@@ -100,8 +100,16 @@
   </script>
   <style type="text/css">
 
+    body:before{
+      content: "*Objects up here will be invisible until detected";
+      
+    }
+
     body{
       background: #222;
+      font-family: sans-serif;
+      color: #ccc;
+      font-size: 15px;
     }
 
     halfdollar{
@@ -141,9 +149,6 @@
       display: block;
       white-space: nowrap;
       text-align: center;
-      font-family: sans-serif;
-      color: #ccc;
-      font-size: 15px;
       position: absolute;
       bottom: 0px;
       left: 0px;
