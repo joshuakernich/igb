@@ -8,6 +8,28 @@
   <script type="text/javascript">
     $(function(){
       
+      /*$(document).mousemove(function(e){
+        let o = $('sky').offset();
+        $('beam').offset({left:e.pageX-100,top:o.top-200});
+
+        o = $('beam').offset();
+
+
+
+        $('ball').each(function(){
+          let o2 = $(this).offset();
+          let x = o.left-o2.left;
+          let y = o.top-o2.top;
+          let d = Math.sqrt(x*x+y*y);
+          if(d<50){
+            $(this).addClass('detected');
+          }
+          else{
+            $(this).removeClass('detected');
+          }
+        })
+      })*/
+
       setInterval(function(){
 
         let time = new Date().getTime()*0.0005;
@@ -90,6 +112,15 @@
       position: relative;
       opacity: 0;
       pointer-events: none;
+      transition: opacity 0.5s;
+    }
+
+    halfdollar:before{
+      content: "half dollar";
+    }
+
+    dollar:before{
+      content: "dollar";
     }
 
     .revealed{
@@ -243,10 +274,14 @@
       background: lightblue;
       border-radius: 20px;
       vertical-align: middle;
-      opacity: 0.5;
       position: absolute;
       margin: 10px;
       line-height: 40px;
+      opacity: 0.5;
+    }
+
+    ball.detected{
+      opacity: 0.5;
     }
 
     ball:before{
@@ -332,15 +367,16 @@
       margin: auto;
     }
 
-    /*beam{
+    beam{
       backdrop-filter: brightness(120%), opacity(0%);
-      width: 200px;
-      height: 200px;
+      width: 150px;
+      height: 150px;
       
       display: inline-block;
       border-radius: 100px;
       transform: translate(-50%,-50%);
-      position: fixed;
+      position: absolute;
+      bottom: 400px;
 
       
       background: rgba(255, 255, 255, 0.1);
@@ -357,7 +393,7 @@
       position: fixed;
 
       background: rgba(0, 0, 0, 0.1);
-    }*/
+    }
 
     .selected{
       opacity: 1;
@@ -398,7 +434,7 @@
       <dart inv='dart'></dart>
       <dart inv='dart'></dart>
       <dollar inv='dollar'></dollar>
-      <masker></masker>
+      
     </sky>
     <floor>
     <stand><window>
@@ -446,6 +482,6 @@
     </dinger>
   </floor>
   </puzzle>
-  <beam></beam>
+  
 </body>
 </html>
