@@ -80,6 +80,7 @@
 
          
           if( $('*[need=dart]:not(.done)').length == 0 ){
+            $('toy').addClass('revealed');
             $('halfdollar').eq(0).addClass('revealed');
           }
 
@@ -102,7 +103,7 @@
 
     body:before{
       content: "*Objects up here will be invisible until detected";
-      
+
     }
 
     body{
@@ -120,7 +121,6 @@
       position: relative;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.5s;
     }
 
     halfdollar:before{
@@ -426,6 +426,20 @@
       opacity: 1;
     }
 
+    toy{
+      width: 70px;
+      height: 70px;
+      border-radius: 10px;
+      background: blue;
+      display: inline-block;
+      opacity: 0;
+      pointer-events: none;
+      position: absolute;
+      left: 50px;
+      bottom: 0px;
+      
+    }
+
   </style>
 </head>
 <body>
@@ -453,7 +467,10 @@
       <balloon need='dart'></balloon>
       <balloon need='dart'></balloon>
       <balloon need='dart'></balloon>
-      <halfdollar pair='dollar'></halfdollar>
+      <toy>
+        Toy<br>
+        <halfdollar pair='dollar'></halfdollar>
+      </toy>
       <shutter class='toggle'></shutter>
     </window><br>Balloon Game Stand</stand>
     <stand><window>
