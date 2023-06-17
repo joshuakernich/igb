@@ -210,7 +210,7 @@
 			let w = 800;
 			let x = 200;
 
-			$(document).mousemove((e)=>{
+			$(document).on('mousemove touchmove',(e)=>{
 
 				let left = $('floor').offset().left;
 				let right = left + $('floor').width();
@@ -219,11 +219,11 @@
 				if(nDrag == 1) $('range').css({right:right-e.pageX});
 			})
 
-			$(document).mouseup((e)=>{
+			$(document).on('mouseup touchend',(e)=>{
 				nDrag = -1;
 			})
 
-			$('handle').mousedown((e)=>{
+			$('handle').on('mousedown touchstart',(e)=>{
 				nDrag = $('handle').index(e.target);
 			})
 
