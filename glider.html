@@ -27,14 +27,39 @@
 			left: 200px;
 		}
 
+		glider:before{
+			content: "";
+			display: block;
+			width: 30px;
+			height: 80px;
+			border-radius: 20px 20px;
+			position: absolute;
+			left: -15px;
+			bottom: -40px;
+			background: darkorange;
+		}
+
+		glider:after{
+			content: "";
+			display: block;
+			width: 60px;
+			height: 10px;
+			position: absolute;
+			left: -30px;
+			bottom: -30px;
+			background: orange;
+			box-shadow: 0px 5px darkorange;
+		}
+
 		wing{
 			display: block;
-			width: 300px;
+			width: 320px;
 			height: 20px;
 			background: orange;
 			position: absolute;
 			bottom: 0px;
 			left: -150px;
+			box-shadow: 0px 5px darkorange;
 		}
 
 		person{
@@ -60,6 +85,8 @@
 			border-radius: 5px;
 			display: block;
 			transform: translate(-50%,-50%);
+
+
 		}
 
 		floor{
@@ -119,15 +146,36 @@
 		wingrange{
 			position: absolute;
 
-			bottom: 25px;
+			bottom: 10px;
 			left: 50%;
 			
+		}
+
+		@keyframes tippytap{
+			0%{
+				transform: translateY(0px);
+			}
+			50%{
+				transform: translateY(-3px);
+			}
+			100%{
+				transform: translateY(0px);
+			}
+		}
+
+		wingrange person {
+			animation: tippytap;
+			animation-iteration-count: infinite;
+			animation-duration: 0.2s;
+
 		}
 
 		wingrange person:after{
 			height: 20px;
 			width: 15px;
 		}
+
+
 
 	</style>
 	<script type="text/javascript" src="jq.js"></script>
@@ -158,7 +206,7 @@
 
 			for(var i = 0; i<10; i++){
 				$('<person>').appendTo('range');
-				$('<person>').appendTo('wingrange');
+				$('<person>').appendTo('wingrange').css('bottom',Math.random()*10).css('animation-delay',Math.random()+'s')
 			}
 
 
