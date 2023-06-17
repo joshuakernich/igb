@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Glider</title>
+	<style type="text/css">
+		screen{
+			width: 800px;
+			height: 450px;
+			position: absolute;
+			background: lightblue;
+			position: absolute;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			top: 0px;
+			margin: auto;
+			display: block;
+		}
+
+		glider{
+			width: 0px;
+			display: block;
+			position: absolute;
+			bottom: 100px;
+			left: 200px;
+		}
+
+		wing{
+			display: block;
+			width: 300px;
+			height: 20px;
+			background: orange;
+			position: absolute;
+			bottom: 0px;
+			left: -150px;
+		}
+
+		person{
+			
+			width: 0px;
+			height: 0px;
+			background: red;
+			border-radius: 5px;
+			display: inline-block;
+			position: relative;
+
+		}
+
+		person:after{
+			content: "";
+			width: 20px;
+			
+			height: 50px;
+			top: 0px;
+			left: 0px;
+			position: absolute;
+			background: red;
+			border-radius: 5px;
+			display: block;
+			transform: translate(-50%,-50%);
+		}
+
+		floor{
+			position: absolute;
+			bottom: -70px;
+			background: #ddd;
+			left: 0px;
+			right: 0px;
+			height: 70px;
+			display: block;
+		}
+
+		handle{
+			width: 0px;
+			height: 100%;
+			display: block;
+			position: absolute;
+			transform-origin: 0px 0px;
+			left: 0px;
+		}
+
+		handle:last-of-type{
+			transform: scaleX(-1);
+			left: 100%;
+		}
+
+		handle:before{
+			content: "<";
+			display: block;
+			position: absolute;
+			left: -30px;
+			width: 30px;
+			height: 70px;
+			background: rgba(255,200,0,0.2);
+			line-height: 70px;
+			text-align: center;
+			font-size: 20px;
+			border-right: 5px solid orange;
+			box-sizing: border-box;
+			color: orange;
+			font-weight: bold;
+			font-family: sans-serif;
+		}
+
+		range{
+			display: flex;
+			position: absolute;
+			background: #eee;
+			height: 100%;
+			left: 25%;
+			right: 25%;
+			justify-content: center;
+			align-items: center;
+			justify-content: space-around;
+		}
+
+		wingrange{
+			position: absolute;
+
+			bottom: 25px;
+			left: 50%;
+			
+		}
+
+		wingrange person:after{
+			height: 20px;
+			width: 15px;
+		}
+
+	</style>
+	<script type="text/javascript" src="jq.js"></script>
+	<script type="text/javascript">
+		$(function(){
+
+			let nDrag = -1;
+			let w = 800;
+			let x = 200;
+
+			$(document).mousemove((e)=>{
+
+				let left = $('floor').offset().left;
+				let right = left + $('floor').width();
+
+				if(nDrag == 0) $('range').css({left:e.pageX-left});
+				if(nDrag == 1) $('range').css({right:right-e.pageX});
+			})
+
+			$(document).mouseup((e)=>{
+				nDrag = -1;
+			})
+
+			$('handle').mousedown((e)=>{
+				nDrag = $('handle').index(e.target);
+			})
+
+
+			for(var i = 0; i<10; i++){
+				$('<person>').appendTo('range');
+				$('<person>').appendTo('wingrange');
+			}
+
+
+			let wingrange = 150;
+			let tick = ()=>{
+
+				let average = 0;
+
+				$('range person').each(function(n){
+					
+					let left = $(this).offset().left;
+					
+
+					$('wingrange person').eq(n).offset({left:left});
+
+					left = parseInt($('wingrange person').eq(n).css('left'));
+					left = Math.min(wingrange,Math.max(-wingrange,left*0.7));
+
+					$('wingrange person').eq(n).css('left',left);
+
+					average += left;
+				})
+
+				let offset = average/10/wingrange;
+				
+				$('glider').css('transform','rotate('+offset*30+'deg)');
+
+				x += offset*15;
+
+				$('glider').css('left',x);
+			}
+
+			setInterval(tick,50);
+
+		})
+	</script>
+</head>
+<body>
+	<screen>
+		<glider>
+			<wing>
+				<wingrange>
+				</wingrange>
+			</wing>
+		</glider>
+		<floor>
+			<range>
+				<handle></handle>
+				<handle></handle>
+			</range>
+		</floor>
+	</screen>
+	
+</body>
+</html>
