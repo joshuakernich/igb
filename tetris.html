@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tetris</title>
+  <script type="text/javascript" src="./jq.js"></script>
+  <script type="text/javascript">
+    $(function(){
+
+      const W = 10;
+      const H = 20;
+
+      let tets = [
+        //O
+        '11,11',
+        '11,11',
+        '11,11',
+        '11,11',
+
+        //I
+        '1,1,1,1',
+        //'1111',
+        '1,1,1,1',
+        //'1111',
+
+        //S
+        '10,11,01',
+        //'110,011',
+        '10,11,01',
+        //'110,011',
+
+        //Z
+        '01,11,10',
+        //'011,110',
+        '01,11,10',
+        //'011,110',
+
+        //T
+        '010,111',
+        '111,010',
+        '01,11,01',
+        '10,11,10',
+
+        //L
+        //'111,100',
+        '11,01,01',
+        //'001,111',
+        '10,10,11',
+
+        //r
+        //'111,001',
+        '11,10,10',
+        //'100,111',
+        '01,01,11',
+
+        // little bonus blocks
+        '1',
+        '1,1',
+        '1,1,1',
+        '1',
+        '1,1,1',
+      ]
+
+      let wall = [];
+
+      for( var r = 0; r<H; r++ ){
+        let $row = $('<row>').appendTo('wall').css('z-index',H-r);
+        wall[r] = [];
+
+        for( var c = 0; c<W; c++ ){ 
+          let $cell = $('<cell>').appendTo($row);
+          $cell.attr('n',0);
+          wall[r][c] = {type:0,$el:$cell};
+        }
+      }
+
+      let queue = [];
+
+      function Block(s,nPlayer){
+
+        let map = [];
+        let $block = $('<block>');
+        let $row;
+
+        this.n = nPlayer;
+
+        let row = s.split(',');
+
+        for( var r in row){
+
+          map[r] = [];
+          $row = $('<row>').appendTo($block);
+          
+          for(var c in row[r]){
+            let type = row[r][c];
+            map[r][c] = type;
+            $('<cell>').appendTo($row).attr('n',type==1?this.n:0);
+          }
+        }
+
+        this.$el = $block;
+        this.map = map;
+        this.w = map[0].length;
+        this.h = map.length;
+      }
+
+      let block;
+
+      function nextBlock(nPlayer){
+        if(!queue.length) queue = tets.concat().sort(() => Math.random() - 0.5);
+
+        let map = queue.pop();
+
+        return new Block(map,nPlayer);
+      }
+
+      let players = [];
+      let player;
+
+
+      function Player(){
+
+        let self = this;
+        let n = players.push(self);
+
+        this.$hover = $('<hover>').appendTo('body');
+
+        this.reblock = function(){
+          self.$hover.empty();
+          self.block = nextBlock(n);
+          self.block.$el.appendTo( self.$hover );
+        }
+
+        this.reblock();
+
+        
+
+        for( var i in players) players[i].$hover.css('left',i*10+'vw');
+      }
+
+      new Player();
+      new Player();
+      new Player();
+      new Player();
+      player = players[0];
+
+      let cHover = 0;
+      let xMouse = 0;
+
+      $(document).mousemove(function(e){
+        xMouse = e.pageX;
+      });
+
+      function tick(){
+
+        cHover = 0;
+
+        let xBlock = xMouse;
+
+        player.$hover.css('left',xMouse);
+
+        
+
+        $('wall row').eq(0).find('cell').each(function(n){
+
+          if( xBlock > $(this).offset().left - $(this).width()/2 ){
+            cHover = n;
+          }
+        })
+
+        if(cHover > W-player.block.w) cHover = W-player.block.w;
+
+        $('wall cell').attr('temp',false);
+
+        
+        let c = cHover;
+        let r = findBlockRowAtColumn(player.block,c);
+
+        for(var y=0; y<player.block.h; y++){
+            for(var x=0; x<player.block.w; x++){
+
+              if( wall[r+y] && wall[r+y][c+x]){
+                if(player.block.map[y][x] == 1 ) wall[r+y][c+x].$el.attr('temp',true);
+              }
+            }
+          }
+
+      }
+
+
+
+      setInterval(tick,50);
+
+      $(document).keypress(function(e){
+        player = players[e.which-49];
+
+        $('hover').removeClass('active');
+        player.$hover.addClass('active');
+      });
+
+      $(document).mousedown(function(){
+        
+        let cells = addBlockAtColumn(player.block,cHover);
+        $('wall cell').attr('temp',false);
+        
+        player.reblock();
+        markLines();
+        if(clearing) setTimeout(clearLines,200);
+
+
+      })
+
+      let clearing = [];
+      function markLines(){
+
+        clearing = [];
+
+        for(var r in wall){
+          let isLine = true;
+          for(var c in wall[r]) if(wall[r][c].type == 0) isLine = false;
+          if(isLine){
+
+            clearing.push(r);
+
+            for(var c in wall[r]){
+              wall[r][c].type = 4;
+              wall[r][c].$el.attr('clearing', true);
+              wall[r][c].$el.attr('n', 0);
+
+            }
+          }
+        }
+
+        
+      }
+
+      function clearLines(){
+        while(clearing.length){
+          let r = clearing.shift();
+          while(r > 0){
+            for(var c in wall[r]){
+              wall[r][c].type = wall[r-1][c].type;
+              wall[r][c].$el.attr('n',wall[r][c].type);
+              wall[r][c].$el.attr('clearing',false);
+            }
+            r--;
+          }
+        }
+      }
+
+
+      function findBlockRowAtColumn(block,c){
+        let collision = false;
+        let r = -1;
+
+        while( !collision && r<H-block.h ){
+
+          r++;
+
+          for(var y=0; y<block.h; y++){
+            for(var x=0; x<block.w; x++){
+              if(block.map[y][x] != 0 && wall[r+y][c+x].type != 0) collision = true;
+            }
+          }
+        }
+
+        if(collision) r--;
+
+        return r;
+      }
+
+      function addBrokenLine(){
+
+        //move everthing up
+        for(let r=0; r<wall.length-1; r++){
+          for(let c in wall[r]){
+            wall[r][c].type = wall[r+1][c].type;
+            wall[r][c].$el.attr('n',wall[r][c].type);
+          }
+        }
+
+        r = H-1;
+        let nHole = Math.floor(Math.random()*W);
+        for(var c in wall[r]){
+          wall[r][c].type = c==nHole?0:101;
+          wall[r][c].$el.attr('n',wall[r][c].type);
+        }
+      }
+
+      addBrokenLine();
+      addBrokenLine();
+      addBrokenLine();
+      addBrokenLine();
+      addBrokenLine();
+
+      function addBlockAtColumn(block,c){
+        
+        let cells = [];
+        let r = findBlockRowAtColumn(block,c);
+
+        for(var y=0; y<block.h; y++){
+            for(var x=0; x<block.w; x++){
+
+              if( wall[r+y] && wall[r+y][c+x]){
+                if(block.map[y][x]==1){
+                  wall[r+y][c+x].$el.attr('n',100);
+                  wall[r+y][c+x].type = 100;
+                  cells.push(wall[r+y][c+x]);
+                }
+              } else{
+                //death
+              }
+              
+            }
+          }
+
+        return cells;
+        
+      }
+
+
+    })
+  </script>
+  <style type="text/css">
+    body{
+      text-align: center;
+      margin: 0px;
+      padding: 0px;
+      background: #777;
+      background-size: cover;
+    }
+
+
+    hover{
+      position: fixed;
+      white-space: nowrap;
+      top: 6vh;
+      width: 18vh;
+      height: 18vh;
+      display: block;
+      border-radius: 9vh;
+      
+      transform-origin: 50% 0px;
+      /*box-shadow: inset 0px 0px 20px white;
+      background: rgba(255,255,255,0.2);*/
+
+    }
+
+    hover.active{
+      top: 12vh;
+      z-index: 1;
+    }
+
+    @keyframes spin{
+      0%{
+        transform: translate(-50%,-50%) rotate(-90deg);
+      }
+      100%{
+        transform: translate(-50%,-50%) rotate(0deg);
+      }
+    }
+
+    hover block{
+      left: 50%;
+      top: 50%;
+
+      transform: translate(-50%,-50%);
+      /*animation-name: spin;
+      animation-duration: 0.2s;*/
+    }
+
+    block{
+      display: inline-block;
+      line-height: 0px;
+      position: absolute;
+      top: 0px;
+      left: 0px;
+    }
+
+    wall{
+      display: inline-block;
+      line-height: 0px;
+      margin-top: 10vh;
+    }
+
+
+
+    row{
+      display: block;
+      position: relative;
+    }
+
+    cell{
+      width: 4vh;
+      height: 4vh;
+      box-sizing: border-box;
+      display: inline-block;
+      border-radius: 5px;
+
+
+    }
+
+    cell:not([n='0']){
+
+     
+    }
+
+    cell[temp=true]{ background:rgba(255,255,255,0.2); }
+    cell[clearing=true]{ background:#ff9900; }
+
+
+    
+  
+    cell[n='100']{ 
+      background: #999999; 
+      box-shadow: 0px -10px #666666; 
+    } 
+
+    cell[n='101']{ 
+      background: #ffcc55; 
+      box-shadow: 0px -10px #dd9922; 
+    } 
+
+    cell[n='1']{ 
+      background: #dd3333; 
+      box-shadow: 0px 10px #993333;
+    } 
+    cell[n='2']{ 
+      background: #4444dd; 
+      box-shadow: 0px 10px #333399;
+    }    
+    cell[n='3']{ 
+      background: #33cc33; 
+      box-shadow: 0px 10px #336633;
+    }   
+    cell[n='4']{ 
+      background: #ff9933; 
+      box-shadow: 0px 10px #dd6633; 
+    }    
+
+    hover:after{
+      content: "1";
+      position: absolute;
+      top: -4vh;
+      left: 6vh;
+      width: 6vh;
+      height: 6vh;
+      display: block;
+      line-height: 6vh;
+     
+      border-radius: 3vh;
+      font-weight: bold;
+      font-size: 4vh;
+      font-family: sans-serif;
+
+      background: white;
+      color: #dd3333;
+    }
+
+    hover:nth-of-type(2):after{ content:"2"; color: #3333dd; }
+    hover:nth-of-type(3):after{ content:"3"; color: #33cc33; }
+    hover:nth-of-type(4):after{ content:"4"; color: #ff9933; }
+
+
+  </style>
+</head>
+<body>
+  <wall></wall>
+  <!--audio autoplay controls>
+    <source src="tetris-lofi.mp3" type="audio/mpeg">
+  </audio-->
+</body>
+</html>

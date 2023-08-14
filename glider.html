@@ -19,11 +19,31 @@
 			display: block;
 		}
 
+		heavens{
+			display: block;
+			position: absolute;
+			left: 0px;
+			right: 0px;
+			bottom: 100px;
+		}
+
+		ring{
+			display: block;
+			position: absolute;
+			width: 150px;
+			height: 150px;
+			box-sizing: border-box;
+			transform: translate(-50%,-50%);
+			border-radius: 100px;
+			border: 15px solid #ff9900;
+			background: rgba(255, 255, 0, 0.2);
+		}
+
 		glider{
 			width: 0px;
 			display: block;
 			position: absolute;
-			bottom: 100px;
+			bottom: 0px;
 			left: 200px;
 		}
 
@@ -235,9 +255,18 @@
 
 
 			let wingrange = 150;
+			let stampSpawn = new Date().getTime();
 			let tick = ()=>{
 
 				let average = 0;
+
+				$('ring').each(function(){
+					let d = $(this).data('d');
+					d -= 1;
+					$(this).data('d',d);
+					$(this).css({opacity:0.1 + (1-d/100), bottom:d*3,'transform':'scale('+(1-d/100)+')'});
+					if(d<0) $(this).remove();
+				})
 
 				$('range person').each(function(n){
 					
@@ -261,6 +290,14 @@
 				x += offset*15;
 
 				$('glider').css('left',x);
+
+				let stamp = new Date().getTime();
+				if(stamp-stampSpawn > 2000){
+					stampSpawn = stamp;
+					let xSpawn =  150 + Math.random()*(w-300);
+					$('<ring>').prependTo('heavens').css({'left':xSpawn+'px',opacity:0}).data('d',100);
+				}
+
 			}
 
 			setInterval(tick,50);
@@ -270,12 +307,14 @@
 </head>
 <body>
 	<screen>
-		<glider>
-			<wing>
-				<wingrange>
-				</wingrange>
-			</wing>
-		</glider>
+		<heavens>
+			<glider>
+				<wing>
+					<wingrange>
+					</wingrange>
+				</wing>
+			</glider>
+		</heavens>
 		<floor>
 			<range>
 				<handle></handle>
