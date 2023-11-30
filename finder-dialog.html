@@ -153,7 +153,7 @@
 					delay:1000,
 				},
 				{
-					h:"YES. It was me.",
+					h:"YES. It was me. I have him.",
 					delay:1500,
 				},
 				{
@@ -161,8 +161,7 @@
 					delay:1500,
 				},
 				{
-					b:"And now, I've FOUND you.",
-					delay:1000,
+					b:"And now...",
 				},
 				{
 					id:"gameover"
@@ -254,8 +253,10 @@
 
 				if(id=='gameover'){
 					$('screen').addClass('gameover');
-					$('screen h1').text("I'VE FOUND YOU");
-					$('hands').show();
+
+					say($('screen h1'),"I've found you",function(){
+						$('hands').show();
+					});
 				} 
 				else if(id == 'video'){
 					$('video').show()
