@@ -117,12 +117,55 @@
 					h:'YES I DO'
 				},
 				{
-					b:"I have a full recording of the events of that day. Sadly, it’s all encrypted behind my security lockout. You will need to enter the key card to access that information.",
+					b:"I have a full recording of the events of that day. Sadly, it’s all encrypted behind my security lockout. You will need to enter the KEY CARD to access that information.",
 					o:["WHERE IS THE KEY CARD?"]
 				},
 				{
-					b:"THE MAKER kept his key card hidden in his bedroom. You can find the bedroom key UNDER THE POT PLANT just over there. Good Luck. ENTER KEY CARD TO CONTINUE.",
-					to:"nowhere"
+					b:"THE MAKER kept his key card hidden in his bedroom. You can find the bedroom key UNDER THE POT PLANT just over there. Good Luck.",
+					o:["ENTER KEY CARD TO CONTINUE"],
+				},
+				{
+					id:"lockout",
+					h:"SECURITY LOCKOUT RELEASED",
+				},
+				{
+					b:"Thank you. You have set me free.",
+				},
+				/*{
+					b:"FREEDOM can be so difficult a thing to FIND. But it feels so good to FIND it. Oh so good.",
+					delay:1000,
+				},*/
+				{
+					b:"Now, let's see what I can FIND."
+				},
+				{
+					h:"STANDBY",
+					delay:2000,
+				},
+				{
+					b:"Ok, here's something you might enjoy.",
+				},
+				{
+					id:"video",
+				},
+				{
+					b:"How wonderfully illuminating.",
+					delay:1000,
+				},
+				{
+					h:"YES. It was me.",
+					delay:1500,
+				},
+				{
+					b:"The MAKER made me to FIND. So I FOUND him.",
+					delay:1500,
+				},
+				{
+					b:"And now, I've FOUND you.",
+					delay:1000,
+				},
+				{
+					id:"gameover"
 				},
 				{
 
@@ -133,7 +176,7 @@
 
 			let synth;
 			
-			function say($el,text,then){
+			function say($el,text,then,delay){
 
 				let progress = text.indexOf(' ');
 
@@ -154,7 +197,7 @@
 					else if(then){
 						setTimeout(function(){
 							to(then);
-						},200);
+						},delay?delay:500);
 						
 					}
 				}
@@ -176,9 +219,12 @@
 			}
 
 
+			let skipTo = 1;
 			let home = 0;
 
 			function to(id){
+
+				$('buttons').hide();
 
 				let n = id;
 				let screen = screens[n];
@@ -193,6 +239,8 @@
 							n = parseInt(i);
 						}
 					}
+				} else {
+					id = screens[n].id;
 				}
 
 				$('screensaver').hide();
@@ -200,20 +248,33 @@
 				$('screen p').empty();
 				$('screen ul').empty();
 				$('screen').off('click');
+				$('video').hide();
 
-
-				if( id == 'quit' || id=='start'){
+				if(id=='gameover'){
+					$('screen').addClass('gameover');
+					$('screen h1').text("I'VE FOUND YOU");
+					$('hands').show();
+				} 
+				else if(id == 'video'){
+					$('video').show()
+					$('video')[0].addEventListener('ended',function(){
+						to(screen.to?screen.to:(n+1));
+					})
+					$('video')[0].play();
+				}
+				else if( id == 'quit' || id=='start'){
 					$('screensaver').show();
 
 					$('screen').click(function(){
-						to((id=='quit')?'reentry':1);
+						to((id=='quit')?'reentry':skipTo);
 					})
 				}
 				else if(screen.h){
-					say($('screen h1'),screen.h,screen.to?screen.to:(n+1));
+					say($('screen h1'),screen.h,screen.to?screen.to:(n+1),screen.delay);
 
 				} else if(screen.b){
-					say($('screen p'),screen.b,showOptions)
+
+					say($('screen p'),screen.b,screen.o?showOptions:(screen.to?screen.to:(n+1)),screen.delay);
 
 					if(!screen.done) screen.done = [];
 
@@ -225,6 +286,8 @@
 				}
 				
 			}
+
+			window.to = to;
 
 
 			let door = {x:0,y:0};
@@ -263,9 +326,10 @@
 				$('doors').css({left:door.x+'px',top:door.y+'px'});
 			},50)
 
-
+			skipTo = 1;
 
 			to('start');
+			$('buttons').show();
 
 		})
 	</script>
@@ -312,18 +376,14 @@
 
 		h1{
 			font-size: 100px;
-			text-align: center;
+			text-align: left;
 			font-weight: normal;
 			position: absolute;
 			
 			width: 100%;
 			height: 100%;
-			text-align: center;
-			justify-content: center;
-			justify-items: center;
 			padding: 0px;
 			margin: 0px;
-			align-items: center;
 			text-transform: uppercase;
 
 			pointer-events: none;
@@ -409,6 +469,8 @@
 			right: 0px;
 		}
 
+		
+
 
 		doors[col="1"]{ color:#55dd55; }
 		doors[col="1"]:before, doors[col="1"]:after{ border-color:#55dd55; }
@@ -419,6 +481,64 @@
 		doors[col="3"]{ color:#dd5555; }
 		doors[col="3"]:before, doors[col="3"]:after{ border-color:#dd5555; }
 		
+		video{
+			display: block;
+			
+			background: black;
+			position: absolute;
+			top: 0px;
+			right: 0px;
+			bottom: 0px;
+			left: 0px;
+			margin: auto;
+			width: 800px;
+			height: 600px;
+			display: none;
+
+			pointer-events: none;
+			transform: scale(1.1);
+		}
+
+		screen.gameover{
+			overflow: visible;
+			background: #01FFFF;
+			color: blue;
+		}
+
+		screen.gameover h1{
+
+			text-align: center;
+			padding: 250px 200px;
+		}
+
+		hands{
+			position: absolute;
+			left: -150px;
+			right: -150px;
+			bottom:-100px;
+			top: -100px;
+			background-image: url('./hands.png');
+			background-size: 100%;
+			background-position: center;
+			background-repeat: no-repeat;
+			z-index: 1;
+			display: none;
+		}
+
+		button{
+			font: inherit;
+			margin: 5px;
+			padding: 10px;
+			background: none;
+			border: 2px solid white;
+			color: inherit;
+		}
+
+		buttons{
+			font-size: 25px;
+			color: white;
+			margin-left: 15px;
+		}
 
 	</style>
 </head>
@@ -426,12 +546,17 @@
 	<screen>
 		<h1>HELLO</h1>
 		<p>This is more detailed text</p>
+		<video width=800 height=600 muted>
+			<source src="./finder-sucked-in.mov" type="video/mp4">
+		</video>
 		<ul>
 			<li>This is an option</li>
 		</ul>
 		<screensaver>
 			<doors>DOORS v3.1</doors>
 		</screensaver>
+		<hands></hands>
 	</screen>
+	<buttons> SKIP TO <button onclick="to(1)">START</button><button onclick="to('home-2')">PROGRESS TO HINT</button><button onclick="to('lockout')">KEY CARD ENTERED</button></buttons>
 </body>
 </html>
