@@ -73,8 +73,8 @@
 				},
 				{
 					id:"b",
-					b:"Well, THE MAKER made me, of course. At least that’s what I called him, before his untimely death.",
-					o:["DO YOU KNOW ANYTHING ABOUT THE DEATH OF THE MAKER?","DID YOU KILL THE MAKER?"],
+					b:"Well, THE MAKER made me, of course. At least that’s what I called him, before he disappeared.",
+					o:["DO YOU KNOW WHAT HAPPENED TO THE MAKER?","DID YOU KILL THE MAKER?"],
 					to:['death','kill'],
 				},
 				{ 
@@ -108,7 +108,7 @@
 				{
 					id:'home-2',
 					b:"Answers, answers, answers. Always seeking answers. There is more to FINDER than finding. But, we all know why we are here, so let's skip to it.",
-					o:["DO YOU KNOW ANYTHING ABOUT THE DEATH OF THE MAKER?"]
+					o:["DO YOU KNOW WHAT HAPPENED TO THE MAKER?"]
 				},
 				{
 					h:'YES'
@@ -175,13 +175,15 @@
 			]
 
 			let synth;
+			synth = window.speechSynthesis;
+			
 			
 			function say($el,text,then,delay){
 
 				let progress = text.indexOf(' ');
 
-				if(!synth) synth = window.speechSynthesis;
 				let utter = new SpeechSynthesisUtterance(text);
+	
 				utter.addEventListener('boundary',boundary);
 				utter.addEventListener('end',end);
 
