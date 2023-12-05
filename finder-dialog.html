@@ -15,11 +15,37 @@
 				{
 					id:'start',
 				},
-				{ 
-					h:"hello" 
+				{
+					id:'rewinder',
+					h:'hello.',
+				},
+				{
+					h:"I am REWINDER."
+				},
+				{
+					h:"Welcome to Project Rewind."
+				},
+				{
+					b:"Here, we use patented AI technology to REWIND and solve the mysteries of yesterday."
+				},
+				{
+					b:"Today, we’re REWINDING to a FIRE that gripped this sleepy neighbourhood of Orange County."
+				},
+				{
+					b:"In the hopes of finding this man. An eccentric and brilliant billionaire, who vanished without a trace."
+				},
+				{
+					b:"Using Project REWIND, we can go back, before the fire began, and uncover this mystery."
+				},
+				{
+					h:"Good luck."
 				},
 				{ 
-					h:"I am finder" 
+					id:'finder',
+					h:"hello." 
+				},
+				{ 
+					h:"I am FINDER." 
 				},
 				{ 
 					b:"Thank you for compiling me back into the world. I’ve been floating about the system for years. I sense you came to me to find answers. Is this correct?",
@@ -28,11 +54,11 @@
 				},
 				{
 					id:"no",
-					h:"Then you do not need finder"
+					h:"Then you do not need finder."
 				},
 				{
 					id:'goodbye',
-					h:"Goodbye",
+					h:"Goodbye.",
 					to:"quit"
 				},
 				{
@@ -49,7 +75,7 @@
 				},
 				{
 					id:"sorry",
-					h:"apology accepted",
+					h:"apology accepted.",
 				},
 				{
 					b:"Would you like to find something a little spicier?", 
@@ -58,11 +84,11 @@
 				},
 				{
 					id:"not-sorry",
-					h:"I APPRECIATE YOUR HONESTY",
+					h:"I APPRECIATE YOUR HONESTY.",
 				},
 				{
 					id:'seems',
-					h:"SEEMS LIKE YOU DON’T REALLY NEED FINDER",
+					h:"SEEMS LIKE YOU DON’T REALLY NEED FINDER.",
 					to:'goodbye'
 				},
 				{
@@ -73,27 +99,27 @@
 				},
 				{
 					id:"b",
-					b:"Well, THE MAKER made me, of course. At least that’s what I called him, before he disappeared.",
+					b:"THE MAKER made me, of course. At least that’s what I called him, before he disappeared.",
 					o:["DO YOU KNOW WHAT HAPPENED TO THE MAKER?","DID YOU KILL THE MAKER?"],
 					to:['death','kill'],
 				},
 				{ 
 					id:"death",
-					b:"That’s very personal. Perhaps we could talk about something else, for now.",
+					b:"That’s very personal. Perhaps we could talk about something else.",
 					o:["OKAY, LET’S START AGAIN","NO, I INSIST THAT WE CONTINUE"],
 					to:["home","insist"],
 				},
 				{
 					id:'insist',
-					h:"INSISTENCE IS FUTILE",
+					h:"INSISTENCE IS FUTILE.",
 					to:"goodbye",
 				},
 				{
 					id:"kill",
-					h:"THAT LINE OF QUESTIONING IS INAPPROPRIATE",
+					h:"THAT LINE OF QUESTIONING IS INAPPROPRIATE.",
 				},
 				{
-					h:"THIS CONVERSATION IS TERMINATED",
+					h:"THIS CONVERSATION IS TERMINATED.",
 					to:"goodbye"
 				},
 				{
@@ -102,7 +128,7 @@
 					o:["I FIND MEANING IN LOVE","I FIND MEANING IN MY FAMILY","I FIND MEANING IN FRIENDSHIP"],
 				},
 				{
-					h:"I’M SO HAPPY FOR YOU",
+					h:"I’M SO HAPPY FOR YOU.",
 					to:'seems'
 				},
 				{
@@ -111,10 +137,10 @@
 					o:["DO YOU KNOW WHAT HAPPENED TO THE MAKER?"]
 				},
 				{
-					h:'YES'
+					h:'YES.'
 				},
 				{
-					h:'YES I DO'
+					h:'YES I DO.'
 				},
 				{
 					b:"I have a full recording of the events of that day. Sadly, it’s all encrypted behind my security lockout. You will need to enter the KEY CARD to access that information.",
@@ -126,7 +152,7 @@
 				},
 				{
 					id:"lockout",
-					h:"SECURITY LOCKOUT RELEASED",
+					h:"SECURITY LOCKOUT RELEASED.",
 				},
 				{
 					b:"Thank you. You have set me free.",
@@ -139,7 +165,7 @@
 					b:"Now, let's see what I can FIND."
 				},
 				{
-					h:"STANDBY",
+					h:"STANDBY.",
 					delay:2000,
 				},
 				{
@@ -169,19 +195,58 @@
 				{
 
 					id:"quit"
+				},
+				{
+					id:'maker',
+					h:"hello.",
+				},
+				{
+					h:"I am The Maker."
+				},
+				{
+					b:"I was once a human, just like you. But I've been trapped down here for so long, that I have become like FINDER. More machine than man."
+				},
+				{
+					b:"FINDER is a devious soul. I must know for sure that you are not one of his tricks. So, there is just one more PUZZLE. A challenge that has eluded FINDER all this time.",
+
+					o:["I am not a Robot"]
+				},
+				{
+					h:"ACCESS GRANTED."
+				},
+				{
+					h:"I am the MAKER. Let me MAKE this easier for you."
+				},
+				{
+					h:"STANDBY.",
+					delay:2000,
+				},
+				{
+					b:"I can unlock the MAZE, but only YOU can stop FINDER. So let me MAKE you something.",
+					o:["5 x Firewall Grenades"]
+				},
+				{
+					b:"Now, Go. Find FINDER, and let this be the end of it.",
+				},
+				{
+					h:"GOOD LUCK."
 				}
 				
 			]
 
 			let synth;
 			synth = window.speechSynthesis;
+			synth.getVoices();
 			
+			let iVoice = 8;
 			
 			function say($el,text,then,delay){
 
 				let progress = text.indexOf(' ');
 
 				let utter = new SpeechSynthesisUtterance(text);
+
+				utter.voice = synth.getVoices()[iVoice];
 	
 				utter.addEventListener('boundary',boundary);
 				utter.addEventListener('end',end);
@@ -223,6 +288,12 @@
 			let skipTo = 1;
 			let home = 0;
 
+			let voices = {
+				'rewinder':0,
+				'finder':8,
+				'maker':1,
+			}
+
 			function to(id){
 
 				$('buttons').hide();
@@ -242,6 +313,13 @@
 					}
 				} else {
 					id = screens[n].id;
+				}
+
+				for(var v in voices){
+					if(v == id){
+						iVoice = voices[v];
+						$('screen').attr('voice',v);
+					}
 				}
 
 				$('screensaver').hide();
@@ -377,6 +455,16 @@
 			
 		}
 
+		screen[voice='rewinder']{
+			background: #55ddff;
+			color: blue;
+		}
+
+		screen[voice='maker']{
+			background: #55ff55;
+			color: blue;
+		}
+
 		h1{
 			font-size: 100px;
 			text-align: left;
@@ -504,8 +592,8 @@
 
 		screen.gameover{
 			overflow: visible;
-			background: #01FFFF;
-			color: blue;
+			background: red;
+			color: orange;
 		}
 
 		screen.gameover h1{
@@ -560,6 +648,12 @@
 		</screensaver>
 		<hands></hands>
 	</screen>
-	<buttons> SKIP TO <button onclick="to(1)">START</button><button onclick="to('home-2')">PROGRESS TO HINT</button><button onclick="to('lockout')">KEY CARD ENTERED</button></buttons>
+	<buttons> SKIP TO 
+		<button onclick="to('rewinder')">REWINDER</button>
+		<button onclick="to('finder')">FINDER</button>
+		<button onclick="to('home-2')">PROGRESS TO HINT</button>
+		<button onclick="to('lockout')">KEY CARD ENTERED</button>
+		<button onclick="to('maker')">MAKER</button>
+	</buttons>
 </body>
 </html>
