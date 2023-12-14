@@ -212,11 +212,12 @@
 		}
 
 		button{
-			font-family: Arial;
 			background: black;
 			border: 1px solid white;
 			padding: 15px;
 			color: gray;
+
+			font-family: inherit;
 		}
 
 		button.active{
@@ -226,6 +227,17 @@
 
 		button:first-of-type{
 			border-right: none;
+		}
+
+		hud{
+			background: black;
+			color: white;
+			position: absolute;
+			border: 1px solid white;
+			padding: 10px;
+			font-family: Arial;
+			font-size: 10px;
+
 		}
 	</style>
 </head>
@@ -254,6 +266,9 @@
 			<path></path>
 		</svg>
 	</screen>
-	<button class='active'>DRAW</button><button>MOVE</button>
+	<hud>
+		<button class='active'>DRAW MODE</button><button>MOVE MODE</button>
+		<br><br>DRAW MODE<br>Drag and drop to create nodes and lines.<br>Click to delete node.<br><br>MOVE MODE<br>Drag and drop to move nodes.
+	</hud>
 </body>
 </html>
