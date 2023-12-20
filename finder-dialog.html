@@ -23,7 +23,7 @@
 					h:"I am REWINDER."
 				},
 				{
-					h:"Welcome to Project Rewind."
+					h:"Welcome to Project-Rewind."
 				},
 				{
 					b:"Here, we use patented AI technology to REWIND and solve the mysteries of yesterday."
@@ -157,10 +157,6 @@
 				{
 					b:"Thank you. You have set me free.",
 				},
-				/*{
-					b:"FREEDOM can be so difficult a thing to FIND. But it feels so good to FIND it. Oh so good.",
-					delay:1000,
-				},*/
 				{
 					b:"Now, let's see what I can FIND."
 				},
@@ -238,7 +234,7 @@
 			synth = window.speechSynthesis;
 			synth.getVoices();
 			
-			let iVoice = 8;
+			let iVoice = 7;
 			
 			function say($el,text,then,delay){
 
@@ -246,7 +242,9 @@
 
 				let utter = new SpeechSynthesisUtterance(text);
 
+				console.log(synth.getVoices());
 				utter.voice = synth.getVoices()[iVoice];
+				utter.rate = 0.8;
 	
 				utter.addEventListener('boundary',boundary);
 				utter.addEventListener('end',end);
@@ -289,9 +287,9 @@
 			let home = 0;
 
 			let voices = {
-				'rewinder':0,
-				'finder':8,
-				'maker':1,
+				'rewinder':33,
+				'finder':7,
+				'maker':0,
 			}
 
 			function to(id){
@@ -411,6 +409,40 @@
 
 			to('start');
 			$('buttons').show();
+
+			function arrToCSV(arr,q){
+				return q+arr.join('","')+q;
+			}
+
+			/*let str = '';
+
+			for(var d in screens){
+				let arr = [
+					d,
+					screens[d].id,
+					screens[d].h,
+					screens[d].b,
+					(typeof(screens[d].to) == 'string')?screens[d].to:undefined
+				];
+
+
+
+				if(!screens[d].o) screens[d].o = [];
+				if(!screens[d].to || (typeof(screens[d].to) == 'string')) screens[d].to = [];
+
+				let opt = [
+					screens[d].o[0],
+					screens[d].to[0],
+					screens[d].o[1],
+					screens[d].to[1],
+					screens[d].o[2],
+					screens[d].to[2],
+				];
+
+				str += '\n' + arrToCSV(arr.concat(opt),'"');
+			}
+
+			console.log(str);*/
 
 		})
 	</script>
