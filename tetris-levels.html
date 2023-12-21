@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Tetris Levels</title>
+	<script type="text/javascript" src="jq.js"></script>
+	<script type="text/javascript">
+		$(function(){
+
+			let colors = {
+				J:'blue',
+				L:'orange',
+				T:'purple',
+				Z:'red',
+				S:'limegreen',
+				I:'cyan',
+				O:'yellow',
+
+				apple:'red',
+				watermelon:'pink',
+				banana:'yellow',
+				banana2:'yellow',
+				pear:'green',
+				pear2:'green',
+				grapes:'purple',
+
+				boot:'brown',
+				boot2:'brown',
+				scarf:'#dd7777',
+				scarf2:'#dd7777',
+				vest:'beige',
+				dress:'#77dd77',
+				sock:'lightgray',
+				sock2:'lightgray',
+				trousers:'#7777dd',
+
+				mattress:'beige',
+				couch:'#7777dd',
+				couch2:'#7777dd',
+				boxes:'#997755',
+				boxes2:'#997755',
+				box:'#997755',
+				box2:'#997755',
+				box3:'#997755',
+				box4:'#997755',
+				washing:'lightgray',
+				fridge:'lightgray',
+				duffel:'gray',
+				piano:'#333',
+
+				lettuce:'#77dd77',
+				cheese:'#ffdd00',
+				burger:'brown',
+				buntop:'#dd9955',
+				bunbottom:'#dd9955',
+				onion:'pink',
+				bacon:'#dd7777',
+				pickle:'green',
+				mushroom:'beige',
+				tomato:'red',
+			}
+
+			let standard = {
+				J:'01,01,11',
+				L:'10,10,11',
+				T:'111,010',
+				Z:'110,011',
+				S:'011,110',
+				I:'1,1,1,1',
+				O:'11,11',
+			}
+
+			let smoothie = {
+				pear:'01,01,11',
+				pear2:'10,10,11',
+				grapes:'111,010',
+				banana:'10,11,01',
+				banana2:'01,11,10',
+				watermelon:'1,1,1,1',
+				apple:'11,11',
+			}
+
+			let wardrobe = {
+				
+				dress:'1,1,1,1',
+				boot:'10,10,11',
+				boot2:'01,01,11',
+				scarf:'10,11,01',
+				scarf2:'01,11,10',
+				vest:'11,11',
+				trousers:'111,101,100',
+				sock:'1,1',
+				sock2:'1,1',
+			}
+
+			let truck = {
+				
+				mattress:'1,1,1,1',
+				couch:'100,111',
+				couch2:'001,111',
+				boxes:'011,110',
+				boxes2:'110,011',
+				washing:'11,11',
+				duffel:'010,111',
+				fridge:'11,11,11',
+				piano:'1111,1001',
+				box:'1',
+				box2:'1',
+				box3:'1',
+				box4:'1',
+			}
+
+			let burger = {
+				lettuce:'100,111',
+				cheese:'111,001',
+				pickle:'001,111',
+				mushroom:'111,010',
+				bacon:'110,011',
+				onion:'011,110',
+				tomato:'11,11',
+				burger:'1111',
+				buntop:'1111',
+				bunbottom:'1111',
+			}
+
+			let marathon = [
+				'000000n00,000n00000,0000000n0',
+				'00n000000,0n00000n0,0000n0000,00n000n00',
+				'0000n0000,000000n0n,00n000000,0n000n000,0000000n0',
+			]
+
+			let jigsaw = [
+			    "1234,1234,1234,1234",
+			    "1111,2222,3333,4444",
+			    "1122,1122,3344,3344",
+			    "3111,3312,3422,4442",
+			    "1113,2213,2433,2444",
+			    "1133,1243,1243,2244",
+			    "3311,3114,3224,2244",
+			    "1114,3214,3224,3324",
+			    "1133,2113,2223,4444",
+			    "3444,3324,3122,1112",
+			    "1124,1124,3224,3334",
+			    "3311,3221,3221,4444"
+			]
+
+			let bridge = [
+				{w:6,l:3,r:3,pylons:[],heights:[]},
+				{w:6,l:7,r:7,pylons:[],heights:[]},
+				{w:13,l:3,r:3,pylons:[6],heights:[2]},
+				{w:13,l:2,r:7,pylons:[6],heights:[3]},
+				{w:17,l:6,r:6,pylons:[4,12],heights:[3,3]},
+				{w:17,l:1,r:8,pylons:[4,12],heights:[2,5]},
+				{w:21,l:8,r:8,pylons:[10],heights:[3]},
+
+				
+			]
+
+			function switchPlayers(iPuzzle,a,b){
+				jigsaw[iPuzzle] = jigsaw[iPuzzle].replaceAll(a,'a').replaceAll(b,'b').replaceAll('b',a).replaceAll('a',b);
+			}
+
+			/*switchPlayers(3,'2','4')
+			switchPlayers(5,'3','4')
+			switchPlayers(6,'1','3')
+			switchPlayers(6,'2','4')
+			switchPlayers(7,'2','3')
+			switchPlayers(9,'1','3')
+			switchPlayers(9,'2','4')
+			switchPlayers(10,'1','4')
+			switchPlayers(10,'2','3')
+			switchPlayers(11,'2','3')
+			switchPlayers(11,'4','1')*/
+
+
+
+
+			function drawBlock(container,map,color,label) {
+				let $b = $('<block>').appendTo(container);
+				for(var n in map){
+					if(map[n] == ',') $('<br>').appendTo($b);
+					else $('<mino>').appendTo($b).attr('n',map[n]).css({background:color})
+				}
+				$('<label>').appendTo($b).text(label);
+			}
+
+			function drawCollection(container,collection){
+				for(var n in collection) drawBlock(container,collection[n],colors[n],n);
+			}
+
+			drawCollection('.standard',standard);
+			drawCollection('.smoothie',smoothie);
+			drawCollection('.wardrobe',wardrobe);
+			drawCollection('.truck',truck);
+			drawCollection('.burger',burger);
+
+			function drawPuzzle(container,map,omit){
+
+				let $b = $('<block>').appendTo(container);
+				for(var n in map){
+					if(map[n] == ',') $('<br>').appendTo($b);
+					else $('<mino>').appendTo($b).attr('p',(omit.indexOf(map[n]) > -1)?0:map[n]);
+				}
+			}
+
+			drawPuzzle('.mar-1',marathon[0],[]);
+			drawPuzzle('.mar-2',marathon[1],[]);
+			drawPuzzle('.mar-3',marathon[2],[]);
+
+			$('<h2>4 player</h2>').appendTo('.jigsaw');
+			for(var i in jigsaw ) drawPuzzle('.jigsaw',jigsaw[i],[]);
+			$('<h2>3 player</h2>').appendTo('.jigsaw');
+			$('<p>Same puzzles, but omitting player 4</p>').appendTo('.jigsaw');
+
+			for(var i in jigsaw ) drawPuzzle('.jigsaw',jigsaw[i],['4']);
+			$('<h2>2 player</h2>').appendTo('.jigsaw');
+			$('<p>Same puzzles, but omitting players 3 and 4</p>').appendTo('.jigsaw');
+			for(var i in jigsaw ) drawPuzzle('.jigsaw',jigsaw[i],['3','4']);
+
+			function drawBridge(container,spec){
+
+				let $b = $('<block class="bridge">').appendTo(container);
+				let h = 10;
+				for(var y = 0; y <= h; y++){
+
+					for(var x = -2; x < spec.w + 2; x++){
+
+						let p = 'n';
+						if(x < 0 && y >= (h-spec.l)) p = '0';
+						if(x >= spec.w && y >= (h-spec.r)) p = '0';
+
+						let iPylon = spec.pylons.indexOf(x);
+
+						if( iPylon > -1 && y >= (h-spec.heights[iPylon])) p = '0'
+
+						if(y>=h) p = '2';
+
+						$('<mino>').appendTo($b).attr('p',p);
+					}
+					$('<br>').appendTo($b);
+				}
+
+				$('<label>').appendTo($b).text('width('+spec.w+') left('+spec.l+') right('+spec.r+') pylons('+spec.pylons+') at heights('+spec.heights+')');
+			}
+
+
+			for(var b in bridge ) drawBridge('.bridges',bridge[b])
+
+		});
+	</script>
+	<style type="text/css">
+
+		label{
+			position: absolute;
+			top: -10px;
+			left: 0px;
+			right: 0px;
+			text-align: center;
+			display: block;
+			font-size: 10px;
+		}
+		blocks{
+			display: block;
+		}
+		body{
+			font-family: sans-serif;
+			color: #333;
+			max-width: 1000px;
+			margin: auto;
+			background: gray;
+		}
+
+		stream{
+			background: white;
+			padding: 50px;
+			display: block;
+		}
+
+		block{
+			display: inline-block;
+			white-space: nowrap;
+			line-height: 0px;
+			margin: 20px;
+			position: relative;
+		}
+
+		mino{
+			display: inline-block;
+			width: 20px;
+			height: 20px;
+			background: blue;
+			box-sizing: border-box;
+			border: 1px solid rgba(0,0,0,0.2);
+			border-left: 1px solid rgba(255,255,255,0.2);
+			border-top: 1px solid rgba(255,255,255,0.2);
+			border-radius: 5px;
+		}
+
+		mino[n='0']{
+			opacity: 0;
+
+		}
+
+		mino[p='0']{
+			background: lightgray;
+		}
+
+		mino[p='n']{
+			opacity: 0;
+		}
+
+		mino[p='1']{ background: red; }
+		mino[p='2']{ background: blue; }
+		mino[p='3']{ background: green; }
+		mino[p='4']{ background: orange; }
+
+		h1{
+			border-top: 1px solid black;
+			padding-top: 20px;
+		}
+
+		.bridge{
+			border-top: 2px dashed red;
+		}
+	</style>
+</head>
+<body>
+	<stream>
+		
+		<h1>Marathon</h1>
+		<h2>Bag</h2>
+		<blocks class='standard'></blocks>
+		<p>Standard Tetriminos</p>
+		<p>Random Rotations</p>
+		<h2>Levels</h2>
+		<p>Generate random lines with gaps in this sequence</p>
+		<ol>
+			<li>
+				<b>1 Player - Clear 3 lines</b><br>3 random lines<br>(single gap in each)
+				<blocks class='mar-1'></blocks>
+			</li>
+			<li>
+				<b>2 Players - Clear 4 lines</b><br>4 random lines<br>(alternating 1 or 2 gaps)
+				<blocks class='mar-2'></blocks>
+			</li>
+			<li>
+				<b>2 players - Clear 5 lines</b><br>5 random lines<br>(alternating 1 or 2 gaps)
+				<blocks class='mar-3'></blocks>
+			</li>
+			<li>
+				Continue adding more lines (alternating 1 or 2 gaps)
+			</li>
+		</ol>
+		<p>Each player gets a turn on each level-type before continuing</p>
+		<h1>Packing</h1>
+		<h2>Bag</h2>
+		<p>Rigged Bags (as below) delivered in random order. Renew bag when emptied.</p>
+		<p>No Rotations (deliver all blocks unrotated)</p>
+		<h2>Levels</h2>
+		<ol>
+			<li>
+				Smoothie (7 x 13 matrix)
+				<blocks class='smoothie'></blocks>
+			</li>
+			<li>
+				Wardrobe (10 x 10 matrix)
+				<blocks class='wardrobe'></blocks>
+			</li>
+			<li>
+				Moving Truck (14 x 10 matrix)
+				<blocks class='truck'></blocks>
+			</li>
+		</ol>
+		<h1>Jigsaw</h1>
+		<blocks class='jigsaw'></blocks>
+		<h1>Stacking</h1>
+		<h2>Bag</h2>
+		<blocks class='burger'></blocks>
+		<p>Only deliver ingredients relevant to current recipes</p>
+		<p>No rotations (deliver all blocks unrotated)</p>
+		<h2>Levels</h2>
+		<p>Each player moves up a category after completing a recipe</p>
+		<ol>
+			<li>2 ingredients (1 of each)</li>
+			<li>2 ingredients (1 or 2 of each)</li>
+			<li>2 ingredients (2 or 3 of each)</li>
+			<li>3 ingredients (1 of each)</li>
+			<li>3 ingredients (1 or 2 of each)</li>
+			<li>2 ingredients (4 of each)</li>
+			<li>4 ingredients (1 of each)</li>
+			<li>4 ingredients (1 or 2 of each)</li>
+			<li>5 ingredients (1 of each)</li>
+			<li>5 ingredients (1 or 2 of each)</li>
+			<li>7 ingredients (1 of each)</li>
+		</ol>
+		<p>These could be generated by always including a burger, and choosing a random accompaniment with automatic names like "double burger & triple cheese"</p>
+
+		<h1>Bridge</h1>
+		<h2>Bag</h2>
+		<p>Standard Tetriminos</p>
+		<p>Random Rotations</p>
+		<h2>Levels</h2>
+		<div class="bridges">
+			
+		</div>
+		<h1>Dome</h1>
+		<p>Standard Tetriminos (Always show the 7 standard blocks)</p>
+		<p>Random Rotations</p>
+
+		<h2>Levels</h2>
+		<p>Randomly scatter the holes across the breadth of the dome.</p>
+		<p>Allow 1.5 seconds worth of rejection time per hole. (e.g. 5 holes is 5 x 1.5 = 7.5 seconds)</p>
+		<ol>
+			<li>1 hole</li>
+			<li>2 holes</li>
+			<li>3 holes</li>
+			<li>4 holes</li>
+			<li>5 holes</li>
+			<li>6 holes</li>
+			<li>7 holes</li>
+			<li>6 holes</li>
+			<li>5 holes</li>
+			<li>4 holes</li>
+			<li>3 holes</li>
+			<li>2 holes</li>
+			<li>1 hole (the T)</li>
+		</ol>
+	</stream>
+</body>
+</html>
