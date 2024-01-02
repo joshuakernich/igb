@@ -231,6 +231,26 @@
 				}
 			]
 
+			let palettes = [
+
+				['#00ff00','#00d16f','#bbff00','#FFff00','#ffc700','#ffd760'], //greens and yellows
+				['#FF0000','#bf0085','#ff6d6d','#ff00ff','#d400ff','#ff5eff'], //reds and pinks
+				['#0000ff','#3b3e9b','#007fff','#00FFFF','#00e29e','#5be9ff'], //blues and cyans
+				['#FFff00','#ffc700','#ffd760','#FF6A00','#e03f00','#ffa100'], //yellows and oranges
+				['#00ff00','#00d16f','#bbff00','#00FFFF','#00e29e','#5be9ff'], //greens and cyans
+
+				['#FF0000','#bf0085','#ff6d6d'], //reds
+				['#ff00ff','#d400ff','#ff5eff'], //pinks
+				['#00ff00','#00d16f','#bbff00'], //greens
+				['#0000ff','#3b3e9b','#007fff'], //blues
+				['#FF6A00','#e03f00','#ffa100'], //oranges
+				['#FFff00','#ffc700','#ffd760'], //yellows
+				['#00FFFF','#00e29e','#5be9ff'], //cyans
+
+			]
+
+			let dome = [1,2,3,4,5,6,7,6,5,4,3,2,1];
+
 			function switchPlayers(iPuzzle,a,b){
 				jigsaw[iPuzzle] = jigsaw[iPuzzle].replaceAll(a,'a').replaceAll(b,'b').replaceAll('b',a).replaceAll('a',b);
 			}
@@ -317,11 +337,12 @@
 			$('<h2>4 player</h2>').appendTo('.jigsaw');
 			for(var i in jigsaw ) drawPuzzle('.jigsaw',jigsaw[i],[]);
 			$('<h2>3 player</h2>').appendTo('.jigsaw');
-			$('<p>Same puzzles, but omitting player 4 (yellow)</p>').appendTo('.jigsaw');
+			$('<p>Same puzzles, but omitting player 4 (yellow).</p>').appendTo('.jigsaw');
 
 			for(var i in jigsaw ) drawPuzzle('.jigsaw',jigsaw[i],['4']);
 			$('<h2>2 player</h2>').appendTo('.jigsaw');
-			$('<p>Same puzzles, but omitting players 3 (green) and 4 (yellow)</p>').appendTo('.jigsaw');
+			$('<p>Same puzzles, but omitting players 3 (green) and 4 (yellow).</p>').appendTo('.jigsaw');
+			$('<p>For 2 player, blocks should also appear at random rotations with a marathon-style rotation mechanic.</p>').appendTo('.jigsaw');
 			for(var i in jigsaw ) drawPuzzle('.jigsaw',jigsaw[i],['3','4']);
 
 			function drawBridge(container,spec){
@@ -355,7 +376,17 @@
 			for(var b in bridge ) drawBridge('.bridges',bridge[b])
 
 			
+			function drawPalette($el,p){
+				let $p = $('<palette>').appendTo($el);
+				for(var n in p){
+					$('<swatch>').appendTo($p).css({'background':p[n]})
+				}
+			}
 
+			for(var d in dome){
+				let $li = $('<li>').appendTo('.dome').text(dome[d] + ' holes');
+				drawPalette($li,palettes[d]);
+			}
 		});
 	</script>
 	<style type="text/css">
@@ -382,6 +413,17 @@
 			max-width: 1000px;
 			margin: auto;
 			background: gray;
+		}
+
+		palette{
+			display: inline-block;
+			margin-left: 10px;
+		}
+
+		swatch{
+			display: inline-block;
+			width: 15px;
+			height: 15px;
 		}
 
 		stream{
@@ -434,7 +476,9 @@
 		}
 
 		.bridge{
-			border-top: 2px dashed red;
+			border-top: 4px dashed red;
+			border-left: 1px dashed red;
+			border-right: 1px dashed red;
 		}
 	</style>
 </head>
@@ -447,7 +491,7 @@
 		<p>Standard Tetriminos</p>
 		<p>Random Rotations</p>
 		<h2>Levels</h2>
-		<p>Generate random lines with gaps in this sequence</p>
+		<p>Each player gets a turn on each on these level-types before continuing.</p>
 		<ol>
 			<li>
 				<b>1 Player - Clear 3 lines</b><br>3 random lines<br>(single gap in each)
@@ -465,7 +509,7 @@
 				Continue adding more lines (alternating 1 or 2 gaps)
 			</li>
 		</ol>
-		<p>Each player gets a turn on each level-type before continuing</p>
+		
 		<h1>Packing</h1>
 		<h2>Bag</h2>
 		<p>Rigged Bags (as below) delivered in random order. Renew bag when emptied.</p>
@@ -516,20 +560,9 @@
 		<h2>Levels</h2>
 		<p>Randomly scatter the holes across the breadth of the dome.</p>
 		<p>Allow 1.5 seconds worth of rejection time per hole. (e.g. 5 holes is 5 x 1.5 = 7.5 seconds)</p>
-		<ol>
-			<li>1 hole</li>
-			<li>2 holes</li>
-			<li>3 holes</li>
-			<li>4 holes</li>
-			<li>5 holes</li>
-			<li>6 holes</li>
-			<li>7 holes</li>
-			<li>6 holes</li>
-			<li>5 holes</li>
-			<li>4 holes</li>
-			<li>3 holes</li>
-			<li>2 holes</li>
-			<li>1 hole (the T)</li>
+		<ol class="dome">
+			
+			
 		</ol>
 	</stream>
 </body>
