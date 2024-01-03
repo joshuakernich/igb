@@ -59,6 +59,11 @@
 			top: 120px;
 		}
 
+		score h1{
+			text-align: center;
+			font-size: 50px;
+		}
+
 		scoreline{
 			display: block;
 			height: 60px;
@@ -93,6 +98,7 @@
 
 
 		.pink { color: #FE6EFF; border-color: #FE6EFF; }
+		.secondary { color:#05edff }
 		.red { color: red; border-color: red; }
 		.blue { color: blue; border-color:blue }
 		.green { color: limegreen; border-color:limegreen; }
@@ -158,7 +164,7 @@
 		recipe{
 			width: 240px;
 			position: absolute;
-			background: rgba(0, 0, 0, 0.8);
+			background: rgba(0, 0, 0, 0.7);
 			bottom: 120px;
 			left: 60px;
 			box-sizing: border-box;
@@ -233,6 +239,21 @@
 			margin-bottom: 10px;
 		}
 
+		bonus{
+			text-align: center;
+			font-size: 50px;
+			display: block;
+			color: #FE6EFF;
+			margin-top: 250px;
+		}
+
+		bonusname{
+			text-align: center;
+			font-size: 100px;
+			display: block;
+
+		}
+
 	</style>
 </head>
 <body>
@@ -290,7 +311,7 @@
 	</screen>
 	<h1>Packing</h1>
 	<ol>
-		<li>Game fades in, “Smoothie” already visible (“Wardrobe”, “Moving Truck”) </li>
+		<li>Game fades in, “BONUS ROUND - SMOOTHIE" already visible (“Wardrobe”, “Moving Truck”) </li>
 		<li>“Player One” appears </li>
 		<li>“Pack the Smoothie with fruit” with pic of fruit (2 seconds)
 		<br>“Pack the Wardrobe” with pic of clothes
@@ -301,7 +322,8 @@
 		<li>At end of game, main scoreboard appears</li>
 	</ol>
 	<screen style='background-image: url(bg-smoothie-empty.png);'>
-		<header>SMOOTHIE</header>
+		<bonus>BONUS ROUND</bonus>
+		<bonusname>SMOOTHIE</bonusname>
 	</screen>
 	<screen style='background-image: url(bg-smoothie-empty.png);'>
 		<instruct>
@@ -355,16 +377,16 @@
 			MAKE A PERFECT CUBE<br>
 			<img width=200px src="instruct-cube.png"/>
 		</instruct>
-
 	</screen>
 	<screen  style='background-image: url(bg-warehouse.png);'>
+		<timer>5:27.26</timer>
+	</screen>
+
+	<screen  style='background-image: url(bg-warehouse.png);'>
 		<score>
-			<h1 style="font-size:81px;">WAREHOUSE</h1>
-			<scoreline><name class='red'>Player 1</name><points>15</points></scoreline>
-			<scoreline class='winner'><name class='blue'>Player 2</name><points class='crowned'>18</points></scoreline>
-			<scoreline><name class='green'>Player 3</name><points>16</points></scoreline>
-			<scoreline><name class='yellow'>Player 4</name><points>12</points></scoreline>
-			<scoreline class='pink'><name>TEAM TOTAL</name><points>87</points><tackon>+18</tackon></scoreline>
+			<h1>WAREHOUSE</h1>
+			<scoreline><name  class='secondary'>TEAM CUBES</name><points>+12</points></scoreline>
+			<scoreline class='pink'><name>TEAM TOTAL</name><points>87</points><tackon>+12</tackon></scoreline>
 		</score>
 	</screen>
 	<h1>STACKING</h1>
@@ -402,13 +424,23 @@
 			<ing><img src="ing-bottom.png"/></ing>
 		</recipe>
 		<recipe>
-			<h1>Hold the onion</h1>
+			<h1>Double Cheese</h1>
 			<ing><img src="ing-top.png"/></ing>
-			<ing thick><img src="ing-tomato.png"/><counter>1/2</counter></ing>
 			<ing><img src="ing-burger.png"/><counter>1/2</counter></ing>
-			<ing thick><img src="ing-cheese.png"/><counter>3/3</counter></ing>
+			<ing thick><img src="ing-cheese.png"/><counter>0/2</counter></ing>
 			<ing><img src="ing-bottom.png"/></ing>
 		</recipe>
+		<timer>5:27.26</timer>
+	</screen>
+	<screen  style='background-image: url(bg-diner.png);'>
+		<score>
+			<h1>DINER</h1>
+			<scoreline><name class='red'>Player 1</name><points>15</points></scoreline>
+			<scoreline class='winner'><name class='blue'>Player 2</name><points class='crowned'>18</points></scoreline>
+			<scoreline><name class='green'>Player 3</name><points>16</points></scoreline>
+			<scoreline><name class='yellow'>Player 4</name><points>12</points></scoreline>
+			<scoreline class='pink'><name>TEAM TOTAL</name><points>87</points><tackon>+18</tackon></scoreline>
+		</score>
 	</screen>
 	<h1>BRIDGE</h1>
 	<ol>
@@ -417,8 +449,8 @@
 		<li>“Build a bridge” appears with pic of bridge (2 seconds)</li>
 		<li>“Here they come” (1 second)</li>
 		<li>“3” “2” “1” countdown</li>
-		<li>Bridge tally appears after each bridge</li>
-		<li>At end of game, main scoreboard appears</li>
+		<li>Bridge score appends to list after each bridge</li>
+		<li>At end of game, total for all bridges is added to tally</li>
 	</ol>
 	<screen style='background-image: url(bg-bridge.png);'>
 		<header>CITY PARK</header>
@@ -437,18 +469,18 @@
 	</screen>
 	<screen style='background-image: url(bg-bridge.png);'>
 		<score>
-			<h1 style="font-size: 48px;">BRIDGE COMPLETE</h1>
-			<scoreline><name>Bridge 1</name><points>+3</points></scoreline>
-			<scoreline><name>Bridge 2</name><points>+5</points></scoreline>
+			<h1>BRIDGE COMPLETE</h1>
+			<scoreline><name class='secondary'>Bridge 1</name><points>+3</points></scoreline>
+			<scoreline><name class='secondary'>Bridge 2</name><points>+5</points></scoreline>
 		</score>
 	</screen>
 	<screen style='background-image: url(bg-bridge.png);'>
 		<score>
-			<h1 style="font-size: 80px;">CITY PARK</h1>
-			<scoreline><name>Bridge 1</name><points>+3</points></scoreline>
-			<scoreline><name>Bridge 2</name><points>+5</points></scoreline>
-			<scoreline><name>Bridge 3</name><points>+7</points></scoreline>
-			<scoreline><name>Bridge 4</name><points>+3</points></scoreline>
+			<h1>CITY PARK</h1>
+			<scoreline><name class='secondary'>Bridge 1</name><points>+3</points></scoreline>
+			<scoreline><name class='secondary'>Bridge 2</name><points>+5</points></scoreline>
+			<scoreline><name class='secondary'>Bridge 3</name><points>+7</points></scoreline>
+			<scoreline><name class='secondary'>Bridge 4</name><points>+3</points></scoreline>
 			<scoreline class='pink'><name>TEAM TOTAL</name><points>87</points><tackon>+18</tackon></scoreline>
 		</score>
 	</screen>
@@ -457,17 +489,26 @@
 		<li>Game fades in, “The Dome” already visible </li>
 		<li>“All players” appears</li>
 		<li>Blocks appear</li>
-		<li>“Choose your blocks” with pic of tapping the blocks (2 seconds)</li>
-		<li>“Seal the dome” with pic of block falling into hole (2 seconds)</li>
+		<li>“CHOOSE YOUR BLOCK” with pic of tapping the blocks (2 seconds)</li>
+		<li>“SEAL THE DOME” with pic of block falling into hole (2 seconds)</li>
 		<li>No scoreboard</li>
 	</ol>
+	<screen style='background-image: url(bg-dome.png);'>
+		<header>THE DOME</header>
+	</screen>
+	<screen style='background-image: url(bg-dome.png);'>
+		<instruct>CHOOSE YOUR BLOCK</instruct>
+	</screen>
+	<screen style='background-image: url(bg-dome.png);'>
+		<instruct>SEAL THE DOME</instruct>
+	</screen>
 	<h1>FINALE</h1>
 	<ol>
 		<li>Main scoreboard appers with final tally</li>
 	</ol>
 	<screen>
 		<score>
-			<h1 style="font-size: 66px;">FINAL SCORE</h1>
+			<h1>FINAL SCORE</h1>
 			<scoreline><name class='red'>Player 1</name><points>47</points></scoreline>
 			<scoreline><name class='blue'>Player 2</name><points>55</points></scoreline>
 			<scoreline><name class='green'>Player 3</name><points class='crowned'>65</points></scoreline>
