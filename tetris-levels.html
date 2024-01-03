@@ -151,13 +151,12 @@
 
 			let bridge = [
 				{w:6,l:3,r:3,pylons:[],heights:[]},
-				{w:6,l:7,r:7,pylons:[],heights:[]},
-				{w:13,l:3,r:3,pylons:[6],heights:[2]},
-				{w:13,l:2,r:7,pylons:[6],heights:[3]},
-				{w:17,l:6,r:6,pylons:[4,12],heights:[3,3]},
-				{w:17,l:1,r:8,pylons:[4,12],heights:[2,5]},
-				{w:21,l:8,r:8,pylons:[10],heights:[3]},
-
+				{w:12,l:7,r:7,pylons:[],heights:[]},
+				{w:17,l:5,r:5,pylons:[8],heights:[4]},
+				{w:17,l:5,r:13,pylons:[8],heights:[7]},
+				{w:21,l:6,r:6,pylons:[6,14],heights:[3,3]},
+				{w:26,l:5,r:17,pylons:[8,17],heights:[2,5]},
+				{w:26,l:20,r:20,pylons:[13],heights:[6]},
 				
 			]
 
@@ -349,7 +348,7 @@
 
 				let $li = $('<li>').appendTo(container);
 				let $b = $('<block class="bridge">').appendTo($li);
-				let h = 10;
+				let h = 23;
 				for(var y = 0; y <= h; y++){
 
 					for(var x = -2; x < spec.w + 2; x++){
