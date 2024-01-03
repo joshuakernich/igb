@@ -220,14 +220,41 @@
 			content: "";
 		}
 
+		ol{
+			font-size: 12px;
+			text-align: left;
+			display: inline-block;
+			width: 1280px;
+
+			box-sizing: border-box;
+		}
+
+		li{
+			margin-bottom: 10px;
+		}
+
 	</style>
 </head>
 <body>
 	<h1>Retro</h1>
+	<ol>
+		<li>“Clear a Line” appears (2 seconds)</li>
+	</ol>
 	<screen>
 		<header class="smaller">CLEAR A LINE</header>
 	</screen>
 	<h1>Marathon</h1>
+	<ol>
+		<li>Game fades in, “Downtown” already visible</li>
+		<li>Camera pans down to level (already in place)</li>
+		<li>“Player One” appears and player Tetrimino appears
+		<li>“Move side-to-side” appears (for 2 seconds)</li>
+		<li>“Nod or Squat to slam” appears (until they slam or 2 seconds)</li>
+		<li>“Clear 3 lines” appears (for 2 seconds)</li>
+		<li>When a line is cleared, a message appears “2 lines left” or “1 line left” etc. (for 1 second)</li>
+		<li>When last line is cleared, message appears “Round Complete”</li>
+		<li>After final player, main scoreboard appears</li>
+	</ol>
 	<screen style='background-image: url(bg-downtown.png);'>
 		<header>DOWNTOWN</header>
 	</screen>
@@ -262,6 +289,17 @@
 		</score>
 	</screen>
 	<h1>Packing</h1>
+	<ol>
+		<li>Game fades in, “Smoothie” already visible (“Wardrobe”, “Moving Truck”) </li>
+		<li>“Player One” appears </li>
+		<li>“Pack the Smoothie with fruit” with pic of fruit (2 seconds)
+		<br>“Pack the Wardrobe” with pic of clothes
+		<br>“Pack the Moving Truck” with pic of stuff</li>
+		<li>“Get Ready” (1 second)</li>
+		<li>“3” “2” “1” countdown</li>
+		<li>Player tally appears on death</li>
+		<li>At end of game, main scoreboard appears</li>
+	</ol>
 	<screen style='background-image: url(bg-smoothie-empty.png);'>
 		<header>SMOOTHIE</header>
 	</screen>
@@ -301,7 +339,42 @@
 			<scoreline class='pink'><name>TEAM TOTAL</name><points>87</points><tackon>+18</tackon></scoreline>
 		</score>
 	</screen>
+	<h1>JIGSAW</h1>
+	<ol>
+		<li>Game fades in, “Warehouse” already visible</li>
+		<li>“Player X” appears </li>
+		<li>Tetriminos fly in</li>
+		<li>“Make a perfect cube” appears (2 seconds)</li>
+		<li>At end of game, main scoreboard appears</li>
+	</ol>
+	<screen  style='background-image: url(bg-warehouse.png);'>
+		<header>WAREHOUSE</header>
+	</screen>
+	<screen  style='background-image: url(bg-warehouse.png);'>
+		<instruct>
+			MAKE A PERFECT CUBE<br>
+			<img width=200px src="instruct-cube.png"/>
+		</instruct>
+
+	</screen>
+	<screen  style='background-image: url(bg-warehouse.png);'>
+		<score>
+			<h1 style="font-size:81px;">WAREHOUSE</h1>
+			<scoreline><name class='red'>Player 1</name><points>15</points></scoreline>
+			<scoreline class='winner'><name class='blue'>Player 2</name><points class='crowned'>18</points></scoreline>
+			<scoreline><name class='green'>Player 3</name><points>16</points></scoreline>
+			<scoreline><name class='yellow'>Player 4</name><points>12</points></scoreline>
+			<scoreline class='pink'><name>TEAM TOTAL</name><points>87</points><tackon>+18</tackon></scoreline>
+		</score>
+	</screen>
 	<h1>STACKING</h1>
+	<ol>
+		<li>Game fades in, “Diner” already visible </li>
+		<li>“Player X” appears </li>
+		<li>Game starts</li>
+		<li>“Stack your burger” appears (2 seconds)</li>
+		<li>At end of game, main scoreboard appears</li>
+	</ol>
 	<screen style='background-image: url(bg-diner.png);'>
 		<header>DINER</header>
 	</screen>
@@ -338,6 +411,15 @@
 		</recipe>
 	</screen>
 	<h1>BRIDGE</h1>
+	<ol>
+		<li>Game fades in, “City Park” already visible </li>
+		<li>“Player X” appears</li>
+		<li>“Build a bridge” appears with pic of bridge (2 seconds)</li>
+		<li>“Here they come” (1 second)</li>
+		<li>“3” “2” “1” countdown</li>
+		<li>Bridge tally appears after each bridge</li>
+		<li>At end of game, main scoreboard appears</li>
+	</ol>
 	<screen style='background-image: url(bg-bridge.png);'>
 		<header>CITY PARK</header>
 	</screen>
@@ -370,7 +452,19 @@
 			<scoreline class='pink'><name>TEAM TOTAL</name><points>87</points><tackon>+18</tackon></scoreline>
 		</score>
 	</screen>
+	<h1>DOME</h1>
+	<ol>
+		<li>Game fades in, “The Dome” already visible </li>
+		<li>“All players” appears</li>
+		<li>Blocks appear</li>
+		<li>“Choose your blocks” with pic of tapping the blocks (2 seconds)</li>
+		<li>“Seal the dome” with pic of block falling into hole (2 seconds)</li>
+		<li>No scoreboard</li>
+	</ol>
 	<h1>FINALE</h1>
+	<ol>
+		<li>Main scoreboard appers with final tally</li>
+	</ol>
 	<screen>
 		<score>
 			<h1 style="font-size: 66px;">FINAL SCORE</h1>
