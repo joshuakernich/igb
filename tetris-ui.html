@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Tetris UI</title>
+	<script type="text/javascript" src="jq.js"></script>
+	<script type="text/javascript">
+		$(function(){
+
+
+		})
+	</script>
+	<style type="text/css">
+
+		@font-face {
+		  font-family: TetrisFont;
+		  src: url(joystixmonospace.ttf);
+		}
+
+		body{
+			background: black;
+			font-family: TetrisFont;
+			font-size: 30px;
+			color: white;
+			text-align: center;
+		}
+
+		screen{
+			width: 1280px;
+			height: 720px;
+			background-color: #333;
+			
+		
+			display: inline-block;
+			text-align: left;
+			position: relative;
+			margin-bottom: 20px;
+
+			background-size: cover;
+		}
+
+		h1{
+			font-weight: none;
+			padding: 0px;
+			margin: 0px;
+			font-size: 91px;
+			margin-bottom: 20px;
+			white-space: nowrap;
+		}
+
+		score{
+			display: block;
+			width: 600px;
+			margin: auto;
+			position: absolute;
+			left: 0px;
+			right: 0px;
+			top: 120px;
+		}
+
+		scoreline{
+			display: block;
+			height: 60px;
+			line-height: 56px;
+			position: relative;
+			background: rgba(0, 0, 0, 0.8);
+			margin-bottom: 5px;
+			border: 2px solid rgba(0, 0, 0, 0.8);
+			box-sizing: border-box;
+		}
+
+		name{
+			position: absolute;
+			left: 15px;
+			top: 0px;
+			display:  block;
+		}
+
+		points{
+			position: absolute;
+			top: 0px;
+			right: 15px;
+			display: block;
+		}
+
+		tackon{
+			position: absolute;
+			width: 100px;
+			right: -115px;
+			color: white;
+		}
+
+
+		.pink { color: #FE6EFF; border-color: #FE6EFF; }
+		.red { color: red; border-color: red; }
+		.blue { color: blue; border-color:blue }
+		.green { color: limegreen; border-color:limegreen; }
+		.yellow { color: yellow; border-color:yellow; }
+
+
+		totals{
+			position: absolute;
+			top: 30px;
+			right: 30px;
+			width: 350px;
+		}
+
+		header{
+			line-height: 720px;
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			text-align: center;
+			display: block;
+			color: white;
+			font-size: 100px;
+		}
+
+		timer{
+			position: absolute;
+			right: 30px;
+			top: 30px;
+			color: white;
+			font-size: 30px;
+		}
+
+		.crowned:before{
+			content: "";
+			width: 35px;
+			height: 30px;
+			background-image: url(icon-crown.png);
+			background-size: 100%;
+			background-position: center;
+			display: inline-block;
+			vertical-align: middle;
+			margin-right: 20px;
+			background-repeat: no-repeat;
+		}
+
+		.smaller{
+			font-size: 50px;
+		}
+
+		instruct{
+			font-size: 50px;
+			text-align: center;
+			display: block;
+			margin-top: 150px;
+		}
+
+		instruct img{
+			margin-top: 50px;
+			image-rendering:pixelated;
+		}
+
+		recipe{
+			width: 240px;
+			position: absolute;
+			background: rgba(0, 0, 0, 0.8);
+			bottom: 120px;
+			left: 60px;
+			box-sizing: border-box;
+			
+
+			font-size: 20px;
+			padding-bottom: 10px;
+			border: 2px solid red;
+		}
+
+		recipe:last-of-type{
+			left: auto;
+			right: 60px;
+			border: 2px solid blue;
+		}
+
+		recipe h1{
+			
+			text-align: center;
+			white-space: normal;
+			font-size: 20px;
+			padding: 10px;
+			background: red;
+		}
+
+		recipe:last-of-type h1{
+			background: blue;
+		}
+
+		ing{
+			display: block;
+			text-align: center;
+			position: relative;
+			height: 30px;
+			line-height: 30px;
+			margin-bottom: 10px;
+			left: -35px;
+		}
+
+		ing[thick] {
+			line-height: 60px;
+			height: 60px;
+		}
+
+		ing img{
+			height: 30px;
+		}
+
+		ing[thick] img {
+			height: 60px;
+		}
+
+		ing counter{
+			position: absolute;
+			right: -15px;
+		}
+
+		ing counter:before{
+			content: "";
+		}
+
+	</style>
+</head>
+<body>
+	<h1>Retro</h1>
+	<screen>
+		<header class="smaller">CLEAR A LINE</header>
+	</screen>
+	<h1>Marathon</h1>
+	<screen>
+		<header>DOWNTOWN</header>
+	</screen>
+	<screen>
+		<header class="smaller">MOVE SIDE-To-side</header>
+	</screen>
+	<screen>
+		<instruct>
+			Nod or squat to slam<br>
+			<img width=50% src="gestures-slam.gif"/>
+		</instruct>
+	</screen>
+	<screen>
+		<header class="smaller">CLEAR 3 LINES</header>
+	</screen>
+	<screen>
+		<header class="smaller">2 LINES LEFT</header>
+		<timer>5:27.26</timer>
+	</screen>
+	<screen>
+		<header class="smaller">ROUND COMPLETE</header>
+		<timer>5:27.26</timer>
+	</screen>
+	<screen>
+		<score>
+			<h1>DOWNTOWN</h1>
+			<scoreline><name class='red'>Player 1</name><points>+5</points></scoreline>
+			<scoreline><name class='blue'>Player 2</name><points>+4</points></scoreline>
+			<scoreline><name class='green'>Player 3</name><points>+6</points></scoreline>
+			<scoreline><name class='yellow'>Player 4</name><points class='crowned'>+8</points></scoreline>
+			<scoreline class='pink'><name>TEAM TOTAL</name><points>87</points><tackon>+23</tackon></scoreline>
+		</score>
+	</screen>
+	<h1>Packing</h1>
+	<screen style='background-image: url(bg-smoothie-empty.png);'>
+		<header>SMOOTHIE</header>
+	</screen>
+	<screen style='background-image: url(bg-smoothie-empty.png);'>
+		<instruct>
+			PACK THE SMOOTHIE<br>WITH FRUIT<br>
+			<img width=50% src="fruit-pixelated.png"/>
+		</instruct>
+	</screen>
+	<screen style='background-image: url(bg-smoothie-empty.png);'>
+		<header class="smaller">GET READY</header>
+	</screen>
+	<screen style='background-image: url(bg-smoothie-empty.png);'>
+		<header class="smaller">3</header>
+	</screen>
+	<screen style='background-image: url(bg-smoothie-full.png);'>
+		<totals>
+			<scoreline ><name class='red'>PLAYER 1</name><points>15</points></scoreline>
+			<scoreline ><name class='blue'>PLAYER 2</name><points>16</points></scoreline>
+			<scoreline><name class='green'>PLAYER 3</name><points>14</points></scoreline>
+		</totals>
+		<score style='top:200px;right:auto;left:60px;'>
+			<scoreline><name>Oranges</name><points>+5</points></scoreline>
+			<scoreline><name>Apples</name><points>+4</points></scoreline>
+			<scoreline><name>Bananas</name><points>+6</points></scoreline>
+			<scoreline><name>Watermelons</name><points>+8</points></scoreline>
+			<scoreline class='yellow'><name>PLAYER 4 TOTAL</name><points>15</points></scoreline>
+		</score>
+	</screen>
+	<screen  style='background-image: url(bg-smoothie-full.png);'>
+		<score>
+			<h1>SMOOTHIE</h1>
+			<scoreline><name class='red'>Player 1</name><points>15</points></scoreline>
+			<scoreline class='winner'><name class='blue'>Player 2</name><points class='crowned'>18</points></scoreline>
+			<scoreline><name class='green'>Player 3</name><points>16</points></scoreline>
+			<scoreline><name class='yellow'>Player 4</name><points>12</points></scoreline>
+			<scoreline class='pink'><name>TEAM TOTAL</name><points>87</points><tackon>+18</tackon></scoreline>
+		</score>
+	</screen>
+	<h1>STACKING</h1>
+	<screen style='background-image: url(bg-diner.png);'>
+		<header>DINER</header>
+	</screen>
+	<screen style='background-image: url(bg-diner.png);'>
+		<instruct>
+			STACK THE BURGER<br>
+			<img width=250px src="instruct-burger.png"/>
+		</instruct>
+	</screen>
+	<screen style='background-image: url(bg-diner.png);'>
+		<header class="smaller">GET READY</header>
+	</screen>
+	<screen style='background-image: url(bg-diner.png);'>
+		<header class="smaller">3</header>
+	</screen>
+	<screen style='background-image: url(bg-diner.png);'>
+		<recipe>
+			<h1>Hold the onion</h1>
+			<ing><img src="ing-top.png"/></ing>
+			<ing thick><img src="ing-pickle.png"/><counter>0/1</counter></ing>
+			<ing thick><img src="ing-lettuce.png"/><counter>1/2</counter></ing>
+			<ing thick><img src="ing-tomato.png"/><counter>1/2</counter></ing>
+			<ing><img src="ing-burger.png"/><counter>1/2</counter></ing>
+			<ing thick><img src="ing-cheese.png"/><counter>3/3</counter></ing>
+			<ing><img src="ing-bottom.png"/></ing>
+		</recipe>
+		<recipe>
+			<h1>Hold the onion</h1>
+			<ing><img src="ing-top.png"/></ing>
+			<ing thick><img src="ing-tomato.png"/><counter>1/2</counter></ing>
+			<ing><img src="ing-burger.png"/><counter>1/2</counter></ing>
+			<ing thick><img src="ing-cheese.png"/><counter>3/3</counter></ing>
+			<ing><img src="ing-bottom.png"/></ing>
+		</recipe>
+	</screen>
+	<h1>BRIDGE</h1>
+	<screen style='background-image: url(bg-bridge.png);'>
+		<header>CITY PARK</header>
+	</screen>
+	<screen style='background-image: url(bg-bridge.png);'>
+		<instruct>
+			BUILD A BRIDGE<br>
+			<img width=40% src="instruct-bridge.png"/>
+		</instruct>
+	</screen>
+	<screen style='background-image: url(bg-bridge.png);'>
+		<header class="smaller">GET READY</header>
+	</screen>
+	<screen style='background-image: url(bg-bridge.png);'>
+		<header class="smaller">3</header>
+	</screen>
+	<screen style='background-image: url(bg-bridge.png);'>
+		<score>
+			<h1 style="font-size: 48px;">BRIDGE COMPLETE</h1>
+			<scoreline><name>Bridge 1</name><points>+3</points></scoreline>
+			<scoreline><name>Bridge 2</name><points>+5</points></scoreline>
+		</score>
+	</screen>
+	<screen style='background-image: url(bg-bridge.png);'>
+		<score>
+			<h1 style="font-size: 80px;">CITY PARK</h1>
+			<scoreline><name>Bridge 1</name><points>+3</points></scoreline>
+			<scoreline><name>Bridge 2</name><points>+5</points></scoreline>
+			<scoreline><name>Bridge 3</name><points>+7</points></scoreline>
+			<scoreline><name>Bridge 4</name><points>+3</points></scoreline>
+			<scoreline class='pink'><name>TEAM TOTAL</name><points>87</points><tackon>+18</tackon></scoreline>
+		</score>
+	</screen>
+	<h1>FINALE</h1>
+	<screen>
+		<score>
+			<h1 style="font-size: 66px;">FINAL SCORE</h1>
+			<scoreline><name class='red'>Player 1</name><points>47</points></scoreline>
+			<scoreline><name class='blue'>Player 2</name><points>55</points></scoreline>
+			<scoreline><name class='green'>Player 3</name><points class='crowned'>65</points></scoreline>
+			<scoreline><name class='yellow'>Player 4</name><points>45</points></scoreline>
+			<scoreline class='pink'><name>TEAM TOTAL</name><points>167</points></scoreline>
+		</score>
+	</screen>
+</body>
+</html>
