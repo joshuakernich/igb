@@ -364,6 +364,7 @@
 	<h1>JIGSAW</h1>
 	<ol>
 		<li>Game fades in, “Warehouse” already visible</li>
+		<li>Camera pans down to warehouse floor</li>
 		<li>“Player X” appears </li>
 		<li>Tetriminos fly in</li>
 		<li>“Make a perfect cube” appears (2 seconds)</li>
@@ -392,6 +393,7 @@
 	<h1>STACKING</h1>
 	<ol>
 		<li>Game fades in, “Diner” already visible </li>
+		<li>Camera moves through diner and stops at counter</li>
 		<li>“Player X” appears </li>
 		<li>Game starts</li>
 		<li>“Stack your burger” appears (2 seconds)</li>
@@ -444,7 +446,8 @@
 	</screen>
 	<h1>BRIDGE</h1>
 	<ol>
-		<li>Game fades in, “City Park” already visible </li>
+		<li>Game fades in, “City Park” already visible</li>
+		<li>Camera pans down to show bridge/park</li>
 		<li>“Player X” appears</li>
 		<li>“Build a bridge” appears with pic of bridge (2 seconds)</li>
 		<li>“Here they come” (1 second)</li>
@@ -486,7 +489,8 @@
 	</screen>
 	<h1>DOME</h1>
 	<ol>
-		<li>Game fades in, “The Dome” already visible </li>
+		<li>Game fades in, “The Dome” already visible</li>
+		<li>Camera pans down to show dome</li>
 		<li>“All players” appears</li>
 		<li>Blocks appear</li>
 		<li>“CHOOSE YOUR BLOCK” with pic of tapping the blocks (2 seconds)</li>
@@ -497,10 +501,14 @@
 		<header>THE DOME</header>
 	</screen>
 	<screen style='background-image: url(bg-dome.png);'>
-		<instruct>CHOOSE YOUR BLOCK</instruct>
+		<instruct>
+			CHOOSE YOUR BLOCK<br>
+			<img width=40% src="instruct-dome-select.png"/>
+		</instruct>
 	</screen>
 	<screen style='background-image: url(bg-dome.png);'>
-		<instruct>SEAL THE DOME</instruct>
+		<instruct>SEAL THE DOME<br>
+			<img width=40% src="gestures-slam.gif"/></instruct>
 	</screen>
 	<h1>FINALE</h1>
 	<ol>
