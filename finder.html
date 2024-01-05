@@ -5,12 +5,18 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Finder</title>
 	<style>
+
+		@font-face {
+		  font-family: TetrisFont;
+		  src: url(joystixmonospace.ttf);
+		}
+
 		body{
 			line-height: 0px;
 			text-align: center;
 
 			
-			font-family: sans-serif;
+			font-family: TetrisFont;
 		}
 
 		p{
@@ -60,9 +66,12 @@
 		}
 
 		cell.blocked{
-			background: url(https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/ee9e1d6a-8333-4a9c-a47c-abd0bc01d054/d4yygqt-5245b93c-d3db-4e94-92b0-772de824021b.gif?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiJcL2ZcL2VlOWUxZDZhLTgzMzMtNGE5Yy1hNDdjLWFiZDBiYzAxZDA1NFwvZDR5eWdxdC01MjQ1YjkzYy1kM2RiLTRlOTQtOTJiMC03NzJkZTgyNDAyMWIuZ2lmIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.ekG3aSE7xUzJBSKqNryRR5oJl4zzZUDJTLmg7uGR-kY);
-			background-size: 150%;
+			background: black;
 			background-position: center;
+		}
+
+		cell[type='0']{
+			background: none;
 		}
 
 		me, finder{
@@ -73,44 +82,106 @@
 			line-height: 100px;
 			text-align: center;
 			color: white;
+			font-size: 10px;
+			color: yellow;
+
+		}
+
+		me{
+			font-size: 20px;
+		}
+
+		finder{
+			transform: rotate(-5deg);
+		}
+
+		finder:before{
+			content: "";
+			display: block;
+			width: 70px;
+			height: 50px;
+			background: red;
+			border-radius: 10px;
+			position: absolute;
+			top:0px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			margin: auto;
 		}
 
 		me:after{
 			content: "ME";
+			position: relative;
 		}
 
 		finder:after{
 			content: "FINDER";
+			position: relative;
+		}
+
+		map{
+			display: block;
 		}
 	</style>
 	<script type="text/javascript" src='jq.js'></script>
 	<script type="text/javascript">
 		$(function(){
 
-			const GRID = 4;
-			const ELECTRO = Math.floor(GRID/2);
+			const MAPS = 
+			[	
+				'111,101,111',
+				'111,111,111',
+				'1111,1011,1111',
+				'1111,1111,1111',
+			]
 
-			for(var i = 0; i < GRID; i++){
-				var $row = $('<row>').appendTo('body')
-				for(var j = 0; j < GRID; j++){
-					$('<cell>').appendTo($row);
+			const ELECTRO = 2;
+
+			let map;
+			let GRIDY;
+			let GRIDX;
+			let coordWas = [1,GRIDY-1];
+			let coord = [1,GRIDY-1];
+			let cFinder = [Math.floor(GRIDX/2),0];
+			let isEnabled = true;
+			let nWas = -1;
+			let nLevel = 0;
+			let blocked = [];
+			let $me = $('me');
+			let $finder = $('finder');
+
+			function doLevel(n){
+
+				$('map').empty();
+
+				map = MAPS[n].split(',');
+				GRIDY = map.length;
+				GRIDX = map[0].length;
+
+				for(var y in map){
+					var $row = $('<row>').appendTo('map')
+					for(var x in map[y]){
+						$('<cell>').appendTo($row).attr('type',map[y][x]);
+					}
 				}
+
+				coordWas = [1,GRIDY-1];
+				coord = [1,GRIDY-1];
+				cFinder = [Math.floor(GRIDX/2),0];
+				isEnabled = true;
+
+				$me.css(getCellAt(coord).offset());
+				$finder.css(getCellAt(cFinder).offset());
+
+				nWas = -1;
+
+				blocked.length = 0;
 			}
 
-			var $me = $('<me>').appendTo('body');
-			var $finder = $('<finder>').appendTo('body');
-
-
-
-
-			let coordWas = [1,GRID-1];
-			let coord = [1,GRID-1];
-			let cFinder = [Math.floor(GRID/2),0];
-			let isEnabled = true;
+			doLevel(nLevel);
 			
-			$me.css(getCellAt(coord).offset());
-			$finder.css(getCellAt(cFinder).offset());
-
+			
 			let dirs = [
 				[0,-1],
 				[1,0],
@@ -118,16 +189,16 @@
 				[-1,0]
 			]
 
-			let blocked = [];
-
-			let nWas = -1;
-
+			
 
 			function getCellAt(coord){
 				return $('row').eq(coord[1]).find('cell').eq(coord[0]);
 			}
 
 			function getIsBlocked(possible){
+
+				if(map[possible[1]] && map[possible[1]][possible[0]] == '0') return true;
+
 				let isBlocked = false;
 
 				if(possible[0] == coord[0] && possible[1] == coord[1]) isBlocked = true;
@@ -137,7 +208,7 @@
 					&& cFinder[0] == coord[0] && cFinder[1] == coord[1] 
 				) isBlocked = true;
 
-				if(possible[0] < 0 || possible[1] < 0 || possible[0] > (GRID-1) || possible[1] > (GRID-1) ) isBlocked = true;
+				if(possible[0] < 0 || possible[1] < 0 || possible[0] > (GRIDX-1) || possible[1] > (GRIDY-1) ) isBlocked = true;
 				
 				for(var b in blocked){
 					if(blocked[b][0] == possible[0] && blocked[b][1] == possible[1]) isBlocked = true;
@@ -161,6 +232,13 @@
 
 					for(var b in blocked) getCellAt(blocked[b]).addClass('blocked');
 
+					if(cFinder[0] == coord[0] && cFinder[1] == coord[1]){
+						alert("GOT HIM! Next level incoming!");
+						//got him
+						nLevel++;
+						doLevel(nLevel);
+					}
+
 					return;
 				}
 
@@ -174,19 +252,30 @@
 				if(e.which == 39) move[0]++;
 				//if(e.which == 40) move[1]++; // can't go down
 
-				coord[0] += move[0];
-				coord[1] += move[1];
+				let $cell;
+				let mult = 0;
 
-				coord[0] = (coord[0]+GRID)%GRID;
-				coord[1] = (coord[1]+GRID)%GRID;
+				function moveBy(){
 
+					mult++;
 
-				var $cell = getCellAt(coord);
+					coord[0] += move[0];
+					coord[1] += move[1];
+
+					coord[0] = (coord[0]+GRIDX)%GRIDX;
+					coord[1] = (coord[1]+GRIDY)%GRIDY;
+
+					$cell = getCellAt(coord);
+					if($cell.attr('type') == '0') moveBy();
+				}
+
+				moveBy();
+
 				var o = $cell.offset();
 
 				isEnabled = false;
 
-				$me.css({ left:o.left - move[0]*100, top:o.top - move[1]*100 }).animate(o, function(){
+				$me.css({ left:o.left - move[0]*100*mult, top:o.top - move[1]*100*mult }).animate(o, function(){
 					isEnabled = true;
 				});
 
@@ -212,13 +301,13 @@
 					let dif = [possible[0]-coord[0], possible[1]-coord[1]];
 					let dist = dif[0]*dif[0] + dif[1]*dif[1];
 
+
+
 					if(dist>max || (dist==max && Math.random() > 0.5)){
 						max = dist;
 						best = possible; 
 						nMaybe = n;
 					}
-
-
 				}
 
 				if(nMaybe == -99){
@@ -235,10 +324,7 @@
 				nWas = nMaybe;
 				cFinder = best;
 
-
 				$finder.animate(getCellAt(cFinder).offset());
-
-		
 			});
 		})
 		
@@ -248,5 +334,8 @@
 	<p>Press UP, LEFT, RIGHT to move (no DOWN movement).</p>
 	<p>Press SPACE to insert ZAPPER in room (MAX 2 ZAPPERS).</p>
 	<p>You can warp through map edges. Finder cannot.</p>
+	<map></map>
+	<me></me>
+	<finder></finder>
 </body>
 </html>
