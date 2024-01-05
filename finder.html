@@ -171,8 +171,8 @@
 				cFinder = [Math.floor(GRIDX/2),0];
 				isEnabled = true;
 
-				$me.css(getCellAt(coord).offset());
-				$finder.css(getCellAt(cFinder).offset());
+				$me.stop().css(getCellAt(coord).offset());
+				$finder.stop().css(getCellAt(cFinder).offset());
 
 				nWas = -1;
 
@@ -232,12 +232,7 @@
 
 					for(var b in blocked) getCellAt(blocked[b]).addClass('blocked');
 
-					if(cFinder[0] == coord[0] && cFinder[1] == coord[1]){
-						alert("GOT HIM! Next level incoming!");
-						//got him
-						nLevel++;
-						doLevel(nLevel);
-					}
+					
 
 					return;
 				}
@@ -277,6 +272,13 @@
 
 				$me.css({ left:o.left - move[0]*100*mult, top:o.top - move[1]*100*mult }).animate(o, function(){
 					isEnabled = true;
+
+					if(cFinder[0] == coord[0] && cFinder[1] == coord[1]){
+						alert("GOT HIM! Next level incoming!");
+						//got him
+						nLevel++;
+						doLevel(nLevel);
+					}
 				});
 
 				let max = 0;
