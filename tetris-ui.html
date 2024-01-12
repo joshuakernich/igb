@@ -254,6 +254,67 @@
 
 		}
 
+		tick{
+			width: 100px;
+			height: 100px;
+			background-image: url('tetris-tick.png');
+			background-size: 100%;
+			position: absolute;
+			top: 20px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			margin: auto;
+			display: block;
+			image-rendering: pixelated;
+			background-repeat: no-repeat;
+
+		}
+
+		rotator{
+			display: block;
+			width: 80px;
+			height: 80px;
+			position: absolute;
+			top: 100px;
+			right: 200px;
+			
+		}
+
+		rotator:before{
+			content: "";
+			background-image: url(tetris-rotate.png);
+			background-size: 70%;
+			background-position: center;
+			image-rendering: pixelated;
+			background-repeat: no-repeat;
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			width: 100%;
+			height: 100%;
+		}
+
+		rotator:first-of-type{
+			right: auto;
+			left: 200px;
+
+		}
+
+		rotator:first-of-type:before{
+			transform: scaleX(-1);
+		}
+
+		rotator:after{
+			content: "HOVER TO ROTATE";
+			position: absolute;
+			left: 0px;
+			top: 100%;
+			right: 0px;
+			text-align: center;
+			font-size: 12px;
+		}
+
 	</style>
 </head>
 <body>
@@ -290,6 +351,10 @@
 	</screen>
 	<screen style='background-image: url(bg-downtown.png);'>
 		<header class="smaller">CLEAR 3 LINES</header>
+	</screen>
+	<screen style='background-image: url(bg-downtown.png);'>
+		<rotator></rotator>
+		<rotator></rotator>
 	</screen>
 	<screen style='background-image: url(bg-downtown.png);'>
 		<header class="smaller">2 LINES LEFT</header>
@@ -432,7 +497,9 @@
 			<ing><img src="ing-burger.png"/><counter>1/2</counter></ing>
 			<ing thick><img src="ing-cheese.png"/><counter>0/2</counter></ing>
 			<ing><img src="ing-bottom.png"/></ing>
+			
 		</recipe>
+		<tick></tick>
 		<timer>5:27.26</timer>
 	</screen>
 	<screen  style='background-image: url(bg-diner.png);'>
