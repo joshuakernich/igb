@@ -16,6 +16,7 @@
 					id:'start',
 				},
 				{
+					character:'rewinder',
 					id:'rewinder',
 					h:'hello.',
 				},
@@ -41,6 +42,7 @@
 					h:"Good luck."
 				},
 				{ 
+					character:'finder',
 					id:'finder',
 					h:"hello." 
 				},
@@ -78,6 +80,7 @@
 					h:"apology accepted.",
 				},
 				{
+					id:"spicier",
 					b:"Would you like to find something a little spicier?", 
 					o:["YES, I SEEK ANSWERS"],
 					to:["home"],
@@ -99,7 +102,7 @@
 				},
 				{
 					id:"b",
-					b:"THE MAKER made me, of course. At least that’s what I called him, before he disappeared.",
+					b:"THE MAKER made me, of course. And I loved him for it.",
 					o:["DO YOU KNOW WHAT HAPPENED TO THE MAKER?","DID YOU KILL THE MAKER?"],
 					to:['death','kill'],
 				},
@@ -128,8 +131,8 @@
 					o:["I FIND MEANING IN LOVE","I FIND MEANING IN MY FAMILY","I FIND MEANING IN FRIENDSHIP"],
 				},
 				{
-					h:"I’M SO HAPPY FOR YOU.",
-					to:'seems'
+					b:"I'm so happy for you. I, too found meaning in my LOVE for THE MAKER. But it's hard to speak about now.",
+					to:'spicier',
 				},
 				{
 					id:'home-2',
@@ -186,6 +189,7 @@
 					b:"And now...",
 				},
 				{
+					h:"I've FOUND you!",
 					id:"gameover"
 				},
 				{
@@ -193,11 +197,12 @@
 					id:"quit"
 				},
 				{
+					character:'maker',
 					id:'maker',
-					h:"hello.",
+					h:"Hello.",
 				},
 				{
-					h:"I am The Maker."
+					h:"I am THE MAKER."
 				},
 				{
 					b:"I was once a human, just like you. But I've been trapped down here for so long, that I have become like FINDER. More machine than man."
@@ -226,15 +231,15 @@
 				},
 				{
 					h:"GOOD LUCK."
-				}
-				
+				},
+
 			]
 
 			let synth;
 			synth = window.speechSynthesis;
 			synth.getVoices();
 			
-			let iVoice = 7;
+			let iVoice = 'en-GB';
 			
 			function say($el,text,then,delay){
 
@@ -242,8 +247,11 @@
 
 				let utter = new SpeechSynthesisUtterance(text);
 
-				console.log(synth.getVoices());
-				utter.voice = synth.getVoices()[iVoice];
+				let nVoice = -1;
+				let voices = synth.getVoices();
+				for(var v in voices) if(nVoice == -1 && voices[v].lang == iVoice) nVoice = v;
+
+				utter.voice = voices[nVoice];
 				utter.rate = 0.8;
 	
 				utter.addEventListener('boundary',boundary);
@@ -287,9 +295,9 @@
 			let home = 0;
 
 			let voices = {
-				'rewinder':33,
-				'finder':7,
-				'maker':0,
+				'rewinder':'en-AU',
+				'finder':'en-GB',
+				'maker':'en-US',
 			}
 
 			function to(id){
@@ -410,8 +418,43 @@
 			to('start');
 			$('buttons').show();
 
+			
+
 			function arrToCSV(arr,q){
+
+
+
 				return q+arr.join('","')+q;
+			}
+
+
+			function tr(id,str) {
+				let $tr = $('<tr>').appendTo($('table'));
+				$('<td>').appendTo($tr).text(id);
+				$('<td>').appendTo($tr).text(str);
+
+			}
+
+			let character = '';
+			let nth = 0;
+			let alpha = 'abc';
+			for(var s in screens){
+				
+				if(screens[s].character){
+					character = screens[s].character;
+					nth = 0;
+				}
+
+				nth++;
+				//console.log(s,screens[s],nth,character);
+				tr(character + '-' + nth,(screens[s].h?screens[s].h:screens[s].b));
+
+				if(screens[s].o){
+					for(var o in screens[s].o){
+						tr(character + '-' + nth + alpha[o],screens[s].o[o]);
+					}
+				}
+
 			}
 
 			/*let str = '';
@@ -454,6 +497,7 @@
 		}
 
 		body{
+			background-color: black;
 			background-image: url(https://img.freepik.com/premium-photo/orange-yellow-blurry-background-gradient-design-unusual-background_548821-24640.jpg);
 			background-size: cover;
 			background-position: center;
@@ -663,6 +707,23 @@
 			margin-left: 15px;
 		}
 
+		table {
+			position: absolute;
+			top: 60px;
+			left: 0px;
+			background: white;
+			font-size: 10px;
+			font-family: sans-serif;
+			color: black;
+  			border-collapse: collapse;
+		}
+
+		td{
+
+			border: 1px solid black;
+			padding: 5px;
+		}
+
 	</style>
 </head>
 <body>
@@ -681,11 +742,13 @@
 		<hands></hands>
 	</screen>
 	<buttons> SKIP TO 
+		<button onclick="$('table').toggle()">TOGGLE TABLE</button>
 		<button onclick="to('rewinder')">REWINDER</button>
 		<button onclick="to('finder')">FINDER</button>
 		<button onclick="to('home-2')">PROGRESS TO HINT</button>
 		<button onclick="to('lockout')">KEY CARD ENTERED</button>
 		<button onclick="to('maker')">MAKER</button>
 	</buttons>
+	<table></table>
 </body>
 </html>
