@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>AIN Level Design</title>
+	<script type="text/javascript" src="../jq.js"></script>
+	<script type="text/javascript">
+		$(function(){
+			let nodal = [
+				[
+					'1+++1',
+				],
+				[
+					'1+++0',
+					'0+++1',
+				],
+				[
+					'1+++1',
+					'2+++2',
+				],
+				[
+					'1+++0',
+					'0+210',
+					'0+++2',
+				],
+				[
+					'1+++0',
+					'0+2+0',
+					'0+1+0',
+					'0+++2',
+				],
+				[
+					'0+++0',
+					'0+2+2',
+					'1+1+0',
+					'0+++0',
+				],
+				[
+					'0+++0',
+					'0+++2',
+					'+121+',
+					'+++++',
+				],
+				[
+					'0+++++',
+					'0+++2+',
+					'21+1++',
+					'+++++0',
+				],
+				[
+					'1+++',
+					'++2+',
+					'+2++',
+					'+++1',
+				],
+				[
+					'++++++++',
+					'+0+1++0+',
+					'+0+2120+',
+					'++++++++',
+				],
+				[
+					'++++++++',
+					'20++1+++',
+					'+++1++02',
+					'++++++++',
+				],
+				[
+					'++++++++++',
+					'++0++012++',
+					'++120++0++',
+					'++++++++++',
+				],
+				[
+					'1+++++++++',
+					'++++++++++',
+					'+++++++++0',
+					'+++++++++1',
+				],
+				[
+					'1+++++++',
+					'+2++++2+',
+					'++++++++',
+					'0++++++1',
+				],
+				[
+					'++++++++',
+					'+0000+++',
+					'++++++++',
+					'01+++0++',
+					'+++2++++',
+					'+0+02+1+',
+					'+++0++++',
+				]
+
+			]
+
+			// ┏┳┓
+			// ┣╋┫
+			// ┗┻┛
+
+			//╆ // passing 
+			//╅ // passing 
+		
+
+			let circuit = [
+				[
+					'1---2',
+				],
+				[
+					'  1  ',
+					'  |  ',
+					'1-╋-2',
+					'  |  ',
+					'  2  ',
+				],
+				[
+					' 1┏1 ',
+					' ┗╋-2',
+					'2-┛  ',
+				],
+				[
+					'  ┏-2',
+					'1-┫  ',
+					'  ┗-2',
+				],
+				[
+					'┏-┳-┓',
+					'| | |',
+					'┣-1-┫',
+					'| | |',
+					'┗-┻-┛',
+				],
+				[
+					'   ┏-1  ',
+					'2--╅---2',
+					' 1-┛    ',
+				],
+				[
+					' ┏-┓ ┏-1',
+					' | | |  ',
+					'1╅-╋-╅-2',
+					' | | |  ',
+					' ┗-┛ ┗-2',
+				],
+				[
+					' ┏-┓   ┏-┓   ┏-┓ ',
+					'1┫ ┣---╆-╅---┫ ┣1',
+					' ┗-┻---┛ ┗---┻-┛ ',
+				]
+			]
+
+			let trace = [
+				[
+					'1---1',
+				],
+				[
+					'  2  ',
+					'  |  ',
+					'1-╋-1',
+					'  |  ',
+					'  2  ',
+				],
+				[
+					' 2┏-1 ',
+					' ||   ',
+					' ┗╋--2',
+					'1-┛   ',
+				],
+				[
+					'1-----1',
+					'   *   ',
+					'2-----2',
+				],
+				[
+					'1-┓┏--┓ ┏--1',
+					'  ┗╋-┓┗-╋┓  ',
+					'2--┛ ┗--┛┗-2',
+				],
+				[
+					'1-----1',
+					'  * *  ',
+					'2-----2',
+				],
+				[
+					'    ┏-┓┏-1',
+					'1-┓┏╋┓||  ',
+					'  ┗╋┛┗╋╋-2',
+					'2--┛  ┗┛  ',
+				],
+				[
+					'  ┏-┓ ',
+					'1-╋-╋┓',
+					'  | ||',	
+					'1-╋-╋┛',	
+					'  | | ',
+					'  2 2 ',
+				],
+				[
+					'    2  ',
+					'  ┏┓|  ',
+					'1-╋╋╋┓ ',
+					' ┏╋╋╋┛ ',	
+					' ┗╋╋╋-1',	
+					'  |┗┛  ',
+					'  2    ',
+				],
+				[
+					' ┏-┓ ',
+					'┏╋-╋┓',
+					'||1╋┛',	
+					'┗╋-╋1',	
+					' 2 2 ',
+				],
+				[
+					'  ┏-┓ 2  ',
+					'  |*| |  ',
+					'1-╋-╋-╋┓ ',	
+					' ┏╋-╋-╋┛ ',	
+					' ┗╋-╋-╋-1',	
+					'  | |*|  ',
+					'  2 ┗-┛  ',
+				],
+				[
+	
+					'  ┏-┓  ┏-┓  ',
+					'  |┏╋┓┏╋┓|  ',
+					'2-╋┛||||┗╋-1',
+					'  | ┗╋┛| |  ',
+					'1-┛  ┗-┛ ┗-2',
+					'            ',
+				],
+				
+			]
+
+
+
+
+
+
+			$('<h1>').appendTo('body').text('Node Maze');
+			for(var l in nodal){
+				let level = nodal[l];
+				let $l = $('<level>').appendTo('body');
+				$('<h2>').appendTo($l).text((parseInt(l)+1))
+				for(var y in level){
+					let $r = $('<row>').appendTo($l);
+					for(var x in level[y]){
+						$('<node>').appendTo($r).attr('type',level[y][x])
+					}
+				}
+			}
+
+			$('<h1>').appendTo('body').text('Node Circuit');
+			for(var l in circuit){
+				let level = circuit[l];
+				let $l = $('<level type=circuit>').appendTo('body');
+				$('<h2>').appendTo($l).text((parseInt(l)+1))
+				for(var y in level){
+					let $r = $('<row>').appendTo($l);
+					for(var x in level[y]){
+						$('<node>').appendTo($r).attr('type',level[y][x])
+					}
+				}
+			}
+
+			$('<h1>').appendTo('body').text('Node Trace');
+			for(var l in trace){
+				let level = trace[l];
+				let $l = $('<level type=circuit mode=trace>').appendTo('body');
+				$('<h2>').appendTo($l).text((parseInt(l)+1))
+				for(var y in level){
+					let $r = $('<row>').appendTo($l);
+					for(var x in level[y]){
+						$('<node>').appendTo($r).attr('type',level[y][x])
+					}
+				}
+			}
+		})
+	</script>
+	<style type="text/css">
+
+		body{
+			background: #553333;
+			font-family: sans-serif;
+			color: white;
+			text-align: center;
+		}
+
+		h2{
+			margin: 0px;
+			position: absolute;
+			font-weight: normal;
+			position: absolute;
+			left: 0px;
+			top: 0px;
+			font-size: 12px;
+			padding: 20px;
+		}
+
+		 level{
+		 	background: rgba(255,255,255,0.1);
+		 	display: block;
+		 	padding: 10px;
+		 	margin: 10px;
+		 	vertical-align: top;
+		 	position: relative;
+		 }
+
+		row{
+			display: block;
+			line-height: 0px;
+		}
+
+		node{
+			width: 50px;
+			height: 50px;
+			position: relative;
+			display:  inline-block;
+		}
+
+		node:after{
+			content: "";
+			display: block;
+			width: 50px;
+			height: 50px;
+			border-radius: 30px;
+			background: #ddd;
+			box-sizing: border-box;
+			border: 15px solid white;
+			position: relative;
+		}
+
+		node[type='0'],node[type=' ']{
+			opacity: 0;
+		}
+
+		node[type='1']:after{
+			background: red;
+		}
+
+		node[type='2']:after{
+			background: blue;
+		}
+
+		level[type=circuit][mode=trace] node[type='*']{
+			overflow: visible;
+			z-index: 1;
+		}
+
+		node[type='*']:before{
+			content: "";
+			position: absolute;
+			top: -50px;
+			left: 0px;
+			height: 150px;
+			width: 50px;
+			background: red;
+			display: block;
+			border-radius: 50px;
+			opacity: 0.5;
+		}
+
+		node[type='*']:after{
+			content: "";
+			border:none;
+			line-height: 50px;
+			font-size: 50px;
+			background: red;
+		}
+
+
+		level[type=circuit] node{
+			box-shadow: inset 0px 0px 1px white;
+			background: rgba(0, 0, 0, 0.5);
+			overflow: hidden;
+		}
+
+		level[type=circuit][mode=trace] node{
+			box-shadow: none;
+			background: transparent;
+			overflow: hidden;
+		}
+
+		level[type=circuit] node[type='┳']:after,
+		level[type=circuit] node[type='┫']:after,
+		level[type=circuit] node[type='┣']:after,
+		level[type=circuit] node[type='┻']:after,
+		level[type=circuit] node[type='╋']:after,
+		level[type=circuit] node[type='-']:after,
+		level[type=circuit] node[type='|']:after{
+			width: 50px;
+			height: 32.5px;
+			background: transparent;
+			border-radius: 0px;
+			border-top: 0px;
+			border-left: 0px;
+			border-right: 0px;
+			position:  absolute;
+			top: 0px;
+			left: 0px;
+		}
+
+		level[type=circuit] node[type='|']{
+			transform: rotate(90deg);
+		}
+
+		
+		level[type=circuit] node[type='┳']:before,
+		level[type=circuit] node[type='┫']:before,
+		level[type=circuit] node[type='┣']:before,
+		level[type=circuit] node[type='┻']:before,
+		level[type=circuit] node[type='╋']:before{
+			content: "";
+			display: block;
+			width: 32.5px;
+			height: 50px;
+			background: transparent;
+			border-radius: 0px;
+			border-top: 0px;
+			border-left: 0px;
+			border-bottom: 0px;
+			border-right: 15px solid white;
+			position:  absolute;
+			box-sizing: border-box;
+			top: 0px;
+			left: 0px;
+		}
+
+		level[type=circuit] node[type='┳']:after,
+		level[type=circuit] node[type='┫']:after,
+		level[type=circuit] node[type='┣']:after,
+		level[type=circuit] node[type='┻']:after
+		{
+			width: 25px;
+			left: 25px;
+		}
+
+
+		level[type=circuit] node[type='┏']:after,
+		level[type=circuit] node[type='┛']:after,
+		level[type=circuit] node[type='┗']:after,
+		level[type=circuit] node[type='┓']:after,
+		level[type=circuit] node[type='╆']:after,
+		level[type=circuit] node[type='╅']:after
+		{
+			position: absolute;
+			top: 17.5px;
+			left: 17.5px;
+			width: 75px;
+			height: 75px;
+			background: transparent;
+
+		}
+
+	
+		level[type=circuit] node[type='┛']{
+			transform: rotate(180deg);
+		}
+
+		level[type=circuit] node[type='┓'],
+		level[type=circuit] node[type='┫']{
+			transform: scaleX(-1);
+		}
+
+		level[type=circuit] node[type='┗']{
+			transform: scaleY(-1);
+		}
+
+		level[type=circuit] node[type='┻']{
+			transform: rotate(-90deg);
+		}
+
+		level[type=circuit] node[type='┳']{
+			transform: rotate(90deg);
+		}
+
+		level[type=circuit] node[type='┫']:before,
+		level[type=circuit] node[type='┣']:before,
+		level[type=circuit] node[type='┻']:before,
+		level[type=circuit] node[type='┳']:before,
+		{
+			content: "";
+			display: block;
+			width: 50px;
+			height: 50px;
+			border-radius: 30px;
+			background: #ddd;
+			box-sizing: border-box;
+			border: 15px solid white;
+			position: relative;
+			position: absolute;
+			bottom: 17.5px;
+			left: 17.5px;
+			width: 75px;
+			height: 75px;
+			background: transparent;
+		}
+
+
+		level[type=circuit] node[type='╆']:before,
+		level[type=circuit] node[type='╅']:before
+		{
+			content: "";
+			display: block;
+			
+			background: transparent;
+			
+			position:  absolute;
+			box-sizing: border-box;
+
+			position: absolute;
+			top: -27.5px;
+			left: -27.5px;
+			width: 60px;
+			height: 60px;
+			background: transparent;
+
+			border-radius: 30px;
+			
+			border: 15px solid white;
+
+		}
+
+		level[type=circuit] node[type='╅']{
+			transform: scaleX(-1);
+		}
+
+		
+		
+		
+		
+	</style>
+</head>
+<body>
+
+</body>
+</html>
