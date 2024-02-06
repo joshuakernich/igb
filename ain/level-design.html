@@ -145,9 +145,13 @@
 					' ┗-┛ ┗-2',
 				],
 				[
-					' ┏-┓   ┏-┓   ┏-┓ ',
-					'1┫ ┣---╆-╅---┫ ┣1',
-					' ┗-┻---┛ ┗---┻-┛ ',
+					'             1 ',
+					'  ┏┳==-┳====-╆2',
+					'  |┗==-╋====┳┛ ',
+					'  ║    ║    ║  ',
+					' ┏┻====╋-==┓|  ',
+					'2╆-====┻-==┻┛  ',
+					' 1             ',
 				]
 			]
 
@@ -381,6 +385,15 @@
 			background: red;
 		}
 
+		level[type=circuit] node[type='1'],
+		level[type=circuit] node[type='2'],
+		level[type=circuit] node[type='='],
+		level[type=circuit] node[type='║']{
+			box-shadow: none;
+			background: transparent;
+			overflow: hidden;
+		}
+
 
 		level[type=circuit] node{
 			box-shadow: inset 0px 0px 1px white;
@@ -400,7 +413,10 @@
 		level[type=circuit] node[type='┻']:after,
 		level[type=circuit] node[type='╋']:after,
 		level[type=circuit] node[type='-']:after,
-		level[type=circuit] node[type='|']:after{
+		level[type=circuit] node[type='=']:after,
+		level[type=circuit] node[type='|']:after,
+		level[type=circuit] node[type='║']:after
+		{
 			width: 50px;
 			height: 32.5px;
 			background: transparent;
@@ -413,7 +429,8 @@
 			left: 0px;
 		}
 
-		level[type=circuit] node[type='|']{
+		level[type=circuit] node[type='|'],
+		level[type=circuit] node[type='║']{
 			transform: rotate(90deg);
 		}
 
