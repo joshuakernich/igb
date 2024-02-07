@@ -45,7 +45,7 @@
 				
 			});
 
-			let r = 50;
+			let r = 100;
 
 			function step() {
 
@@ -70,10 +70,19 @@
 			}
 
 
-			setInterval(step,50);
+			setInterval(step,20);
 		})
 	</script>
 	<style type="text/css">
+		p{
+			color: white;
+			font-family: sans-serif;
+			margin: 20px;
+			font-weight: normal;
+			z-index: 100;
+			text-align: center;
+		}
+
 		body{
 			background: #333;
 		}
@@ -162,7 +171,9 @@
 	</style>
 </head>
 <body>
+	<p>SUB MAZE - Drag the red or blue Cursor to move</p>
 	<screen>
+		
 		<level>
 			
 		</level>
