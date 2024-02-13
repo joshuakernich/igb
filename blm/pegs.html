@@ -14,7 +14,7 @@
 			let nDrag;
 			let dMax = 30 * 30;
 			let map = [];
-			let grid = 6;
+			let grid = 4;
 
 			for(var y=0; y<grid; y++){
 				let $row = $('<row>').appendTo('.pegs')
@@ -72,7 +72,9 @@
 				let o2 = $('cursor').eq(1).offset();
 				let oSVG = $('svg').offset();
 
-				let d = 'M'+(o1.left-oSVG.left)+' '+(o1.top-oSVG.top)+' ';
+				let dCursor = 'M'+(o1.left-oSVG.left)+' '+(o1.top-oSVG.top)+' ';
+				let dFirst = 'M'+(map[0]%grid + 1)*100+' '+Math.floor(map[0]/grid + 1)*100+' ';
+				let d = '';
 
 				for(var m in map){
 					$('cell').eq(map[m]).addClass('active');
@@ -83,9 +85,13 @@
 					d += 'L'+(map[m]%grid + 1)*100+' '+Math.floor(map[m]/grid + 1)*100+' ';
 				}
 
+				$('path').eq(0).attr('d',dCursor+d);
+
+				$('path').eq(2).attr('d',dFirst+d);
+
 				d += 'L'+(o2.left-oSVG.left)+' '+(o2.top-oSVG.top)+' ';
 
-				$('path').attr('d',d);
+				$('path').eq(1).attr('d',dFirst+d);
 			}
 
 			redraw();
@@ -130,28 +136,33 @@
 
 		cell:after{
 			content: "";
-			width: 20px;
-			height: 20px;
+			width: 30px;
+			height: 30px;
 			border-radius: 20px;
 			position: absolute;
-			left: -10px;
-			top: -10px;
-			background: black;
+			left: -15px;
+			top: -15px;
+			background: rgba(0,0,0,0.5);
 			display: block;
 			box-sizing: border-box;
-			border: 2px solid white;
+			border: 2px dashed rgba(255,255,255,0.2);
 		}
 
 		cell.active:after{
 			background: white;
+			transform: scale(0.3);
 		}
 
 		cell.active.first:after{
-			background: red;
+			background: black;
+			border-color:red;
+			transform: scale(1);
 		}
 
 		cell.active.last:after{
-			background: blue;
+			background: black;
+			border-color:blue;
+			transform: scale(1);
 		}
 
 		cursor{
@@ -165,7 +176,7 @@
 			height: 30px;
 			transform: translate(-50%,-50%);
 			background: red;
-			border: 2px solid white;
+			
 			box-shadow: 0px 1px 5px black;
 			display: block;
 			position: absolute;
@@ -180,8 +191,10 @@
 </head>
 <body>
 	<layer>
-		<svg style='margin:-50px;display: inline-block;background: #111;' width=700 height=700>
-			<path fill='transparent' stroke='white' stroke-width=5 d='M0 0 L100 100'/>
+		<svg style='margin:-50px;display: inline-block;background: #111;' width=500 height=500>
+			<path fill='transparent' stroke='red' stroke-width=2 d='M0 0 L100 100'/>
+			<path fill='transparent' stroke='blue' stroke-width=2 d='M0 0 L100 100'/>
+			<path fill='transparent' stroke='white' stroke-width=2 d='M0 0 L100 100'/>
 		</svg>
 	</layer>
 	<layer class='pegs'>
