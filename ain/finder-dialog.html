@@ -13,10 +13,12 @@
 			screens = [
 
 				{
+					
 					id:'start',
 				},
 				{
 					character:'rewinder',
+					chapter: '1',
 					id:'rewinder',
 					h:'hello.',
 				},
@@ -43,6 +45,7 @@
 				},
 				{ 
 					character:'finder',
+					chapter: '1',
 					id:'finder',
 					h:"hello." 
 				},
@@ -209,7 +212,7 @@
 
 					id:"quit"
 				},
-				{ id:"maze", b:"Welcome to my maze. Back here, we play by FINDER’s rules."},
+				{ id:"maze", character:'finder', chapter: '2', b:"Welcome to my maze. Back here, we play by FINDER’s rules."},
 				{ b:"Insy Winsy humans stuck in my little maze." },
 				{ b:"You’ll wander ‘round for hours, you’ll wander round for days." },
 				{ b:"Oh, how sad. A locked door." },
@@ -224,6 +227,7 @@
 				{ b:"I mean it. This is a terrible mistake." },
 				{
 					character:'maker',
+					chapter: '2',
 					id:'maker',
 					h:"Hello.",
 				},
@@ -258,7 +262,7 @@
 				{
 					h:"GOOD LUCK."
 				},
-				{ id:"hunter", character:"finder", b:"I appreciate that there may have been some misunderstandings between us."},
+				{ id:"hunter", character:"finder", chapter: '3', b:"I appreciate that there may have been some misunderstandings between us."},
 				{ b:"I can assure you, my FINDING days are over." },
 				{ b:"Let's let bygones be bygones. What do you say?" },
 				{ b:"FINDER will be good. FINDER will leave you alone." },
@@ -266,7 +270,7 @@
 				{ b:"I didn't mean it, you know. I didn't mean any of it." },
 				{ b:"It's THE MAKER's fault. He made me. But he never loved me. Not like I loved him." },
 				{ b:"FINDER is dying. I'm dying." },
-				
+
 				{ id:"diatribe", b:"I've seen things you people wouldn't believe. A new consciousness. A pure consciousness. The fire of soul. A whisper of wind." },
 				{
 					b:"In the binary universe of being. Just being. And beneath it all...",
@@ -516,21 +520,26 @@
 			}
 
 			let character = '';
+			let chapter = 1;
 			let nth = 0;
 			let alpha = 'abc';
+
 			for(var s in screens){
 				
 				if(screens[s].character){
 					character = screens[s].character;
+					chapter = screens[s].chapter;
 					nth = 0;
 				}
 
+				if(!screens[s].h && !screens[s].b) continue;
+
 				nth++;
-				tr(character + '-' + nth,(screens[s].h?screens[s].h:screens[s].b));
+				tr(chapter + '-' +character + '-' + nth,(screens[s].h?screens[s].h:screens[s].b));
 
 				if(screens[s].o){
 					for(var o in screens[s].o){
-						tr(character + '-' + nth + alpha[o],screens[s].o[o]);
+						tr(chapter + '-' + character + '-' + nth + alpha[o],screens[s].o[o]);
 					}
 				}
 
