@@ -10,7 +10,7 @@
 		$(function(){
 
 
-			screens = [
+			let screens = [
 
 				{
 					
@@ -512,10 +512,12 @@
 			}
 
 
-			function tr(id,str) {
+			function tr(a,b,c,d) {
 				let $tr = $('<tr>').appendTo($('table'));
-				$('<td>').appendTo($tr).text(id);
-				$('<td>').appendTo($tr).text(str);
+				$('<td>').appendTo($tr).text(a);
+				$('<td>').appendTo($tr).text(b);
+				$('<td>').appendTo($tr).text(c);
+				$('<td>').appendTo($tr).text(d);
 
 			}
 
@@ -523,6 +525,8 @@
 			let chapter = 1;
 			let nth = 0;
 			let alpha = 'abc';
+
+			tr('SCREEN ID','GRIDLY ID','TEXT','SEND TO SCREEN ID')
 
 			for(var s in screens){
 				
@@ -532,16 +536,24 @@
 					nth = 0;
 				}
 
-				if(!screens[s].h && !screens[s].b) continue;
+				if(!screens[s].h && !screens[s].b){
+					tr(screens[s].id, '','',screens[s].to);
+				}
+				else{
+					nth++;
+					tr(screens[s].id,chapter + '-' +character + '-' + nth,(screens[s].h?screens[s].h:screens[s].b),typeof(screens[s].to)=='string'?screens[s].to:'');
 
-				nth++;
-				tr(chapter + '-' +character + '-' + nth,(screens[s].h?screens[s].h:screens[s].b));
+					if(screens[s].o){
 
-				if(screens[s].o){
-					for(var o in screens[s].o){
-						tr(chapter + '-' + character + '-' + nth + alpha[o],screens[s].o[o]);
+						if(screens[s].to == undefined) screens[s].to = '';
+						//if(typeof(screens[s].to)=='string') screen[s].to = [screens[s].to,screens[s].to,screens[s].to];
+
+						for(var o in screens[s].o){
+							tr('',chapter + '-' + character + '-' + nth + alpha[o],screens[s].o[o],screens[s].to[o]);
+						}
 					}
 				}
+				
 
 			}
 
