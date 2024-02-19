@@ -197,7 +197,7 @@
 				'            ',
 			]
 
-			let jumpnduck = [
+			let jumpduck = [
 				'        ',
 				'    *** ',
 				'     @  ',
@@ -207,7 +207,7 @@
 				'        ',
 			]
 
-			let jumpnjump = [
+			let jumpjump = [
 				'     @  ',
 				'        ',
 				'    *** ',
@@ -218,7 +218,7 @@
 				'        ',
 			]
 
-			let jumpndouble = [
+			let jumpdouble = [
 				'     @  ',
 				'        ',
 				'    *** ',
@@ -281,14 +281,22 @@
 				}
 			}
 
-			
+			let patterns = [
+				flat,
+				over,under,overunder,
+				high,jump,threat,squat,longjump,longsquat,longsquatjump,longdouble,longsquatjump,
+				hole,ramp,
+				thread,threadramp,
+				jumpduck,jumpjump,longdouble,jumpdouble,
+				jumpjumpduck,jumpduckjump,jumpjumpduckdouble,jumpduckjumpdouble
+			]
 			
 			let runs = [
 				[over,over,under,under,over,overunder,under,overunder],
 				[high,jump,threat,squat,high,threat,longjump,longsquat,longsquatjump,longdouble,longsquatjump,longdouble],
 				[high,hole,ramp,hole,ramp,squat,hole,ramp,squat,hole,ramp],
 				[thread,thread,jump,squat,thread,thread,jump,squat,threadramp,threadramp],
-				[jumpnduck,overunder,jumpnjump,longdouble,jumpndouble,overunder,longdouble,jumpndouble],
+				[jumpduck,overunder,jumpjump,longdouble,jumpdouble,overunder,longdouble,jumpdouble],
 				[jumpjumpduck,jumpduckjump,jumpjumpduckdouble,jumpduckjumpdouble,jumpjumpduck,jumpduckjump,jumpjumpduckdouble,jumpduckjumpdouble],
 			]
 
@@ -302,6 +310,14 @@
 				
 			}
 
+			$('<p>').appendTo('body').text('Available Patterns');
+			for(var p in patterns){
+				let $level = $('<level class="run">').appendTo('body');
+				append(patterns[p],$level);
+
+			}
+
+			$('<p>').appendTo('body').text('Levels (with a flat space between each obstacle)');
 			for( var r in runs ){
 				makeRun(runs[r]);
 			}
@@ -335,7 +351,7 @@
 		level.run{
 			
 			white-space: nowrap;
-			padding: 10px;
+			padding: 0px;
 		}
 
 
