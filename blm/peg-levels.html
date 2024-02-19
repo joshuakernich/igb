@@ -39,6 +39,8 @@
 			let gridX = 3;
 			let gridY = 4;
 
+			$('<h1>').appendTo('body').text('Weave');
+
 			for(var l in levels){
 				let $level = $('<level>').appendTo('body');
 				let $svg = $('<svg width=150 height=200>').appendTo($level);
@@ -58,11 +60,268 @@
 
 				$svg.html('<path stroke=white stroke-width=2 d="'+d+'"/>');
 			}
+
+			$('<h1>').appendTo('body').text('Run & Jump');
+
+			let flat = [
+				'======',
+			]
+
+			let over = [
+				'  @  ',
+				'*====',
+				'     ',
+				'     ',
+				'=====',
+			]
+
+			let under = [
+				'     ',
+				'*====',
+				'     ',
+				'  @  ',
+				'=====',
+			]
+
+			let overunder = [
+				'  @  ',
+				'*====',
+				'     ',
+				'  @  ',
+				'=====',
+			]
+
+			let high = [
+				' @ ',
+				'   ',
+				'   ',
+				'   ',
+				'===',
+			]
+
+			let jump = [
+				' @ ',
+				'   ',
+				' * ',
+				' * ',
+				'===',
+			]
+
+			let longjump = [
+				'  @  ',
+				'     ',
+				'     ',
+				' *** ',
+				'=====',
+			]
+
+			let threat = [
+				' * ',
+				' * ',
+				'   ',
+				' @ ',
+				'===',
+			]
+
+			let squat = [
+				' * ',
+				' * ',
+				' * ',
+				' @ ',
+				'===',
+			]
+
+			let longsquat = [
+				'     ',
+				'     ',
+				' *** ',
+				'  @  ',
+				'=====',
+			]
+
+			let longsquatjump = [
+				'       @  ',
+				'          ',
+				' ***      ',
+				'      *** ',
+				'==========',
+			]
+
+			let longdouble = [
+				'  @  ',
+				'     ',
+				' *** ',
+				'  @  ',
+				'=====',
+			]
+
+			let thread = [
+				'  **',
+				' *  ',
+				'*  @',
+				'    ',
+				'    ',
+				'  **',
+				' *  ',
+				'*   ',
+				'    ',
+			]
+
+			let hole = [
+				'  @  ',
+				'     ',
+				'     ',
+				'     ',
+				'     ',
+			]
+
+			let ramp = [
+				'      @ ',
+				'        ',
+				'        ',
+				'*====   ',
+				'        ',
+				'        ',
+				'        ',
+			]
+
+			let threadramp = [
+				'  **      @ ',
+				' *          ',
+				'*           ',
+				'            ',
+				'            ',
+				'  **=====   ',
+				' *          ',
+				'*           ',
+				'            ',
+			]
+
+			let jumpnduck = [
+				'        ',
+				'    *** ',
+				'     @  ',
+				'*=======',
+				'        ',
+				'        ',
+				'        ',
+			]
+
+			let jumpnjump = [
+				'     @  ',
+				'        ',
+				'    *** ',
+				'        ',
+				'*=======',
+				'        ',
+				'        ',
+				'        ',
+			]
+
+			let jumpndouble = [
+				'     @  ',
+				'        ',
+				'    *** ',
+				'     @  ',
+				'*=======',
+				'        ',
+				'        ',
+				'        ',
+			]
+
+			let jumpjumpduck = [
+				'       *** ',
+				'        @  ',
+				'    *======',
+				'           ',
+				'*===       ',
+				'           ',
+				'           ',
+			]
+
+			let jumpduckjump = [
+				'    *       ',
+				'    *     @ ',
+				'    *   *===',
+				'            ',
+				'*======     ',
+				'            ',
+				'            ',
+			]
+
+			let jumpjumpduckdouble = [
+				'       ***',
+				'        @ ',
+				'    *=====',
+				'          ',
+				'*===   ***',
+				'        @ ',
+				'    ======',
+			]
+
+			let jumpduckjumpdouble = [
+				'    *       ',
+				'    *     @ ',
+				'    *   *===',
+				'            ',
+				'*======     ',
+				'          @ ',
+				'       =====',
+			]
+
+			function append(pattern,$level){
+				let $b = $('<block>').appendTo($level);
+
+
+				for(var y=0; y<pattern.length; y++){
+					let $row = $('<row>').appendTo($b);
+					for(var x=0; x<pattern[y].length; x++){
+						$('<brick>').appendTo($row).attr('type',pattern[y][x]);
+					}
+				}
+			}
+
+			
+			
+			let runs = [
+				[over,over,under,under,over,overunder,under,overunder],
+				[high,jump,threat,squat,high,threat,longjump,longsquat,longsquatjump,longdouble,longsquatjump,longdouble],
+				[high,hole,ramp,hole,ramp,squat,hole,ramp,squat,hole,ramp],
+				[thread,thread,jump,squat,thread,thread,jump,squat,threadramp,threadramp],
+				[jumpnduck,overunder,jumpnjump,longdouble,jumpndouble,overunder,longdouble,jumpndouble],
+				[jumpjumpduck,jumpduckjump,jumpjumpduckdouble,jumpduckjumpdouble,jumpjumpduck,jumpduckjump,jumpjumpduckdouble,jumpduckjumpdouble],
+			]
+
+			function makeRun(sequence){
+				let $level = $('<level class="run">').appendTo('body');
+				append(flat,$level)
+				for(var s in sequence){
+					append(sequence[s],$level);
+					append(flat,$level);
+				}
+				
+			}
+
+			for( var r in runs ){
+				makeRun(runs[r]);
+			}
+
+			$('<p>').appendTo('body').text('*randomise all patterns for remaining rounds')
+			
+
 		})
 	</script>
 	<style type="text/css">
 		body{
 			background: #333;
+			color: white;
+			font-family: sans-serif;
+
+		}
+
+		p,h1{
+			margin: 10px;
+		
 		}
 
 		level{
@@ -73,6 +332,14 @@
 			margin: 10px;
 		}
 
+		level.run{
+			
+			white-space: nowrap;
+			padding: 10px;
+		}
+
+
+
 		svg{
 			position: absolute;
 			top:0px;
@@ -82,6 +349,36 @@
 
 		row{
 			display: block;
+		}
+
+		block{
+			display: inline-block;
+			margin-right: 1px;
+			vertical-align: bottom;
+		}
+
+		brick{
+			display: inline-block;
+			width: 10px;
+			height: 10px;
+			background: transparent;
+			position: relative;
+		}
+
+		brick[type='=']{
+			background: white;
+		}
+
+		brick[type='*']{
+			background: red;
+			border-radius: 20px;
+			transform: scale(0.5);
+		}
+
+		brick[type='@']{
+			background: gold;
+			border-radius: 20px;
+			transform: scale(0.5);
 		}
 
 		cell{
