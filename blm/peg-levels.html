@@ -63,6 +63,15 @@
 
 			$('<h1>').appendTo('body').text('Run & Jump');
 
+			let scale = [
+				'R     ',
+				'      ',
+				'      ',
+				'R     ',
+				'R  R  ',
+				'======',
+			]
+
 			let flat = [
 				'      ',
 				'      ',
@@ -162,8 +171,8 @@
 			let thread = [
 				'  **',
 				' *  ',
-				'*  @',
-				'    ',
+				'*   ',
+				'   @',
 				'    ',
 				'  **',
 				' *  ',
@@ -322,15 +331,15 @@
 			]
 
 			let threadlong = [
-				'  ****  ',
-				' *    * ',
-				'*      *',
-				'        ',
-				'       @',
-				'  ****  ',
-				' *    * ',
-				'*      *',
-				'        ',
+				'  **  ',
+				' *  * ',
+				'*    *',
+				'      ',
+				'     @',
+				'  **  ',
+				' *  * ',
+				'*    *',
+				'      ',
 			]
 
 			function append(pattern,$level){
@@ -346,7 +355,7 @@
 			}
 
 			let patterns = [
-				flat,
+				scale,flat,
 				over,under,overunder,
 				high,jump,threat,squat,longjump,longsquat,longsquatjump,longdouble,longsquatjump,
 				hole,ramp,
@@ -371,7 +380,7 @@
 
 			function makeRun(sequence){
 				let $level = $('<level class="run">').appendTo('body');
-				append(flat,$level)
+				append(scale,$level)
 				for(var s in sequence){
 					append(sequence[s],$level);
 					append(flat,$level);
@@ -455,6 +464,11 @@
 
 		brick[type='=']{
 			background: white;
+		}
+
+		brick[type='R']{
+			background: red;
+			transform: scale(0.8);
 		}
 
 		brick[type='*']{
