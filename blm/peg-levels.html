@@ -237,6 +237,7 @@
 				'*===       ',
 				'           ',
 				'           ',
+				'           ',
 			]
 
 			let jumpduckjump = [
@@ -247,6 +248,7 @@
 				'*======     ',
 				'            ',
 				'            ',
+				'            ',
 			]
 
 			let jumpjumpduckdouble = [
@@ -254,7 +256,8 @@
 				'        @ ',
 				'    *=====',
 				'          ',
-				'*===   ***',
+				'*===      ',
+				'       ***',
 				'        @ ',
 				'    ======',
 			]
@@ -265,8 +268,65 @@
 				'    *   *===',
 				'            ',
 				'*======     ',
+				'            ',
 				'          @ ',
 				'       =====',
+			]
+
+			let jumphole = [
+				'               ',
+				'               ',
+				'               ',
+				'            @  ',
+				'*====     =====',
+				'               ',
+				'               ',
+				'               ',
+			]
+
+			let jumpduckhole = [
+				'   *            ',
+				'   *            ',
+				'   *            ',
+				'             @  ',
+				'*=====     =====',
+				'                ',
+				'                ',
+				'                ',
+			]
+
+			let jumpduckholeduck = [
+				'   *         *  ',
+				'   *         *  ',
+				'   *         *  ',
+				'             @  ',
+				'*=====     =====',
+				'                ',
+				'                ',
+				'                ',
+			]
+
+			let jumpholedouble = [
+				'               ',
+				'               ',
+				'               ',
+				'            @  ',
+				'*====     =====',
+				'               ',
+				'            @  ',
+				'        =======',
+			]
+
+			let threadlong = [
+				'  ****  ',
+				' *    * ',
+				'*      *',
+				'        ',
+				'       @',
+				'  ****  ',
+				' *    * ',
+				'*      *',
+				'        ',
 			]
 
 			function append(pattern,$level){
@@ -297,7 +357,10 @@
 				[high,hole,ramp,hole,ramp,squat,hole,ramp,squat,hole,ramp],
 				[thread,thread,jump,squat,thread,thread,jump,squat,threadramp,threadramp],
 				[jumpduck,overunder,jumpjump,longdouble,jumpdouble,overunder,longdouble,jumpdouble],
+				[jumphole,jumpduckhole,jumpduckholeduck,jumphole,jumpholedouble,jumpduckhole,jumpholedouble],
 				[jumpjumpduck,jumpduckjump,jumpjumpduckdouble,jumpduckjumpdouble,jumpjumpduck,jumpduckjump,jumpjumpduckdouble,jumpduckjumpdouble],
+				[thread,threadlong,threadramp,threadlong,thread,threadramp,threadlong,thread,threadramp,threadlong],
+				
 			]
 
 			function makeRun(sequence){
