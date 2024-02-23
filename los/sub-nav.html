@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Sub Nav</title>
+	<script type="text/javascript" src="../shared/jq.js"></script>
+	<script type="text/javascript">
+		$(function(){
+
+			let p = 0;
+			let offset = 0;
+			let isP1 = false;
+			let isP2 = false;
+			let sx = 1280/2; //sub x
+			let tx = 1280/2; //target x
+
+			$(document).on('mouseup', function(e){
+				isP1 = false;
+				isP2 = false;
+			});
+
+			$('cursor').eq(0).on('mousedown', function(e){
+				isP1 = true;
+				e.stopPropagation();
+			});
+
+			$('cursor').eq(1).on('mousedown', function(e){
+				isP2 =  true;
+				e.stopPropagation();
+			});
+
+			$(document).on('mousemove',move);
+
+			function move(e) {
+				let mx = e.clientX - $('screen').offset().left;
+				
+
+				if(isP1){
+					sx = mx;
+					p = -0.5+(sx/1280);
+				} 
+
+				if(isP2){
+					tx = mx;
+					
+				}
+				
+			}
+
+			function tick() {
+
+
+				$('sub').css('left',sx);
+				$('cursor').eq(0).css('left',sx);
+				$('sub').css('transform','translateX(-50%) rotate('+p*40+'deg)');
+				$('cursor').eq(1).css('left',tx);
+
+				offset -= p*20;
+				$('bg').css({'background-position-x':offset});
+
+				let a = $('cursor').eq(1).offset();
+				let b = $('turret').offset();
+
+				let v = {x:a.left - b.left,y:a.top-b.top};
+				let r = Math.atan2(v.y,v.x)*180/Math.PI + 90;
+				$('turret').css({transform:'rotate('+r+'deg)'})
+			}
+
+			setInterval(tick,20);
+		})
+	</script>
+	<style type="text/css">
+		p{
+			color: white;
+			font-family: sans-serif;
+			margin: 20px;
+			font-weight: normal;
+			z-index: 100;
+			text-align: center;
+		}
+
+		screen{
+			width: 1280px;
+			height: 720px;
+			background: black;
+			margin: auto;
+			display: block;
+			overflow: hidden;
+			background: url(ocean-colour.png);
+			background-size: cover;
+			position: relative;
+		}
+
+		body{
+			background: #333;
+		}
+
+		bg{
+			width: 200%;
+			height: 100%;
+			background: url(cityscape.png);
+			background-size: 50%;
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			opacity: 0.5;
+		}
+
+		sub{
+			width: 40%;
+			height: 100%;
+			background: url(sub-top.png);
+			background-size: 100%;
+			background-position: center bottom;
+			background-repeat: no-repeat;
+			position: absolute;
+			left: 0px;
+			bottom: -30px;
+			display: block;
+			transform: translateX(-50%);
+			transform-origin: center bottom;
+		}
+
+		turret{
+			position: absolute;
+			left: 245px;
+			bottom: 230px;
+			z-index: -1;
+		}
+
+		turret:after{
+			content: "";
+			width: 20px;
+			height: 20px;
+			position: absolute;
+			top: -10px;
+			left: -10px;
+			box-shadow: 0px 1px 2px white;
+			border-radius: 20px;
+			background: black;
+		}
+
+		turret:before{
+			content: "";
+			height: 60px;
+			width: 12px;
+			background: black;
+			box-shadow: 0px -2px 3px white;
+			position: absolute;
+			display: block;
+			bottom: 0px;
+			left: -6px;
+			border-radius: 5px 5px 0px 0px;
+
+		}
+
+		cursor{
+			position: absolute;
+		}
+
+		cursor:after{
+			content: "";
+			width: 40px;
+			height: 40px;
+			border-radius: 20px;
+			background: rgba(255,0,0,0.5);
+			display: block;
+			border: 8px dashed red;
+			transform: translate(-50%,-50%);
+			position: absolute;
+			box-sizing: border-box;
+
+		}
+
+		cursor:last-of-type:after{
+			background: rgba(150,250,255,0.5);
+			border-color: cyan;
+		}
+	</style>
+</head>
+<body>
+	<p>HARPOON | Drag the red cursor to move | Drag the blue cursor to aim</p>
+	<screen>
+		<bg></bg>
+		<sub>
+			<turret></turret>
+		</sub>
+		<cursor style='bottom:20px;'></cursor>
+		<cursor style='top:200px;'></cursor>
+	</screen>
+</body>
+</html>

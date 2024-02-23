@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>
+		Score Test
+	</title>
+	<script type="text/javascript" src="../jq.js"></script>
+	<script type="text/javascript">
+		$(function(){
+
+			
+			let minStarsTeam = 10;
+			let maxStarsTeam = 40;
+			let playerCount = 4;
+
+			let minStarsPerPlayer = minStarsTeam/playerCount;
+			let maxStarsPerPlayer = maxStarsTeam/playerCount;
+
+			let starsByTeam = 30;
+			let starsByPlayer = 6;
+
+			// team score
+			let scoreTeam = Math.max(starsByTeam-minStarsTeam,0) / (maxStarsTeam-minStarsTeam) 
+			let clampedTeam = Math.max(Math.min(1,scoreTeam),0);
+			let outOfFiveTeam = 1 + 4 * clampedTeam;
+
+			// player score
+			let scorePlayer = Math.max(starsByPlayer-minStarsPerPlayer,0) / (maxStarsPerPlayer-minStarsPerPlayer) 
+			let clampedPlayer = Math.max(Math.min(1,scorePlayer),0);
+			let outOfFivePlayer = 1 + 4 * clampedPlayer;
+
+			console.log(outOfFiveTeam);
+			console.log(outOfFivePlayer);
+		})
+	</script>
+</head>
+<body>
+
+</body>
+</html>

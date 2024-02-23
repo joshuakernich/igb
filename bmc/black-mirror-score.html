@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Black Mirror Score</title>
+	<script type="text/javascript" src="jq.js"></script>
+	<script type="text/javascript">
+		$(function(){
+
+			$('player').clone().appendTo('players').clone().appendTo('players');
+			$('<fill>').appendTo('star');
+			
+
+			let $p = $('panel').hide().eq(0).show();
+	
+			let $s = $p.find('ministar');
+
+			$s.each(function(n){
+				$(this).css({opacity:0}).delay(n*50).animate({opacity:1},50);
+			})
+
+		})
+	</script>
+	<style type="text/css">
+		@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@100;200&display=swap');
+
+		body{
+			background: black;
+			text-align: center;
+			font-family: 'Lexend', sans-serif;
+		}
+
+		screen{
+			width: 1280px;
+			height: 760px;
+			background: black;
+			display: block;
+			position: relative;
+			display: inline-block;
+
+			background-image: url(blm-bg.png);
+			background-size: cover;
+		}
+
+		screen:before{
+			content: "";
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			background: rgba(0, 0, 0, 0.7);
+		}
+
+		players{
+			display: block;
+			position: absolute;
+			bottom: 0px;
+			width: 100%;
+		}
+
+		player{
+			
+			height: 400px;
+			
+			bottom: 0px;
+			background: url(blm-human.png);
+			background-position: center top;
+			background-size: 100%;
+			display: inline-block;
+			position: relative;
+			margin: 0px 20px;
+			text-align: left;
+		}
+
+		panel, appender{
+			width: 300px;
+			
+			border: 1px solid red;
+			border-radius: 0px;
+			position: absolute;
+			left: 0px;
+			bottom: 105%;
+			background: rgba(0, 0, 0, 0.5);
+			box-sizing: border-box;
+			padding: 20px;
+			color: white;
+		}
+
+		score{
+			display: block;
+			color: white;
+			font-size: 60px;
+			font-weight: 100;
+		}
+
+		small{
+			font-size: 30px;
+		}
+
+		appender score{
+			font-size: 30px;
+		}
+
+		appender star{
+			transform: scale(0.7);
+		}
+
+		star{
+			width: 30px;
+			height: 30px;
+			display: inline-block;
+			background: url('blm-star-sprite.png');
+			background-size: 200%;
+			position: relative;
+
+			vertical-align: middle;
+		}
+
+		fill{
+			background: url('blm-star-sprite.png');
+			background-size: 60px;
+			background-position: -30px;
+			width: 0%;
+			height: 100%;
+			position: absolute;
+			top: 0px;
+			left: 0px;
+		}
+
+		name{
+			color: red;
+			font-size: 20px;
+		}
+
+		appender{
+			
+		}
+
+		scores{
+			margin: 50px auto;
+			width: 600px;
+			background: rgba(0, 0, 0, 0.7);
+			border: 1px solid white;
+			padding: 50px;
+			display: block;
+			text-align: left;
+			line-height: 60px;
+			position: relative;
+		}
+
+		scoreline{
+			display: block;
+			font-size: 40px;
+		}
+
+		scoreline tally{
+			color: white;
+		}
+
+		ministar{
+			width: 15px;
+			height: 15px;
+			display: inline-block;
+			background: url('blm-star-sprite.png');
+			background-size: 200%;
+			background-position: -100%;
+			position: relative;
+			vertical-align: middle;
+			
+		}
+
+		hr{
+			margin: 20px 0px;
+			background: red;
+			border: none;
+			height: 1px;
+		}
+
+
+	</style>
+</head>
+<body>
+	<screen>
+		<players>
+			<player>
+				<panel>
+					<name>Player 1</name>
+					<hr>
+					<span>Stars Collected</span><br><br>
+					<span>
+						<ministar></ministar>
+						<ministar></ministar>
+						<ministar></ministar>
+						<ministar></ministar>
+						<ministar></ministar><br>
+						<ministar></ministar>
+						<ministar></ministar>
+						<ministar></ministar>
+						<ministar></ministar>
+						<ministar></ministar><br>
+						<ministar></ministar>
+						<ministar></ministar>
+						<ministar></ministar>
+						<ministar></ministar>
+						<ministar></ministar>
+					</span>
+
+					<hr>
+					<stars>
+						<star></star>
+						<star></star>
+						<star></star>
+						<star></star>
+						<star></star>
+					</stars>
+				</panel>
+				<panel>
+					<name>Player 1</name>
+					<score><big>2.54</big><small>52</small></score>
+					<stars>
+						<star></star>
+						<star></star>
+						<star></star>
+						<star></star>
+						<star></star>
+					</stars>
+				</panel>
+				
+			</player>
+		</players>
+		<!--scores>
+			<scoreline><name>Player Red</name><tally><ministar></ministar></tally><stars>
+						<star></star>
+						<star></star>
+						<star></star>
+						<star></star>
+						<star></star>
+					</stars></scoreline>
+			<scoreline><name>Player Red</name><tally>+12 <star></star></tally></scoreline>
+			<scoreline><name>Player Red</name><tally>+12 <star></star></tally></scoreline>
+			<scoreline><name>Player Red</name><tally>+12 <star></star></tally></scoreline>
+		</scores-->
+	</screen>
+</body>
+</html>

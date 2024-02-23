@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title></title>
+	<style type="text/css">
+		body{
+			background: #333;
+			padding: 0px;
+			margin: 0px;
+		}
+
+		screen{
+			display: block;
+			width: 1280px;
+			height: 720px;
+			background: black;
+			margin: auto;
+			position: absolute;
+			top:0px;left:0px;right:0px;bottom:0px;
+		}
+
+		level{
+			position: absolute;
+			left: 0px;
+			top: 0px;
+			height: 620px;
+			min-width: 100%;
+			border-bottom: 2px solid white;
+			display: block;
+		}
+
+		jumper{
+			width: 50px;
+			height: 150px;
+			border: 2px solid white;
+			position: absolute;
+			bottom: 0px;
+			left: 100px;
+			transition: height 0.2s, width 0.2s;
+		}
+
+		jumper[crouch='true']{
+			height: 75px;
+			width: 75px;
+		}
+
+		jumper[jumping='true']{
+			height: 75px;
+			width: 75px;
+		}
+	</style>
+	<script type="text/javascript" src="jq.js"></script>
+	<script type="text/javascript">
+		$(function(){
+
+			let y = 0;
+			let r = 0;
+			let sy = 1;
+			let n = 0;
+			let isUp = false;
+			let isDown = false;
+
+			function step() {
+				n++;
+
+				sy += 1;
+				y += sy;
+
+				if(y>0){
+					y = 0;
+					sy = 1;
+					r = 0;
+					$('jumper').attr('jumping',false);
+				} else if(r<180){
+					r+= 5;
+				}
+
+				if(sy>0&&y>-150) $('jumper').attr('jumping',false);
+
+				//$('level').css({left:-n});
+				$('jumper').css({bottom:-y,transform:'rotate('+r+'deg)'});
+
+				$('jumper').attr('crouch',isDown);
+
+				if(isUp && !wasUp){
+					jump();
+				}
+
+				wasUp = isUp;
+				wasDown = isDown;
+			}
+
+			function jump(){
+				sy = -25;
+				$('jumper').attr('jumping',true);
+			}
+
+			setInterval(step,20);
+
+			$(document).on('keydown',onKeyDown);
+			$(document).on('keyup',onKeyUp);
+
+			function onKeyDown(e){
+				if(e.keyCode == 38) isUp = true;
+				if(e.keyCode == 40) isDown = true;
+			}
+
+			function onKeyUp(e){
+				if(e.keyCode == 38) isUp = false;
+				if(e.keyCode == 40) isDown = false;
+			}
+
+
+		})
+	</script>
+</head>
+<body>
+	<screen>
+		<level>
+			<jumper></jumper>
+		</level>
+	</screen>
+</body>
+</html>

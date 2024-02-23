@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title></title>
+	<script type="text/javascript" src='jq.js'></script>
+	<script type="text/javascript">
+		$(function(){
+			let posters = [
+				{ h:'<big>Indentured Worker</big><br>on Elon Musk’s Mars colony',bg:'poster/mars.png'},
+				{ h:'<big>Talent Agent</big><br>for Only Fans Performers',bg:'poster/pimp.png'},
+				{ h:'<big>Ambassador to Brownland</big><br>(Formerly known as Iceland)',bg:'poster/brownland.png'},
+				{ h:'<big>Cryonicist</big><br>for Silicon Valley Billionaires ',bg:'poster/cryo.png'},
+				{ h:'<big>Security Guard</big><br>for the Last Tree in the Amazon',bg:'poster/amazon.png'},
+				{ h:'<big>Flight attendant</big><br>on Greta Thunberg’s private jet',bg:'poster/greta.png'},
+				{ h:'<big>Athlete</big><br>at the 32nd MrBeast Summer Games (formerly known as the Olympics)',bg:'poster/athlete.png'},
+				{ h:'<big>Human Pet</big><br>for Advanced AI',bg:'poster/pet.png'},
+				{ h:'<big>Thought Police</big><br>for University Campuses',bg:'poster/campus.png'},
+				{ h:'<big>Tour Guide</big><br>for the Netherlands:<br>The World’s First Underwater Country',bg:'poster/netherlands.png'},
+				{ h:'<big>Euthanizer</big><br>for Senior Citizens',bg:'poster/nurse.png'},
+				{ h:'<big>Campaigner</big><br>for Trump’s 7th Presidential Term',bg:'poster/trump.png'},
+				{ h:'<big>Campaigner</big><br>for the BrEntry Party:<br>Getting Britain Back in the EU',bg:'poster/lady-eu.png'},
+				{ h:'<big>Meat Substitute</big>',bg:'poster/meat.png'},
+			]
+
+			for(var p in posters){
+				$(`<poster>
+		          <layer>
+		            <img src='${posters[p].bg}'/>
+		          </layer>
+		          <layer>
+		          	<top>
+
+			            <h1><span><small>We need you as</small><br>${posters[p].h}</span></h1>
+		            </top>
+		            <bottom>
+		            	<logo></logo>
+		            </bottom>
+		          </layer>
+		        </poster>`).appendTo('body')
+     		 }
+	
+		})
+	</script>	
+	<style type="text/css">
+		@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@200;900&display=swap');
+
+		body{
+			padding: 0px;
+			margin: 0px;
+			color: white;
+			font-family: 'Lexend', sans-serif;
+			font-weight: 200;
+			font-size: 15mm;
+			line-height: 0;
+		}
+
+		h1{
+			margin: 0px;
+			padding: 0px;
+			line-height: 0.7;
+		}
+
+		h1 span{
+
+			font-weight: 100;
+			font-size: 15mm;
+
+		}
+
+		h1 span small{
+			font-style: italic;
+
+			line-height: 2;
+		}
+
+		h1 span big{
+			font-size: 30mm;
+			font-weight: bold;
+			line-height: 1;
+		}
+
+		layer{
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			text-align: center;
+		}
+
+		top{
+			
+			display: block;
+			background: linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.5), transparent);
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			padding: 10px 0px 50px 0px;
+		}
+
+		bottom{
+			position: absolute;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			height: 22%;
+			display: block;
+			background: linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0.5), transparent);
+		}
+
+		logo{
+			width: 100%;
+			height: 100%;
+			background-image: url(poster/logo.png);
+			background-position: center;
+			background-size: 40%;
+			background-position: center;
+			background-repeat: no-repeat;
+			display: block;
+		}
+
+		poster{
+			position: relative;
+			display: inline-block;
+			width: 297mm;
+			height: 420.1mm;
+			background: black;
+			overflow: hidden;
+
+		}
+
+		img{
+			width: 100%;
+			height: 100%;
+			
+
+		}
+	</style>
+</head>
+<body>
+
+</body>
+</html>

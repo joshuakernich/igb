@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Maze Scroller</title>
+	<script type="text/javascript" src='../shared/jq.js'></script>
+	<script type="text/javascript">
+		$(function(){
+
+
+			let diver = {x:100,y:100,tx:100,ty:100}
+			let sub = {x:450,y:150,tx:450,ty:150}
+
+			let isDiver = false;
+			let isSub = false;
+
+			$(document).on('mouseup', function(e){
+				isDiver = false;
+				isSub = false;
+			});
+
+			$('cursor').eq(0).on('mousedown', function(e){
+				isDiver = true;
+				e.stopPropagation();
+			});
+
+			$('cursor').eq(1).on('mousedown', function(e){
+				isSub =  true;
+				e.stopPropagation();
+			});
+
+			$(document).on('mousemove', function(e){
+				let o = $('screen').offset();
+				let tx = e.clientX - o.left;
+				let ty = e.clientY - o.top;
+
+				if(isDiver){
+					diver.tx = tx;
+					diver.ty = ty;
+				} else if(isSub){
+					sub.tx = tx;
+					sub.ty = ty;
+				}
+				
+			});
+
+			let r = 100;
+
+			function step() {
+
+
+				$('cursor').eq(0).css({left:diver.tx,top:diver.ty});
+				$('cursor').eq(1).css({left:sub.tx,top:sub.ty});
+
+				diver.x = (diver.x*r+diver.tx)/(r+1);
+				diver.y = (diver.y*r+diver.ty)/(r+1);
+
+				sub.x = (sub.x*r+sub.tx)/(r+1);
+				sub.y = (sub.y*r+sub.ty)/(r+1);
+			
+				$('player').css({left:diver.x,top:diver.y,'transform':'scaleX('+(diver.tx>diver.x?1:-1)+')'});
+				$('sub').css({left:sub.x,top:sub.y,'transform':'scaleX('+(sub.tx>sub.x?-1:1)+')'});
+
+
+				let px = (diver.x+sub.x)/2;
+				let py = (diver.y+sub.y)/2;
+
+				$('level').css({left:'-'+px+'px',top:'-'+py+'px'});
+			}
+
+
+			setInterval(step,20);
+		})
+	</script>
+	<style type="text/css">
+		p{
+			color: white;
+			font-family: sans-serif;
+			margin: 20px;
+			font-weight: normal;
+			z-index: 100;
+			text-align: center;
+		}
+
+		body{
+			background: #333;
+		}
+
+		screen{
+			width: 1280px;
+			height: 720px;
+			background: url(ocean-colour.png);
+			display: block;
+			margin:  auto;
+			overflow: hidden;
+			position: relative;
+			background-size: cover;
+		}
+
+		level{
+			width: 200%;
+			height: 200%;
+			display: block;
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			background-image: url(maze.png);
+			background-size: 100%;
+			image-rendering: pixelated;
+			opacity: 0.8;
+		}
+
+		cursor{
+			position: absolute;
+		}
+
+		cursor:after{
+			content: "";
+			width: 40px;
+			height: 40px;
+			border-radius: 20px;
+			background: rgba(255,0,0,0.5);
+			display: block;
+			border: 8px dashed red;
+			transform: translate(-50%,-50%);
+			position: absolute;
+			box-sizing: border-box;
+
+		}
+
+		cursor:last-of-type:after{
+			background: rgba(150,250,255,0.5);
+			border-color: cyan;
+		}
+
+		player, sub{
+			position: absolute;
+		}
+
+		player:after{
+			content: "";
+			width: 60px;
+			height: 60px;
+			border-radius: 20px;
+
+			display: block;
+			
+			transform: translate(-50%,-50%);
+			position: absolute;
+			box-sizing: border-box;
+			background:url(diver.png);
+			background-size: cover;
+		}
+
+		sub:after{
+			content: "";
+			width: 120px;
+			height: 120px;
+
+			display: block;
+			
+			transform: translate(-50%,-50%);
+			position: absolute;
+			box-sizing: border-box;
+			background:url(sub.png);
+			background-size: contain;
+			background-position: center;
+			background-repeat: no-repeat;
+		}
+	</style>
+</head>
+<body>
+	<p>SUB MAZE - Drag the red or blue Cursor to move</p>
+	<screen>
+		
+		<level>
+			
+		</level>
+		<player></player>
+		<cursor></cursor>
+
+		<sub></sub>
+		<cursor></cursor>
+	</screen>
+</body>
+</html>

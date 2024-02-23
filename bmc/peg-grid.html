@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<script type="text/javascript" src="../jq.js"></script>
+	<title>
+		Pegs
+	</title>
+	<script type="text/javascript">
+		$(function(){
+
+			let $drag;
+			let nDrag;
+			let dMax = 30 * 30;
+			let map = [];
+			let grid = 6;
+
+			for(var y=0; y<grid; y++){
+				let $row = $('<row>').appendTo('.pegs')
+				for(var x=0; x<grid; x++){
+					$('<cell>').appendTo($row);
+				}
+			}
+
+			$('cursor').on('mousedown',function(){
+				$drag = $(this);
+				nDrag = $('cursor').index(this);
+			});
+
+			let nTouch = -1;
+
+			$(document).on('mousemove',function(e){
+				if(!$drag) return;
+
+				$drag.offset({left:e.clientX,top:e.clientY});
+
+				let isTouch = false;
+
+				$('cell').each(function(n){
+					let o = $(this).offset();
+					let dx = e.clientX - o.left;
+					let dy = e.clientY - o.top;
+	
+					let hasTouch = dx > 0 && dx < 100 && dy > 0 && dy < 100;
+
+					if(hasTouch && nTouch != n){
+
+						
+
+						if(nDrag == 1 && map[map.length-2] == n) map.pop();
+						else if(nDrag == 1) map.push(n);
+
+						if(nDrag == 0 && map[1] == n) map.shift();
+						else if(nDrag == 0) map.unshift(n);
+
+
+						nTouch = n;				
+						console.log(map);	
+						for(var m in map) console.log(getXY(map[m]));	
+					}
+
+					if(hasTouch) isTouch = true;
+					
+				})
+
+				if(!isTouch) nTouch = -1;
+
+				redraw();
+			})
+
+			function CalcY(xval, x0, y0, x1, y1)
+			{
+			    if(x1 == x0) return NaN;
+			    return y0 + (xval - x0)*(y1 - y0)/(x1 - x0);
+			}
+
+			function CalcX(yval, x0, y0, x1, y1)
+			{
+			    if(x1 == x0) return NaN;
+			    return x0 + (yval - y0)*(y1 - y0)/(x1 - x0);
+			}
+
+			function LineIntersectsSquare(x0, y0, x1, y1, left, top, right, bottom)
+			{
+			    let intersections = 0;
+			    if(CalcX(bottom, x0, y0, x1, y1) < right && CalcX(bottom, x0, y0, x1, y1) > left  ) intersections++;
+			    if(CalcX(top   , x0, y0, x1, y1) < right && CalcX(top   , x0, y0, x1, y1) > left  ) intersections++;
+			    if(CalcY(left  , x0, y0, x1, y1) < top   && CalcY(left  , x0, y0, x1, y1) > bottom) intersections++;
+			    if(CalcY(right , x0, y0, x1, y1) < top   && CalcY(right , x0, y0, x1, y1) > bottom) intersections++;
+			    return intersections;
+			}
+
+			function getXY(n){
+				return {x: n%grid * 100, y:Math.floor(n/grid) * 100};
+			}
+
+
+
+			function redraw() {
+				$('cell').removeClass('active');
+				for(m in map) $('cell').eq(map[m]).addClass('active');
+
+				let start = $('cursor').eq(0).offset();
+				let end = $('cursor').eq(1).offset();
+				let first = $('cell').eq(0).offset();
+
+				start = { x: start.left - first.left, y: start.top - first.top };
+				end = { x: end.left - first.left, y: end.top - first.top };
+
+				//console.log(start,end);
+
+				let line = [start];
+
+				let anchor = {x:start.x,y:start.y};
+
+				for(let m=0; m<map.length-1; m++){
+
+					
+					let xy = getXY(map[m]);
+					
+					let intersections = LineIntersectsSquare(anchor.x,anchor.y,end.x,end.y,xy.x,xy.y,xy.x+100,xy.y+100);
+
+					if(intersections==0){
+						// corner needed
+						// base it on the next grid
+
+						let xyNext = getXY(map[m+1]);
+
+						let dirX = (anchor.x < xyNext.x)?1:-1;
+						let dirY = (anchor.y < xyNext.y)?1:-1;
+
+						if( dirX > 0 && dirY < 0 ) anchor = {x:xy.x+10,y:xy.y+10}; // top left corner
+						else if( dirX > 0 && dirY > 0 ) anchor = {x:xy.x+10,y:xy.y+90}; // bottom left corner
+						else if( dirX < 0 && dirY < 0 ) anchor = {x:xy.x+90,y:xy.y+10}; // top right corner
+						else if( dirX < 0 && dirY > 0 ) anchor = {x:xy.x+90,y:xy.y+90}; // bottom right corner
+
+						line.push(anchor);
+
+
+					}
+
+
+				}
+
+				
+
+				line.push(end);
+
+				let o1 = $('cursor').eq(0).offset();
+				let o2 = $('cursor').eq(1).offset();
+				let oSVG = $('svg').offset();
+
+				let d = ''
+				for(var l in line){
+					d += (l==0?'M':'L') + (line[l].x+50) +' '+ (line[l].y+50) + ' ';
+				}
+			
+
+				//console.log(d);
+
+				$('path').eq(0).attr('d',d);
+
+			
+
+			}
+
+			redraw();
+
+			$(document).on('mouseup',function(e){
+				$drag = undefined;
+			});
+		})
+	</script>
+	<style type="text/css">
+		body{
+			padding: 0px;
+			margin: 0px;
+			background: #222;
+			line-height: 0px;
+			text-align: center;
+			
+		}
+
+		layer{
+			position: absolute;
+			top: 50px;
+			left: 50px;
+			
+			width: 600px;
+			height: 600px;
+
+			
+			box-sizing: border-box;
+
+
+		}
+
+		row{
+			display: block;
+		}
+
+		cell{
+			display: inline-block;
+			width: 100px;
+			height: 100px;
+			position: relative;
+			box-sizing: border-box;
+			border: 1px solid rgba(255, 255, 255, 0.1);
+		}
+
+		cell.active{
+			background: rgba(255, 255, 255, 0.1);
+		}
+
+		cursor{
+			position: absolute;
+			display: block;
+		}
+
+		cursor:after{
+			content: "";
+			width: 30px;
+			height: 30px;
+			transform: translate(-50%,-50%);
+			background: red;
+			
+			box-shadow: 0px 1px 5px black;
+			display: block;
+			position: absolute;
+			border-radius: 100px;
+			box-sizing: border-box;
+		}
+
+		cursor:last-of-type:after{
+			background: blue;
+		}
+	</style>
+</head>
+<body>
+	<layer>
+		<svg style='margin:-50px;display: inline-block;background: #111;' width=700 height=700>
+			<path fill='transparent' stroke='white' stroke-width=2 d='M0 0 L100 100'/>
+		</svg>
+	</layer>
+	<layer class='pegs'>
+
+	</layer>
+	<layer>
+
+		<cursor style='left: 47vw;top:100px;'></cursor>
+		<cursor style='left: 53vw;top:100px;'></cursor>
+	</layer>
+</body>
+</html>

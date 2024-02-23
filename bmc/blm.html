@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>BLM</title>
+	<script type="text/javascript" src="jq.js"></script>
+	<script type="text/javascript">
+		$(function(){
+			let level = 
+			{
+				laser:'3,3,R',
+			}
+
+			for(var y  = 0; y < 9; y++){
+				let $row = $('<row>').appendTo('body');
+				for(var x  = 0; x < 16*3; x++){
+					$('<cell>').appendTo($row);
+				}
+			}
+
+			function getCell(x,y) {
+				return $('row').eq(y).find('cell').eq(x);
+			}
+
+			let laser = level.laser.split(',');
+			getCell(laser[0],laser[1]).addClass('laser').addClass(laser[2]);
+		})
+	</script>
+	<style type="text/css">
+		body{
+			
+		}
+		row{
+			display: block;
+			text-align: center;
+			line-height: 0px;
+			white-space: nowrap;
+		}
+
+		cell{
+			width: 30px;
+			height: 30px;
+			box-sizing: border-box;
+			border: 1px solid #333;
+			display: inline-block;
+			position: relative;
+			background: black;
+		}
+
+		cell:nth-of-type(16n){
+			margin-right: 1px;
+		}
+
+		cell.laser{
+			background: red;
+		}
+
+		cell.laser:after{
+			content: "";
+			display: inline-block;
+			width: 50%;
+			height: 50%;
+			border-right: 2px solid white;
+			border-bottom: 2px solid white;
+			position: absolute;
+			top: 25%;
+			left: 25%;
+			box-sizing: border-box;
+		}
+
+		cell.laser.R:after{
+			transform: rotate(-45deg);
+		}
+	</style>
+</head>
+<body>
+
+</body>
+</html>

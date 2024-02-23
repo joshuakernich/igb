@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<script type="text/javascript" src="../jq.js"></script>
+	<title>
+		Pegs
+	</title>
+	<script type="text/javascript">
+		$(function(){
+
+			
+
+			let $drag;
+			let nDrag;
+			let dMax = 30 * 30;
+			let map = [];
+			let grid = 4;
+
+			for(var y=0; y<grid; y++){
+				let $row = $('<row>').appendTo('.pegs')
+				for(var x=0; x<grid; x++){
+					$('<cell>').appendTo($row);
+				}
+			}
+
+			$('cursor').on('mousedown',function(){
+				$drag = $(this);
+				nDrag = $('cursor').index(this);
+			});
+
+			let nTouch = -1;
+
+			$(document).on('mousemove',function(e){
+				if(!$drag) return;
+
+				$drag.offset({left:e.clientX,top:e.clientY});
+
+				let isTouch = false;
+
+				$('cell').each(function(n){
+					let o = $(this).offset();
+					let dx = o.left - e.clientX;
+					let dy = o.top - e.clientY;
+					let d = dx*dx + dy*dy;
+					let hasTouch = d<dMax;
+
+					if(hasTouch && nTouch != n){
+
+
+
+						if(nDrag == 1 && map.indexOf(n) == -1) map.push(n);
+						else if(nDrag == 0 && map.indexOf(n) == -1) map.unshift(n);
+						else if(nDrag == 1 && map[map.length-1] == n) map.pop();
+						else if(nDrag == 0 && map[0] == n) map.shift();
+
+						nTouch = n;						
+					}
+
+					if(hasTouch) isTouch = true;
+					
+				})
+
+				if(!isTouch) nTouch = -1;
+
+				redraw();
+			})
+
+			function redraw() {
+				$('cell').removeClass('active first last');
+
+				let o1 = $('cursor').eq(0).offset();
+				let o2 = $('cursor').eq(1).offset();
+				let oSVG = $('svg').offset();
+
+				let dCursor = 'M'+(o1.left-oSVG.left)+' '+(o1.top-oSVG.top)+' ';
+				let dFirst = 'M'+(map[0]%grid + 1)*100+' '+Math.floor(map[0]/grid + 1)*100+' ';
+				let d = '';
+
+				for(var m in map){
+					$('cell').eq(map[m]).addClass('active');
+
+					if(m==0) $('cell').eq(map[m]).addClass('first');
+					if(m==map.length-1) $('cell').eq(map[m]).addClass('last');
+
+					d += 'L'+(map[m]%grid + 1)*100+' '+Math.floor(map[m]/grid + 1)*100+' ';
+				}
+
+				$('path').eq(0).attr('d',dCursor+d);
+
+				$('path').eq(2).attr('d',dFirst+d);
+
+				d += 'L'+(o2.left-oSVG.left)+' '+(o2.top-oSVG.top)+' ';
+
+				$('path').eq(1).attr('d',dFirst+d);
+
+				if(map.length <= 1) $('path').eq(2).attr('d',dCursor+d);
+			}
+
+			redraw();
+
+			$(document).on('mouseup',function(e){
+				$drag = undefined;
+			});
+
+			
+		})
+	</script>
+	<style type="text/css">
+		body{
+			padding: 0px;
+			margin: 0px;
+			background: #222;
+			line-height: 0px;
+			text-align: center;
+			
+		}
+
+		layer{
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			width: 100vw;
+			height: 100vh;
+
+			padding: 50px;
+			box-sizing: border-box;
+		}
+
+		row{
+			display: block;
+		}
+
+		cell{
+			display: inline-block;
+			width: 0px;
+			height: 0px;
+			margin: 50px;
+			position: relative;
+		}
+
+		cell:after{
+			content: "";
+			width: 30px;
+			height: 30px;
+			border-radius: 20px;
+			position: absolute;
+			left: -15px;
+			top: -15px;
+			background: rgba(0,0,0,0.5);
+			display: block;
+			box-sizing: border-box;
+			border: 2px dashed rgba(255,255,255,0.2);
+		}
+
+		cell.active:after{
+			width: 20px;
+			height: 20px;
+			top: -10px;
+			left: -10px;
+			background: white;
+			
+		}
+
+		cell.active.first:after{
+			background: black;
+			border-color:red;
+			
+		}
+
+		cell.active.last:after{
+			background: black;
+			border-color:blue;
+			
+		}
+
+		cursor{
+			position: absolute;
+			display: block;
+		}
+
+		cursor:after{
+			content: "";
+			width: 30px;
+			height: 30px;
+			transform: translate(-50%,-50%);
+			background: red;
+			
+			box-shadow: 0px 1px 5px black;
+			display: block;
+			position: absolute;
+			border-radius: 100px;
+			box-sizing: border-box;
+		}
+
+		cursor:last-of-type:after{
+			background: blue;
+		}
+
+		
+	</style>
+</head>
+<body>
+	
+	<layer>
+		<svg style='margin:-50px;display: inline-block;background: #111;' width=500 height=500>
+			<path fill='transparent' stroke='red' stroke-width=2 d='M0 0 L100 100'/>
+			<path fill='transparent' stroke='blue' stroke-width=2 d='M0 0 L100 100'/>
+			<path fill='transparent' stroke='white' stroke-width=2 d='M0 0 L100 100'/>
+		</svg>
+	</layer>
+	<layer class='pegs'>
+
+	</layer>
+	<layer>
+
+		<cursor style='left: 50vw;'></cursor>
+		<cursor style='left: 50vw;top:150px;'></cursor>
+	</layer>
+</body>
+</html>

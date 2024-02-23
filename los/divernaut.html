@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <script type="text/javascript" src="./bezier.js"></script>
+  <script type="text/javascript" src="./jq.js"></script>
+	<title>Divernauts</title>
+	<style type="text/css">
+		body{
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			align-content: center;
+			width: 100vw;
+			height: 100vh;
+			padding: 0px;
+			margin: 0px;
+			background: black;
+		}
+		world{
+			width: 960px;
+			height: 540px;
+			background-image: url('./Divernaut-bg.png');
+			display: flex;
+			position: relative;
+		}
+
+		avatar{
+			position: absolute;
+			bottom: -80px;
+			display: block;
+			width: 50px;
+			height: 60px;
+			background: red;
+			border-radius: 50px 50px 20px 20px;
+
+			transform: translateX(-50%);
+
+		}
+
+		avatar:after{
+			content: "";
+			width: 50px;
+			height: 50px;
+			border-radius: 100px;
+			display: block;
+			position: absolute;
+			top: -40px;
+			left: 0px;
+			background: red;
+			box-shadow: 0px 0px 10px black;
+		}
+
+		marker{
+			position: absolute;
+			top: -80px;
+			display: block;
+			width: 0px;
+			height: 20px;
+			background: red;
+			left: 50%;
+
+		}
+
+		marker:after{
+			content: "";
+			width: 0; 
+			height: 0; 
+			border-left: 15px solid transparent;
+			border-right: 15px solid transparent;
+			border-top: 20px solid red;
+			display: block;
+			position: absolute;
+			left: -15px;
+			
+		}
+
+		naut{
+			width: 0px;
+			height: 0px;
+			display: block;
+			position: absolute;
+			top: 100px;
+		}
+
+		nautinner{
+			width: 100px;
+			left: -50px;
+			display: block;
+			position: absolute;
+			transform: scale(0.5);
+		}
+
+		nauthead{
+			width: 100px;
+			height: 80px;
+			display: block;
+			position: absolute;
+			background-image: url(./divernaut-head.png);
+			background-position: center top;
+			background-size: 180%;
+		}
+
+		nautbody{
+			width: 100px;
+			height: 85px;
+			display: block;
+			position: absolute;
+			background-image: url(./divernaut-body.png);
+			background-position: center bottom;
+			background-size: 150%;
+			top: 80px;
+			transform-origin: 50% -20px;
+		}
+
+		jellyfish.off{
+			background-image: url(./jellyfish-off.png);
+		}
+
+		jellyfish{
+			display: block;
+			background-image: url(./jellyfish.png);
+			width: 200px;
+			height: 200px;
+			background-size: 100%;
+			background-position: center;
+			position: absolute;
+			transform: translateX(-50%);
+
+		}
+
+
+
+		
+
+		start, end{
+			height: 100%;
+			width: 100px;
+			background: white;
+			position: absolute;
+			opacity: 0.1;
+			background: linear-gradient(to top, white, transparent);
+			display: block;
+
+		}
+
+		end{
+			right: 0px;
+		}
+
+		obstacle{
+			width: 50px;
+			height: 50px;
+			background-image: url(./skateboard.png);
+			background-size: 100%;
+			background-repeat: no-repeat;
+			background-position: center;
+		}
+
+		charger{
+			width: 30px;
+			height: 30px;
+			position: absolute;
+			left: 50%;
+			top: 0px;
+			border-right: 0px;
+			transform-origin: center;
+		
+			border-radius: 100px;
+			transform: translate(-50%,-50%);
+			
+			background-image: url(alert.png);
+			background-size: 100%;
+		}
+
+
+
+		
+	</style>
+	<script type="text/javascript">
+
+		
+
+		$(function(){
+
+			var jelly = [
+				
+				{x:250,y:70},
+				{x:450,y:220},
+				{x:700,y:70},
+			]
+
+			function Obstacle(x){
+				var self = this;
+
+				self.step = () => {
+
+				}
+
+				self.collide = () => {
+
+				}
+
+				self.render = () => {
+
+				}
+			}
+
+			function Jelly(n,j){
+
+				let self = this;
+
+				self.$ = $('<jellyfish>').appendTo('world').css({left:j.x,top:j.y});
+				self.$charger = $('<charger>').appendTo(self.$);
+				self.time = 10000-n*1500;
+
+				self.setTime = function(t){
+					self.time = t;
+
+					let loop = t%8000;
+
+					let charging = loop/6000;
+
+					let frame = Math.floor(charging*9);
+
+					
+					self.$charger.css({
+						opacity:(charging>0.7&&charging<1)?1:0,
+						//'background-position-x':-frame*100+'%'
+					})
+
+					if(loop<6000 || (loop>6100 && loop<6200) || (loop>7800 && loop<7900) ) self.$.addClass('off');
+					else self.$.removeClass('off');
+				}
+			}
+
+			for(var j in jelly) jelly[j].instance = new Jelly(j,jelly[j]);
+			
+
+			$('naut').appendTo('world');
+			
+
+
+			var map = {};
+			var a = 5;
+			var sx = 0;
+			var msx = 20;
+			var px = 0;
+			var mpx = 960;
+
+			var interval = 50;
+			var obstacles = [];
+
+			$(document).keydown( e => {
+				map[e.keyCode] = true;
+				console.log(e.keyCode);
+			})
+
+			$(document).keyup( e => {
+				map[e.keyCode] = false;
+			})
+
+			function tick(){
+				if(map[37]) sx -= a;
+				else if(map[39]) sx += a;
+				else sx *= 0.8;
+
+				if(sx>msx) sx = msx;
+				if(sx<-msx) sx = -msx;
+
+				px += sx;
+
+				
+				
+
+				
+
+				if(px<0){
+					px = 0;
+					sx = 0;
+				}
+				if(px>mpx){
+					px = mpx;
+					sx = 0;
+				}
+
+				let nJelly = 0;
+				while(jelly[nJelly] && px>jelly[nJelly].x) nJelly++;
+
+				let nPrevJelly = nJelly-1;
+
+				if(nPrevJelly<0) nPrevJelly = 0;
+				if(nJelly > jelly.length-1) nJelly = jelly.length-1;
+
+				let travelled = px - jelly[nPrevJelly].x;
+
+				let asPercent = travelled/( jelly[nJelly].x - jelly[nPrevJelly].x );
+				
+				if(nJelly == nPrevJelly) asPercent = 0;
+
+
+				
+
+				$('avatar').css('left',px);
+				$('naut').css('left',px);
+
+				$('naut').css('transform','scaleX('+(sx>0?-1:1)+')');
+				$('nautbody').css('rotate',-Math.abs(sx*2)+'deg');
+				$('nauthead').css('rotate',-Math.abs(sx)+'deg');
+				$('nauthead').css('left',-Math.abs(sx));
+
+
+				for(var j in jelly){
+					jelly[j].yCurrent = jelly[j].y + Math.sin(j + new Date().getTime()*0.001)*20;
+					jelly[j].instance.$.css({top:jelly[j].yCurrent});
+					jelly[j].instance.setTime( jelly[j].instance.time + interval );
+
+
+
+					
+				}
+
+
+				let yDif = jelly[nJelly].yCurrent - jelly[nPrevJelly].yCurrent;
+				py = jelly[nPrevJelly].yCurrent + yDif*asPercent + 50 + Math.sin(new Date().getTime()*0.001)*20;
+
+
+				
+				$('naut').css('top',py);
+
+				if( Math.random() > 0.9 ) obstacles.push( new Obstacle(50+Math.random()*800) );
+
+				for(var o in obstacles){
+					obstacles[o].step();
+					obstacles[o].collide(jelly);
+					obstacles[o].render();
+				}
+				
+			}
+
+
+
+			setInterval(tick,interval);
+		});
+	</script>
+</head>
+<body>
+	<world>
+		<obstacle></obstacle>
+		<naut>
+			<nautinner>
+				<nautbody></nautbody>
+				<nauthead></nauthead>
+			</nautinner>
+		</naut>
+		
+		<avatar>
+			
+			<marker></marker>
+		</avatar>
+		<start></start>
+		<end></end>
+	</world>
+
+</body>
+</html>

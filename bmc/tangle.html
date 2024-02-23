@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Tangle</title>
+	<script type="text/javascript" src='./jq.js'></script>
+	<script type="text/javascript">
+		$(function(){
+
+			let nodes = [];
+
+			let lines = [];
+
+			let spacing = 1280/18;
+
+
+			/*for(var y=0; y<11; y++){
+				for(var x=0; x<19; x++){
+					$('<spot>').appendTo('screen').css({left:x*spacing,top:y*spacing}).attr({x:x,y:y});
+				}
+			}*/
+
+			let $from;
+			let $drag;
+			let mode = 'draw';
+			let didMove = true;
+			let drags = [];
+
+			function join(from,to){
+				lines.push({$from:from,$to:to});
+				redraw();
+			}
+
+			function getXY(e){
+				let o = $('screen').offset();
+				let x = e.pageX - o.left;
+				let y = e.pageY - o.top;
+				return {x:x,y:y};
+			}
+
+			function onDown(e){
+
+				let xy = getXY(e);
+
+				if( $(e.target).is('node') ){
+					if( mode == 'move' ){
+						$drag = $(e.target);
+
+						
+						$('node').removeClass('draggable')
+
+						let n = drags.indexOf($drag);
+
+						if( n == -1 ) drags.unshift($drag);
+						while(drags.length>2) drags.pop();
+
+						console.log(drags);
+						for(var d in drags) drags[d].addClass('draggable');
+
+					}
+					else{
+						$from = $(e.target);
+						didMove = false;
+					}
+				} else if( mode == 'draw') {
+					$from = $('<node>')
+					.appendTo('screen')
+					.css({left:xy.x,top:xy.y});
+				}
+			}
+
+			
+
+			function redraw() {
+
+				$('path').attr('d','');
+
+				for(var l in lines){
+
+					let from = lines[l].$from.position();
+					let to = lines[l].$to.position();
+
+					let d = 'M'+from.left+','+from.top+' L'+to.left+','+to.top;
+					$('path').eq(l).attr('d',d);
+				}
+			}
+
+			function onDrag(e){
+				if($from){
+					let xy = getXY(e);
+					let from = $from.position();
+					let d = 'M'+from.left+','+from.top+' L'+xy.x+','+xy.y;
+					$('path').last().attr('d',d);
+				} else if($drag){
+					let xy = getXY(e);
+					$drag.css({left:xy.x,top:xy.y});
+					redraw();
+				}
+				didMove = true;
+			}
+
+			function onDrop(e){
+
+				let $to = $(e.target);
+
+				if($from && !didMove){
+
+					for(var i = lines.length-1; i>0; i--){
+						
+						if(lines[i].$from[0] == $from[0] || lines[i].$to[0] == $from[0]) lines.splice(i, 1);
+					}
+
+					$from.remove();
+					redraw();
+					$from = undefined;
+
+				}else if($from){
+
+					if(!$to.is('node')){
+						let xy = getXY(e);
+						$to = $('<node>').appendTo('screen').css({left:xy.x,top:xy.y});
+					}
+
+					join($from,$to);
+
+					$from = undefined;
+					$('path').last().attr('d','');
+				} else if($drag){
+					
+					$drag = undefined;
+					
+				}
+			}
+
+			$('screen').on('mousedown', onDown);
+			$('screen').on('mousemove',onDrag);
+			$(document).on('mouseup',onDrop);
+
+			$('button').first().click(function(){
+				mode = 'draw';
+				$('button').removeClass('active').first().addClass('active');
+			})
+
+			$('button').last().click(function(){
+				mode = 'move';
+				$('button').removeClass('active').last().addClass('active');
+			})
+
+		})
+	</script>
+	<style type="text/css">
+		body{
+			margin: 0px;
+			padding: 0px;
+			background: #333;
+		}
+
+		screen{
+			width: 1280px;
+			height: 720px;
+			background: black;
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			margin: auto;
+			padding: 0px;
+		}
+
+		node:after{
+			content: "";
+			width: 20px;
+			height: 20px;
+			left: -10px;
+			top: -10px;
+			display: block;
+			position: absolute;
+			box-sizing: border-box;
+			border: 1px solid white;
+			background: white;
+			border-radius: 100px;
+		}
+
+		node.draggable:after{
+			background: red;
+		}
+
+		node, spot{
+			position: absolute;
+			display: block;
+		}
+
+		spot:after{
+			content: "";
+			width: 20px;
+			height: 20px;
+			border-radius: 100px;
+			position: absolute;
+			left: -10px;
+			top: -10px;
+			opacity: 0.4;
+			box-sizing: border-box;
+			border: 1px solid white;
+			background: black;
+		}
+
+		spot:hover{
+			background: white;
+			opacity: 1;
+		}
+
+		button{
+			background: black;
+			border: 1px solid white;
+			padding: 15px;
+			color: gray;
+
+			font-family: inherit;
+		}
+
+		button.active{
+			background: blue;
+			color: white;
+		}
+
+		button:first-of-type{
+			border-right: none;
+		}
+
+		hud{
+			background: black;
+			color: white;
+			position: absolute;
+			border: 1px solid white;
+			padding: 10px;
+			font-family: Arial;
+			font-size: 10px;
+
+		}
+	</style>
+</head>
+<body>
+
+	<screen>
+		<svg stroke="white" stroke-width='2' width=1280 height=720>
+			<path ></path>
+			<path></path>
+			<path></path>
+			<path></path>
+			<path></path>
+			<path></path>
+			<path></path>
+			<path></path>
+			<path></path>
+			<path></path>
+			<path></path>
+			<path></path>
+			<path></path>
+			<path></path>
+			<path></path>
+			<path></path>
+			<path></path>
+			<path></path>
+			<path></path>
+		</svg>
+	</screen>
+	<hud>
+		<button class='active'>DRAW MODE</button><button>MOVE MODE</button>
+		<br><br>DRAW MODE<br>Drag and drop to create nodes and lines.<br>Click to delete node.<br><br>MOVE MODE<br>Drag and drop to move nodes.
+	</hud>
+</body>
+</html>

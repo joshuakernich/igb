@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title></title>
+	<script type="text/javascript" src="jq.js"></script>
+	<script type="text/javascript">
+		$(function(){
+
+			let actors = [];
+			let gravity = 1;
+
+			
+
+			function Actor(props) {
+
+				let $actor = $('<actor>').appendTo('scene').css(props);
+				let self = this;
+
+				self.x = props.x?props.x:0;
+				self.y = props.y?props.y:0;
+				self.sx = 0;
+				self.sy = 0;
+				self.w = props.w?props.w:50;
+				self.h = props.h?props.h:50;
+
+				self.step = function(){
+					if(!props.active) return;
+						
+					sy += props.g;
+					if(sy>20) sy = 20;
+					y += sy;
+				}
+
+				self.collide = function(other){
+					
+				}
+
+				actors.push(self);
+			}
+
+
+			new Actor({g:1});
+
+		});
+
+	</script>
+	<style type="text/css">
+		body{
+			background: #333;
+			padding: 0px;
+			margin: 0px;
+
+		}
+
+		scene{
+			display: block;
+			width: 1280px;
+			height: 720px;
+			background: black;
+			margin: auto;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			position: absolute;
+		}
+
+		actor{
+			display: block;
+			width: 50px;
+			height: 50px;
+			box-sizing: border-box;
+			border: 1px solid white;
+			bottom: 0px;
+			position: absolute;
+			left: 0px;
+		}
+	</style>
+</head>
+<body>
+	<scene>
+		
+	</scene>
+</body>
+</html>

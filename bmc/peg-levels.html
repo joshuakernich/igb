@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Peg Levels</title>
+	<script type="text/javascript" src="../shared/jq.js"></script>
+	<script type="text/javascript">
+		
+
+		$(function(){
+
+			let levels = [
+
+				// clear line
+				'11 12',
+				'01 02 12 11 21 22',
+				'00 11 12 23',
+				'10 01 12 03 13 22 11 20',
+				'01 00 20 11 12 03 23 22',
+				'03 01 10 21 23 13 11',
+
+				// crossovers
+				'01 00 22 02 20 21',
+				'00 21 02 13 22 01 20',
+				'21 22 00 10 13 23 01 02',
+				'02 03 11 23 20 12 00 01',
+				'23 01 00 22 13 02 20 21 03',
+
+				// hidden end points
+				'22 00 20 23 03 21',
+				'13 10 21 23 03 02 11',
+				'10 13 12 01 11',
+				'12 22 00 10 13 23 01 11',
+				'02 22 20 00 03 23 21 01',
+				'10 12 22 20 00 03 23 21 11 13',
+			]
+
+			let gridX = 3;
+			let gridY = 4;
+
+			$('<h1>').appendTo('body').text('Weave');
+
+			for(var l in levels){
+				let $level = $('<level>').appendTo('body');
+				let $svg = $('<svg width=150 height=200>').appendTo($level);
+				for(var y=0; y<gridY; y++){
+					let $row = $('<row>').appendTo($level)
+					for(var x=0; x<gridX; x++){
+						$('<cell>').appendTo($row);
+					}
+				}
+
+				let d = ' ';
+				let coords = levels[l].split(' ');
+				for(var c in coords){
+					let coord = coords[c].split('');
+					d = d + (c==0?'M':'L') + (25+coord[0]*50) + ' ' + (25+coord[1]*50) + ' ';
+				}
+
+				$svg.html('<path stroke=white stroke-width=2 d="'+d+'"/>');
+
+				console.log('<path d="'+d+'"/>')
+			}
+
+			$('<h1>').appendTo('body').text('Run & Jump');
+
+			let scale = [
+				'R     ',
+				'      ',
+				'      ',
+				'R     ',
+				'R  R  ',
+				'======',
+			]
+
+			let flat = [
+				'      ',
+				'      ',
+				'      ',
+				'      ',
+				'======',
+			]
+
+			let over = [
+				'  @  ',
+				'*====',
+				'     ',
+				'     ',
+				'=====',
+			]
+
+			let under = [
+				'     ',
+				'*====',
+				'     ',
+				'  @  ',
+				'=====',
+			]
+
+			let overunder = [
+				'  @  ',
+				'*====',
+				'     ',
+				'  @  ',
+				'=====',
+			]
+
+			let high = [
+				' @ ',
+				'   ',
+				'   ',
+				'   ',
+				'===',
+			]
+
+			let jump = [
+				' @ ',
+				'   ',
+				' * ',
+				' * ',
+				'===',
+			]
+
+			let longjump = [
+				'  @  ',
+				'     ',
+				'     ',
+				' *** ',
+				'=====',
+			]
+
+			let threat = [
+				' * ',
+				' * ',
+				'   ',
+				' @ ',
+				'===',
+			]
+
+			let squat = [
+				' * ',
+				' * ',
+				' * ',
+				' @ ',
+				'===',
+			]
+
+			let longsquat = [
+				'     ',
+				'     ',
+				' *** ',
+				'  @  ',
+				'=====',
+			]
+
+			let longsquatjump = [
+				'       @  ',
+				'          ',
+				' ***      ',
+				'      *** ',
+				'==========',
+			]
+
+			let longdouble = [
+				'  @  ',
+				'     ',
+				' *** ',
+				'  @  ',
+				'=====',
+			]
+
+			let thread = [
+				'  **',
+				' *  ',
+				'*   ',
+				'   @',
+				'    ',
+				'  **',
+				' *  ',
+				'*   ',
+				'    ',
+			]
+
+			let hole = [
+				'  @  ',
+				'     ',
+				'     ',
+				'     ',
+				'     ',
+			]
+
+			let ramp = [
+				'      @ ',
+				'        ',
+				'        ',
+				'*====   ',
+				'        ',
+				'        ',
+				'        ',
+			]
+
+			let threadramp = [
+				'  **        ',
+				' *        @ ',
+				'*           ',
+				'            ',
+				'            ',
+				'  **=====   ',
+				' *          ',
+				'*           ',
+				'            ',
+			]
+
+			let jumpduck = [
+				'        ',
+				'    *** ',
+				'     @  ',
+				'*=======',
+				'        ',
+				'        ',
+				'        ',
+			]
+
+			let jumpjump = [
+				'     @  ',
+				'        ',
+				'    *** ',
+				'        ',
+				'*=======',
+				'        ',
+				'        ',
+				'        ',
+			]
+
+			let jumpdouble = [
+				'     @  ',
+				'        ',
+				'    *** ',
+				'     @  ',
+				'*=======',
+				'        ',
+				'        ',
+				'        ',
+			]
+
+			let jumpjumpduck = [
+				'       *** ',
+				'        @  ',
+				'    *======',
+				'           ',
+				'*===       ',
+				'           ',
+				'           ',
+				'           ',
+			]
+
+			let jumpduckjump = [
+				'    *       ',
+				'    *     @ ',
+				'    *   *===',
+				'            ',
+				'*======     ',
+				'            ',
+				'            ',
+				'            ',
+			]
+
+			let jumpjumpduckdouble = [
+				'       ***',
+				'        @ ',
+				'    *=====',
+				'          ',
+				'*===      ',
+				'       ***',
+				'        @ ',
+				'    ======',
+			]
+
+			let jumpduckjumpdouble = [
+				'    *       ',
+				'    *     @ ',
+				'    *   *===',
+				'            ',
+				'*======     ',
+				'            ',
+				'          @ ',
+				'       =====',
+			]
+
+			let jumphole = [
+				'               ',
+				'               ',
+				'               ',
+				'            @  ',
+				'*====     =====',
+				'               ',
+				'               ',
+				'               ',
+			]
+
+			let jumpduckhole = [
+				'   *            ',
+				'   *            ',
+				'   *            ',
+				'             @  ',
+				'*=====     =====',
+				'                ',
+				'                ',
+				'                ',
+			]
+
+			let jumpduckholeduck = [
+				'   *         *  ',
+				'   *         *  ',
+				'   *         *  ',
+				'             @  ',
+				'*=====     =====',
+				'                ',
+				'                ',
+				'                ',
+			]
+
+			let jumpholedouble = [
+				'               ',
+				'               ',
+				'               ',
+				'            @  ',
+				'*====     =====',
+				'               ',
+				'            @  ',
+				'        =======',
+			]
+
+			let threadlong = [
+				'  **  ',
+				' *  * ',
+				'*    *',
+				'      ',
+				'     @',
+				'  **  ',
+				' *  * ',
+				'*    *',
+				'      ',
+			]
+
+			function append(pattern,$level){
+				let $b = $('<block>').appendTo($level);
+
+
+				for(var y=0; y<pattern.length; y++){
+					let $row = $('<row>').appendTo($b);
+					for(var x=0; x<pattern[y].length; x++){
+						$('<brick>').appendTo($row).attr('type',pattern[y][x]);
+					}
+				}
+			}
+
+			let patterns = [
+				scale,flat,
+				over,under,overunder,
+				high,jump,threat,squat,longjump,longsquat,longsquatjump,longdouble,longsquatjump,
+				hole,ramp,
+				thread,threadramp,
+				jumpduck,jumpjump,longdouble,jumpdouble,
+				jumpjumpduck,jumpduckjump,jumpjumpduckdouble,jumpduckjumpdouble,jumpjumpduck,
+				jumpjumpduck,jumpduckjump,jumpjumpduckdouble,jumpduckjumpdouble,
+				threadlong,
+			]
+			
+			let runs = [
+				[over,over,under,under,over,overunder,under,overunder],
+				[high,jump,threat,squat,high,threat,longjump,longsquat,longsquatjump,longdouble,longsquatjump,longdouble],
+				[high,hole,ramp,hole,ramp,squat,hole,ramp,squat,hole,ramp],
+				[thread,thread,jump,squat,thread,thread,jump,squat,threadramp,threadramp],
+				[jumpduck,overunder,jumpjump,longdouble,jumpdouble,overunder,longdouble,jumpdouble],
+				[jumphole,jumpduckhole,jumpduckholeduck,jumphole,jumpholedouble,jumpduckhole,jumpholedouble],
+				[jumpjumpduck,jumpduckjump,jumpjumpduckdouble,jumpduckjumpdouble,jumpjumpduck,jumpduckjump,jumpjumpduckdouble,jumpduckjumpdouble],
+				[thread,threadlong,threadramp,threadlong,thread,threadramp,threadlong,thread,threadramp,threadlong],
+				
+			]
+
+			function makeRun(sequence){
+				let $level = $('<level class="run">').appendTo('body');
+				append(scale,$level)
+				for(var s in sequence){
+					append(sequence[s],$level);
+					append(flat,$level);
+				}
+				
+			}
+
+			$('<p>').appendTo('body').text('Available Patterns');
+			for(var p in patterns){
+				let $level = $('<level class="run">').appendTo('body');
+				append(patterns[p],$level);
+
+			}
+
+			$('<p>').appendTo('body').text('Levels (with a flat space between each obstacle)');
+			for( var r in runs ){
+				makeRun(runs[r]);
+			}
+
+			$('<p>').appendTo('body').text('*randomise all patterns for remaining rounds')
+			
+
+		})
+	</script>
+	<style type="text/css">
+		body{
+			background: #333;
+			color: white;
+			font-family: sans-serif;
+
+		}
+
+		p,h1{
+			margin: 10px;
+		
+		}
+
+		level{
+			background: black;
+			line-height: 0px;
+			position: relative;
+			display: inline-block;
+			margin: 10px;
+		}
+
+		level.run{
+			
+			white-space: nowrap;
+			padding: 0px;
+		}
+
+
+
+		svg{
+			position: absolute;
+			top:0px;
+			left: 0px;
+
+		}
+
+		row{
+			display: block;
+		}
+
+		block{
+			display: inline-block;
+			border-right: 1px dashed #333333;
+			vertical-align: bottom;
+
+		}
+
+		
+
+		brick{
+			display: inline-block;
+			width: 10px;
+			height: 10px;
+			background: transparent;
+			position: relative;
+		}
+
+		brick[type='=']{
+			background: white;
+		}
+
+		brick[type='R']{
+			background: red;
+			transform: scale(0.8);
+		}
+
+		brick[type='*']{
+			background: red;
+			border-radius: 20px;
+			transform: scale(0.5);
+		}
+
+		brick[type='@']{
+			background: gold;
+			border-radius: 20px;
+			transform: scale(0.5);
+		}
+
+		cell{
+			display: inline-block;
+			width: 50px;
+			height: 50px;
+			background: transparent;
+			position: relative;
+		}
+
+		cell:after{
+			content: "";
+			width: 4px;
+			height: 4px;
+			background: white;
+			position: absolute;
+			top:23px;
+			left: 23px;
+			display: block;
+		}
+
+
+	</style>
+</head>
+<body>
+
+</body>
+</html>
