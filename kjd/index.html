@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Kim Jong Dashian</title>
+	<script type="text/javascript" src='../shared/jq.js'></script>
+	<script type="text/javascript">
+		$(function(){
+
+			
+			let xFrom = 500;
+			let xTo = 800;
+			let xRad = (xTo-xFrom)/2;
+			let yRad = 450;
+			let xCenter = (xFrom+xTo)/2;
+			let yFrom = 500;
+			let yCenter = 500;
+
+			
+			let span = Math.PI;
+			let steps = 200;
+
+			let ticker = 0;
+			function tick(){
+		
+				ticker ++;
+
+				let d = '';
+				
+				let iEnd = (ticker < 30)?(ticker/30*steps):steps;
+				let iStart = (ticker > 30 )?((ticker-30)*5):(0);
+
+				for(var i=iStart; i<iEnd; i++){
+
+					let r = Math.PI-span*(i/steps);
+					let x = xCenter + Math.cos(r)*xRad;
+					let y = yCenter - Math.sin(r)*yRad;
+			
+					let r2 = r+Math.PI/2;
+
+					let curve = Math.sin(i/steps*30 - ticker*0.6);
+					let xRipple = x + Math.sin(r2)*curve*(i/steps)*30;
+					let yRipple = y + Math.cos(r2)*curve*(i/steps)*30;
+					
+					d += (i==iStart?'M':'L')+xRipple+','+yRipple;
+				}
+				
+				$('path').attr('d',d);
+			}
+
+			setInterval(tick,70);
+		})
+	</script>
+	<style type="text/css">
+		body{
+			background: #333;
+		}
+
+		screen{
+			width: 1024px;
+			height: 520px;
+			background: #B45E06;
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			margin: auto;
+		}
+	</style>
+</head>
+<body>
+	<screen>
+		<svg width=1024 height=520>
+			<path stroke='white' fill='transparent' stroke-width='5' d='M500,520 L500,0'/>
+		</svg>
+	</screen>
+</body>
+</html>
