@@ -7,7 +7,92 @@
 	<script type="text/javascript" src="../shared/jq.js"></script>
 	<script type="text/javascript">
 		$(function(){
+			$(document).on('mousemove',onMove);
+
+			let w = $('screen').width();
+			let isThrowing = false;
+			let $projectile;
+			let layerTime;
+			let layerProgress;
+			let yTarget = 0;
+
+			function onMove(e){
+				let x = e.pageX - $('screen').offset().left;
+				let amt = x/w - 0.5;
+
+				$('target').css('left',x);
+				
+				if(!isThrowing){
+					
+					$projectile.css('left',x);
+					$projectile.find('inner').css('transform','rotate('+amt*70+'deg)');
+				}
+			}
+
+			function redrawProjectile(val,obj){
+
+				let maxAt = 550;
+				let minAt = 150;
+				let pos = (val-minAt)/(maxAt-minAt);
+	
+				let scale = 0.2 + pos * 0.8;
+
+				$projectile.css('transform','scale('+scale+')');
+				$projectile.find('inner').css({
+					'top': -Math.sin(obj.pos*Math.PI)*400,
+					'transform':'rotate('+obj.pos*270+'deg)',
+				})
+			}
+
+			function doThrow(y){
+
+				isThrowing = true;
+				let duration = 1000-y;
+				$projectile.animate({ top:y },{ easing:'linear', duration:duration, step:redrawProjectile, complete:newProjectile });
+			}
+
+			let isTriggeredByLayer = false;
+
+			function newProjectile() {
+				isThrowing = false;
+				isTriggeredByLayer = false;
+				$projectile = $(`<projectile>
+				<inner></inner>
+				<smash></smash>
+				</projectile>`).appendTo('screen');
+
+				$projectile.css({top:550,transform:'scale(1) rotate(0deg)'});
+
+				setTimeout(function(){ doThrow(yTarget); },3000);
+				
+			}
+
+
+
+			function onLayerUpdate(a,obj) {
+				layerProgress = obj.pos;
+			}
+
+			function doLayer(n) {
+
+				layerDuration = 10000-(n*2000);
+				yTarget = 150+n*100;
+				let scale = (1+n);
+				
+
+				$('target').css({top:yTarget,transform:'scale('+scale+')'});
+
+				$('demogorgon')
+				.css({left:'-5%',top:yTarget,transform:'scale('+scale+')'})
+				.animate({left:'105%'},{easing:'linear',step:onLayerUpdate,duration:layerDuration,complete:function(){
+					if(n<2) doLayer(n+1);
+				}});
+
+			}
+
 			
+			doLayer(0);
+			newProjectile();
 		})
 	</script>
 	<style type="text/css">
@@ -19,15 +104,119 @@
 		screen{
 			width: 1024px;
 			height: 576px;
-			background: black;
+			background: #777;
 			display: inline-block;
 			margin: 20px;
+			position: relative;
+			overflow: hidden;
+		}
+
+		target{
+			position: absolute;
+			top: 100px;
+		}
+
+		target:before{
+			content: "";
+			width: 50px;
+			height: 50px;
+			border-radius: 100px;
+			border: 5px solid red;
+			position: absolute;
+			left: -25px;
+			top: -25px;
+			transform: scaleY(0.3);
+		}
+
+		demogorgon{
+			position: absolute;
+			top: 100px;
+		}
+
+		demogorgon:before{
+			content: "";
+			width: 50px;
+			height: 50px;
+			border-radius: 100px;
+			background: black;
+			position: absolute;
+			left: -25px;
+			top: -25px;
+			transform: scaleY(0.3);
+			opacity: 0.3;
+		}
+
+		demogorgon:after{
+			content: "";
+			background-image:url("./demogorgon.png");
+			width: 100px;
+			height: 100px;
+			background-size: 180%;
+			background-position: center;
+			background-repeat: no-repeat;
+			display: inline-block;
+			position: absolute;
+			left: -50px;
+			bottom: -5px;
+		}
+
+		projectile{
+			position: absolute;
+			top: 550px;
+		}
+
+		projectile:before{
+			content: "";
+			width: 50px;
+			height: 50px;
+			border-radius: 100px;
+			background: black;
+			position: absolute;
+			left: -25px;
+			top: -25px;
+			transform: scaleY(0.3);
+			opacity: 0.3;
+		}
+
+		inner{
+			position: absolute;
+			top: 0px;
+		}
+
+		inner:after{
+			content: "";
+			background-image:url("./bottle.png");
+			width: 200px;
+			height: 200px;
+			background-size: contain;
+			background-position: center;
+			background-repeat: no-repeat;
+			display: inline-block;
+			position: absolute;
+			left: -100px;
+			bottom: -100px;
+		}
+
+		smash{
+			position: absolute;
+			/*background: url(https://cdn-icons-png.flaticon.com/512/8819/8819076.png);*/
+			
+			width: 400px;
+			height: 400px;
+			background-size: contain;
+			background-position: center;
+			background-repeat: no-repeat;
+			display: inline-block;
+			position: absolute;
+			left: -200px;
+			bottom: -200px;
 		}
 	</style>
 </head>
 <body>
 	<screen>
-
+		<target></target>
+		<demogorgon></demogorgon>
 	</screen>
 </body>
 </html>
