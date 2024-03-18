@@ -17,6 +17,7 @@
 			let layerProgress;
 			let yTarget = 0;
 			let scale = 1;
+			let iLayerJump;
 
 			function onMove(e){
 				let x = e.pageX - $('screen').offset().left;
@@ -29,19 +30,17 @@
 					
 					$projectile.find('inner').css('transform','rotate('+amt*70+'deg)');
 
-					if( !$('demogorgon').hasClass('crouch') ){
+					if( $('demogorgon').hasClass('vulnerable') ){
 						let dist = $('demogorgon').offset().left - e.pageX;
 						let y = $('target').offset().top - $('screen').offset().top;
 						if(dist<50 && dist>-50) doThrow( y );
 					}
-					
 
 				} 
-					
-
-
 
 			}
+
+			
 
 			function redrawProjectile(val,obj){
 
@@ -67,10 +66,40 @@
 
 				isThrowing = true;
 				let duration = 1000-y;
-				$projectile.animate({ top:y },{ easing:'linear', duration:duration, step:redrawProjectile, complete:newProjectile });
+				$projectile.animate({ top:y },{ easing:'linear', duration:duration, step:redrawProjectile, complete:onThrowComplete });
 			}
 
 			let isTriggeredByLayer = false;
+
+
+			function onThrowComplete(){
+				if($projectile){
+					
+
+					if( $('demogorgon').hasClass('vulnerable') ){
+						let dist = $('demogorgon').offset().left - $projectile.offset().left;
+						let y = $('target').offset().top - $('screen').offset().top;
+						if(dist<50 && dist>-50) hitDemogorgon();
+					}
+
+					$projectile.remove();
+
+				}
+				setTimeout(newProjectile,500);
+			}
+
+			function hitDemogorgon(){
+
+				clearTimeout(iLayerJump);
+
+				let x = $('demogorgon').position().left;
+				$('demogorgon')
+				.animate({left:x-5},20)
+				.animate({left:x+5},20)
+				.animate({left:x-5},20)
+				.animate({left:x+5},20)
+				.animate({left:x},{duration:20,complete:toRandomObstacle})
+			}
 
 			function newProjectile() {
 
@@ -100,38 +129,38 @@
 				let $obstacle = $('layer').eq(nLayer).find('obstacle').eq(nObstacle);
 				let x = $obstacle.position().left + Math.random()*$obstacle.width();
 
-				$('demogorgon').removeClass('crouch').css({left:x});
+				$('demogorgon').removeClass('crouch').css({left:x}).addClass('vulnerable');
 
-				setTimeout(toNextObstacle,1000);
+				iLayerJump = setTimeout(doNextLayer,1500);
+			}
+
+			function toRandomObstacle(){
+				nObstacle = Math.floor(Math.random()*$('layer').eq(nLayer).find('obstacle').length);
+				toObstacle( nObstacle );
 			}
 
 			function atObstacle(){
 
-				if(Math.random()>0.4) setTimeout( demoPop, 500 + Math.random()*1000 );
-				else if(Math.random()>0.4) setTimeout( toNextObstacle, 500 + Math.random()*1000 );
-				else setTimeout( toPrevObstacle, 500 + Math.random()*1000 );
+				if(Math.random()>0.4) setTimeout( demoPop, 200 + Math.random()*1000 );
+				else toRandomObstacle();
 
 			}
 
 			function toObstacle(nObstacle){
 				let $obstacle = $('layer').eq(nLayer).find('obstacle').eq(nObstacle);
 
-				$('demogorgon').addClass('crouch');
+				$('demogorgon').addClass('crouch').removeClass('vulnerable');
 
-				if($obstacle.length){
-					
-					$('demogorgon').animate(
-						{
-							left:$obstacle.position().left + $obstacle.width()/2
-						},
-						{
-							duration: 1000,
-							easing:'swing',
-							complete:atObstacle,
-						});
-				} else {
-					$('demogorgon').animate({left:'110%'},{duration:1000,complete:doNextLayer});
-				}
+				$('demogorgon').animate(
+					{
+						left:$obstacle.position().left + $obstacle.width()/2
+					},
+					{
+						duration: 1000,
+						easing:'swing',
+						complete:atObstacle,
+					});
+				
 			}
 
 			let nObstacle = -1;
@@ -162,11 +191,12 @@
 				$('target').appendTo($('layer').eq(n)).css({transform:'scale('+scale+')'});
 
 				$('demogorgon')
+				.removeClass('vulnerable')
 				.prependTo($('layer').eq(n))
-				.css({left:'-5%',transform:'scale('+scale+')'});
+				.css({transform:'scale('+scale+')'});
 
 
-				toNextObstacle();
+				if( $('layer').eq(nLayer).find('obstacle').length ) setTimeout( toNextObstacle, 500);
 				
 
 			}
@@ -217,7 +247,7 @@
 
 		demogorgon{
 			position: absolute;
-			bottom: 10px;
+			bottom: 15%;
 		}
 
 		demogorgon:before{
@@ -348,6 +378,9 @@
 		<layer style="height:150px">
 		
 			<obstacle style='width:500px;'></obstacle>
+			<obstacle style='width:300px;'></obstacle>
+		</layer>
+		<layer>
 		</layer>
 	</screen>
 </body>
