@@ -12,9 +12,11 @@
 			let w = $('screen').width();
 			let isThrowing = false;
 			let $projectile;
+			let $locked;
 			let layerTime;
 			let layerProgress;
 			let yTarget = 0;
+			let scale = 1;
 
 			function onMove(e){
 				let x = e.pageX - $('screen').offset().left;
@@ -50,7 +52,7 @@
 	
 				let scale = 0.2 + pos * 0.8;
 
-				console.log( pos, Math.sin(Math.PI*pos));
+				
 
 				$projectile.css('transform','scale('+scale+')');
 				$projectile.find('inner').css({
@@ -60,6 +62,8 @@
 			}
 
 			function doThrow(y){
+
+				//$locked = $('<locked>').appendTo('body').offset($('target').offset());
 
 				isThrowing = true;
 				let duration = 1000-y;
@@ -71,6 +75,9 @@
 			function newProjectile() {
 
 				if($projectile) $projectile.remove();
+				if($locked) $locked.remove();
+
+				
 
 				isThrowing = false;
 				isTriggeredByLayer = false;
@@ -80,8 +87,6 @@
 				</projectile>`).appendTo('screen');
 
 				$projectile.css({top:550,transform:'scale(1) rotate(0deg)'});
-
-				//setTimeout(function(){ doThrow(yTarget); },3000);
 				
 			}
 
@@ -91,20 +96,24 @@
 				//layerProgress = obj.pos;
 			}
 
-			function atObstacle(){
+			function demoPop(){
+				let $obstacle = $('layer').eq(nLayer).find('obstacle').eq(nObstacle);
+				let x = $obstacle.position().left + Math.random()*$obstacle.width();
 
-
-
-				$('demogorgon').removeClass('crouch');
+				$('demogorgon').removeClass('crouch').css({left:x});
 
 				setTimeout(toNextObstacle,1000);
 			}
 
-			let nObstacle = -1;
-			function toNextObstacle(){
+			function atObstacle(){
 
-				nObstacle++;
+				if(Math.random()>0.4) setTimeout( demoPop, 500 + Math.random()*1000 );
+				else if(Math.random()>0.4) setTimeout( toNextObstacle, 500 + Math.random()*1000 );
+				else setTimeout( toPrevObstacle, 500 + Math.random()*1000 );
 
+			}
+
+			function toObstacle(nObstacle){
 				let $obstacle = $('layer').eq(nLayer).find('obstacle').eq(nObstacle);
 
 				$('demogorgon').addClass('crouch');
@@ -123,8 +132,17 @@
 				} else {
 					$('demogorgon').animate({left:'110%'},{duration:1000,complete:doNextLayer});
 				}
+			}
 
-				
+			let nObstacle = -1;
+			function toNextObstacle(){
+				nObstacle++;
+				toObstacle(nObstacle);
+			}
+
+			function toPrevObstacle(){
+				nObstacle--;
+				toObstacle(nObstacle);
 			}
 
 			function doNextLayer(){
@@ -138,7 +156,7 @@
 
 				layerDuration = 10000-(n*2000);
 				yTarget = 150+n*100;
-				let scale = (1+n);
+				scale = (1+n);
 				
 
 				$('target').appendTo($('layer').eq(n)).css({transform:'scale('+scale+')'});
@@ -174,12 +192,14 @@
 			overflow: hidden;
 		}
 
-		target{
+		target, locked{
 			position: absolute;
 			top: -45%;
 		}
 
-		target:before{
+
+
+		locked:before, target:before{
 			content: "";
 			width: 20px;
 			height: 20px;
@@ -189,6 +209,10 @@
 			transform: translate( -50%, -50% );
 
 			
+		}
+
+		locked:before{
+			border-color: yellow;
 		}
 
 		demogorgon{
@@ -284,7 +308,7 @@
 			text-align: center;
 			height: 60px;
 			display: block;
-			border: 1px solid red;
+			
 			margin: 0px 0px;
 			position: relative;
 		}
