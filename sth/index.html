@@ -21,25 +21,40 @@
 				let amt = x/w - 0.5;
 
 				$('target').css('left',x);
+				$projectile.css('left',x);
 				
 				if(!isThrowing){
 					
-					$projectile.css('left',x);
 					$projectile.find('inner').css('transform','rotate('+amt*70+'deg)');
-				}
+
+					if( !$('demogorgon').hasClass('crouch') ){
+						let dist = $('demogorgon').offset().left - e.pageX;
+						let y = $('target').offset().top - $('screen').offset().top;
+						if(dist<50 && dist>-50) doThrow( y );
+					}
+					
+
+				} 
+					
+
+
+
 			}
 
 			function redrawProjectile(val,obj){
 
+
 				let maxAt = 550;
-				let minAt = 150;
+				let minAt = 0;
 				let pos = (val-minAt)/(maxAt-minAt);
 	
 				let scale = 0.2 + pos * 0.8;
 
+				console.log( pos, Math.sin(Math.PI*pos));
+
 				$projectile.css('transform','scale('+scale+')');
 				$projectile.find('inner').css({
-					'top': -Math.sin(obj.pos*Math.PI)*400,
+					'top':-Math.sin(obj.pos*Math.PI)*400,
 					'transform':'rotate('+obj.pos*270+'deg)',
 				})
 			}
@@ -54,6 +69,9 @@
 			let isTriggeredByLayer = false;
 
 			function newProjectile() {
+
+				if($projectile) $projectile.remove();
+
 				isThrowing = false;
 				isTriggeredByLayer = false;
 				$projectile = $(`<projectile>
@@ -63,30 +81,75 @@
 
 				$projectile.css({top:550,transform:'scale(1) rotate(0deg)'});
 
-				setTimeout(function(){ doThrow(yTarget); },3000);
+				//setTimeout(function(){ doThrow(yTarget); },3000);
 				
 			}
 
 
 
 			function onLayerUpdate(a,obj) {
-				layerProgress = obj.pos;
+				//layerProgress = obj.pos;
+			}
+
+			function atObstacle(){
+
+
+
+				$('demogorgon').removeClass('crouch');
+
+				setTimeout(toNextObstacle,1000);
+			}
+
+			let nObstacle = -1;
+			function toNextObstacle(){
+
+				nObstacle++;
+
+				let $obstacle = $('layer').eq(nLayer).find('obstacle').eq(nObstacle);
+
+				$('demogorgon').addClass('crouch');
+
+				if($obstacle.length){
+					
+					$('demogorgon').animate(
+						{
+							left:$obstacle.position().left + $obstacle.width()/2
+						},
+						{
+							duration: 1000,
+							easing:'swing',
+							complete:atObstacle,
+						});
+				} else {
+					$('demogorgon').animate({left:'110%'},{duration:1000,complete:doNextLayer});
+				}
+
+				
+			}
+
+			function doNextLayer(){
+				nObstacle = -1;
+				doLayer(nLayer+1);
 			}
 
 			function doLayer(n) {
+
+				nLayer = n;
 
 				layerDuration = 10000-(n*2000);
 				yTarget = 150+n*100;
 				let scale = (1+n);
 				
 
-				$('target').css({top:yTarget,transform:'scale('+scale+')'});
+				$('target').appendTo($('layer').eq(n)).css({transform:'scale('+scale+')'});
 
 				$('demogorgon')
-				.css({left:'-5%',top:yTarget,transform:'scale('+scale+')'})
-				.animate({left:'105%'},{easing:'linear',step:onLayerUpdate,duration:layerDuration,complete:function(){
-					if(n<2) doLayer(n+1);
-				}});
+				.prependTo($('layer').eq(n))
+				.css({left:'-5%',transform:'scale('+scale+')'});
+
+
+				toNextObstacle();
+				
 
 			}
 
@@ -113,24 +176,24 @@
 
 		target{
 			position: absolute;
-			top: 100px;
+			top: -45%;
 		}
 
 		target:before{
 			content: "";
-			width: 50px;
-			height: 50px;
-			border-radius: 100px;
-			border: 5px solid red;
+			width: 20px;
+			height: 20px;
+			
+			border: 5px dashed red;
 			position: absolute;
-			left: -25px;
-			top: -25px;
-			transform: scaleY(0.3);
+			transform: translate( -50%, -50% );
+
+			
 		}
 
 		demogorgon{
 			position: absolute;
-			top: 100px;
+			bottom: 10px;
 		}
 
 		demogorgon:before{
@@ -152,7 +215,7 @@
 			width: 100px;
 			height: 100px;
 			background-size: 180%;
-			background-position: center;
+			background-position: bottom center;
 			background-repeat: no-repeat;
 			display: inline-block;
 			position: absolute;
@@ -160,12 +223,17 @@
 			bottom: -5px;
 		}
 
+		demogorgon.crouch:after{
+			background-image:url("./demogorgon-crouch.png");
+			background-size: 70%;
+		}
+
 		projectile{
 			position: absolute;
 			top: 550px;
 		}
 
-		projectile:before{
+		/*projectile:before{
 			content: "";
 			width: 50px;
 			height: 50px;
@@ -176,7 +244,7 @@
 			top: -25px;
 			transform: scaleY(0.3);
 			opacity: 0.3;
-		}
+		}*/
 
 		inner{
 			position: absolute;
@@ -211,12 +279,52 @@
 			left: -200px;
 			bottom: -200px;
 		}
+
+		layer{
+			text-align: center;
+			height: 60px;
+			display: block;
+			border: 1px solid red;
+			margin: 0px 0px;
+			position: relative;
+		}
+
+		obstacle{
+			width: 200px;
+			height: 120%;
+			display: inline-block;
+			margin: 0px 30px;
+			background: #ddd;
+			position: relative;
+			border-radius: 50px 50px 5px 5px;
+			position: relative;
+			top: -20%;
+			box-shadow: 0px -5px 10px rgba(0,0,0,0.2);
+		}
+
+		
 	</style>
 </head>
 <body>
 	<screen>
 		<target></target>
-		<demogorgon></demogorgon>
+		<demogorgon class='crouch'>
+			<demobody></demobody>
+			<demohead></demohead>
+		</demogorgon>
+		<layer style='margin-top:100px;'>
+			<obstacle></obstacle>
+			<obstacle></obstacle>
+			<obstacle></obstacle>
+		</layer>
+		<layer style="height:100px">
+			<obstacle style='width:300px;'></obstacle>
+			<obstacle></obstacle>
+		</layer>
+		<layer style="height:150px">
+		
+			<obstacle style='width:500px;'></obstacle>
+		</layer>
 	</screen>
 </body>
 </html>
