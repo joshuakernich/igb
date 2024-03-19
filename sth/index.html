@@ -19,26 +19,50 @@
 			let scale = 1;
 			let iLayerJump;
 
-			function onMove(e){
-				let x = e.pageX - $('screen').offset().left;
-				let amt = x/w - 0.5;
+			let xTarget;
 
-				$('target').css('left',x);
-				$projectile.css('left',x);
+			
+
+			function onMove(e){
+				xTarget = e.pageX - $('screen').offset().left;
+			}
+
+			function tick(){
+				let amt = xTarget/w - 0.5;
+				let isHitting = false;
+
+				$('target').css('left',xTarget);
+				$projectile.css('left',xTarget);
 				
 				if(!isThrowing){
 					
 					$projectile.find('inner').css('transform','rotate('+amt*70+'deg)');
 
 					if( $('demogorgon').hasClass('vulnerable') ){
-						let dist = $('demogorgon').offset().left - e.pageX;
-						let y = $('target').offset().top - $('screen').offset().top;
-						if(dist<50 && dist>-50) doThrow( y );
+						let dist = $('demogorgon').position().left - xTarget;
+						
+						
+						if(dist<50 && dist>-50) isHitting = true;
 					}
-
 				} 
 
+				if(isHitting) nLocked--;
+				else if(nLocked<ticksLock) nLocked++;
+
+				if(!isThrowing) $('locked').css('transform','scale('+(1+nLocked*0.1)+')')
+
+				if(isHitting && nLocked<=0){
+					let y = $('target').offset().top - $('screen').offset().top;
+					doThrow(y);
+				}
 			}
+
+			let ticksPerSecond = 20;
+			let timeLock =  140;
+			let ticksLock = timeLock/ticksPerSecond;
+			let nLocked = ticksLock;
+
+			setInterval(tick,1000/ticksPerSecond);
 
 			
 
@@ -75,7 +99,6 @@
 			function onThrowComplete(){
 				if($projectile){
 					
-
 					if( $('demogorgon').hasClass('vulnerable') ){
 						let dist = $('demogorgon').offset().left - $projectile.offset().left;
 						let y = $('target').offset().top - $('screen').offset().top;
@@ -131,7 +154,12 @@
 
 				$('demogorgon').removeClass('crouch').css({left:x}).addClass('vulnerable');
 
-				iLayerJump = setTimeout(doNextLayer,1500);
+				iLayerJump = setTimeout(doClimb,750);
+			}
+
+			function doClimb() {
+				$('demogorgon').addClass('climb');
+				iLayerJump = setTimeout(doNextLayer,1000);
 			}
 
 			function toRandomObstacle(){
@@ -149,7 +177,7 @@
 			function toObstacle(nObstacle){
 				let $obstacle = $('layer').eq(nLayer).find('obstacle').eq(nObstacle);
 
-				$('demogorgon').addClass('crouch').removeClass('vulnerable');
+				$('demogorgon').addClass('crouch').removeClass('vulnerable climb dodge');
 
 				$('demogorgon').animate(
 					{
@@ -191,7 +219,8 @@
 				$('target').appendTo($('layer').eq(n)).css({transform:'scale('+scale+')'});
 
 				$('demogorgon')
-				.removeClass('vulnerable')
+				.removeClass('vulnerable climb')
+				.addClass('dodge')
 				.prependTo($('layer').eq(n))
 				.css({transform:'scale('+scale+')'});
 
@@ -236,27 +265,31 @@
 			overflow: hidden;
 		}
 
-		target, locked{
+		target{
 			position: absolute;
 			top: -45%;
 		}
 
 
 
-		locked:before, target:before{
-			content: "";
+
+		reticule, locked{
+			
 			width: 20px;
 			height: 20px;
 			
-			border: 5px dashed red;
+			border: 2px solid red;
 			position: absolute;
-			transform: translate( -50%, -50% );
+			left: -10px;
+			top: -10px;
+			box-sizing: border-box;
+			border-radius: 100px;
 
 			
 		}
 
-		locked:before{
-			border-color: yellow;
+		locked{
+			border: 0.5px solid red;
 		}
 
 		demogorgon{
@@ -264,36 +297,34 @@
 			bottom: 15%;
 		}
 
-		demogorgon:before{
-			content: "";
-			width: 50px;
-			height: 50px;
-			border-radius: 100px;
-			background: black;
-			position: absolute;
-			left: -25px;
-			top: -25px;
-			transform: scaleY(0.3);
-			opacity: 0.3;
-		}
-
+		
 		demogorgon:after{
 			content: "";
-			background-image:url("./demogorgon.png");
+			background-image:url("./demo-static.png");
 			width: 100px;
 			height: 100px;
-			background-size: 180%;
+			background-size: 100%;
 			background-position: bottom center;
 			background-repeat: no-repeat;
 			display: inline-block;
 			position: absolute;
 			left: -50px;
-			bottom: -5px;
+			bottom: 0px;
+		}
+
+		demogorgon.dodge:after{
+			background-image:url("./demo-dodge.png");
+			
+		}
+
+		demogorgon.climb:after{
+			background-image:url("./demo-climb.png");
+			
 		}
 
 		demogorgon.crouch:after{
-			background-image:url("./demogorgon-crouch.png");
-			background-size: 70%;
+			background-image:url("./demo-crouch.png");
+			
 		}
 
 		projectile{
@@ -375,7 +406,10 @@
 </head>
 <body>
 	<screen>
-		<target></target>
+		<target>
+			<reticule></reticule>
+			<locked></locked>
+		</target>
 		<demogorgon class='crouch'>
 			<demobody></demobody>
 			<demohead></demohead>
