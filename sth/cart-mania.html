@@ -14,6 +14,14 @@
 		
 			let level;
 
+			/*
+				space is empty
+				- is barrier
+				1 is standard demodog
+				> is in right wall demodog
+				< is in left wall demodog
+			*/
+
 			let patterns = {
 				blank:[
 					'    ',
@@ -38,6 +46,14 @@
 					'    ',
 					'    ',
 					' -- ',
+				],
+
+				demowallleft:[
+					'<   ',
+				],
+
+				demowallright:[
+					'   >',
 				],
 
 				democolumnleft:[
@@ -92,10 +108,18 @@
 				'demozigzag','blank',
 				'obsrightleft','blank',
 				'demozigzag','blank',
+				'obsinout','blank',
+				'demowallleft','blank',
+				'obsinout','blank',
+				'demowallright','blank',
+				'obsinout','blank',
+				'demowallleft','blank',
+				'demowallright','blank',
+				'demorow','blank',
 				]
 			}
 
-			let levels = [a]
+			let levels = [a,b];
 
 
 			function spawnObstacle(x,y,type){
@@ -309,9 +333,23 @@
 
 		obstacle[type='1']:after{
 			background-image: url(demodog.png);
-			background-size: 150%;
+			background-size: 140%;
 			background-position: bottom -20px center;
 
+		}
+
+		obstacle[type='>']:after{
+			background-image: url(demodog.png);
+			background-size: 160%;
+			background-position: center left -100px;
+			transform: scaleX(-1) rotateX(-80deg) translateY(-50px);
+		}
+
+		obstacle[type='<']:after{
+			background-image: url(demodog.png);
+			background-size: 160%;
+			background-position: center left -100px;
+			transform: rotateX(-80deg) translateY(-50px);
 		}
 
 		car:before, obstacle:before{
