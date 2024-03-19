@@ -132,16 +132,11 @@
 				let sideways = 0.2/ticksPerSecond;
 				let forwards = 1/ticksPerSecond;
 
-				//if(xDiff>0) p.x -= distance;
-				//if(xDiff<0) p.x += distance;
-
 
 				if(p.x<xCar) p.x += sideways;
 				else if(p.x>xCar) p.x -= sideways;
 
 				if(p.y>yCar) p.y -= forwards;
-
-				console.log(p);
 				
 				$self.css({left:p.x*GRID,bottom:p.y*GRID*level.speed})
 				.data('p',p);
