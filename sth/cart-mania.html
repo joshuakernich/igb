@@ -122,8 +122,44 @@
 			let levels = [a,b];
 
 
+			function stepDoNothing(){
+
+			}
+
+			function stepMoveToward($self){
+
+				let p = $self.data('p');
+				let sideways = 0.2/ticksPerSecond;
+				let forwards = 1/ticksPerSecond;
+
+				//if(xDiff>0) p.x -= distance;
+				//if(xDiff<0) p.x += distance;
+
+
+				if(p.x<xCar) p.x += sideways;
+				else if(p.x>xCar) p.x -= sideways;
+
+				if(p.y>yCar) p.y -= forwards;
+
+				console.log(p);
+				
+				$self.css({left:p.x*GRID,bottom:p.y*GRID*level.speed})
+				.data('p',p);
+			}
+
 			function spawnObstacle(x,y,type){
-				$('<obstacle>').appendTo('inner').css({left:x*GRID,bottom:y*GRID*level.speed}).attr('type',type);
+
+			
+
+				let $o = $('<obstacle>')
+				.appendTo('inner')
+				.css({left:x*GRID,bottom:y*GRID*level.speed})
+				.attr('type',type)
+				.data('p',{x:parseFloat(x),y:parseFloat(y)})
+				.data('step',stepDoNothing)
+
+				if(type=='1') $o.data('step',stepMoveToward);
+				
 			}
 
 			let length = 0;
@@ -159,14 +195,34 @@
 			}
 
 			let nTick = 0;
-			let speed = 3; //car lengths per second
+			let carLengthsPerSecond = 3; //car lengths per second
 			let ticksPerSecond = 50;
+			let dist = 0;
+			let xCar;
+			let yCar;
 
 			function tick(){
-				nTick ++;
-				let dist = nTick/ticksPerSecond*speed;
-				$('car').css({bottom:dist*GRID*level.speed});
-				$('inner').css({bottom:-dist*GRID*level.speed});
+
+				dist += (carLengthsPerSecond/ticksPerSecond);
+				
+				$('car').css({bottom:dist * GRID * level.speed });
+				$('inner').css({bottom:-dist * GRID * level.speed });
+
+				xCar = xWas/GRID;
+				yCar = dist;
+
+				$('obstacle').each(function(){
+					let p = $(this).data('p');
+									
+					let xDiff = p.x-xCar;
+					let yDiff = p.y-yCar; 
+
+
+					if(yDiff<6){
+						$(this).addClass('active');
+						$(this).data('step')($(this),xDiff,yDiff);
+					}
+				})
 
 				if(dist>length) nextLevel();
 			}
@@ -180,6 +236,7 @@
 				$('obstacle').remove();
 				nTick = 0;
 				length = 0;
+				dist = 0;
 
 				nLevel ++;
 
@@ -197,7 +254,6 @@
 			perspective: 800px;
 			width: 100vw;
 			height: 100vh;
-			overflow: hidden;
 
 		}
 
@@ -308,7 +364,6 @@
 			position: absolute;
 			background: transparent;
 			transform-style: preserve-3d;
-
 		}
 
 		obstacle:after{
@@ -363,6 +418,10 @@
 			transform: scaleY(0.2);
 		}
 
+		obstacle.active:not([type='-']):before{
+			background: red;
+		}
+
 		info{
 			position: fixed;
 			top: 0px;
@@ -399,6 +458,7 @@
 				<li>The course is four grid spaces wide</li>
 				<li>Obstacles generally spawn in the middle of a grid space</li>
 				<li>Grid height (length) is scaled according to car speed</li>
+				<li>Demodogs should be activated, and start doing their individual behaviours when the car is 6 grid lengths away</li>
 			</ul>
 		</p>
 		<p>Car speed starts at 3 grid spaces per second, and increases each level.</p>
