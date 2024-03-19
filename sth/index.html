@@ -212,6 +212,20 @@
 			text-align: center;
 		}
 
+		info{
+			position: fixed;
+			top: 0px;
+			left: 0px;
+			display: block;
+			font-family: sans-serif;
+			padding: 10px;
+			width: 250px;
+			border: 1px solid black;
+			margin: 10px;
+			background: white;
+			text-align: left;
+		}
+
 		screen{
 			width: 1024px;
 			height: 576px;
@@ -383,5 +397,22 @@
 		<layer>
 		</layer>
 	</screen>
+
+	<info>
+		<p>Move left-to-right to attack.</p>
+		<p>
+			The thing that will make this game interesting is cheeky, unexpected behaviour from the Demogorgon to outsmart us. We need a system to queue behaviours that includes:
+			<ul>
+				<li>Run from obstacle to obstacle</li>
+				<li>Pop-up (and become vulnerable)</li>
+				<li>Pop-up to the side (and become vulnerable)</li>
+				<li>Peak (i.e. false pop-up)</li>
+				<li>Jump to next layer</li>
+				<li>Maybe throw things at us</li>
+			</ul>
+			
+		</p>
+
+	</info>
 </body>
 </html>
