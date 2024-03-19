@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>
+		Cart-Mania
+	</title>
+	<script type="text/javascript" src="../shared/jq.js"></script>
+	<script type="text/javascript">
+		$(function(){
+
+			const GRID = 150;
+		
+			let level;
+
+			let patterns = {
+				blank:[
+					'    ',
+					'    ',
+					'    ',
+					'    ',
+				],
+				obsleftright:[
+					'  --',
+					'    ',
+					'    ',
+					'--  ',
+				],
+				obsrightleft:[
+					'--  ',
+					'    ',
+					'    ',
+					'  --',
+				],
+				obsinout:[
+					'-  -',
+					'    ',
+					'    ',
+					' -- ',
+				],
+
+				democolumnleft:[
+					' 1  ',
+					'    ',
+					' 1  ',
+					'    ',
+					' 1  ',
+				],
+				democolumnright:[
+					'  1 ',
+					'    ',
+					'  1 ',
+					'    ',
+					'  1 ',
+				],
+				demozigzag:[
+					'  1 ',
+					'    ',
+					' 1  ',
+					'    ',
+					'  1 ',
+					'    ',
+					' 1  ',
+				],
+				demorow:[
+					'1111',
+				]
+			}
+
+			let a = {
+				speed:1,
+				queue:[
+					'blank','blank','blank',
+					'obsleftright','blank',
+					'democolumnleft','blank',
+					'obsrightleft','blank',
+					'democolumnright','blank',
+					'obsinout','blank',
+					'demozigzag','blank',
+					'obsleftright','blank',
+					'obsinout','blank',
+					'demorow','blank',
+				]
+			};
+
+			let b = {
+				speed:1.1,
+				queue:[
+				'blank','blank','blank',
+				'obsleftright','blank',
+				'demozigzag','blank',
+				'obsrightleft','blank',
+				'demozigzag','blank',
+				]
+			}
+
+			let levels = [a]
+
+
+			function spawnObstacle(x,y,type){
+				$('<obstacle>').appendTo('inner').css({left:x*GRID,bottom:y*GRID*level.speed}).attr('type',type);
+			}
+
+			let length = 0;
+			function nextPattern(pattern){
+				$('<pattern>').prependTo('inner').css({ height:pattern.length*GRID*level.speed });
+				for(var r in pattern) for(var c in pattern[r]) if(pattern[r][c] != ' ') spawnObstacle(c,length+pattern.length-r-1,pattern[r][c]);
+
+				length += pattern.length;
+			}
+
+			
+
+			$(document).on('mousemove',onMove);
+
+			let xWas = 0;
+			function onMove(e){
+				let x = e.pageX - $('course').offset().left - GRID/2;
+
+				if(x<0) x = 0;
+				if(x>(GRID*3)) x = GRID*3;
+
+				$('car').css({left:x}).removeClass('hitleft hitright')
+
+				if(x==0) $('car').addClass('hitleft');
+				if(x==(GRID*3)) $('car').addClass('hitright');
+
+				let d = x-xWas;
+				if(d>30) d = 30;
+				if(d<-30) d = -30;
+
+				$('chassis').css({transform:'rotate('+d+'deg)'});
+
+
+				xWas = x;
+			}
+
+			let nTick = 0;
+			let speed = 3; //car lengths per second
+			let ticksPerSecond = 50;
+
+			function tick(){
+				nTick ++;
+				let dist = nTick/ticksPerSecond*speed;
+				$('car').css({bottom:dist*GRID*level.speed});
+				$('inner').css({bottom:-dist*GRID*level.speed});
+
+				if(dist>length) nextLevel();
+			}
+
+			setInterval(tick,1000/ticksPerSecond);
+
+			let nLevel = -1;
+			function nextLevel(){
+
+				$('pattern').remove();
+				$('obstacle').remove();
+				nTick = 0;
+				length = 0;
+
+				nLevel ++;
+
+				level = levels[nLevel%levels.length];
+				for(var q in level.queue) nextPattern(patterns[level.queue[q]]);
+			}
+
+			nextLevel();
+		})
+	</script>
+	<style type="text/css">
+		body{
+			padding: 0px;
+			margin: 0px;
+			perspective: 800px;
+			width: 100vw;
+			height: 100vh;
+			overflow: hidden;
+
+		}
+
+
+
+		course{
+			width: 600px;
+			display: block;
+			margin: auto;	
+			position: absolute;
+			bottom: 0px;
+			left: 0px;
+			right: 0px;
+			margin: auto;
+			transform: rotateX(80deg);
+			transform-origin: bottom center;
+  			transform-style: preserve-3d;
+		} 
+
+		inner{
+			position: absolute;
+			bottom: 0px;
+			left: 0px;
+			right: 0px;
+			transform-style: preserve-3d;
+		}
+
+		pattern{
+			display: block;
+			width: 100%;
+			background: gray;
+			border-top: 10px dashed rgba(255,255,255,0.2);
+			box-sizing: border-box;
+			transform-style: preserve-3d;
+		}
+
+		car{
+			width: 150px;
+			height: 150px;
+			position: absolute;
+			bottom: 0px;
+			left: 0px;
+			display: block;
+			position: absolute;
+			background: transparent;
+			transform-style: preserve-3d;
+		}
+
+		car sprite{
+			content: "";
+			width: 100%;
+			height: 100%;
+			
+			transform: rotateX(-80deg);
+			transform-origin: bottom center;
+			display: block;
+			transform-style: preserve-3d;
+			position: absolute;
+			left: 0px;
+			bottom: 50%;
+		}
+
+		car chassis{
+			display: block;
+			position: absolute;
+			left: 0px;
+			bottom: 0px;
+			background-image: url(cart.png);
+			background-size: 90%;
+			background-position: bottom center;
+			background-repeat: no-repeat;
+			width: 100%;
+			height: 100%;
+		}
+
+		car spark{
+			content: "";
+			width: 100%;
+			height: 100%;
+			background-image: url(spark.gif);
+			background-size: 100%;
+			background-position: center;
+			background-repeat: no-repeat;
+			display: block;
+			position: absolute;
+			opacity: 0;
+			transform: scaleY(2);
+
+		}
+
+		car.hitleft spark{
+			left: -50%;
+			opacity: 1;
+		}
+
+		car.hitright spark{
+			left: 50%;
+			opacity: 1;
+		}
+
+		obstacle{
+			width: 150px;
+			height: 150px;
+			position: absolute;
+			bottom: 0px;
+			left: 0px;
+			display: block;
+			position: absolute;
+			background: transparent;
+			transform-style: preserve-3d;
+
+		}
+
+		obstacle:after{
+			content: "";
+			width: 100%;
+			height: 100%;
+			
+			transform: rotateX(-80deg);
+			transform-origin: bottom center;
+			display: block;
+			transform-style: preserve-3d;
+			position: absolute;
+			left: 0px;
+			bottom: 50%;
+			background-image: url(barrier.webp);
+			background-size: 100%;
+			background-position: bottom center;
+			background-repeat: no-repeat;
+		}
+
+		obstacle[type='1']:after{
+			background-image: url(demodog.png);
+			background-size: 150%;
+			background-position: bottom -20px center;
+
+		}
+
+		car:before, obstacle:before{
+			content: "";
+			border-radius: 100px;
+			background: rgba(0,0,0,0.1);
+			left: 5%;
+			right: 5%;
+			bottom: 5%;
+			top: 5%;
+			display: block;
+			position: absolute;
+			transform: scaleY(0.2);
+		}
+
+		info{
+			position: fixed;
+			top: 0px;
+			left: 0px;
+			display: block;
+			font-family: sans-serif;
+			padding: 20px;
+			width: 300px;
+			border: 1px solid black;
+			margin: 10px;
+		}
+
+		game{
+			width: 100vw;
+			height:100vh;
+			display: block;
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			right: 100vw;
+			bottom: 100vh;
+			transform-style: preserve-3d;
+		}
+
+
+	</style>
+</head>
+<body>
+	<info>
+		<p>Move your mouse left-to-right to steer.</p>
+		<p>All patterns appear on a perfect grid where:
+			<ul>
+				<li>The car is one grid space</li>
+				<li>The course is four grid spaces wide</li>
+				<li>Obstacles land in the middle of a grid space</li>
+				<li>Grid height (length) is scaled according to car speed</li>
+			</ul>
+		</p>
+		<p>Car speed starts at 3 grid spaces per second, and increases each level.</p>
+		<p>Example: If level speed is 1.5, then the car travels at 1.5 x 3 = 4.5 standard grid spaces per second.</p>
+		<p>However, the grid spacing is also increased 1.5 times, so obstacles are spaced analogously, regardless of speed.</p>
+	</info>
+	<game>
+		<course>
+			<inner>
+				<car>
+					<sprite>
+						<spark></spark>
+						<chassis></chassis>
+					</sprite>
+				</car>
+			</inner>
+		</course>
+	</game>
+</body>
+</html>
