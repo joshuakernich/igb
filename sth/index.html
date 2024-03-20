@@ -155,7 +155,7 @@
 			function queuePop(){
 				let $obstacle = $('layer').eq(nLayer).find('obstacle').eq(nObstacle);
 				let x = $obstacle.position().left + Math.random()*$obstacle.width();
-				$('demogorgon').attr('pose','static').animate({left:x},200);
+				$('demogorgon').attr('pose','static').animate({left:x},100);
 
 				iLayerJump = setTimeout(doClimb,timeClimb);
 			}
@@ -179,9 +179,13 @@
 
 				let $obstacle = $('layer').eq(nLayer).find('obstacle').eq(nObstacle);
 				let x = $obstacle.position().left + Math.random()*$obstacle.width();
-				$('demogorgon').attr('pose','fakeout').animate({left:x},200);
+				$('demogorgon').attr('pose','fakeout').animate({left:x},100);
 
-				setTimeout( queueHide, 400 );
+				setTimeout( function(){
+					$('demogorgon').attr('pose','crouch');
+				},500);
+
+				setTimeout( queuePop, 800 );
 			}
 
 			let whatNexts = [queuePop,queueHide,queueWave,queueFakeout];
