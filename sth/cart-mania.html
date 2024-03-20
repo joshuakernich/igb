@@ -10,6 +10,9 @@
 	<script type="text/javascript">
 		$(function(){
 
+
+
+
 			const GRID = 150;
 		
 			let level;
@@ -22,6 +25,7 @@
 				< is in left wall demodog
 			*/
 
+			
 			let patterns = {
 				blank:[
 					'    ',
@@ -79,6 +83,15 @@
 					'    ',
 					' 1  ',
 				],
+				demofarleft:[
+					'1   ',
+				],
+				demofarright:[
+					'   1',
+				],
+				demosplit:[
+					'1  1',
+				],
 				demorow:[
 					'1111',
 				]
@@ -104,6 +117,8 @@
 				speed:1.1,
 				queue:[
 				'blank','blank','blank',
+				'demowallleft','blank',
+				'demowallright','blank',
 				'obsleftright','blank',
 				'demozigzag','blank',
 				'obsrightleft','blank',
@@ -119,11 +134,37 @@
 				]
 			}
 
-			let levels = [a,b];
+			let c = {
+				speed:1.2,
+				queue:[
+				'blank','blank','blank',
+				'obsinout','blank',
+				'demofarleft','blank',
+				'demofarright','blank',
+				'demosplit','blank',
+				]
+			}
+
+			let levels = [b,a,c];
 
 
 			function stepDoNothing(){
 
+			}
+
+			function stepPounce($self){
+				let p = $self.data('p');
+
+				if(p.y-yCar < 1){
+					let sideways = 4/ticksPerSecond;
+					$self.attr('type','1');
+
+					if(p.x<xCar) p.x += sideways;
+					else if(p.x>xCar) p.x -= sideways;
+				}
+
+
+				$self.css({left:p.x*GRID,bottom:p.y*GRID*level.speed}).data('p',p);
 			}
 
 			function stepMoveToward($self){
@@ -133,13 +174,14 @@
 				let forwards = 1/ticksPerSecond;
 
 
+				if(p.y>yCar) p.y -= forwards;
+				if(p.y-yCar < 1) sideways = 4/ticksPerSecond;
+
 				if(p.x<xCar) p.x += sideways;
 				else if(p.x>xCar) p.x -= sideways;
 
-				if(p.y>yCar) p.y -= forwards;
 				
-				$self.css({left:p.x*GRID,bottom:p.y*GRID*level.speed})
-				.data('p',p);
+				$self.css({left:p.x*GRID,bottom:p.y*GRID*level.speed}).data('p',p);
 			}
 
 			function spawnObstacle(x,y,type){
@@ -154,6 +196,8 @@
 				.data('step',stepDoNothing)
 
 				if(type=='1') $o.data('step',stepMoveToward);
+				if(type=='>') $o.data('step',stepPounce);
+				if(type=='<') $o.data('step',stepPounce);
 				
 			}
 
