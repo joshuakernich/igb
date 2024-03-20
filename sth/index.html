@@ -188,9 +188,8 @@
 
 				setTimeout( function(){
 					$('demogorgon').attr('pose','crouch');
+					queueRandom();
 				},500);
-
-				setTimeout( queuePop, 800 );
 			}
 
 			let whatNexts = [queuePop,queueHide,queueWave,queueFakeout];
