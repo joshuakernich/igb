@@ -171,7 +171,11 @@
 			}
 
 			function queueWave(){
-				$('demogorgon').attr('pose','wave');
+
+				let $obstacle = $('layer').eq(nLayer).find('obstacle').eq(nObstacle);
+				let x = $obstacle.position().left + $obstacle.width()/4 + Math.random()*$obstacle.width()/2;
+
+				$('demogorgon').attr('pose','wave').css({left:x});
 				
 				setTimeout( function(){
 					$('demogorgon').attr('pose','crouch');
