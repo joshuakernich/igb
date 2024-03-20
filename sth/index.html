@@ -38,7 +38,7 @@
 					
 					$projectile.find('inner').css('transform','rotate('+amt*70+'deg)');
 
-					if( $('demogorgon').hasClass('vulnerable') ){
+					if( $('demogorgon').attr('pose') == 'static' || $('demogorgon').attr('pose') == 'climb' ){
 						let dist = $('demogorgon').position().left - xTarget;
 						
 						
@@ -49,7 +49,7 @@
 				if(isHitting) nLocked--;
 				else if(nLocked<ticksLock) nLocked++;
 
-				if(!isThrowing) $('locked').css('transform','scale('+(1+nLocked*0.1)+')')
+				if(!isThrowing) $('locked').css('transform','scale('+(1+nLocked*0.2)+')')
 
 				if(isHitting && nLocked<=0){
 					let y = $('target').offset().top - $('screen').offset().top;
@@ -57,8 +57,12 @@
 				}
 			}
 
-			let ticksPerSecond = 20;
-			let timeLock =  140;
+			let timeLock =  150;
+			let timeClimb = 750;
+			let timeJump = 1000;
+
+			let ticksPerSecond = 50;
+			
 			let ticksLock = timeLock/ticksPerSecond;
 			let nLocked = ticksLock;
 
@@ -99,7 +103,7 @@
 			function onThrowComplete(){
 				if($projectile){
 					
-					if( $('demogorgon').hasClass('vulnerable') ){
+					if( $('demogorgon').attr('pose') == 'static' || $('demogorgon').attr('pose') == 'climb' ){
 						let dist = $('demogorgon').offset().left - $projectile.offset().left;
 						let y = $('target').offset().top - $('screen').offset().top;
 						if(dist<50 && dist>-50) hitDemogorgon();
@@ -121,7 +125,7 @@
 				.animate({left:x+5},20)
 				.animate({left:x-5},20)
 				.animate({left:x+5},20)
-				.animate({left:x},{duration:20,complete:toRandomObstacle})
+				.animate({left:x},{duration:20,complete:queueHide})
 			}
 
 			function newProjectile() {
@@ -148,36 +152,53 @@
 				//layerProgress = obj.pos;
 			}
 
-			function demoPop(){
+			function queuePop(){
 				let $obstacle = $('layer').eq(nLayer).find('obstacle').eq(nObstacle);
 				let x = $obstacle.position().left + Math.random()*$obstacle.width();
+				$('demogorgon').attr('pose','static').animate({left:x},200);
 
-				$('demogorgon').removeClass('crouch').css({left:x}).addClass('vulnerable');
-
-				iLayerJump = setTimeout(doClimb,850);
+				iLayerJump = setTimeout(doClimb,timeClimb);
 			}
 
 			function doClimb() {
-				$('demogorgon').addClass('climb');
-				iLayerJump = setTimeout(doNextLayer,1000);
+				$('demogorgon').attr('pose','climb');
+				iLayerJump = setTimeout(doNextLayer,timeJump);
 			}
 
-			function toRandomObstacle(){
+			function queueHide(){
 				nObstacle = Math.floor(Math.random()*$('layer').eq(nLayer).find('obstacle').length);
 				toObstacle( nObstacle );
 			}
 
+			function queueWave(){
+				$('demogorgon').attr('pose','wave');
+				queueRandom();
+			}
+
+			function queueFakeout(){
+
+				let $obstacle = $('layer').eq(nLayer).find('obstacle').eq(nObstacle);
+				let x = $obstacle.position().left + Math.random()*$obstacle.width();
+				$('demogorgon').attr('pose','fakeout').animate({left:x},200);
+
+				setTimeout( queueHide, 400 );
+			}
+
+			let whatNexts = [queuePop,queueHide,queueWave,queueFakeout];
+
+			function queueRandom(){
+				let whatNext = whatNexts[ Math.floor(Math.random()*whatNexts.length) ];
+				setTimeout( whatNext, 50 + Math.random()*1000 );
+			}
+
 			function atObstacle(){
-
-				if(Math.random()>0.4) setTimeout( demoPop, 50 + Math.random()*1000 );
-				else toRandomObstacle();
-
+				queueRandom();
 			}
 
 			function toObstacle(nObstacle){
 				let $obstacle = $('layer').eq(nLayer).find('obstacle').eq(nObstacle);
 
-				$('demogorgon').addClass('crouch').removeClass('vulnerable climb dodge');
+				$('demogorgon').attr('pose','crouch');
 
 				$('demogorgon').animate(
 					{
@@ -219,8 +240,7 @@
 				$('target').appendTo($('layer').eq(n)).css({transform:'scale('+scale+')'});
 
 				$('demogorgon')
-				.removeClass('vulnerable climb')
-				.addClass('dodge')
+				.attr('pose','dodge')
 				.prependTo($('layer').eq(n))
 				.css({transform:'scale('+scale+')'});
 
@@ -312,18 +332,28 @@
 			bottom: 0px;
 		}
 
-		demogorgon.dodge:after{
+		demogorgon[pose=dodge]:after{
 			background-image:url("./demo-dodge.png");
 			
 		}
 
-		demogorgon.climb:after{
+		demogorgon[pose=climb]:after{
 			background-image:url("./demo-climb.png");
 			
 		}
 
-		demogorgon.crouch:after{
+		demogorgon[pose=crouch]:after{
 			background-image:url("./demo-crouch.png");
+			
+		}
+
+		demogorgon[pose=wave]:after{
+			background-image:url("./demo-wave.png");
+			
+		}
+
+		demogorgon[pose=fakeout]:after{
+			background-image:url("./demo-fakeout.png");
 			
 		}
 
@@ -437,10 +467,10 @@
 		<p>
 			<p>TIMINGS TO TWEAK:</p>
 			<ul>
-				<li>Vulnerability time (V): 1.85s</li>
+				<li>Vulnerability time (V): 1.75s</li>
 				<li>Target lock delay (L): 0.15s</li>
 				<li>Throw time per layer (T):<br>0.9s, 0.85, 0.8s</li>
-				<li>Player reaction time:<br> V - L - T = <br>1 second (approx)</li>
+				<li>Player reaction time:<br> V - L - T = <br>< 1 second (approx)</li>
 			</ul>
 			<p>VARIABLES TO TWEAK:</p>
 			<ul>
