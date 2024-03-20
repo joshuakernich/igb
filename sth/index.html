@@ -172,7 +172,12 @@
 
 			function queueWave(){
 				$('demogorgon').attr('pose','wave');
-				queueRandom();
+				
+				setTimeout( function(){
+					$('demogorgon').attr('pose','crouch');
+					queueRandom();
+				},500);
+
 			}
 
 			function queueFakeout(){
