@@ -15,14 +15,22 @@
 			let $locked;
 			let layerTime;
 			let layerProgress;
-			let yTarget = 0;
 			let scale = 1;
 			let iLayerJump;
 
 			let xTarget;
+			let hitsOnLayer = 0;
+			let isTargeting = false;
+
+			let timeLock =  1000;
+			let timeClimb = 1000;
+			let timeJump = 1500;
+			let ticksPerSecond = 50;
+			let ticksLock = timeLock/ticksPerSecond;
+			let nLocked = ticksLock;
+			let DISTANCE = 40;
 
 			
-
 			function onMove(e){
 				xTarget = e.pageX - $('screen').offset().left;
 			}
@@ -31,74 +39,60 @@
 				let amt = xTarget/w - 0.5;
 				let isHitting = false;
 
-				$('target').css('left',xTarget);
+				$('.me').css('left',xTarget);
 				$projectile.css('left',xTarget);
 				
 				if(!isThrowing){
 					
 					$projectile.find('inner').css('transform','rotate('+amt*70+'deg)');
 
-					if( $('demogorgon').attr('pose') == 'static' || $('demogorgon').attr('pose') == 'climb' ){
+					if( isTargeting ){
 						let dist = $('demogorgon').position().left - xTarget;
-						
-						
-						if(dist<30 && dist>-30) isHitting = true;
+						if(dist<DISTANCE && dist>-DISTANCE) isHitting = true;
 					}
 				} 
 
 				if(isHitting) nLocked--;
 				else if(nLocked<ticksLock) nLocked++;
 
-				if(!isThrowing) $('locked').css('transform','scale('+(1+nLocked*0.2)+')')
+				if(!isThrowing) $('locked').css('transform','scale('+(1+nLocked*0.1)+')')
 
 				if(isHitting && nLocked<=0){
+
 					let y = $('target').offset().top - $('screen').offset().top;
 					doThrow(y);
 				}
 			}
 
-			let timeLock =  150;
-			let timeClimb = 750;
-			let timeJump = 1000;
-
-			let ticksPerSecond = 50;
 			
-			let ticksLock = timeLock/ticksPerSecond;
-			let nLocked = ticksLock;
 
 			setInterval(tick,1000/ticksPerSecond);
 
-			
 
 			function redrawProjectile(val,obj){
-
 
 				let maxAt = 550;
 				let minAt = 0;
 				let pos = (val-minAt)/(maxAt-minAt);
 	
-				let scale = 0.2 + pos * 0.8;
-
-				
+				let scale = pos * 1;
 
 				$projectile.css('transform','scale('+scale+')');
 				$projectile.find('inner').css({
-					'top':-Math.sin(obj.pos*Math.PI)*400,
+					'top':-Math.sin(obj.pos*Math.PI)*600,
 					'transform':'rotate('+obj.pos*270+'deg)',
 				})
 			}
 
 			function doThrow(y){
-
-				//$locked = $('<locked>').appendTo('body').offset($('target').offset());
-
+				isTargeting = false;
+				$('target').hide();
 				isThrowing = true;
-				let duration = 1000-y;
+				let duration = 900 - nLayer*100;
 				$projectile.animate({ top:y },{ easing:'linear', duration:duration, step:redrawProjectile, complete:onThrowComplete });
 			}
 
 			let isTriggeredByLayer = false;
-
 
 			function onThrowComplete(){
 				if($projectile){
@@ -116,6 +110,8 @@
 			}
 
 			function hitDemogorgon(){
+
+				hitsOnLayer++;
 
 				clearTimeout(iLayerJump);
 
@@ -153,16 +149,23 @@
 			}
 
 			function queuePop(){
-				let $obstacle = $('layer').eq(nLayer).find('obstacle').eq(nObstacle);
-				let x = $obstacle.position().left + Math.random()*$obstacle.width();
-				$('demogorgon').attr('pose','static').css({left:x});
 
-				iLayerJump = setTimeout(doClimb,timeClimb);
+				let x = getRandomX();
+				$('demogorgon').attr('pose','static').css({left:x});
+				
+
+				setTimeout(function(){
+					$('.them').css({left:x}).show();
+					$('target').show();
+					isTargeting = true;
+				},500)
+
+				iLayerJump = setTimeout(doClimb,500+timeClimb);
 			}
 
 			function doClimb() {
 				$('demogorgon').attr('pose','climb');
-				iLayerJump = setTimeout(doNextLayer,timeJump);
+				iLayerJump = setTimeout(doNextLayer,timeJump-hitsOnLayer*100);
 			}
 
 			function queueHide(){
@@ -170,12 +173,14 @@
 				toObstacle( nObstacle );
 			}
 
+			function getRandomX(){
+				let $obstacle = $('layer').eq(nLayer).find('obstacle').eq(nObstacle);
+				return $obstacle.position().left + $obstacle.width()*0.1 + Math.random()*$obstacle.width()*0.8;
+			}
+
 			function queueWave(){
 
-				let $obstacle = $('layer').eq(nLayer).find('obstacle').eq(nObstacle);
-				let x = $obstacle.position().left + $obstacle.width()/4 + Math.random()*$obstacle.width()/2;
-
-				$('demogorgon').attr('pose','wave').css({left:x});
+				$('demogorgon').attr('pose','wave').css({left:getRandomX()});
 				
 				setTimeout( function(){
 					$('demogorgon').attr('pose','crouch');
@@ -186,9 +191,7 @@
 
 			function queueFakeout(){
 
-				let $obstacle = $('layer').eq(nLayer).find('obstacle').eq(nObstacle);
-				let x = $obstacle.position().left + Math.random()*$obstacle.width();
-				$('demogorgon').attr('pose','fakeout').css({left:x});
+				$('demogorgon').attr('pose','fakeout').css({left:getRandomX()});
 
 				setTimeout( function(){
 					$('demogorgon').attr('pose','crouch');
@@ -196,11 +199,33 @@
 				},500);
 			}
 
-			let whatNexts = [queuePop,queueHide,queueWave,queueFakeout];
+			let libraryOfMoves = [queuePop,queueHide,queueWave,queueFakeout];
+			let whatNexts = [];
+
+			function shuffle(array) {
+			  let currentIndex = array.length, randomIndex;
+
+			  // While there remain elements to shuffle.
+			  while (currentIndex > 0) {
+
+			    // Pick a remaining element.
+			    randomIndex = Math.floor(Math.random() * currentIndex);
+			    currentIndex--;
+
+			    // And swap it with the current element.
+			    [array[currentIndex], array[randomIndex]] = [
+			      array[randomIndex], array[currentIndex]];
+			  }
+
+			  return array;
+			}
+
 
 			function queueRandom(){
-				let whatNext = whatNexts[ Math.floor(Math.random()*whatNexts.length) ];
-				setTimeout( whatNext, 50 + Math.random()*1000 );
+				if(!whatNexts.length) whatNexts = shuffle(libraryOfMoves.concat());
+				let whatNext = whatNexts.pop();
+				console.log(whatNext);
+				setTimeout( whatNext, 150 + Math.random()*1000 );
 			}
 
 			function atObstacle(){
@@ -236,20 +261,24 @@
 			}
 
 			function doNextLayer(){
+
 				nObstacle = -1;
 				doLayer(nLayer+1);
 			}
 
 			function doLayer(n) {
 
-				nLayer = n;
+				hitsOnLayer = 0;
+				isTargeting = false;
+				nLocked = ticksLock;
 
-				layerDuration = 10000-(n*2000);
-				yTarget = 150+n*100;
+				$('target').hide();
+
+				nLayer = n;
 				scale = (1+n);
 				
 
-				$('target').appendTo($('layer').eq(n)).css({transform:'scale('+scale+')'});
+				$('target').appendTo($('layer').eq(n));//.css({transform:'scale('+scale+')'});
 
 				$('demogorgon')
 				.attr('pose','dodge')
@@ -262,19 +291,30 @@
 
 			}
 
+			function doMessage(x,y,text){
+				$('<message>').text(text).css({left:x,top:y}).appendTo('screen');
+			}
+
 			
 			doLayer(0);
 			newProjectile();
 		})
 	</script>
 	<style type="text/css">
+		message{
+			display: block;
+		}
 		body{
 			background: #222;
 			text-align: center;
 		}
 
+		p{
+			margin-top: 0px;
+		}
+
 		info{
-			position: fixed;
+			position: absolute;
 			top: 0px;
 			left: 0px;
 			display: block;
@@ -282,9 +322,14 @@
 			padding: 10px;
 			width: 250px;
 			border: 1px solid black;
-			margin: 10px;
+			top: 0px;
+			bottom: 0px;
+			height: 576px;
+			margin: auto;
 			background: white;
 			text-align: left;
+			font-size: 12px;
+			box-sizing: border-box;
 		}
 
 		screen{
@@ -293,13 +338,19 @@
 			background: #777;
 			display: inline-block;
 			margin: 20px;
-			position: relative;
+			position: absolute;
 			overflow: hidden;
+			left: 250px;
+			top: 0px;
+			bottom: 0px;
+			right: 0px;
+			margin: auto;
+			cursor: none;
 		}
 
 		target{
 			position: absolute;
-			top: -45%;
+			top: -50%;
 		}
 
 
@@ -307,21 +358,29 @@
 
 		reticule, locked{
 			
-			width: 20px;
-			height: 20px;
+			width: 40px;
+			height: 40px;
 			
-			border: 2px solid red;
+			border: 2px solid white;
 			position: absolute;
-			left: -10px;
-			top: -10px;
+			left: -20px;
+			top: -20px;
 			box-sizing: border-box;
 			border-radius: 100px;
-
 			
+			
+		
 		}
 
+		reticule{
+			background: rgba(255,0,0,0.3);
+			box-shadow: 0px 0px 5px black;
+		}
+
+
 		locked{
-			border: 0.5px solid red;
+			border: 0.5px dashed white;
+
 		}
 
 		demogorgon{
@@ -374,19 +433,7 @@
 			top: 550px;
 		}
 
-		/*projectile:before{
-			content: "";
-			width: 50px;
-			height: 50px;
-			border-radius: 100px;
-			background: black;
-			position: absolute;
-			left: -25px;
-			top: -25px;
-			transform: scaleY(0.3);
-			opacity: 0.3;
-		}*/
-
+		
 		inner{
 			position: absolute;
 			top: 0px;
@@ -395,15 +442,15 @@
 		inner:after{
 			content: "";
 			background-image:url("./bottle.png");
-			width: 200px;
-			height: 200px;
+			width: 400px;
+			height: 400px;
 			background-size: contain;
 			background-position: center;
 			background-repeat: no-repeat;
 			display: inline-block;
 			position: absolute;
-			left: -100px;
-			bottom: -100px;
+			left: -200px;
+			bottom: -200px;
 		}
 
 		smash{
@@ -431,16 +478,21 @@
 		}
 
 		obstacle{
-			width: 200px;
+			width: 250px;
 			height: 120%;
 			display: inline-block;
 			margin: 0px 30px;
 			background: #ddd;
 			position: relative;
-			border-radius: 50px 50px 5px 5px;
+			border-radius: 20px 20px 5px 5px;
 			position: relative;
 			top: -20%;
 			box-shadow: 0px -5px 10px rgba(0,0,0,0.2);
+		}
+
+		h2{
+			font-weight: normal;
+			margin: 0px;
 		}
 
 		
@@ -448,59 +500,67 @@
 </head>
 <body>
 	<screen>
-		<target>
+		<target class='me'>
 			<reticule></reticule>
 			<locked></locked>
+		</target>
+		<target class='them'>
+			<reticule></reticule>
 		</target>
 		<demogorgon class='crouch'>
 			<demobody></demobody>
 			<demohead></demohead>
 		</demogorgon>
-		<layer style='height:50px;margin-top:100px;'>
+		<layer style='height:55px;margin-top:100px;'>
 			<obstacle></obstacle>
 			<obstacle></obstacle>
 			<obstacle></obstacle>
 		</layer>
-		<layer style="height:100px">
-			<obstacle style='width:300px;'></obstacle>
-			<obstacle style='width:350px;'></obstacle>
+		<layer style="height:110px">
+			<obstacle style='width:400px;'></obstacle>
+			<obstacle style='width:400px;'></obstacle>
 		</layer>
-		<layer style="height:150px">
+		<layer style="height:165px">
 		
-			<obstacle style='width:550px;'></obstacle>
+			<obstacle style='width:650px;'></obstacle>
 		</layer>
 		<layer>
 		</layer>
 	</screen>
 
 	<info>
-		<p>Move left-to-right to attack.</p>
-		<p>
-			<p>TIMINGS TO TWEAK:</p>
-			<ul>
-				<li>Vulnerability time (V): 1.75s</li>
-				<li>Target lock delay (L): 0.15s</li>
-				<li>Throw time per layer (T):<br>0.9s, 0.85, 0.8s</li>
-				<li>Player reaction time:<br> V - L - T = <br>< 1 second (approx)</li>
-			</ul>
-			<p>VARIABLES TO TWEAK:</p>
-			<ul>
-				<li>Proximity for targeting lock</li>
-				<li>Demogorgon behaviours</li>
-				<li>Demodog Minions?</li>
-			</ul>
-			<p>STATES:</p>
-			<ul>
-				<li>Scurry</li>
-				<li>Pop-up</li>
-				<li>Climb</li>
-				<li>Dodge</li>
-				<li>Peak</li>
-				<li>Wave</li>
-				<li>Maybe throw things at us</li>
-			</ul>
+		<h2>Controls</h2>
+		<ul>
+			<li>Move left-to-right to aim</li>
+			<li>Reticule appears when vulnerable</li>
+			<li>Target appears when vulnerable</li>
+			<li>Target and reticule must touch for 0.5 seconds to throw</li>
+		</ul>
 
-		</p>
+		<h2>Timings</h2>
+		<ul>
+			<li>Vulnerability time (V):<br>2.5s - 0.1s for each hit on a layer</li>
+			<li>Target lock delay (L): 1s</li>
+			<li>Throw time per layer (T):<br>0.9s, 0.8, 0.7s</li>
+			<li>Player reaction time:<br> V - L - T = <br>0.3 to 0.5 seconds</li>
+		</ul>
+		<h2>Variables</h2>
+		<ul>
+			<li>Proximity for targeting lock</li>
+			<li>Demogorgon behaviours</li>
+			<li>Demodog Minions?</li>
+		</ul>
+		<h2>States</h2>
+		<p>Use a randomised bag of:</p>
+		<ol>
+			<li>Scurry between obstacles</li>
+			<li>Peak momentarily</li>
+			<li>Wave momentarily</li>
+			<li>Pop-up, roar, and jump layer (vulnerable sequence)</li>
+			<li>Maybe throw something?</li>
+		</ol>
+
+	
 
 	</info>
 </body>

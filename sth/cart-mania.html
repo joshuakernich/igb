@@ -13,7 +13,7 @@
 
 
 
-			const GRID = 150;
+			const GRID = 250;
 		
 			let level;
 
@@ -165,6 +165,12 @@
 
 
 				$self.css({left:p.x*GRID,bottom:p.y*GRID*level.speed}).data('p',p);
+
+				let px = p.x-xCar;
+				if(p.y<yCar && (px<0.5 && px>-0.5)){
+					$self.remove();
+					//$('<score>').appendTo('body').offset($('car').offset()).text('Ouch!');
+				}
 			}
 
 			function stepMoveToward($self){
@@ -172,6 +178,7 @@
 				let p = $self.data('p');
 				let sideways = 0.2/ticksPerSecond;
 				let forwards = 1/ticksPerSecond;
+
 
 
 				if(p.y>yCar) p.y -= forwards;
@@ -182,6 +189,12 @@
 
 				
 				$self.css({left:p.x*GRID,bottom:p.y*GRID*level.speed}).data('p',p);
+
+				let px = p.x-xCar;
+				if(p.y<yCar && (px<0.5 && px>-0.5)){
+					$self.remove();
+					//$('<score>').appendTo('body').offset($('car').offset()).text('Ouch!');
+				}
 			}
 
 			function spawnObstacle(x,y,type){
@@ -290,16 +303,21 @@
 		body{
 			padding: 0px;
 			margin: 0px;
-			perspective: 800px;
+			
 			width: 100vw;
 			height: 100vh;
+			background: black;
+		}
 
+		score{
+			position: absolute;
+			transform: translateX(-50%,-50%);
 		}
 
 
 
 		course{
-			width: 600px;
+			width: calc(250px * 4);
 			display: block;
 			margin: auto;	
 			position: absolute;
@@ -307,7 +325,7 @@
 			left: 0px;
 			right: 0px;
 			margin: auto;
-			transform: rotateX(80deg);
+			transform: rotateX(65deg);
 			transform-origin: bottom center;
   			transform-style: preserve-3d;
 		} 
@@ -330,8 +348,8 @@
 		}
 
 		car{
-			width: 150px;
-			height: 150px;
+			width: 250px;
+			height: 250px;
 			position: absolute;
 			bottom: 0px;
 			left: 0px;
@@ -394,8 +412,8 @@
 		}
 
 		obstacle{
-			width: 150px;
-			height: 150px;
+			width: 250px;
+			height: 250px;
 			position: absolute;
 			bottom: 0px;
 			left: 0px;
@@ -433,15 +451,15 @@
 		obstacle[type='>']:after{
 			background-image: url(demodog.png);
 			background-size: 160%;
-			background-position: center left -100px;
-			transform: scaleX(-1) rotateX(-80deg) translateY(-50px);
+			background-position: center left 120%;
+			transform: scaleX(-1) rotateX(-80deg) translateY(-50%);
 		}
 
 		obstacle[type='<']:after{
 			background-image: url(demodog.png);
 			background-size: 160%;
-			background-position: center left -100px;
-			transform: rotateX(-80deg) translateY(-50px);
+			background-position: center left 120%;
+			transform: rotateX(-80deg) translateY(-50%);
 		}
 
 		car:before, obstacle:before{
@@ -462,27 +480,63 @@
 		}
 
 		info{
-			position: fixed;
+			position: absolute;
 			top: 0px;
 			left: 0px;
 			display: block;
 			font-family: sans-serif;
-			padding: 20px;
-			width: 300px;
+			padding: 10px;
+			width: 250px;
 			border: 1px solid black;
-			margin: 10px;
+			top: 0px;
+			bottom: 0px;
+			height: 576px;
+			margin: auto;
+			background: white;
+			text-align: left;
+			font-size: 12px;
+			box-sizing: border-box;
 		}
 
 		game{
-			width: 100vw;
-			height:100vh;
+			
 			display: block;
 			position: absolute;
 			top: 0px;
 			left: 0px;
-			right: 100vw;
-			bottom: 100vh;
+			right: 0px;
+			bottom: 0px;
+			
 			transform-style: preserve-3d;
+		}
+
+		screen{
+			width: 1024px;
+			height: 576px;
+			background: #777;
+			display: inline-block;
+			margin: 20px;
+			position: absolute;
+			
+			left: 250px;
+			top: 0px;
+			bottom: 0px;
+			right: 0px;
+			margin: auto;
+			
+
+			perspective: 500px;
+			overflow: hidden;
+		}
+
+
+		p{
+			margin-top: 0px;
+		}
+
+		h2{
+			font-weight: normal;
+			margin: 0px;
 		}
 
 
@@ -490,7 +544,11 @@
 </head>
 <body>
 	<info>
-		<p>Move your mouse left-to-right to steer.</p>
+		<h2>Controls</h2>
+		<ul>
+			<li>Move your mouse left-to-right to steer.</li>
+		</ul>
+		<h2>Patterns</h2>
 		<p>All patterns appear on a perfect grid where:
 			<ul>
 				<li>The car is one grid space</li>
@@ -504,17 +562,19 @@
 		<p>Example: If level speed is 1.5, then the car travels at 1.5 x 3 = 4.5 standard grid spaces per second.</p>
 		<p>However, the grid spacing is also increased 1.5 times, so obstacles are spaced analogously, regardless of speed.</p>
 	</info>
-	<game>
-		<course>
-			<inner>
-				<car>
-					<sprite>
-						<spark></spark>
-						<chassis></chassis>
-					</sprite>
-				</car>
-			</inner>
-		</course>
-	</game>
+	<screen>
+		<game>
+			<course>
+				<inner>
+					<car>
+						<sprite>
+							<spark></spark>
+							<chassis></chassis>
+						</sprite>
+					</car>
+				</inner>
+			</course>
+		</game>
+	</screen>
 </body>
 </html>
