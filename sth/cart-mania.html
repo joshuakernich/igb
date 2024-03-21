@@ -161,6 +161,33 @@
 				};
 			}
 
+			function doMessage(text){
+				let o = $('car').offset();
+				o.left += $('car').width()/2 - 100;
+				o.top -= 150;
+				$('<message>').appendTo('screen').text(text).offset(o).animate({top:'-=50px'},200,function(){
+					$(this).remove();
+				});
+			}
+
+			let cntHit = 1;
+
+			function tryCollide($self){
+				let p = $self.data('p');
+				let px = p.x-xCar;
+				let py = p.y-yCar;
+
+				if(py>0 && py<0.8 && (px<0.5 && px>-0.5)){
+					$self.remove();
+					if(px < 0.1 && px > -0.1){
+						doMessage('HIT +'+cntHit++);
+					} else {
+						if(p.x>xCar) $('car').attr('demoright',true);
+						if(p.x<xCar) $('car').attr('demoleft',true);
+					}
+				}
+			}
+
 			function stepPounce($self){
 				let p = $self.data('p');
 
@@ -175,11 +202,7 @@
 
 				$self.css({left:p.x*GRID,bottom:p.y*GRID*level.speed}).data('p',p);
 
-				let px = p.x-xCar;
-				if(p.y<yCar && (px<0.5 && px>-0.5)){
-					$self.remove();
-					//$('<score>').appendTo('body').offset($('car').offset()).text('Ouch!');
-				}
+				tryCollide($self);
 			}
 
 			function stepMoveToward($self){
@@ -199,11 +222,7 @@
 				
 				$self.css({left:p.x*GRID,bottom:p.y*GRID*level.speed}).data('p',p);
 
-				let px = p.x-xCar;
-				if(p.y<yCar && (px<0.5 && px>-0.5)){
-					$self.remove();
-					//$('<score>').appendTo('body').offset($('car').offset()).text('Ouch!');
-				}
+				tryCollide($self);
 			}
 
 			function spawnObstacle(x,y,type){
@@ -240,8 +259,16 @@
 
 				$('car').css({left:x}).removeClass('hitleft hitright')
 
-				if(x==0) $('car').addClass('hitleft');
-				if(x==(GRID*3)) $('car').addClass('hitright');
+				if(x==0){
+					$('car').addClass('hitleft');
+					if($('car').attr('demoleft') == 'true') doMessage('HIT +'+cntHit++);
+					$('car').attr('demoleft',false);
+				}
+				if(x==(GRID*3)){
+					$('car').addClass('hitright');
+					if($('car').attr('demoright') == 'true') doMessage('HIT +'+cntHit++);
+					$('car').attr('demoright',false);
+				}
 
 				let d = x-xWas;
 				if(d>30) d = 30;
@@ -366,6 +393,38 @@
 			transform-style: preserve-3d;
 		}
 
+		car[demoright=true] chassis:after{
+			content: "";
+			width: 70%;
+			height: 70%;
+			background-image: url(demodog.png);
+			background-size: 150%;
+			background-position: center;
+			position: absolute;
+			left: 60%;
+			top: 0px;
+			display: block;
+			transform: scaleX(-1) rotate(-70deg);
+	
+		}
+
+		car[demoleft=true] chassis:before{
+			content: "";
+			width: 70%;
+			height: 70%;
+			background-image: url(demodog.png);
+			background-size: 150%;
+			background-position: center;
+			position: absolute;
+			right: 70%;
+			top: 0px;
+			display: block;
+			transform: rotate(-70deg);
+	
+		}
+
+
+
 		car sprite{
 			content: "";
 			width: 100%;
@@ -391,6 +450,7 @@
 			background-repeat: no-repeat;
 			width: 100%;
 			height: 100%;
+	
 		}
 
 		car spark{
@@ -546,6 +606,20 @@
 			margin: 0px;
 		}
 
+		message{
+			font-size: 50px;
+			
+			text-align: center;
+			color: white;
+			text-shadow: 0px 2px blue;
+			position: absolute;
+			
+			font-family: Impact;
+			padding: 0px;
+			margin: 0px;
+			width: 200px;
+		}
+
 
 	</style>
 </head>
@@ -582,6 +656,7 @@
 				</inner>
 			</course>
 		</game>
+		
 	</screen>
 </body>
 </html>
