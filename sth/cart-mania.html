@@ -148,8 +148,12 @@
 			let levels = [b,a,c];
 
 
-			function stepDoNothing(){
-
+			function stepDoNothing($self){
+				let p = $self.data('p');
+				let px = p.x-xCar;
+				if(p.y>yCar && p.y<yCar+0.2 && (px<0.9 && px>-0.9)){
+					dist = p.y-0.5;
+				};
 			}
 
 			function stepPounce($self){
@@ -198,8 +202,6 @@
 			}
 
 			function spawnObstacle(x,y,type){
-
-			
 
 				let $o = $('<obstacle>')
 				.appendTo('inner')
