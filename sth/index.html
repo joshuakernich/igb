@@ -5,6 +5,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Stranger Things</title>
 	<script type="text/javascript" src="../shared/jq.js"></script>
+	<script type="text/javascript" src="Demogorgon.js"></script>
 	<script type="text/javascript">
 		$(function(){
 			$(document).on('mousemove',onMove);
@@ -13,23 +14,15 @@
 			let isThrowing = false;
 			let $projectile;
 			let $locked;
-			let layerTime;
-			let layerProgress;
+		
 			let scale = 1;
-			let iLayerJump;
-
 			let xTarget;
-			let hitsOnLayer = 0;
-			let isTargeting = false;
-
 			let timeLock =  1000;
-			let timeClimb = 1000;
-			let timeJump = 1500;
 			let ticksPerSecond = 50;
 			let ticksLock = timeLock/ticksPerSecond;
 			let nLocked = ticksLock;
 			let DISTANCE = 40;
-
+			let demogorgons = [];
 			
 			function onMove(e){
 				xTarget = e.pageX - $('screen').offset().left;
@@ -37,8 +30,11 @@
 
 			function tick(){
 				let amt = xTarget/w - 0.5;
-				let isHitting = false;
+				let demoPopup = undefined;
+				let demoTargeting = undefined;
+				let demoVulnerable = undefined;
 
+				$('target').hide();
 				$('.me').css('left',xTarget);
 				$projectile.css('left',xTarget);
 				
@@ -46,21 +42,30 @@
 					
 					$projectile.find('inner').css('transform','rotate('+amt*70+'deg)');
 
-					if( isTargeting ){
-						let dist = $('demogorgon').position().left - xTarget;
-						if(dist<DISTANCE && dist>-DISTANCE) isHitting = true;
+					for( let d in demogorgons){
+						if(demogorgons[d].isPopup) demoPopup = demogorgons[d];
+
+						if(demogorgons[d].isVulnerable){
+							demoVulnerable = demogorgons[d];
+							$('.them').css({left:demoVulnerable.$el.position().left});
+							$('target').show().appendTo($('layer').eq(demoVulnerable.nLayer));
+
+							let dist = demoVulnerable.$el.position().left - xTarget;
+							if(dist<DISTANCE && dist>-DISTANCE) demoTargeting = demoVulnerable;
+						}
 					}
 				} 
 
-				if(isHitting) nLocked--;
+				for( let d in demogorgons ) demogorgons[d].setCanPopup( !isThrowing && !demoPopup );
+
+				if(demoTargeting) nLocked--;
 				else if(nLocked<ticksLock) nLocked++;
 
 				if(!isThrowing) $('locked').css('transform','scale('+(1+nLocked*0.1)+')')
 
-				if(isHitting && nLocked<=0){
-
+				if(demoTargeting && nLocked<=0){
 					let y = $('target').offset().top - $('screen').offset().top;
-					doThrow(y);
+					doThrow(demoTargeting);
 				}
 			}
 
@@ -84,23 +89,25 @@
 				})
 			}
 
-			function doThrow(y){
-				isTargeting = false;
-				$('target').hide();
-				isThrowing = true;
-				let duration = 900 - nLayer*100;
-				$projectile.animate({ top:y },{ easing:'linear', duration:duration, step:redrawProjectile, complete:onThrowComplete });
-			}
+			function doThrow(demogorgon){
+				let y = $('target').offset().top - $('screen').offset().top;
 
-			let isTriggeredByLayer = false;
+				isThrowing = true;
+				let duration = 900 - demogorgon.nLayer*100;
+				$projectile.animate({ top:y },{ easing:'linear', duration:duration, step:redrawProjectile, complete:onThrowComplete });
+
+				$('target').hide();
+			}
 
 			function onThrowComplete(){
 				if($projectile){
-					
-					if( $('demogorgon').attr('pose') == 'static' || $('demogorgon').attr('pose') == 'climb' ){
-						let dist = $('demogorgon').offset().left - $projectile.offset().left;
-						let y = $('target').offset().top - $('screen').offset().top;
-						if(dist<50 && dist>-50) hitDemogorgon();
+
+					for( let d in demogorgons){
+						if(demogorgons[d].isVulnerable){
+							let dist = demogorgons[d].$el.offset().left - $projectile.offset().left;
+							let y = $('target').offset().top - $('screen').offset().top;
+							if(dist<DISTANCE && dist>-DISTANCE) demogorgons[d].hit();
+						}
 					}
 
 					$projectile.remove();
@@ -109,30 +116,12 @@
 				setTimeout(newProjectile,500);
 			}
 
-			function hitDemogorgon(){
-
-				hitsOnLayer++;
-
-				clearTimeout(iLayerJump);
-
-				let x = $('demogorgon').position().left;
-				$('demogorgon')
-				.animate({left:x-5},20)
-				.animate({left:x+5},20)
-				.animate({left:x-5},20)
-				.animate({left:x+5},20)
-				.animate({left:x},{duration:20,complete:queueHide})
-			}
-
 			function newProjectile() {
 
 				if($projectile) $projectile.remove();
 				if($locked) $locked.remove();
 
-				
-
 				isThrowing = false;
-				isTriggeredByLayer = false;
 				$projectile = $(`<projectile>
 				<inner></inner>
 				<smash></smash>
@@ -142,161 +131,15 @@
 				
 			}
 
-
-
-			function onLayerUpdate(a,obj) {
-				//layerProgress = obj.pos;
-			}
-
-			function queuePop(){
-
-				let x = getRandomX();
-				$('demogorgon').attr('pose','static').css({left:x});
-				
-
-				setTimeout(function(){
-					$('.them').css({left:x}).show();
-					$('target').show();
-					isTargeting = true;
-				},500)
-
-				iLayerJump = setTimeout(doClimb,500+timeClimb);
-			}
-
-			function doClimb() {
-				$('demogorgon').attr('pose','climb');
-				iLayerJump = setTimeout(doNextLayer,timeJump-hitsOnLayer*100);
-			}
-
-			function queueHide(){
-				nObstacle = Math.floor(Math.random()*$('layer').eq(nLayer).find('obstacle').length);
-				toObstacle( nObstacle );
-			}
-
-			function getRandomX(){
-				let $obstacle = $('layer').eq(nLayer).find('obstacle').eq(nObstacle);
-				return $obstacle.position().left + $obstacle.width()*0.1 + Math.random()*$obstacle.width()*0.8;
-			}
-
-			function queueWave(){
-
-				$('demogorgon').attr('pose','wave').css({left:getRandomX()});
-				
-				setTimeout( function(){
-					$('demogorgon').attr('pose','crouch');
-					queueRandom();
-				},500);
-
-			}
-
-			function queueFakeout(){
-
-				$('demogorgon').attr('pose','fakeout').css({left:getRandomX()});
-
-				setTimeout( function(){
-					$('demogorgon').attr('pose','crouch');
-					queueRandom();
-				},500);
-			}
-
-			let libraryOfMoves = [queuePop,queueHide,queueWave,queueFakeout];
-			let whatNexts = [];
-
-			function shuffle(array) {
-			  let currentIndex = array.length, randomIndex;
-
-			  // While there remain elements to shuffle.
-			  while (currentIndex > 0) {
-
-			    // Pick a remaining element.
-			    randomIndex = Math.floor(Math.random() * currentIndex);
-			    currentIndex--;
-
-			    // And swap it with the current element.
-			    [array[currentIndex], array[randomIndex]] = [
-			      array[randomIndex], array[currentIndex]];
-			  }
-
-			  return array;
-			}
-
-
-			function queueRandom(){
-				if(!whatNexts.length) whatNexts = shuffle(libraryOfMoves.concat());
-				let whatNext = whatNexts.pop();
-				console.log(whatNext);
-				setTimeout( whatNext, 150 + Math.random()*1000 );
-			}
-
-			function atObstacle(){
-				queueRandom();
-			}
-
-			function toObstacle(nObstacle){
-				let $obstacle = $('layer').eq(nLayer).find('obstacle').eq(nObstacle);
-
-				$('demogorgon').attr('pose','crouch');
-
-				$('demogorgon').animate(
-					{
-						left:$obstacle.position().left + $obstacle.width()/2
-					},
-					{
-						duration: 1000,
-						easing:'swing',
-						complete:atObstacle,
-					});
-				
-			}
-
-			let nObstacle = -1;
-			function toNextObstacle(){
-				nObstacle++;
-				toObstacle(nObstacle);
-			}
-
-			function toPrevObstacle(){
-				nObstacle--;
-				toObstacle(nObstacle);
-			}
-
-			function doNextLayer(){
-
-				nObstacle = -1;
-				doLayer(nLayer+1);
-			}
-
-			function doLayer(n) {
-
-				hitsOnLayer = 0;
-				isTargeting = false;
-				nLocked = ticksLock;
-
-				$('target').hide();
-
-				nLayer = n;
-				scale = (1+n);
-				
-
-				$('target').appendTo($('layer').eq(n));//.css({transform:'scale('+scale+')'});
-
-				$('demogorgon')
-				.attr('pose','dodge')
-				.prependTo($('layer').eq(n))
-				.css({transform:'scale('+scale+')'});
-
-
-				if( $('layer').eq(nLayer).find('obstacle').length ) setTimeout( toNextObstacle, 500);
-				
-
-			}
-
 			function doMessage(x,y,text){
 				$('<message>').text(text).css({left:x,top:y}).appendTo('screen');
 			}
 
-			
-			doLayer(0);
+			demogorgons.push( new Demogorgon() );
+			setTimeout(function(){
+				demogorgons.push( new Demogorgon() );
+			},2000);
+	
 			newProjectile();
 		})
 	</script>
@@ -507,10 +350,7 @@
 		<target class='them'>
 			<reticule></reticule>
 		</target>
-		<demogorgon class='crouch'>
-			<demobody></demobody>
-			<demohead></demohead>
-		</demogorgon>
+		
 		<layer style='height:55px;margin-top:100px;'>
 			<obstacle></obstacle>
 			<obstacle style='width:150px;'></obstacle>
