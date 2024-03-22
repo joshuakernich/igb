@@ -175,20 +175,52 @@
 			box-sizing: border-box;
 		}
 
-		screen{
+		screenframe{
 			width: 1024px;
 			height: 576px;
 			background: #777;
 			display: inline-block;
-			margin: 20px;
+			
 			position: absolute;
-			overflow: hidden;
+			
 			left: 250px;
 			top: 0px;
 			bottom: 0px;
 			right: 0px;
 			margin: auto;
 			cursor: none;
+
+
+		}
+
+		screenframe:after{
+			content: "";
+			display: block;
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			box-shadow: 0px 0px 50px rgba(0, 0, 0, 0.3);
+
+
+		}
+
+		screen{
+			width: 300%;
+			height: 100%;
+			background: #777;
+			display: inline-block;
+			
+			position: absolute;
+			overflow: hidden;
+			left: -100%;
+			top: 0px;
+			bottom: 0px;
+			right: 0px;
+
+
+			
 		}
 
 		target{
@@ -325,12 +357,17 @@
 			height: 120%;
 			display: inline-block;
 			margin: 0px 30px;
-			background: #ddd;
-			position: relative;
-			border-radius: 20px 20px 5px 5px;
-			position: relative;
 			top: -20%;
-			box-shadow: 0px -5px 10px rgba(0,0,0,0.2);
+			position: relative;
+			
+			position: relative;
+			
+			background-image: url(obstacle.png);
+			background-size: 100% 100%;
+		}
+
+		obstacle:nth-of-type(even){
+			transform: scaleX(-1);
 		}
 
 		h2{
@@ -342,32 +379,34 @@
 	</style>
 </head>
 <body>
-	<screen>
-		<target class='me'>
-			<reticule></reticule>
-			<locked></locked>
-		</target>
-		<target class='them'>
-			<reticule></reticule>
-		</target>
-		
-		<layer style='height:55px;margin-top:100px;'>
-			<obstacle></obstacle>
-			<obstacle style='width:150px;'></obstacle>
-			<obstacle></obstacle>
-		</layer>
-		<layer style="height:110px">
-			<obstacle style='width:300px;'></obstacle>
-			<obstacle style='width:450px;'></obstacle>
-		</layer>
-		<layer style="height:165px">
+	<screenframe>
+		<screen>
+			<target class='me'>
+				<reticule></reticule>
+				<locked></locked>
+			</target>
+			<target class='them'>
+				<reticule></reticule>
+			</target>
 			
-			<obstacle style='width:500px;'></obstacle>
-			<obstacle style='width:300px;'></obstacle>
-		</layer>
-		<layer>
-		</layer>
-	</screen>
+			<layer style='height:55px;margin-top:100px;'>
+				<obstacle></obstacle>
+				<obstacle style='width:150px;'></obstacle>
+				<obstacle></obstacle>
+			</layer>
+			<layer style="height:110px">
+				<obstacle style='width:300px;'></obstacle>
+				<obstacle style='width:450px;'></obstacle>
+			</layer>
+			<layer style="height:165px">
+				
+				<obstacle style='width:500px;'></obstacle>
+				<obstacle style='width:300px;'></obstacle>
+			</layer>
+			<layer>
+			</layer>
+		</screen>
+	</screenframe>
 
 	<info>
 		<h2>Controls</h2>
