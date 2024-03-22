@@ -173,6 +173,7 @@
 			text-align: left;
 			font-size: 12px;
 			box-sizing: border-box;
+			display: none;
 		}
 
 		screenframe{
@@ -183,7 +184,7 @@
 			
 			position: absolute;
 			
-			left: 250px;
+			left: 0px;
 			top: 0px;
 			bottom: 0px;
 			right: 0px;
@@ -198,9 +199,10 @@
 			display: block;
 			position: absolute;
 			top: 0px;
-			left: 0px;
-			right: 0px;
+			left: 100%;
+			
 			bottom: 0px;
+			width: 100%;
 			box-shadow: 0px 0px 50px rgba(0, 0, 0, 0.3);
 
 
@@ -214,7 +216,7 @@
 			
 			position: absolute;
 			overflow: hidden;
-			left: -100%;
+			left: 0px;
 			top: 0px;
 			bottom: 0px;
 			right: 0px;
@@ -350,6 +352,7 @@
 			
 			margin: 0px 0px;
 			position: relative;
+			white-space: nowrap;
 		}
 
 		obstacle{
@@ -371,8 +374,16 @@
 		}
 
 		h2{
-			font-weight: normal;
+			font-weight: bold;
 			margin: 0px;
+			font-size: 1em;
+		}
+
+		screenlayer{
+			width: 1024px;
+			display: inline-block;
+			height: 100%;
+
 		}
 
 		
@@ -390,18 +401,44 @@
 			</target>
 			
 			<layer style='height:55px;margin-top:100px;'>
-				<obstacle></obstacle>
-				<obstacle style='width:150px;'></obstacle>
-				<obstacle></obstacle>
+				<screenlayer>
+					<obstacle></obstacle>
+					<obstacle></obstacle>
+				</screenlayer>
+				<screenlayer>
+					<obstacle></obstacle>
+					<obstacle style='width:150px;'></obstacle>
+					
+				</screenlayer>
+				<screenlayer>
+					<obstacle></obstacle>
+					<obstacle></obstacle>
+				</screenlayer>
 			</layer>
 			<layer style="height:110px">
-				<obstacle style='width:300px;'></obstacle>
-				<obstacle style='width:450px;'></obstacle>
+				<screenlayer>
+					<obstacle></obstacle>
+				</screenlayer>
+				<screenlayer>
+					<obstacle style='width:300px;'></obstacle>
+					<obstacle style='width:450px;'></obstacle>
+				</screenlayer>
+				<screenlayer>
+					<obstacle></obstacle>
+				</screenlayer>
 			</layer>
 			<layer style="height:165px">
-				
-				<obstacle style='width:500px;'></obstacle>
-				<obstacle style='width:300px;'></obstacle>
+				<screenlayer>
+					<obstacle style='width:300px;'></obstacle>
+					<obstacle style='width:500px;'></obstacle>
+				</screenlayer>
+				<screenlayer>
+					<obstacle style='width:500px;'></obstacle>
+				</screenlayer>
+				<screenlayer>
+					<obstacle style='width:500px;'></obstacle>
+					<obstacle style='width:300px;'></obstacle>
+				</screenlayer>
 			</layer>
 			<layer>
 			</layer>
@@ -438,6 +475,12 @@
 			<li>Wave momentarily</li>
 			<li>Pop-up, roar, and jump layer (vulnerable sequence)</li>
 			<li>Maybe throw something?</li>
+		</ol>
+		<h2>Level Progression</h2>
+		<ol>
+			<li>One demogorgon - One Player</li>
+			<li>Two demogorgons - One Player</li>
+			<li>Two demogorgons - Two Players</li>
 		</ol>
 
 	
