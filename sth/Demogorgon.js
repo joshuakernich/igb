@@ -50,6 +50,7 @@ Demogorgon = function(){
 		self.isPopup = true;
 
 		let x = getRandomX();
+		if(self.nLayer == 0) x = x + (Math.random()>0.5?-50:50);
 		self.$el.attr('pose','static').css({left:x});
 
 		setTimeout(function(){
@@ -71,7 +72,8 @@ Demogorgon = function(){
 
 	function getRandomX(){
 		let $obstacle = $('layer').eq(self.nLayer).find('obstacle').eq(nObstacle);
-		return $obstacle.position().left + $obstacle.width()*0.1 + Math.random()*$obstacle.width()*0.8;
+		let left = $obstacle.offset().left - $('screen').offset().left;
+		return left + $obstacle.width()*0.1 + Math.random()*$obstacle.width()*0.8;
 	}
 
 	function queueWave(){
@@ -129,10 +131,11 @@ Demogorgon = function(){
 
 	function toObstacle(nObstacle){
 		let $obstacle = $('layer').eq(self.nLayer).find('obstacle').eq(nObstacle);
+		let left = $obstacle.offset().left - $('screen').offset().left;
 		self.$el.attr('pose','crouch');
 		self.$el.animate(
 			{
-				left:$obstacle.position().left + $obstacle.width()/2
+				left:left + $obstacle.width()/2
 			},
 			{
 				duration: 1000,

@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script type="text/javascript" src="../shared/jq.js"></script>
+  <script type="text/javascript">
+    $(function(){
+
+
+
+      let up = false;
+      let down = false;
+      let right = false;
+      let left = false;
+
+      let r = 0;
+      let nWallWas = -1;
+
+      const p = {top:200,left:200}
+
+      $(document).mousemove(function(e){
+
+        
+
+        const o = $('footprint').offset();
+
+        const dx = e.clientX - o.left;
+        const dy = e.clientY - o.top;
+        r = Math.atan2(dy,dx) + Math.PI/2;
+
+        $('footprint').css('transform','rotate('+r+'rad)')
+
+        if( r < -Math.PI*0.25 ) nWall = 0; 
+        else if( r > Math.PI*0.25 ) nWall = 2; 
+        else nWall = 1; 
+      })
+
+      $(document).keydown( function(e){
+
+        if(e.keyCode == 37) left = true;
+        if(e.keyCode == 39) right = true;
+        if(e.keyCode == 38) up = true;
+        if(e.keyCode == 40) down = true;
+      })
+
+      $(document).keyup( function(e){
+
+        if(e.keyCode == 37) left = false;
+        if(e.keyCode == 39) right = false;
+        if(e.keyCode == 38) up = false;
+        if(e.keyCode == 40) down = false;
+      })
+
+      
+      function retarget(){
+
+      }
+
+      const speed = 20;
+      const edge = 30;
+      const range = 800;
+
+      setInterval(function(){
+        
+        if(left) p.left -= speed;
+        if(right) p.left += speed;
+        if(up) p.top -= speed;
+        if(down) p.top += speed;
+
+        if(p.left<edge) p.left = edge;
+        if(p.left>range-edge) p.left = range-edge;
+        if(p.top<edge) p.top = edge;
+        if(p.top>range-edge) p.top = range-edge;
+
+        $('footprint').css(p);
+        $('human').offset( $('footprint').offset() );
+        
+        $('human').css('transform','scale('+(1+p.top/range)+')');
+
+
+
+        $('wall').removeClass('active').eq(nWall).addClass('active').append($('character'));
+        
+        if(nWallWas != nWall){
+          nWallWas = nWall;
+          //transition?
+        }
+
+        let activePan = nWall==1?p.left:p.top;
+        let activeDolly = nWall==1?p.top:p.left;
+
+        if(nWall == 0) activePan = range-activePan;
+        if(nWall == 2) activeDolly = range-activeDolly;
+
+        $('character').css('bottom',(0-activeDolly/range*30)+'px');
+        $('character').css('left',activePan);
+        $('character').css('transform','scaleX('+(activePan/range>0.5?1:-1)+')')
+
+        $('beam').css('height',20 + activeDolly*0.6);
+
+
+        const xOffset = Math.abs(-1 + (activePan/range)*2);
+        $('beam').css('width',(10+(30*xOffset))+'px');
+
+      },20);
+      
+
+      $('human').offset($('footprint').offset());
+
+      
+    })
+  </script>
+  <title></title>
+  <style>
+    body{
+      overflow: hidden;
+    }
+
+    centering{
+      width: 800px;
+      height: 450px;
+      position: absolute;
+      bottom: 0px;
+      left: 0px;
+      right: 0px;
+      top: 0px;
+      margin: auto;
+      display: block;
+    }
+
+    gamebox{
+      display: block;
+      perspective: 2000px;
+      position: relative;
+      
+      height: 450px;
+      width: 2400px;
+      position: absolute;
+      bottom: 0px;
+      left: -800px;
+      right: 0px;
+      top: 0px;
+      margin: auto;
+      white-space: nowrap;
+      text-align: center;
+      line-height: 0px;
+    }
+
+    wall{
+      width: 800px;
+      height: 450px;
+      display: inline-block;
+      
+      position: relative;
+      background-color: white;
+      box-shadow: inset 0px 0px 50px #ddd;
+      overflow: hidden;
+    }
+
+    wall:nth-of-type(1){
+      transform: rotate3d(0, 1, 0, 90deg);
+      transform-origin: 100% 0px 0px;
+
+    }
+
+    wall:nth-of-type(3){
+      transform: rotate3d(0, 1, 0, -90deg);
+      transform-origin: 0px 0px 0px;
+    }
+
+    wall{
+      background: #ccc;
+      background-size: cover;
+    }
+
+    wall.active{
+      box-sizing: border-box;
+      border: 5px solid orange;
+    }
+
+    floor{
+     
+      width: 800px;
+      height: 800px;
+      transform-origin: 0px 0px 0px;
+      display: inline-block;
+      
+      background: #eee;
+      transform: rotate3d(1, 0, 0, 90deg);
+      position: relative;
+
+
+      background-color: white;
+      box-shadow: inset 0px 0px 50px #ddd;
+    }
+
+    floor:after{
+      content: "";
+      display: block;
+      width: 500%;
+      height: 500%;
+      position: absolute;
+      left: -200%;
+      top: -250%;
+      background: rgba(0, 0, 0, 0);
+    }
+
+    footprint:before{
+      content: "";
+      display: block;
+       width: 60px;
+      height: 60px;
+      border-radius: 30px;
+      background: black;
+      position: absolute;
+      left: -30px;
+      top: -30px;
+      box-sizing: border-box;
+      box-shadow: 0px 0px 10px 10px black;
+      opacity: 0.2;
+    }
+
+    footprint{
+      display: block;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      pointer-events: none;
+    }
+
+    footprint:after{
+      content: "^";
+      display: block;
+      width:  100px;
+      position: absolute;
+      left: -50px;
+      bottom: 50px;
+      color: orange;
+      text-align: center;
+      font-size: 80px;
+      font-weight: bold;
+    }
+
+    human{
+      display: block;
+      position: fixed;
+      pointer-events: none;
+    
+    }
+
+    human.duck:before{
+      height: 80px;
+    }
+
+    human.duck:after{
+      bottom: 85px;
+    }
+
+    human:before{
+      content: "";
+      width: 80px;
+      height: 200px;
+      background: rgba(255, 255, 255, 0.5);
+      
+      position: absolute;
+      bottom:0px;
+      left: -40px;
+      box-sizing: border-box;
+      border-radius: 100% 100% 20px 20px;
+      box-shadow: inset 0px 0px 10px #ddd;
+    }
+
+    human:after{
+      content: "";
+      width: 60px;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.5);
+      position: absolute;
+      bottom:200px;
+      left: -30px;
+      box-sizing: border-box;
+      border-radius: 100%;
+      box-shadow: inset 0px 0px 10px #ddd;
+    }
+
+    ball{
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: white;
+      transform: translate(-10px,-10px);
+      
+      box-sizing: border-box;
+      display: block;
+      border-radius: 10px;
+      box-shadow: 0px 0px 10px 5px white;
+    }
+
+    tracker{
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background: rgba(255, 0, 0,0.2);
+      border: 2px solid red;
+      transform: translate(-50%,-50%);
+      
+      box-sizing: border-box;
+      display: none;
+    }
+
+
+    wall:nth-of-type(2){
+      
+    }
+
+    character{
+      position: absolute;
+    }
+
+    sprite{
+      width: 60px;
+      height: 130px;
+      background-image: url(./buster.png);
+      background-size: 100%;
+      display: block;
+      position: absolute;
+      bottom: -65px;
+      transform: translate(-50%);
+    }
+
+    beam{
+      display: block;
+      position: absolute;
+      bottom: 42px;
+      right: 22px;
+      width: 50px;
+      height: 100px;
+    }
+
+    splat{
+      display: block;
+      width: 20px;
+      height: 20px;
+      transform: translate(-50%, -50%);
+      position: absolute;
+      left: 0px;
+      top: 30%;
+      background: url(splat.png);
+      background-size: 100%;
+    }
+
+
+
+  </style>
+</head>
+<body>
+  <centering>
+    <gamebox>
+      <wall></wall><wall class='front'><character>
+          <sprite></sprite>
+          <beam>
+            <svg preserveAspectRatio="none" width='100%' height='100%' viewbox='0 0 100 100'>
+              <path vector-effect='non-scaling-stroke' fill='none' stroke-width=5 stroke='orange' d='M100,100 C50 0, 20 0, 0 30'/>
+            </svg>
+            <splat></splat>
+          </beam>
+          
+        </character>
+      </wall><wall></wall>
+      <br>
+      <floor><footprint></footprint></floor>
+      
+    </gamebox>
+  </centering>
+<human></human>
+</body>
+</html>

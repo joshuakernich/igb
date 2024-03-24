@@ -58,6 +58,8 @@
 
 				for( let d in demogorgons ) demogorgons[d].setCanPopup( !isThrowing && !demoPopup );
 
+				
+
 				if(demoTargeting) nLocked--;
 				else if(nLocked<ticksLock) nLocked++;
 
@@ -187,7 +189,7 @@
 			left: 0px;
 			top: 0px;
 			bottom: 0px;
-			right: 0px;
+			
 			margin: auto;
 			cursor: none;
 
@@ -266,6 +268,7 @@
 		}
 
 		
+		
 		demogorgon:after{
 			content: "";
 			background-image:url("./demo-static.png");
@@ -278,6 +281,7 @@
 			position: absolute;
 			left: -50px;
 			bottom: 0px;
+			
 		}
 
 		demogorgon[pose=dodge]:after{
@@ -386,6 +390,15 @@
 
 		}
 
+		layer:nth-of-type(1) obstacle{
+			width: 50px;
+			background: white;
+			margin: 0px 150px;
+			border-radius: 5px;
+			height: 500%;
+			top: -400%;
+		}
+
 		
 	</style>
 </head>
@@ -407,7 +420,8 @@
 				</screenlayer>
 				<screenlayer>
 					<obstacle></obstacle>
-					<obstacle style='width:150px;'></obstacle>
+					<obstacle></obstacle>
+					<obstacle></obstacle>
 					
 				</screenlayer>
 				<screenlayer>
