@@ -50,7 +50,9 @@ Demogorgon = function(){
 		self.isPopup = true;
 
 		let x = getRandomX();
-		if(self.nLayer == 0) x = x + (Math.random()>0.5?-50:50);
+		if(self.nLayer == 0){
+			x = x + (Math.random()>0.5?-50:50);
+		}
 		self.$el.attr('pose','static').css({left:x});
 
 		setTimeout(function(){

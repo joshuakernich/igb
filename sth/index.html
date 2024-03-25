@@ -229,7 +229,7 @@
 
 		target{
 			position: absolute;
-			top: -50%;
+			top: -100px;
 		}
 
 
@@ -282,6 +282,10 @@
 			left: -50px;
 			bottom: 0px;
 			
+		}
+
+		layer:nth-of-type(1) demogorgon:not([pose=crouch]):after{
+			bottom: 100px;
 		}
 
 		demogorgon[pose=dodge]:after{
@@ -351,7 +355,7 @@
 
 		layer{
 			text-align: center;
-			height: 60px;
+			height: 50px;
 			display: block;
 			
 			margin: 0px 0px;
@@ -361,17 +365,17 @@
 
 		obstacle{
 			width: 250px;
-			height: 120%;
+			height: 150px;
 			display: inline-block;
 			margin: 0px 30px;
-			top: -20%;
+			vertical-align: bottom;
 			position: relative;
-			
-			position: relative;
-			
 			background-image: url(obstacle.png);
 			background-size: 100% 100%;
+			top: -100px;
 		}
+
+
 
 		obstacle:nth-of-type(even){
 			transform: scaleX(-1);
@@ -395,8 +399,9 @@
 			background: white;
 			margin: 0px 150px;
 			border-radius: 5px;
-			height: 500%;
-			top: -400%;
+			height: 500px;
+			top: -450px;
+			
 		}
 
 		
@@ -413,7 +418,7 @@
 				<reticule></reticule>
 			</target>
 			
-			<layer style='height:55px;margin-top:100px;'>
+			<layer style='margin-top:350px;'>
 				<screenlayer>
 					<obstacle></obstacle>
 					<obstacle></obstacle>
@@ -429,7 +434,7 @@
 					<obstacle></obstacle>
 				</screenlayer>
 			</layer>
-			<layer style="height:110px">
+			<layer>
 				<screenlayer>
 					<obstacle></obstacle>
 				</screenlayer>
@@ -441,7 +446,7 @@
 					<obstacle></obstacle>
 				</screenlayer>
 			</layer>
-			<layer style="height:165px">
+			<layer>
 				<screenlayer>
 					<obstacle style='width:300px;'></obstacle>
 					<obstacle style='width:500px;'></obstacle>
