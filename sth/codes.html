@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Code Breaker</title>
+	<script type="text/javascript" src="../shared/jq.js"></script>
+	<script type="text/javascript">
+		$(function(){
+
+			
+
+			//red blue green purple yellow orange
+
+			let levels = [
+				{
+					'text':'all buttons',
+					'shapes':['--0-|----','-0--|--0-','-0--|----'],
+				},
+				{
+					'text':'all buttons',
+					'shapes':['-0-0|---0','0--0|----','0-0-|0---'],
+				},
+				{
+					'text':'two of your colour',
+					'shapes':['0---|-0-0','0--0|----','---0|0-0-'],
+					'colours':[3,3,0,0,1,2,1,2]
+				},
+				{
+					'text':'one of your colour and one of not your colour',
+					'shapes':['-0-0|--0-','0--0|----','000-'],
+					'colours':[2,0,1,1,2,3,0,3]
+				},
+				{
+					'text':'two of not your colour',
+					'shapes':['-000|----','0--0|----','000-|----'],
+					'colours':[2,1,0,1,2,3,0,3]
+				},
+				{
+					'text':'two of not not your colour',
+					'shapes':['-000|----','0--0|----','000-|----'],
+					'colours':[0,1,0,1,2,3,2,3]
+				},
+				{
+					'text':'all squares',
+					'shapes':['01-0|----','0-10|----','01-0|----'],
+					'colours':[],
+				},{
+					'text':'all circles of your colour',
+					'shapes':['----|----','----|----','----|----'],
+					'colours':[],
+				},{
+					'text':'two squares of not your colour',
+					'shapes':['----|----','----|----','----|----'],
+					'colours':[],
+				},{
+					'text':'two not squares of your colour',
+					'shapes':['----|----','----|----','----|----'],
+					'colours':[],
+				},{
+					'text':'two not circles of not your colour',
+					'shapes':['----|----','----|----','----|----'],
+					'colours':[],
+				},{
+					'text':'two not not squares of not your colour',
+					'shapes':['----|----','----|----','----|----'],
+					'colours':[],
+				}
+			]
+
+			for(var l in levels){
+				let $level = $('<level>').appendTo('body');
+
+				for(var s in levels[l].shapes){
+					let $screen = $('<screen>').appendTo($level);
+
+					if(s==1) $('<message>').html('Press & hold '+levels[l].text).appendTo($screen);
+
+					let $buttons = $('<buttons>').appendTo($screen);
+
+					for(var n=0; n<levels[l].shapes[s].length; n++){
+
+						let $btn = $('<button>')
+						.appendTo($buttons)
+						.attr('shape',levels[l].shapes[s][n])
+						
+						if(levels[l].shapes[s][n] != '-' ){
+							$btn.attr('colour',(levels[l].colours?levels[l].colours.shift():undefined));
+						}
+						
+
+						if(levels[l].shapes[s][n+1] == '|'){
+							$('<br>').appendTo($buttons);
+							n++;
+						} 
+						
+					}
+				}
+			}
+		})
+	</script>
+	<style type="text/css">
+		@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+		body{
+			background: #333;
+			text-align: center;
+			font-family: "Press Start 2P", system-ui;
+			font-weight: 400;
+			font-style: normal;
+			color: white;
+			text-shadow: 0px 0px 2px white;
+			line-height: 1.5;
+		}
+
+		level{
+			display: block;
+			white-space: nowrap;
+		}
+
+		screen{
+			width: 400px;
+			height: 225px;
+			background: #773333;
+			display: inline-block;
+			box-shadow: inset 0px 0px 50px black;
+
+			position: relative;
+		}
+
+		message{
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			
+			display: block;
+			font-size: 10px;
+			
+			white-space: normal;
+			padding: 30px 40px;
+		}
+
+		buttons{
+			position: absolute;
+			top: 80px;
+			left: 0px;
+			right: 0px;
+			
+			display: block;
+			line-height: 50px;
+
+		}
+
+		button{
+			display: inline-block;
+			width: 40px;
+			height: 40px;
+			border: 2px solid white;
+			margin: 0px 25px;
+			position: relative;
+			background: rgba(255, 255, 255, 0.4);
+
+		}
+
+		
+
+		button[colour='0']{ border-color: red; background: rgba(255, 0, 0, 0.4);}
+		button[colour='1']{ border-color: blue; background: rgba(0, 0, 255, 0.4);}
+		button[colour='2']{ border-color: green; background: rgba(0, 255, 0, 0.4);}
+		button[colour='3']{ border-color: rgba(154, 31, 232, 1); background: rgba(154, 31, 232, 0.4);}
+		button[colour='4']{ border-color: yellow; background: rgba(255, 255, 0, 0.4);}
+		button[colour='5']{ border-color: orange; background: rgba(255, 100, 0, 0.4);}
+
+		button[shape='-']{ opacity: 0.1; background:rgba(0,0,0,0.4); border-color:black; }
+		button[shape='1']{ border-radius:100px; }
+
+		
+	</style>
+</head>
+<body>
+	<h2>4 players</h2>
+</body>
+</html>
