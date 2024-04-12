@@ -19,6 +19,8 @@
 			  --igb-purple: #330357;
 			  --igb-pink: #FF00B7;
 			  --igb-pink-opaque: rgba(255, 0, 183, 0.2);
+			  --igb-purple-opaque: rgba(51, 3, 87, 0.7);
+			  --igb-cyan-opaque: rgba(0, 255, 255, 0.5);
 			  --igb-cyan: #00ffff;
 
 			  background: var(--igb-purple);
@@ -183,6 +185,7 @@
 			position: relative;
 			border: 1px solid  var(--igb-pink-opaque);
 			box-shadow: 0px 0px 30px var( --igb-pink-opaque);
+			vertical-align: middle;
 		}
 
 		panel.compact{
@@ -287,6 +290,33 @@
 			max-width: 100vw;
 		}
 
+		diagram{
+			display: inline-block;
+			position: relative;
+			padding: 0px 10px;
+			vertical-align: middle;
+		}
+
+		callout{
+			background: var(--igb-purple-opaque);
+			box-shadow: 0px 0px 10px var(--igb-cyan-opaque);
+			border: 1px solid var(--igb-cyan-opaque);
+			padding: 5px 20px;
+			display: inline-block;
+			color: white;
+			position: absolute;
+
+			/*font-family: "DotGothic16", sans-serif;
+		  font-weight: 700;
+		  font-style: normal;
+		  font-size: 18px;*/
+
+		  backdrop-filter: blur(2px);
+
+		 
+
+		}
+
 	</style>
 </head>
 <body>
@@ -314,10 +344,24 @@
 	</block>
 	<marquee>{ 24,500 5 star reviews } {TOP TRAVELLERS CHOICE } { 24,500 5 star reviews } {TOP TRAVELLERS CHOICE } { 24,500 5 star reviews } {TOP TRAVELLERS CHOICE } { 24,500 5 star reviews } {TOP TRAVELLERS CHOICE } { 24,500 5 star reviews } {TOP TRAVELLERS CHOICE } { 24,500 5 star reviews } {TOP TRAVELLERS CHOICE } { 24,500 5 star reviews } {TOP TRAVELLERS CHOICE } { 24,500 5 star reviews } {TOP TRAVELLERS CHOICE }</marquee>
 	<block style='text-align: center;'>
-		
-			<h1>WHAT'S IN THE BOX?</h1>
+			<panel style='text-align: left;'>
+				<h1>WHAT'S IN THE BOX?</h1>
+				<p>Our gameboxes use world-class motion capture and LIDAR technology, optimised for easy, social play.</p>
+				<tag>Ages 8-80</tag><tag>30 - 90 minute Adventures</tag><tag>2-6 Players</tag><tag>Casual Phsyical Challanges</tag><tag>Social Puzzles</tag>
+			</panel>
+			
+
+			
+			<diagram>
+				<img width=700 src="box-meeps.png">
+				<callout style='left:200px;top:100px;'>PLAY SILLY GAMES</callout>
+				<callout style='left:350px;bottom:50px;'>RUN AROUND</callout>
+				<callout style='right:0px;top:280px;'>SLAP THE WALLS</callout>
+				<callout style='left:30px;bottom:150px;'>DRINK (18+)</callout>
+			</diagram>
+			
 			<br>
-			<panel class=compact>
+			<!--<panel class=compact>
 				<h2>FANCY MOTION TRACKING</h2>
 				<video width="400" height="300" loop muted autoplay playsinline>
 					<source src="./track.mov" type="">
@@ -344,7 +388,9 @@
 				</video>
 				<post-it style='bottom:auto;top:80px;'>Go easy on these</post-it>
 			</panel>
-			<br><br>
+			<br><br>-->
+	</block>
+	<block style='text-align: center;'>
 			<cta>
 				<selecto>London Southbank</selecto>
 				<button>BOOK NOW</button>
