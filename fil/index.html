@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Floor is Lava</title>
+	<script type="text/javascript" src="../shared/jq.js"></script>
+	<script type="text/javascript">
+		$(function(){
+			for(var i=0; i<5*5; i++){
+				$('<cell>').appendTo('grid');
+			}
+		})
+	</script>
+	<style type="text/css">
+		body{
+			padding: 0px;
+			margin: 0px;
+			
+			width: 100vw;
+			height: 100vh;
+			background: black;
+		}
+
+		floor{
+			width: calc(250px * 4);
+			display: block;
+			margin: auto;	
+			position: absolute;
+			bottom: 0px;
+			left: 0px;
+			right: 0px;
+			margin: auto;
+			transform: rotateX(80deg);
+			transform-origin: bottom center;
+  			transform-style: preserve-3d;
+		} 
+
+		grid{
+			position: absolute;
+			bottom: 200px;
+			left: 0px;
+			right: 0px;
+			transform-style: preserve-3d;
+			height: 1000px;
+			
+		}
+
+		game{
+			
+			display: block;
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			
+			transform-style: preserve-3d;
+			perspective-origin: center;
+		}
+
+		screen{
+			width: 1024px;
+			height: 576px;
+			background: #777;
+			display: inline-block;
+			margin: 20px;
+			position: absolute;
+			
+			left: 0px;
+			top: 0px;
+			bottom: 0px;
+			right: 0px;
+			margin: auto;
+			
+
+			perspective: 1000px;
+			overflow: hidden;
+			background-image: linear-gradient(to top, #F86701, #460003);
+		}
+
+		cell{
+			width: 20%;
+			height: 20%;
+			box-sizing: border-box;
+			border: 5px solid white;
+			display: inline-block;
+		}
+
+	</style>
+</head>
+<body>
+	<screen>
+		<game>
+			<floor>
+				<grid>
+					
+				</grid>
+			</floor>
+		</game>
+	</screen>
+</body>
+</html>
