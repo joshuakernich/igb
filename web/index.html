@@ -4,320 +4,7 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=600, user-scalable=0">
 	<title>Immersive Gamebox</title>
-	<style type="text/css">
-		@import url('https://fonts.googleapis.com/css2?family=DotGothic16&family=PT+Sans+Narrow:wght@400;700&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
-
-		body{
-			font-family: "Rubik", sans-serif;
-			  font-optical-sizing: auto;
-			  font-weight: 300;
-			  font-style: normal;
-			  color: white;
-			  margin: 0px;
-			  padding: 0px;
-
-			  --igb-purple: #330357;
-			  --igb-pink: #FF00B7;
-			  --igb-pink-opaque: rgba(255, 0, 183, 0.2);
-			  --igb-purple-opaque: rgba(51, 3, 87, 0.7);
-			  --igb-cyan-opaque: rgba(0, 255, 255, 0.5);
-			  --igb-cyan: #00ffff;
-
-			  background: var(--igb-purple);
-
-			  line-height: 1.8;
-
-		}
-
-
-
-		marquee{
-			background: var(--igb-purple);
-			line-height: 30px;
-			color: var(--igb-cyan);
-			text-transform: uppercase;
-
-			font-family: "DotGothic16", sans-serif;
-		  font-weight: 400;
-		  font-style: normal;
-		}
-
-		header{
-			position: fixed;
-			top: 0px;
-			left: 0px;
-			right: 0px;
-			height: 100px;
-			background: var(--igb-purple);
-
-			background: none;
-			z-index: 1;
-		}
-
-
-
-		logo{
-			
-			width: 300px;
-			height: 100%;
-			background: url(./logo.svg);
-			background-position: center;
-			background-size: 70%;
-			background-repeat: no-repeat;
-			display: block;
-			left: 0px;
-			top: 0px;
-		}
-
-		menu{
-			position: absolute;
-			right: 0px;
-			top: 0px;
-			margin: 0px;
-			padding: 0px;
-			font-size: 20px;
-			
-			line-height: 100px;
-			padding-right: 10px;
-		}
-
-		menu ul, menu li{
-			list-style-type: none;
-			margin: 0px;
-			padding: 0px;
-		}
-
-		menu li{
-			display: inline-block;
-			padding: 10px;
-			line-height: 1;
-			margin: 0px 5px;
-		}
-
-		menu li.filled{
-			background: var(--igb-pink);
-			font-weight: 900;
-		}
-
-		menu li.big{
-			font-size: 1.5em;
-		}
-
-		button, selecto{
-			background: var(--igb-pink);
-			
-			font: inherit;
-			font-weight: 900;
-			color: white;
-			padding: 10px;
-			border: none;
-			width: 100%;
-			font-size: 30px;
-			display: block;
-			box-sizing: border-box;
-		}
-
-		button.sly{
-			background: none;
-			font-size: 20px;
-			color: var(--igb-pink);
-		}
-
-		selecto{
-			background: transparent;
-			border: 2px solid var(--igb-pink);
-			padding: 0px 10px;
-			position: relative;
-			margin-bottom: 10px;
-
-		}
-
-		selecto:after{
-			content:"";
-			position: absolute;
-			top: 20px;
-			right: 20px;
-			
-
-			width: 0px;
-		   height: 0px;
-		   border-style: solid;
-		   border-width: 0 10px 15px 10px;
-		   border-color: transparent transparent var(--igb-pink) transparent;
-		   transform: rotate(180deg);
-		}
-
-		block{
-			display: block;
-			padding: 50px;
-			
-			background-position: cover;
-			background-position-x: center;
-			background-position-y: -200px;
-			position: relative;
-		}
-
-		block.pink{
-			background: var(--igb-pink);
-		}
-
-		block.top:before{
-			content: "";
-			display: block;
-			position: absolute;
-			top: 0px;
-			left: 0px;
-			right: 0px;
-			bottom: 0px;
-			background: linear-gradient(to bottom right, var(--igb-purple), transparent);
-		}
-
-		block.top{
-			padding-top: 150px;
-			background-image: url(./banner-people.jpeg);
-		}
-
-		panel{
-			background: var(--igb-purple);
-			display: inline-block;
-			max-width: 400px;
-			padding: 70px 50px;
-			position: relative;
-			border: 1px solid  var(--igb-pink-opaque);
-			box-shadow: 0px 0px 30px var( --igb-pink-opaque);
-			vertical-align: middle;
-		}
-
-		panel.compact{
-			padding: 10px 20px;
-			margin: 10px;
-		}
-
-		h1{
-			margin: 0px;
-			padding: 0px;
-			font-weight: 900;
-			font-size: 40px;
-			line-height: 1;
-		}
-
-		h2{
-			
-			margin: 0px;
-			padding: 0px;
-			 font-family: "PT Sans Narrow", sans-serif;
-		  font-weight: 700;
-		  font-style: normal;
-		  font-size: 30px;
-		  line-height: 1;
-		  margin-bottom: 10px;
-		}
-
-		flag{
-			background: white;
-			display: inline-block;
-			padding: 10px 15px;
-			color: black;
-			vertical-align: middle;
-			position: absolute;
-			left: 50px;
-			top: -15px;
-			line-height: 20px;
-			box-shadow: 0px 1px 5px black;
-			box-shadow: 0px 0px 50px var(--igb-pink);
-
-		}
-
-		flag *{
-			vertical-align: middle;
-		}
-
-		b{
-			font-weight: 900;
-		}
-
-		cta{
-			width: 450px;
-			display: inline-block;
-		}
-
-		adventure{
-			display: inline-block;
-			width: 400px;
-			background: var(--igb-purple);
-			margin: 5px;
-			vertical-align: top;
-			padding: 20px;
-			border: 1px solid  var(--igb-pink-opaque);
-			box-shadow: 0px 0px 30px var( --igb-pink-opaque);
-		}
-
-		adventure p{
-			
-			margin: 10px 0px;
-		}
-
-		post-it{
-			position: absolute;
-			padding: 15px 10px;
-			right: 40px;
-			bottom: 40px;
-			background: #fff282;
-			width: 70px;
-			height: 70px;
-			
-			color: black;
-			line-height: 1;
-			transform: rotate(-5deg);
-
-			font-size: 12px;
-			box-sizing: border-box;
-			box-shadow: -2px 3px 5px rgba(0, 0, 0, 0.2);
-			border-top: 10px solid rgba(0,0,0,0.1);
-		}
-
-		tag{
-			font-weight: 100;
-			
-			background: rgba(255,255,255,0.2);
-			padding: 5px 10px;
-			margin: 0px 5px 5px 0px;
-			border-radius: 5px;
-			display: inline-block;
-		}
-
-		video{
-			max-width: 100vw;
-		}
-
-		diagram{
-			display: inline-block;
-			position: relative;
-			padding: 0px 10px;
-			vertical-align: middle;
-		}
-
-		callout{
-			background: var(--igb-purple-opaque);
-			box-shadow: 0px 0px 10px var(--igb-cyan-opaque);
-			border: 1px solid var(--igb-cyan-opaque);
-			padding: 5px 20px;
-			display: inline-block;
-			color: white;
-			position: absolute;
-
-			/*font-family: "DotGothic16", sans-serif;
-		  font-weight: 700;
-		  font-style: normal;
-		  font-size: 18px;*/
-
-		  backdrop-filter: blur(2px);
-
-		 
-
-		}
-
-	</style>
+	<link rel="stylesheet" href="style.css">
 </head>
 <body>
 	<header>
@@ -338,6 +25,7 @@
 			<p>Over <b>1 MILLION FUN-LOVERS</b> have visited Immersive Gamebox all over the world. You could be lucky number 1,000,0001 (unlikely). So let's play!</p>
 
 			<flag><span>Rated 'Excellent' on</span> <img width=100 src="https://image-assets.immersivegamebox.com/media/577/TripAdvisor-Logo.png"></flag>
+
 			<selecto>London Southbank</selecto>
 			<button>BOOK NOW</button>
 		</panel>
@@ -346,8 +34,9 @@
 	<block style='text-align: center;'>
 			<panel style='text-align: left;'>
 				<h1>WHAT'S IN THE BOX?</h1>
+				
 				<p>Our gameboxes use world-class motion capture and LIDAR technology, optimised for easy, social play.</p>
-				<tag>Ages 8-80</tag><tag>30 - 90 minute Adventures</tag><tag>2-6 Players</tag><tag>Casual Phsyical Challanges</tag><tag>Social Puzzles</tag>
+				<tag class='age'>Ages 8-80</tag><tag class='time'>30 - 90 minute Adventures</tag><tag class='group'>2-6 Players</tag><tag class='challenge'>Casual Phsyical Challanges</tag><tag class='puzzle'>Social Puzzles</tag><tag class='cinematic'>Cinematic Immersion</tag>
 			</panel>
 			
 
@@ -359,9 +48,12 @@
 				<callout style='right:0px;top:280px;'>SLAP THE WALLS</callout>
 				<callout style='left:30px;bottom:150px;'>DRINK (18+)</callout>
 			</diagram>
+	</block>	
+	<!--block style='text-align: center;'>
 			
-			<br>
-			<!--<panel class=compact>
+				<h1>WHAT'S IN THE BOX?</h1>
+				<br>
+			<panel class=compact>
 				<h2>FANCY MOTION TRACKING</h2>
 				<video width="400" height="300" loop muted autoplay playsinline>
 					<source src="./track.mov" type="">
@@ -388,8 +80,8 @@
 				</video>
 				<post-it style='bottom:auto;top:80px;'>Go easy on these</post-it>
 			</panel>
-			<br><br>-->
-	</block>
+			
+	</block-->
 	<block style='text-align: center;'>
 			<cta>
 				<selecto>London Southbank</selecto>
@@ -406,17 +98,17 @@
 			</video>
 			<h2>TETRIS 1991</h2>
 
-			<tag>8+</tag><tag>30 - 60 minutes</tag><tag>2-6 Players</tag><tag>Madcap Challenge</tag>
+			<tag class='age'>8+</tag><tag class='time'>30 - 60 minutes</tag><tag class='group'>2-6 Players</tag><tag class='challenge'>Madcap Challenge</tag>
 			<p>Ever wanted to play HUMAN-SIZED Tetris!? Now's your chance.</p>
 			<button>BOOK NOW</button>
-			<button class="sly">LEARN MORE ></button>
+			<a href='./tetris.html'><button class="sly">LEARN MORE ></button></a>
 		</adventure>
 		<adventure>
 			<video width="400" height="300" loop muted autoplay playsinline>
 				<source src="./bmc-preview.mov" type="">
 			</video>
 			<h2>BLACK MIRROR CAREERS</h2>
-			<tag>16+</tag><tag>60 minutes</tag><tag>2-6 Players</tag><tag>Physical Puzzler</tag>
+			<tag class='age'>16+</tag><tag class='time'>60 minutes</tag><tag class='group'>2-6 Players</tag><tag class='challenge'>Physical Puzzler</tag>
 			<p>AI has made made your human job redundant. Test your skills in the box so we can assign you an exciting new career!</p>
 			
 			<button>BOOK NOW</button>
@@ -430,7 +122,7 @@
 				<source src="./gbu-preview.mov" type="">
 			</video>
 			<h2>GHOSTBUSTERS: THE CURSED COLLECTION</h2>
-			<tag>16+</tag><tag>60 minutes</tag><tag>2-6 Players</tag><tag>Silliness</tag>
+			<tag class='age'>16+</tag><tag class='time'>30 - 60 minutes</tag><tag class='group'>2-6 Players</tag><tag class='challenge'>Madcap Challenge</tag><tag class='cinematic'>Cinematic</tag>
 			<p>Who you gonna call!? Yourself!? Become a Ghostbuster for a day, and slap some sense into the supernatural.</p>
 			<button>BOOK NOW</button>
 			<button class="sly">LEARN MORE ></button>
