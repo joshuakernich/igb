@@ -194,13 +194,27 @@ panel.compact{
 	margin: 10px;
 }
 
-panel.opaque{
+panel.preview{
 	background: rgba(51, 4, 86, 0.5);
 	padding: 10px;
 	margin: auto;
 	line-height: 0px;
 }
 
+panel.mode-preview{
+	padding: 20px;
+	width: 250px;
+	margin: 10px;
+}
+
+.mode-preview-img{
+	width: 250px;
+	height: 250px;
+	background-size: cover;
+	background-position: center;
+	margin-bottom: 20px;
+	background-color: black;
+}
 
 h1{
 	margin: 0px;
