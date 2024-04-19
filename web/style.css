@@ -148,6 +148,12 @@ block{
 	background-position-x: center;
 	background-position-y: -200px;
 	position: relative;
+
+
+}
+
+block.banner{
+	display: flex;
 }
 
 block.pink{
@@ -179,12 +185,22 @@ panel{
 	border: 1px solid  var(--igb-pink-opaque);
 	box-shadow: 0px 0px 30px var( --igb-pink-opaque);
 	vertical-align: middle;
+
+
 }
 
 panel.compact{
 	padding: 10px 20px;
 	margin: 10px;
 }
+
+panel.opaque{
+	background: rgba(51, 4, 86, 0.5);
+	padding: 10px;
+	margin: auto;
+	line-height: 0px;
+}
+
 
 h1{
 	margin: 0px;
