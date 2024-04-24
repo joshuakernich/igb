@@ -185,8 +185,6 @@ panel{
 	border: 1px solid  var(--igb-pink-opaque);
 	box-shadow: 0px 0px 30px var( --igb-pink-opaque);
 	vertical-align: middle;
-
-
 }
 
 panel.compact{
@@ -362,7 +360,4 @@ callout{
   font-size: 18px;*/
 
   backdrop-filter: blur(2px);
-
- 
-
 }
