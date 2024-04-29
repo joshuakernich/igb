@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Human Journey</title>
+	<script src="../shared/jq.js"></script>
+	<script type="text/javascript">
+		$(function(){
+
+
+			let touchpoints = [
+				{
+					poster:'https://image-assets.immersivegamebox.com/media/414/conversions/ImmersiveGamebox_Logo_SquidGames.small.png',
+					name:'An ad, poster, or other headline.',
+					thinks:['I am looking for something fun to do.', 'I wonder what to do this weekend?','I wonder what is happening in my city.'],
+					then:['I love that IP','Oh cool, an immersive experience','Oh wow, it’s interactive','Oh wow, it’s social'],
+					challenge:["Brand dillution.","Often Gamebox first. IP second.","Lack of clarity."],
+				},
+				{
+					poster:'./website.png',
+					name:'IGB website, or other front-page.',
+					thinks:['I wonder if it’s any good?','Can I trust this enough to bring a group?'],
+					then:['I am confident that this is good.','This looks popular.','The reviews look great.','This looks amazing!','I kind of get it.','This looks like something worth trying out with my group.','I know everything I need to know.'],
+					challenge:["Brand dillution.","Often Gamebox first. IP second.","Very limited information provided."],
+				},
+				{
+					poster:'https://image-assets.immersivegamebox.com/media/384/ImmersiveGamebox_FranchiseSlider_small.jpg',
+					name:'Arrival at Gamebox',
+					thinks:['I am nervous.','I am excited.','I am unsure what to do.'],
+					then:['I am in the right place.','I am welcome here.','I know what to do.',"I'm glad I came here."],
+
+				},
+				{
+					poster:'https://www.utahsadventurefamily.com/wp-content/uploads/2024/03/Immersive-Gamebox-4-600x450.jpg',
+					name:'Introduction to Gamebox',
+					thinks:['This is different.','I am nervous.','I am excited.','I wonder how this works.'],
+					then:['I am excited.','I get it.',"Okay, let's play!"],
+					challenge:["Introduction is long.","Intro is overly prescriptive (due to tech issues)."],
+				},
+				{
+					poster:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRQsX8UEf4TPjWb1zKv4w7v1_RdiWXECmXucRBXkbGI0w&s',
+					name:'Introduction to Adventure',
+					thinks:['I am excited.',"Let's get on with it."],
+					then:['This is cool.','Wow!','I understand and am excited by the stakes.'],
+					challenge:['Introduction can be long.','Vague narrative.','Stakes are low.'],
+				},
+				{
+					poster:'https://thepopinsider.com/wp-content/uploads/sites/6/2022/09/ImmersiveGamebox_SquidGameScreen.jpg',
+					name:'GAME LOOP<br>Intro to minigame',
+					thinks:['Okay, how does this work?','What do I do?'],
+					then:['Sounds simple enough.','I am clear on this.'],
+					challenge:['Players want practice.','Players complain too much instruction.','Too much text.'],
+				},
+				{
+					poster:'https://i0.wp.com/www.mercurynews.com/wp-content/uploads/2022/10/SJM-L-SQUIDGAME-02.jpg?fit=620%2C9999px&ssl=1',
+					name:'GAME LOOP<br>Playing a minigame',
+					thinks:['How do I win?',"Let's goooo!"],
+					then:['Yes. I get it!','This feels very natural','Haha! This is wild.','I am lost in play.','I am getting good at this.'],
+					challenge:['Confusion around how to play.','Lack of in-game help or hand-holding.','Sometimes a lot to take in.','Can be repetitive.','Minigames can drag on.',"Doesn't match IP.",'Game is not responding to the body.'],
+				},
+				{
+					poster:'./minigame-score.png',
+					name:'GAME LOOP<br>Finishing a minigame',
+					thinks:['How did I go?',"How did we go?","That was intense.","What's next?"],
+					then:['I can see exactly how I performed.','I can see my rank in the group.',"I can see how we're performing as a group.","It's nice to rest for a moment.","This is fun."],
+					challenge:['Narrative competes with scoring.','Is this a group or individual challenge?'],
+				},
+				{
+					poster:'https://s3-media0.fl.yelpcdn.com/bphoto/Bk9C_S-ByIH0Uq7l7av7eQ/348s.jpg',
+					name:'Adventure Complete',
+					thinks:['How did I go?',"How did we go?"],
+					then:['I can see exactly how I performed.','I can see my rank in the group.',"I can see how we're performing as a group." ],
+					challenge:['Narrative competes with scoring.','Is this a group or individual challenge?','Scores are vague.'],
+				},
+				{
+					poster:'https://s3-media0.fl.yelpcdn.com/bphoto/bzVRJYS2WlhnlZUBmN050Q/348s.jpg',
+					name:'GIF Moment',
+					thinks:["Phew. It's done!","What now?"],
+					then:['Haha. Fun!',"Let's much around!","What silly thing can we do!?"],
+					challenge:["Technical limitations lead to timing issues.",'Lack of in-game footage.']
+				},
+				{
+					poster:'https://image-assets.immersivegamebox.com/media/213/ImmersiveGamebox_PurpleCard.png',
+					name:'Time to go',
+					thinks:["Now what?"],
+					then:["I should book again."],
+					challenge:["Purple Card is a complex new concept."]
+				}
+
+
+			]
+
+			function mapToList(arr, tag){
+				if(!arr) return '';
+				return '<ul class='+tag+'><li>'+arr.join('</li><li>')+'</ul>';
+			}
+			
+			for(var t in touchpoints){
+
+				let lists = {
+					thinks:mapToList(touchpoints[t].thinks),
+					then:mapToList(touchpoints[t].then),
+					challenge:mapToList(touchpoints[t].challenge,'post-its'),
+				}
+
+
+				$(`<touchpoint>
+					<poster style='background-image:url(${touchpoints[t].poster})'></poster>
+					<h1>${touchpoints[t].name}</h1>
+					<h2>Arrives thinking...</h2>
+					${lists.thinks}
+					<h2>But then ideally...</h2>
+					${lists.then}
+					
+					${lists.challenge}
+					</touchpoint>`).appendTo('body');
+			}
+
+
+
+		})
+	</script>
+	<style type="text/css">
+		@import url('https://fonts.googleapis.com/css2?family=DotGothic16&family=PT+Sans+Narrow:wght@400;700&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
+
+		body{
+			font-family: "Rubik", sans-serif;
+			font-optical-sizing: auto;
+			font-weight: 300;
+			font-style: normal;
+			color: black;
+			margin: 0px;
+			padding: 0px;
+
+			--igb-purple: #330357;
+			--igb-pink: #FF00B7;
+			--igb-pink-opaque: rgba(255, 0, 183, 0.2);
+			--igb-purple-opaque: rgba(51, 3, 87, 0.7);
+			--igb-cyan-opaque: rgba(0, 255, 255, 0.5);
+			--igb-cyan: #00ffff;
+
+			background: #ddd;
+
+			line-height: 1.2;
+			font-size: 14px;
+
+			white-space: nowrap;
+
+			padding: 20px;
+		}
+
+		.post-its{
+			list-style: none;
+			margin: 0px;
+			padding: 0px;
+		}
+
+		.post-its li{
+			display: inline-block;
+			background: #FDEF8C;
+			padding: 10px;
+			width: 70px;
+			height: 70px;
+			margin: 2px;
+			font-size: 0.8em;
+			font-weight: 400;
+			transform: rotate(2deg);
+			box-shadow: 0px 1px 0px rgba(0, 0, 0, 0.2);
+		}
+
+		.post-its li:nth-of-type(even){
+
+			transform: rotate(-2deg);
+		}
+
+		touchpoint{
+			display: inline-block;
+			width: 300px;
+			vertical-align: top;
+			background: white;
+			border: 1px solid rgba(0,0,0,0.1);	
+			padding: 20px;
+			margin: 20px;
+
+			white-space: normal;
+		}
+
+		poster{
+			height: 300px;
+			display: block;
+			background-color: black;
+			background-size: cover;
+			background-position: center;
+			background-repeat: no-repeat;
+		}
+
+		h1{
+			font-size: 1em;
+			font-style: italic;
+			color: var(--igb-pink);
+		}
+
+		h2{
+			font-size: 1em;
+		}
+	</style>
+</head>
+<body>
+
+</body>
+</html>
