@@ -16,6 +16,7 @@
 					thinks:['I am looking for something fun to do.', 'I wonder what to do this weekend?','I wonder what is happening in my city.'],
 					then:['I love that IP','Oh cool, an immersive experience','Oh wow, it’s interactive','Oh wow, it’s social'],
 					challenge:["Brand dillution.","Often Gamebox first. IP second.","Lack of clarity."],
+					implications:["Lead with IP","Avoid sub-brands","BATMAN The Immersive Adventure","BATMAN at Immersive Gamebox","AVOID Batman: The Clown Conundrum"],
 				},
 				{
 					poster:'./website.png',
@@ -23,6 +24,7 @@
 					thinks:['I wonder if it’s any good?','Can I trust this enough to bring a group?'],
 					then:['I am confident that this is good.','This looks popular.','The reviews look great.','This looks amazing!','I kind of get it.','This looks like something worth trying out with my group.','I know everything I need to know.'],
 					challenge:["Brand dillution.","Often Gamebox first. IP second.","Very limited information provided."],
+					implications:["Lead with IP and reviews","Avoid sub-brands","Provide better insight into the experience"],
 				},
 				{
 					poster:'https://image-assets.immersivegamebox.com/media/384/ImmersiveGamebox_FranchiseSlider_small.jpg',
@@ -30,7 +32,7 @@
 					thinks:['I am nervous.','I am excited.','I am unsure what to do.'],
 					then:['I am in the right place.','I am welcome here.','I know what to do.',"I'm glad I came here."],
 					challenge:['Would be great to capture and use player names.'],
-
+					implications:['Implement player names'],
 				},
 				{
 					poster:'https://www.utahsadventurefamily.com/wp-content/uploads/2024/03/Immersive-Gamebox-4-600x450.jpg',
@@ -38,6 +40,7 @@
 					thinks:['This is different.','I am nervous.','I am excited.','I wonder how this works.'],
 					then:['I am excited.','I get it.',"Okay, let's play!"],
 					challenge:["Introduction is long.","Intro is overly prescriptive (due to tech issues)."],
+					implications:['Shorten intro','Tighten the "rules"'],
 				},
 				{
 					poster:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRQsX8UEf4TPjWb1zKv4w7v1_RdiWXECmXucRBXkbGI0w&s',
@@ -45,6 +48,7 @@
 					thinks:['I am excited.',"Let's get on with it."],
 					then:['This is cool.','Wow!','I understand and am excited by the stakes.'],
 					challenge:['Introduction can be long.','Vague narrative.','Stakes are low.'],
+					implications:['Always integrage a clear misson','Always aim for visual splendour'],
 				},
 				{
 					poster:'https://thepopinsider.com/wp-content/uploads/sites/6/2022/09/ImmersiveGamebox_SquidGameScreen.jpg',
@@ -52,6 +56,7 @@
 					thinks:['Okay, how does this work?','What do I do?'],
 					then:['Sounds simple enough.','I am clear on this.'],
 					challenge:['Players want practice.','Players complain too much instruction.','Too much text.'],
+					implications:['Start with simplest explanation','Create standard instruction format','Progressive discolusure','Integrate training levels'],
 				},
 				{
 					poster:'https://i0.wp.com/www.mercurynews.com/wp-content/uploads/2022/10/SJM-L-SQUIDGAME-02.jpg?fit=620%2C9999px&ssl=1',
@@ -59,6 +64,7 @@
 					thinks:['How do I win?',"Let's goooo!"],
 					then:['Yes. I get it!','This feels very natural','Haha! This is wild.','I am lost in play.','I am getting good at this.'],
 					challenge:['Confusion around how to play.','Lack of in-game help or hand-holding.','Sometimes a lot to take in.','Can be repetitive.','Minigames can drag on.',"Doesn't match IP.",'Game is not responding to the body.'],
+					implications:['Progressive discolusure','Use familiar mechanics','Arcade-style gaming','Favour intuituve control mechanisms'],
 				},
 				{
 					poster:'./minigame-score.png',
@@ -66,6 +72,7 @@
 					thinks:['How did I go?',"How did we go?","That was intense.","What's next?"],
 					then:['I can see exactly how I performed.','I can see my rank in the group.',"I can see how we're performing as a group.","It's nice to rest for a moment.","This is fun."],
 					challenge:['Narrative competes with scoring.','Is this a group or individual challenge?'],
+					implications:['Favour simple (and transparent) scoring mechanisms','Favour game-based scoring over narrative-driven scoring','Commit to single scope (group or individual)'],
 				},
 				{
 					poster:'https://s3-media0.fl.yelpcdn.com/bphoto/Bk9C_S-ByIH0Uq7l7av7eQ/348s.jpg',
@@ -73,20 +80,24 @@
 					thinks:['How did I go?',"How did we go?"],
 					then:['I can see exactly how I performed.','I can see my rank in the group.',"I can see how we're performing as a group." ],
 					challenge:['Narrative competes with scoring.','Is this a group or individual challenge?','Scores are vague.'],
+					implications:['Favour simple (and transparent) scoring mechanisms','Favour game-based scoring over narrative-driven scoring','Commit to single scope (group or individual)','Craft narrative around this conclusion'],
 				},
 				{
 					poster:'https://s3-media0.fl.yelpcdn.com/bphoto/bzVRJYS2WlhnlZUBmN050Q/348s.jpg',
 					name:'GIF Moment',
 					thinks:["Phew. It's done!","What now?"],
 					then:['Haha. Fun!',"Let's much around!","What silly thing can we do!?"],
-					challenge:["Technical limitations lead to timing issues.",'Lack of in-game footage.']
+					challenge:["Technical limitations lead to timing issues.",'Lack of in-game footage.'],
+
+					implications:["Interrogate tech issues"]
 				},
 				{
 					poster:'https://image-assets.immersivegamebox.com/media/213/ImmersiveGamebox_PurpleCard.png',
 					name:'Time to go',
 					thinks:["Now what?"],
 					then:["I should book again."],
-					challenge:["Purple Card is a complex new concept."]
+					challenge:["Purple Card is a complex new concept."],
+					implications:["Suggest a much simpler CTA here"]
 				}
 
 
@@ -103,6 +114,7 @@
 					thinks:mapToList(touchpoints[t].thinks),
 					then:mapToList(touchpoints[t].then),
 					challenge:mapToList(touchpoints[t].challenge,'post-its'),
+					implications:mapToList(touchpoints[t].implications),
 				}
 
 
@@ -115,6 +127,8 @@
 					${lists.then}
 					<h2>Emerging Challenges</h2>
 					${lists.challenge}
+					<h2>Design Implications & Actions</h2>
+					${lists.implications}
 					</touchpoint>`).appendTo('body');
 			}
 
