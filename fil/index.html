@@ -8,8 +8,62 @@
 	<script type="text/javascript">
 		$(function(){
 			for(var i=0; i<5*5; i++){
-				$('<cell>').appendTo('grid');
+				$('<cell>').prependTo('grid');
 			}
+
+			$('cell').eq(9).addClass('filled');
+
+			let $grid = $('grid').eq(1);
+			let gx,gy=0;
+
+			$(document).on('mousemove',function(e){
+
+				let $ground = $('ground');
+				let o = $ground.offset();
+
+				let lx = (e.pageX-window.innerWidth/2)/800;
+				let ly = (e.pageY-o.top)/200;
+
+				let px = 50 + lx*100;
+				let py = ly*100;
+
+				px = Math.max(7,Math.min(px,93));
+				py = Math.max(7,Math.min(py,93));
+
+				let inc = 100/5;
+
+				gx = Math.floor(px/inc);
+				gy = Math.floor(py/inc);
+				$('target').css({left:px+'%',top:py+'%'});
+			});
+
+
+			let gxWas, gyWas = 0;
+			let ticksPerSecond = 50;
+			let tickTime = 1000/ticksPerSecond;
+			let jumpedAt;
+
+			function step(){
+
+				if((gx != gxWas || gy != gyWas) && !jumpedAt){
+					jumpedAt = new Date().getTime();
+					$('avatar').addClass('jumping');
+				}
+
+				if(jumpedAt && new Date().getTime()-jumpedAt > 250 ){
+					jumpedAt = undefined;
+					
+					$('avatar').css({left:10+gx*100/5+'%',top:10+gy*100/5+'%'});
+					$('avatar').removeClass('jumping');
+				}
+
+				$('cell').removeClass('targeted').eq(gy*5+gx).addClass('targeted');
+
+				gxWas = gx;
+				gyWas = gy;
+			}
+
+			setInterval(step,tickTime);
 		})
 	</script>
 	<style type="text/css">
@@ -20,6 +74,26 @@
 			width: 100vw;
 			height: 100vh;
 			background: black;
+			white-space: nowrap;
+			
+			overflow: hidden;
+			
+		}
+
+		screens{
+			perspective: 4000px;
+			perspective-origin: center;
+			display: block;
+			position: absolute;
+			top: 50vh;
+			left: 50vw;
+
+			
+
+			background: #333;
+
+			transform-style: preserve-3d;
+			transform: rotateX(-5deg) scale(0.7) translateY(-100px);
 		}
 
 		floor{
@@ -31,7 +105,7 @@
 			left: 0px;
 			right: 0px;
 			margin: auto;
-			transform: rotateX(80deg);
+			transform: rotateX(60deg);
 			transform-origin: bottom center;
   			transform-style: preserve-3d;
 		} 
@@ -43,6 +117,7 @@
 			right: 0px;
 			transform-style: preserve-3d;
 			height: 1000px;
+			white-space: normal;
 			
 		}
 
@@ -64,40 +139,168 @@
 			height: 576px;
 			background: #777;
 			display: inline-block;
-			margin: 20px;
-			position: absolute;
+		
 			
-			left: 0px;
-			top: 0px;
-			bottom: 0px;
-			right: 0px;
-			margin: auto;
 			
+
 
 			perspective: 1000px;
 			overflow: hidden;
 			background-image: linear-gradient(to top, #F86701, #460003);
+
+			transform-style: preserve-3d;
+			box-shadow: inset 0px 0px 50px rgba(255, 255, 255, 0.1);
+
+			position: absolute;
+			left: -512px;
+			top: -288px;
+		}
+
+		screen:nth-of-type(1){
+			transform: rotateY(90deg);
+			transform-origin: right center;
+
+			left: -1536px;
+			top: -288px;
+
+		}
+
+		screen:nth-of-type(3){
+			transform: rotateY(-90deg);
+			transform-origin: left center;
+
+			left: 512px;
+			top: -288px;
+		}
+
+		ground{
+			width: 1024px;
+			height: 1024px;
+			transform: rotateX(90deg);
+			transform-origin: top center;
+			position: absolute;
+			left: -512px;
+			top: 288px;
+			transform-style: preserve-3d;
+			background: #333;
 		}
 
 		cell{
 			width: 20%;
 			height: 20%;
 			box-sizing: border-box;
-			border: 5px solid white;
+			box-shadow: inset 0px 0px 5px white;
 			display: inline-block;
+			transform-style: preserve-3d;
 		}
+
+		cell.filled{
+			
+			position: relative;
+		}
+
+		cell.filled:before{
+			content: "";
+			display: block;
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			margin: 30px;
+			background: rgba(200,200,200,0.5);
+			border-radius: 20px;
+		}
+
+		cell.targeted{
+			background: rgba(255,255,255,0.2);
+		}
+
+		target{
+			position: absolute;	
+			top: 50px;
+			left: 50px;
+			box-sizing: border-box;
+			transform-style: preserve-3d;
+		}
+
+		avatar{
+			position: absolute;
+			top: 50px;
+			left: 50px;
+			box-sizing: border-box;
+			transform-style: preserve-3d;
+			transition: all 0.1s;
+		}
+
+		target:after{
+			content: "";
+			position: absolute;
+			width: 150px;
+			height: 150px;
+			border-radius: 100px;
+			border: 20px dashed red;
+			background: rgba(255,255,255,0.3);
+			top: -75px;
+			left:-75px;
+			display: block;
+			box-sizing: border-box;
+		}
+
+		avatar:after{
+			content: "";
+			position: absolute;
+			width: 150px;
+			height: 150px;
+			border-radius: 10px;
+			
+			background: red;
+			bottom: 0px;
+			left:-75px;
+			display: block;
+			box-sizing: border-box;
+			transform: rotateX(-80deg);
+			transform-origin: bottom center;
+			transition: all 0.1s;
+
+		}
+
+		avatar.jumping:after{
+			bottom: 50px;
+		}
+
 
 	</style>
 </head>
 <body>
-	<screen>
-		<game>
-			<floor>
-				<grid>
+	<screens>
+		<screen>
+			<game>
+				<floor>
 					
-				</grid>
-			</floor>
-		</game>
-	</screen>
+				</floor>
+			</game>
+		</screen><screen>
+			<game>
+				<floor>
+					<grid>
+						
+					<target></target>
+					<avatar></avatar>
+					</grid>
+
+				</floor>
+			</game>
+		</screen><screen>
+			<game>
+				<floor>
+					
+				</floor>
+			</game>
+		</screen>
+		<ground>
+			<target></target>
+		</ground>
+	</screens>
 </body>
 </html>

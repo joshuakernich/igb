@@ -1,0 +1,125 @@
+JSON = {
+    "patterns": [
+        {
+            "name": "Blank",
+            "rows": [
+                "____",
+                "____",
+                "____",
+                "____"
+            ]
+        },
+        {
+            "name": "obsleftright",
+            "rows": [
+                "__--",
+                "____",
+                "____",
+                "--__"
+            ]
+        },
+        {
+            "name": "obsrightleft",
+            "rows": [
+                "--__",
+                "____",
+                "____",
+                "__--"
+            ]
+        },
+        {
+            "name": "obsinout",
+            "rows": [
+                "-__-",
+                "____",
+                "____",
+                "_--_"
+            ]
+        },
+        {
+            "name": "demowallleft",
+            "rows": [
+                "<___"
+            ]
+        },
+        {
+            "name": "demowallright",
+            "rows": [
+                "___>"
+            ]
+        },
+        {
+            "name": "democolumnleft",
+            "rows": [
+                "_1__",
+                "____",
+                "_1__",
+                "____",
+                "_1__"
+            ]
+        },
+        {
+            "name": "democolumnright",
+            "rows": [
+                "__1_",
+                "____",
+                "__1_",
+                "____",
+                "__1_"
+            ]
+        },
+        {
+            "name": "demozigzag",
+            "rows": [
+                "__1_",
+                "____",
+                "_1__",
+                "____",
+                "__1_",
+                "____",
+                "_1__"
+            ]
+        },
+        {
+            "name": "demorow",
+            "rows": [
+                "1111"
+            ]
+        }
+    ],
+
+    "levels": [
+        {
+            "name": "LevelA",
+            "speed": 1,
+            "patterns": [
+                "blank",
+                "blank",
+                "blank",
+                "obsleftright",
+                "blank",
+                "demozigzag",
+                "blank",
+                "obsrightleft",
+                "blank",
+                "demozigzag",
+                "blank",
+                "obsinout",
+                "blank",
+                "demowallleft",
+                "blank",
+                "obsinout",
+                "blank",
+                "demowallright",
+                "blank",
+                "obsinout",
+                "blank",
+                "demowallleft",
+                "blank",
+                "demowallright",
+                "blank",
+                "demorow"
+            ]
+        }
+    ]
+}

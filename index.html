@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>IGB Porotypes</title>
+	<script type="text/javascript" src="./shared/jq.js"></script>
+	<script type="text/javascript">
+		$(function () {
+			const proto = {
+				
+				'FIL JUMP':'fil/jump.html',
+				'LOS MAZE':'los/maze-nav.html',
+
+			}
+
+			for(var p in proto){
+				$('<li>').appendTo('ul').text(p).attr('url',proto[p]).click(launchProto);
+			}
+
+			function launchProto() {
+				let url = $(this).attr('url');
+				$('iframe').attr('src',url).addClass('active');
+			}
+
+			$('button').click(function() {
+				$('iframe').removeClass('active').attr('src','');
+			})
+		})
+	</script>
+	<style type="text/css">
+		body{
+			background: #333;
+		}
+		.active{
+			position: fixed;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			width: 100vw;
+			height: 100vh;
+			border: none;
+			display: block;
+		}
+
+		iframe{
+			display: none;
+		}
+
+		button{
+			position: fixed;
+			top: 0px;
+			left: 0px;
+			margin: 50px;
+			width: 100px;
+			height: 100px;
+			background: white;
+			box-sizing: border-box;
+		}
+
+		ul{
+			width: 800px;
+			height: 400px;
+			position: fixed;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			margin: auto;
+			list-style-type: none;
+			margin: auto;
+			padding: 0px;
+		}
+
+		li{
+			list-style-type: none;
+			margin: 0px;
+			padding: 0px;
+			width: 100px;
+			height: 100px;
+			line-height: 100px;
+			box-sizing: border-box;
+			background: white;
+			text-align: center;
+			display: inline-block;
+			margin: 5px;
+		}
+	</style>
+</head>
+<body>
+	<ul></ul>
+	<iframe src=""></iframe>
+	<button>MENU</button>
+</body>
+</html>

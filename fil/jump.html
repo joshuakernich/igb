@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Jump</title>
+	<script type="text/javascript" src="../shared/jq.js"></script>
+	<script type="text/javascript">
+		$(function(){
+				for(var i=0; i<25; i++){
+					$('<cell>').appendTo('inner');
+				}
+
+				$('cell').eq(0).addClass('floor');
+				$('cell').eq(3).addClass('floor');
+				$('cell').eq(14).addClass('floor');
+				$('cell').eq(12).addClass('floor');
+				$('cell').eq(20).addClass('floor');
+
+				$(document).on('mousemove',onMove);
+
+				let ixWas = -1;
+				let iyWas = -1;
+				let xWas = -1;
+				let yWas = -1;
+				let isJumping = false;
+
+				function onMove(e) {
+					let o = $('grid').offset();
+					let x = e.pageX - o.left;
+					let y = e.pageY - o.top;
+
+					let ix = Math.floor(x/100);
+					let iy = Math.floor(y/100);
+
+					
+
+					if(!isJumping && (ixWas != ix || iyWas != iy)){
+
+
+						isJumping = true;
+						$('target').addClass('jumping');
+						$('avatar').css({bottom:50}).animate({bottom:100},{duration:200,easing:'linear'}).animate({bottom:0},{duration:200,easing:'linear',complete:function(){
+							isJumping=false;
+							$('target').removeClass('jumping');
+						}});
+					}
+
+					let dir = (x>=xWas)?1:-1;
+					$('avatar').css('transform','scaleX('+dir+')');
+
+					ixWas = ix;
+					iyWas = iy;
+					xWas = x;
+					yWas = y;
+
+
+					$('target').css({left:x,top:y});
+				}
+		})
+	</script>
+	<style type="text/css">
+		body{
+			background: orange;
+		}
+		
+		grid{
+			width: 500px;
+			height: 500px;
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			display: inline-block;
+			margin: auto;
+			line-height: 0px;
+		}
+
+		inner{
+			display: block;
+		}
+
+		cell{
+			display: inline-block;
+			width: 100px;
+			height: 100px;
+			
+			box-sizing: border-box;
+		}
+
+		cell.floor{
+			background: white;
+			border-bottom: 15px solid #ddd;
+			border-radius: 10px;
+			box-shadow: 2px 2px 0px rgba(0,0,0,0.2);
+		}
+
+		target{
+			display: block;
+			
+			
+			position: absolute;
+			width: 0px;
+			height: 0px;
+		}
+
+		target:before{
+			content: "";
+			transform: scaleY(0.2);
+			width: 70px;
+			height: 70px;
+			position: absolute;
+			display: block;
+			left: -35px;
+			top: -35px;
+
+			border-radius: 50px;
+			background: rgba(0,0,0,0.5);
+		}
+
+		target.jumping:before{
+			transform: scale(0.7, 0.15) translateY(20px);
+
+		}
+
+		avatar{
+			width: 100px;
+			
+			height: 100px;
+			position: absolute;
+			bottom: 0px;
+			left: -50px;
+			background-image: url('../sprites/Main Characters/Pink Man/Idle (32x32).png');
+			background-size: 1100%;
+			image-rendering: pixelated;
+		}
+	</style>
+</head>
+<body>
+	<grid>
+		<inner></inner>
+		<target>
+			<avatar></avatar>
+		</target>
+	</grid>
+</body>
+</html>
