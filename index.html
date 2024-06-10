@@ -27,9 +27,9 @@
 				$('iframe').removeClass('active').attr('src','');
 			})
 
-			let log = [];
+			/*let log = [];
 
-			window.addEventListener(
+			window.vuplex.addEventListener(
 			  "message",
 			  (event) => {
 			  	log.unshift( event.data.toString());
@@ -37,7 +37,22 @@
 			    $('textarea').html(log.join('<br>'));
 			  },
 			  false,
-			);
+			);*/
+
+			if (window.vuplex) {
+			    addMessageListener();
+			} else {
+			    window.addEventListener('vuplexready', addMessageListener);
+			}
+
+			function addMessageListener() {
+			    window.vuplex.addEventListener('message', function(event) {
+			        let json = event.data;
+			        // > JSON received: { "type": "greeting", "message": "Hello from C#!" }
+			        console.log('JSON received: ' + json);
+
+			    });
+			}
 
 			$(document).click(function(e){
 				$('<dot type=red>').appendTo('body').css({left:e.pageX,top:e.pageY});
