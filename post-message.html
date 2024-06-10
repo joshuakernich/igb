@@ -4,10 +4,22 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title></title>
-	<script type="text/javascript" src="../shared/jq.js"></script>
+	<script type="text/javascript" src="./shared/jq.js"></script>
 	<script type="text/javascript">
 		$(function(){
-			
+
+			let popup;
+
+			$(document).click(function(){
+				if(popup == undefined){
+					popup = window.open('./index.html');
+				} else {
+					popup.postMessage(
+					  "The user is 'bob' and the password is 'secret'",
+					  "https://secure.example.net",
+					);
+				}
+			});
 		})
 	</script>
 </head>
