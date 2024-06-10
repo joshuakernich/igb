@@ -39,11 +39,37 @@
 			  false,
 			);
 
+			$(document).click(function(e){
+				$('<dot type=red>').appendTo('body').css({left:e.pageX,top:e.pageY});
+				$('<dot type=blue>').appendTo('body').css({left:e.screenX,top:e.screenY});
+			})
+
 		})
 	</script>
 	<style type="text/css">
 		body{
 			background: #333;
+		}
+
+		dot{
+			position: fixed;
+			width: 0px;
+			height: 0px;
+		}
+
+		dot[type="blue"]:after{
+			background: blue;
+		}
+
+		dot:after{
+			content: "";
+			width: 20px;
+			height: 20px;
+			background: red;
+			display: block;
+			position: absolute;
+			left: -10px;
+			top: -10px;
 		}
 
 		textarea{
@@ -111,7 +137,7 @@
 </head>
 <body>
 	<ul></ul>
-	<textarea></textarea>
+	<textarea>LOGS WILL APPEAR HERE (hopefully)</textarea>
 	<iframe src=""></iframe>
 	<button>MENU</button>
 </body>
