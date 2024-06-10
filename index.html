@@ -27,9 +27,9 @@
 				$('iframe').removeClass('active').attr('src','');
 			})
 
-			/*let log = [];
+			let log = [];
 
-			window.vuplex.addEventListener(
+			/*window.vuplex.addEventListener(
 			  "message",
 			  (event) => {
 			  	log.unshift( event.data.toString());
@@ -50,6 +50,10 @@
 			        let json = event.data;
 			        // > JSON received: { "type": "greeting", "message": "Hello from C#!" }
 			        console.log('JSON received: ' + json);
+
+			        log.unshift( event.data.toString());
+				  	if(log.length>10) log.length = 10;
+				    $('logger').html(log.join('<br>'));
 
 			    });
 			}
@@ -87,12 +91,14 @@
 			top: -10px;
 		}
 
-		textarea{
+		logger{
 			position: fixed;
 			height: 50vh;
 			width: 500px;
 			bottom: 0px;
 			left: 50px;
+			background: white;
+			font-family: sans-serif;
 		}
 		.active{
 			position: fixed;
@@ -152,7 +158,7 @@
 </head>
 <body>
 	<ul></ul>
-	<textarea>LOGS WILL APPEAR HERE (hopefully)</textarea>
+	<logger>LOGS WILL APPEAR HERE (hopefully)</logger>
 	<iframe src=""></iframe>
 	<button>MENU</button>
 </body>
