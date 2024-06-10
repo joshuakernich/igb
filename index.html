@@ -26,11 +26,32 @@
 			$('button').click(function() {
 				$('iframe').removeClass('active').attr('src','');
 			})
+
+			let log = [];
+
+			window.addEventListener(
+			  "message",
+			  (event) => {
+			  	log.unshift( event.data.toString());
+			  	if(log.length>10) log.length = 10;
+			    $('textarea').html(log.join('<br>'));
+			  },
+			  false,
+			);
+
 		})
 	</script>
 	<style type="text/css">
 		body{
 			background: #333;
+		}
+
+		textarea{
+			position: fixed;
+			height: 50vh;
+			width: 500px;
+			bottom: 0px;
+			left: 50px;
 		}
 		.active{
 			position: fixed;
@@ -90,6 +111,7 @@
 </head>
 <body>
 	<ul></ul>
+	<textarea></textarea>
 	<iframe src=""></iframe>
 	<button>MENU</button>
 </body>
