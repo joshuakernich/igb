@@ -40,6 +40,7 @@
 			);*/
 
 
+			doLog('Vuplex is '+window.vuplex);
 			// The window.vuplex object gets created when the page starts loading,
 			// so we double-check that it exists before using it here.
 			// You can skip this step if you're sending a message after the page has loaded.
@@ -53,11 +54,13 @@
 			}
 
 			function sendMessageToCSharp() {
+				doLog('Vuplex is '+window.vuplex);
 			    // This object passed to postMessage() automatically gets serialized as JSON
 			    // and is emitted via the C# MessageEmitted event. This API mimics the window.postMessage API.
 			    window.vuplex.postMessage({ type: 'greeting', message: 'Hello from JavaScript!' });
 			}
 
+			doLog('Vuplex is '+window.vuplex);
 
 			if (window.vuplex) {
 			    addMessageListener();
@@ -66,21 +69,24 @@
 			}
 
 			function addMessageListener() {
+				doLog('Vuplex is '+window.vuplex);
 			    window.vuplex.addEventListener('message', function(event) {
 			        let json = event.data;
 			        // > JSON received: { "type": "greeting", "message": "Hello from C#!" }
 			        console.log('JSON received: ' + json);
 
-			        log.unshift( event.data.toString());
-				  	if(log.length>10) log.length = 10;
-				    $('logger').html(log.join('<br>'));
+			        doLog(json);
 
 			    });
 			}
 
-			function log(){
-
+			function doLog(str){
+				log.unshift( str );
+			  	if(log.length>10) log.length = 10;
+			    $('logger').html(log.join('<br>'));
 			}
+
+			
 
 			$(document).click(function(e){
 				$('<dot type=red>').appendTo('body').css({left:e.pageX,top:e.pageY});
