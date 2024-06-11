@@ -71,17 +71,20 @@
 
 			window.addEventListener('message', function(e) { 
 				let player = e.data;
-			
-				if(player.id==0){
-					diver.tx = player.px+'%';
-					diver.ty = player.pz+'%';
-				} else if(player.id==1){
-					sub.tx = player.px+'%';
-					sub.ty = player.pz+'%';
-				}
-
-				//$('cursor').eq(player.id).css({left:player.px+'%',top:player.pz+'%'});
+				doPlayerMove(player);
 			 });
+
+			function doPlayerMove(player){
+				if(player.id==0){
+					diver.tx = player.px/100*$('screen').width();
+					diver.ty = player.pz/100*$('screen').height();
+				} else if(player.id==1){
+					sub.tx = player.px/100*$('screen').width();
+					sub.ty = player.pz/100*$('screen').height();
+				}
+			}
+
+			doPlayerMove({id:0,px:5,pz:5});
 
 
 			setInterval(step,20);
@@ -102,14 +105,19 @@
 		}
 
 		screen{
-			width: 1280px;
-			height: 720px;
+			width: 160vh;
+			height: 100vh;
 			background: url(ocean-colour.png);
 			display: block;
 			margin:  auto;
 			overflow: hidden;
-			position: relative;
+			position: absolute;
 			background-size: cover;
+			left: 0px;
+			right: 0px;
+			top: 0px;
+			bottom: 0px;
+			margin: auto;
 		}
 
 		level{
@@ -185,7 +193,6 @@
 	</style>
 </head>
 <body>
-	<p>SUB MAZE - Drag the red or blue Cursor to move</p>
 	<screen>
 		
 		<level>
