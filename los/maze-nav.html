@@ -69,7 +69,11 @@
 				$('level').css({left:'-'+px+'px',top:'-'+py+'px'});
 			}
 
-			window.addEventListener('message', function(e) { window.alert(e.data) });
+			window.addEventListener('message', function(e) { 
+				let player = e.data;
+				console.log(player.id,player.x,player.y,player.z);
+				
+			 });
 
 
 			setInterval(step,20);

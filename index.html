@@ -40,7 +40,7 @@
 			let log = [];
 			let players = [];
 			while(players.length<6){
-				players.push({x:0,y:0,z:0});
+				players.push({id:players.length,x:0,y:0,z:0});
 				$('<player>').appendTo('tracker');
 			}
 
@@ -77,7 +77,7 @@
 
 		        	$('player').eq(p).css({left:px+'%',top:py+'%',width:50+pz,height:50+pz});
 		        	
-		        	$('iframe')[0].contentWindow.postMessage(arr);
+		        	$('iframe')[0].contentWindow.postMessage(players[p]);
 		        }
 
 		        doLog(str);
