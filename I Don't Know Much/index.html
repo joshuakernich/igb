@@ -4,8 +4,11 @@
 	<title>I Don't Know Much</title>
 	<script type="text/javascript" src='https://code.jquery.com/jquery-3.3.1.min.js'></script>
 	<script src="./launchpad-control.js"></script>
+	<script src="./Tone.js"></script>
 	<script type="text/javascript">
 		$(function(){
+
+
 
 			var cntRound = 0;
 
@@ -134,9 +137,10 @@
 			var cntAnswer = 0;
 			var selections = [];
 			var totalForPlayer = [0,0,0];
+			var synth;
 
 			function nextRound(){
-				$('.quiz').css({'background-image':'url('+round.bg+')'});
+				$('.quiz').show().css({'background-image':'url('+round.bg+')'});
 				$('.rounds').hide();
 
 				iq = -1;
@@ -176,18 +180,29 @@
 				} else {
 					if(cntRound == 6) $('.rounds li').removeClass('locked');
 					$('.rounds').show();
-
+					$('.quiz').hide();
 					openDoors();
 				}
 			}
 
-			function revealQuestion(){
+			function blip(a,b){
+				const now = Tone.now();
+				synth.triggerAttackRelease(pitchLibrary[a], 0.1, now);
+				synth.triggerAttackRelease(pitchLibrary[b], 0.1, now+0.2);
+			}
 
+			function song( ...args ){
+				const now = Tone.now();
+				for(var i=0; i<args.length; i++) synth.triggerAttackRelease(pitchLibrary[args[i]], 0.1, now+0.1*i);
+			}
+
+			function revealQuestion(){
+				song(0,1,4,7);
 				$('.question').show();
 			}
 
 			function revealOptions(){
-
+				song(4,6);
 				timeQuestionStart = new Date().getTime();
 				$('.options').show();
 				$('.options li').each(function(i){
@@ -199,6 +214,7 @@
 			
 
 			function revealCorrect(){
+				blip(6,7);
 				for(var i in q.a){
 					var correctness = (q.s[i]>0)?'correct':'incorrect';
 					$('.options li').eq(i).addClass(correctness);
@@ -228,6 +244,7 @@
 			}
 
 			function hideQuestion(){
+				song(7,6,5,4,1);
 				$('.door').removeClass('open');
 
 				setTimeout(resolveScores,2000);
@@ -257,6 +274,8 @@
 
 			function doOption(nPlayer,iSelect){
 
+				synth.triggerAttackRelease(pitchLibrary[nPlayer], 0.1);
+
 				selections.push({nPlayer:nPlayer,iSelect:iSelect});
 
 				var elapsed = new Date().getTime() - timeQuestionStart;
@@ -282,6 +301,7 @@
 
 
 			function onRoundSelect(e){
+				blip(4,5);
 				cntRound++;
 				$(this).addClass('selected');
 				round = $(this).data('round');
@@ -301,9 +321,29 @@
 				$('.door').addClass('open');
 			}
 
-			setTimeout(openDoors,1000);
+			$('.quiz').hide();
+			//setTimeout(openDoors,1000);
 
-			
+			const pitchLibrary = ['D3','E3','G3','A3','C4','D4','E4','G4','A4'];
+
+			async function getStarted(){
+				
+				$(document).off('click');
+
+				await Tone.start();
+
+				synth = new Tone.Synth().toDestination();
+				synth.envelope.attack = 0.001;
+				synth.envelope.release = 1;
+				song(0,1,4,7);
+
+				
+				$('holding').hide();
+				openDoors();
+
+			}
+
+			$(document).click(getStarted);
 			
 		})
 	</script>
@@ -324,8 +364,8 @@
 
 		.bg{
 			background: url('./globe.gif');
-			background-size: 100%;
-			background-position: 150% center;
+			background-size: 200%;
+			background-position: left 20%;
 			background-repeat: no-repeat;
 		}
 
@@ -335,6 +375,14 @@
 			background-position: 150% center;
 			background-repeat: no-repeat;
 
+		}
+
+		.door.right .bg{
+			background-position: right 20%;
+		}
+
+		.door.right .logo{
+			background-position: -50% center;
 		}
 
 		.vhs{
@@ -370,9 +418,7 @@
 			left: 50%;
 		}
 
-		.door.right .layer{
-			background-position: -50% center;
-		}
+		
 
 		.door.left.open{
 			left:-50%;
@@ -563,7 +609,7 @@
 
 		igb{
 			width: 100vw;
-			height: 18.75vw;
+			height: 20.83vw;
 			position: fixed;
 			top: 0px;
 			left: 0px;
@@ -584,6 +630,20 @@
 			
 			
 			overflow: hidden;
+		}
+
+		holding{
+			position: absolute;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			line-height: 0px;
+			display: block;
+			color: white;
+			width: 100%;
+			height: 20%;
+			text-align: center;
+			font-size: 2em;
 		}
 
 	</style>
@@ -626,6 +686,7 @@
 				<div class='layer logo'></div>
 			</div>
 		</layer>
+		<holding>Tap Anywhere to Begin</holding>
 	</igb>
 </body>
 </html>

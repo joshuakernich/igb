@@ -23,10 +23,13 @@
 			function launchProto() {
 				let url = $(this).attr('url');
 				$('iframe').attr('src',url).addClass('active');
+
+				window.location = url;
 			}
 
 			$('button').click(function() {
 				$('iframe').removeClass('active').attr('src','');
+
 			})
 
 			let log = [];
