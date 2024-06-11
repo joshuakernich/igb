@@ -21,7 +21,7 @@
 
 			function launchProto() {
 				let url = $(this).attr('url');
-				$('iframe').attr('src',url).addClass('active');
+				$('iframe').attr('src',url+'?seed='+Math.random()).addClass('active');
 			}
 
 			$('[btn=move]').click(function() {
