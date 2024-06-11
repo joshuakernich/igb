@@ -58,13 +58,15 @@
 				
 
 		        let arr = str.split(',');
+		        console.log(arr);
 		        let type = arr[0];
 
 		        if(type=='M'){
-		        	let p = arr[1];
-		        	players[p].x = arr[2];
-		        	players[p].y = arr[3];
-		        	players[p].z = arr[4];
+
+		        	let p = parseInt(arr[1]);
+		        	players[p].x = parseFloat(arr[2]);
+		        	players[p].y = parseFloat(arr[3]);
+		        	players[p].z = parseFloat(arr[4]);
 		        	
 		        	let px = (players[p].x+1)/2*100;
 		        	let py = (players[p].y+1)/2*100;
@@ -95,7 +97,8 @@
 				});
 			})
 
-			onMessage('M,0,0,0,0');
+			onMessage('M,0,1,1,0');
+			onMessage('M,1,-1,0,0');
 
 		})
 	</script>
