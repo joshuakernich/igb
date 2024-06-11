@@ -89,8 +89,9 @@
 			
 
 			$(document).click(function(e){
-				$('<dot type=red>').appendTo('body').css({left:e.pageX,top:e.pageY});
-				$('<dot type=blue>').appendTo('body').css({left:e.screenX,top:e.screenY});
+				$('<dot type=red>').appendTo('body').css({left:e.pageX,top:e.pageY}).animate({width:150,height:150,opacity:0},500,function(){
+					$(this).remove();
+				});
 			})
 
 		})
@@ -102,25 +103,19 @@
 
 		dot{
 			position: fixed;
-			width: 0px;
-			height: 0px;
+			width: 20px;
+			height: 20px;
+			
+			transform: translate(-50%,-50%);
+			background: radial-gradient(transparent, transparent, white, transparent, transparent);
+			border-radius: 100px;
 		}
 
-		dot[type="blue"]:after{
+		dot[type="blue"]{
 			background: blue;
 		}
 
-		dot:after{
-			content: "";
-			width: 20px;
-			height: 20px;
-			background: red;
-			display: block;
-			position: absolute;
-			left: -10px;
-			top: -10px;
-		}
-
+		
 		logger{
 			position: fixed;
 			height: 50vh;
