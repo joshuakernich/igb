@@ -3,7 +3,7 @@
 <head>
 	<title>I Don't Know Much</title>
 	<script type="text/javascript" src='https://code.jquery.com/jquery-3.3.1.min.js'></script>
-	<script src="./launchpad-control.js"></script>
+	<!--script src="./launchpad-control.js"></script-->
 	<script src="./Tone.js"></script>
 	<script type="text/javascript">
 		$(function(){
@@ -185,12 +185,7 @@
 				}
 			}
 
-			function blip(a,b){
-				const now = Tone.now();
-				synth.triggerAttackRelease(pitchLibrary[a], 0.1, now);
-				synth.triggerAttackRelease(pitchLibrary[b], 0.1, now+0.2);
-			}
-
+		
 			function song( ...args ){
 				const now = Tone.now();
 				for(var i=0; i<args.length; i++) synth.triggerAttackRelease(pitchLibrary[args[i]], 0.1, now+0.1*i);
@@ -214,7 +209,7 @@
 			
 
 			function revealCorrect(){
-				blip(6,7);
+				song(6,7);
 				for(var i in q.a){
 					var correctness = (q.s[i]>0)?'correct':'incorrect';
 					$('.options li').eq(i).addClass(correctness);
@@ -244,6 +239,7 @@
 			}
 
 			function hideQuestion(){
+
 				song(7,6,5,4,1);
 				$('.door').removeClass('open');
 
@@ -301,7 +297,7 @@
 
 
 			function onRoundSelect(e){
-				blip(4,5);
+				song(4,5);
 				cntRound++;
 				$(this).addClass('selected');
 				round = $(this).data('round');
@@ -343,7 +339,9 @@
 
 			}
 
-			$(document).click(getStarted);
+			setTimeout(function(){
+				$(document).click(getStarted);
+			},1000);
 			
 		})
 	</script>
