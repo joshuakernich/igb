@@ -10,83 +10,77 @@
 			const proto = {
 				
 				'FIL JUMP':'fil/jump.html',
-				'LOS MAZE':'los/maze-nav.html',
-				'JOSH QUIZ':"I Don't Know Much/index.html",
+				'LOS MAZE':'./los/maze-nav.html',
+				'QUIZ':"I Don't Know Much/index.html",
 				'BRIDGE':"https://joshuakernich.github.io/the-bridge/",
-
 			}
 
 			for(var p in proto){
-				$('<li>').appendTo('ul').text(p).attr('url',proto[p]).click(launchProto);
+				$('<li>').appendTo('.menu-games').text(p).attr('url',proto[p]).click(launchProto);
 			}
 
 			function launchProto() {
 				let url = $(this).attr('url');
 				$('iframe').attr('src',url).addClass('active');
-
-				window.location = url;
 			}
 
-			$('button').click(function() {
+			$('[btn=move]').click(function() {
+				
+			})
+
+			$('[btn=menu]').click(function() {
 				$('iframe').removeClass('active').attr('src','');
 
 			})
 
 			let log = [];
+			let players = [];
+			while(players.length<6){
+				players.push({x:0,y:0,z:0});
+				$('<player>').appendTo('tracker');
+			}
 
-			/*window.vuplex.addEventListener(
-			  "message",
-			  (event) => {
-			  	log.unshift( event.data.toString());
-			  	if(log.length>10) log.length = 10;
-			    $('textarea').html(log.join('<br>'));
-			  },
-			  false,
-			);*/
-
-
-			doLog('Vuplex is '+window.vuplex);
-			// The window.vuplex object gets created when the page starts loading,
-			// so we double-check that it exists before using it here.
-			// You can skip this step if you're sending a message after the page has loaded.
+			doLog('Vuplex is '+(window.vuplex?'ready':'not ready'));
+		
 			if (window.vuplex) {
-			    // The window.vuplex object already exists, so go ahead and send the message.
-			    sendMessageToCSharp();
+			    ready();
 			} else {
-			    // The window.vuplex object hasn't been initialized yet because the page is still
-			    // loading, so add an event listener to send the message once it's initialized.
-			    window.addEventListener('vuplexready', sendMessageToCSharp);
+			    window.addEventListener('vuplexready', ready);
 			}
 
-			function sendMessageToCSharp() {
-				doLog('Vuplex is '+window.vuplex);
-			    // This object passed to postMessage() automatically gets serialized as JSON
-			    // and is emitted via the C# MessageEmitted event. This API mimics the window.postMessage API.
-			    window.vuplex.postMessage({ type: 'greeting', message: 'Hello from JavaScript!' });
+			function ready(){
+				doLog("Let's go...");
+				window.vuplex.postMessage({ type: 'greeting', message: 'Hello from JavaScript!' });
+			  	window.vuplex.addEventListener('message', function(e) { onMessage(e.data) });
 			}
 
-			doLog('Vuplex is '+window.vuplex);
+			function onMessage(e){
+				let str = e.data;
 
-			if (window.vuplex) {
-			    addMessageListener();
-			} else {
-			    window.addEventListener('vuplexready', addMessageListener);
+		        let arr = str.split(' ');
+		        let type = arr[0];
+
+		        if(type=='M'){
+		        	let p = arr[1];
+		        	players[p].x = arr[2];
+		        	players[p].y = arr[3];
+		        	players[p].z = arr[4];
+		        	
+		        	let px = (players[p].x+1)/2*100;
+		        	let py = (players[p].y+1)/2*100;
+
+		        	$('player').eq(p).css({left:px+'%',top:py+'%'});
+		        	
+		        	//$('iframe').window.postMessage(players);
+		        }
+
+		        doLog(str);
+
+		        //doLog(str);
 			}
 
-			function addMessageListener() {
-				doLog('Vuplex is '+window.vuplex);
-			    window.vuplex.addEventListener('message', function(event) {
-			        let json = event.data;
-			        // > JSON received: { "type": "greeting", "message": "Hello from C#!" }
-			        console.log('JSON received: ' + json);
-
-			        doLog(json);
-
-			    });
-			}
-
-			function doLog(str){
-				log.unshift( str );
+			function doLog( ...args ){
+				log.unshift( args.join(' ') );
 			  	if(log.length>10) log.length = 10;
 			    $('logger').html(log.join('<br>'));
 			}
@@ -102,8 +96,20 @@
 		})
 	</script>
 	<style type="text/css">
+		@import url('https://fonts.googleapis.com/css2?family=DotGothic16&family=PT+Sans+Narrow:wght@400;700&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
+
 		body{
 			background: #333;
+			--igb-purple: #330357;
+   			--igb-pink: #FF00B7;
+
+   			font-family: "Rubik", sans-serif;
+		  font-optical-sizing: auto;
+		  font-weight: 300;
+		  font-style: bold;
+		  font-size: 30px;
+
+   			background: var(--igb-purple);
 		}
 
 		dot{
@@ -122,13 +128,12 @@
 
 		
 		logger{
-			position: fixed;
-			height: 50vh;
-			width: 500px;
-			bottom: 0px;
-			left: 50px;
-			background: white;
+			
+			display: block;
+			
 			font-family: sans-serif;
+			margin: 5px;
+			color: var(--igb-pink);
 		}
 		.active{
 			position: fixed;
@@ -158,38 +163,78 @@
 		}
 
 		ul{
-			width: 800px;
-			height: 400px;
-			position: fixed;
-			top: 0px;
-			left: 0px;
+		
 			right: 0px;
 			bottom: 0px;
 			margin: auto;
 			list-style-type: none;
 			margin: auto;
 			padding: 0px;
+			display: block;
 		}
 
 		li{
 			list-style-type: none;
 			margin: 0px;
 			padding: 0px;
-			width: 100px;
-			height: 100px;
-			line-height: 100px;
-			box-sizing: border-box;
+			
+			padding: 30px 40px;
+			
+			
+			
 			background: white;
 			text-align: center;
 			display: inline-block;
 			margin: 5px;
+
+			background: rgba(255, 255, 255, 0.1);
+			color: var(--igb-pink);
+			border: 2px solid var(--igb-pink);
+		}
+
+		menu{
+			padding: 20% 5%;
+			display: block;
+			position: fixed;
+			right: 0px;
+			top: 0px;
+			text-align: right;
+		}
+
+		tracker{
+			position: absolute;
+			top: 0px;
+			left: 33.3%;
+			right: 33.3%;
+			bottom: 0px;
+			border: 1px solid var(--igb-pink);
+			overflow: hidden;
+		}
+
+		player{
+			width: 100px;
+			height: 100px;
+			background: var(--igb-pink);
+			border-radius: 100%;
+			display: block;
+			transform: translate(-50%, -50%);
 		}
 	</style>
 </head>
 <body>
-	<ul></ul>
-	<logger>LOADING...</logger>
+	<tracker></tracker>
+	<menu>
+		<ul class="menu-function">
+			<li btn='menu'>MENU</li>
+		</ul>
+		<ul class="menu-games">
+			
+		</ul>
+		<logger>LOADING...</logger>
+	</menu>
+
 	<iframe src=""></iframe>
-	<button>MENU</button>
+	
+	
 </body>
 </html>
