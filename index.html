@@ -75,7 +75,7 @@
 		        	players[p].py = 100 - (players[p].y+1)/2*100;
 		        	players[p].pz = (players[p].z+1)/2*100;
 
-		        	$('player').eq(p).css({left:px+'%',top:py+'%',width:50+pz,height:50+pz});
+		        	$('player').eq(p).css({left:players[p].px+'%',top:players[p].py+'%',width:50+players[p].pz,height:50+players[p].pz});
 		        	
 		        	$('iframe')[0].contentWindow.postMessage(players[p]);
 		        }
