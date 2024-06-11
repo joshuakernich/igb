@@ -60,9 +60,8 @@
 
 			function onMessage(str){
 				
-
 		        let arr = str.split(',');
-		        console.log(arr);
+		       
 		        let type = arr[0];
 
 		        if(type=='M'){
@@ -77,10 +76,8 @@
 		        	let pz = (players[p].z+1)/2*100;
 
 		        	$('player').eq(p).css({left:px+'%',top:py+'%',width:50+pz,height:50+pz});
-
-		        	console.log(arr,px,py);
 		        	
-		        	$('iframe')[0].contentWindow.postMessage(str);
+		        	$('iframe')[0].contentWindow.postMessage(arr);
 		        }
 
 		        doLog(str);
