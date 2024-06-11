@@ -71,9 +71,9 @@
 
 			window.addEventListener('message', function(e) { 
 				let player = e.data;
-				console.log(player.id,player.x,player.y,player.z);
+			
 
-				$('cursor').eq(0).css({left:player.px+'%',top:player.pz+'%'});
+				$('cursor').eq(player.id).css({left:player.px+'%',top:player.pz+'%'});
 			 });
 
 
