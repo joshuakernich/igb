@@ -70,8 +70,9 @@
 		        	
 		        	let px = (players[p].x+1)/2*100;
 		        	let py = 100 - (players[p].y+1)/2*100;
+		        	let pz = (players[p].z+1)/2*100;
 
-		        	$('player').eq(p).css({left:px+'%',top:py+'%'});
+		        	$('player').eq(p).css({left:px+'%',top:py+'%',width:50+pz,height:50+pz});
 
 		        	console.log(arr,px,py);
 		        	
@@ -97,7 +98,7 @@
 				});
 			})
 
-			onMessage('M,0,1,1,0');
+			onMessage('M,0,1,1,1');
 			onMessage('M,1,-1,0,0');
 
 		})
