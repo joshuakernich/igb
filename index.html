@@ -70,6 +70,8 @@
 		        	let py = (players[p].y+1)/2*100;
 
 		        	$('player').eq(p).css({left:px+'%',top:py+'%'});
+
+		        	console.log(arr,px,py);
 		        	
 		        	//$('iframe').window.postMessage(players);
 		        }
@@ -220,6 +222,7 @@
 			border-radius: 100%;
 			display: block;
 			transform: translate(-50%, -50%);
+			position: absolute;
 		}
 	</style>
 </head>
