@@ -72,8 +72,15 @@
 			window.addEventListener('message', function(e) { 
 				let player = e.data;
 			
+				if(player.id==0){
+					diver.tx = player.px+'%';
+					diver.ty = player.pz+'%';
+				} else if(player.id==1){
+					sub.tx = player.px+'%';
+					sub.ty = player.pz+'%';
+				}
 
-				$('cursor').eq(player.id).css({left:player.px+'%',top:player.pz+'%'});
+				//$('cursor').eq(player.id).css({left:player.px+'%',top:player.pz+'%'});
 			 });
 
 
