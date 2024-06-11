@@ -54,8 +54,8 @@
 			  	window.vuplex.addEventListener('message', function(e) { onMessage(e.data) });
 			}
 
-			function onMessage(e){
-				let str = e.data;
+			function onMessage(str){
+				
 
 		        let arr = str.split(' ');
 		        let type = arr[0];
