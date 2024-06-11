@@ -12,7 +12,7 @@
 				'FIL JUMP':'fil/jump.html',
 				'LOS MAZE':'./los/maze-nav.html',
 				'QUIZ':"I Don't Know Much/index.html",
-				'BRIDGE':"https://joshuakernich.github.io/the-bridge/",
+				
 			}
 
 			for(var p in proto){
@@ -25,7 +25,11 @@
 			}
 
 			$('[btn=move]').click(function() {
-				
+				let x = -1 + Math.random()*2;
+				let y = -1 + Math.random()*2;
+				let z = -1 + Math.random()*2;
+
+				onMessage(`M,0,${x},${y},${z}`);
 			})
 
 			$('[btn=menu]').click(function() {
@@ -76,7 +80,7 @@
 
 		        	console.log(arr,px,py);
 		        	
-		        	//$('iframe').window.postMessage(players);
+		        	$('iframe')[0].contentWindow.postMessage(str);
 		        }
 
 		        doLog(str);
@@ -98,8 +102,12 @@
 				});
 			})
 
-			onMessage('M,0,1,1,1');
-			onMessage('M,1,-1,0,0');
+			onMessage('M,0,0,0,0');
+			onMessage('M,1,1,0,0');
+			onMessage('M,2,1,1,0');
+			onMessage('M,3,-1,1,0');
+			onMessage('M,4,-1,-1,0');
+			onMessage('M,5,1,-1,0');
 
 		})
 	</script>
@@ -207,6 +215,7 @@
 			right: 0px;
 			top: 0px;
 			text-align: right;
+			z-index: 1;
 		}
 
 		tracker{
@@ -227,6 +236,25 @@
 			display: block;
 			transform: translate(-50%, -50%);
 			position: absolute;
+			text-align: center;
+
+			font-size: 100px;
+			line-height: 10px;
+			color: var(--igb-purple);
+			box-sizing: border-box;
+			padding: 10px 0px;
+		}
+
+		player:before{
+			content: "..";
+			
+			display: block;
+			
+		}
+
+		player:after{
+			content: "_";
+			display: block;
 		}
 	</style>
 </head>
@@ -235,6 +263,7 @@
 	<menu>
 		<ul class="menu-function">
 			<li btn='menu'>MENU</li>
+			<li btn='move'>MOVE</li>
 		</ul>
 		<ul class="menu-games">
 			

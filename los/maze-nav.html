@@ -69,6 +69,8 @@
 				$('level').css({left:'-'+px+'px',top:'-'+py+'px'});
 			}
 
+			window.addEventListener('message', function(e) { window.alert(e.data) });
+
 
 			setInterval(step,20);
 		})
