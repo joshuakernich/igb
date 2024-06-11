@@ -71,9 +71,9 @@
 		        	players[p].y = parseFloat(arr[3]);
 		        	players[p].z = parseFloat(arr[4]);
 		        	
-		        	let px = (players[p].x+1)/2*100;
-		        	let py = 100 - (players[p].y+1)/2*100;
-		        	let pz = (players[p].z+1)/2*100;
+		        	players[p].px = (players[p].x+1)/2*100;
+		        	players[p].py = 100 - (players[p].y+1)/2*100;
+		        	players[p].pz = (players[p].z+1)/2*100;
 
 		        	$('player').eq(p).css({left:px+'%',top:py+'%',width:50+pz,height:50+pz});
 		        	
