@@ -45,13 +45,27 @@
 				
 			}
 
-			$('[btn=move]').click(function() {
-				let x = -1 + Math.random()*2;
-				let y = -1 + Math.random()*2;
-				let z = -1 + Math.random()*2;
+			$('[btn=move]').click(doRandomMove);
 
-				onMessage(`M,0,${x},${y},${z}`);
-			})
+			function doRandomMove(){
+				let players = [];
+				for(var i=0; i<6; i++){
+
+					let p = {
+						Id:i,
+						X:-1 + Math.random()*2,
+						Y:-1 + Math.random()*2,
+						Z:-1 + Math.random()*2,
+					}
+
+					p.px = (p.X+1)/2*100;
+		        	p.py = 100 - (p.Y+1)/2*100;
+		        	p.pz = (p.Z+1)/2*100;
+		        	players[i] = p;
+				}
+
+				onMessage(JSON.stringify(players));
+			}
 
 			$('[btn=refresh]').click(function() {
 				window.location = window.location.host+'?seed='+Math.random();
@@ -125,7 +139,7 @@
 				});
 			})
 
-			onMessage('[{"Id":0,"X":0,"Y":0,"Z":0}]');
+			doRandomMove();
 
 			$('.expando').click(function(){
 				$('menu').toggleClass('hidden');
