@@ -54,7 +54,7 @@
 			})
 
 			$('[btn=refresh]').click(function() {
-				window.location = window.location;
+				window.location = window.location.host+'?seed='+Math.random();
 			})
 
 			$('[btn=menu]').click(function() {
