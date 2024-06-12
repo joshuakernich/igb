@@ -53,6 +53,10 @@
 				onMessage(`M,0,${x},${y},${z}`);
 			})
 
+			$('[btn=refresh]').click(function() {
+				window.location = window.location;
+			})
+
 			$('[btn=menu]').click(function() {
 				if(liveModule && liveModule.turnOnOff) liveModule.turnOnOff(false);
 				$('mframe').addClass('active').empty();
@@ -93,7 +97,7 @@
 		        let timeNow = new Date().getTime();
 
 
-		        if(type=='M' && (timeNow-timeLast)>debounce){
+		        if(type=='M'){
 
 		        	let p = parseInt(arr[1]);
 		        	players[p].x = parseFloat(arr[2]);
@@ -107,7 +111,7 @@
 		        	let size = (0.1+players[p].pz*0.1) + 'vw';
 
 		        	if($('iframe')[0].contentWindow){
-		        		$('player').eq(p).css({left:players[p].px+'%',top:players[p].py+'%',width:size,height:size});
+		        		$('player').eq(p).css({left:players[p].px+'%',top:players[p].py+'%'});
 		        	} else {
 		        		$('iframe')[0].contentWindow.postMessage(players[p]);
 		        	} 
@@ -273,8 +277,8 @@
 		}
 
 		player{
-			width: 1vw;
-			height: 1vw;
+			width: 2vw;
+			height: 2vw;
 			background: var(--igb-pink);
 			border-radius: 100%;
 			display: block;
@@ -412,7 +416,7 @@
 		<igbside>
 			<menu>
 				<ul class="menu-function">
-					<li btn='menu'>MENU</li><li btn='move'>MOVE</li>
+					<li btn='refresh'>REFRESH</li><li btn='menu'>MENU</li><li btn='move'>MOVE</li>
 				</ul>
 				<ul class="menu-games">
 					
