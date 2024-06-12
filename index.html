@@ -149,6 +149,15 @@
 				$('menu').toggleClass('hidden');
 			})
 
+			let x = -1;
+			let dir = 1;
+			setInterval(function(){
+				x += dir*0.01;
+				if(x>0.8) dir = -1;
+				if(x<-0.8) dir = 1;
+				onMessage('M,0,'+x+',0,0');
+			},1000/50);
+
 		})
 	</script>
 	<style type="text/css">
