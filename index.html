@@ -97,9 +97,9 @@
 		       
 		       for(var p=0; p<players.length; p++){
 
-		        	players[p].px = (players[p].x+1)/2*100;
-		        	players[p].py = 100 - (players[p].y+1)/2*100;
-		        	players[p].pz = (players[p].z+1)/2*100;
+		        	players[p].px = (players[p].X+1)/2*100;
+		        	players[p].py = 100 - (players[p].Y+1)/2*100;
+		        	players[p].pz = (players[p].Z+1)/2*100;
 
 		        	let size = (0.1+players[p].pz*0.1) + 'vw';
 
@@ -125,7 +125,7 @@
 				});
 			})
 
-			onMessage('[{"id":0,"x":0.111,"y":0.1,"z":0}]');
+			onMessage('[{"Id":0,"X":0,"Y":0,"Z":0}]');
 
 			$('.expando').click(function(){
 				$('menu').toggleClass('hidden');
