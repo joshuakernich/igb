@@ -81,13 +81,18 @@
 			  	window.vuplex.addEventListener('message', function(e) { onMessage(e.data) });
 			}
 
+			let timeLast = 0;
+
 			function onMessage(str){
 				
 		        let arr = str.split(',');
 		       
 		        let type = arr[0];
 
-		        if(type=='M'){
+		        let timeNow = new Date().getTime();
+		        
+
+		        if(type=='M' && (timeNow-timeLast)>25){
 
 		        	let p = parseInt(arr[1]);
 		        	players[p].x = parseFloat(arr[2]);
@@ -100,9 +105,13 @@
 
 		        	let size = (0.1+players[p].pz*0.1) + 'vw';
 
-		        	$('player').eq(p).css({left:players[p].px+'%',top:players[p].py+'%',width:size,height:size});
+		        	if($('iframe')[0].contentWindow){
+		        		$('player').eq(p).css({left:players[p].px+'%',top:players[p].py+'%',width:size,height:size});
+		        	} else {
+		        		$('iframe')[0].contentWindow.postMessage(players[p]);
+		        	} 
 		        	
-		        	$('iframe')[0].contentWindow.postMessage(players[p]);
+		        	timeLast = timeNow;
 		        }
 
 		        doLog(str);
