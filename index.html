@@ -124,6 +124,8 @@
 		        
 			}
 
+			window.forceMessage = onMessage;
+
 			function doLog( ...args ){
 				log.unshift( args.join(' ') );
 			  	if(log.length>10) log.length = 10;
