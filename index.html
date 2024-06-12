@@ -75,7 +75,9 @@
 		        	players[p].py = 100 - (players[p].y+1)/2*100;
 		        	players[p].pz = (players[p].z+1)/2*100;
 
-		        	$('player').eq(p).css({left:players[p].px+'%',top:players[p].py+'%',width:50+players[p].pz,height:50+players[p].pz});
+		        	let size = (0.1+players[p].pz*0.1) + 'vw';
+
+		        	$('player').eq(p).css({left:players[p].px+'%',top:players[p].py+'%',width:size,height:size});
 		        	
 		        	$('iframe')[0].contentWindow.postMessage(players[p]);
 		        }
@@ -112,17 +114,17 @@
 		@import url('https://fonts.googleapis.com/css2?family=DotGothic16&family=PT+Sans+Narrow:wght@400;700&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
 
 		body{
-			background: #333;
+			background: black;
 			--igb-purple: #330357;
    			--igb-pink: #FF00B7;
 
    			font-family: "Rubik", sans-serif;
 		  font-optical-sizing: auto;
-		  font-weight: 300;
+		  font-weight: 600;
 		  font-style: bold;
-		  font-size: 30px;
+		  font-size: 1vw;
 
-   			background: var(--igb-purple);
+   			
 		}
 
 		dot{
@@ -145,17 +147,21 @@
 			display: block;
 			
 			font-family: sans-serif;
-			margin: 5px;
+			margin: 1vw 0.2vw;
+			font-size: 0.5em;
 			color: var(--igb-pink);
+
+
 		}
 		.active{
-			position: fixed;
+			position: absolute;
 			top: 0px;
 			left: 0px;
 			right: 0px;
 			bottom: 0px;
-			width: 100vw;
-			height: 100vh;
+			width: 100%;
+			height: 100%;
+			
 			border: none;
 			display: block;
 		}
@@ -164,26 +170,14 @@
 			display: none;
 		}
 
-		button{
-			position: fixed;
-			top: 0px;
-			left: 0px;
-			margin: 50px;
-			width: 100px;
-			height: 100px;
-			background: white;
-			box-sizing: border-box;
-		}
+		
 
 		ul{
 		
-			right: 0px;
-			bottom: 0px;
-			margin: auto;
+			
 			list-style-type: none;
-			margin: auto;
 			padding: 0px;
-			display: block;
+			margin: 0px;
 		}
 
 		li{
@@ -191,24 +185,25 @@
 			margin: 0px;
 			padding: 0px;
 			
-			padding: 30px 40px;
+			padding: 1vw 1vw;
 			
 			
 			
 			background: white;
 			text-align: center;
 			display: inline-block;
-			margin: 5px;
+			margin: 0.2vw;
 
 			background: rgba(255, 255, 255, 0.1);
 			color: var(--igb-pink);
-			border: 2px solid var(--igb-pink);
+			border: 0.1vw solid var(--igb-pink);
 		}
 
 		menu{
-			padding: 10vh 10vh;
+			margin: 0px;
+			padding: 2vw 2vw;
 			display: block;
-			position: fixed;
+			position: absolute;
 			right: 0px;
 			top: 0px;
 			text-align: right;
@@ -218,16 +213,17 @@
 		tracker{
 			position: absolute;
 			top: 0px;
-			left: 33.3%;
-			right: 33.3%;
+			left:0px;
+			right: 0px;
 			bottom: 0px;
-			border: 1px solid var(--igb-pink);
+			border: 0.1vw solid var(--igb-pink);
 			overflow: hidden;
+			box-sizing: border-box;
 		}
 
 		player{
-			width: 100px;
-			height: 100px;
+			width: 1vw;
+			height: 1vw;
 			background: var(--igb-pink);
 			border-radius: 100%;
 			display: block;
@@ -235,11 +231,11 @@
 			position: absolute;
 			text-align: center;
 
-			font-size: 100px;
-			line-height: 10px;
+			font-size: 3vw;
+			line-height: 0.5vw;
 			color: var(--igb-purple);
 			box-sizing: border-box;
-			padding: 10px 0px;
+			padding: 0.1vw 0px;
 		}
 
 		player:before{
@@ -253,23 +249,56 @@
 			content: "_";
 			display: block;
 		}
+
+		igb{
+			width: 100vw;
+			height: 20.83vw;
+			position: fixed;
+			top: 0px;
+			left: 0px;
+			bottom: 0px;
+			right: 0px;
+			overflow: hidden;
+			margin: auto;
+			display: block;
+			white-space: nowrap;
+
+			background: var(--igb-purple);
+		}
+
+		igbside{
+			display: inline-block;
+			white-space: normal;
+			height: 100%;
+			width: 33.3%;
+			position: relative;
+			
+			
+			overflow: hidden;
+		}
 	</style>
 </head>
 <body>
-	<tracker></tracker>
-	<menu>
-		<ul class="menu-function">
-			<li btn='menu'>MENU</li>
-			<li btn='move'>MOVE</li>
-		</ul>
-		<ul class="menu-games">
-			
-		</ul>
-		<logger>LOADING...</logger>
-	</menu>
+	<igb>
+		<igbside></igbside>
+		<igbside>
+			<tracker></tracker>
+		</igbside>
+		<igbside>
+			<menu>
+				<ul class="menu-function">
+					<li btn='menu'>MENU</li><li btn='move'>MOVE</li>
+				</ul>
+				<ul class="menu-games">
+					
+				</ul>
+				<logger>LOADING...</logger>
+			</menu>
+		</igbside>
+		
 
-	<iframe src=""></iframe>
+		<iframe src=""></iframe>
 	
-	
+	</igb>
 </body>
 </html>
