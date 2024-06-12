@@ -77,10 +77,10 @@
 			function doPlayerMove(player){
 				if(player.id==0){
 					diver.tx = player.px/100*$('screen').width();
-					diver.ty = player.pz/100*$('screen').height();
+					diver.ty = (1-player.pz)/100*$('screen').height();
 				} else if(player.id==1){
 					sub.tx = player.px/100*$('screen').width();
-					sub.ty = player.pz/100*$('screen').height();
+					sub.ty = (1-player.pz)/100*$('screen').height();
 				}
 			}
 
