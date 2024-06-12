@@ -5,10 +5,15 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>IGB Prototypes</title>
 	<script type="text/javascript" src="./shared/jq.js"></script>
+
+	<script type="text/javascript" src="./I Don't Know Much/Tone.js"></script>
+	<script type="text/javascript" src="./proto/sequencer.js"></script>
+
 	<script type="text/javascript">
 		$(function () {
 			const proto = {
 				
+				'SEQUENCER':window.Sequencer,
 				'FIL JUMP':'fil/jump.html',
 				'LOS MAZE':'./los/maze-nav.html',
 				'QUIZ':"I Don't Know Much/index.html",
@@ -16,12 +21,29 @@
 			}
 
 			for(var p in proto){
-				$('<li>').appendTo('.menu-games').text(p).attr('url',proto[p]).click(launchProto);
+				$('<li>').appendTo('.menu-games').text(p).attr('id',p).click(launchProto);
 			}
 
 			function launchProto() {
-				let url = $(this).attr('url');
-				$('iframe').attr('src',url+'?seed='+Math.random()).addClass('active');
+				let id = $(this).attr('id');
+				let p = proto[id];
+				
+				$('moduleframe').empty();
+
+				if(typeof(p) == 'function'){
+					$('iframe').attr('src',undefined).removeClass('active');
+					
+					let liveModule = new p();
+					liveModule.$el.appendTo('mframe');
+					$('mframe').addClass('active');
+
+				} else {
+
+					$('iframe').attr('src',p+'?seed='+Math.random()).addClass('active');
+				}
+
+				$('menu').addClass('hidden');
+				
 			}
 
 			$('[btn=move]').click(function() {
@@ -108,6 +130,10 @@
 			onMessage('M,4,-1,-1,0');
 			onMessage('M,5,1,-1,0');
 
+			$('.expando').click(function(){
+				$('menu').toggleClass('hidden');
+			})
+
 		})
 	</script>
 	<style type="text/css">
@@ -122,7 +148,7 @@
 		  font-optical-sizing: auto;
 		  font-weight: 600;
 		  font-style: bold;
-		  font-size: 1vw;
+		  font-size: 0.7vw;
 
    			
 		}
@@ -148,7 +174,7 @@
 			
 			font-family: sans-serif;
 			margin: 1vw 0.2vw;
-			font-size: 0.5em;
+			
 			color: var(--igb-pink);
 
 
@@ -170,6 +196,9 @@
 			display: none;
 		}
 
+		mframe{
+			display: none;
+		}
 		
 
 		ul{
@@ -185,14 +214,14 @@
 			margin: 0px;
 			padding: 0px;
 			
-			padding: 1vw 1vw;
+			padding: 0.5vw 0.5vw;
 			
 			
 			
 			background: white;
 			text-align: center;
 			display: inline-block;
-			margin: 0.2vw;
+			margin: 0.1vw;
 
 			background: rgba(255, 255, 255, 0.1);
 			color: var(--igb-pink);
@@ -200,14 +229,25 @@
 		}
 
 		menu{
-			margin: 0px;
-			padding: 2vw 2vw;
+			margin: 2vw;
+			padding: 3vw 1vw 1vw 1vw;
 			display: block;
 			position: absolute;
 			right: 0px;
 			top: 0px;
 			text-align: right;
 			z-index: 1;
+			background: var(--igb-purple);
+			border: 0.1vw solid var(--igb-pink);
+			overflow: hidden;
+		}
+
+		menu.hidden{
+			width: 2.1vw;
+			height: 2vw;
+			padding: 0vw;
+			box-sizing: border-box;
+
 		}
 
 		tracker{
@@ -276,6 +316,63 @@
 			
 			overflow: hidden;
 		}
+
+		table{
+			width: 100%;
+			height: 100%;
+			padding: 10%;
+			position: relative;
+		}
+
+		td{	
+			background: rgba(255, 255, 255, 0.1);
+		}
+
+		td.selected{
+			background: var(--igb-pink);
+		}
+
+		td.highlight{
+			background: rgba(255, 255, 255, 0.2);
+		}
+
+		td.selected.highlight{
+			background: white;
+		}
+
+		.expando{
+			position: absolute;
+			top: 0px;
+			right: 0px;
+			
+			padding: 0.1em;
+			
+			
+			
+		
+			background: white;
+			text-align: center;
+			display: inline-block;
+		
+
+			background: var(--igb-pink);
+			color: var(--igb-purple);
+
+			font-size: 2vw;
+			
+			border: none;
+			line-height: 1.5vw;
+		}
+
+		.expando:after{
+			content: "⛶";
+		}
+
+		menu.hidden .expando{
+			display: block;
+		}
+
+		
 	</style>
 </head>
 <body>
@@ -293,10 +390,12 @@
 					
 				</ul>
 				<logger>LOADING...</logger>
+				<button class="expando"></button>
 			</menu>
 		</igbside>
 		
 
+		<mframe></mframe>
 		<iframe src=""></iframe>
 	
 	</igb>
