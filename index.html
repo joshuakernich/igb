@@ -282,23 +282,40 @@
 			text-align: center;
 
 			font-size: 3vw;
-			line-height: 0.5vw;
+			
 			color: var(--igb-purple);
 			box-sizing: border-box;
 			padding: 0.1vw 0px;
+			
+			text-align: center;
+			overflow: hidden;
 		}
 
 		player:before{
-			content: "..";
-			
+			content: "";
 			display: block;
+			line-height: 0px;
+			position: absolute;
+			left: 25%;
+			right: 25%;
+			top: 25%;
+			height: 0.3vw;
+			border-left: 0.3vw solid var(--igb-purple);
+			border-right: 0.3vw solid var(--igb-purple);
 			
 		}
 
 		player:after{
-			content: "_";
+			content: "";
 			display: block;
+			border-bottom: 0.3vw solid var(--igb-purple);
+			position: absolute;
+			left: 25%;
+			right: 25%;
+			bottom: 25%;
 		}
+
+		
 
 		igb{
 			width: 100vw;
