@@ -82,6 +82,7 @@
 			}
 
 			let timeLast = 0;
+			let debounce = 1000/50;
 
 			function onMessage(str){
 				
@@ -92,7 +93,7 @@
 		        let timeNow = new Date().getTime();
 
 
-		        if(type=='M' && (timeNow-timeLast)>25){
+		        if(type=='M' && (timeNow-timeLast)>debounce){
 
 		        	let p = parseInt(arr[1]);
 		        	players[p].x = parseFloat(arr[2]);
