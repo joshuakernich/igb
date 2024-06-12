@@ -11,6 +11,8 @@
 
 	<script type="text/javascript">
 		$(function () {
+
+			let liveModule;
 			const proto = {
 				
 				'SEQUENCER':window.Sequencer,
@@ -72,7 +74,9 @@
 			})
 
 			$('[btn=menu]').click(function() {
+
 				if(liveModule && liveModule.turnOnOff) liveModule.turnOnOff(false);
+
 				$('mframe').addClass('active').empty();
 				$('iframe').removeClass('active').attr('src','');
 
@@ -134,7 +138,7 @@
 			}
 
 			$(document).click(function(e){
-				$('<dot type=red>').appendTo('body').css({left:e.pageX,top:e.pageY}).animate({width:150,height:150,opacity:0},500,function(){
+				$('<dot type=red>').appendTo('body').css({left:e.pageX,top:e.pageY}).animate({width:'5vw',height:'5vw',opacity:0},500,function(){
 					$(this).remove();
 				});
 			})
@@ -175,11 +179,11 @@
 
 		dot{
 			position: fixed;
-			width: 20px;
-			height: 20px;
+			width: 2vw;
+			height: 2vw;
 			
 			transform: translate(-50%,-50%);
-			background: radial-gradient(transparent, transparent, white, transparent, transparent);
+			background: radial-gradient(transparent, transparent, var(--igb-pink), transparent, transparent);
 			border-radius: 100px;
 		}
 
@@ -250,7 +254,7 @@
 
 		menu{
 			margin: 2vw;
-			padding: 3vw 1vw 1vw 1vw;
+			padding: 4vw 1vw 1vw 1vw;
 			display: block;
 			position: absolute;
 			right: 0px;
@@ -263,9 +267,10 @@
 		}
 
 		menu.hidden{
-			width: 2.1vw;
-			height: 2vw;
+			width: 3vw;
+			height: 3vw;
 			padding: 0vw;
+			
 			box-sizing: border-box;
 
 		}
@@ -391,7 +396,9 @@
 			top: 0px;
 			right: 0px;
 			
-			padding: 0.1em;
+			padding: 0.3em;
+			width: 3vw;
+			height: 3vw;
 			
 			
 			
