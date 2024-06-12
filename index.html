@@ -14,8 +14,7 @@
 			const proto = {
 				
 				'SEQUENCER':window.Sequencer,
-				'FIL JUMP':'fil/jump.html',
-				'LOS MAZE':'./los/maze-nav.html',
+				'MAZE':'./los/maze-nav.html',
 				'QUIZ':"I Don't Know Much/index.html",
 				
 			}
@@ -33,7 +32,7 @@
 				if(typeof(p) == 'function'){
 					$('iframe').attr('src',undefined).removeClass('active');
 					
-					let liveModule = new p();
+					liveModule = new p();
 					liveModule.$el.appendTo('mframe');
 					$('mframe').addClass('active');
 
@@ -55,6 +54,7 @@
 			})
 
 			$('[btn=menu]').click(function() {
+				if(liveModule && liveModule.turnOnOff) liveModule.turnOnOff(false);
 				$('mframe').addClass('active').empty();
 				$('iframe').removeClass('active').attr('src','');
 
