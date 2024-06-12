@@ -90,38 +90,25 @@
 
 			function onMessage(str){
 				
-		        let arr = str.split(',');
+				console.log('onMessage',str);
+		       let players = JSON.parse(str);
 		       
-		        let type = arr[0];
+		       console.log('players',players);
+		       
+		       for(var p=0; p<players.length; p++){
 
-		        let timeNow = new Date().getTime();
-
-
-		        if(type=='M'){
-
-		        	let p = parseInt(arr[1]);
-		        	players[p].x = parseFloat(arr[2]);
-		        	players[p].y = parseFloat(arr[3]);
-		        	players[p].z = parseFloat(arr[4]);
-		        	
 		        	players[p].px = (players[p].x+1)/2*100;
 		        	players[p].py = 100 - (players[p].y+1)/2*100;
 		        	players[p].pz = (players[p].z+1)/2*100;
 
 		        	let size = (0.1+players[p].pz*0.1) + 'vw';
 
-		        	if($('iframe')[0].contentWindow){
+		        	if(!$('iframe').hasClass('active')){
 		        		$('player').eq(p).css({left:players[p].px+'%',top:players[p].py+'%'});
 		        	} else {
 		        		$('iframe')[0].contentWindow.postMessage(players[p]);
 		        	} 
-		        	
-		        	timeLast = timeNow;
-		        }
-
-		        //doLog(str);
-
-		        
+		       }
 			}
 
 			window.forceMessage = onMessage;
@@ -132,33 +119,26 @@
 			    $('logger').html(log.join('<br>'));
 			}
 
-			
-
 			$(document).click(function(e){
 				$('<dot type=red>').appendTo('body').css({left:e.pageX,top:e.pageY}).animate({width:150,height:150,opacity:0},500,function(){
 					$(this).remove();
 				});
 			})
 
-			onMessage('M,0,0,0,0');
-			onMessage('M,1,1,0,0');
-			onMessage('M,2,1,1,0');
-			onMessage('M,3,-1,1,0');
-			onMessage('M,4,-1,-1,0');
-			onMessage('M,5,1,-1,0');
+			onMessage('[{"id":0,"x":0.111,"y":0.1,"z":0}]');
 
 			$('.expando').click(function(){
 				$('menu').toggleClass('hidden');
 			})
 
-			let x = -1;
+			/*let x = -1;
 			let dir = 1;
 			setInterval(function(){
 				x += dir*0.01;
 				if(x>0.8) dir = -1;
 				if(x<-0.8) dir = 1;
 				onMessage('M,0,'+x+',0,0');
-			},1000/50);
+			},1000/50);*/
 
 		})
 	</script>
@@ -307,6 +287,13 @@
 			overflow: hidden;
 		}
 
+		player:nth-of-type(1){ background:red; }
+		player:nth-of-type(2){ background:blue; }
+		player:nth-of-type(3){ background:green; }
+		player:nth-of-type(4){ background:purple; }
+		player:nth-of-type(5){ background:orange; }
+		player:nth-of-type(6){ background:yellow; }
+
 		player:before{
 			content: "";
 			display: block;
@@ -320,6 +307,8 @@
 			border-right: 0.3vw solid var(--igb-purple);
 			
 		}
+
+
 
 		player:after{
 			content: "";
