@@ -8,6 +8,7 @@
 
 	<script type="text/javascript" src="./I Don't Know Much/Tone.js"></script>
 	<script type="text/javascript" src="./proto/sequencer.js"></script>
+	<script type="text/javascript" src="./proto/aimbydelta.js"></script>
 
 	<script type="text/javascript">
 		$(function () {
@@ -15,6 +16,7 @@
 			let liveModule;
 			const proto = {
 				
+				'AIM':window.AimByDelta,
 				'SEQUENCER':window.Sequencer,
 				'MAZE':'./los/maze-nav.html',
 				'QUIZ':"I Don't Know Much/index.html",
@@ -86,7 +88,10 @@
 			let players = [];
 			while(players.length<6){
 				players.push({id:players.length,x:0,y:0,z:0});
-				$('<player>').appendTo('tracker');
+				let $p = $('<player>').appendTo('tracker');
+
+				$('<cowl>').appendTo($p);
+				$('<cape>').appendTo($p);
 			}
 
 			doLog('Vuplex is '+(window.vuplex?'ready':'not ready'));
@@ -105,28 +110,46 @@
 
 			let timeLast = 0;
 			let debounce = 1000/50;
+			let history = [];
 
 			function onMessage(str){
 				
-				console.log('onMessage',str);
 		       let players = JSON.parse(str);
 		       
-		       console.log('players',players);
-		       
+		    
 		       for(var p=0; p<players.length; p++){
+
+		       		if(!history[p]) history[p] = [];
+
+		       		history[p].push(players[p].X);
+		       		while(history[p].length>50) history[p].shift();
 
 		        	players[p].px = (players[p].X+1)/2*100;
 		        	players[p].py = 100 - (players[p].Y+1)/2*100;
 		        	players[p].pz = (players[p].Z+1)/2*100;
 
 		        	let size = (0.1+players[p].pz*0.1) + 'vw';
+		        	let scale = 0.6 + (players[p].Z + 1)/2 * 0.6;
+
+		        	let dx = players[p].X - history[p][0];
+	
 
 		        	if(!$('iframe').hasClass('active')){
-		        		$('player').eq(p).css({left:players[p].px+'%',top:players[p].py+'%'});
-		        	} else {
-		        		$('iframe')[0].contentWindow.postMessage(players[p]);
-		        	} 
+
+		        		$('player').eq(p).css({left:players[p].px+'%',top:players[p].py+'%','transform':'scale('+scale+')'});
+		        		$('player').eq(p).find('cape').css({'transform':'rotate('+dx*20+'deg)'});
+		        	}
+	    
 		       }
+
+
+		       if( liveModule ){
+	        		if(liveModule.setPlayers) liveModule.setPlayers(players);
+	        	} else {
+	        		$('iframe')[0].contentWindow.postMessage(players[p]);
+	        	} 
+
+
 			}
 
 			window.forceMessage = onMessage;
@@ -175,6 +198,35 @@
 		  font-size: 0.7vw;
 
    			
+		}
+
+		cowl{
+			width: 4vw;
+			height: 2vw;
+			background: url('./bat/batman-red-fadeout.png');
+			background-size: 12vw;
+			background-position: top center;
+			display: block;
+			position: absolute;
+			top: -1.5vw;
+			left: -2vw;
+			
+		}
+
+		cape{
+			
+			width: 15vw;
+			height: 15vw;
+			background: url('./bat/batman-red-fadeout.png');
+			background-size: 12vw;
+			background-position: center -2vw;
+
+			display: block;
+			position: absolute;
+			top: 0.4vw;
+			left: -7.5vw;
+			background-repeat: no-repeat;
+			transform-origin: top center;
 		}
 
 		dot{
@@ -287,8 +339,8 @@
 		}
 
 		player{
-			width: 2vw;
-			height: 2vw;
+			width: 0vw;
+			height: 0vw;
 			background: var(--igb-pink);
 			border-radius: 100%;
 			display: block;
@@ -300,10 +352,10 @@
 			
 			color: var(--igb-purple);
 			box-sizing: border-box;
-			padding: 0.1vw 0px;
+			
 			
 			text-align: center;
-			overflow: hidden;
+			
 		}
 
 		player:nth-of-type(1){ background:red; }
@@ -313,7 +365,7 @@
 		player:nth-of-type(5){ background:orange; }
 		player:nth-of-type(6){ background:yellow; }
 
-		player:before{
+		/*player:before{
 			content: "";
 			display: block;
 			line-height: 0px;
@@ -337,7 +389,7 @@
 			left: 25%;
 			right: 25%;
 			bottom: 25%;
-		}
+		}*/
 
 		
 
