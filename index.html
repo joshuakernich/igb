@@ -20,6 +20,7 @@
 				'SEQUENCER':window.Sequencer,
 				'MAZE':'./los/maze-nav.html',
 				'QUIZ':"I Don't Know Much/index.html",
+				'IGB QUIZ':"quiz IGB/index.html",
 				
 			}
 
@@ -52,7 +53,7 @@
 			$('[btn=move]').click(doRandomMove);
 
 			function doRandomMove(){
-				let players = [];
+				
 				for(var i=0; i<6; i++){
 
 					let p = {
@@ -62,9 +63,6 @@
 						Z:-1 + Math.random()*2,
 					}
 
-					p.px = (p.X+1)/2*100;
-		        	p.py = 100 - (p.Y+1)/2*100;
-		        	p.pz = (p.Z+1)/2*100;
 		        	players[i] = p;
 				}
 
@@ -114,7 +112,7 @@
 
 			function onMessage(str){
 				
-		       let players = JSON.parse(str);
+		       players = JSON.parse(str);
 		       
 		    
 		       for(var p=0; p<players.length; p++){
