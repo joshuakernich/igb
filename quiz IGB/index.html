@@ -202,7 +202,6 @@
 					z:100
 				};
 
-				console.log(clickSpot);
 				let min = 99999;
 				let pMin = 0;
 				for(var p=0; p<players.length; p++){
@@ -227,9 +226,17 @@
 
 			function doOption(nPlayer,iSelect){
 
+				for(var s in selections){
+					if(selections[s].nPlayer == nPlayer){
+						song(nPlayer+1,nPlayer);
+						return;
+					}
+				}
+				selections.push({nPlayer:nPlayer,iSelect:iSelect});
+
 				synth.triggerAttackRelease(pitchLibrary[nPlayer], 0.1);
 
-				selections.push({nPlayer:nPlayer,iSelect:iSelect});
+				
 
 				var elapsed = new Date().getTime() - timeQuestionStart;
 				var seconds = elapsed/1000;
@@ -708,7 +715,7 @@
 	</style>
 </head>
 <body>
-	<audio autoplay loop muted>
+	<audio autoplay loop>
 		<source src="./quiz-bg.mp3" type="audio/mpeg">
 	</audio>
 	<igb>

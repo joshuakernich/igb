@@ -3,11 +3,18 @@ window.Sequencer = function(){
 	let synths = [];
 	
 
-	const pitchLibrary = ['D3','E3','G3','A3','C4','D4','E4','G4','A4'];
-	const timePerBeat = 0.5;
+	//C, E-flat, F, G, B-flat
+
+	let pitchLibrary = ['C3','Eb3','F3','G3','Bb3','C4','Eb4','F4','G4','Bb4'];
+	pitchLibrary = ['C3', 'D3', 'E3', 'G3', 'A3','C4', 'D4', 'E4', 'G4', 'A4'];
+	const timePerBeat = 0.8;
 
 	const self = this;
 	self.$el = $('<igb>');
+
+	let $music = $(`<audio autoplay loop>
+		<source src="proto/sci-fi-ambient-music-183269.mp3" type="audio/mpeg">
+	</audio>`).appendTo(self.$el);
 
 	let isOn = false;
 	let iTick = undefined;
@@ -25,8 +32,10 @@ window.Sequencer = function(){
 		map[i] = [];
 
 		let synth = new Tone.Synth().toDestination();
-		synth.envelope.attack = 0.1;
-		synth.envelope.release = 1;
+		synth.envelope.attack = 0.3;
+		synth.envelope.sustain = 1;
+		synth.envelope.release = 2;
+		synth.volume.value = -12;
 		synths[i] = synth;
 
 		let $side = $('<igbside>').appendTo(self.$el);
@@ -61,6 +70,9 @@ window.Sequencer = function(){
 	}
 
 	self.$el.find('td').click(function(){
+
+		$music[0].volume = 0.5;
+		$music[0].play();
 
 		let r = $(this).attr('r');
 		let c = $(this).attr('c');
