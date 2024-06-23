@@ -2,7 +2,7 @@
 <html>
 <head>
 	<title>I Don't Know Much</title>
-	<script type="text/javascript" src='https://code.jquery.com/jquery-3.3.1.min.js'></script>
+	<script type="text/javascript" src='../shared/jq.js'></script>
 	<!--script src="./launchpad-control.js"></script-->
 	<script src="./Tone.js"></script>
 	<script type="text/javascript">
@@ -12,157 +12,41 @@
 
 			var cntRound = 0;
 
-			var roundWarmUp = {
-				name: "Warm Up",
-				q:[
-					{t:'Where are you right now?',a:['Here','There','Elsewhere'],s:[10,0,0]},
-					{t:'Where would you rather be?',a:['Anywhere','Nowhere','Among friends'],s:[10,10,10]},
-					{t:'What is this?',a:['Something that matters','A world unto itself','Another Josh Kernich production'],s:[0,10,10]}
-				]
-
-			}
-
-			var roundScience = {
-				name: "Science & Mathematics",
-				bg:'./science.gif',
-				q:[
-					{t:'1 + 2 x 2 = ?',a:["4","5","6"],s:[0,10,0]},
-					{t:'What is the most accurate representation of Pi?',a:["3.14","22/7","√10"],s:[0,10,0]},
-					{t:'What is the next number in the Fibonacci sequence: 3,5,8,13,...',a:["18","21","23"],s:[0,10,0]},
-					{t:'3! = ?',a:["3","6","9"],s:[0,10,0]},
-					{t:'What is your favourite part of BODMAS?',a:["The B","The O","the D"],s:[10,10,10]},
-				]
-			}
-
-			var roundFabric = {
-				name: "Fabrics & Haberdashery",
-				bg:'./knitting.gif',
-				q:[
-					{t:'Why did you choose the Fabrics & Haberdashery topic?',a:["It was the last remaining topic","I liked the cute gif","Genuinely interested in the topic"],s:[0,0,10]},
-					{t:"Does anyone even know what Haberdashery means?",a:["Fucked if I know","Something about Needles and thread and shit","No. No they don't."],s:[0,10,0]},
-					{t:"'Denier' is a measure of what?",a:["The weight in grams of 9,000 metres of a given fabric","A measure of the opaqueness of nylon","How much someone is like the apostle Simon Peter"],s:[0,10,0]},
-					{t:"'Denier' is a measure of what?",a:["The weight in grams of 9,000 metres of a given fabric","A measure of the opaqueness of nylon","How much someone is like the apostle Simon Peter"],s:[0,10,0]},
-				]
-			}
-
-			var roundPenis = {
-				name: "The Human Penis",
-				bg:'./penis.gif',
-				q:[
-					{t:"What is the average length of a human penis?",a:["8.27cm","9.16 cm","10.15cm"],s:[0,10,0]},
-					{t:"Which of the following is the funniest name for a penis?",a:["Shlong","Wang","Dork"],s:[0,10,0]},
-					{t:"Are you tired of answering questions about dicks?",a:["Never","I live for the dick","Yes. Please stop."],s:[10,10,0]},
-					{t:"Why is there no more dick-related questions?",a:["Josh ran out of time while writing this quiz","Because dicks aren't that interesting","Because this topic is stupid"],s:[10,0,0]},
-				]
-			}
-
-			var roundNaturalWorld = {
-				name: "The Natural World",
-				bg:'./poster-natural-world.gif',
-				q:[
-					{t:'When is a leaf not a leaf?',a:["When it's a Phyllode","When it's a Vegetable","When it's an Epiphyte"],s:[10,0,0]},
-					{t:'A Black Panther is actually a...',a:['A melatonic Tapir','A melanostic Leopard','A melanistic Jaguar'],s:[0,0,10]},
-					{t:'What kind of plant grows on the surface of stone?',a:['An Epiphyte','A Lithophyte','A Paleophyte'],s:[0,10,0]},
-					{t:'Petrichor is caused by...',a:['Plant oils disturbed by rain','Pollen in sub-tropical conditions','Warm wind bearing desert soil'],s:[10,0,0]},
-					{t:'How many woods would a woodchuck chuck if a woodchuck would chuck wood?',a:['What?','Seven','Depends'],s:[0,0,10]}
-				]
-
-			}
-
-			var roundPlayFactory = {
-				name: "Play Factory History",
-				bg:'./staircase.gif',
-				q:[
-					{
-						t:'According to legend, discarded boxes from which board game were once found out the back of the warehouse?',
-						a:['Scrabble','Monopoly','Cluedo'],
-						s:[0,10,0]
-					},
-					{
-						t:'Who broke the Dishwasher?',
-						a:['Sounds Anatolian','Classic Patrick shit','Josh would never admit to this'],
-						s:[10,10,10]
-					},
-					{
-						t:'The pool table curves in which direction?',
-						a:['Stop making excuses','Toward the South-Westerly corner','In basically every direction'],
-						s:[0,0,10]
-					},
-					{
-						t:'When will we dispose of the box the session screen came in?',
-						a:['At the behest of an insightful session','At the rising of the sun on the fifth day','When hellfire itself freezes over'],
-						s:[10,0,0]
-					},
-					{
-						t:'Where are all the Walnuts coming from?',
-						a:['Where all great nuts come from','Ghosts of Play Factory long past',"Suck on deez nuts"],
-						s:[0,0,10]
-					},
-				]
-
-			}
-
-			var roundCOVID = {
-				name: "COVID-19",
-				bg:'./virus.gif',
-				q:[
-					{t:'COVID-19 has a r0 of...',a:["1-2","2-4","4-6"],s:[0,10,0]},
-					{t:'The curfew officially finishes when?',a:["Tomorrow","End of October","End of November"],s:[10,0,0]},
-					{t:'Sweden avoided a lockdown which has been widely lauded as...',a:["A good idea","A terrible idea","The jury is still out"],s:[10,10,10]},
-					{t:'Josh recently got tested for COVID-19. His test came back...',a:["Negative","Positive","Wait. Why is this the first time I'm hearing about this?"],s:[0,0,10]},
-					{t:'Caronavirus? More like...',a:["Carona-WHY-rus","Cov-idiot","The Chinese Flu"],s:[10,0,0]},
-				]
-			}
-
-			var roundFinale = {
-				name:"",
-				bg:'./whatever.gif',
-				isLocked:true,
-				q:[
-					{t:'Has this quiz been fun?',a:['Moderately','No','Lots of fun. Well done, Josh.'],s:[0,0,10]},
-					{t:'What can you be certain of?',a:["That things will last","That the people I care about will be there for me","That I will always have support"],s:[0,0,0]},
-					{t:'What can you be certain of?',a:["That I will survive the night","That I will survive the year","That someone in this room won't hurt me"],s:[0,0,0]},
-					{t:'What can you be certain of?',a:["That I am loved","That this too shall pass","That I am here"],s:[10,10,10]},
-					{t:'What can you be certain of?',a:["That there will always be love in the world","That people in this room love me","That this quiz will end shortly"],s:[10,10,10]},
-					{t:"What don't you know?",a:['Much','Some things','Many things'],s:[10,0,0]},
-					{t:'How is the winner of this quiz declared?',a:['Highest score','Middle score','Lowest score'],s:[0,0,10]},
-				]
-			}
+			
 
 			var roundContent = {
 				name:"Content Capers",
 				q:[
-					{t:'Which year is our Tetris experience?',a:['1997','1991','1984']},
-					{t:'Escape AI features an AI character by what name?',a:['Rewinder','Finder','The Maker']},
-					{t:'The content team once considered a game based on which celebrity mashup?',a:['Kim Jongdashian','Cate Blanched Egg','Ronald McDonald Trump']},
-					{t:'Black Mirror Careers is about what?',a:['Who the fuck knows?','Not me','Not anyone']},
-					{t:'The best way to decide our next game is…',a:['Throw a dart at a dartboard','Seek to appease Netflix','Decide on a whim']}
+					{t:'Which year is our Tetris experience?',a:['1997','1991','1984'],s:[0,10,0]},
+					{t:'Escape AI features an AI character by what name?',a:['Rewinder','Finder','The Maker'],s:[10,10,10]},
+					{t:'The content team once considered a game based on which celebrity mashup?',a:['Kim Jongdashian','Cate Blanched Egg','Ronald McDonald Trump'],s:[10,0,0]},
+					{t:'Black Mirror Careers is about what?',a:['Who the fuck knows?','Not me','Not anyone'],s:[10,10,10]},
+					{t:'The best way to decide our next game is…',a:['Throw a dart at a dartboard','Seek to appease Netflix','Decide on a whim'],s:[0,0,0]}
 					]}
 
 			var roundVenue = {
 				name:"Venue Victories",
 				q:[
 					
-					{t:'In what year do venues tend to operate at a profit?',a:['Year one','Year two','Never']},
-					{t:'Operating costs are mostly due to what?',a:['Excessive use of toilet paper','Frequently replacing LiDAR sensors','Staff demanding they get paid']},
-					{t:'General Managers agree that the toilet paper policy should be what?',a:['Buy in bulk','Single ply only','One sheet per wipe']},
-					{t:'The Venue Toilet Paper Commission (VTPC) was recently appointed to perform what function?',a:['Divide all dual ply into single ply','Appointing new Toilet Paper advisory bodies','Enough with the toilet paper questions']},
-					{t:'Our venue staff are…',a:['Upstanding citizens','The backbone of everything','Plebs for the millstone']}
+					{t:'In what year do venues tend to operate at a profit?',a:['Year one','Year two','Never'],s:[0,10,0]},
+					{t:'Operating costs are mostly due to what?',a:['Excessive use of toilet paper','Frequently replacing LiDAR sensors','Staff demanding they get paid'],s:[0,0,10]},
+					{t:'General Managers agree that the toilet paper policy should be what?',a:['Buy in bulk','Single ply only','One sheet per wipe'],s:[0,10,10]},
+					{t:'The Venue Toilet Paper Commission (VTPC) was recently appointed to perform what function?',a:['Divide all dual ply into single ply','Appointing new Toilet Paper advisory bodies','Enough with the toilet paper questions'],s:[0,0,10]},
+					{t:'Our venue staff are…',a:['Upstanding citizens','The backbone of everything','Plebs for the millstone'],s:[0,10,0]}
 				]}
 
 			var roundManagement = {
 				name:"Management Mayhem",
 				q:[
-					{t:'Q1 has been redefined as…',a:['A nebulous period toward, but not at, the beginning of the year','A nebulous, ever redefined epoch of corporate bliss','Nobody knows for sure']},
-					{t:'Which is the most compelling parable?',a:['The lost passport and the ferry terminal','Cello packing 101','Reluctant remuneration from the board ']},
-					{t:'In order to reach our targets, we must…',a:['Bleed from our eyeballs','Sacrifice our bodies on the altar of consumerism','Construct an urban entertainment dystopia']},
-					{t:'As a reminder, our core principles are…',a:['Agile definitions for Q1','$1.7 million or die trying','Something about 3 Fs and 5 Ps!?!?']},
-					{t:'Which theme for a “break out” room is most compelling?',a:['Cost reduction through bulk toilet paper purchasing','Revenue increase by targeting ever-richer hobnobs','How to “break out” of this nightmare']}
+					{t:'Q1 has been redefined as…',a:['A nebulous period toward, but not at, the beginning of the year','A nebulous, ever redefined epoch of corporate bliss','Nobody knows for sure'],s:[10,0,10]},
+					{t:'Which is the most compelling parable?',a:['The lost passport and the ferry terminal','Cello packing 101','Reluctant remuneration from the board '],s:[0,0,10]},
+					{t:'In order to reach our targets, we must…',a:['Bleed from our eyeballs','Sacrifice our bodies on the altar of consumerism','Construct an urban entertainment dystopia'],s:[10,0,0]},
+					{t:'As a reminder, our core principles are…',a:['Agile definitions for Q1','$1.7 million or die trying','Something about 3 Fs and 5 Ps!?!?'],s:[10,10,10]},
+					{t:'Which theme for a “break out” room is most compelling?',a:['Cost reduction through bulk toilet paper purchasing','Revenue increase by targeting ever-richer hobnobs','How to “break out” of this nightmare'],s:[0,0,10]}
 				]}
 
-			var rounds = [roundPenis,roundNaturalWorld,roundCOVID,roundFabric,roundPlayFactory,roundScience,roundFinale];
-			rounds = [roundContent,roundVenue,roundManagement];
-			var round = roundPlayFactory;
+			var rounds = [roundContent,roundVenue,roundManagement];
+			var round;
 			var iq = -1;
 			var q;
 			var timeQuestionStart;
@@ -198,8 +82,7 @@
 					}
 
 					openDoors();
-					
-
+				
 					$('.options').hide();
 					$('.question').hide();
 
@@ -207,7 +90,7 @@
 					setTimeout(revealOptions,4000);
 
 				} else if( cntRound > 6 ){
-					$('.scores').delay(2000).animate({top:'40vh'},1000);
+					//$('.scores').delay(2000).animate({top:'40vh'},1000);
 
 				} else {
 					if(cntRound == 6) $('.rounds li').removeClass('locked');
@@ -235,8 +118,6 @@
 				$('.options li').each(function(i){
 					$(this).css({opacity:0}).delay(i*100).animate({opacity:1},200);
 				})
-
-				activateButtons();
 			}
 			
 
@@ -251,42 +132,60 @@
 				
 			}
 
+			var scoreForPlayer = [];
+			var someoneGotSomething = false;
 			function revealScores(){
 
 				var scoreStack = [2,5,10];
-				var scoreForPlayer = [0,0,0]
+				scoreForPlayer = [0,0,0];
+				someoneGotSomething = false;
 
 				for(var i in selections){
 					if(q.s[selections[i].iSelect] > 0) scoreForPlayer[selections[i].nPlayer] = scoreStack.pop();
 				}
 
 				for(var i in scoreForPlayer){
-					$('.scores plus').eq(i).html(' +'+scoreForPlayer[i]).show().css({right:0}).animate({right:-80},200).animate({right:-75},200);
+					if(scoreForPlayer[i]){
+						$('.scores plus').eq(i).text(' +'+scoreForPlayer[i]).addClass('pop');
+						someoneGotSomething = true;
+					}
 					totalForPlayer[i] += scoreForPlayer[i]
 				}
 
-
-				setTimeout(hideQuestion,3000);
-				
+				if(someoneGotSomething) song(1,2,3);
+				setTimeout(hideQuestion,2000);
 			}
 
 			function hideQuestion(){
-
 				song(7,6,5,4,1);
 				$('.door').removeClass('open');
-
-				setTimeout(resolveScores,2000);
+				if(someoneGotSomething) setTimeout(resolveScores,2000);
+				else setTimeout(nextQuestion,2000);
 			}
 
 			function resolveScores(){
-
-				for(var i in totalForPlayer){
-					$('.scores plus').hide();
-					$('.scores p').eq(i).html(totalForPlayer[i]);
-				}
-
+				for(var i in totalForPlayer) if(scoreForPlayer[i]) resolveScoreForPlayer(i,i*200); 
 				setTimeout(nextQuestion,3000);
 			}
+
+			function resolveScoreForPlayer(i,time){
+				setTimeout( function(){
+					song(i);
+					$('.scores plus').eq(i).removeClass('pop');
+					$('.scores p').eq(i).html(totalForPlayer[i]);
+				}, time);
+				
+			}
+
+			let players = [
+				{px:25,pz:80},
+				{px:50,pz:80},
+				{px:75,pz:80},
+			];
+			window.addEventListener('message', function(e) { 
+				players = e.data;
+				
+			 });
 
 			castVoteFromLaunchpad = function(nPlayer,iSelect){
 				doOption(nPlayer,iSelect);
@@ -294,8 +193,34 @@
 
 			function castVoteFromScreen(e){
 
+				let o = $('.frontside').offset();
+
 				var iSelect = $('.options li').index(this);
+
+				let clickSpot = {
+					x:(e.screenX-o.left)/$('.frontside').width()*100,
+					z:100
+				};
+
+				console.log(clickSpot);
+				let min = 99999;
+				let pMin = 0;
+				for(var p=0; p<players.length; p++){
+
+					let dx = players[p].px-clickSpot.x;
+					let dz = players[p].pz-clickSpot.z;
+
+					let dist = Math.sqrt( dx*dx + dz*dz );
+					
+					if(dist<min){
+						min = dist;
+						pMin = p;
+					}
+				}
+				
+
 				var nPlayer = selections.length;
+				nPlayer = pMin;
 
 				doOption(nPlayer,iSelect);	
 			}
@@ -311,7 +236,7 @@
 
 				var $option = $('.options li').eq(iSelect);
 
-				var $nPlayer = '<b>'+(nPlayer+1)+'</b>';
+				var $nPlayer = '<pip n='+(nPlayer+1)+'></pip>';
 				$('<div class="time">').appendTo($option.find('.times')).html($nPlayer+seconds.toFixed(2));
 				$option.addClass('selected');
 
@@ -319,7 +244,7 @@
 			}
 
 			function jiggle(){
-				$('p').css({left:Math.random()*2,top:Math.random()*2});
+				$('p').css({left:-1+Math.random()*2,top:-1+Math.random()*2});
 			}
 
 			setInterval(jiggle,500);
@@ -347,6 +272,7 @@
 
 			function openDoors(){
 				$('.door').addClass('open');
+				
 			}
 
 			$('.quiz').hide();
@@ -356,7 +282,15 @@
 
 			async function getStarted(){
 				
+				for(var i=0; i<3; i++){
+					$(`<li>
+						<pip n=${i+1}></pip><p>0</p> points
+						<plusmasker><plus>+ 10</plus></plusmasker>
+					</li>`).appendTo('.scores');
+				}
+				
 				$(document).off('click');
+				$('audio')[0].volume = 0.5;
 				$('audio')[0].play();
 
 				await Tone.start();
@@ -364,6 +298,7 @@
 				synth = new Tone.Synth().toDestination();
 				synth.envelope.attack = 0.001;
 				synth.envelope.release = 1;
+				synth.volume.value = -6;
 				song(0,1,4,7);
 
 				
@@ -386,11 +321,17 @@
 
 		body{
 			font-family: VCR;
-			font-size: 0.7vw;
-			color: #abd9f5;
+			font-size: 1vw;
+			
 			margin: 0px;
 			padding: 0px;
 			background: black;
+
+			--color-main: #FF00B7;
+			--color-text: #abd9f5;
+			--color-bg: rgba(0,0,0,0.7);
+			--border-width: 0.15vw;
+			color: var(--color-text);
 		}
 
 		.bg{
@@ -435,6 +376,10 @@
 			box-sizing: border-box;
 		}
 
+		.layer.inactive{
+			pointer-events: none;
+		}
+
 		.door{
 			width: 50%;
 			height: 100%;
@@ -460,58 +405,81 @@
 		}
 
 		.question{
-			position: absolute;
-			top: 5%;
-			left: 0px;
-			width: 100%;
 			
-			background-image: url('./frames.png');
-			background-size: 100% 340%;
-			padding: 3% 10%;
+			
+			
+			
 			box-sizing: border-box;
+			text-align: center;
+			margin: 1vw 0vw 2vw;
 
 		}
 
 		.options{
 			list-style-type: none;
 			padding: 0px;
-			margin:0px;
-			position: absolute;
-			top: 25%;
-			width: 100%;
-			left: 0px;
 		}
 
 		.options li{
 			width: 100%;
 
-			margin-bottom: 1%;
-			background-image: url('./frames-small.png');
-			background-size: 100% 400%;
+			margin-bottom: 0.5vw;
+			
 			background-position: 0% 0%;
 			display: block;
-			padding: 3% 13%;
+			padding: 0.7vw;
 			box-sizing: border-box;
 			color: #F89D29;
 
 			cursor: pointer;
 			position: relative;
+			border-width: var(--border-width);
+			border-style: solid;
+			border-color: var(--color-main);
+			border-radius: 1vw;
+			vertical-align: middle;
 			
+			color: var(--color-main);
+			background: var(--color-bg);
+			padding-left: 2vw;
+		}
+
+		.options li:before{
+			content: "";
+			width: 0.5vw;
+			height: 0.5vw;
+			margin-right: 1vw;
+			
+			display: inline-block;
+			transform: rotate(45deg);
+			background: var(--color-main);
+			position: absolute;
+			top: 1vw;
+			left: 1vw;
+		}
+
+		.options li p{
+			display: block;
 		}
 
 		.options li.selected{
-			background-position: 0% -100%;
+			color: var(--color-text);
 		}
 
 		.options li.correct{
-			background-position: 0% -300%;
-			color: white;
+			
+			color: var(--color-text);
 			transition: all 0.05s;
+			background-color: var(--color-main);
+		}
+
+		.options li.correct:before{
+			background: var(--color-text);
 		}
 
 		.options li.incorrect{
 			background-position: 0% -200%;
-			color: white;
+			color: var(--color-text);
 			transition: all 0.05s;
 			opacity: 0.3 !important;
 		}
@@ -524,45 +492,66 @@
 
 		.times{
 			position: absolute;
-			top: -5px;
-			right: 10%;
+			top: -0.4vw;
+			right: 0.3vw;
 			font-size: 0.75em;
 		}
 
 		.time{
 			display: inline-block;
-			background: #231f20;
-			border: 4px solid #d6a75d;
-			margin-left: 10px;
-			padding: 8px 8px 8px 1px;
+			background: black;
+			border-width: var(--border-width);
+			border-style: solid;
+			border-color: var(--color-main);
+			margin-left: 0.5vw;
+			padding: 0.3vw 0.4vw;
+			border-radius: 0.6vw;
+			vertical-align: middle;
 		}
 
-		.scores b, .time b{
-			background: #d6a75d;
-			color: #231f20;
-			padding: 8px;
-			margin-right: 10px;
+		.scores pip, .time pip{
+			background: var(--color-main);
+
+			margin-right: 0.5vw;
+			width: 0.5vw;
+			height: 0.5vw;
+			color: transparent;
+			display: inline-block;
+			border-radius: 100%;
 		}
+
+		pip[n='1']{background: red; }
+		pip[n='2']{background: blue; }
+		pip[n='3']{background: limegreen; }
 
 		.scores{
-			height: 10%;
-			top: 90%;
-			bottom: 0px;
+			
+			
+			bottom: 1vw;
 			text-align: center;
+			position: absolute;
+			text-align: center;
+			display: block;
+			width: 100%;
 		}
 
 		.scores li{
-			margin: 0px 5%;
+			
 			display: inline-block;
-			background: #231f20;
-			padding: 1% 1% 1% 0%;
-			border: 4px solid #abd9f5;
+			
+			border-width: var(--border-width);
+			border-style: solid;
+			border-color: var(--color-main);
 			position: relative;
+
+			padding: 0.3vw 0.4vw;
+			border-radius: 0.6vw;
+			background: var(--color-bg);
+			overflow: visible;
+			margin: 0.1vw 0.3vw;
 		}
 
-		.scores b{
-			background: #abd9f5;
-		}
+		
 
 		.scores p{
 			display: inline-block;
@@ -574,48 +563,88 @@
 			height: 90%;
 			width: 90%;
 			box-sizing: border-box;
-
-			border: 0.1vw solid #abd9f5;
 		}
 
 		plus{
-			display: block;
-			background: #F89D29;
-			color: #231f20;
+			
+			background: var(--color-main);
+			
 			position: absolute;
-			width: 70px;
-			right: -75px;
+			left: 0.5vw;
+			right: 0.5vw;
 			top: 0px;
-			padding: 8px 4px;
+			
 			box-sizing: border-box;
+			text-align: center;
+			
+			transition: all 0.2s;
+			
+			display: block;
+			padding: 0.3vw 0.4vw;
+			border-radius: 0.3vw 0.3vw 0vw 0vw;
 			display: none;
+			
+		}
+
+		plus.pop{
+			display:block;
+			transform: translateY(-100%);
 		}
 
 		.rounds{
 			text-align: center;
+			
 		}
 
 		.backdrop{
+			background-color: #200033;
 			
-			background-image:url('./synthwave.gif');
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+		}
+
+		.backdrop:after{
+			content: "";
+			display: block;
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			background-image:url(https://i.pinimg.com/originals/bc/55/51/bc5551ac237a9ef4d8e9575662f2e106.gif);
 			background-size: cover;
 			background-position: center;
+			opacity: 0.2;
 		}
 
 		.rounds li{
 			display: inline-block;
-			width: 25%;
-			height: 25%;
-			border: 4px solid #abd9f5;
+		
+			border: var(--border-width) solid var(--color-main);
 			background-size: cover;
-			margin: 2% 2%;
+			margin: 0.5vw;
 			box-sizing: border-box;
-			padding: 20px;
+
 			vertical-align: middle;
 			background-position: center;
-			text-shadow: 0px 1px 1px black;
 			position: relative;
 			cursor: pointer;
+			color: var(--color-main);
+			
+
+			text-align: center;
+			background: rgb(40, 29, 127, 0.5);
+			
+			justify-content: center;
+			align-content: center;
+			align-items: center;
+			border-radius: 1vw;
+		
+			width: 7vw;
+			height: 7vw;
 		}
 
 		.rounds li.locked:after{
@@ -633,9 +662,9 @@
 		}
 
 		.rounds li.selected{
-			border-color: white;
-			color: white;
-			background: green;
+			border-color: var(--color-text);
+			color: var(--color-text);
+			background: var(--color-main)
 		}
 
 		igb{
@@ -670,17 +699,16 @@
 			bottom: 0px;
 			line-height: 0px;
 			display: block;
-			color: white;
 			width: 100%;
 			height: 20%;
 			text-align: center;
-			font-size: 2em;
+			font-size: 1.5vw;
 		}
 
 	</style>
 </head>
 <body>
-	<audio autoplay loop>
+	<audio autoplay loop muted>
 		<source src="./quiz-bg.mp3" type="audio/mpeg">
 	</audio>
 	<igb>
@@ -688,7 +716,8 @@
 			
 		</div>
 		<igbside></igbside>
-		<igbside>
+		<igbside class='frontside'>
+			
 			<div class='layer quiz'>
 				<div class='question'><p>Why Hello there.</p></div>
 				<ul class='options'>
@@ -702,11 +731,7 @@
 			</div>
 			
 			
-			<div class='layer scores'>
-				<li><b>1</b><p>0</p> points<plus></plus></li>
-				<li><b>2</b><p>0</p> points<plus></plus></li>
-				<li><b>3</b><p>0</p> points<plus></plus></li>
-			</div>
+			
 			
 		</igbside>
 		<igbside></igbside>
@@ -723,14 +748,19 @@
 			<div class='door right'>
 				<div class='layer bg'>
 					<video width="266%" muted autoplay loop style="position:absolute;left:-100%;">
-						<source src="./sting.mp4" type="video/mp4">
+						<source src="./sting.webm" type="video/webm">
 					</video>
 				</div>
 				<!--div class='layer logo'></div-->
 			</div>
 		</layer>
-		<holding>Tap Anywhere to Begin</holding>
 
+		<holding>Tap Anywhere to Begin</holding>
+		<div class='layer inactive'>
+				<div class="scores">
+					
+				</div>
+			</div>
 	</igb>
 </body>
 </html>

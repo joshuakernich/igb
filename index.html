@@ -7,8 +7,10 @@
 	<script type="text/javascript" src="./shared/jq.js"></script>
 
 	<script type="text/javascript" src="./I Don't Know Much/Tone.js"></script>
+	<script type="text/javascript" src="./proto/Css.js"></script>
 	<script type="text/javascript" src="./proto/sequencer.js"></script>
 	<script type="text/javascript" src="./proto/aimbydelta.js"></script>
+	<script type="text/javascript" src="./proto/headergame.js"></script>
 
 	<script type="text/javascript">
 		$(function () {
@@ -16,8 +18,9 @@
 			let liveModule;
 			const proto = {
 				
-				'AIM':window.AimByDelta,
+				
 				'SEQUENCER':window.Sequencer,
+				'HEADER':window.HeaderGame,
 				'MAZE':'./los/maze-nav.html',
 				'QUIZ':"I Don't Know Much/index.html",
 				'IGB QUIZ':"quiz IGB/index.html",
@@ -33,6 +36,8 @@
 				let p = proto[id];
 				
 				$('moduleframe').empty();
+
+				console.log(p);
 
 				if(typeof(p) == 'function'){
 					$('iframe').attr('src',undefined).removeClass('active');
@@ -144,7 +149,7 @@
 		       if( liveModule ){
 	        		if(liveModule.setPlayers) liveModule.setPlayers(players);
 	        	} else {
-	        		$('iframe')[0].contentWindow.postMessage(players[p]);
+	        		$('iframe')[0].contentWindow.postMessage(players);
 	        	} 
 
 
