@@ -16,7 +16,8 @@ window.HeaderGame = function (argument) {
 			width:W+'px',
 			height:H+'px',
 			'transform-origin':'top left',
-			
+			'background-image':'url(https://t3.ftcdn.net/jpg/01/13/49/82/360_F_113498271_Arb4VgIstIcPgxUOTQfhjZg9FK8a9HvA.jpg)',
+			'background-size':'cover',
 		},
 
 		'headerdude':{
@@ -44,10 +45,9 @@ window.HeaderGame = function (argument) {
 			top: -rBall+'px',
 		},
 
-		'headerdude:after':{
-			content: '""',
+		'headerdudehead':{
 			width: dDude+'px',
-			height: dDude+'px',
+			height: dDude*1.2+'px',
 			display:'block',
 			position:'absolute',
 			left: -rDude+'px',
@@ -56,8 +56,63 @@ window.HeaderGame = function (argument) {
 			'border-radius': rDude+'px',
 			'background-image':'url(https://www.pngall.com/wp-content/uploads/14/Anime-Face-PNG-Images-HD.png)',
 			'background-size':'50%',
-			'background-position':'center',
+			'background-position':'center 130px',
 			'background-repeat':'no-repeat',
+		},
+
+		'headerdudehead:after':{
+			content: '""',
+			display:'block',
+			position: 'absolute',
+			left: '0px',
+			right: '0px',
+			top: '70px',
+			width: dDude+'px',
+			background: 'red',
+			height: '40px',
+
+		},
+
+		'headerdude:last-of-type headerdudehead:after':{
+			background: 'blue',
+		},
+
+		'headerdudebody':{
+			display:'block',
+			position:'absolute',
+			width: '80px',
+			left: '-40px',
+			height: '135px',
+			background: 'linear-gradient(to bottom, #ddd, white)',
+
+			top: '100px',
+			'border-radius':'20px',
+
+		},
+
+		'headerdude svg':{
+			display:'block',
+			position:'absolute',
+			top: '0px',
+			left: '-150px',
+			'stroke-width':'20px',
+			'stroke-linecap':'round',
+			'stroke':'white',
+			'fill':'none',
+		},
+
+		'headerscore':{
+			'font-size': '50px',
+			'color':'white',
+			'position':'absolute',
+			'top':'10px',
+			'left':'20px',
+		},
+
+		'headerscore:last-of-type':{
+			'left':'auto',
+			'right':'20px',
+			'text-align':'right',
 		}
 	}
 
@@ -73,11 +128,29 @@ window.HeaderGame = function (argument) {
 
 	let $game = $('<headergame>').appendTo($center);
 
+	$('<headerscore>').appendTo($center).text('0');
+	$('<headerscore>').appendTo($center).text('0');
 
-	$('<headerdude>').appendTo($game);
-	$('<headerdude>').appendTo($game);
 
-	let ball = {x:50,y:50,sx:10,sy:0};
+	for(var i=0; i<2; i++){
+		$(`
+			<headerdude>
+				<svg width=300 height=600>
+					
+					<path class='headerArm' d='M150,150 L10,150'/>
+					<path class='headerArm' d='M150,150 L290,150'/>
+					<path class='headerleg' d='M120,220 L120,500'/>
+					<path class='headerleg' d='M180,220 L180,500'/>
+				</svg>
+				<headerdudebody></headerdudebody>
+				<headerdudehead></headerdudehead>
+			</headerdude>
+		`).appendTo($game);
+	}
+	
+	
+
+	let ball = {x:W/2,y:H/2,sx:0,sy:-20};
 	let $ball = $('<headerball>').appendTo($game);
 
 	let was = []
@@ -87,14 +160,31 @@ window.HeaderGame = function (argument) {
 		players = p;
 		players.length = 2;
 		for(var p in players){
-			players[p].py = 50 + players[p].py/2;
+			players[p].py = Math.min( 75, 40 + players[p].py );
+			
 			self.$el.find('headerdude').eq(p).css({'left':players[p].px/100*W+'px','top':players[p].py/100*H+'px'});
+
+			let legLength = (1-players[p].py/100)*H - 220;
+			let legBow = Math.max(0,150 - legLength);
+
+			let dLeft = 'M120 220 Q'+(120-legBow)+' '+(220+legLength/2)+', 120 '+(220+legLength);
+			let dRight = 'M180 220 Q'+(180+legBow)+' '+(220+legLength/2)+', 180 '+(220+legLength);
+	
+			self.$el.find('headerdude').eq(p).find('.headerleg').eq(0).attr('d',dLeft);
+			self.$el.find('headerdude').eq(p).find('.headerleg').eq(1).attr('d',dRight);
+
 		}
 	}
 
 	let collideDist = rDude+rBall;
 	let wWas = 0;
+	let nTick = 0;
+
+	let scoreLeft = 0;
+	let scoreRight = 0;
 	function tick(){
+
+		nTick++;
 
 		wScreen = $center.width();
 		if(wScreen != wWas){
@@ -109,9 +199,13 @@ window.HeaderGame = function (argument) {
 		if(ball.x>(W-rBall)){
 			ball.x = W-rBall;
 			ball.sx = -10;
+			scoreRight++;
+			$('headerscore').eq(1).text(scoreRight);
 		} else if(ball.x<rBall){
 			ball.x = rBall;
 			ball.sx = 10;
+			scoreLeft++;
+			$('headerscore').eq(0).text(scoreLeft);
 		}
 
 		if(ball.y>(H-rBall)){
@@ -123,7 +217,8 @@ window.HeaderGame = function (argument) {
 		}
 
 
-		for(var p in players){
+
+		for(var p=0; p<players.length; p++){
 
 			let px = players[p].px/100*W;
 			let py = players[p].py/100*H;
@@ -136,26 +231,33 @@ window.HeaderGame = function (argument) {
 			let dist = Math.sqrt( xDif*xDif + yDif*yDif );
 
 
-			if(dist < collideDist){
+			if(dist < collideDist && players[p].py < ball.y && ball.sy > 0){
 				
+				let r = Math.atan2(yDif,xDif);
+				let v = Math.sqrt(ball.sx*ball.sx + ball.sy*ball.sy);
+				if(v<minHeader) v = minHeader;
 				
-					let r = Math.atan2(yDif,xDif);
-					let v = Math.sqrt(ball.sx*ball.sx + ball.sy*ball.sy);
-					if(v<minHeader) v = minHeader;
-					
-					ball.x = px + Math.cos(r) * (rBall+rDude);
-					ball.y = py + Math.sin(r) * (rBall+rDude);
+				ball.x = px + Math.cos(r) * (rBall+rDude);
+				ball.y = py + Math.sin(r) * (rBall+rDude);
 
-					ball.sx = Math.cos(r) * v;
-					ball.sy = Math.sin(r) * v;
-
-					
-				
+				ball.sx = Math.cos(r) * v;
+				ball.sy = Math.sin(r) * v;
 
 			}
+
+			let dRight = 'M150,150'
+			let dLeft = 'M150,150'
+			for(var i=0; i<12; i++){
+				dLeft += ' L'+(120-i*10)+','+(150+Math.sin((p*3+nTick+i)*0.4)*20*i/10 + i*5);
+				dRight += ' L'+(180+i*10)+','+(150+Math.sin((p*3+3+nTick+i)*0.4)*20*i/10 + i*5);
+			}
+
+			self.$el.find('headerdude').eq(p).find('.headerArm').eq(0).attr('d',dLeft);
+			self.$el.find('headerdude').eq(p).find('.headerArm').eq(1).attr('d',dRight);
 		}
 
 		$ball.css({'top':ball.y+'px',left:ball.x+'px'});
+
 
 	}
 
