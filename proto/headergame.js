@@ -79,8 +79,10 @@ window.HeaderGame = function (argument) {
 	let ball = {x:50,y:50,sx:10,sy:0};
 	let $ball = $('<headerball>').appendTo($game);
 
+	let was = []
 	let players = [];
 	self.setPlayers = function(p){
+		was = players.length?players.concat():p;
 		players = p;
 		players.length = 2;
 		for(var p in players){
@@ -126,6 +128,9 @@ window.HeaderGame = function (argument) {
 			let xDif = ball.x-px;
 			let yDif = ball.y-py;
 
+			let dx = players[p].px - was[p].px;
+			let dy = players[p].py - was[p].py;
+
 			let dist = Math.sqrt( xDif*xDif + yDif*yDif );
 
 
@@ -138,8 +143,8 @@ window.HeaderGame = function (argument) {
 					ball.x = px + Math.cos(r) * (rBall+rDude);
 					ball.y = py + Math.sin(r) * (rBall+rDude);
 
-					ball.sx = Math.cos(r) * v;
-					ball.sy = Math.sin(r) * v;
+					ball.sx = Math.cos(r) * v*1.2;
+					ball.sy = Math.sin(r) * v*1.2;
 
 					
 				
