@@ -86,7 +86,7 @@ window.HeaderGame = function (argument) {
 		players = p;
 		players.length = 2;
 		for(var p in players){
-			self.$el.find('headerdude').eq(p).css({'left':players[p].px/100*W+'px','top':players[p].py/100*H+'px'});
+			self.$el.find('headerdude').eq(p).css({'left':players[p].px/100*W+'px','top':(50 + players[p].py/50)*H+'px'});
 		}
 	}
 
