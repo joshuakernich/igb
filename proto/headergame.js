@@ -6,6 +6,7 @@ window.HeaderGame = function (argument) {
 	let rDude = 100;
 	let dBall = rBall*2;
 	let dDude = rDude*2;
+	let minHeader = 20;
 
 
 	let css = {
@@ -86,7 +87,8 @@ window.HeaderGame = function (argument) {
 		players = p;
 		players.length = 2;
 		for(var p in players){
-			self.$el.find('headerdude').eq(p).css({'left':players[p].px/100*W+'px','top':(50 + players[p].py/50)*H+'px'});
+			players[p].py = 50 + players[p].py/2;
+			self.$el.find('headerdude').eq(p).css({'left':players[p].px/100*W+'px','top':players[p].py/100*H+'px'});
 		}
 	}
 
@@ -139,12 +141,13 @@ window.HeaderGame = function (argument) {
 				
 					let r = Math.atan2(yDif,xDif);
 					let v = Math.sqrt(ball.sx*ball.sx + ball.sy*ball.sy);
+					if(v<minHeader) v = minHeader;
 					
 					ball.x = px + Math.cos(r) * (rBall+rDude);
 					ball.y = py + Math.sin(r) * (rBall+rDude);
 
-					ball.sx = Math.cos(r) * v*1.2;
-					ball.sy = Math.sin(r) * v*1.2;
+					ball.sx = Math.cos(r) * v;
+					ball.sy = Math.sin(r) * v;
 
 					
 				
