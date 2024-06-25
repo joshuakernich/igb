@@ -120,13 +120,13 @@ window.HeaderGame = function (argument) {
 			background: 'url(proto/goal.png)',
 			display: 'block',
 			position: 'absolute',
-			right: '-1420px',
+			right: '-1500px',
 			bottom: '0px',
 		},
 
 		'headergoal:last-of-type':{
 			right:'auto',
-			left:'-1420px',
+			left:'-1500px',
 			transform:'scaleX(-1)',
 		},
 
