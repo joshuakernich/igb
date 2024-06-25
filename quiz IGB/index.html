@@ -197,14 +197,12 @@
 					z:100
 				};
 
-				console.log(players);
-
 				let min = 99999;
 				let pMin = 0;
 				for(var p=0; p<players.length; p++){
 
 					let dx = players[p].px-clickSpot.x;
-					let dz = players[p].pz-clickSpot.z;
+					let dz = (100-players[p].pz)-clickSpot.z;
 
 					let dist = Math.sqrt( dx*dx + dz*dz );
 					
