@@ -144,7 +144,7 @@ window.HeaderGame = function (argument) {
 
 
 	$('<igbside>').appendTo(self.$el);
-	let $center = $('<igbside>').appendTo(self.$el).css({'border':'1px solid white','box-sizing':'border-box'})
+	let $center = $('<igbside>').appendTo(self.$el);
 	$('<igbside>').appendTo(self.$el);
 	
 
@@ -174,8 +174,22 @@ window.HeaderGame = function (argument) {
 	
 	
 
-	let ball = {x:W/2,y:H/2,sx:0,sy:-20};
-	let $ball = $('<headerball>').appendTo($game);
+	let ballsOld = [];
+	let ball;
+	
+
+	function spawnBall(){
+		if(ball){
+			ball.isActive = false;
+			ballsOld.push(ball);
+		}
+		let $ball = $('<headerball>').appendTo($game);
+		ball = {x:W/2,y:H/2,sx:0,sy:-30,$el:$ball,isActive:true};
+
+		
+	}
+
+	spawnBall();
 
 	let was = []
 	let players = [];
@@ -200,12 +214,96 @@ window.HeaderGame = function (argument) {
 		}
 	}
 
+
+
 	let collideDist = rDude+rBall;
 	let wWas = 0;
 	let nTick = 0;
 
 	let scoreLeft = 0;
 	let scoreRight = 0;
+
+
+	function tickBall(ball){
+		ball.sy += 1;
+		ball.y += ball.sy;
+		ball.x += ball.sx;
+
+		if(ball.isActive){
+			let isGoal = ball.y > (H-750+rBall+40);
+			let isAbove = ball.y < (H-750);
+			
+
+			if(ball.x>(W-rBall)){
+				
+				if(isGoal){
+					scoreRight++;
+					$('headerscore').eq(1).text(scoreRight);
+					spawnBall();
+				}
+				else if(isAbove){
+					
+					ball.isAbove = true;
+					spawnBall();
+				} else {
+					ball.x = W-rBall;
+					ball.sx = -10;
+				}
+
+			} else if(ball.x<rBall){
+				
+				if(isGoal){
+					scoreLeft++;
+					$('headerscore').eq(0).text(scoreLeft);
+					spawnBall();
+				} else if(isAbove){
+					
+					ball.isAbove = true;
+					spawnBall();
+				} else {
+					ball.x = rBall;
+					ball.sx = 10;
+				}
+			}
+
+			if(ball.y>(H-rBall)){
+				ball.y = H-rBall;
+				ball.sy = -40;
+			} else if(ball.y<rBall){
+				ball.y = rBall;
+				ball.sy = 1;
+			}
+
+		} else {
+			
+			
+
+			if(ball.isAbove){
+
+				if(ball.y>(H-750-rBall)){
+					ball.sy = -25;
+					ball.y = H-750-rBall;
+				}
+
+			} else {
+				ball.sx *= 0.975;
+				if(ball.y>(H-rBall)){
+					ball.y = H-rBall;
+					ball.sy = -Math.abs(ball.sy)*0.7;
+				} else if(ball.y<(H-750+rBall+40)){
+					ball.y = H-750+rBall+40;
+					ball.sy = 1;
+				}
+			}
+
+			ball.$el.css({'top':ball.y+'px',left:ball.x+'px'});
+			
+		}
+		
+
+		
+	}
+
 	function tick(){
 
 		nTick++;
@@ -216,30 +314,11 @@ window.HeaderGame = function (argument) {
 			wWas = wScreen;
 		}
 
-		ball.sy += 1;
-		ball.y += ball.sy;
-		ball.x += ball.sx;
+		tickBall(ball);
 
-		if(ball.x>(W-rBall)){
-			ball.x = W-rBall;
-			ball.sx = -10;
-			scoreRight++;
-			$('headerscore').eq(1).text(scoreRight);
-		} else if(ball.x<rBall){
-			ball.x = rBall;
-			ball.sx = 10;
-			scoreLeft++;
-			$('headerscore').eq(0).text(scoreLeft);
+		for(var b in ballsOld){
+			tickBall(ballsOld[b]);
 		}
-
-		if(ball.y>(H-rBall)){
-			ball.y = H-rBall;
-			ball.sy = -40;
-		} else if(ball.y<rBall){
-			ball.y = rBall;
-			ball.sy = 1;
-		}
-
 
 
 		for(var p=0; p<players.length; p++){
@@ -280,7 +359,7 @@ window.HeaderGame = function (argument) {
 			self.$el.find('headerdude').eq(p).find('.headerArm').eq(1).attr('d',dRight);
 		}
 
-		$ball.css({'top':ball.y+'px',left:ball.x+'px'});
+		ball.$el.css({'top':ball.y+'px',left:ball.x+'px'});
 
 
 	}

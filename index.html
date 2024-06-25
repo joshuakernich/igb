@@ -291,6 +291,7 @@
 			list-style-type: none;
 			padding: 0px;
 			margin: 0px;
+			position: relative;
 		}
 
 		li{
@@ -485,14 +486,15 @@
 
 		gamebox{
 			display: block;
-			position: fixed;
-			right: 60px;
-			bottom: 40px;
+			position: absolute;
+			left: 60px;
+			top: 40px;
 			width: 160px;
 			height: 100px;
 
   			perspective: 500px;
   			transform-style: preserve-3d;
+  			pointer-events: none;
 		}
 
 
@@ -582,6 +584,16 @@
 		</igbside>
 		<igbside>
 			<menu>
+				<gamebox>
+					<gameboxside></gameboxside><gameboxside></gameboxside><gameboxside></gameboxside><gameboxside>
+						<gbavatar><gbhuman></gbhuman></gbavatar>
+						<gbavatar><gbhuman></gbhuman></gbavatar>
+						<gbavatar><gbhuman></gbhuman></gbavatar>
+						<gbavatar><gbhuman></gbhuman></gbavatar>
+						<gbavatar><gbhuman></gbhuman></gbavatar>
+						<gbavatar><gbhuman></gbhuman></gbavatar>
+					</gameboxside>
+				</gamebox>
 				<ul class="menu-function">
 					<li btn='refresh'>REFRESH</li><li btn='menu'>MENU</li><li btn='move'>MOVE</li>
 				</ul>
@@ -590,6 +602,7 @@
 				</ul>
 				<logger>LOADING...</logger>
 				<button class="expando"></button>
+				
 			</menu>
 		</igbside>
 		
@@ -598,16 +611,6 @@
 		<iframe src=""></iframe>
 	
 	</igb>
-	<gamebox>
-		<gameboxside></gameboxside><gameboxside></gameboxside><gameboxside></gameboxside><gameboxside>
-
-			<gbavatar><gbhuman></gbhuman></gbavatar>
-			<gbavatar><gbhuman></gbhuman></gbavatar>
-			<gbavatar><gbhuman></gbhuman></gbavatar>
-			<gbavatar><gbhuman></gbhuman></gbavatar>
-			<gbavatar><gbhuman></gbhuman></gbavatar>
-			<gbavatar><gbhuman></gbhuman></gbavatar>
-		</gameboxside>
-	</gamebox>
+	
 </body>
 </html>
