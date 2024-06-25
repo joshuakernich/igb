@@ -16,8 +16,8 @@ window.HeaderGame = function (argument) {
 			width:W+'px',
 			height:H+'px',
 			'transform-origin':'top left',
-			'background-image':'url(https://t3.ftcdn.net/jpg/01/13/49/82/360_F_113498271_Arb4VgIstIcPgxUOTQfhjZg9FK8a9HvA.jpg)',
-			'background-size':'cover',
+			
+
 		},
 
 		'headerdude':{
@@ -25,7 +25,6 @@ window.HeaderGame = function (argument) {
 			position:'absolute',
 			bottom: '0px',
 			left: '0px',
-
 		},
 
 		'headerball':{
@@ -113,20 +112,45 @@ window.HeaderGame = function (argument) {
 			'left':'auto',
 			'right':'20px',
 			'text-align':'right',
+		},
+
+		'headergoal':{
+			width: '1500px',
+			height: '750px',
+			background: 'url(proto/goal.png)',
+			display: 'block',
+			position: 'absolute',
+			right: '-1420px',
+			bottom: '0px',
+		},
+
+		'headergoal:last-of-type':{
+			right:'auto',
+			left:'-1420px',
+			transform:'scaleX(-1)',
+		},
+
+		'.headergamebg':{
+			'background-image':'url(https://static.vecteezy.com/system/resources/thumbnails/028/142/355/small_2x/a-stadium-filled-with-excited-fans-a-football-field-in-the-foreground-background-with-empty-space-for-text-photo.jpg)',
+			'background-size':'100%',
+			'background-position':'center -25vw',
 		}
 	}
 
 	$("head").append('<style>'+Css.of(css)+'</style>');
 
 	let self = this;
-	self.$el = $('<igb>');
+	self.$el = $('<igb class="headergamebg">');
 
 
 	$('<igbside>').appendTo(self.$el);
-	let $center = $('<igbside style="border: 1px solid white;box-sizing:border-box;">').appendTo(self.$el);
+	let $center = $('<igbside>').appendTo(self.$el);
 	$('<igbside>').appendTo(self.$el);
+	
 
 	let $game = $('<headergame>').appendTo($center);
+	$('<headergoal>').appendTo($game);
+	$('<headergoal>').appendTo($game);
 
 	$('<headerscore>').appendTo($center).text('0');
 	$('<headerscore>').appendTo($center).text('0');

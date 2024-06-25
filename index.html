@@ -142,6 +142,9 @@
 		        		$('player').eq(p).css({left:players[p].px+'%',top:players[p].py+'%','transform':'scale('+scale+')'});
 		        		$('player').eq(p).find('cape').css({'transform':'rotate('+dx*20+'deg)'});
 		        	}
+
+		        	$('gbavatar').eq(p).css({left:players[p].px+'%',top:players[p].pz+'%'});
+		        	$('gbavatar').eq(p).find('gbhuman').css({height:100-players[p].py+'px'});
 	    
 		       }
 
@@ -183,6 +186,8 @@
 				if(x<-0.8) dir = 1;
 				onMessage('M,0,'+x+',0,0');
 			},1000/50);*/
+
+
 
 		})
 	</script>
@@ -419,8 +424,6 @@
 			width: 33.3%;
 			position: relative;
 			
-			
-			overflow: hidden;
 		}
 
 		table{
@@ -480,6 +483,94 @@
 			display: block;
 		}
 
+		gamebox{
+			display: block;
+			position: fixed;
+			right: 60px;
+			bottom: 40px;
+			width: 160px;
+			height: 100px;
+
+  			perspective: 500px;
+  			transform-style: preserve-3d;
+		}
+
+
+		gameboxside{
+			width: 160px;
+			height: 100px;
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			background: rgba(255, 255, 255, 0.1);
+			display: inline-block;
+			box-sizing: border-box;
+			box-shadow: inset 0px 0px 10px rgba(255, 255, 255, 0.2);
+			transform-style: preserve-3d;
+
+		}
+
+		gameboxside:nth-of-type(1){
+			transform: rotateY(-90deg);
+			 transform-style: preserve-3d;
+			 transform-origin: left center;
+		}
+
+		gameboxside:nth-of-type(3){
+			transform: rotateY(90deg);
+			 transform-style: preserve-3d;
+			 transform-origin: right center;
+
+		}
+
+		gameboxside:nth-of-type(4){
+			transform: rotateX(-90deg);
+			 transform-style: preserve-3d;
+			 transform-origin: bottom center;
+			 height: 160px;
+			 top: auto;
+			 bottom: 0px;
+
+		}
+
+		gbavatar{
+			width: 20px;
+			height: 20px;
+			background: red;
+			border-radius: 10px;
+			transform: translate(-50%,-50%);
+			display: block;
+			position: absolute;
+			 transform-style: preserve-3d;
+			  transform-origin: center;
+		}
+
+
+
+		gbhuman{
+			position: absolute;
+			left: 0px;
+			bottom: 0px;
+			right: 0px;
+			height: 50px;
+			
+			background: red;
+			 transform-style: preserve-3d;
+			 transform-origin: center bottom;
+			 transform: rotateX(90deg);
+			 border-radius: 10px 10px 0px 0px;
+			 opacity: 0.2;
+		}
+
+		gbavatar:nth-of-type(1) gbhuman,gbavatar:nth-of-type(1){ background:red }
+		gbavatar:nth-of-type(2) gbhuman,gbavatar:nth-of-type(2){ background:blue }
+		gbavatar:nth-of-type(3) gbhuman,gbavatar:nth-of-type(3){ background:green }
+		gbavatar:nth-of-type(4) gbhuman,gbavatar:nth-of-type(4){ background:purple }
+		gbavatar:nth-of-type(5) gbhuman,gbavatar:nth-of-type(5){ background:orange }
+		gbavatar:nth-of-type(6) gbhuman,gbavatar:nth-of-type(6){ background:yellow }
+
+
+
 		
 	</style>
 </head>
@@ -507,5 +598,16 @@
 		<iframe src=""></iframe>
 	
 	</igb>
+	<gamebox>
+		<gameboxside></gameboxside><gameboxside></gameboxside><gameboxside></gameboxside><gameboxside>
+
+			<gbavatar><gbhuman></gbhuman></gbavatar>
+			<gbavatar><gbhuman></gbhuman></gbavatar>
+			<gbavatar><gbhuman></gbhuman></gbavatar>
+			<gbavatar><gbhuman></gbhuman></gbavatar>
+			<gbavatar><gbhuman></gbhuman></gbavatar>
+			<gbavatar><gbhuman></gbhuman></gbavatar>
+		</gameboxside>
+	</gamebox>
 </body>
 </html>

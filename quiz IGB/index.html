@@ -8,11 +8,7 @@
 	<script type="text/javascript">
 		$(function(){
 
-
-
 			var cntRound = 0;
-
-			
 
 			var roundContent = {
 				name:"Content Capers",
@@ -184,7 +180,6 @@
 			];
 			window.addEventListener('message', function(e) { 
 				players = e.data;
-				
 			 });
 
 			castVoteFromLaunchpad = function(nPlayer,iSelect){
@@ -201,6 +196,8 @@
 					x:(e.screenX-o.left)/$('.frontside').width()*100,
 					z:100
 				};
+
+				console.log(players);
 
 				let min = 99999;
 				let pMin = 0;
@@ -342,14 +339,14 @@
 		}
 
 		.bg{
-			background: url('./globe.gif');
+			background: url('https://i.pinimg.com/originals/bc/55/51/bc5551ac237a9ef4d8e9575662f2e106.gif');
 			background-size: 200%;
-			background-position: left 20%;
+			background-position: left center;
 			background-repeat: no-repeat;
 		}
 
 		.logo{
-			background: url('./logo.gif');
+			background: url('./logo-igb.png');
 			background-size: 50%;
 			background-position: 150% center;
 			background-repeat: no-repeat;
@@ -357,7 +354,7 @@
 		}
 
 		.door.right .bg{
-			background-position: right 20%;
+			background-position: right center;
 		}
 
 		.door.right .logo{
@@ -710,6 +707,7 @@
 			height: 20%;
 			text-align: center;
 			font-size: 1.5vw;
+			color: var(--color-main);
 		}
 
 	</style>
@@ -745,20 +743,16 @@
 		<layer>
 			<div class='door left'>
 				<div class='layer bg'>
-					<video width="266%" muted autoplay loop>
-						<source src="./sting.mp4" type="video/mp4">
-					</video>
+					
 				</div>
-				<!--div class='layer logo'></div-->
+				<div class='layer logo'></div>
 				
 			</div>
 			<div class='door right'>
 				<div class='layer bg'>
-					<video width="266%" muted autoplay loop style="position:absolute;left:-100%;">
-						<source src="./sting.webm" type="video/webm">
-					</video>
+					
 				</div>
-				<!--div class='layer logo'></div-->
+				<div class='layer logo'></div>
 			</div>
 		</layer>
 
