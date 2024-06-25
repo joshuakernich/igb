@@ -131,9 +131,9 @@ window.HeaderGame = function (argument) {
 		},
 
 		'.headergamebg':{
-			'background-image':'url(https://static.vecteezy.com/system/resources/thumbnails/028/142/355/small_2x/a-stadium-filled-with-excited-fans-a-football-field-in-the-foreground-background-with-empty-space-for-text-photo.jpg)',
+			'background-image':'url(proto/20180220_021.jpg)',
 			'background-size':'100%',
-			'background-position':'center -25vw',
+			'background-position':'center bottom -70px',
 		}
 	}
 
