@@ -120,13 +120,13 @@ window.HeaderGame = function (argument) {
 			background: 'url(proto/goal.png)',
 			display: 'block',
 			position: 'absolute',
-			right: '-1500px',
+			right: '-1470px',
 			bottom: '0px',
 		},
 
 		'headergoal:last-of-type':{
 			right:'auto',
-			left:'-1500px',
+			left:'-1470px',
 			transform:'scaleX(-1)',
 		},
 
@@ -144,7 +144,7 @@ window.HeaderGame = function (argument) {
 
 
 	$('<igbside>').appendTo(self.$el);
-	let $center = $('<igbside>').appendTo(self.$el);
+	let $center = $('<igbside>').appendTo(self.$el).css({'border':'1px solid white','box-sizing':'border-box'})
 	$('<igbside>').appendTo(self.$el);
 	
 
