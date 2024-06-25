@@ -55,6 +55,8 @@
 				
 			}
 
+			$('gamebox').css('transform','scale('+400/$('igb').width()+')');
+
 			$('[btn=move]').click(doRandomMove);
 
 			function doRandomMove(){
@@ -84,6 +86,8 @@
 
 				$('mframe').addClass('active').empty();
 				$('iframe').removeClass('active').attr('src','');
+
+
 
 			})
 
@@ -146,7 +150,10 @@
 		        	$('gbavatar').eq(p).css({left:players[p].px+'%',top:players[p].pz+'%'});
 		        	$('gbavatar').eq(p).find('gbhuman').css({height:100-players[p].py+'px'});
 	    
+
 		       }
+
+		       console.log(players[0]);
 
 
 		       if( liveModule ){
@@ -487,14 +494,15 @@
 		gamebox{
 			display: block;
 			position: absolute;
-			left: 60px;
-			top: 40px;
+			left: 20px;
+			top: 20px;
 			width: 160px;
 			height: 100px;
 
   			perspective: 500px;
   			transform-style: preserve-3d;
   			pointer-events: none;
+  			transform-origin: top left;
 		}
 
 
