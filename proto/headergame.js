@@ -7,6 +7,7 @@ window.HeaderGame = function () {
 	let dBall = rBall*2;
 	let dDude = rDude*2;
 	let minHeader = 20;
+	let fps = 50;
 
 
 	let css = {
