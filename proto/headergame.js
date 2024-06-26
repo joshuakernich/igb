@@ -1,4 +1,4 @@
-window.HeaderGame = function (argument) {
+window.HeaderGame = function () {
 	
 	let W = 1728;
 	let H = 1080;
@@ -364,6 +364,16 @@ window.HeaderGame = function (argument) {
 
 	}
 
-	let interval = setInterval(tick,1000/50);
+	
+
+	let interval;
+	
+	self.turnOnOff = function(b){
+		clearInterval(interval);
+		if(b) interval = setInterval(tick,1000/fps);
+	}
+
+
+	self.turnOnOff(true);
 
 }
