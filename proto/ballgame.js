@@ -172,7 +172,8 @@ BallGame = function () {
 		'.basketball ballgameball:after':{
 			'background':'url(proto/bball.png)',
 			'background-size':'100%',
-			'border-radius':'0px',
+			'border-radius': rBall+'px',
+			'background-color':'black',
 		},
 
 		'ballgamescore':{
