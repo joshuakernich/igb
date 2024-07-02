@@ -251,7 +251,7 @@ BallGame = function () {
 	$('<igbside>').appendTo(self.$el);
 	
 
-	let gameType = 'basketball';
+	let gameType = 'football';
 	let $game = $('<ballgame>').appendTo($center).addClass(gameType);
 
 	
