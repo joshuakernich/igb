@@ -317,6 +317,7 @@ BallGame = function () {
 		$('footballgoal').remove();
 		$('bballhoop').remove();
 		$('bballhoopfront').remove();
+		$('volleyballnet').remove();
 
 		if( gameType == 'football'){
 			$('<footballgoal>').appendTo($game);
@@ -367,12 +368,12 @@ BallGame = function () {
 	let ball;
 	
 
-	function spawnBall(){
+	function spawnBall( x ){
 
 		if(ball) ball.isActive = false;
 
 		let $ball = $('<ballgameball>').appendTo($game);
-		ball = {r:0,x:W/2,y:H/2,sx:0,sy:-30,$el:$ball,isActive:true};
+		ball = {r:0,x:x?x:W/2,y:H/2,sx:0,sy:-30,$el:$ball,isActive:true};
 
 		balls.push(ball);
 	}
@@ -386,7 +387,7 @@ BallGame = function () {
 		players = p;
 		players.length = 2;
 		for(var p=0; p<players.length; p++){
-			players[p].py = Math.min( 75, 40 + players[p].py );
+			players[p].py = Math.min( 75, 30 + players[p].py );
 
 
 			if(gameType == 'volleyball'){
@@ -493,8 +494,8 @@ BallGame = function () {
 		ball.x += ball.sx;
 		ball.r += ball.sx*0.5;
 
-		let farLeft = rBall+50;
-		let farRight = W-rBall-50;
+		let farLeft = rBall;
+		let farRight = W-rBall;
 		let isLeft = ball.x < farLeft;
 		let isRight = ball.x > farRight;
 		let netHeight = 400;
@@ -509,7 +510,7 @@ BallGame = function () {
 				if(ball.x>W/2) scoreRight++;
 				else scoreLeft++;
 
-				spawnBall();
+				spawnBall( ball.x>W/2?W*0.75:W*0.25 );
 			}
 		}
 
@@ -534,7 +535,7 @@ BallGame = function () {
 
 			} else if( isHittingNet ){
 				ball.y = H-netHeight-rBall+20;
-				ball.sy = -20;
+				ball.sy = -10;
 			}
 
 		} else {

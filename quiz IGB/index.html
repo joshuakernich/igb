@@ -221,7 +221,7 @@
 					z:100,
 				};
 
-				let min = 99999;
+				let min = 99999999;
 				let pMin = 0;
 				for(var p=0; p<players.length; p++){
 
@@ -237,8 +237,8 @@
 				}
 				
 
-				var nPlayer = selections.length;
-				nPlayer = pMin;
+				//var nPlayer = selections.length;
+				let nPlayer = pMin;
 
 				doOption(nPlayer,iSelect);	
 			}
@@ -273,7 +273,7 @@
 				$('p').css({left:-1+Math.random()*2,top:-1+Math.random()*2});
 			}
 
-			setInterval(jiggle,500);
+			//setInterval(jiggle,500);
 
 
 			$('.options li').click(castVoteFromScreen);
@@ -340,14 +340,17 @@
 		})
 	</script>
 	<style type="text/css">
+		@import url('https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
+
 		@font-face {
 		  font-family: VCR;
 		  src: url(./VCR_OSD_MONO_1.001.ttf);
 		}
 
 		body{
-			font-family: VCR;
-			font-size: 1vw;
+			font-family: "Rubik", sans-serif;
+			font-weight: 900;
+			font-size: 0.8vw;
 			
 			margin: 0px;
 			padding: 0px;
