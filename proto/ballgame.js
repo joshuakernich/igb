@@ -176,6 +176,23 @@ BallGame = function () {
 			'background-color':'black',
 		},
 
+		'.volleyball ballgameball:after':{
+			'background':'url(proto/volleyball.png)',
+			'background-size':'100%',
+			'border-radius': rBall+'px',
+			'background-color':'black',
+		},
+
+		'.volleyball:before':{
+			content:'" "',
+			position:'absolute',
+			bottom:'0px',
+			left:'0px',
+			right:'0px',
+			height:'100px',
+			background:'url(proto/field.png)',
+		},
+
 		'ballgamescore':{
 			'font-size': '1.5vw',
 			'color':'white',
@@ -226,7 +243,8 @@ BallGame = function () {
 			display:'block',
 			position:'absolute',
 			right:'0px',
-			bottom:'0px',
+			bottom:'-100px',
+
 		},
 
 		'bballhoopfront':{
@@ -239,6 +257,33 @@ BallGame = function () {
 			left:'0px',
 			transform:'scaleX(-1)',
 		},
+
+		'gamebuttons':{
+			'display':'block',
+			'position':'absolute',
+			'top':'0px',
+			'left':'0px',
+			'margin':'2vw',
+		},
+
+		'gamebutton':{
+			'display':'inline-block',
+			'background':'white',
+			'padding':'1vw',
+			'margin':'0.1vw',
+
+		},
+
+		'volleyballnet':{
+			'display':'block',
+			'position':'absolute',
+			'bottom':'0px',
+			'left':'50%',
+			'height':'400px',
+			'width':'100px',
+			'background':'url(proto/volleyball-net.png)',
+			'transform':'translateX(-50%)'
+		}
 	}
 
 	$("head").append('<style>'+Css.of(css)+'</style>');
@@ -248,29 +293,55 @@ BallGame = function () {
 
 	$('<igbside>').appendTo(self.$el);
 	let $center = $('<igbside>').appendTo(self.$el);
-	$('<igbside>').appendTo(self.$el);
+	let $right = $('<igbside>').appendTo(self.$el);
 	
 
-	let gameType = 'football';
-	let $game = $('<ballgame>').appendTo($center).addClass(gameType);
+	let gameType;
+	let $game = $('<ballgame>').appendTo($center);
 
-	
+	let games = ['football','basketball','volleyball'];
+	let $buttons = $('<gamebuttons>').appendTo($right);
+	for(var g in games) $('<gamebutton>').appendTo($buttons).text(games[g]).click(function(){
+		switchGame( $(this).text() );
+	})
 
 	let tickBall;
 
-	if( gameType == 'football'){
-		$('<footballgoal>').appendTo($game);
-		$('<footballgoal>').appendTo($game);
-		tickBall = tickFootball;
-	} else if(gameType == 'volleyball'){
-		tickBall = tickVolleyball;
-	} else if(gameType == 'basketball'){
-		$('<bballhoop>').appendTo($game);
-		$('<bballhoop>').appendTo($game);
-		$('<bballhoopfront>').appendTo($game);
-		$('<bballhoopfront>').appendTo($game);
-		tickBall = tickBBall;
+	function switchGame( gameSwitch ){
+
+		gameType = gameSwitch;
+
+		$game.removeClass(games.join(' '));
+		$game.addClass(gameType);
+
+		$('footballgoal').remove();
+		$('bballhoop').remove();
+		$('bballhoopfront').remove();
+
+		if( gameType == 'football'){
+			$('<footballgoal>').appendTo($game);
+			$('<footballgoal>').appendTo($game);
+			tickBall = tickFootball;
+		} else if(gameType == 'volleyball'){
+			tickBall = tickVolleyball;
+			$('<volleyballnet>').appendTo($game);
+		} else if(gameType == 'basketball'){
+			$('<bballhoop>').appendTo($game);
+			$('<bballhoop>').appendTo($game);
+			$('<bballhoopfront>').appendTo($game);
+			$('<bballhoopfront>').appendTo($game);
+			tickBall = tickBBall;
+		}
+
+		$('ballgameball').appendTo($game);
+
+		for(var d in dudes) dudes[d].$el.appendTo($game);
+
 	}
+
+	//switchGame('basketball');
+
+
 	
 
 	$('<ballgamescore>').appendTo($center).text('0');
@@ -287,7 +358,6 @@ BallGame = function () {
 	for(var i=0; i<2; i++){
 		let dude = new Dude(i,rDude);
 		dude.$el.appendTo($game);
-		console.log(dude.$el);
 		dudes[i] = dude;
 	}
 	
@@ -302,7 +372,7 @@ BallGame = function () {
 		if(ball) ball.isActive = false;
 
 		let $ball = $('<ballgameball>').appendTo($game);
-		ball = {x:W/2,y:H/2,sx:0,sy:-30,$el:$ball,isActive:true};
+		ball = {r:0,x:W/2,y:H/2,sx:0,sy:-30,$el:$ball,isActive:true};
 
 		balls.push(ball);
 	}
@@ -315,9 +385,19 @@ BallGame = function () {
 		was = players.length?players.concat():p;
 		players = p;
 		players.length = 2;
-		for(var p in players){
+		for(var p=0; p<players.length; p++){
 			players[p].py = Math.min( 75, 40 + players[p].py );
+
+
+			if(gameType == 'volleyball'){
+				if(p==0) players[p].px = Math.min( 45, players[p].px );
+				if(p==1) players[p].px = Math.max( 55, players[p].px );
+			}
+
 			dudes[p].setX(players[p].px/100*W);
+
+			
+
 			dudes[p].setY(players[p].py/100*H);
 			dudes[p].setHeight((1-players[p].py/100)*H);
 		}
@@ -337,6 +417,7 @@ BallGame = function () {
 		ball.sy += 1;
 		ball.y += ball.sy;
 		ball.x += ball.sx;
+		ball.r += ball.sx*0.5;
 
 		if(ball.isActive){
 			let isGoal = ball.y > (H-750+rBall+40);
@@ -400,27 +481,68 @@ BallGame = function () {
 				}
 			}
 
-			ball.$el.css({'top':ball.y+'px',left:ball.x+'px'});
+			ball.$el.css({'top':ball.y+'px',left:ball.x+'px','transform':'rotate('+ball.r+'deg)'});
 			
 		}
 	}
 
 	function tickVolleyball(ball){
 		ball.sy += 1;
-		ball.sx *= 0.98;
+		
 		ball.y += ball.sy;
 		ball.x += ball.sx;
+		ball.r += ball.sx*0.5;
+
+		let farLeft = rBall+50;
+		let farRight = W-rBall-50;
+		let isLeft = ball.x < farLeft;
+		let isRight = ball.x > farRight;
+		let netHeight = 400;
 
 		let isGround = ball.y>(H-rBall);
 
 		if(isGround){
 			ball.sy = -Math.abs(ball.sy)*0.5;
 			ball.y = H-rBall;
-			if(ball.isActive) spawnBall();
+
+			if(ball.isActive){
+				if(ball.x>W/2) scoreRight++;
+				else scoreLeft++;
+
+				spawnBall();
+			}
 		}
 
+		if(ball.isActive){
+			if(isLeft){
+				ball.x = farLeft;
+				ball.sx = Math.abs(ball.sx);	
+			}
 
-		ball.$el.css({'top':ball.y+'px',left:ball.x+'px'});
+			if(isRight){
+				ball.x = farRight;
+				ball.sx = -Math.abs(ball.sx);
+			}
+
+			let isHittingNet = ball.y > (H-netHeight-rBall+20) && ball.x > (W/2-rBall) && ball.x < (W/2+rBall);
+			let isFromTheSide = ball.y > (H-netHeight);
+
+			if(isHittingNet && isFromTheSide){
+
+				ball.sx = Math.abs(ball.sx) * (ball.x > W/2)?1:-1;
+				ball.x = W/2 + (rBall + 20)*(ball.x > W/2?1:-1);
+
+			} else if( isHittingNet ){
+				ball.y = H-netHeight-rBall+20;
+				ball.sy = -20;
+			}
+
+		} else {
+			ball.sx *= 0.99;
+		}
+
+		
+		ball.$el.css({'top':ball.y+'px',left:ball.x+'px','transform':'rotate('+ball.r+'deg)'});
 	}
 
 	function tickBBall(ball){
@@ -429,6 +551,7 @@ BallGame = function () {
 	
 		ball.y += ball.sy;
 		ball.x += ball.sx;
+		ball.r += ball.sx*0.5;
 
 		let isGround = ball.y>(H-rBall);
 	
@@ -441,8 +564,13 @@ BallGame = function () {
 				ball.y = H-rBall;
 			}
 
-			let isAbove = ball.y < 300;
-			let isBelow = ball.y > 400;
+			let hoopAt = 350 + 100;
+			let hoopAbove = hoopAt-50;
+			let hoopBelow = hoopAt+50;
+
+
+			let isAbove = ball.y < hoopAbove;
+			let isBelow = ball.y > hoopBelow;
 			let farLeft = rBall+50;
 			let farRight = W-rBall-50;
 			let isLeft = ball.x < farLeft;
@@ -491,7 +619,7 @@ BallGame = function () {
 				ball.y = H-rBall;
 			}
 
-			ball.$el.css({'top':ball.y+'px',left:ball.x+'px'});
+			ball.$el.css({'top':ball.y+'px',left:ball.x+'px','transform':'rotate('+ball.r+'deg)'});
 		}
 
 		
@@ -507,7 +635,7 @@ BallGame = function () {
 			wWas = wScreen;
 		}
 
-		for(var b in balls) tickBall(balls[b]);
+		if(tickBall) for(var b in balls) tickBall(balls[b]);
 
 
 		for(var p=0; p<players.length; p++){
@@ -540,7 +668,7 @@ BallGame = function () {
 			dudes[p].wiggleArms();
 		}
 
-		ball.$el.css({'top':ball.y+'px',left:ball.x+'px'});
+		ball.$el.css({'top':ball.y+'px',left:ball.x+'px','transform':'rotate('+ball.r+'deg)'});
 
 		$('ballgamescore').eq(1).text(scoreLeft);
 		$('ballgamescore').eq(0).text(scoreRight);

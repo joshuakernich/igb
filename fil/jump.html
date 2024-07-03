@@ -32,7 +32,9 @@
 
 					let ix = Math.floor(x/100);
 					let iy = Math.floor(y/100);
-
+					
+					
+					$('cell').eq(iy*5+ix).append( $('shadow.onplatform') );
 					
 
 					if(!isJumping && (ixWas != ix || iyWas != iy)){
@@ -56,6 +58,9 @@
 
 
 					$('target').css({left:x,top:y});
+					$('shadow.onlava').css({left:x,top:y});
+					$('shadow.onplatform').offset( $('shadow.onlava').offset() );
+					$('shadow.onlava').css({left:x,top:y+10});
 				}
 		})
 	</script>
@@ -64,6 +69,19 @@
 			background: orange;
 		}
 		
+		body:before{
+			content: "";
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			width: 100vw;
+			height: 100vh;
+
+			background-image: url(https://i.gifer.com/13wV.gif);
+			background-size: 500px;
+			opacity: 0.1;
+		}
+
 		grid{
 			width: 500px;
 			height: 500px;
@@ -79,14 +97,20 @@
 
 		inner{
 			display: block;
+			position: relative;
 		}
 
 		cell{
 			display: inline-block;
 			width: 100px;
 			height: 100px;
-			
 			box-sizing: border-box;
+			overflow: hidden;
+			position: relative;
+		}
+
+		cell shadow{
+			opacity: 0;
 		}
 
 		cell.floor{
@@ -96,27 +120,29 @@
 			box-shadow: 2px 2px 0px rgba(0,0,0,0.2);
 		}
 
-		target{
+		cell.floor shadow{
+			opacity: 1;
+		}
+
+		shadow, target{
 			display: block;
-			
-			
 			position: absolute;
 			width: 0px;
 			height: 0px;
 		}
 
-		target:before{
+		shadow:before{
 			content: "";
-			transform: scaleY(0.2);
+			transform: scaleY(0.3);
 			width: 70px;
 			height: 70px;
 			position: absolute;
 			display: block;
 			left: -35px;
 			top: -35px;
-
 			border-radius: 50px;
-			background: rgba(0,0,0,0.5);
+			background: rgba(0,0,0,0.4);
+			
 		}
 
 		target.jumping:before{
@@ -125,8 +151,7 @@
 		}
 
 		avatar{
-			width: 100px;
-			
+			width: 100px;	
 			height: 100px;
 			position: absolute;
 			bottom: 0px;
@@ -139,9 +164,12 @@
 </head>
 <body>
 	<grid>
+		<shadow class="onlava"></shadow>
 		<inner></inner>
 		<target>
-			<avatar></avatar>
+			<avatar>
+				<shadow class="onplatform"></shadow>
+			</avatar>
 		</target>
 	</grid>
 </body>
