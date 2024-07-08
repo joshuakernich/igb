@@ -109,6 +109,13 @@
 					revealQuestion();
 					setTimeout(revealOptions,4000);
 
+					timeCountdown = timeNow = new Date().getTime();
+					redrawCountdown();
+
+					
+					setTimeout(startTimer,4500)
+					//setTimeout(revealCorrect,9000);
+
 				} else if( cntRound > 6 ){
 					//$('.scores').delay(2000).animate({top:'40vh'},1000);
 
@@ -118,6 +125,40 @@
 					$('.quiz').hide();
 					openDoors();
 				}
+			}
+
+			let iTick = 0;
+			function startTimer(){
+				timeCountdown = timeNow = new Date().getTime();
+				iTick = setInterval(tickCountdown,20);
+			}
+
+			let TIME = 10*1000;
+			let timeCountdown;
+			let timeNow;
+			function redrawCountdown(){
+				let timeElapsed = timeNow-timeCountdown;
+				let timeRemaining = TIME - timeElapsed;
+				if(timeRemaining<0){
+					timeRemaining = 0;
+					clearInterval( iTick );
+					revealCorrect();
+				}
+				let s = Math.floor( timeRemaining/1000 );
+				let j = Math.floor( (timeRemaining - s*1000)/10 );
+
+				if(s.toString().length<2) s = '0'+s;
+				if(j.toString().length<2) j = '0'+j;
+
+				$('timer').text(s.toString()+'.'+j.toString());
+
+				console.log(s.toString()+'.'+j.toString());
+			}
+
+		
+			function tickCountdown(){
+				timeNow = new Date().getTime();
+				redrawCountdown();
 			}
 
 		
@@ -266,7 +307,7 @@
 				$('<div class="time">').appendTo($option.find('.times')).html($nPlayer+seconds.toFixed(2));
 				$option.addClass('selected');
 
-				if(selections.length == 3) setTimeout( revealCorrect, 1500 );
+				//if(selections.length == 3) setTimeout( revealCorrect, 1500 );
 			}
 
 			function jiggle(){
@@ -348,8 +389,8 @@
 		}
 
 		body{
-			font-family: "Rubik", sans-serif;
-			font-weight: 900;
+			font-family: monospace;
+			
 			font-size: 0.8vw;
 			
 			margin: 0px;
@@ -735,6 +776,12 @@
 			color: var(--color-main);
 		}
 
+		timer{
+			display: block;
+			text-align: center;
+			font-family: monospace;
+		}
+
 	</style>
 </head>
 <body>
@@ -749,12 +796,15 @@
 		<igbside class='frontside'>
 			
 			<div class='layer quiz'>
+				<timer>5:00.00</timer>
 				<div class='question'><p>Why Hello there.</p></div>
+				
 				<ul class='options'>
 					<li><p></p><div class='times'></div></li>
 					<li><p></p><div class='times'></div></li>
 					<li><p></p><div class='times'></div></li>
 				</ul>
+				
 			</div>
 			<div class='layer rounds'>
 				
