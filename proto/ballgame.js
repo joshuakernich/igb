@@ -387,7 +387,7 @@ BallGame = function () {
 		players = p;
 		players.length = 2;
 		for(var p=0; p<players.length; p++){
-			players[p].py = Math.min( 75, 30 + players[p].py );
+			players[p].py = Math.min( 75, 35 + players[p].py );
 
 
 			if(gameType == 'volleyball'){
