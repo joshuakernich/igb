@@ -24,6 +24,7 @@ let css = {
 		'background-size':'100%',
 		'background-position':'center',
 		'transform-style': 'preserve-3d',
+		'vertical-align':'top',
 	},
 
 	'.riddler.enabled':{
@@ -118,6 +119,15 @@ let css = {
 		'transform':'translateX(-50%)',
 		'transform-origin':'top center',
 		'opacity':'0.5',
+	},
+
+	'.riddler button':{
+		'background':'none',
+		'color':'white',
+		'font-family': "'Press Start 2P'",
+		'border':'none',
+		'font-size':'0.5vw',
+		'padding':'1.5vw',
 	}
 }
 
@@ -196,6 +206,9 @@ Riddler = function(){
 		}
 	}
 
+	$('<button>SKIP</button>').appendTo(sides[2]).click(doCorrect);
+
+
 	function shuffle(array) {
 	  let currentIndex = array.length;
 
@@ -215,6 +228,8 @@ Riddler = function(){
 	
 	
 	let selected = [];
+	let isTouchCorrect = true;
+	let isPositionCorrect = false;
 	
 	function onToggle(){
 		
@@ -236,24 +251,35 @@ Riddler = function(){
 			combo['total']++;
 		}
 
-		let isCorrect = true;
+		isTouchCorrect = true;
 		for(var r in rules){
-			if(r.length==1){
-				if(combo[r] != rules[r]) isCorrect = false;
-			} else{
-				let s = r[1];
-				if((combo['total'] - combo[s]) < rules[r]) isCorrect = false;
+		
+			if(r != 'R' && r!= 'L'){
+				if(r.length==1){
+					if(combo[r] != rules[r]) isTouchCorrect = false;
+				} else {
+					let s = r[1];
+					if((combo['total'] - combo[s]) < rules[r]) isTouchCorrect = false;
+				}
 			}
+			
 
 		}
 
-		if(isCorrect) doCorrect();
+		checkCorrect();
+	}
+
+	function checkCorrect(){
+		console.log('touch',isTouchCorrect,'position',isPositionCorrect);
+		if(isEnabled && isTouchCorrect && isPositionCorrect) doCorrect();
 	}
 
 	function doCorrect(){
-		isEnabled = false;
-		self.$el.removeClass('enabled');
-		setTimeout(celebrate,500);
+		if(isEnabled){
+			isEnabled = false;
+			self.$el.removeClass('enabled');
+			setTimeout(celebrate,500);
+		}
 	}
 
 	function celebrate(){
@@ -274,6 +300,9 @@ Riddler = function(){
 		let question = questions[iQuestion];
 		let range = 24;
 
+		isTouchCorrect = true;
+		isPositionCorrect = true;
+
 		//if(question.type=='shapes'){
 			
 			let q = question.q;
@@ -289,9 +318,11 @@ Riddler = function(){
 
 				let text = ''
 				if(shape=='R' || shape=='L'){
+					isPositionCorrect = false;
 					text = 'Move '+count+' player'+(count>1?'s':'')+' to the '+MOVES[shape];
 				}
 				else {
+					isTouchCorrect = false;
 					text = 'Touch '+count+' '+(not?'NOT ':'')+SHAPES[shape]+(count>1?'s':'');
 				}
 
@@ -347,6 +378,7 @@ Riddler = function(){
 
 	let heads = [];
 	let bodies = [];
+	
 	self.setPlayers = function(p){
 
 		let counts = [0,0,0,0];
@@ -363,13 +395,15 @@ Riddler = function(){
 			let ix = Math.floor(players[p].px/25);
 			counts[ix]++;
 
-			let isInPosition = true;
-			if(!rules['L'] && !rules['R']) isInPosition = false;
+	
+			isPositionCorrect = true;
 
-			if(rules['L']) isInPosition = isInPosition && (rules['L'] == counts[0]);
-			if(rules['R']) isInPosition = isInPosition && (rules['R'] == counts[3]);
+			if(rules['L']) isPositionCorrect = isPositionCorrect && (rules['L'] == counts[0]);
+			if(rules['R']) isPositionCorrect = isPositionCorrect && (rules['R'] == counts[3]);
 
-			if(isEnabled && isInPosition) doCorrect();
+			
+
+			checkCorrect();
 
 			heads[p].appendTo(sides[1].find('riddlerscreen').eq(ix)).css('left',((players[p].px%25)/25)*100+'%');
 			bodies[p].appendTo(sides[1].find('riddlerscreen').eq(ix+4)).css('left',((players[p].px%25)/25)*100+'%');
