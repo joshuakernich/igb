@@ -173,6 +173,7 @@ Riddler = function(){
 	let squ = '▢';
 	let cir = '◯';
 	let geo = [tri,squ,cir];
+	let isEnabled = false;
 
 	let self = this;
 	self.$el = $('<igb class="riddler">');
@@ -250,6 +251,7 @@ Riddler = function(){
 	}
 
 	function doCorrect(){
+		isEnabled = false;
 		self.$el.removeClass('enabled');
 		setTimeout(celebrate,500);
 	}
@@ -337,6 +339,7 @@ Riddler = function(){
 		}
 
 		self.$el.addClass('enabled');
+		isEnabled = true;
 	}
 
 	nextQuestion();
@@ -366,7 +369,7 @@ Riddler = function(){
 			if(rules['L']) isInPosition = isInPosition && (rules['L'] == counts[0]);
 			if(rules['R']) isInPosition = isInPosition && (rules['R'] == counts[3]);
 
-			if(isInPosition) doCorrect();
+			if(isEnabled && isInPosition) doCorrect();
 
 			heads[p].appendTo(sides[1].find('riddlerscreen').eq(ix)).css('left',((players[p].px%25)/25)*100+'%');
 			bodies[p].appendTo(sides[1].find('riddlerscreen').eq(ix+4)).css('left',((players[p].px%25)/25)*100+'%');
