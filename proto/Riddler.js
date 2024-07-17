@@ -82,7 +82,7 @@ let css = {
 		'right':'0px',
 		'bottom':'0px',
 		'line-height':'0.7vw',
-		'padding':'0.3vw',
+		'padding':'0.4vw',
 		'box-sizing':'border-box',
 		'font-family': "'Press Start 2P'",
 	},
@@ -126,18 +126,40 @@ $("head").append('<style>'+Css.of(css)+'</style>');
 Riddler = function(){
 
 	let questions = [
+
+		
+
 		{type:'shapes',q:['3-C'],s:'CSTCSTCST'},
 		{type:'shapes',q:['3-NC'],s:'CSTCSTCST'},
 		{type:'shapes',q:['3-S','1-NS'],s:'CSTCSTCST'},
 		{type:'shapes',q:['2-S','2-NS','2-NC'],s:'CSTCSTCST'},
+		{type:'shapes',q:['5-B'],s:'CSTCSTCST'},
+		{type:'shapes',q:['1-I'],s:'CSTCSTCST'},
+		{type:'shapes',q:['1-B','1-S','1-T','1-C','3-I'],s:'CSTCSTCST'},
+		
 
-		{type:'move',q:['R'],s:''},
+		{type:'move',q:['1-R','2-I']},
+		{type:'move',q:['2-R']},
+		{type:'move',q:['1-R','1-L']},
+		{type:'move',q:['1-S','1-NS','2-I','2-B','1-R','1-L'],s:'CSTCSTCST'},
+
+		
+
+
+		
 	];
+
+	let MOVES = {
+		'L':'left',
+		'R':'right',
+	}
 
 	let SHAPES = {
 		'C':'circle',
 		'S':'square',
 		'T':'triangle',
+		'B':'blank screen',
+		'I':'riddle screen',
 	}
 
 	let SYMBOLS = {
@@ -203,9 +225,11 @@ Riddler = function(){
 		if (isSelected) selected.push(this);
 		else selected.splice( selected.indexOf(this), 1 );
 
-		let combo = {'C':0,'T':0,'S':0,'total':0};
+		let combo = {'I':0,'B':0,'C':0,'T':0,'S':0,'total':0};
 		for(var s in selected){
 			let shape = $(selected[s]).attr('s');
+
+			if(!shape) shape = 'B';
 	
 			combo[shape]++;
 			combo['total']++;
@@ -222,16 +246,16 @@ Riddler = function(){
 
 		}
 
-	
+		if(isCorrect) doCorrect();
+	}
 
-		if(isCorrect){
-			self.$el.removeClass('enabled');
-			setTimeout(celebrate,500);
-		}
+	function doCorrect(){
+		self.$el.removeClass('enabled');
+		setTimeout(celebrate,500);
 	}
 
 	function celebrate(){
-		self.$el.find('riddlerscreen').html('<p>PERFECT<br>PERFECT<br>PERFECT</p>').removeClass('selected');
+		self.$el.find('riddlerscreen').html('<p>PERFECT<br>PERFECT<br>PERFECT</p>').removeClass('selected').addClass('on');
 		setTimeout(nextQuestion,1000);
 	}
 
@@ -242,37 +266,71 @@ Riddler = function(){
 		selected = [];
 		iQuestion ++;
 
-		self.$el.find('riddlerscreen').empty().removeClass('on');
+		self.$el.find('riddlerscreen').empty().removeClass('on').attr('s','B');
 
 		let things = [];
+		let question = questions[iQuestion];
+		let range = 24;
 
-		let q = questions[iQuestion].q;
-		for(var i in q){
-			let rule = q[i].split('-');
-			let count = rule[0];
-			let shape = rule[1];
+		//if(question.type=='shapes'){
+			
+			let q = question.q;
+			for(var i in q){
+				let rule = q[i].split('-');
+				let count = rule[0];
+				let shape = rule[1];
 
-			rules[shape] = parseInt(count);
+				rules[shape] = parseInt(count);
 
-			let not = (shape.length==2);
-			if(not) shape = shape[1];
+				let not = (shape.length==2);
+				if(not) shape = shape[1];
 
-			let text = 'Touch '+count+' '+(not?'NOT ':'')+SHAPES[shape]+(count?'s':'');
-			things.push({s:'p',t:'<p>'+text+'</p>'});
-		}
+				let text = ''
+				if(shape=='R' || shape=='L'){
+					text = 'Move '+count+' player'+(count>1?'s':'')+' to the '+MOVES[shape];
+				}
+				else {
+					text = 'Touch '+count+' '+(not?'NOT ':'')+SHAPES[shape]+(count>1?'s':'');
+				}
 
-		for(var s=0; s<questions[iQuestion].s.length; s++){
-			let shape = questions[iQuestion].s[s];
-			things.push({s:shape,t:SYMBOLS[shape]});
-		}
+				things.push({s:'I',t:'<p>'+text+'</p>'});
+			}
+
+
+			if(questions[iQuestion].s){
+				for(var s=0; s<questions[iQuestion].s.length; s++){
+					let shape = questions[iQuestion].s[s];
+					things.push({s:shape,t:SYMBOLS[shape]});
+				}
+			}
+
+			
+		//}
+
+		/*if(question.type=='move'){
+			let q = question.q;
+			for(var i in q){
+				let rule =  q[i].split('-');
+				let count = rule[0];
+				let shape = rule[1];
+				let text = 'Move '+count+' player'+(count>1?'s':'')+' to the '+MOVES[shape];
+				things.push({s:'I',t:'<p>'+text+'</p>'});
+
+				rules[shape] = parseInt(count);
+			}
+
+			sides[1].find('riddlerscreen').addClass('on');
+
+			
+		}*/
 
 		let order = [];
-		while(order.length<24) order[order.length] = order.length;
+		while(order.length<range) order[order.length] = order.length;
 		shuffle(order);
 
 		for(var t in things){
 			self.$el.find('riddlerscreen')
-			.eq(order[t])
+			.eq((24-range)/2+order[t])
 			.attr('s',things[t].s)
 			.html(things[t].t)
 			.addClass('on');
@@ -287,7 +345,11 @@ Riddler = function(){
 	let heads = [];
 	let bodies = [];
 	self.setPlayers = function(p){
+
+		let counts = [0,0,0,0];
+
 		players = p;
+		players.length = 2;
 		
 		for(var p in players){
 			if(!heads[p]){
@@ -296,6 +358,15 @@ Riddler = function(){
 			}
 			
 			let ix = Math.floor(players[p].px/25);
+			counts[ix]++;
+
+			let isInPosition = true;
+			if(!rules['L'] && !rules['R']) isInPosition = false;
+
+			if(rules['L']) isInPosition = isInPosition && (rules['L'] == counts[0]);
+			if(rules['R']) isInPosition = isInPosition && (rules['R'] == counts[3]);
+
+			if(isInPosition) doCorrect();
 
 			heads[p].appendTo(sides[1].find('riddlerscreen').eq(ix)).css('left',((players[p].px%25)/25)*100+'%');
 			bodies[p].appendTo(sides[1].find('riddlerscreen').eq(ix+4)).css('left',((players[p].px%25)/25)*100+'%');
