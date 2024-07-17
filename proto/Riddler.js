@@ -9,11 +9,21 @@ let css = {
 		'line-height':'0px',
 		'margin-top':'3vw',
 		'display':'block',
-		
+		'transform-style': 'preserve-3d',
 	},
 
 	'.riddler':{
 		'pointer-events':'none',
+		'perspective': '1000px',
+		'transform-style': 'preserve-3d',
+		'position':'relative',
+	},
+
+	'.riddler igbside':{
+		'background-image':'url(./proto/riddler-bg.png)',
+		'background-size':'100%',
+		'background-position':'center',
+		'transform-style': 'preserve-3d',
 	},
 
 	'.riddler.enabled':{
@@ -24,26 +34,25 @@ let css = {
 		'display':'inline-block',
 		'width':'6vw',
 		'height':'4vw',
-		'border':'1px solid white',
+		'border':'0.2vw solid #1D3B0F',
 		'line-height':'4vw',
-		'margin':'0.5vw',
+		'margin':'0.3vw',
 		'overflow':'hidden',
 		'position':'relative',
 		'white-space':'wrap',
-		'background':'darkgreen',
+		
 
-	},
-
-	'riddlerscreen:empty':{
 		'background':'black',
+		
+		'transform-style': 'preserve-3d',
 	},
 
-	'riddlerscreen:empty:before':{
-		'display':'none',
+	'riddlerscreen.on':{
+		'background':'darkgreen',
 	},
 
-	'riddlerscreen:before':{
-		content:'" "',
+	'riddlerscreen.on:before':{
+		'content':'" "',
 		'background-image':'url(https://i.pinimg.com/originals/51/7a/86/517a86be65e2c862e73e1ecd18a85627.gif)',
 		'position':'absolute',
 		'top':'0px',
@@ -53,8 +62,16 @@ let css = {
 		'opacity':'0.1',
 	},
 
+	'riddlerscreen.on.selected':{
+		'background':'limegreen',
+	},
+
 	'riddlerscreen.selected':{
-		background:'limegreen',
+		'background':'#993300',
+	},
+
+	'riddlerscreen.selected:before':{
+		'display':'block',
 	},
 
 	'riddlerscreen p':{
@@ -68,6 +85,37 @@ let css = {
 		'padding':'0.3vw',
 		'box-sizing':'border-box',
 		'font-family': "'Press Start 2P'",
+	},
+
+	'riddlerrow':{
+		'transform-style': 'preserve-3d',
+		'display':'block',
+	},
+
+	'riddlerhead':{
+		'background':'url(./bat/batman-red-fadeout.png)',
+		'background-position':'top center',
+		'width':'7vw',
+		'height':'3vw',
+		'position':'absolute',
+		'bottom':'0px',
+		'display':'block',
+		'background-size':'100%',
+		'transform':'translateX(-50%)',
+		'opacity':'0.5',
+	},
+
+	'riddlerbody':{
+		'background':'url(./bat/batman-red-fadeout.png)',
+		'background-position':'bottom center',
+		'width':'7vw',
+		'height':'6vw',
+		'position':'absolute',
+		'top':'0px',
+		'display':'block',
+		'background-size':'100%',
+		'transform':'translateX(-50%)',
+		'opacity':'0.5',
 	}
 }
 
@@ -76,10 +124,12 @@ $("head").append('<style>'+Css.of(css)+'</style>');
 Riddler = function(){
 
 	let questions = [
-		{q:['3-C'],s:'CSTCSTCST'},
-		{q:['3-NC'],s:'CSTCSTCST'},
-		{q:['3-S','1-NS'],s:'CSTCSTCST'},
-		{q:['2-S','2-NS','2-NC'],s:'CSTCSTCST'},
+		{type:'shapes',q:['3-C'],s:'CSTCSTCST'},
+		{type:'shapes',q:['3-NC'],s:'CSTCSTCST'},
+		{type:'shapes',q:['3-S','1-NS'],s:'CSTCSTCST'},
+		{type:'shapes',q:['2-S','2-NS','2-NC'],s:'CSTCSTCST'},
+
+		{type:'move',q:['R'],s:''},
 	];
 
 	let SHAPES = {
@@ -103,14 +153,18 @@ Riddler = function(){
 	let self = this;
 	self.$el = $('<igb class="riddler">');
 
+	
+
 	let C = 4;
 	let R = 2;
+	let sides = [];
 
 	for(let i=0; i<3; i++){
 		let $side = $('<igbside>').appendTo(self.$el);
 		let $t = $('<riddlerscreens>').appendTo($side);
+		sides[i] = $t;
 		for(let y=0; y<R; y++){
-			let $r = $('<div>').appendTo($t);
+			let $r = $('<riddlerrow>').appendTo($t);
 			for(let x=0; x<C; x++){
 				let $d = $('<riddlerscreen>').appendTo($r).click(onToggle);
 			}
@@ -163,6 +217,7 @@ Riddler = function(){
 				let s = r[1];
 				if((combo['total'] - combo[s]) < rules[r]) isCorrect = false;
 			}
+
 		}
 
 	
@@ -185,7 +240,7 @@ Riddler = function(){
 		selected = [];
 		iQuestion ++;
 
-		self.$el.find('riddlerscreen').empty();
+		self.$el.find('riddlerscreen').empty().removeClass('on');
 
 		let things = [];
 
@@ -200,12 +255,8 @@ Riddler = function(){
 			let not = (shape.length==2);
 			if(not) shape = shape[1];
 
-			let text = 'Press and hold '+count+' '+(not?'NOT ':'')+SHAPES[shape]+(count?'s':'');
-			//self.$el.find('riddlerscreen').eq(i).html('<p>'+text+'</p>');
-
+			let text = 'Touch '+count+' '+(not?'NOT ':'')+SHAPES[shape]+(count?'s':'');
 			things.push({s:'p',t:'<p>'+text+'</p>'});
-
-			
 		}
 
 		for(var s=0; s<questions[iQuestion].s.length; s++){
@@ -221,11 +272,37 @@ Riddler = function(){
 			self.$el.find('riddlerscreen')
 			.eq(order[t])
 			.attr('s',things[t].s)
-			.html(things[t].t);
+			.html(things[t].t)
+			.addClass('on');
 		}
 
 		self.$el.addClass('enabled');
 	}
 
 	nextQuestion();
+
+
+	let heads = [];
+	let bodies = [];
+	self.setPlayers = function(p){
+		players = p;
+		
+		for(var p in players){
+			if(!heads[p]){
+				heads[p] = $('<riddlerhead>');
+				bodies[p] = $('<riddlerbody>');
+			}
+			
+			let ix = Math.floor(players[p].px/25);
+
+			heads[p].appendTo(sides[1].find('riddlerscreen').eq(ix)).css('left',((players[p].px%25)/25)*100+'%');
+			bodies[p].appendTo(sides[1].find('riddlerscreen').eq(ix+4)).css('left',((players[p].px%25)/25)*100+'%');
+
+			console.log(players[p].pz);
+			heads[p].css('opacity',(players[p].pz/2)+'%');
+			bodies[p].css('opacity',(players[p].pz/2)+'%');
+		}
+	}
+
+	self.setPlayers([{px:15}]);
 }
