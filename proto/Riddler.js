@@ -103,6 +103,7 @@ let css = {
 		'background-size':'100%',
 		'transform':'translateX(-50%)',
 		'opacity':'0.5',
+		'transform-origin':'bottom center',
 	},
 
 	'riddlerbody':{
@@ -115,6 +116,7 @@ let css = {
 		'display':'block',
 		'background-size':'100%',
 		'transform':'translateX(-50%)',
+		'transform-origin':'top center',
 		'opacity':'0.5',
 	}
 }
@@ -298,9 +300,14 @@ Riddler = function(){
 			heads[p].appendTo(sides[1].find('riddlerscreen').eq(ix)).css('left',((players[p].px%25)/25)*100+'%');
 			bodies[p].appendTo(sides[1].find('riddlerscreen').eq(ix+4)).css('left',((players[p].px%25)/25)*100+'%');
 
-			console.log(players[p].pz);
-			heads[p].css('opacity',(players[p].pz/2)+'%');
-			bodies[p].css('opacity',(players[p].pz/2)+'%');
+			let scale = 0.5 + (players[p].pz/100)*0.5;
+			let o = {
+				'opacity':(players[p].pz/2)+'%',
+				'transform':'scale('+scale+') translateX(-50%)'
+			}
+
+			heads[p].css(o);
+			bodies[p].css(o);
 		}
 	}
 
