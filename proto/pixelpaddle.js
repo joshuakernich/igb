@@ -90,17 +90,17 @@ PixelPaddle = function(){
 	let beats = [
 
 		
-		{px:50,at:6,time:1},
-		{px:70,at:8,time:1},
-		{px:20,at:10,time:1},
-		{px:80,at:12,time:1},
-		{px:20,at:14,time:1},
-		{px:20,at:16,time:1},
-		{px:50,at:18,time:1},
-		{px:80,at:20,time:1},
-		{px:80,at:22,time:1},
+		{px:50,at:6,time:1.5},
+		{px:70,at:8,time:1.5},
+		{px:20,at:10,time:1.5},
+		{px:80,at:12,time:1.5},
+		{px:20,at:14,time:1.5},
+		{px:20,at:16,time:1.5},
+		{px:50,at:18,time:1.5},
+		{px:80,at:20,time:1.5},
+		{px:80,at:22,time:1.5},
 
-		{px:10,at:23,time:0.7},
+		{px:10,at:23,time:1.5},
 		{px:20,at:24,time:0.7},
 		{px:30,at:25,time:0.7},
 		{px:40,at:26,time:0.7},
@@ -110,8 +110,8 @@ PixelPaddle = function(){
 		{px:80,at:30,time:0.7},
 		{px:90,at:31,time:0.7},
 
-		{px:90,at:32,time:0.7},
-		{px:80,at:32,time:0.7},
+		{px:90,at:32,time:1.5},
+		{px:80,at:32,time:1.5},
 
 		{px:70,at:34,time:0.7},
 		{px:60,at:34,time:0.7},
@@ -123,6 +123,14 @@ PixelPaddle = function(){
 		{px:20,at:37,time:0.7},
 
 	];
+
+	let n = 40;
+	while(beats.length<100){
+		
+		beats.push({px:10 + Math.random() * 80,at:n,time:1.5});
+
+		n++;
+	}
 
 	for(var b in beats) beats[b].timeSpawn = beats[b].at * secondsPerBeat - beats[b].time;
 
