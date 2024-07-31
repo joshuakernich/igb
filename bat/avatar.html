@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title></title>
+	<script type="text/javascript" src="../shared/jq.js"></script>
+	<script type="text/javascript">
+
+
+
+		$(function(){
+
+
+		let m = {
+			'ears':20,
+			'head':15,
+			'shoulders':50,
+		}
+
+		adjustBat = function(thing,value){
+			
+
+			let o = {};
+			o[thing] = value;
+
+			$(m).animate(o,{duration:100,step:redraw});
+		}
+
+
+		function redraw(){
+			
+			let d = `
+				M 0 0
+				L 5 0
+				L ${m.head*0.9} ${-m.ears}
+				L ${m.head} 10
+				L ${m.head} 20
+				L ${m.shoulders*0.9} 30
+				L ${m.shoulders*0.8} 50
+				L ${m.shoulders} 80
+				L ${-m.shoulders} 80
+				L ${-m.shoulders*0.8} 50
+				L  ${-m.shoulders*0.9} 30
+				L ${-m.head} 20
+				L ${-m.head} 10
+				L ${-m.head*0.9} ${-m.ears}
+				L -5 0
+			`;
+
+
+			$('path').attr('d',d);
+		}
+
+
+		redraw()
+
+		})
+	</script>
+	<style type="text/css">
+		body{
+			text-align: center;
+		}
+		batman{
+			position: relative;
+			display: block;
+			width: 500px;
+			height: 500px;
+			display: inline-block;
+			vertical-align: middle;
+		}
+
+		batsymbol{
+			position: absolute;
+			left: 0px;
+			top: 100px;
+			width: 500px;
+			height: 400px;
+			background: url('./symbol.png');
+			background-position: center;
+			
+			background-repeat: no-repeat;
+			background-size: 200px;
+
+		}
+
+		bateye{
+			position: absolute;
+			right: 50%;
+			top: 120px;
+			width: 50px;
+			height: 50px;
+			background: url('./batman-eye.png');
+			background-position: center;
+			
+			background-repeat: no-repeat;
+			background-size: 80%;
+			background-position: center left;
+		}
+
+		bateye:last-of-type{
+			transform: scaleX(-1);
+			transform-origin: center right;
+		}
+
+		buttons{
+			display: inline-block;
+			vertical-align: middle;
+		}
+
+		button{
+			width: 100px;
+			height: 100px;
+			display: inline-block;
+			vertical-align: middle;
+
+			border: none;
+			border-radius: 0px;
+			margin: 5px;
+		}
+	</style>
+</head>
+<body>
+	<buttons>
+	<button onclick="adjustBat('ears',5)">LITTLE EARS</button>
+	<button onclick="adjustBat('ears',10)">MEDIUM EARS</button>
+	<button onclick="adjustBat('ears',20)">BIG EARS</button>
+	<br>
+	<button onclick="adjustBat('head',10)">LITTLE HEAD</button>
+	<button onclick="adjustBat('head',13)">MEDIUM HEAD</button>
+	<button onclick="adjustBat('head',18)">BIG HEAD</button>
+	<br>
+	<button onclick="adjustBat('shoulders',25)">LITTLE SHOULDERS</button>
+	<button onclick="adjustBat('shoulders',35)">MEDIUM SHOULDERS</button>
+	<button onclick="adjustBat('shoulders',50)">BIG SHOULDERS</button>
+	</buttons>
+	<batman>
+		<svg width=500 height=500 viewBox='-50 -20 100 100'>
+			<defs>
+			    <linearGradient id="myGradient" gradientTransform="rotate(90)">
+			      <stop offset="5%" stop-color="red" />
+			      <stop offset="95%" stop-color="white" />
+			    </linearGradient>
+			  </defs>
+			<path fill="url('#myGradient')" d=''/>
+		</svg>
+		<batsymbol></batsymbol>
+		<bateye></bateye>
+		<bateye></bateye>
+	</batman>
+</body>
+</html>

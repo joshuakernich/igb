@@ -17,6 +17,9 @@ let css = {
 		'perspective': '1000px',
 		'transform-style': 'preserve-3d',
 		'position':'relative',
+
+		 'font-family': "Trade Winds",
+		 'font-weight': 400,
 	},
 
 	'.riddler igbside':{
@@ -128,6 +131,16 @@ let css = {
 		'border':'none',
 		'font-size':'0.5vw',
 		'padding':'1.5vw',
+	},
+
+	'.riddler h1':{
+		'position':'absolute',
+		'top':'0px',
+		'bottom':'0px',
+		'left':'0px',
+		'right':'0px',
+		'font-size':'2vw',
+		'line-height':'2vw',
 	}
 }
 
@@ -154,7 +167,7 @@ Riddler = function(){
 		{type:'move',q:['1-S','1-NS','2-I','2-B','1-R','1-L'],s:'CSTCSTCST'},
 
 		
-
+		{type:'move',q:['2-Q']},
 
 		
 	];
@@ -287,7 +300,7 @@ Riddler = function(){
 		setTimeout(nextQuestion,1000);
 	}
 
-	let rules;
+	let rules = {};
 	function nextQuestion(){
 
 		rules = {};
@@ -373,7 +386,7 @@ Riddler = function(){
 		isEnabled = true;
 	}
 
-	nextQuestion();
+	//
 
 
 	let heads = [];
@@ -401,8 +414,6 @@ Riddler = function(){
 			if(rules['L']) isPositionCorrect = isPositionCorrect && (rules['L'] == counts[0]);
 			if(rules['R']) isPositionCorrect = isPositionCorrect && (rules['R'] == counts[3]);
 
-			
-
 			checkCorrect();
 
 			heads[p].appendTo(sides[1].find('riddlerscreen').eq(ix)).css('left',((players[p].px%25)/25)*100+'%');
@@ -419,5 +430,28 @@ Riddler = function(){
 		}
 	}
 
+	function doIntro(){
+		self.$el.find('riddlerscreen').addClass('on');
+		setTimeout( function(){ doTitle('Riddle Challenge')},500);
+		setTimeout( function(){ doTitle('Solve the Riddles<br>and beat the Riddler')},3500);
+		setTimeout( nextQuestion,7000);
+	}
+
+	function doTitle(text){
+		$('<h1>')
+		.appendTo(sides[1])
+		.html(text)
+		.css({'opacity':0})
+		.animate({'opacity':1})
+		.delay(1500)
+		.animate({'opacity':0},{duration:500,complete:dump});
+	}
+
+	function dump(){
+		$(this).remove();
+	}
+
+	doIntro();
+	//nextQuestion();
 	self.setPlayers([{px:15}]);
 }

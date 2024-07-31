@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Climbing</title>
+	<script type="text/javascript" src="../shared/jq.js"></script>
+	<script type="text/javascript">
+		$(function(){
+			let map = 
+			[
+				[
+					
+					'*________^',
+					'_________*',
+					'^_________'
+				],
+				[
+					
+					'*________^',
+					'^|_______*',
+					'B_______|^'
+				],
+			]
+
+			
+			let $bat;
+			let bat = {x:20,r:0};
+			let isRight = false;
+			let isLeft = false;
+
+			for(var l in map){
+
+				let $t = $('<table>').appendTo('body');
+				for(var r in map[l]){
+					let $tr = $('<tr>').appendTo($t).attr('l',l).attr('r',r);
+					for(var d in map[l][r]){
+						let $td = $('<td>').appendTo($tr);
+
+						let type = map[l][r][d];
+
+						if(type=='B'){
+							$bat = $('<batman>').appendTo($td);
+							bat.r = r;
+						}
+
+						if(type=='^'){
+							$td.text('^');
+						}
+					}
+				}
+			}
+
+			$(document).on('keydown',onKeyDown);
+			$(document).on('keyup',onKeyUp);
+
+			function onKeyDown(e){
+				if(e.which==37) isLeft = true;
+				if(e.which==39) isRight = true;
+			}
+
+			function onKeyUp(e) {
+				if(e.which==37) isLeft = false;
+				if(e.which==39) isRight = false;
+			}
+
+			let iLevel = map.length-1;
+			function tick(){
+				if(isRight) bat.x += 5;
+				if(isLeft) bat.x -= 5;
+
+				let ix = Math.floor(bat.x/40);
+				$bat.css({left:bat.x});
+
+				let type = map[iLevel][bat.r][ix];
+				if(type=='^'){
+					bat.r --;
+					if(bat.r<0){
+						iLevel--;
+						bat.r = 2;
+					}
+					$(`tr[l=${iLevel}][r=${bat.r}]`).append($bat);
+
+				}
+			}
+
+			setInterval(tick,1000/50);
+		})
+	</script>
+	<style type="text/css">
+		table{
+			border-collapse: collapse;
+			width: 400px;
+			height: 250px;
+			margin: 20px;
+		}
+		tr{
+			position: relative;
+		}
+		td{
+			border: 1px dashed #999;
+			position: relative;
+			border-bottom: 5px solid black;
+			width: 40px;
+			text-align: center;
+			font-size: 40px;
+			color: blue;
+			height: 60px;
+		}
+
+		batman{
+			position: absolute;
+			display: block;
+			width: 30px;
+			height: 50px;
+			background: black;
+			bottom: 0px;
+			
+			transform: translateX(-50%);
+		}
+	</style>
+</head>
+<body>
+
+</body>
+</html>
