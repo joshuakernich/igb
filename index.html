@@ -131,7 +131,7 @@
 
 			function onMessage(str){
 				
-				 console.log(str);
+			
 				let d = str.split('|');
 
 		    	players = JSON.parse(d[0]);
@@ -159,7 +159,7 @@
 		    	
 		    	$reticule.css({left:''+sx+'%', top: ''+sy+ '%', 'background':state=='Update'?'white':'transparent'});
 
-		       console.log(players,stick);
+		      
 		    
 		       for(var p=0; p<players.length; p++){
 
@@ -190,7 +190,7 @@
 
 		       }
 
-		       console.log(players[0]);
+		     
 
 
 		       if( liveModule ){
