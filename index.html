@@ -79,7 +79,7 @@
 		        	players[i] = p;
 				}
 
-				onMessage(JSON.stringify(players)+'|Left,0,0,None');
+				onMessage(JSON.stringify(players)+'|Front,0,0,None');
 			}
 
 			$('[btn=refresh]').click(function() {
@@ -146,9 +146,9 @@
 
 		    	
 
-		    	if(stick[0]=='Left') $reticule.appendTo($('igbside').eq(0));
-		    	if(stick[0]=='Front') $reticule.appendTo($('igbside').eq(1));
-		    	if(stick[0]=='Right') $reticule.appendTo($('igbside').eq(2));
+		    	if(stick[0]=='Left') sx = sx/3;
+		    	if(stick[0]=='Front') sx = 100/3 + sx/3;
+		    	if(stick[0]=='Right') sx = 100/3*2 + sx/3;
 
 		    	let state = stick[3];
 
@@ -186,11 +186,8 @@
 
 		        	$('gbavatar').eq(p).css({left:players[p].px+'%',top:players[p].pz+'%'});
 		        	$('gbavatar').eq(p).find('gbhuman').css({height:100-players[p].py+'px'});
-	    
-
+	   
 		       }
-
-		     
 
 
 		       if( liveModule ){
@@ -257,32 +254,34 @@
 		}
 
 		cowl{
-			width: 4vw;
-			height: 2vw;
-			background: url('./bat/batman-red-fadeout.png');
+			width: 2vw;
+			height: 3.5vw;
+			background: linear-gradient(to bottom, red, transparent);
 			background-size: 12vw;
 			background-position: top center;
 			display: block;
 			position: absolute;
-			top: -1.5vw;
-			left: -2vw;
+			top: -1.25vw;
+			left: -1vw;
+			border-radius: 1vw 1vw 0vw 0vw;
 			
 		}
 
 		cape{
 			
-			width: 15vw;
+			width: 5vw;
 			height: 15vw;
-			background: url('./bat/batman-red-fadeout.png');
+			background: linear-gradient(to bottom, red, transparent);
 			background-size: 12vw;
 			background-position: center -2vw;
 
 			display: block;
 			position: absolute;
-			top: 0.4vw;
-			left: -7.5vw;
+			top: 1.25vw;
+			left: -2.5vw;
 			background-repeat: no-repeat;
 			transform-origin: top center;
+			border-radius: 2vw 2vw 0vw 0vw;
 		}
 
 		dot{
@@ -294,6 +293,21 @@
 			background: radial-gradient(transparent, transparent, var(--igb-pink), transparent, transparent);
 			border-radius: 100px;
 		}
+
+		player:nth-of-type(1) cowl, player:nth-of-type(1) cape { background: linear-gradient(to bottom, red, transparent); }
+		player:nth-of-type(2) cowl, player:nth-of-type(2) cape { background: linear-gradient(to bottom, blue, transparent); }
+		player:nth-of-type(3) cowl, player:nth-of-type(3) cape { background: linear-gradient(to bottom, green, transparent); }
+		player:nth-of-type(4) cowl, player:nth-of-type(4) cape { background: linear-gradient(to bottom, purple, transparent); }
+		player:nth-of-type(5) cowl, player:nth-of-type(5) cape { background: linear-gradient(to bottom, orange, transparent); }
+		player:nth-of-type(6) cowl, player:nth-of-type(6) cape { background: linear-gradient(to bottom, yellow, transparent); }
+		
+		player:nth-of-type(7) cowl { 
+			background: radial-gradient(transparent, red); 
+			border-radius:1vw;
+			height: 2vw;
+			top: -1vw;
+		}
+		player:nth-of-type(7) cape { display:none; }
 
 		dot[type="blue"]{
 			background: blue;
