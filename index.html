@@ -79,7 +79,7 @@
 		        	players[i] = p;
 				}
 
-				onMessage(JSON.stringify(players)+'|Front,0,0,None');
+				onMessage(JSON.stringify(players)+'|Left,0,0,None');
 			}
 
 			$('[btn=refresh]').click(function() {
@@ -137,22 +137,27 @@
 		    	players = JSON.parse(d[0]);
 
 		    	stick = d[1].split(',');
+
+
 		    	
 
-		    	let sx = (stick[1]+1)/2*100;
-		    	let sy = 100 - (stick[2]+1)/2*100;
+		    	let sx = (parseFloat(stick[1])+1)/2*100;
+		    	let sy = 100 - (parseFloat(stick[2])+1)/2*100;
 
-		    	if(stick[0]=='Left') sx = (sx/3);
-		    	if(stick[0]=='Front') sx = (100/3) + (sx/3);
-		    	if(stick[0]=='Right') sx = (100/3)*2 + (sx/3);
+		    	
+
+		    	if(stick[0]=='Left') $reticule.appendTo($('igbside').eq(0));
+		    	if(stick[0]=='Front') $reticule.appendTo($('igbside').eq(1));
+		    	if(stick[0]=='Right') $reticule.appendTo($('igbside').eq(2));
 
 		    	let state = stick[2];
 
 
 
-		    	console.log(sx,sy,{left:''+((100/3)+sx/3)+'%', top: ''+sy+ '%'});
+		    
 
-		    	$reticule.css({left:''+((100/3)+sx/3)+'%', top: ''+sy+ '%', 'background':state=='Update'?'white':'transparent'});
+		    	
+		    	$reticule.css({left:''+sx+'%', top: ''+sy+ '%', 'background':state=='Update'?'white':'transparent'});
 
 		       console.log(players,stick);
 		    
