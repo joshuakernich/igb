@@ -79,7 +79,7 @@
 		        	players[i] = p;
 				}
 
-				onMessage(JSON.stringify(players)+'|Front;(0,0);None');
+				onMessage(JSON.stringify(players)+'|Front,0,0,None');
 			}
 
 			$('[btn=refresh]').click(function() {
@@ -136,23 +136,23 @@
 
 		    	players = JSON.parse(d[0]);
 
-		    	stick = d[1].split(';');
-		    	console.log(stick[1])
-		    	stick[1] = stick[1].substr(1,stick[1].length-2).split(',');
-		    	console.log(stick[1]);
+		    	stick = d[1].split(',');
+		    	
 
-		    	let sx = (stick[1][0]+1)/2*100;
-		    	let sy = 100 - (stick[1][1]+1)/2*100;
+		    	let sx = (stick[1]+1)/2*100;
+		    	let sy = 100 - (stick[2]+1)/2*100;
 
 		    	if(stick[0]=='Left') sx = (sx/3);
 		    	if(stick[0]=='Front') sx = (100/3) + (sx/3);
 		    	if(stick[0]=='Right') sx = (100/3)*2 + (sx/3);
 
+		    	let state = stick[2];
+
 
 
 		    	console.log(sx,sy,{left:''+((100/3)+sx/3)+'%', top: ''+sy+ '%'});
 
-		    	$reticule.css({left:''+((100/3)+sx/3)+'%', top: ''+sy+ '%'});
+		    	$reticule.css({left:''+((100/3)+sx/3)+'%', top: ''+sy+ '%', 'background':state=='Update'?'white':'transparent'});
 
 		       console.log(players,stick);
 		    
