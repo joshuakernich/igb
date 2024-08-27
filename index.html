@@ -79,7 +79,7 @@
 		        	players[i] = p;
 				}
 
-				onMessage(JSON.stringify(players)+'|wxyz,input');
+				onMessage(JSON.stringify(players)+'|Front;(0,0);None');
 			}
 
 			$('[btn=refresh]').click(function() {
@@ -107,6 +107,9 @@
 				$('<cape>').appendTo($p);
 			}
 
+			let $reticule = $('<reticule>').appendTo('igb');
+
+
 			doLog('Vuplex is '+(window.vuplex?'ready':'not ready'));
 		
 			if (window.vuplex) {
@@ -124,6 +127,7 @@
 			let timeLast = 0;
 			let debounce = 1000/50;
 			let history = [];
+			let stick = ['Front',[0,0],'None'];
 
 			function onMessage(str){
 				
@@ -132,7 +136,19 @@
 
 		    	players = JSON.parse(d[0]);
 
-		    	let stick = d[1].split(',');
+		    	stick = d[1].split(';');
+		    	console.log(stick[1])
+		    	stick[1] = stick[1].substr(1,stick[1].length-2).split(',');
+		    	console.log(stick[1]);
+
+		    	let sx = (stick[1][0]+1)/2*100;
+		    	let sy = 100 - (stick[1][1]+1)/2*100;
+
+
+
+		    	console.log(sx,sy,{left:''+((100/3)+sx/3)+'%', top: ''+sy+ '%'});
+
+		    	$reticule.css({left:''+((100/3)+sx/3)+'%', top: ''+sy+ '%'});
 
 		       console.log(players,stick);
 		    
@@ -272,6 +288,17 @@
 
 		dot[type="blue"]{
 			background: blue;
+		}
+
+		reticule{
+			width: 2em;
+			height: 2em;
+			border: 0.2em solid white;
+			position: absolute;
+			transform: translate(-50%,-50%);
+			z-index: 100;
+			border-radius: 1em;
+			box-sizing: border-box;
 		}
 
 		
@@ -562,7 +589,7 @@
 		gbavatar{
 			width: 20px;
 			height: 20px;
-			background: red;
+			background: white;
 			border-radius: 10px;
 			transform: translate(-50%,-50%);
 			display: block;
@@ -580,7 +607,7 @@
 			right: 0px;
 			height: 50px;
 			
-			background: red;
+			background: white;
 			 transform-style: preserve-3d;
 			 transform-origin: center bottom;
 			 transform: rotateX(90deg);
@@ -610,6 +637,7 @@
 			<menu>
 				<gamebox>
 					<gameboxside></gameboxside><gameboxside></gameboxside><gameboxside></gameboxside><gameboxside>
+						<gbavatar><gbhuman></gbhuman></gbavatar>
 						<gbavatar><gbhuman></gbhuman></gbavatar>
 						<gbavatar><gbhuman></gbhuman></gbavatar>
 						<gbavatar><gbhuman></gbhuman></gbavatar>
