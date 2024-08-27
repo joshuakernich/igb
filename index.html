@@ -144,6 +144,10 @@
 		    	let sx = (stick[1][0]+1)/2*100;
 		    	let sy = 100 - (stick[1][1]+1)/2*100;
 
+		    	if(stick[0]=='Left') sx = (sx/3);
+		    	if(stick[0]=='Front') sx = (100/3) + (sx/3);
+		    	if(stick[0]=='Right') sx = (100/3)*2 + (sx/3);
+
 
 
 		    	console.log(sx,sy,{left:''+((100/3)+sx/3)+'%', top: ''+sy+ '%'});
