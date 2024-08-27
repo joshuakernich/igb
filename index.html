@@ -67,7 +67,7 @@
 
 			function doRandomMove(){
 				
-				for(var i=0; i<6; i++){
+				for(var i=0; i<7; i++){
 
 					let p = {
 						Id:i,
@@ -79,7 +79,7 @@
 		        	players[i] = p;
 				}
 
-				onMessage(JSON.stringify(players));
+				onMessage(JSON.stringify(players)+'|STICKDATA,wxyz,input');
 			}
 
 			$('[btn=refresh]').click(function() {
@@ -127,8 +127,13 @@
 
 			function onMessage(str){
 				
-		       players = JSON.parse(str);
-		       
+				let d = str.split('|');
+
+		    	players = JSON.parse(d[0]);
+
+		    	let stick = d[1].split(',');
+
+		       console.log(players,stick);
 		    
 		       for(var p=0; p<players.length; p++){
 
