@@ -310,10 +310,11 @@ TennisGame = function () {
 		}
 
 		let q = {W:racket.rW, X:racket.rX, Y:racket.rY, Z:racket.rZ};
-		for(var prop in racket) console.log(prop,racket[prop]);
-		console.log(q.W,q.X,q.Y,q.Z,getYaw(q),getPitch(q),getRoll(q));
+		let yaw = getYaw(q);
+		//for(var prop in racket) console.log(prop,racket[prop]);
+		//console.log(q.W,q.X,q.Y,q.Z,getYaw(q),getPitch(q),getRoll(q));
 
-		dudes[0].$racket.css({ left:racket.px/100*W + 'px', top:racket.py/100*H + 'px'});
+		dudes[0].$racket.css({ left:racket.px/100*W + 'px', top:racket.py/100*H + 'px', transform:'rotate('+yaw+'rad)'});
 	}
 
 
