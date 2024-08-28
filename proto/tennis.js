@@ -212,35 +212,11 @@ TennisGame = function () {
 				top: -rBall+'px',
 
 				'background-image':'url(proto/tennis-ball.webp)',
-				'background-size':'110%;',
+				'background-size':'120%;',
 				'border-radius':rBall+'px',
 			},
 
-			'tennisgameball':{
-				'font-size': '1.5vw',
-				'color':'white',
-				'position':'absolute',
-				'top':'0vw',
-				'right':'50%',
-				'width':'3vw',
-				'color':'white',
-				'background':'red',
-				
-				'text-align':'center',
-				'border-radius':'0px 0px 0vw 0.5vw',
-			},
-
-			'tennisgameball:last-of-type':{
-				'right':'auto',
-				'left':'50%',
-				'background':'blue',
-				'border-radius':'0px 0px 0.5vw 0vw',
-			},
-
-			'tennisgame button':{
-				'font-size':'100px',
-				'margin':'50px',
-			},
+			
 
 			'svgtennisarm':{
 				'position':'absolute',
@@ -406,7 +382,7 @@ TennisGame = function () {
 
 
 	function tickBall(ball){
-		ball.sy += 1;
+		ball.sy += 0.5;
 		ball.y += ball.sy;
 		ball.x += ball.sx;
 		ball.r += ball.sx*0.5;
@@ -456,7 +432,8 @@ TennisGame = function () {
 			let yDelta = racket.cy - history[0].cy;
 
 			let r = Math.atan2(yDelta,xDelta);
-			let v = 50;
+			let d = Math.sqrt(xDelta*xDelta+yDelta*yDelta);
+			let v = Math.max(20,Math.min(50,d));
 
 
 
