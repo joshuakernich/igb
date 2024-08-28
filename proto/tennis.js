@@ -267,19 +267,19 @@ TennisGame = function () {
     {
         let x2 = q.X * q.X;
         let y2 = q.Y * q.Y;
-        return Math.Atan2(2 * q.Y * q.W - 2 * q.Z * q.X, 1 - 2 * y2 - 2 * x2);
+        return Math.atan2(2 * q.Y * q.W - 2 * q.Z * q.X, 1 - 2 * y2 - 2 * x2);
     }
 
     function GetPitch(q)
     {
-        return -Math.Asin(2 * q.Z * q.Y + 2 * q.X * q.W);
+        return -Math.asin(2 * q.Z * q.Y + 2 * q.X * q.W);
     }
 
     function GetRoll(q)
     {
         let x2 = q.X * q.X;
         let z2 = q.Z * q.Z;
-        return -Math.Atan2(2 * q.Z * q.W - 2 * q.Y * q.X, 1 - 2 * z2 - 2 * x2);
+        return -Math.atan2(2 * q.Z * q.W - 2 * q.Y * q.X, 1 - 2 * z2 - 2 * x2);
     }
 
 	function spawnBall( x ){
