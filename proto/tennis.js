@@ -168,8 +168,8 @@ TennisDude = function(p,rDude){
 
 TennisGame = function () {
 	
-	let W = 1728;
-	let H = 1080;
+	let W = 1728*1.5;
+	let H = 1080*1.5;
 	let rBall = 40;
 	let rDude = 100;
 	let dBall = rBall*2;
