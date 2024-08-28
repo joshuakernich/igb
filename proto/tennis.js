@@ -225,6 +225,11 @@ TennisGame = function () {
 				'background':'blue',
 				'border-radius':'0px 0px 0.5vw 0vw',
 			},
+
+			'tennisgame button':{
+				'font-size':'100px',
+				'margin':'50px',
+			}
 		}
 
 		$("head").append('<style>'+Css.of(css)+'</style>');
@@ -294,6 +299,11 @@ TennisGame = function () {
 
 	spawnBall();
 
+	let prop = 'yaw';
+	$('<button>YAW</button>').appendTo($game).click(function(){ prop='yaw'; });
+	$('<button>ROLL</button>').appendTo($game).click(function(){ prop='roll'; });
+	$('<button>PITCH</button>').appendTo($game).click(function(){ prop='pitch'; });
+
 	let was = []
 	let players = [];
 	let racket = {X:0,Y:0,px:50,py:50,rW:0,rX:0,rY:0,rZ:0};
@@ -310,11 +320,13 @@ TennisGame = function () {
 		}
 
 		let q = {W:racket.rW, X:racket.rX, Y:racket.rY, Z:racket.rZ};
-		let yaw = getYaw(q);
+		racket.yaw = getYaw(q);
+		racket.roll = getYaw(q);
+		racket.pitch = getYaw(q);
 		//for(var prop in racket) console.log(prop,racket[prop]);
 		//console.log(q.W,q.X,q.Y,q.Z,getYaw(q),getPitch(q),getRoll(q));
 
-		dudes[0].$racket.css({ left:racket.px/100*W + 'px', top:racket.py/100*H + 'px', transform:'rotate('+yaw+'rad)'});
+		dudes[0].$racket.css({ left:racket.px/100*W + 'px', top:racket.py/100*H + 'px', transform:'rotate('+racket[prop]+'rad)'});
 	}
 
 
