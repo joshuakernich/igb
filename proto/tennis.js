@@ -94,6 +94,16 @@ TennisDude = function(p,rDude){
 				'top':'-450px',
 				'left':'-125px',
 
+			},
+
+			'tennisrackethead':{
+				display:'block',
+				width:dDude+'px',
+				height:dDude+'px',
+				transform:'translate(-50%,-50%)',
+				'background':'red',
+				'position':'absolute',
+				'border-radius':rDude+'px',
 			}
 		}
 
@@ -151,6 +161,7 @@ TennisDude = function(p,rDude){
 	}
 
 	self.$racket = $('<tennisracket>');
+	self.$rackethead = $('<tennisrackethead>');
 	
 }
 
@@ -273,6 +284,7 @@ TennisGame = function () {
 	for(var i=0; i<1; i++){
 		let dude = new TennisDude(i,rDude);
 		dude.$el.appendTo($game);
+		dude.$rackethead.appendTo($game);
 		dude.$arm = $(`<svg class='svgtennisarm' width=${W} height=${H}>
 				<path class='tennisArmLong' d='M150,150 L10,150'/>
 			</svg>
@@ -312,8 +324,8 @@ TennisGame = function () {
 
 		if(ball) ball.isActive = false;
 
-		let $ball = $('<ballgameball>').appendTo($game);
-		ball = {r:0,x:x?x:W/2,y:H/2,sx:0,sy:-30,$el:$ball,isActive:true};
+		let $ball = $('<tennisgameball>').appendTo($game);
+		ball = {r:0,x:x?x:Math.random()*W,y:0,sx:0,sy:0,$el:$ball,isActive:true};
 
 		balls.push(ball);
 	}
@@ -324,7 +336,7 @@ TennisGame = function () {
 	
 	let was = []
 	let players = [];
-	let racket = {X:0,Y:0,px:50,py:50,rW:0,rX:-0.25,rY:0.5,rZ:0.5};
+	let racket = {X:0,Y:0,px:40,py:50,rW:0,rX:-0.25,rY:0.5,rZ:0.5};
 	self.setPlayers = function(p){
 		was = players.length?players.concat():p;
 		if(p[6]) racket = p[6];
@@ -347,7 +359,7 @@ TennisGame = function () {
 
 		racket.py = Math.min( 75, 35 + racket.py );
 
-		dudes[0].$racket.css({ left:racket.px/100*W + 'px', top:racket.py/100*H + 'px', transform:'rotate('+racket[prop]+'rad)'});
+		dudes[0].$racket.css({ left:racket.px/100*W + 'px', top:racket.py/100*H + 'px', transform:'rotate('+racket.yaw+'rad)'});
 
 		d=`
 			M ${players[0].px/100*W + 30},${players[0].py/100*H + 130}
@@ -355,6 +367,12 @@ TennisGame = function () {
 		`
 
 		dudes[0].$arm.find('.tennisArmLong').attr('d',d);
+
+
+		racket.cx = racket.px/100*W + Math.sin(racket.yaw)*320;
+		racket.cy = racket.py/100*H - Math.cos(racket.yaw)*320;
+
+		dudes[0].$rackethead.css({ left:racket.cx + 'px', top: racket.cy + 'px' });
 	}
 
 
@@ -374,66 +392,18 @@ TennisGame = function () {
 		ball.r += ball.sx*0.5;
 
 		if(ball.isActive){
-			let isGoal = ball.y > (H-750+rBall+40);
-			let isAbove = ball.y < (H-750);
-			
-			if(ball.x>(W-rBall)){
-				
-				if(isGoal){
-					scoreRight++;
-					spawnBall();
-				}
-				else if(isAbove){
-					
-					ball.isAbove = true;
-					spawnBall();
-				} else {
-					ball.x = W-rBall;
-					ball.sx = -10;
-				}
 
-			} else if(ball.x<rBall){
-				
-				if(isGoal){
-					scoreLeft++;
-					
-					spawnBall();
-				} else if(isAbove){
-					ball.isAbove = true;
-					spawnBall();
-				} else {
-					ball.x = rBall;
-					ball.sx = 10;
-				}
-			}
+			if(ball.y>H-rBall){
+				ball.y = H-rBall
+				ball.sy = -20;
+				ball.isActive = false;
 
-			if(ball.y>(H-rBall)){
-				ball.y = H-rBall;
-				ball.sy = -40;
-			} else if(ball.y<rBall){
-				ball.y = rBall;
-				ball.sy = 1;
+				spawnBall();
 			}
 
 		} else {
 			
-			if(ball.isAbove){
-
-				if(ball.x<W*1.7 && ball.x>-W*0.7 && ball.y>(H-750-rBall+20)){
-					ball.sy = -25;
-					ball.y = H-750-rBall+20;
-				}
-
-			} else {
-				ball.sx *= 0.975;
-				if(ball.y>(H-rBall)){
-					ball.y = H-rBall;
-					ball.sy = -Math.abs(ball.sy)*0.7;
-				} else if(ball.y<(H-750+rBall+40)){
-					ball.y = H-750+rBall+40;
-					ball.sy = 1;
-				}
-			}
+			
 
 			ball.$el.css({'top':ball.y+'px',left:ball.x+'px','transform':'rotate('+ball.r+'deg)'});
 			
@@ -450,38 +420,35 @@ TennisGame = function () {
 			wWas = wScreen;
 		}
 
-		if(tickBall) for(var b in balls) tickBall(balls[b]);
+		for(var b in balls) tickBall(balls[b]);
 
-		for(var p=0; p<players.length; p++){
+		
+		let px = racket.cx;
+		let py = racket.cy;
+		let xDif = ball.x-px;
+		let yDif = ball.y-py;
 
-			let px = players[p].px/100*W;
-			let py = players[p].py/100*H;
-			let xDif = ball.x-px;
-			let yDif = ball.y-py;
+		let dist = Math.sqrt( xDif*xDif + yDif*yDif );
 
-			let dx = players[p].px - was[p].px;
-			let dy = players[p].py - was[p].py;
+		if(dist < collideDist){
+			
+			let r = Math.atan2(yDif,xDif);
+			let v = 20;
+			
+			ball.x = px + Math.cos(r) * (rBall+rDude);
+			ball.y = py + Math.sin(r) * (rBall+rDude);
 
-			let dist = Math.sqrt( xDif*xDif + yDif*yDif );
+			ball.sx = Math.cos(r) * v;
+			ball.sy = Math.sin(r) * v;
+			ball.isActive = false;
 
-			if(dist < collideDist && players[p].py < ball.y && ball.sy > 0){
-				
-				let r = Math.atan2(yDif,xDif);
-				let v = Math.sqrt(ball.sx*ball.sx + ball.sy*ball.sy);
-				if(v<minHeader) v = minHeader;
-				
-				ball.x = px + Math.cos(r) * (rBall+rDude);
-				ball.y = py + Math.sin(r) * (rBall+rDude);
-
-				ball.sx = Math.cos(r) * v;
-				ball.sy = Math.sin(r) * v;
-
-			}
-
-			//dudes[p].wiggleArms();
+			spawnBall();
 		}
 
+
 		ball.$el.css({'top':ball.y+'px',left:ball.x+'px','transform':'rotate('+ball.r+'deg)'});
+
+
 
 		$('ballgamescore').eq(1).text(scoreLeft);
 		$('ballgamescore').eq(0).text(scoreRight);
