@@ -296,10 +296,10 @@ TennisGame = function () {
 
 	let was = []
 	let players = [];
-	let racket = {X:0,Y:0,px:50,py:50};
+	let racket = {X:0,Y:0,px:50,py:50,rW:0,rX:0,rY:0,rZ:0};
 	self.setPlayers = function(p){
 		was = players.length?players.concat():p;
-		if(p.length==7) racket = p.pop();
+		if(p[5]) racket = p[5];
 		players = p;
 		players.length = 1;
 		for(var p=0; p<players.length; p++){
@@ -309,8 +309,9 @@ TennisGame = function () {
 			dudes[p].setHeight((1-players[p].py/100)*H);
 		}
 
-		let q = {w:racket.rW, x:racket.rX, y:racket.rY, z:racket.rZ};
-		console.log(q,getYaw(q),getPitch(q),getRoll(q));
+		let q = {W:racket.rW, X:racket.rX, Y:racket.rY, Z:racket.rZ};
+		for(var prop in racket) console.log(prop,racket[prop]);
+		console.log(q.W,q.X,q.Y,q.Z,getYaw(q),getPitch(q),getRoll(q));
 
 		dudes[0].$racket.css({ left:racket.px/100*W + 'px', top:racket.py/100*H + 'px'});
 	}
