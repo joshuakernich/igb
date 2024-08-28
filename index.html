@@ -7,14 +7,16 @@
 	<script type="text/javascript" src="./shared/jq.js"></script>
 
 	<script type="text/javascript" src="./I Don't Know Much/Tone.js"></script>
+
 	<script type="text/javascript" src="./proto/Css.js"></script>
+	<script type="text/javascript" src="./proto/quaternion.min.js"></script>
+
 	<script type="text/javascript" src="./proto/sequencer.js"></script>
-	<script type="text/javascript" src="./proto/aimbydelta.js"></script>
 	<script type="text/javascript" src="./proto/ballgame.js"></script>
 	<script type="text/javascript" src="./proto/invaders.js"></script>
-	<script type="text/javascript" src="./proto/roll-the-ball.js"></script>
 	<script type="text/javascript" src="./proto/pixelpaddle.js"></script>
 	<script type="text/javascript" src="./proto/Riddler.js"></script>
+	<script type="text/javascript" src="./proto/Tennis.js"></script>
 
 	<script type="text/javascript">
 		$(function () {
@@ -22,13 +24,13 @@
 			let liveModule;
 			const proto = {
 				
-				
-				//'ROLL':window.RollTheBall,
+			
 				'SEQUENCER':window.Sequencer,
 				'HEADER':window.BallGame,
 				'INVADERS':window.InvadersGame,
 				'RIDDLER':window.Riddler,
 				'PIXEL PADDLE':window.PixelPaddle,
+				'TENNIS':window.TennisGame,
 				'IGB QUIZ':"quiz IGB/index.html",
 				
 			}
@@ -131,36 +133,21 @@
 
 			function onMessage(str){
 				
-			
 				let d = str.split('|');
-
 		    	players = JSON.parse(d[0]);
-
 		    	stick = d[1].split(',');
-
-
-		    	
 
 		    	let sx = (parseFloat(stick[1])+1)/2*100;
 		    	let sy = 100 - (parseFloat(stick[2])+1)/2*100;
-
-		    	
 
 		    	if(stick[0]=='Left') sx = sx/3;
 		    	if(stick[0]=='Front') sx = 100/3 + sx/3;
 		    	if(stick[0]=='Right') sx = 100/3*2 + sx/3;
 
 		    	let state = stick[3];
-
-
-
-		    
-
 		    	
 		    	$reticule.css({left:''+sx+'%', top: ''+sy+ '%', 'background':state=='Update'?'white':'transparent'});
 
-		      
-		    
 		       for(var p=0; p<players.length; p++){
 
 		       		if(!history[p]) history[p] = [];
@@ -497,6 +484,7 @@
 			height: 100%;
 			width: 33.3%;
 			position: relative;
+			vertical-align: top;
 			
 		}
 

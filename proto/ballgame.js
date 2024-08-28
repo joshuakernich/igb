@@ -3,73 +3,79 @@ Dude = function(p,rDude){
 
 	let dDude = rDude*2;
 
-	let css = {
+	if(!Dude.didInit){
 
-		'headerdude':{
-			display:'block',
-			position:'absolute',
-			bottom: '0px',
-			left: '0px',
-		},
+		Dude.didInit = true;
+		
+		let css = {
 
-		'headerdudehead':{
-			width: dDude+'px',
-			height: dDude*1.2+'px',
-			display:'block',
-			position:'absolute',
-			left: -rDude+'px',
-			top: -rDude+'px',
-			background: 'white',
-			'border-radius': rDude+'px',
-			'background-image':'url(https://www.pngall.com/wp-content/uploads/14/Anime-Face-PNG-Images-HD.png)',
-			'background-size':'50%',
-			'background-position':'center 130px',
-			'background-repeat':'no-repeat',
-		},
+			'headerdude':{
+				display:'block',
+				position:'absolute',
+				bottom: '0px',
+				left: '0px',
+			},
 
-		'headerdudehead:after':{
-			content: '""',
-			display:'block',
-			position: 'absolute',
-			left: '0px',
-			right: '0px',
-			top: '70px',
-			width: dDude+'px',
-			background: 'red',
-			height: '40px',
+			'headerdudehead':{
+				width: dDude+'px',
+				height: dDude*1.2+'px',
+				display:'block',
+				position:'absolute',
+				left: -rDude+'px',
+				top: -rDude+'px',
+				background: 'white',
+				'border-radius': rDude+'px',
+				'background-image':'url(https://www.pngall.com/wp-content/uploads/14/Anime-Face-PNG-Images-HD.png)',
+				'background-size':'50%',
+				'background-position':'center 130px',
+				'background-repeat':'no-repeat',
+			},
 
-		},
+			'headerdudehead:after':{
+				content: '""',
+				display:'block',
+				position: 'absolute',
+				left: '0px',
+				right: '0px',
+				top: '70px',
+				width: dDude+'px',
+				background: 'red',
+				height: '40px',
 
-		'headerdude:last-of-type headerdudehead:after':{
-			background: 'blue',
-		},
+			},
 
-		'headerdudebody':{
-			display:'block',
-			position:'absolute',
-			width: '80px',
-			left: '-40px',
-			height: '135px',
-			background: 'linear-gradient(to bottom, #ddd, white)',
+			'headerdude:last-of-type headerdudehead:after':{
+				background: 'blue',
+			},
 
-			top: '100px',
-			'border-radius':'20px',
+			'headerdudebody':{
+				display:'block',
+				position:'absolute',
+				width: '80px',
+				left: '-40px',
+				height: '135px',
+				background: 'linear-gradient(to bottom, #ddd, white)',
 
-		},
+				top: '100px',
+				'border-radius':'20px',
 
-		'headerdude svg':{
-			display:'block',
-			position:'absolute',
-			top: '0px',
-			left: '-150px',
-			'stroke-width':'20px',
-			'stroke-linecap':'round',
-			'stroke':'white',
-			'fill':'none',
-		},
+			},
+
+			'headerdude svg':{
+				display:'block',
+				position:'absolute',
+				top: '0px',
+				left: '-150px',
+				'stroke-width':'20px',
+				'stroke-linecap':'round',
+				'stroke':'white',
+				'fill':'none',
+			},
+		}
+
+		$("head").append('<style>'+Css.of(css)+'</style>');
+
 	}
-
-	$("head").append('<style>'+Css.of(css)+'</style>');
 
 	let self = this;
 	self.$el = $(`
