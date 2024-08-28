@@ -263,19 +263,19 @@ TennisGame = function () {
 	let ball;
 	
 
-	function GetYaw(q)
+	function getYaw(q)
     {
         let x2 = q.X * q.X;
         let y2 = q.Y * q.Y;
         return Math.atan2(2 * q.Y * q.W - 2 * q.Z * q.X, 1 - 2 * y2 - 2 * x2);
     }
 
-    function GetPitch(q)
+    function getPitch(q)
     {
         return -Math.asin(2 * q.Z * q.Y + 2 * q.X * q.W);
     }
 
-    function GetRoll(q)
+    function getRoll(q)
     {
         let x2 = q.X * q.X;
         let z2 = q.Z * q.Z;
@@ -310,7 +310,7 @@ TennisGame = function () {
 		}
 
 		let q = {w:racket.rW, x:racket.rX, y:racket.rY, z:racket.rZ};
-		console.log(GetYaw(q),GetPitch(q),getRoll(q));
+		console.log(q,getYaw(q),getPitch(q),getRoll(q));
 
 		dudes[0].$racket.css({ left:racket.px/100*W + 'px', top:racket.py/100*H + 'px'});
 	}
