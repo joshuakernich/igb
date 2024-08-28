@@ -182,6 +182,13 @@ TennisGame = function () {
 		TennisGame.didInit = true;
 
 		let css = {
+			'.tennisbg':{
+				'background-image':'url(https://static.vecteezy.com/system/resources/thumbnails/028/636/551/small_2x/view-of-a-tennis-court-with-light-from-the-spotlights-over-dark-background-photo.jpg)',
+				'background-size':'100%',
+				'background-position-x':'center',
+				'background-position-y':'center',
+			},
+
 			'tennisgame':{
 				display:'block',
 				position:'relative',
@@ -309,7 +316,7 @@ TennisGame = function () {
 
 		ball = {
 			r:0,
-			x:W/2 + Math.cos(r)*dist,
+			x:W/2 + Math.cos(r)*dist*1.5,
 			y:H/2 + Math.sin(r)*dist,
 			sx:-Math.cos(r)*dist*0.02,
 			sy:-Math.sin(r)*dist*0.02-15,
