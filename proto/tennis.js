@@ -261,6 +261,8 @@ TennisGame = function () {
 		self.setPlayers([
 			{px:e.offsetX/W*100 - 10,py:e.offsetY/W*100},
 			{px:e.offsetX/W*100 + 10,py:e.offsetY/W*100},
+			{},{},{},{},
+			{px:e.offsetX/W*100 + 0,py:e.offsetY/W*100 - 5, rW:0,rX:-0.25,rY:0.5,rZ:0.5},
 			]);
 	})
 
@@ -274,8 +276,6 @@ TennisGame = function () {
 			</svg>
 		`).appendTo($game);
 		dude.$racket.appendTo($game);
-
-		
 
 		dudes[i] = dude;
 	}
@@ -352,8 +352,6 @@ TennisGame = function () {
 		racket.yaw = getYaw(q);
 		racket.roll = getRoll(q);
 		racket.pitch = getPitch(q);
-		//for(var prop in racket) console.log(prop,racket[prop]);
-		//console.log(q.W,q.X,q.Y,q.Z,getYaw(q),getPitch(q),getRoll(q));
 
 		racket.py = Math.min( 75, 35 + racket.py );
 
@@ -373,12 +371,8 @@ TennisGame = function () {
 		history.push({cx:racket.cx,cy:racket.cy});
 		while(history.length>20) history.shift();
 
-		
-
 		dudes[0].$rackethead.css({ left:racket.cx + 'px', top: racket.cy + 'px' });
 	}
-
-
 
 	let collideDist = rDude+rBall;
 	let wWas = 0;
@@ -406,8 +400,6 @@ TennisGame = function () {
 
 		} else {
 			
-			
-
 			ball.$el.css({'top':ball.y+'px',left:ball.x+'px','transform':'rotate('+ball.r+'deg)'});
 			
 		}
@@ -440,24 +432,19 @@ TennisGame = function () {
 
 			let r = Math.atan2(yDelta,xDelta);
 			let d = Math.sqrt(xDelta*xDelta+yDelta*yDelta);
-			let v = Math.max(20,Math.min(50,d));
-
-
-
-			
-			//ball.x = px + Math.cos(r) * (rBall+rDude);
-			//ball.y = py + Math.sin(r) * (rBall+rDude);
+			let v = Math.max(20,Math.min(100,d*0.2));
 
 			ball.sx = Math.cos(r) * v;
 			ball.sy = Math.sin(r) * v;
 			ball.isActive = false;
+
+			
 
 			spawnBall();
 		}
 
 
 		ball.$el.css({'top':ball.y+'px',left:ball.x+'px','transform':'rotate('+ball.r+'deg)'});
-
 
 
 		$('ballgamescore').eq(1).text(scoreLeft);
