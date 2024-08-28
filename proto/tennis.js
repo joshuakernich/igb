@@ -104,6 +104,7 @@ TennisDude = function(p,rDude){
 				'background':'red',
 				'position':'absolute',
 				'border-radius':rDude+'px',
+				'opacity':'0.1',
 			}
 		}
 
@@ -169,7 +170,7 @@ TennisGame = function () {
 	
 	let W = 1728;
 	let H = 1080;
-	let rBall = 70;
+	let rBall = 40;
 	let rDude = 100;
 	let dBall = rBall*2;
 	let dDude = rDude*2;
@@ -210,9 +211,9 @@ TennisGame = function () {
 				left: -rBall+'px',
 				top: -rBall+'px',
 
-				'background':'url(proto/football.png)',
-				'background-size':'100%',
-				'border-radius':'0px',
+				'background-image':'url(proto/tennis-ball.webp)',
+				'background-size':'110%;',
+				'border-radius':rBall+'px',
 			},
 
 			'tennisgameball':{
@@ -320,12 +321,24 @@ TennisGame = function () {
         return -Math.atan2(2 * q.Z * q.W - 2 * q.Y * q.X, 1 - 2 * z2 - 2 * x2);
     }
 
-	function spawnBall( x ){
+	function spawnBall( ){
 
 		if(ball) ball.isActive = false;
 
 		let $ball = $('<tennisgameball>').appendTo($game);
-		ball = {r:0,x:x?x:Math.random()*W,y:0,sx:0,sy:0,$el:$ball,isActive:true};
+
+		let r = -Math.random() * Math.PI;
+
+		let dist = W/2;
+
+		ball = {
+			r:0,
+			x:W/2 + Math.cos(r)*dist,
+			y:H/2 + Math.sin(r)*dist,
+			sx:-Math.cos(r)*dist*0.02,
+			sy:-Math.sin(r)*dist*0.02-15,
+			$el:$ball,
+			isActive:true};
 
 		balls.push(ball);
 	}
@@ -337,6 +350,8 @@ TennisGame = function () {
 	let was = []
 	let players = [];
 	let racket = {X:0,Y:0,px:40,py:50,rW:0,rX:-0.25,rY:0.5,rZ:0.5};
+	let history = [];
+
 	self.setPlayers = function(p){
 		was = players.length?players.concat():p;
 		if(p[6]) racket = p[6];
@@ -371,6 +386,11 @@ TennisGame = function () {
 
 		racket.cx = racket.px/100*W + Math.sin(racket.yaw)*320;
 		racket.cy = racket.py/100*H - Math.cos(racket.yaw)*320;
+
+		history.push({cx:racket.cx,cy:racket.cy});
+		while(history.length>20) history.shift();
+
+		
 
 		dudes[0].$rackethead.css({ left:racket.cx + 'px', top: racket.cy + 'px' });
 	}
@@ -432,11 +452,17 @@ TennisGame = function () {
 
 		if(dist < collideDist){
 			
-			let r = Math.atan2(yDif,xDif);
-			let v = 20;
+			let xDelta = racket.cx - history[0].cx;
+			let yDelta = racket.cy - history[0].cy;
+
+			let r = Math.atan2(yDelta,xDelta);
+			let v = 50;
+
+
+
 			
-			ball.x = px + Math.cos(r) * (rBall+rDude);
-			ball.y = py + Math.sin(r) * (rBall+rDude);
+			//ball.x = px + Math.cos(r) * (rBall+rDude);
+			//ball.y = py + Math.sin(r) * (rBall+rDude);
 
 			ball.sx = Math.cos(r) * v;
 			ball.sy = Math.sin(r) * v;
