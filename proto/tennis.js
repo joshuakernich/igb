@@ -115,7 +115,7 @@ TennisDude = function(p,rDude){
 	let self = this;
 	self.$el = $(`
 			<tennisdude>
-				<svg width=300 height=600>
+				<svg width=300 height=1000>
 					
 					<path class='tennisArm' d='M110,150 L50,200 L100,220'/>
 					<path class='tennisArm' d=''/>
@@ -138,7 +138,7 @@ TennisDude = function(p,rDude){
 	self.setHeight = function (h) {
 
 		let legLength = h - 220;
-		let legBow = Math.max(0,150 - legLength);
+		let legBow = Math.max(0,350 - legLength);
 
 		let dLeft = 'M120 220 Q'+(120-legBow)+' '+(220+legLength/2)+', 120 '+(220+legLength);
 		let dRight = 'M180 220 Q'+(180+legBow)+' '+(220+legLength/2)+', 180 '+(220+legLength);
