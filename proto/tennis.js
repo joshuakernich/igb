@@ -324,7 +324,7 @@ TennisGame = function () {
 	
 	let was = []
 	let players = [];
-	let racket = {X:0,Y:0,px:50,py:50,rW:0,rX:0,rY:0,rZ:0};
+	let racket = {X:0,Y:0,px:50,py:50,rW:0,rX:-0.25,rY:0.5,rZ:0.5};
 	self.setPlayers = function(p){
 		was = players.length?players.concat():p;
 		if(p[6]) racket = p[6];
@@ -350,7 +350,7 @@ TennisGame = function () {
 		dudes[0].$racket.css({ left:racket.px/100*W + 'px', top:racket.py/100*H + 'px', transform:'rotate('+racket[prop]+'rad)'});
 
 		d=`
-			M ${players[0].px/100*W},${players[0].py/100*H + 150}
+			M ${players[0].px/100*W + 30},${players[0].py/100*H + 130}
 			L ${racket.px/100*W},${racket.py/100*H}
 		`
 
