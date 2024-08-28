@@ -44,7 +44,7 @@ TennisDude = function(p,rDude){
 
 			},
 
-			'tennisdude:last-of-type tennisdudehead:after':{
+			'tennisdude:nth-of-type(2) tennisdudehead:after':{
 				background: 'blue',
 			},
 
@@ -106,8 +106,8 @@ TennisDude = function(p,rDude){
 			<tennisdude>
 				<svg width=300 height=600>
 					
-					<path class='tennisArm' d='M150,150 L10,150'/>
-					<path class='tennisArm' d='M150,150 L290,150'/>
+					<path class='tennisArm' d='M110,150 L50,200 L100,220'/>
+					<path class='tennisArm' d=''/>
 					<path class='tennisleg' d='M120,220 L120,500'/>
 					<path class='tennisleg' d='M180,220 L180,500'/>
 				</svg>
@@ -150,9 +150,8 @@ TennisDude = function(p,rDude){
 		self.$el.find('.tennisArm').eq(1).attr('d',dRight);
 	}
 
-	self.$racket = $('<tennisracket>')
-
-
+	self.$racket = $('<tennisracket>');
+	
 }
 
 TennisGame = function () {
@@ -229,6 +228,21 @@ TennisGame = function () {
 			'tennisgame button':{
 				'font-size':'100px',
 				'margin':'50px',
+			},
+
+			'svgtennisarm':{
+				'position':'absolute',
+				'top':'0px',
+				'left':'0px',
+
+				
+			},
+
+			'.tennisArmLong':{
+				'stroke-width':'20px',
+				'stroke-linecap':'round',
+				'stroke':'white',
+				'fill':'none',
 			}
 		}
 
@@ -259,7 +273,14 @@ TennisGame = function () {
 	for(var i=0; i<1; i++){
 		let dude = new TennisDude(i,rDude);
 		dude.$el.appendTo($game);
+		dude.$arm = $(`<svg class='svgtennisarm' width=${W} height=${H}>
+				<path class='tennisArmLong' d='M150,150 L10,150'/>
+			</svg>
+		`).appendTo($game);
 		dude.$racket.appendTo($game);
+
+		
+
 		dudes[i] = dude;
 	}
 	
@@ -300,10 +321,7 @@ TennisGame = function () {
 	spawnBall();
 
 	let prop = 'yaw';
-	$('<button>YAW</button>').appendTo($game).click(function(){ prop='yaw'; });
-	$('<button>ROLL</button>').appendTo($game).click(function(){ prop='roll'; });
-	$('<button>PITCH</button>').appendTo($game).click(function(){ prop='pitch'; });
-
+	
 	let was = []
 	let players = [];
 	let racket = {X:0,Y:0,px:50,py:50,rW:0,rX:0,rY:0,rZ:0};
@@ -320,13 +338,23 @@ TennisGame = function () {
 		}
 
 		let q = {W:racket.rW, X:racket.rX, Y:racket.rY, Z:racket.rZ};
+
 		racket.yaw = getYaw(q);
-		racket.roll = getYaw(q);
-		racket.pitch = getYaw(q);
+		racket.roll = getRoll(q);
+		racket.pitch = getPitch(q);
 		//for(var prop in racket) console.log(prop,racket[prop]);
 		//console.log(q.W,q.X,q.Y,q.Z,getYaw(q),getPitch(q),getRoll(q));
 
+		racket.py = Math.min( 75, 35 + racket.py );
+
 		dudes[0].$racket.css({ left:racket.px/100*W + 'px', top:racket.py/100*H + 'px', transform:'rotate('+racket[prop]+'rad)'});
+
+		d=`
+			M ${players[0].px/100*W},${players[0].py/100*H + 150}
+			L ${racket.px/100*W},${racket.py/100*H}
+		`
+
+		dudes[0].$arm.find('.tennisArmLong').attr('d',d);
 	}
 
 
