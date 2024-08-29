@@ -177,6 +177,21 @@ TennisGame = function () {
 	let minHeader = 20;
 	let fps = 50;	
 
+	let iQueue = 0;
+	let queue = [
+		[0],
+		[1],
+		[0,0.05],
+		[1,0.95],
+		[0,0.05,0.1],
+		[1,0.95,0.9],
+		[0],[0.1],[0.2],[0,0.2],
+		[1],[0.9],[0.8],[1,0.8],
+		[0,0.1,0.2,0.3],
+		[1,0.9,0.8,0.7],
+		[1,0.9,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1,0],
+	]
+
 	if(!TennisGame.didInit){
 
 		TennisGame.didInit = true;
@@ -225,7 +240,7 @@ TennisGame = function () {
 
 			
 
-			'svgtennisarm':{
+			'.tennisSVG':{
 				'position':'absolute',
 				'top':'0px',
 				'left':'0px',
@@ -271,7 +286,7 @@ TennisGame = function () {
 		let dude = new TennisDude(i,rDude);
 		dude.$el.appendTo($game);
 		dude.$rackethead.appendTo($game);
-		dude.$arm = $(`<svg class='svgtennisarm' width=${W} height=${H}>
+		dude.$arm = $(`<svg class='tennisSVG' width=${W} height=${H}>
 				<path class='tennisArmLong' d='M150,150 L10,150'/>
 			</svg>
 		`).appendTo($game);
@@ -304,29 +319,38 @@ TennisGame = function () {
         return -Math.atan2(2 * q.Z * q.W - 2 * q.Y * q.X, 1 - 2 * z2 - 2 * x2);
     }
 
-	function spawnBall( ){
+	function spawnBalls( ){
 
-		if(ball) ball.isActive = false;
 
+
+		for(var i in queue[iQueue%queue.length]) makeBall(queue[iQueue%queue.length][i]);
+
+		iQueue++;
+	}
+
+	function makeBall( pos ){
 		let $ball = $('<tennisgameball>').appendTo($game);
 
-		let r = -Math.random() * Math.PI;
+		//let r = -Math.random() * Math.PI;
+		let r = -Math.PI + Math.PI*pos;
 
 		let dist = W/2;
 
+		let x = Math.cos(r)*dist*1.5;
+
 		ball = {
 			r:0,
-			x:W/2 + Math.cos(r)*dist*1.5,
+			x:W/2 + x,
 			y:H/2 + Math.sin(r)*dist,
-			sx:-Math.cos(r)*dist*0.02,
-			sy:-Math.sin(r)*dist*0.02-15,
+			sx:-x*0.02,
+			sy:-5,
 			$el:$ball,
 			isActive:true};
 
 		balls.push(ball);
 	}
 
-	spawnBall();
+	spawnBalls();
 
 	let prop = 'yaw';
 	
@@ -395,14 +419,40 @@ TennisGame = function () {
 				ball.sy = -20;
 				ball.isActive = false;
 
-				spawnBall();
+				//spawnBall();
+			} else {
+				let px = racket.cx;
+				let py = racket.cy;
+				let xDif = ball.x-px;
+				let yDif = ball.y-py;
+
+				let dist = Math.sqrt( xDif*xDif + yDif*yDif );
+
+				if(dist < collideDist){
+					
+					let xDelta = racket.cx - history[0].cx;
+					let yDelta = racket.cy - history[0].cy;
+
+					let r = Math.atan2(yDelta,xDelta);
+					let d = Math.sqrt(xDelta*xDelta+yDelta*yDelta);
+					let v = Math.max(20,Math.min(100,d*0.2));
+
+					ball.sx = Math.cos(r) * v;
+					ball.sy = Math.sin(r) * v;
+					ball.isActive = false;
+
+
+					//spawnBall();
+				}
+
+
+				ball.$el.css({'top':ball.y+'px',left:ball.x+'px','transform':'rotate('+ball.r+'deg)'});
 			}
 
-		} else {
-			
-			ball.$el.css({'top':ball.y+'px',left:ball.x+'px','transform':'rotate('+ball.r+'deg)'});
-			
-		}
+		} 
+		
+		ball.$el.css({'top':ball.y+'px',left:ball.x+'px','transform':'rotate('+ball.r+'deg)'});
+		
 	}
 
 	function tick(){
@@ -415,36 +465,14 @@ TennisGame = function () {
 			wWas = wScreen;
 		}
 
-		for(var b in balls) tickBall(balls[b]);
+		let hasActiveBall = false;
 
-		
-		let px = racket.cx;
-		let py = racket.cy;
-		let xDif = ball.x-px;
-		let yDif = ball.y-py;
-
-		let dist = Math.sqrt( xDif*xDif + yDif*yDif );
-
-		if(dist < collideDist){
-			
-			let xDelta = racket.cx - history[0].cx;
-			let yDelta = racket.cy - history[0].cy;
-
-			let r = Math.atan2(yDelta,xDelta);
-			let d = Math.sqrt(xDelta*xDelta+yDelta*yDelta);
-			let v = Math.max(20,Math.min(100,d*0.2));
-
-			ball.sx = Math.cos(r) * v;
-			ball.sy = Math.sin(r) * v;
-			ball.isActive = false;
-
-			
-
-			spawnBall();
+		for(var b in balls){
+			tickBall(balls[b]);
+			if(balls[b].isActive) hasActiveBall = true;
 		}
 
-
-		ball.$el.css({'top':ball.y+'px',left:ball.x+'px','transform':'rotate('+ball.r+'deg)'});
+		if(!hasActiveBall) spawnBalls();
 
 
 		$('ballgamescore').eq(1).text(scoreLeft);
