@@ -286,6 +286,33 @@ GoalieGame = function () {
 				'background':'black',
 				'transform':'translate(-50%,-50%)',
 				'opacity':0.2,
+			},
+
+			'goaliepulse':{
+				"display":"block",
+				"position":"absolute",
+				"width":(dBall+20)+"px",
+				"height":(dBall+20)+"px",
+				"border":'20px solid yellow',
+				"border-radius":'100%',
+				"transform":"translate(-50%,-50%)",
+				
+				"box-sizing":'border-box'
+			},
+
+			'goaliegame h1':{
+				'position':'absolute',
+				'top':'0px',
+				'left':'0px',
+				'right':'0px',
+				'bottom':'0px',
+				'line-height':'600px',
+				'font-size':'100px',
+				'padding':'0px',
+				'margin':'0px',
+				'text-align':'center',
+				'color':'white',
+
 			}
 		}
 
@@ -303,6 +330,8 @@ GoalieGame = function () {
 	let $game = $('<goaliegame>').appendTo($center);
 
 	$('<goaliegoal>').appendTo($game);
+
+	let $h = $('<h1>').appendTo($game);
 
 	$('<goaliegamescore>').appendTo($game).text('0');
 	$('<goaliegamescore>').appendTo($game).text('0');
@@ -363,6 +392,7 @@ GoalieGame = function () {
 		ball = {
 			r:0,
 			x:x,
+			
 			elevation: H-y,
 			curve: -500 + Math.random()* 1000,
 			depth: 100,
@@ -415,6 +445,8 @@ GoalieGame = function () {
 	let scoreLeft = 0;
 	let scoreRight = 0;
 
+	let combo = 0;
+
 
 	function tickBall(ball){
 		ball.depth --;
@@ -422,67 +454,95 @@ GoalieGame = function () {
 		//ball.x += ball.sx;
 		ball.r += ball.sx*0.5;
 
-		if(ball.isActive){
-
-			if(ball.depth==0){
-				ball.isActive = false;
-			}
-
-			if(ball.y>H-rBall){
-				ball.y = H-rBall
-				ball.sy = -20;
-				ball.isActive = false;
-
-				//spawnBall();
-			} else {
-				
-				/*let px = players[0].px;
-				let py = players[0].py;
-				let xDif = ball.x-px;
-				let yDif = ball.y-py;
-
-				let dist = Math.sqrt( xDif*xDif + yDif*yDif );
-
-				if(dist < collideDist){
-					
-					ball.isActive = false;
-
-
-
-					//spawnBall();
-				}*/
-
-				
-			}
-
-		} 
-
-		
-		
 		let scale = 0.2 + (100-ball.depth)/100*0.8;
-		let o = ball.depth>0?1:1+ball.depth/10;
+		//let o = ball.depth>0?1:1+ball.depth/10;
+		let o = ball.depth>0?1:0;
 
-		let p = Math.min( 1, 1-(ball.depth/100));
+		let p = 1-(ball.depth/100);
 
 		let pCurve = Math.sin(p*Math.PI)*1;
 		let pHeight = p + pCurve;
 
 
 
-			//'transform':'rotate('+ball.r+'deg), scale('+scale+')'
-		ball.$el.css({
-			'top':(H-ground-rBall-(ball.elevation-ground-rBall)*pHeight)+'px',
-			'left':(ball.x+pCurve*ball.curve)+'px',
-			'transform':'scale('+scale+')',
-			'opacity':o,
-		});
+		if(ball.isActive){
+
+			if(ball.depth==0){
+				ball.isActive = false;
+
+				let dx = ball.x - players[0].px/100*W;
+				let dy = (H-ball.elevation) - players[0].py/100*H;
+
+				let d = Math.sqrt(dx*dx+dy*dy);
+				let isCaught = d<(rBall+rDude);
+
+				
+				$('<goaliepulse>').css({
+					left:ball.x+'px',
+					top:H-ball.elevation+'px',
+				}).prependTo($game).animate({width:'300px',height:'300px',opacity:0},400);
+
+				$('<goaliepulse>').css({
+					left:ball.x+'px',
+					top:H-ball.elevation+'px',
+				}).prependTo($game).animate({width:'350px',height:'350px',opacity:0},300);
+
+				$('<goaliepulse>').css({
+					left:ball.x+'px',
+					top:H-ball.elevation+'px',
+					width:'200px',height:'200px',
+				}).prependTo($game).animate({width:'350px',height:'350px',opacity:0},700);
+
+				ball.$el.remove();
+				ball.$shadow.remove();
+
+				if(isCaught){
+					ball.$el
+					.css({top:'0px',left:'0px'})
+					.prependTo(dudes[0].$hands)
+					.animate({top:'0px'},{complete:function(){
+						ball.$el.remove();
+						$h.text('');
+					}});
+
+					combo++;
+					$h.text('COMBO +'+combo);
+
+				} else{
+
+					combo=0;
+					$h.text('MISS!');
+				}
+
+
+				
+			} else {
+
+				ball.$el.css({
+					'top':(H-ground-rBall-(ball.elevation-ground-rBall)*pHeight)+'px',
+					'left':(ball.x+pCurve*ball.curve)+'px',
+					'transform':'scale('+scale+')',
+					'opacity':o,
+				});
+				
+				ball.$shadow.css({
+					'top':(H-ball.depth-50)+'px',
+					'left':ball.x+'px',
+					'transform':'scale('+scale+')',
+					'opacity':o,
+				});
+			}
+
+		} 
+
 		
-		ball.$shadow.css({
-			'top':(H-ball.depth-50)+'px',
-			'left':ball.x+'px',
-			'transform':'scale('+scale+')',
-			'opacity':o,
-		});
+		
+		
+
+
+
+			//'transform':'rotate('+ball.r+'deg), scale('+scale+')'
+		
 	}
 
 	function tick(){

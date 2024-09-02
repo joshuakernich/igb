@@ -253,6 +253,33 @@ TennisGame = function () {
 				'stroke-linecap':'round',
 				'stroke':'white',
 				'fill':'none',
+			},
+
+			'tennispulse':{
+				"display":"block",
+				"position":"absolute",
+				"width":(dBall+20)+"px",
+				"height":(dBall+20)+"px",
+				"border":'20px solid yellow',
+				"border-radius":'100%',
+				"transform":"translate(-50%,-50%)",
+				
+				"box-sizing":'border-box'
+			},
+
+			'tennisgame h1':{
+				'position':'absolute',
+				'top':'0px',
+				'left':'0px',
+				'right':'0px',
+				'bottom':'0px',
+				'line-height':'600px',
+				'font-size':'100px',
+				'padding':'0px',
+				'margin':'0px',
+				'text-align':'center',
+				'color':'white',
+
 			}
 		}
 
@@ -267,6 +294,8 @@ TennisGame = function () {
 	let $right = $('<igbside>').appendTo(self.$el);
 	
 	let $game = $('<tennisgame>').appendTo($center);
+
+	let $h = $('<h1>').appendTo($game);
 
 	$('<tennisgamescore>').appendTo($game).text('0');
 	$('<tennisgamescore>').appendTo($game).text('0');
@@ -404,6 +433,7 @@ TennisGame = function () {
 
 	let scoreLeft = 0;
 	let scoreRight = 0;
+	let combo = 0;
 
 
 	function tickBall(ball){
@@ -418,6 +448,10 @@ TennisGame = function () {
 				ball.y = H-rBall
 				ball.sy = -20;
 				ball.isActive = false;
+
+				combo = 0;
+
+				$h.text('MISS');
 
 				//spawnBall();
 			} else {
@@ -442,7 +476,24 @@ TennisGame = function () {
 					ball.isActive = false;
 
 
-					//spawnBall();
+					$('<tennispulse>').css({
+						left:ball.x+'px',
+						top:ball.y+'px',
+					}).prependTo($game).animate({width:'300px',height:'300px',opacity:0},400);
+
+					$('<tennispulse>').css({
+						left:ball.x+'px',
+						top:ball.y+'px',
+					}).prependTo($game).animate({width:'350px',height:'350px',opacity:0},300);
+
+					$('<tennispulse>').css({
+						left:ball.x+'px',
+						top:ball.y+'px',
+						width:'200px',height:'200px',
+					}).prependTo($game).animate({width:'350px',height:'350px',opacity:0},700);
+
+					combo++;
+					$h.text('COMBO +'+combo);
 				}
 
 
