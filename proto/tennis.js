@@ -350,7 +350,7 @@ TennisGame = function () {
 
 	function spawnBalls( ){
 
-
+		isSpawnPending = false;
 
 		for(var i in queue[iQueue%queue.length]) makeBall(queue[iQueue%queue.length][i]);
 
@@ -371,14 +371,15 @@ TennisGame = function () {
 			r:0,
 			x:W/2 + x,
 			y:H/2 + Math.sin(r)*dist,
-			sx:-x*0.02,
-			sy:-5,
+			sx:-x*0.015,
+			sy:-10,
 			$el:$ball,
 			isActive:true};
 
 		balls.push(ball);
 	}
 
+	let isSpawnPending = false;
 	spawnBalls();
 
 	let prop = 'yaw';
@@ -387,6 +388,7 @@ TennisGame = function () {
 	let players = [];
 	let racket = {X:0,Y:0,px:40,py:50,rW:0,rX:-0.25,rY:0.5,rZ:0.5};
 	let history = [];
+
 
 	self.setPlayers = function(p){
 		was = players.length?players.concat():p;
@@ -506,6 +508,7 @@ TennisGame = function () {
 		
 	}
 
+	
 	function tick(){
 
 		nTick++;
@@ -523,7 +526,11 @@ TennisGame = function () {
 			if(balls[b].isActive) hasActiveBall = true;
 		}
 
-		if(!hasActiveBall) spawnBalls();
+		if(!hasActiveBall && !isSpawnPending){
+			isSpawnPending = true;
+			setTimeout(spawnBalls,1000);
+			//spawnBalls();
+		}
 
 
 		$('ballgamescore').eq(1).text(scoreLeft);
