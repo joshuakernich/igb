@@ -419,7 +419,11 @@ GoalieGame = function () {
 		players = p;
 		players.length = 1;
 		for(var p=0; p<players.length; p++){
-			let pyHead = Math.min( 75, 35 + players[p].py );
+			
+			let pyHead = Math.min( 75, 40 + players[p].py );
+			
+			players[p].py = players[p].py + 20;
+
 			dudes[p].setX(players[p].px/100*W);
 			dudes[p].setY(pyHead/100*H);
 			dudes[p].setHeight((1-pyHead/100)*H);
