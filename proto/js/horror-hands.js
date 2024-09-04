@@ -34,7 +34,7 @@ HorrorHands = function(){
 			
 			width: '15vw',
 
-			'background-image':'url(./proto/walk-animated.gif)',
+			'background-image':'url(./proto/img/walk-animated.gif)',
 			'background-size':'100%',
 			'background-repeat':'no-repeat',
 			'background-position-y':'bottom',

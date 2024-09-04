@@ -90,7 +90,7 @@ GoalieDude = function(p,rDude){
 				'width':'250px',
 				'height':'160px',
 				
-				'background-image':'url(proto/football-gloves.png)',
+				'background-image':'url(proto/img/football-gloves.png)',
 				'background-size':'100%',
 				'position':'absolute',
 				'transform':'translate(-50%, -50%)'
@@ -199,7 +199,7 @@ GoalieGame = function () {
 
 		let css = {
 			'.goaliebg':{
-				'background-image':'url(proto/bg-stadium.webp)',
+				'background-image':'url(proto/img/bg-stadium.webp)',
 				'background-size':'100%',
 				'background-position':'center',
 			},
@@ -232,7 +232,7 @@ GoalieGame = function () {
 				left: -rBall+'px',
 				top: -rBall+'px',
 
-				'background-image':'url(proto/football.png)',
+				'background-image':'url(proto/img/football.png)',
 				'background-size':'100%;',
 				'border-radius':rBall+'px',
 			},
@@ -261,7 +261,7 @@ GoalieGame = function () {
 				'left':'-100%',
 				'right':'-100%',
 				'bottom':'0px',
-				'background-image':'url(proto/goal-inside.png)',
+				'background-image':'url(proto/img/goal-inside.png)',
 				'background-size':'100%',
 
 			},
@@ -538,15 +538,6 @@ GoalieGame = function () {
 			}
 
 		} 
-
-		
-		
-		
-
-
-
-			//'transform':'rotate('+ball.r+'deg), scale('+scale+')'
-		
 	}
 
 	function tick(){

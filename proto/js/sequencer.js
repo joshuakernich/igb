@@ -13,7 +13,7 @@ window.Sequencer = function(){
 	self.$el = $('<igb>');
 
 	let $music = $(`<audio autoplay loop>
-		<source src="proto/sci-fi-ambient-music-183269.mp3" type="audio/mpeg">
+		<source src="proto/audio/sci-fi-ambient-music-183269.mp3" type="audio/mpeg">
 	</audio>`).appendTo(self.$el);
 
 	let isOn = false;

@@ -23,7 +23,7 @@ let css = {
 	},
 
 	'.riddler igbside':{
-		'background-image':'url(./proto/riddler-bg.png)',
+		'background-image':'url(./proto/img/riddler-bg.png)',
 		'background-size':'100%',
 		'background-position':'center',
 		'transform-style': 'preserve-3d',

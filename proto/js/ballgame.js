@@ -170,20 +170,20 @@ BallGame = function () {
 			left: -rBall+'px',
 			top: -rBall+'px',
 
-			'background':'url(proto/football.png)',
+			'background':'url(proto/img/football.png)',
 			'background-size':'100%',
 			'border-radius':'0px',
 		},
 
 		'.basketball ballgameball:after':{
-			'background':'url(proto/bball.png)',
+			'background':'url(proto/img/bball.png)',
 			'background-size':'100%',
 			'border-radius': rBall+'px',
 			'background-color':'black',
 		},
 
 		'.volleyball ballgameball:after':{
-			'background':'url(proto/volleyball.png)',
+			'background':'url(proto/img/volleyball.png)',
 			'background-size':'100%',
 			'border-radius': rBall+'px',
 			'background-color':'black',
@@ -196,7 +196,7 @@ BallGame = function () {
 			left:'0px',
 			right:'0px',
 			height:'100px',
-			background:'url(proto/field.png)',
+			background:'url(proto/img/field.png)',
 		},
 
 		'ballgamescore':{
@@ -223,7 +223,7 @@ BallGame = function () {
 		'footballgoal':{
 			width: '1500px',
 			height: '750px',
-			background: 'url(proto/goal.png)',
+			background: 'url(proto/img/goal.png)',
 			display: 'block',
 			position: 'absolute',
 			right: '-1470px',
@@ -237,7 +237,7 @@ BallGame = function () {
 		},
 
 		'.footballbg':{
-			'background-image':'url(proto/20180220_021.jpg)',
+			'background-image':'url(proto/img/20180220_021.jpg)',
 			'background-size':'100%',
 			'background-position':'center bottom -70px',
 		},
@@ -245,7 +245,7 @@ BallGame = function () {
 		'bballhoop, bballhoopfront':{
 			'height':"1080px",
 			'width':'300px',
-			'background-image':'url(proto/hoop.png)',
+			'background-image':'url(proto/img/hoop.png)',
 			display:'block',
 			position:'absolute',
 			right:'0px',
@@ -254,7 +254,7 @@ BallGame = function () {
 		},
 
 		'bballhoopfront':{
-			'background-image':'url(proto/hoop-front.png)',
+			'background-image':'url(proto/img/hoop-front.png)',
 			'z-index':'1',
 		},
 
@@ -287,7 +287,7 @@ BallGame = function () {
 			'left':'50%',
 			'height':'400px',
 			'width':'100px',
-			'background':'url(proto/volleyball-net.png)',
+			'background':'url(proto/img/volleyball-net.png)',
 			'transform':'translateX(-50%)'
 		}
 	}
@@ -367,7 +367,6 @@ BallGame = function () {
 		dude.$el.appendTo($game);
 		dudes[i] = dude;
 	}
-	
 
 
 	let balls = [];

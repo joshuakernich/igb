@@ -65,7 +65,7 @@ PixelPaddle = function(){
 	let $paddle = $('<paddle>').appendTo($front);
 
 	let $audio = $(`<audio controls>
-		<source src="./proto/we-will-rock-you.mp3" type="audio/mpeg">
+		<source src="./proto/audio/we-will-rock-you.mp3" type="audio/mpeg">
 		</audio>`).appendTo(self.$el.find('igbside').first());
 
 	let $waterfall = $('<waterfall>').appendTo($front);

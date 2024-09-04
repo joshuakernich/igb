@@ -88,7 +88,7 @@ TennisDude = function(p,rDude){
 				display:'block',
 				'width':'250px',
 				'height':'500px',
-				'background':'url(proto/tennis-racket.png)',
+				'background':'url(proto/img/tennis-racket.png)',
 				'background-size':'100%',
 				'position':'absolute',
 				'top':'-450px',
