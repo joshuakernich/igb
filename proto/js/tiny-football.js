@@ -34,6 +34,7 @@ TinyDude = function(x,y){
 	self.wy = 0;
 	self.x = x;
 	self.y = y;
+	self.r = 0;
 
 	self.redraw = function(){
 
@@ -42,6 +43,7 @@ TinyDude = function(x,y){
 		self.$el.css({
 			left:self.x+'px',
 			top:self.y+'px',
+			'transform':'rotate('+(self.r+Math.PI)+'rad)'
 		})
 	}
 
@@ -114,21 +116,41 @@ TinyFootball = function(){
 			'tinydude':{
 				display:'block',
 				position:'absolute',
+				width:'0px',
+				height:'0px',
+			},
+
+			'tinydude:after':{
+				content:'""',
+				display:'block',
+				position:'absolute',
 				width:rDude*2+'px',
 				height:rDude*2+'px',
 				'background':'red',
 				'border-radius':rDude+'px',
-				'transform':'translate(-50%,-50%)',
+				'top':-rDude+'px',
+				'left':-rDude+'px',
 				'box-sizing':'border-box',
 				'border':'5px solid white',
 			},
 
-			'tinydude:nth-of-type(1)':{ 'background':'red' },
-			'tinydude:nth-of-type(2)':{ 'background':'blue' },
-			'tinydude:nth-of-type(3)':{ 'background':'green' },
-			'tinydude:nth-of-type(4)':{ 'background':'purple' },
-			'tinydude:nth-of-type(5)':{ 'background':'orange' },
-			'tinydude:nth-of-type(6)':{ 'background':'yellow' },
+			'tinydude:before':{
+				content:'""',
+				display:'block',
+				position:'absolute',
+				width: rDude*2+'px',
+				height:rDude/2+'px',
+				'top':-rDude/4+'px',
+				'left':'0px',
+				'background':'white',
+			},
+
+			'tinydude:nth-of-type(1):after':{ 'background':'red' },
+			'tinydude:nth-of-type(2):after':{ 'background':'blue' },
+			'tinydude:nth-of-type(3):after':{ 'background':'green' },
+			'tinydude:nth-of-type(4):after':{ 'background':'purple' },
+			'tinydude:nth-of-type(5):after':{ 'background':'orange' },
+			'tinydude:nth-of-type(6):after':{ 'background':'yellow' },
 
 			'tinygoal':{
 				display:'block',
@@ -223,22 +245,32 @@ TinyFootball = function(){
 
 		for(i in dudes){
 
-			dudes[i].redraw();
+			
 
 			let dx = dudes[i].x - ball.x;
 			let dy = dudes[i].y - ball.y;
 			let d = Math.sqrt(dx*dx + dy*dy);
 
-			dudes[i].sx = dudes[i].wx-dudes[i].x;
-			dudes[i].sy = dudes[i].wy-dudes[i].y;
+			let dxMove = dudes[i].wx-dudes[i].x;
+			let dyMove = dudes[i].wy-dudes[i].y;
+			let dMove = Math.sqrt(dxMove*dxMove + dyMove*dyMove);
 
-			dudes[i].wx = dudes[i].x;
-			dudes[i].wy = dudes[i].y;
+			if(dMove>30){
+				dudes[i].sx = dxMove;
+				dudes[i].sy = dyMove;
+				dudes[i].r = Math.atan2(dudes[i].sy,dudes[i].sx);
+
+				dudes[i].wx = dudes[i].x;
+				dudes[i].wy = dudes[i].y;
+			}
 			
 			if(d<dMin){
 				iDudeIs = i;
 				dMin = d;
 			}
+
+			
+			dudes[i].redraw();
 		}
 
 
@@ -263,8 +295,10 @@ TinyFootball = function(){
 					ball.x = dudes[iDudeIs].x - Math.cos(r)*(rBall+rDude);
 					ball.y = dudes[iDudeIs].y - Math.sin(r)*(rBall+rDude);
 
-					ball.sx = -Math.cos(r)*25;
-					ball.sy = -Math.sin(r)*25;
+
+
+					ball.sx = -Math.cos(r)*35;
+					ball.sy = -Math.sin(r)*35;
 
 					iDudeIs = -1;
 				}
