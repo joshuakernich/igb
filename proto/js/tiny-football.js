@@ -68,6 +68,8 @@ TinyFootball = function(){
 				'background':'darkgreen',
 				
 			},
+
+
 		
 			'tinygame':{
 				display:'block',
@@ -79,7 +81,7 @@ TinyFootball = function(){
 				'transform-origin':'top left',
 
 				'perspective':W+'px',
-				
+				'box-shadow':'inset 0px 0px 5px white',
 			},
 
 			'tinygame *':{
@@ -94,23 +96,48 @@ TinyFootball = function(){
 				width:W+'px',
 				height:H+'px',
 				
-				'background':'green',
+				'background':'white',
 				'box-sizing':'border-box',
 				
 
-				'transform':'rotateX(30deg) translateY(-50px)',
+				'transform':'rotateX(30deg) translateY(-50px) scale(0.85)',
 				'transform-origin':'bottom center',
 
 			},
 
+			'tinyfield:after':{
+				content:'""',
+				display:'block',
+				position:'absolute',
+				'left':'50%',
+				'width':'10px',
+				'top':'10px',
+				'bottom':'10px',
+				'background':'white',
+				'transform':'translateX(-50%)',
+			},
+
+			'tinyfield:before':{
+				content:'""',
+				display:'block',
+				position:'absolute',
+				'left':'10px',
+				'right':'10px',
+				'top':'10px',
+				'bottom':'10px',
+				'background':'green',
+			},
+
 			'tinyball':{
 				display:'block',
-				position:'relative',
+				position:'absolute',
 				width:rBall*2+'px',
 				height:rBall*2+'px',
 				'background':'white',
 				'border-radius':rBall+'px',
 				'transform':'translate(-50%,-50%)',
+
+				'z-index':2,
 			},
 
 			'tinydude':{
@@ -118,6 +145,8 @@ TinyFootball = function(){
 				position:'absolute',
 				width:'0px',
 				height:'0px',
+
+				'z-index':1,
 			},
 
 			'tinydude:after':{
@@ -198,8 +227,22 @@ TinyFootball = function(){
 		dudes.push(dude);
 	}
 
-	let ball = new TinyBall(W/2,H/2);
-	ball.$el.appendTo($field);
+	let ball;
+	let balls = [];
+
+	function spawnBall(){
+		
+
+		ball = new TinyBall(W/2,H/2);
+		ball.$el.appendTo($field);
+
+		balls.push(ball);
+	}
+
+
+
+	spawnBall();
+	
 
 	let slowdown = 0.95;
 	let wWas;
@@ -213,28 +256,33 @@ TinyFootball = function(){
 			wWas = wScreen;
 		}
 
-		ball.sx *= slowdown;
-		ball.sy *= slowdown;
+		for(var b in balls){
+			balls[b].sx *= slowdown;
+			balls[b].sy *= slowdown;
+			balls[b].x += balls[b].sx;
+			balls[b].y += balls[b].sy;
+			balls[b].redraw();
+		}
 
-		ball.x += ball.sx;
-		ball.y += ball.sy;
 
-		if(ball.x < (rBall)){
+		let isLeft = ball.x < rBall;
+		let isRight = ball.x > (W-rBall);
+		let isGoalish = ball.y>(H/2-hGoal/2) && ball.y<(H/2+hGoal/2);
+
+		if((isLeft || isRight) && isGoalish){
+			spawnBall();
+		} else if(isLeft){
 			ball.x = rBall;
 			ball.sx = Math.abs(ball.sx);
+		} else if(isRight){
+			ball.x = W-rBall;
+			ball.sx = -Math.abs(ball.sx);
 		}
 
 		if(ball.y < (rBall)){
 			ball.y = rBall;
 			ball.sy = Math.abs(ball.sy);
-		}
-
-		if(ball.x > (W-rBall)){
-			ball.x = W-rBall;
-			ball.sx = -Math.abs(ball.sx);
-		}
-
-		if(ball.y > (H-rBall)){
+		}else if(ball.y > (H-rBall)){
 			ball.y = H-rBall;
 			ball.sy = -Math.abs(ball.sy);
 		}
