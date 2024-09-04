@@ -81,7 +81,7 @@ TinyFootball = function(){
 				'transform-origin':'top left',
 
 				'perspective':W+'px',
-				'box-shadow':'inset 0px 0px 5px white',
+				
 			},
 
 			'tinygame *':{
@@ -189,16 +189,55 @@ TinyFootball = function(){
 				'left':'-200px',
 				'top':'50%',
 				'transform':'translateY(-50%)',
-				'border':'20px solid white',
-				'border-radius':'20px',
+				'border':'10px solid white',
+				'border-radius':'20px 0px 0px 20px',
 				'box-sizing':'border-box',
 				'border-right':'0px',
+				'background':'red',
 			},
 
 			'tinygoal:last-of-type':{
 				'left':'100%',
 				'transform':'translateY(-50%) scaleX(-1)',
-			}
+				'background':'blue',
+			},
+
+			'tinyscore':{
+				'font-size': '1.5vw',
+				'color':'white',
+				'position':'absolute',
+				'top':'0vw',
+				'right':'50%',
+				'width':'3vw',
+				'color':'white',
+				'background':'red',
+				
+				'text-align':'center',
+				'border-radius':'0px 0px 0vw 0.5vw',
+			},
+
+			'tinyscore:last-of-type':{
+				'right':'auto',
+				'left':'50%',
+				'background':'blue',
+				'border-radius':'0px 0px 0.5vw 0vw',
+			},
+
+			'tinygame h1':{
+				'position':'absolute',
+				'top':'100px',
+				'left':'0px',
+				'right':'0px',
+				
+				'line-height':'200px',
+				'font-size':'100px',
+				'padding':'0px',
+				'margin':'0px',
+				'text-align':'center',
+				'color':'white',
+				
+
+			},
 		}
 
 		$("head").append('<style>'+Css.of(css)+'</style>');
@@ -218,7 +257,13 @@ TinyFootball = function(){
 	$('<tinygoal>').appendTo($field);
 	$('<tinygoal>').appendTo($field);
 
+	$('<tinyscore>').appendTo($center).text('0');
+	$('<tinyscore>').appendTo($center).text('0');
 
+	let $h = $('<h1>').appendTo($game);
+
+	let scoreLeft = 0;
+	let scoreRight = 0;
 	
 	let dudes = [];
 	while(dudes.length<6){
@@ -270,7 +315,20 @@ TinyFootball = function(){
 		let isGoalish = ball.y>(H/2-hGoal/2) && ball.y<(H/2+hGoal/2);
 
 		if((isLeft || isRight) && isGoalish){
+
+			if(isLeft) scoreLeft++;
+			if(isRight) scoreRight++;
+
+			self.$el.find('tinyscore').eq(0).text(scoreLeft);
+			self.$el.find('tinyscore').eq(1).text(scoreRight);
+
+			$h.text('GOAL!');
+			setTimeout(function(){
+				$h.text('');
+			},750);
+
 			spawnBall();
+
 		} else if(isLeft){
 			ball.x = rBall;
 			ball.sx = Math.abs(ball.sx);
