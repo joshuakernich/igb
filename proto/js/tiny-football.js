@@ -66,7 +66,10 @@ TinyFootball = function(){
 
 			'.tinygamebg':{
 				'background':'darkgreen',
-				
+				'background-image':'url(proto/img/bg-stadium.webp)',
+				'background-position':'center top',
+				'background-repeat':'no-repeat',
+				'background-size':'100%',
 			},
 
 
@@ -160,18 +163,22 @@ TinyFootball = function(){
 				'top':-rDude+'px',
 				'left':-rDude+'px',
 				'box-sizing':'border-box',
-				'border':'5px solid white',
+				'border':'10px solid white',
 			},
 
 			'tinydude:before':{
 				content:'""',
 				display:'block',
 				position:'absolute',
-				width: rDude*2+'px',
-				height:rDude/2+'px',
-				'top':-rDude/4+'px',
-				'left':'0px',
-				'background':'white',
+				width: rDude+'px',
+				height:rDude+'px',
+				'top':-rDude/2+'px',
+				'left':rDude+'px',
+				
+				'transform':'rotate(45deg)',
+				'box-sizing':'border-box',
+				'border-top':'10px solid white',
+				'border-right':'10px solid white',
 			},
 
 			'tinydude:nth-of-type(1):after':{ 'background':'red' },
@@ -368,6 +375,8 @@ TinyFootball = function(){
 
 				dudes[i].wx = dudes[i].x;
 				dudes[i].wy = dudes[i].y;
+
+
 			}
 			
 			if(d<dMin){
