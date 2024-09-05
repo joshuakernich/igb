@@ -26,7 +26,14 @@ TinyBall = function(x,y){
 TinyDude = function(x,y){
 
 	let self = this;
-	self.$el = $('<tinydude>');
+	self.$el = $(`
+		<tinydude>
+			<tinyfootprint></tinyfootprint>
+			<tinyavatar></tinyavatar>
+		</tinydude>
+		`);
+
+
 
 	self.sx = 0;
 	self.sy = 0;
@@ -43,7 +50,17 @@ TinyDude = function(x,y){
 		self.$el.css({
 			left:self.x+'px',
 			top:self.y+'px',
+			
+			
+		})
+
+		self.$el.find('tinyfootprint').css({
 			'transform':'rotate('+(self.r+Math.PI)+'rad)'
+		})
+
+		self.$el.find('tinyavatar').css({
+			'transform':'scaleX('+(self.sx>0?-1:1)+')',
+			'z-index':self.y,
 		})
 	}
 
@@ -106,6 +123,9 @@ TinyFootball = function(){
 				'transform':'rotateX(30deg) translateY(-50px) scale(0.85)',
 				'transform-origin':'bottom center',
 
+
+
+				'transform-style':'preserve-3d',
 			},
 
 			'tinyfield:after':{
@@ -129,6 +149,10 @@ TinyFootball = function(){
 				'top':'10px',
 				'bottom':'10px',
 				'background':'green',
+
+				'background-image':'url(proto/img/bg-grass.png)',
+				'background-size':'cover',
+
 			},
 
 			'tinyball':{
@@ -150,9 +174,42 @@ TinyFootball = function(){
 				height:'0px',
 
 				'z-index':1,
+				'transform-style':'preserve-3d',
 			},
 
-			'tinydude:after':{
+			'tinyfootprint':{
+				display:'block',
+				position:'absolute',
+				width:'0px',
+				height:'0px',
+			},
+
+			'tinyavatar':{
+				display:'block',
+				position:'absolute',
+				'top':'0px',
+				'left':'0px',
+				'transform-style':'preserve-3d',
+			},
+
+			'tinyavatar:after':{
+				content:'""',
+				display:'block',
+				position:'absolute',
+				width:'64px',
+				height:'140px',
+				'background-image':'url(proto/img/little-dude.png)',
+				'background-size':'300%',
+				'left':'-32px',
+				'bottom':'0px',
+				'transform-style':'preserve-3d',
+				'transform':'scale(2) rotateX(-30deg)',
+				'transform-origin':'bottom center',
+			},
+
+
+
+			'tinyfootprint:after':{
 				content:'""',
 				display:'block',
 				position:'absolute',
@@ -166,7 +223,7 @@ TinyFootball = function(){
 				'border':'10px solid white',
 			},
 
-			'tinydude:before':{
+			'tinyfootprint:before':{
 				content:'""',
 				display:'block',
 				position:'absolute',
@@ -181,12 +238,12 @@ TinyFootball = function(){
 				'border-right':'10px solid white',
 			},
 
-			'tinydude:nth-of-type(1):after':{ 'background':'red' },
-			'tinydude:nth-of-type(2):after':{ 'background':'blue' },
-			'tinydude:nth-of-type(3):after':{ 'background':'green' },
-			'tinydude:nth-of-type(4):after':{ 'background':'purple' },
-			'tinydude:nth-of-type(5):after':{ 'background':'orange' },
-			'tinydude:nth-of-type(6):after':{ 'background':'yellow' },
+			'tinydude:nth-of-type(1) tinyfootprint:after':{ 'background':'red' },
+			'tinydude:nth-of-type(2) tinyfootprint:after':{ 'background':'blue' },
+			'tinydude:nth-of-type(3) tinyfootprint:after':{ 'background':'green' },
+			'tinydude:nth-of-type(4) tinyfootprint:after':{ 'background':'purple' },
+			'tinydude:nth-of-type(5) tinyfootprint:after':{ 'background':'orange' },
+			'tinydude:nth-of-type(6) tinyfootprint:after':{ 'background':'yellow' },
 
 			'tinygoal':{
 				display:'block',
