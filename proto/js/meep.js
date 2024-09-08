@@ -82,6 +82,7 @@ Meep = function(){
 	self.redraw = function(){
 
 		let yHead = -c.h+c.wHead/2;
+		let yHeadband = yHead-c.wHeadband/4;
 		let yEye = -c.h+c.hHead/5*3; // 3/5 mark
 		let yMouth = -c.h+c.hHead/4*3;	// 3/4 mark
 		let yBody = -c.h+c.hHead+c.wBody/2;
@@ -121,7 +122,7 @@ Meep = function(){
 				<path class='meep-shoe' d="M${-legOffset},${c.yFootLeft} a1,1 0 0,0 ${-c.wFoot},0" />
 				<path class='meep-shoe' d="M${legOffset},${c.yFootRight} a1,1 0 0,1 ${c.wFoot},0" />
 
-				<path class='meep-headband' stroke-width=${c.wHeadband} d='M${-c.wHead/2},${yHead-c.wHeadband/4} l${c.wHead},0' />
+				<path class='meep-headband' stroke-width=${c.wHeadband} d='M${-c.wHead/2},${yHeadband} Q0,${yHeadband+5} ${c.wHead/2},${yHeadband}' />
 			</svg>`);
 	}
 
