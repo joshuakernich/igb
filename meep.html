@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<script type="text/javascript" src="./shared/jq.js"></script>
+	<script type="text/javascript" src="./proto/lib/Css.js"></script>
+	<script type="text/javascript" src="./proto/js/meep.js"></script>
+	<title>MEEP</title>
+	<style type="text/css">
+		body{
+			background: #777;
+			font:'sans-serif';
+			color: white;
+		}
+
+		label{
+			font: inherit;
+		}
+	</style>
+	<script type="text/javascript">
+		$(function(){
+
+			let RANGES = {
+
+
+			//h:[200,1000],
+			hHead:[100,200],
+			wHead:[20,200],
+			wArm:[2,50],
+			wLeg:[2,50],
+			wHeadband:[2,50],
+			wMouth:[2,50],
+			wFoot:[2,50],
+			wBody:[20,200],
+			hBody:[50,200],
+			rEye:[2,50],
+			//yFootLeft:[-500,0],
+			//yFootRight:[-500,0],
+		}
+
+			let meep = new Meep(500);
+			meep.$el.appendTo('body');
+			meep.$el.css({
+				'position':'absolute',
+				'left':'50%',
+				'bottom':'100px',
+			})
+
+			function revise(e){
+				
+				meep.c[e.target.id] = parseInt(e.target.value);
+
+				
+				meep.redraw();
+			}
+
+			for(var i in RANGES){
+
+				let $d = $(`<div>`).appendTo('body');
+
+				$(`<input type="range" id="${i}" name="${i}" min="${RANGES[i][0]}" max="${RANGES[i][1]}" value="${meep.c[i]}"/>`)
+				.appendTo($d)
+				.on('mousemove',revise);
+
+				 $(`<label for="${i}">${i}</label>`).appendTo($d);
+			}
+
+
+		})
+	</script>
+</head>
+<body>
+
+</body>
+</html>

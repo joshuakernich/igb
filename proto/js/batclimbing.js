@@ -96,7 +96,7 @@ BatClimbing = function(){
 				'right':'0px',
 				'top':'40px',
 				'bottom':'0px',
-				'background':'red',
+				'background':'orange',
 				'border-radius':'50px 0px 0px 0px',
 			},
 
@@ -105,6 +105,7 @@ BatClimbing = function(){
 				'right':'10px',
 				'top':'40px',
 				'border-radius':'50px 50px 0px 0px',
+				'background':'red',
 			},
 
 
@@ -132,16 +133,32 @@ BatClimbing = function(){
 			},
 
 			'batthrower:after':{
+				'background':'orange',
+			},
+
+			'batthrower.warning:after':{
 				'background':'red',
 			},
 
-			'batgrapnel, batbox, batthrower':{
+			'batgrapnel, batbox, batthrower, batbarrel':{
 				'display':'block',
 				'height':'0px',
 				'width':'0px',
 				'position':'absolute',
 				'bottom':'0px',
 				'left':'50%',
+			},
+
+			'batbarrel:after':{
+				'content':'""',
+				'display':'block',
+				'height':'80px',
+				'width':'80px',
+				'left':'-40px',
+				'bottom':'0px',
+				'background':'red',
+				'position':'absolute',
+				'border-radius':'40px',
 			},
 
 			'batbox:after':{
@@ -235,19 +252,49 @@ BatClimbing = function(){
 
 	let data = 
 	[
+		['---------','---------','---------'],
+		['---------','---------','---------'],
+		['---------','---------','---------'],
+
+		['---------','----^----','---------'],
+		['---------','}-^---^-{','---------'],
+		['---W-W-->','----^----','<--W-W---'],
+
+		['^}-----B-','---------','-B-----{^'],
+		['-B------^','---------','^------B-'],
+		['^--------','<------->','--------^'],
 		
+		['---------','--^------','<--W-W---'],
+		['------{->','------{->','------{-^'],
+		['^-}------','<-}------','<--------'],
+
+		['---------','------{->','--------^'],
+		['---------','^-}------','<--------'],
+		['---------','---------','---W-W--^'],
+		
+		['---------','-}-----B-','-^-}-----'],
+		['---------','-------->','--------^'],
+		['---------','^--W-W---','---------'],
+
+		['---------','-B----{-^','---------'],
+		['---------','^--------','---------'],
+		['---------','--------^','---------'],
+
 		['---------','^-}----B-','---------'],
 		['---------','--------^','---------'],
-		['---------','^-------S','---------'],
+		['---------','^--------','---------'],
+
 		['---------','---W---W^','---------'],
 		['---------','^W---W---','---------'],
 		['---------','---W---W^','---------'],
+
 		['---------','^--W-----','---------'],
 		['---------','-----W--^','---------'],
 		['---------','^--W-----','---------'],
+
 		['---------','--------^','---------'],
 		['---------','--^------','---------'],
-		['---------','------^--','---------'],
+		['---------','-S----^--','---------'],
 	]
 
 
@@ -256,6 +303,7 @@ BatClimbing = function(){
 	let grapnels = [];
 	let boxes = [];
 	let throwers = [];
+	let barrels = [];
 
 	for(var t=0; t<3; t++){
 
@@ -280,7 +328,7 @@ BatClimbing = function(){
 				let $g = $('<batgrid>').appendTo($l);
 
 				if(type=='S') man = { t:t, x:n+0.5, ox:0, y:l, $el:$('<batman>').appendTo($l) };
-				if(type=='}') throwers.push({ t:t, x:n+0.5, y:l, $el:$('<batthrower>').appendTo($g) });
+				if(type=='}' || type=='{') throwers.push({ tick:0, t:t, x:n+0.5, y:l, $el:$('<batthrower>').appendTo($g), dir:type=='}'?1:-1 });
 				if(type=='B') boxes.push({ t:t, x:n+0.5, y:l, $el:$('<batbox>').appendTo($g) });
 				if(type=='W') windows.push({ t:t, tick:0, x:n+0.5, y:l, $el:$('<batwindow>').appendTo($g) });
 				if(type=='^' || type=='>' || type=='<') grapnels.push({ dir:type, t:t, x:n+0.5, y:l, $el:$('<batgrapnel>').appendTo($g).attr('type',type) });
@@ -302,6 +350,8 @@ BatClimbing = function(){
 	let isRetractGrapshot = false;
 
 	let grapshot = { $el:$('<grapshot>') }
+
+	
 	
 
 	function tick(){
@@ -321,7 +371,7 @@ BatClimbing = function(){
 		if(man.x>8.8) man.x = 8.8;
 
 		for(var g in grapnels){
-			if(grapnels[g].t == man.t && grapnels[g].y == man.y){
+			if(grapnels[g].t == man.t && grapnels[g].y == man.y && Math.abs(man.ox) < GRID){
 				let d = Math.abs(man.x-grapnels[g].x);
 
 				if(d<0.2){
@@ -374,12 +424,54 @@ BatClimbing = function(){
 			}
 		}
 
-		for(var w in windows){
-			windows[w].tick = (windows[w].tick+1)%(fps*3);
+		for(var n in windows){
+			windows[n].tick = (windows[n].tick+1)%(fps*3);
 
-			if(windows[w].tick == fps) windows[w].$el.addClass('peak');
-			if(windows[w].tick == fps*2) windows[w].$el.addClass('attack');
-			if(windows[w].tick == 0) windows[w].$el.removeClass('peak attack');
+			if(windows[n].tick == fps) windows[n].$el.addClass('peak');
+			if(windows[n].tick == fps*2) windows[n].$el.addClass('attack');
+			if(windows[n].tick == 0) windows[n].$el.removeClass('peak attack');
+		}
+
+		for(var n in throwers){
+			throwers[n].tick = (throwers[n].tick+1)%(fps*3.5);
+
+			if(throwers[n].tick == fps) throwers[n].$el.addClass('warning');
+			if(throwers[n].tick == fps*2){
+				throwers[n].$el.removeClass('warning');
+				barrels.push({ 
+					dir:throwers[n].dir, 
+					$el:$('<batbarrel>').appendTo(towers[throwers[n].t].$ls[throwers[n].y]), 
+					t:throwers[n].t, 
+					x:throwers[n].x, 
+					y:throwers[n].y 
+				});
+			}
+		}
+
+		for(var n in barrels){
+			barrels[n].x += 0.075*barrels[n].dir;
+			barrels[n].$el.css({left:barrels[n].x*GRID+'px'});
+
+			for(var b in boxes){
+				if(boxes[b].t == barrels[n].t && boxes[b].y == barrels[n].y){
+					let dx = Math.abs(barrels[n].x-boxes[b].x);
+					if(dx<0.5){
+						barrels[n].dir *= -1;
+						barrels[n].y++;
+						barrels[n].x = boxes[b].x + 0.5*barrels[n].dir;
+						barrels[n].$el.appendTo(towers[barrels[n].t].$ls[barrels[n].y]);
+						barrels[n].$el
+						.css({'bottom':LEVEL+'px'})
+						.animate({'bottom':'0px'},200)
+						.animate({'bottom':'30px'},100)
+						.animate({'bottom':'0px'},100);
+
+						boxes[b].$el.css({'bottom':'10px'}).animate({'bottom':'0px'},100);
+					}
+				}
+			}
+
+			if(barrels[n].x<0 || barrels[n].x>9) barrels[n].$el.remove();
 		}
 
 		man.$el.css({left:(man.x*GRID+man.ox)+'px'});
