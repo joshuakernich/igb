@@ -492,6 +492,9 @@ TinyFootball = function(){
 		
 		p.length = 6;
 		for(var i=0; i<p.length; i++){
+
+			
+			
 			dudes[i].x = (p[i].px/100)*W;
 			dudes[i].y = H-(p[i].pz/100)*H;
 		}

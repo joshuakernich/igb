@@ -36,6 +36,7 @@
 			wBody:[20,200],
 			hBody:[50,200],
 			rEye:[2,50],
+			r:[0,Math.PI*2],
 			//yFootLeft:[-500,0],
 			//yFootRight:[-500,0],
 		}
@@ -49,6 +50,8 @@
 			})
 
 			function revise(e){
+
+				console.log(e.target.value);
 				
 				meep.c[e.target.id] = parseInt(e.target.value);
 
