@@ -351,8 +351,12 @@ BatClimbing = function(){
 
 	let grapshot = { $el:$('<grapshot>') }
 
-	
-	
+
+	function getXForT(t){
+		if(t==0) return pxFrontToBack*9;
+		if(t==1) return pxSideToSide*9;
+		if(t==2) return (1-pxFrontToBack)*9;
+	}
 
 	function tick(){
 
@@ -366,6 +370,13 @@ BatClimbing = function(){
 
 		if(isLeft) man.x -= 0.2;
 		if(isRight) man.x += 0.2;
+
+		
+
+		
+		if(dirtyTracking) man.x = getXForT(man.t);
+		dirtyTracking = false;
+
 
 		if(man.x<0.2) man.x = 0.2;
 		if(man.x>8.8) man.x = 8.8;
@@ -392,7 +403,7 @@ BatClimbing = function(){
 						man.t = grapnels[g].t+1;
 						grapshot.x = 0.5;
 						
-						let jumpTo = 4;
+						let jumpTo = getXForT(man.t);
 
 						isRetractGrapshot = false;
 						man.ox = -W - (jumpTo-man.x)*GRID;
@@ -403,7 +414,7 @@ BatClimbing = function(){
 						man.t = grapnels[g].t-1;
 						grapshot.x = 8.5;
 			
-						let jumpTo = 5;
+						let jumpTo = getXForT(man.t);
 
 						isRetractGrapshot = false;
 						man.ox = W - (jumpTo-man.x)*GRID;
@@ -501,6 +512,16 @@ BatClimbing = function(){
 		if(e.which == 39) isRight = false;
 	})
 	
+	let pxSideToSide = 0;
+	let pxFrontToBack = 0;
+	let dirtyTracking = false;
+
+	self.setPlayers = function(p){
+		pxSideToSide = p[0].px/100;
+		pxFrontToBack = p[0].pz/100;
+		dirtyTracking = true;
+	}
+
 	self.turnOnOff = function(b){
 		clearInterval(interval);
 		if(b) interval = setInterval(tick,1000/fps);
