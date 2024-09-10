@@ -35,7 +35,7 @@ Meep = function(){
 
 			'meep svg':{
 				'position':'absolute',
-				'bottom':'0px',
+				'bottom':'-50px',
 				'left':'-250px',
 			},
 
@@ -81,7 +81,8 @@ Meep = function(){
 	self.redraw = function(){
 
 		
-		
+		let wNeck = c.wBody/2;
+
 		let yEye = -c.h+c.hHead/5*3; // 3/5 mark
 		let yMouth = -c.h+c.hHead/4*3;	// 3/4 mark
 		let yBody = -c.h+c.hHead;
@@ -91,35 +92,72 @@ Meep = function(){
 		let rBody = Math.min(c.wBody/2,c.hBody/2);
 
 		let yHeadband = -c.h+rHead-c.wHeadband/2;
-		let yLeg = -c.h+c.hHead+c.hBody-rBody/2;
-		let yArm = yBody + rBody;
-		
-		let yKneeLeft = (yLeg+c.yFootLeft)/2;
-		let yKneeRight = (yLeg+c.yFootRight)/2;
 
-		let kneeOffset = c.wBody/2;
-		let legOffset = c.wBody/4;
+
+		let yHip = -c.h+c.hHead+c.hBody-rBody/2;
+		let yShoulder = yBody + rBody;
+		
+		let yKneeLeft = (yHip+c.yFootLeft)/2;
+		let yKneeRight = (yHip+c.yFootRight)/2;
+
+		let oxKnee = c.wBody/2;
+		let oxHip = c.wBody/4;
 
 		let hArmLeft = c.hBody-rBody*2 + c.yFootRight;
 		let hArmRight = c.hBody-rBody*2 + c.yFootLeft;
 
-		let legOffsetLeft = Math.cos(c.r+Math.PI)*legOffset;
-		let legOffsetRight = Math.cos(c.r)*legOffset;
 
-		let kneeOffsetLeft = Math.cos(c.r+Math.PI)*kneeOffset;
-		let kneeOffsetRight = Math.cos(c.r)*kneeOffset;
 
-		let wNeck = c.wBody/2;
 
-		let arm = {
-			xShoulder:c.wBody/2,
-			yShoulder:yBody,
+		
+		let plane = 1/4;
+		function rotateAround(cx,cy,dist,r){
+
+			return {
+				x: cx + Math.cos(r) * dist,
+				y: cy + Math.sin(r) * (dist*plane),
+			}
 		}
+
+		function makeSymmetrical(cx,cy,dist,r){
+			return {
+				left:rotateAround(cx,cy,dist,r+Math.PI),
+				right:rotateAround(cx,cy,dist,r),
+			}
+		}
+
+		let shoulder = makeSymmetrical(0,yShoulder,c.wBody/2,c.r);
+
+		let oxElbow = c.wBody/2+100;
+		let elbow = {
+			left: rotateAround(0,yShoulder+hArmLeft/2,oxElbow,c.r+Math.PI),
+			right: rotateAround(0,yShoulder+hArmRight/2,oxElbow,c.r),
+		}
+
+		let oxHand = c.wBody/2+10;
+		let hand = {
+			left: rotateAround(0,yShoulder+hArmLeft,oxHand,c.r+Math.PI),
+			right: rotateAround(0,yShoulder+hArmRight,oxHand,c.r),
+		}
+
+		let hip = makeSymmetrical(0,yHip,c.wBody/4,c.r);
+
+		let knee = {
+			left: rotateAround(0,yKneeLeft,oxKnee,c.r+Math.PI),
+			right: rotateAround(0,yKneeRight,oxKnee,c.r),
+		}
+
+		let foot = {
+			left: rotateAround(0,c.yFootLeft,oxHip,c.r+Math.PI),
+			right: rotateAround(0,c.yFootRight,oxHip,c.r),
+		}
+
+		
 
 		self.$el.html(
 			`
 			<meep-shadow style='width:${c.wHead}px;height:${c.wHead/4}px;'></meep-shadow>
-			<svg width=500 height=1000 viewBox='-250 -1000 500 1000'>
+			<svg width=500 height=1100 viewBox='-250 -1050 500 1100'>
 
 				
 				<path class='meep-neck' stroke-width=${wNeck} d='M0,${yBody} L0,${yBody}'/>
@@ -127,21 +165,21 @@ Meep = function(){
 				<rect class='meep-head' width=${c.wHead} height=${c.hHead} x=${-c.wHead/2} y=${-c.h} rx=${rHead} />
 				<rect class='meep-body' width=${c.wBody} height=${c.hBody} x=${-c.wBody/2} y=${yBody} rx=${rBody} />
 
-				<path class='meep-arm' stroke-width=${c.wArm} d='M${-c.wBody/2},${yArm} q-100,${hArmLeft/2} -10,${hArmLeft}'/>
-				<path class='meep-arm' stroke-width=${c.wArm} d='M${c.wBody/2},${yArm} q100,${hArmRight/2} 10,${hArmRight}'/>
+				<path class='meep-arm' stroke-width=${c.wArm} d='M${shoulder.left.x},${shoulder.left.y} Q${elbow.left.x},${elbow.left.y} ${hand.left.x},${hand.left.y}'/>
+				<path class='meep-arm' stroke-width=${c.wArm} d='M${shoulder.right.x},${shoulder.right.y} Q${elbow.right.x},${elbow.right.y} ${hand.right.x},${hand.right.y}'/>
 
-				<path class='meep-thumb' stroke-width=${c.wArm/2} d='M${-c.wBody/2-15},${yArm+hArmLeft} l5,${-c.wArm*0.7}'/>
-				<path class='meep-thumb' stroke-width=${c.wArm/2} d='M${c.wBody/2+15},${yArm+hArmRight} l-5,${-c.wArm*0.7}'/>
+				<path class='meep-thumb' stroke-width=${c.wArm/2} d='M${-c.wBody/2-15},${yShoulder+hArmLeft} l5,${-c.wArm*0.7}'/>
+				<path class='meep-thumb' stroke-width=${c.wArm/2} d='M${c.wBody/2+15},${yShoulder+hArmRight} l-5,${-c.wArm*0.7}'/>
 
-				<path class='meep-leg' stroke-width=${c.wLeg} d='M${legOffsetLeft},${yLeg} Q${kneeOffsetLeft},${yKneeLeft} ${legOffsetLeft},${c.yFootLeft-c.wLeg/2}'/>
-				<path class='meep-leg' stroke-width=${c.wLeg} d='M${legOffsetRight},${yLeg} Q${kneeOffsetRight},${yKneeRight} ${legOffsetRight},${c.yFootRight-c.wLeg/2}'/>
+				<path class='meep-leg' stroke-width=${c.wLeg} d='M${hip.left.x},${hip.left.y} Q${knee.left.x},${knee.left.y} ${foot.left.x},${foot.left.y-c.wFoot/2}'/>
+				<path class='meep-leg' stroke-width=${c.wLeg} d='M${hip.right.x},${hip.right.y} Q${knee.right.x},${knee.right.y} ${foot.right.x},${foot.right.y-c.wFoot/2}'/>
 
 				<circle class='meep-eye' cx=${-c.wHead/4} cy=${yEye} r=${c.rEye} />
 				<circle class='meep-eye' cx=${c.wHead/4} cy=${yEye} r=${c.rEye} />
 				<path class='meep-mouth' d="M${-c.wMouth/2},${yMouth} a1,1 0 0,0 ${c.wMouth},0" />
 
-				<path class='meep-shoe' d="M${legOffsetLeft-c.wFoot/2},${c.yFootLeft} a1,1 0 0,1 ${c.wFoot},0" />
-				<path class='meep-shoe' d="M${legOffsetRight-c.wFoot/2},${c.yFootRight} a1,1 0 0,1 ${c.wFoot},0" />
+				<path class='meep-shoe' d="M${foot.left.x-c.wFoot/2},${foot.left.y} a1,1 0 0,1 ${c.wFoot},0" />
+				<path class='meep-shoe' d="M${foot.right.x-c.wFoot/2},${foot.right.y} a1,1 0 0,1 ${c.wFoot},0" />
 
 				<path class='meep-headband' stroke-width=${c.wHeadband} d='M${-c.wHead/2},${yHeadband} Q0,${yHeadband+5} ${c.wHead/2},${yHeadband}' />
 			</svg>`);
