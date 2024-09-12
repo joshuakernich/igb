@@ -1,10 +1,10 @@
-Meep = function(){
+Meep = function(color){
 
 	let self = this;
 
 	let c = self.c = {
 
-		h:500,
+		h:300,
 		hHead:140,
 		wHead:100,
 		wArm:10,
@@ -17,6 +17,7 @@ Meep = function(){
 		rEye:8,
 		yFootLeft:0,
 		yFootRight:0,
+		color:color?color:'red',
 		r:0,
 	}
 
@@ -51,7 +52,6 @@ Meep = function(){
 
 			'meep path':{
 				'stroke-linecap':'round',
-				'stroke':'white',
 				'fill':'none',
 			},
 
@@ -60,8 +60,12 @@ Meep = function(){
 				'fill':'rgba(0,0,0,0.5)',
 			},
 
+			'meep .meep-arm, meep .meep-leg, meep .meep-thumb':{
+				'stroke':'white',
+			},
+
 			'.meep-headband':{
-				'stroke':'red',
+				
 				'stroke-linecap':'butt',
 			},
 
@@ -106,53 +110,47 @@ Meep = function(){
 		let hArmLeft = c.hBody-rBody*2 + c.yFootRight;
 		let hArmRight = c.hBody-rBody*2 + c.yFootLeft;
 
-
-
-
-		
 		let plane = 1/4;
-		function rotateAround(cx,cy,dist,r){
+		function rotateAround(cx,cy,dx,dy,r){
 
 			return {
-				x: cx + Math.cos(r) * dist,
-				y: cy + Math.sin(r) * (dist*plane),
+				x: cx + Math.cos(r) * dx,
+				y: cy + Math.sin(r) * (dy*plane),
 			}
 		}
 
-		function makeSymmetrical(cx,cy,dist,r){
+		function makeSymmetrical(cx,cy,dx,dy,r){
 			return {
-				left:rotateAround(cx,cy,dist,r+Math.PI),
-				right:rotateAround(cx,cy,dist,r),
+				left:rotateAround(cx,cy,dx,dy,r+Math.PI),
+				right:rotateAround(cx,cy,dx,dy,r),
 			}
 		}
 
-		let shoulder = makeSymmetrical(0,yShoulder,c.wBody/2,c.r);
+		let shoulder = makeSymmetrical(0,yShoulder,c.wBody/2,0,c.r);
 
 		let oxElbow = c.wBody/2+100;
 		let elbow = {
-			left: rotateAround(0,yShoulder+hArmLeft/2,oxElbow,c.r+Math.PI),
-			right: rotateAround(0,yShoulder+hArmRight/2,oxElbow,c.r),
+			left: rotateAround(0,yShoulder+hArmLeft/2,oxElbow,0,c.r+Math.PI),
+			right: rotateAround(0,yShoulder+hArmRight/2,oxElbow,0,c.r),
 		}
 
 		let oxHand = c.wBody/2+10;
 		let hand = {
-			left: rotateAround(0,yShoulder+hArmLeft,oxHand,c.r+Math.PI),
-			right: rotateAround(0,yShoulder+hArmRight,oxHand,c.r),
+			left: rotateAround(0,yShoulder+hArmLeft,oxHand,0,c.r+Math.PI),
+			right: rotateAround(0,yShoulder+hArmRight,oxHand,0,c.r),
 		}
 
-		let hip = makeSymmetrical(0,yHip,c.wBody/4,c.r);
+		let hip = makeSymmetrical(0,yHip,c.wBody/4,0,c.r);
 
 		let knee = {
-			left: rotateAround(0,yKneeLeft,oxKnee,c.r+Math.PI),
-			right: rotateAround(0,yKneeRight,oxKnee,c.r),
+			left: rotateAround(0,yKneeLeft,oxKnee,0,c.r+Math.PI),
+			right: rotateAround(0,yKneeRight,oxKnee,0,c.r),
 		}
 
 		let foot = {
-			left: rotateAround(0,c.yFootLeft,oxHip,c.r+Math.PI),
-			right: rotateAround(0,c.yFootRight,oxHip,c.r),
+			left: rotateAround(0,c.yFootLeft,oxHip,0,c.r+Math.PI),
+			right: rotateAround(0,c.yFootRight,oxHip,0,c.r),
 		}
-
-		
 
 		self.$el.html(
 			`
@@ -181,7 +179,7 @@ Meep = function(){
 				<path class='meep-shoe' d="M${foot.left.x-c.wFoot/2},${foot.left.y} a1,1 0 0,1 ${c.wFoot},0" />
 				<path class='meep-shoe' d="M${foot.right.x-c.wFoot/2},${foot.right.y} a1,1 0 0,1 ${c.wFoot},0" />
 
-				<path class='meep-headband' stroke-width=${c.wHeadband} d='M${-c.wHead/2},${yHeadband} Q0,${yHeadband+5} ${c.wHead/2},${yHeadband}' />
+				<path class='meep-headband' stroke=${c.color} stroke-width=${c.wHeadband} d='M${-c.wHead/2},${yHeadband} Q0,${yHeadband+5} ${c.wHead/2},${yHeadband}' />
 			</svg>`);
 	}
 
@@ -193,11 +191,11 @@ Meep = function(){
 
 	let anim = 
 	[
-		{yFootLeft:0,yFootRight:0,h:390},
-		{yFootLeft:0,yFootRight:-20,h:400},
-		{yFootLeft:0,yFootRight:0,h:390},
-		{yFootLeft:-20,yFootRight:0,h:400},
-		{yFootLeft:0,yFootRight:0,h:390},
+		{yFootLeft:0,yFootRight:0,h:340},
+		{yFootLeft:0,yFootRight:-20,h:350},
+		{yFootLeft:0,yFootRight:0,h:340},
+		{yFootLeft:-20,yFootRight:0,h:350},
+		{yFootLeft:0,yFootRight:0,h:340},
 	];
 
 	let fps = 50;

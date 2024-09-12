@@ -144,11 +144,24 @@ BatClimbing = function(){
 				'background-size':'100%',
 			},
 
+			'batcheckpoint:after':{
+				'content':'""',
+				'display':'block',
+				'height':'200px',
+				'width':'100px',
+				'position':'absolute',
+				'bottom':'0px',
+				'left':'-50px',
+				'background-image':'url(proto/img/bat-checkpoint.png)',
+				'background-size':'100%',
+			},
+
+
 			'batthrower.warning:after':{
 				'background':'red',
 			},
 
-			'batgrapnel, batbox, batthrower, batbarrel':{
+			'batgrapnel, batbox, batthrower, batbarrel, batcheckpoint':{
 				'display':'block',
 				'height':'0px',
 				'width':'0px',
@@ -274,8 +287,8 @@ BatClimbing = function(){
 		['^--------','<-C----->','--------^'],
 		
 		['---------','--^------','<--W-W---'],
-		['------{->','------{->','------{-^'],
-		['^-}------','<-}------','<-------C'],
+		['------{->','-------->','------{-^'],
+		['^--------','<-}------','<-------C'],
 
 		['---------','------{->','--------^'],
 		['---------','^-}------','<--------'],
@@ -313,6 +326,7 @@ BatClimbing = function(){
 	let boxes = [];
 	let throwers = [];
 	let barrels = [];
+	let checkpoints = [];
 
 	for(var t=0; t<3; t++){
 
@@ -336,6 +350,7 @@ BatClimbing = function(){
 
 				let $g = $('<batgrid>').appendTo($l);
 
+				if(type=='C') checkpoints.push({ t:t, x:n+0.5, ox:0, y:l, $el:$('<batcheckpoint>').appendTo($g) });
 				if(type=='S') man = { t:t, x:n+0.5, ox:0, y:l, $el:$('<batman>').appendTo($l) };
 				if(type=='}' || type=='{') throwers.push({ tick:0, t:t, x:n+0.5, y:l, $el:$('<batthrower>').appendTo($g), dir:type=='}'?1:-1 });
 				if(type=='B') boxes.push({ t:t, x:n+0.5, y:l, $el:$('<batbox>').appendTo($g) });

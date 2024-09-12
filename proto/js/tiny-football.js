@@ -1,7 +1,11 @@
 TinyBall = function(x,y){
 
 	let self = this;
-	self.$el = $('<tinyball>');
+	self.$el = $(`
+		<tinyball>
+			<tinyballsprite></tinyballsprite>
+		</tinyball>`
+	);
 
 	self.x = x;
 	self.y = y;
@@ -23,8 +27,9 @@ TinyBall = function(x,y){
 	self.redraw(x,y);
 }
 
-TinyDude = function(x,y){
+TinyDude = function(x,y,n){
 
+	const COLORS = ['red','blue','green','purple','orange','yellow'];
 	let self = this;
 	self.$el = $(`
 		<tinydude>
@@ -43,6 +48,8 @@ TinyDude = function(x,y){
 	self.y = y;
 	self.r = 0;
 
+	new Meep(COLORS[n]).$el.appendTo(self.$el.find('tinyavatar'));
+
 	self.redraw = function(){
 
 
@@ -59,7 +66,6 @@ TinyDude = function(x,y){
 		})
 
 		self.$el.find('tinyavatar').css({
-			'transform':'scaleX('+(self.sx>0?-1:1)+')',
 			'z-index':self.y,
 		})
 	}
@@ -158,13 +164,22 @@ TinyFootball = function(){
 			'tinyball':{
 				display:'block',
 				position:'absolute',
+				'width':'0px',
+				'height':'0px',
+				'z-index':2,
+				'transform-style':'preserve-3d',
+			},
+
+			'tinyball:before':{
+				content:'""',
+				display:'block',
+				position:'absolute',
 				width:rBall*2+'px',
 				height:rBall*2+'px',
-				'background':'white',
+				'background':'black',
 				'border-radius':rBall+'px',
 				'transform':'translate(-50%,-50%)',
-
-				'z-index':2,
+				'opacity':0.5,
 			},
 
 			'tinydude':{
@@ -190,20 +205,32 @@ TinyFootball = function(){
 				'top':'0px',
 				'left':'0px',
 				'transform-style':'preserve-3d',
+				'transform-origin':'bottom center',
+				'transform':'rotateX(-30deg)',
 			},
 
-			'tinyavatar:after':{
+
+
+			'tinyballsprite':{
+				display:'block',
+				position:'absolute',
+				'top':'0px',
+				'left':'0px',
+				'transform-style':'preserve-3d',
+			},
+
+			'tinyballsprite:after':{
 				content:'""',
 				display:'block',
 				position:'absolute',
 				width:'64px',
-				height:'140px',
-				'background-image':'url(proto/img/little-dude.png)',
-				'background-size':'300%',
+				height:'64px',
+				'background-image':'url(proto/img/football.png)',
+				'background-size':'100%',
 				'left':'-32px',
 				'bottom':'0px',
 				'transform-style':'preserve-3d',
-				'transform':'scale(2) rotateX(-30deg)',
+				'transform':'rotateX(-30deg)',
 				'transform-origin':'bottom center',
 			},
 
@@ -331,7 +358,7 @@ TinyFootball = function(){
 	
 	let dudes = [];
 	while(dudes.length<6){
-		let dude = new TinyDude(0,0);
+		let dude = new TinyDude(0,0,dudes.length);
 		dude.$el.appendTo($field);
 		dudes.push(dude);
 	}

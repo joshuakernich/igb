@@ -36,7 +36,7 @@
 			wBody:[20,200],
 			hBody:[50,200],
 			rEye:[2,50],
-			r:[0,Math.PI*2],
+			r:[0,360],
 			//yFootLeft:[-500,0],
 			//yFootRight:[-500,0],
 		}
@@ -51,9 +51,10 @@
 
 			function revise(e){
 
-			
+				let v = parseFloat(e.target.value);
+				if(e.target.id == 'r') v = v*Math.PI/180;
 				
-				meep.c[e.target.id] = parseInt(e.target.value);
+				meep.c[e.target.id] = v;
 
 				
 				meep.redraw();

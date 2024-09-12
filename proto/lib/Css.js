@@ -11,18 +11,5 @@ class Css {
 	    }).join('\n')
 	  }
 
-
-	static of2 (json) {
-
-		function dig(member){
-			const nest = Object.keys(member);
-			if(nest){
-
-			}
-		}
-
-		dig(json);
-		
-	}
 }
 	
