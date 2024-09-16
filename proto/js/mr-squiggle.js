@@ -7,24 +7,26 @@ MrSquiggle = function(){
 	let $front = $('<igbside>').appendTo(self.$el);
 	$('<igbside>').appendTo(self.$el);
 
-	let $svg = $(`<svg width=1600 height=1000 viewBox='0 0 100 100' style="transform-origin:top left;background:black;"></svg>`).appendTo($front);
+	let $svg = $(`<svg preserveAspectRatio=none width=1600 height=1000 viewBox='0 0 100 100' style="transform-origin:top left;background:black;"></svg>`).appendTo($front);
 
 	let line = [];
 	let $ps = [];
-	let positions = [];
+	let positions = [{px:50,py:50}];
 
 	for(var i=0; i<7; i++) line[i] = [];
 
 	let fps = 50;
-	let max = fps*5;
+	let max = fps*15;
 	let interval;
 
 	let COLORS = ['red','blue','green','purple','orange','yellow','white'];
+	let scale = 1;
 
 	function tick(){
 
-		let wScreen = $front.width();
-		$svg.css('transform','scale('+wScreen/1600+')');
+		let scale = $front.width()/1600;
+		
+		$svg.css('transform','scale('+scale+')');
 
 		let str = '';
 
@@ -57,6 +59,12 @@ MrSquiggle = function(){
 		clearInterval(interval);
 		if(b) interval = setInterval(tick,1000/fps);
 	}
+
+	$svg.on('mousemove',function(e){
+		
+		positions[0].px = (e.offsetX/1600)*100;
+		positions[0].py = (e.offsetY/1000)*100;
+	});
 
 	self.turnOnOff(true);
 }

@@ -48,11 +48,12 @@ TinyDude = function(x,y,n){
 	self.y = y;
 	self.r = 0;
 
-	new Meep(COLORS[n]).$el.appendTo(self.$el.find('tinyavatar'));
+	let meep = new Meep(COLORS[n]);
+	meep.$el.appendTo(self.$el.find('tinyavatar'));
 
 	self.redraw = function(){
 
-
+		meep.c.r = self.r + Math.PI/2;
 
 		self.$el.css({
 			left:self.x+'px',

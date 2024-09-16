@@ -2,7 +2,7 @@ Meep = function(color){
 
 	let self = this;
 
-	let c = self.c = {
+	let c = {
 
 		h:300,
 		hHead:140,
@@ -19,7 +19,10 @@ Meep = function(color){
 		yFootRight:0,
 		color:color?color:'red',
 		r:0,
+		zHand:100,
 	}
+
+	self.c = c;
 
 	if(!Meep.didInit){
 
@@ -87,8 +90,8 @@ Meep = function(color){
 		
 		let wNeck = c.wBody/2;
 
-		let yEye = -c.h+c.hHead/5*3; // 3/5 mark
-		let yMouth = -c.h+c.hHead/4*3;	// 3/4 mark
+		let yEye = -c.h+c.hHead/2; // 1/2 mark
+		let yMouth = -c.h+c.hHead/3*2;	// 2/3 mark
 		let yBody = -c.h+c.hHead;
 		
 
@@ -113,44 +116,77 @@ Meep = function(color){
 		let plane = 1/4;
 		function rotateAround(cx,cy,dx,dy,r){
 
+			// where cx cy is the centre (cx is generally zero)
+			// and dx dy is a point on this disc of rotation
+			// and the plane of rotation is disc parallel to the ground
+
+			let dist = Math.sqrt(dx*dx+dy*dy);
+			let rStart = Math.atan2(dy,dx);
+			let rEnd = rStart + r;
+
 			return {
-				x: cx + Math.cos(r) * dx,
-				y: cy + Math.sin(r) * (dy*plane),
+				x: cx + Math.cos(rEnd) * dist,
+				y: cy + Math.sin(rEnd) * (dist*plane),
 			}
 		}
 
 		function makeSymmetrical(cx,cy,dx,dy,r){
 			return {
-				left:rotateAround(cx,cy,dx,dy,r+Math.PI),
+				left:rotateAround(cx,cy,-dx,dy,r),
 				right:rotateAround(cx,cy,dx,dy,r),
 			}
 		}
 
 		let shoulder = makeSymmetrical(0,yShoulder,c.wBody/2,0,c.r);
 
-		let oxElbow = c.wBody/2+100;
+		let oxHand = c.wBody/2+20;
+		let oxElbow = oxHand*1.5;
+		
+		
+
 		let elbow = {
-			left: rotateAround(0,yShoulder+hArmLeft/2,oxElbow,0,c.r+Math.PI),
-			right: rotateAround(0,yShoulder+hArmRight/2,oxElbow,0,c.r),
+			left: rotateAround(0,yShoulder+hArmLeft/2,-oxElbow,c.zHandLeft-50,c.r),
+			right: rotateAround(0,yShoulder+hArmRight/2,oxElbow,c.zHandRight-50,c.r),
 		}
 
-		let oxHand = c.wBody/2+10;
+		
 		let hand = {
-			left: rotateAround(0,yShoulder+hArmLeft,oxHand,0,c.r+Math.PI),
-			right: rotateAround(0,yShoulder+hArmRight,oxHand,0,c.r),
+			left: rotateAround(0,yShoulder+hArmLeft,-oxHand,c.zHandLeft,c.r),
+			right: rotateAround(0,yShoulder+hArmRight,oxHand,c.zHandRight,c.r),
 		}
 
 		let hip = makeSymmetrical(0,yHip,c.wBody/4,0,c.r);
 
 		let knee = {
-			left: rotateAround(0,yKneeLeft,oxKnee,0,c.r+Math.PI),
-			right: rotateAround(0,yKneeRight,oxKnee,0,c.r),
+			left: rotateAround(0,yKneeLeft,-oxKnee,50,c.r),
+			right: rotateAround(0,yKneeRight,oxKnee,50,c.r),
 		}
 
 		let foot = {
-			left: rotateAround(0,c.yFootLeft,oxHip,0,c.r+Math.PI),
+			left: rotateAround(0,c.yFootLeft,-oxHip,0,c.r),
 			right: rotateAround(0,c.yFootRight,oxHip,0,c.r),
 		}
+
+		let xEye = Math.cos(Math.PI/3)*(c.wHead/2);
+		let zEye = Math.sin(Math.PI/3)*(c.wHead/2); // the depth of the face (a little less than the radius of the head)
+
+		let eye = {
+			left: rotateAround(0,yEye,-xEye,zEye,c.r),
+			right: rotateAround(0,yEye,xEye,zEye,c.r),
+		}
+
+		
+
+		eye.left.rx = rotateAround(0,yEye,-xEye+c.rEye,zEye,c.r).x - eye.left.x;
+		eye.right.rx = rotateAround(0,yEye,xEye+c.rEye,zEye,c.r).x - eye.right.x;
+
+		if(eye.left.rx<0) eye.left.rx = 0;
+		if(eye.right.rx<0) eye.right.rx = 0;
+
+		let mouth = rotateAround(0,yMouth,0,zEye,c.r);
+		mouth.rx = rotateAround(0,yMouth,c.wMouth/2,zEye,c.r).x - mouth.x;
+
+		if(mouth.rx<0) mouth.rx = 0;
 
 		self.$el.html(
 			`
@@ -166,18 +202,18 @@ Meep = function(color){
 				<path class='meep-arm' stroke-width=${c.wArm} d='M${shoulder.left.x},${shoulder.left.y} Q${elbow.left.x},${elbow.left.y} ${hand.left.x},${hand.left.y}'/>
 				<path class='meep-arm' stroke-width=${c.wArm} d='M${shoulder.right.x},${shoulder.right.y} Q${elbow.right.x},${elbow.right.y} ${hand.right.x},${hand.right.y}'/>
 
-				<path class='meep-thumb' stroke-width=${c.wArm/2} d='M${-c.wBody/2-15},${yShoulder+hArmLeft} l5,${-c.wArm*0.7}'/>
-				<path class='meep-thumb' stroke-width=${c.wArm/2} d='M${c.wBody/2+15},${yShoulder+hArmRight} l-5,${-c.wArm*0.7}'/>
+				<path class='meep-thumb' stroke-width=${c.wArm/2} d='M${hand.left.x},${hand.left.y} l0,-7'/>
+				<path class='meep-thumb' stroke-width=${c.wArm/2} d='M${hand.right.x},${hand.right.y} l0,-7'/>
 
 				<path class='meep-leg' stroke-width=${c.wLeg} d='M${hip.left.x},${hip.left.y} Q${knee.left.x},${knee.left.y} ${foot.left.x},${foot.left.y-c.wFoot/2}'/>
 				<path class='meep-leg' stroke-width=${c.wLeg} d='M${hip.right.x},${hip.right.y} Q${knee.right.x},${knee.right.y} ${foot.right.x},${foot.right.y-c.wFoot/2}'/>
 
-				<circle class='meep-eye' cx=${-c.wHead/4} cy=${yEye} r=${c.rEye} />
-				<circle class='meep-eye' cx=${c.wHead/4} cy=${yEye} r=${c.rEye} />
-				<path class='meep-mouth' d="M${-c.wMouth/2},${yMouth} a1,1 0 0,0 ${c.wMouth},0" />
+				<ellipse class='meep-eye' cx=${eye.left.x} cy=${eye.left.y} rx=${eye.left.rx} ry=${c.rEye} />
+				<ellipse class='meep-eye' cx=${eye.right.x} cy=${eye.right.y} rx=${eye.right.rx} ry=${c.rEye} />
+				<path class='meep-mouth' d="M${mouth.x-mouth.rx},${mouth.y} q0,${c.wMouth/2} ${mouth.rx},${c.wMouth/2} q${mouth.rx},0 ${mouth.rx},${-c.wMouth/2}" />
 
-				<path class='meep-shoe' d="M${foot.left.x-c.wFoot/2},${foot.left.y} a1,1 0 0,1 ${c.wFoot},0" />
-				<path class='meep-shoe' d="M${foot.right.x-c.wFoot/2},${foot.right.y} a1,1 0 0,1 ${c.wFoot},0" />
+				<path class='meep-shoe' d="M${foot.left.x-c.wFoot/2},${foot.left.y} a1,1 0 0,1 ${c.wFoot},0 q${-c.wFoot/2},5 ${-c.wFoot},0" />
+				<path class='meep-shoe' d="M${foot.right.x-c.wFoot/2},${foot.right.y} a1,1 0 0,1 ${c.wFoot},0 q${-c.wFoot/2},5 ${-c.wFoot},0" />
 
 				<path class='meep-headband' stroke=${c.color} stroke-width=${c.wHeadband} d='M${-c.wHead/2},${yHeadband} Q0,${yHeadband+5} ${c.wHead/2},${yHeadband}' />
 			</svg>`);
@@ -191,15 +227,15 @@ Meep = function(color){
 
 	let anim = 
 	[
-		{yFootLeft:0,yFootRight:0,h:340},
-		{yFootLeft:0,yFootRight:-20,h:350},
-		{yFootLeft:0,yFootRight:0,h:340},
-		{yFootLeft:-20,yFootRight:0,h:350},
-		{yFootLeft:0,yFootRight:0,h:340},
+		{yFootLeft:0,yFootRight:0,h:340,zHandLeft:50,zHandRight:-50},
+		{yFootLeft:0,yFootRight:-20,h:350,zHandLeft:0,zHandRight:0},
+		{yFootLeft:0,yFootRight:0,h:340,zHandLeft:-50,zHandRight:50},
+		{yFootLeft:-20,yFootRight:0,h:350,zHandLeft:0,zHandRight:0},
+		{yFootLeft:0,yFootRight:0,h:340,zHandLeft:50,zHandRight:-50},
 	];
 
 	let fps = 50;
-	let animTime = 0.5;
+	let animTime = 1;
 	let timeStart = new Date().getTime();
 
 	function tick(){
