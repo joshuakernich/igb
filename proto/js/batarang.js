@@ -25,7 +25,12 @@ Batarang = function(level, wall, x){
 	self.x = 0;
 	self.dist = FPS*SECONDS;
 
-	self.$el = $('<batarang>');
+	self.$el = $(`
+		<batarang>
+			<bataranginner>
+				<batarangspinner></batarangspinner>
+			</bataranginner>
+		</batarang>`);
 
 	self.redraw = function(){
 		self.$el.css('left',self.x*BatarangGame.GRID+'px');
@@ -40,7 +45,7 @@ BatarangGame = function(){
 	
 	let W = 1600;
 	let H = 1000;
-	let GRIDSPERWALL = 10;
+	let GRIDSPERWALL = 8;
 	BatarangGame.GRID = W/GRIDSPERWALL;
 	let LEVEL = 250;
 
@@ -61,8 +66,8 @@ BatarangGame = function(){
 				'perspective':W+'px',
 				
 				'text-align':'center',
-				'border-top':'150px solid #222',
-				'border-bottom':'100px solid #666',
+				'border-top':'100px solid #222',
+				'border-bottom':'150px solid #666',
 				'box-sizing':'border-box',
 			},
 
@@ -147,8 +152,17 @@ BatarangGame = function(){
 				'z-index':'1',
 			},
 
-			'batarang:after':{
-				'content':'""',
+			'bataranginner':{
+				'display':'block',
+				'position':'absolute',
+				'left':'0px',
+				'top':'0px',
+				'width':'0px',
+				'height':'0px',
+				'transform':'scaleY(0.5)',
+			},
+
+			'batarangspinner':{
 				'display':'block',
 				'position':'absolute',
 				'left':'-50px',
@@ -189,9 +203,9 @@ BatarangGame = function(){
 	self.$el = $('<igb>');
 
 	let map = [
-		'W--------WW--------WW--------W',
-		'W--------WW--------WW---L----W',
-		'W-----L--WW--------WW--------W',
+		'W------WW------WW------W',
+		'W------WW------WW---L--W',
+		'W---L--WW------WW------W',
 	]
 
 	let $game = $('<bataranggame>').appendTo(self.$el);
