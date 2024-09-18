@@ -1,15 +1,38 @@
 
 
 
-BatarangGoon = function(level,x){
+BatarangGoon = function(level,x,...path){
 	let self = this;
 	self.level = level;
 	self.x = x;
+	self.plantBombAt = undefined;
+
+	let xFloat = x*100;
 
 	self.$el = $('<bataranggoon>');
 
+	let iPath = 0;
+	self.step = function(){
+		
+		if(self.x==path[iPath]){
+			iPath++;
+			if(path[iPath]=='U'){
+				self.level--;
+				iPath++;
+			} else if(path[iPath]=='B'){
+				self.plantBombAt = self.x;
+				iPath++;
+			} else if(path[iPath]=='E'){
+				self.dead = true;
+			} 
+		} else {
+			dir = self.x<path[iPath]?1:-1
+			xFloat += 2*dir;
+			self.x = xFloat/100;
+		}
+	}
+
 	self.redraw = function(){
-		x += 0.1;
 		self.$el.css('left',self.x*BatarangGame.GRID+'px');
 	}
 }
@@ -45,8 +68,8 @@ BatarangGame = function(){
 	
 	let W = 1600;
 	let H = 1000;
-	let GRIDSPERWALL = 8;
-	BatarangGame.GRID = W/GRIDSPERWALL;
+	let GPW = 8; //GRIDS PER WALL
+	BatarangGame.GRID = W/GPW;
 	let LEVEL = 250;
 
 	if(!BatarangGame.didInit){
@@ -69,6 +92,18 @@ BatarangGame = function(){
 				'border-top':'100px solid #222',
 				'border-bottom':'150px solid #666',
 				'box-sizing':'border-box',
+			},
+
+			'bataranggame h1':{
+				'position':'absolute',
+				'left':'0px',
+				'right':'0px',
+				'top':'-100px',
+				'line-height':'100px',
+				'font-size':'50px',
+				'color':'white',
+				'padding':'0px',
+				'margin':'0px',
 			},
 
 			'bataranglevel':{
@@ -94,18 +129,18 @@ BatarangGame = function(){
 
 			'bataranggrid[type=W]':{
 				'background':'#999',
+				'z-index':'1',
 			},
 
-			'bataranggrid[type=L]:after':{
+			'batarangladder:after':{
 				'content':'""',
 				'display':'block',
 				'position':'absolute',
 				
 				'width':'50px',
 			
-				'top':'0px',
-				'left':'0px',
-				'right':'0px',
+				'height':LEVEL+'px',
+				'left':'-25px',
 				'bottom':'0px',
 				'margin':'auto',
 				
@@ -113,6 +148,46 @@ BatarangGame = function(){
 				'border-right':'10px solid black',
 				'box-sizing':'border-box',
 			},
+
+			'batarangbomb:after':{
+				'content':'""',
+				'display':'block',
+				'position':'absolute',
+				
+				'width':'50px',
+				'height':'50px',
+				'left':'-25px',
+				'bottom':'0px',
+				'margin':'auto',
+				
+				'border-radius':'100%',
+				'background':'orange',
+			},
+
+			'batarangbomb.explode:after':{
+				'width':'200px',
+				'height':'200px',
+				'left':'-100px',
+				'bottom':'-75px',
+				'background':'red',
+			},
+
+			'batarangbomb.exploded:after':{
+				'content':'""',
+				'display':'block',
+				'position':'absolute',
+				
+				'width':'150px',
+				'height':'150px',
+				'left':'-75px',
+				'bottom':'0px',
+				'margin':'auto',
+				
+				'border-radius':'100% 100% 0px 0px',
+				'background':'black',
+			},
+
+
 
 			'batarangzone':{
 				'width':(W-300)+'px',
@@ -124,7 +199,7 @@ BatarangGame = function(){
 				'position':'absolute',
 			},
 
-			'bataranggoon':{
+			'bataranggoon, batarangladder, batarangbomb':{
 				'display':'block',
 				'position':'absolute',
 				'left':'0px',
@@ -140,6 +215,7 @@ BatarangGame = function(){
 				'bottom':'0px',
 				'height':'150px',
 				'background':'orange',
+				'border-radius':"30px 30px 0px 0px",
 			},
 
 			'batarang':{
@@ -170,7 +246,11 @@ BatarangGame = function(){
 				'width':'100px',
 				'height':'40px',
 				'background':'black',
-				'border-radius':"100% 100% 0px 0px"
+				'border-radius':"100% 100% 0px 0px",
+				'animation':'spin',
+				'animation-duration':'0.5s',
+				'animation-iteration-count':'infinite',
+				'animation-timing-function':'linear',
 			},
 
 			'batarangpulse':{
@@ -194,23 +274,52 @@ BatarangGame = function(){
 	let wWas = 0;
 	let fps = 50;
 	let interval;
+	let goons = [];
 	let $ls = [];
 	
 	let xSideToSide = 0;
 	let xFrontToBack = 0;
 	let batarang;
 
+	let LADDERS = [[],[5,14,20],[3,18]];
+	let EXIT = [10,13,11];
+
+	let isGameActive = true;
+
+
+	let queue = [
+		'ROUND',
+		1000,
+		new BatarangGoon(0,GPW*2,EXIT[0],'B',EXIT[0]+2,EXIT[0],'E'),
+		Number.MAX_SAFE_INTEGER,
+		'GO',
+		1000,
+		new BatarangGoon(1,GPW,GPW*2,LADDERS[1][1],'U',EXIT[0],'E'),
+		1000,
+		new BatarangGoon(2,GPW*2,GPW,GPW*2,LADDERS[2][0],'U'),
+		1000,
+		new BatarangGoon(2,0,GPW*3),
+		1000,
+		new BatarangGoon(1,GPW*2*3,LADDERS[1][0],'U',EXIT[0],'E'),
+		1000,
+		new BatarangGoon(2,0,LADDERS[2][0],'U',LADDERS[1][0],'U',EXIT[0],'E'),
+		'ROUND',
+		1000,
+		new BatarangGoon(1,GPW*2,EXIT[1],'B',EXIT[1]+2,EXIT[1],'E'),
+		'GO',
+	]
+
 	self.$el = $('<igb>');
 
 	let map = [
 		'W------WW------WW------W',
-		'W------WW------WW---L--W',
-		'W---L--WW------WW------W',
+		'W------WW------WW------W',
+		'W------WW------WW------W',
 	]
 
 	let $game = $('<bataranggame>').appendTo(self.$el);
 
-	for(var i=0; i<3; i++){
+	for(var i=0; i<map.length; i++){
 		let $l = $('<bataranglevel>').appendTo($game);
 		$ls[i] = $l;
 		for(var g=0; g<30; g++){
@@ -222,34 +331,62 @@ BatarangGame = function(){
 			.click(spawnBatarang);
 		}
 
-		/*for(var z=0; z<3; z++){
-			$('<batarangzone>').appendTo($l).css({left:150 + z*W+'px'}).attr('level',i).attr('wall',z);
-
-		}*/
+		
+		for(var l in LADDERS[i]) $('<batarangladder>').appendTo($ls[i]).css('left',LADDERS[i][l]*BatarangGame.GRID+'px');
+		
+	
 	}
 
+	let $h = $('<h1>').appendTo($game);
+
 	function getXFor(wall){
-		if(wall==0) return GRIDSPERWALL - xFrontToBack;
-		if(wall==1)	return GRIDSPERWALL + xSideToSide;
-		if(wall==2) return GRIDSPERWALL*2 + xFrontToBack;
+		if(wall==0) return GPW - xFrontToBack;
+		if(wall==1)	return GPW + xSideToSide;
+		if(wall==2) return GPW*2 + xFrontToBack;
 	}
 
 	function spawnBatarang(e){
+		if(!isGameActive) return;
 		let level = $(this).attr('level');
-		let wall = Math.floor( $(this).attr('g')/GRIDSPERWALL );
+		let wall = Math.floor( $(this).attr('g')/GPW );
 		
 		batarang = new Batarang(level,wall,getXFor(wall));
 		batarang.redraw();
 		batarang.$el.appendTo($ls[batarang.level]);
 	}
 
-	function spawnGoon(){
-		let goon = new BatarangGoon(2,2);
-		goon.redraw();
-		goon.$el.appendTo($ls[goon.level]);
+
+	let iQueue = 0;
+	let intervalQueue;
+	function doNextQueue(){
+
+		clearInterval(intervalQueue);
+		let g = queue[iQueue];
+		if(!g) return;
+
+		console.log('spawnGoon',g);
+		iQueue++;
+
+		if(g=='ROUND'){
+			$h.text('GET READY...');
+			isGameActive = false;
+			doNextQueue();
+		} else if(g=='GO'){
+			$h.text('GO!');
+			isGameActive = true;
+			doNextQueue();
+		} else if(isNaN(g)){
+			//spawn the goon
+			g.redraw();
+			g.$el.appendTo($ls[g.level]);
+			goons.push(g);
+			//doNextQueue();
+		} else{
+			intervalQueue = setTimeout(doNextQueue,g);
+		}
 	}
 
-	spawnGoon();
+	doNextQueue();
 
 	function tick(){
 
@@ -258,6 +395,43 @@ BatarangGame = function(){
 			scale = wScreen/(W*3);
 			$game.css('transform','scale('+scale+')');
 			wWas = wScreen;
+		}
+
+		let didGoonDie = false;
+		for(var g in goons){
+			
+			goons[g].step();
+			goons[g].redraw();
+			
+			if( !goons[g].$el.parent().is($ls[goons[g].level])) goons[g].$el.appendTo($ls[goons[g].level]);
+			
+			if(goons[g].plantBombAt){
+
+				let $bomb = $('<batarangbomb>')
+				.prependTo($ls[goons[g].level])
+				.css('left',goons[g].x*BatarangGame.GRID+'px');
+
+				setTimeout(function(){
+					$bomb.addClass('explode');
+				},1000);
+
+				setTimeout(function(){
+					$bomb.removeClass('explode');
+					$bomb.addClass('exploded');
+				},1500);
+
+				goons[g].plantBombAt = undefined;
+
+			}
+
+			if( goons[g].dead ){
+				goons[g].$el.remove();
+				goons.splice(g,1);
+				g--;
+				didGoonDie = true;
+				
+			}
+			if(didGoonDie) doNextQueue();
 		}
 
 		if(batarang){
@@ -274,7 +448,16 @@ BatarangGame = function(){
 				.css('left',batarang.x*BatarangGame.GRID+'px')
 				.animate({width:'200px',height:'200px','opacity':0})
 
-				
+				for(var g=0; g<goons.length; g++){
+					let dx = Math.abs( goons[g].x - batarang.x );
+					if(dx<0.5){
+						goons[g].$el.remove();
+						goons.splice(g,1);
+						g--;
+						doNextQueue();
+					}
+
+				}
 
 				batarang.$el.remove();
 				batarang = undefined;
@@ -282,10 +465,10 @@ BatarangGame = function(){
 			}
 		}
 	}
-
+ 
 	self.setPlayers = function(p){
-		xSideToSide = p[0].px/100*GRIDSPERWALL;
-		xFrontToBack = (1-p[0].pz/100)*GRIDSPERWALL;
+		xSideToSide = p[0].px/100*GPW;
+		xFrontToBack = (1-p[0].pz/100)*GPW;
 	}
 
 	self.turnOnOff = function(b){
@@ -297,11 +480,11 @@ BatarangGame = function(){
 
 	$game.on('mousemove',function(e){
 
-		let x = (e.pageX/scale)/W*GRIDSPERWALL;
+		let x = (e.pageX/scale)/W*GPW;
 		
-		xFrontToBack = GRIDSPERWALL-Math.max( 0, Math.min( GRIDSPERWALL, x));
-		xSideToSide = Math.max( 0, Math.min( GRIDSPERWALL, x-GRIDSPERWALL));
-		if( x>GRIDSPERWALL*2 ) xFrontToBack = Math.max( 0, Math.min( GRIDSPERWALL, x-GRIDSPERWALL*2));
+		xFrontToBack = GPW-Math.max( 0, Math.min( GPW, x));
+		xSideToSide = Math.max( 0, Math.min( GPW, x-GPW));
+		if( x>GPW*2 ) xFrontToBack = Math.max( 0, Math.min( GPW, x-GPW*2));
 
 		
 	})
