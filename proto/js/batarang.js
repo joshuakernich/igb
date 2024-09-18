@@ -99,11 +99,12 @@ BatarangGame = function(){
 				'left':'0px',
 				'right':'0px',
 				'top':'-100px',
-				'line-height':'100px',
-				'font-size':'50px',
+				'line-height':H+'px',
+				'font-size':'150px',
 				'color':'white',
 				'padding':'0px',
 				'margin':'0px',
+				'pointer-events':'none',
 			},
 
 			'bataranglevel':{
@@ -154,14 +155,14 @@ BatarangGame = function(){
 				'display':'block',
 				'position':'absolute',
 				
-				'width':'50px',
-				'height':'50px',
-				'left':'-25px',
+				'width':'80px',
+				'height':'80px',
+				'left':'-40px',
 				'bottom':'0px',
 				'margin':'auto',
 				
 				'border-radius':'100%',
-				'background':'orange',
+				'background':'#222',
 			},
 
 			'batarangbomb.explode:after':{
@@ -283,30 +284,54 @@ BatarangGame = function(){
 
 	let LADDERS = [[],[5,14,20],[3,18]];
 	let EXIT = [10,13,11];
+	let PAUSE = 100000;
 
 	let isGameActive = true;
 
 
+
+
 	let queue = [
-		'ROUND',
+		'ROUND', // ROUND 1
 		1000,
-		new BatarangGoon(0,GPW*2,EXIT[0],'B',EXIT[0]+2,EXIT[0],'E'),
-		Number.MAX_SAFE_INTEGER,
+		new BatarangGoon(0,GPW*2,EXIT[0],'B',EXIT[0]+1.5,EXIT[0],'E'), // BOMBER 1
+		PAUSE,
 		'GO',
 		1000,
 		new BatarangGoon(1,GPW,GPW*2,LADDERS[1][1],'U',EXIT[0],'E'),
+		5000,
+		new BatarangGoon(2,GPW*2,GPW,GPW*2,LADDERS[2][0],'U',LADDERS[1][0],'U',EXIT[0],'E'),
+		5000,
+		new BatarangGoon(2,0,LADDERS[2][1],'U',LADDERS[1][1],'U',EXIT[0],'E'),
+		5000,
+		new BatarangGoon(1,GPW*3,LADDERS[1][0],'U',EXIT[0],'E'),
+		5000,
+		new BatarangGoon(2,0,LADDERS[2][0],'U',LADDERS[1][1],'U',EXIT[0],'E'),
+		PAUSE,
+		'ROUND', // ROUND 2
 		1000,
-		new BatarangGoon(2,GPW*2,GPW,GPW*2,LADDERS[2][0],'U'),
-		1000,
-		new BatarangGoon(2,0,GPW*3),
-		1000,
-		new BatarangGoon(1,GPW*2*3,LADDERS[1][0],'U',EXIT[0],'E'),
-		1000,
-		new BatarangGoon(2,0,LADDERS[2][0],'U',LADDERS[1][0],'U',EXIT[0],'E'),
-		'ROUND',
-		1000,
-		new BatarangGoon(1,GPW*2,EXIT[1],'B',EXIT[1]+2,EXIT[1],'E'),
 		'GO',
+		1000,
+		new BatarangGoon(1,GPW*2,LADDERS[1][0],'U',EXIT[0],'E'),
+		5000,
+		new BatarangGoon(2,GPW*3,LADDERS[2][1],'U',LADDERS[1][1],'U',EXIT[0],'E'),
+		PAUSE,
+		'ROUND', // ROUND 3
+		1000,
+		new BatarangGoon(1,GPW*2,EXIT[1],'B',EXIT[1]+1.5,EXIT[1],'E'), // BOMBER 2
+		PAUSE,
+		'GO',
+		1000,
+		new BatarangGoon(1,0,EXIT[1],'E'),
+		PAUSE,
+		'ROUND', // ROUND 4
+		1000,
+		new BatarangGoon(2,GPW*2,EXIT[2],'B',EXIT[2]+1.5,EXIT[2],'E'), // BOMBER 3
+		PAUSE,
+		'GO',
+		1000,
+		new BatarangGoon(2,GPW*3,EXIT[2],'E'),
+		PAUSE
 	]
 
 	self.$el = $('<igb>');
@@ -374,13 +399,14 @@ BatarangGame = function(){
 		} else if(g=='GO'){
 			$h.text('GO!');
 			isGameActive = true;
+			setTimeout(function(){$h.text('')},1000);
 			doNextQueue();
 		} else if(isNaN(g)){
 			//spawn the goon
 			g.redraw();
 			g.$el.appendTo($ls[g.level]);
 			goons.push(g);
-			//doNextQueue();
+			doNextQueue();
 		} else{
 			intervalQueue = setTimeout(doNextQueue,g);
 		}
@@ -431,7 +457,7 @@ BatarangGame = function(){
 				didGoonDie = true;
 				
 			}
-			if(didGoonDie) doNextQueue();
+			if(didGoonDie && !goons.length) doNextQueue();
 		}
 
 		if(batarang){
@@ -454,7 +480,7 @@ BatarangGame = function(){
 						goons[g].$el.remove();
 						goons.splice(g,1);
 						g--;
-						doNextQueue();
+						if(!goons.length) doNextQueue();
 					}
 
 				}
