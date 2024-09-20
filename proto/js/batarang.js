@@ -8,17 +8,40 @@ BatarangGoon = function(level,x,...path){
 	self.plantBombAt = undefined;
 
 	let xFloat = x*100;
+	let isClimbing = false;
+
+	let speed = 3;
 
 	self.$el = $('<bataranggoon>');
 
 	let iPath = 0;
 	self.step = function(){
 		
+		if(isClimbing) return;
+
 		if(self.x==path[iPath]){
 			iPath++;
 			if(path[iPath]=='U'){
-				self.level--;
-				iPath++;
+
+				// climb up
+				isClimbing = true;
+				self.$el.animate({'bottom':'250px'},{easing:'linear',duration:1000,complete:function(){
+					self.level--;
+					iPath++;
+					isClimbing = false;
+					
+				}})
+
+			} else if(path[iPath]=='D'){
+
+				// climb down
+				isClimbing = true;
+				self.$el.animate({'bottom':'-250px'},{easing:'linear',duration:1000,complete:function(){
+					self.level++;
+					iPath++;
+					isClimbing = false;
+				}})
+				
 			} else if(path[iPath]=='B'){
 				self.plantBombAt = self.x;
 				iPath++;
@@ -27,8 +50,12 @@ BatarangGoon = function(level,x,...path){
 			} 
 		} else {
 			dir = self.x<path[iPath]?1:-1
-			xFloat += 2*dir;
+			xFloat += speed*dir;
 			self.x = xFloat/100;
+
+			//snap to finish
+			if(dir==1 && self.x>path[iPath] || dir==-1 && self.x<path[iPath]) self.x = path[iPath];
+			
 		}
 	}
 
@@ -282,14 +309,25 @@ BatarangGame = function(){
 	let xFrontToBack = 0;
 	let batarang;
 
-	let LADDERS = [[],[5,14,20],[3,18]];
-	let EXIT = [10,13,11];
+	let LADDERS = [[],[5,14,20],[3,13,18]];
+	let EXIT = [10,12,11];
 	let PAUSE = 100000;
+	let BETWEEN = 10000;
+	let SEQUENCE = 1500;
 
 	let isGameActive = true;
 
 
+	let iQueue = 0;
+	/*iQueue = 16;
+	iQueue = 31;
+	iQueue = 47;
+	iQueue = 62;
+	iQueue = 85;*/
 
+	
+
+	
 
 	let queue = [
 		'ROUND', // ROUND 1
@@ -298,41 +336,160 @@ BatarangGame = function(){
 		PAUSE,
 		'GO',
 		1000,
-		new BatarangGoon(1,GPW,GPW*2,LADDERS[1][1],'U',EXIT[0],'E'),
-		5000,
-		new BatarangGoon(2,GPW*2,GPW,GPW*2,LADDERS[2][0],'U',LADDERS[1][0],'U',EXIT[0],'E'),
-		5000,
+		new BatarangGoon(1,GPW,LADDERS[1][1],'U',EXIT[0],'E'),
+		BETWEEN,
+		new BatarangGoon(2,GPW*2,LADDERS[2][1],'U',LADDERS[1][0],'U',EXIT[0],'E'),
+		BETWEEN,
 		new BatarangGoon(2,0,LADDERS[2][1],'U',LADDERS[1][1],'U',EXIT[0],'E'),
-		5000,
-		new BatarangGoon(1,GPW*3,LADDERS[1][0],'U',EXIT[0],'E'),
-		5000,
-		new BatarangGoon(2,0,LADDERS[2][0],'U',LADDERS[1][1],'U',EXIT[0],'E'),
+		BETWEEN,
+		new BatarangGoon(1,GPW*3,LADDERS[1][2],'U',EXIT[0],'E'),
+		BETWEEN,
+		new BatarangGoon(2,0,LADDERS[2][0],'U',LADDERS[1][0],'U',EXIT[0],'E'),
 		PAUSE,
 		'ROUND', // ROUND 2
-		1000,
+		2000,
 		'GO',
 		1000,
-		new BatarangGoon(1,GPW*2,LADDERS[1][0],'U',EXIT[0],'E'),
-		5000,
+		new BatarangGoon(1,GPW,LADDERS[1][1],'U',EXIT[0],'E'),
+		BETWEEN,
+		new BatarangGoon(1,GPW*3,LADDERS[1][2],'U',EXIT[0],'E'),
 		new BatarangGoon(2,GPW*3,LADDERS[2][1],'U',LADDERS[1][1],'U',EXIT[0],'E'),
+		BETWEEN,
+		new BatarangGoon(1,0,LADDERS[1][0],'U',EXIT[0],'E'),
+		new BatarangGoon(2,0,LADDERS[2][0],'U',LADDERS[1][0],'U',EXIT[0],'E'),
+		BETWEEN,
+		new BatarangGoon(2,GPW,LADDERS[2][1],'U',LADDERS[1][1],'U',EXIT[0],'E'),
+		new BatarangGoon(2,GPW*2,LADDERS[2][1],'U',LADDERS[1][1],'U',EXIT[0],'E'),
 		PAUSE,
 		'ROUND', // ROUND 3
+		2000,
+		'GO',
+		1000,
+		new BatarangGoon(0,GPW*3,EXIT[0],'E'),
+		new BatarangGoon(1,GPW*3,LADDERS[1][2],'U',EXIT[0],'E'),
+		new BatarangGoon(2,GPW*3,LADDERS[2][2],'U',LADDERS[1][2],'U',EXIT[0],'E'),
+		BETWEEN+5000,
+		new BatarangGoon(0,0,EXIT[0],'E'),
+		new BatarangGoon(1,0,LADDERS[1][0],'U',EXIT[0],'E'),
+		new BatarangGoon(2,0,LADDERS[2][0],'U',LADDERS[1][0],'U',EXIT[0],'E'),
+		BETWEEN+5000,
+		new BatarangGoon(0,GPW*2,EXIT[0],'E'),
+		new BatarangGoon(1,GPW,LADDERS[1][1],'U',EXIT[0],'E'),
+		new BatarangGoon(2,GPW*2,LADDERS[2][1],'U',LADDERS[1][1],'U',EXIT[0],'E'),
+		PAUSE,
+		'ROUND', // ROUND 4
 		1000,
 		new BatarangGoon(1,GPW*2,EXIT[1],'B',EXIT[1]+1.5,EXIT[1],'E'), // BOMBER 2
 		PAUSE,
 		'GO',
 		1000,
 		new BatarangGoon(1,0,EXIT[1],'E'),
+		new BatarangGoon(1,GPW*3,EXIT[1],'E'),
+		BETWEEN,
+		new BatarangGoon(0,0,EXIT[0],'E'),
+		new BatarangGoon(0,GPW*3,EXIT[0],'E'),
+		BETWEEN,
+		new BatarangGoon(2,0,LADDERS[2][0],'U',EXIT[1],'E'),
+		new BatarangGoon(2,GPW*3,LADDERS[2][2],'U',LADDERS[1][1],'U',EXIT[0],'E'),
 		PAUSE,
-		'ROUND', // ROUND 4
+		'ROUND', // ROUND 5
+		2000,
+		'GO', 
+		1000,
+		new BatarangGoon(2,GPW*3,LADDERS[2][2],'U',LADDERS[1][1],'U',EXIT[0],'E'),
+		SEQUENCE,
+		new BatarangGoon(2,GPW*3,LADDERS[2][1],'U',EXIT[1],'E'),
+		SEQUENCE,
+		new BatarangGoon(2,GPW*3,LADDERS[2][2],'U',EXIT[1],'E'),
+		BETWEEN+5000,
+		new BatarangGoon(2,0,LADDERS[2][0],'U',LADDERS[1][0],'U',EXIT[0],'E'),
+		SEQUENCE,
+		new BatarangGoon(2,0,LADDERS[2][0],'U',EXIT[1],'E'),
+		SEQUENCE,
+		new BatarangGoon(2,0,LADDERS[2][1],'U',LADDERS[1][1],'U',EXIT[0],'E'),
+		BETWEEN+5000,
+		new BatarangGoon(0,GPW*3,LADDERS[1][2],'D',EXIT[1],'E'),
+		SEQUENCE,
+		new BatarangGoon(0,GPW*3,EXIT[0],'E'),
+		SEQUENCE,
+		new BatarangGoon(0,GPW*3,LADDERS[1][2],'D',LADDERS[2][2],'D',LADDERS[2][1],'U',EXIT[1],'E'),
+		SEQUENCE,
+		new BatarangGoon(0,0,LADDERS[1][0],'D',EXIT[1],'E'),
+		SEQUENCE,
+		new BatarangGoon(0,0,EXIT[0],'E'),
+		SEQUENCE,
+		new BatarangGoon(0,0,LADDERS[1][0],'D',EXIT[1],'E'),
+		PAUSE,
+		'ROUND', // ROUND 6
 		1000,
 		new BatarangGoon(2,GPW*2,EXIT[2],'B',EXIT[2]+1.5,EXIT[2],'E'), // BOMBER 3
 		PAUSE,
 		'GO',
 		1000,
 		new BatarangGoon(2,GPW*3,EXIT[2],'E'),
-		PAUSE
+		SEQUENCE,
+		new BatarangGoon(2,GPW*3,EXIT[2],'E'),
+		SEQUENCE,
+		new BatarangGoon(2,0,EXIT[2],'E'),
+		SEQUENCE,
+		new BatarangGoon(2,0,EXIT[2],'E'),
+		SEQUENCE,
+		new BatarangGoon(1,GPW*3,EXIT[1],'E'),
+		SEQUENCE,
+		new BatarangGoon(1,GPW*3,EXIT[1],'E'),
+		SEQUENCE,
+		new BatarangGoon(1,0,EXIT[1],'E'),
+		SEQUENCE,
+		new BatarangGoon(1,0,EXIT[1],'E'),
+		SEQUENCE,
+		new BatarangGoon(0,GPW*3,EXIT[0],'E'),
+		SEQUENCE,
+		new BatarangGoon(0,GPW*3,EXIT[0],'E'),
+		SEQUENCE,
+		new BatarangGoon(0,0,EXIT[0],'E'),
+		SEQUENCE,
+		new BatarangGoon(0,0,EXIT[0],'E'),
+		PAUSE,
+		'ROUND', // ROUND 7
+		2000,
+		'GO', 
+		1000,
+		new BatarangGoon(2,GPW*3,EXIT[2],'E'),
+		SEQUENCE,
+		new BatarangGoon(2,0,EXIT[2],'E'),
+		SEQUENCE,
+		new BatarangGoon(1,GPW*3,EXIT[1],'E'),
+		SEQUENCE,
+		new BatarangGoon(1,0,EXIT[1],'E'),
+		SEQUENCE,
+		new BatarangGoon(0,GPW*3,EXIT[0],'E'),
+		SEQUENCE,
+		new BatarangGoon(0,0,EXIT[0],'E'),
+		SEQUENCE,
+		new BatarangGoon(2,GPW*3,EXIT[2],'E'),
+		SEQUENCE,
+		new BatarangGoon(2,0,EXIT[2],'E'),
+		SEQUENCE,
+		new BatarangGoon(1,GPW*3,EXIT[1],'E'),
+		SEQUENCE,
+		new BatarangGoon(1,0,EXIT[1],'E'),
+		SEQUENCE,
+		new BatarangGoon(0,GPW*3,EXIT[0],'E'),
+		SEQUENCE,
+		new BatarangGoon(0,0,EXIT[0],'E'),
+		PAUSE,
 	]
+
+	let skipToRound = 6;
+	while(skipToRound){
+		if(queue[iQueue]=='ROUND'){
+			skipToRound--;
+		} 
+		iQueue++;
+	}
+	iQueue--;
+
+
 
 	self.$el = $('<igb>');
 
@@ -381,7 +538,7 @@ BatarangGame = function(){
 	}
 
 
-	let iQueue = 0;
+	
 	let intervalQueue;
 	function doNextQueue(){
 
@@ -429,7 +586,10 @@ BatarangGame = function(){
 			goons[g].step();
 			goons[g].redraw();
 			
-			if( !goons[g].$el.parent().is($ls[goons[g].level])) goons[g].$el.appendTo($ls[goons[g].level]);
+			if( !goons[g].$el.parent().is($ls[goons[g].level])){
+				goons[g].$el.appendTo($ls[goons[g].level]);
+				goons[g].$el.css({'bottom':'0px'});
+			}
 			
 			if(goons[g].plantBombAt){
 
@@ -475,13 +635,17 @@ BatarangGame = function(){
 				.animate({width:'200px',height:'200px','opacity':0})
 
 				for(var g=0; g<goons.length; g++){
-					let dx = Math.abs( goons[g].x - batarang.x );
-					if(dx<0.5){
-						goons[g].$el.remove();
-						goons.splice(g,1);
-						g--;
-						if(!goons.length) doNextQueue();
+					
+					if(goons[g].level==batarang.level){
+						let dx = Math.abs( goons[g].x - batarang.x );
+						if(dx<0.5){
+							goons[g].$el.remove();
+							goons.splice(g,1);
+							g--;
+							if(!goons.length) doNextQueue();
+						}
 					}
+					
 
 				}
 
