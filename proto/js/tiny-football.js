@@ -96,8 +96,6 @@ TinyFootball = function(){
 				'background-size':'100%',
 			},
 
-
-		
 			'tinygame':{
 				display:'block',
 				position:'absolute',
@@ -118,24 +116,42 @@ TinyFootball = function(){
 			'tinyfield':{
 				display:'block',
 				position:'absolute',
-				'top':'0px',
+				'bottom':'0px',
 				'left':'0px',
 				width:W+'px',
 				height:H+'px',
 				
 				'background':'white',
 				'box-sizing':'border-box',
-				
+				'background-image':'url(proto/img/bg-grass.png)',
+				'background-size':'cover',
 
 				'transform':'rotateX(30deg) translateY(-50px) scale(0.85)',
 				'transform-origin':'bottom center',
-
-
-
 				'transform-style':'preserve-3d',
 			},
 
-			'tinyfield:after':{
+			'tinyplayarea':{
+				display:'block',
+				position:'absolute',
+				'bottom':'0px',
+				'left':'0px',
+				width:W+'px',
+				height:H+'px',
+				
+				'transform-style':'preserve-3d',
+			},
+
+			'tinymarkings':{
+				display:'block',
+				position:'absolute',
+				'left':'0px',
+				'right':'0px',
+				'top':'0px',
+				'bottom':'0px',
+			},
+
+			'tinymarkings:after':{
 				content:'""',
 				display:'block',
 				position:'absolute',
@@ -147,19 +163,15 @@ TinyFootball = function(){
 				'transform':'translateX(-50%)',
 			},
 
-			'tinyfield:before':{
+			'tinymarkings:before':{
 				content:'""',
 				display:'block',
 				position:'absolute',
-				'left':'10px',
-				'right':'10px',
-				'top':'10px',
-				'bottom':'10px',
-				'background':'green',
-
-				'background-image':'url(proto/img/bg-grass.png)',
-				'background-size':'cover',
-
+				'left':'5px',
+				'right':'5px',
+				'top':'5px',
+				'bottom':'5px',
+				'border':'10px solid white',
 			},
 
 			'tinyball':{
@@ -288,6 +300,8 @@ TinyFootball = function(){
 				'background':'red',
 			},
 
+			
+
 			'tinygoal:last-of-type':{
 				'left':'100%',
 				'transform':'translateY(-50%) scaleX(-1)',
@@ -327,8 +341,46 @@ TinyFootball = function(){
 				'margin':'0px',
 				'text-align':'center',
 				'color':'white',
-				
+			},
 
+			'tinynet':{
+				'display':'block',
+				'position':'absolute',
+				'bottom':'50%',
+				'left':'0px',
+				'right':'0px',
+				'height':'100px',
+				
+				'transform':'rotateX(-50deg)',
+				'border':'10px solid white',
+				'box-sizing':'border-box',
+				'border-bottom':'none',
+				'transform-origin':'bottom center',
+				'background-image':'url(./proto/img/net-pattern.png)',
+
+			},
+
+			'[game=tennis] tinygoal':{
+				'display':'none',
+			},
+
+			'[game=tennis] tinyfootprint:before':{
+				'display':'none',
+			},
+
+			'[game=tennis] tinyballsprite:after':{
+				'background-image':'url(./proto/img/tennis-ball.webp)',
+			},
+
+			'[game=tennis] tinyfield':{
+				'height':H*2+'px',
+				'transform':'rotateX(50deg) translateY(-50px) scale(0.85)',
+				'transform-origin':'bottom center',
+				'transform-style':'preserve-3d',
+			},
+
+			'[game=tennis] tinymarkings':{
+				'margin':'200px',
 			},
 		}
 
@@ -342,12 +394,16 @@ TinyFootball = function(){
 	let $center = $('<igbside>').appendTo(self.$el);
 	let $right = $('<igbside>').appendTo(self.$el);
 
-	let $game = $('<tinygame>').appendTo($center);
+	let typeGame = "tennis";
+	let $game = $(`<tinygame game=${typeGame}>`).appendTo($center);
 	let $field = $('<tinyfield>').appendTo($game);
+	$('<tinymarkings>').appendTo($field);
+	let $playArea = $('<tinyplayarea>').appendTo($field);
 
 	
 	$('<tinygoal>').appendTo($field);
 	$('<tinygoal>').appendTo($field);
+	$('<tinynet>').appendTo($field);
 
 	$('<tinyscore>').appendTo($center).text('0');
 	$('<tinyscore>').appendTo($center).text('0');
@@ -360,7 +416,7 @@ TinyFootball = function(){
 	let dudes = [];
 	while(dudes.length<6){
 		let dude = new TinyDude(0,0,dudes.length);
-		dude.$el.appendTo($field);
+		dude.$el.appendTo($playArea);
 		dudes.push(dude);
 	}
 
@@ -371,7 +427,7 @@ TinyFootball = function(){
 		
 
 		ball = new TinyBall(W/2,H/2);
-		ball.$el.appendTo($field);
+		ball.$el.appendTo($playArea);
 
 		balls.push(ball);
 	}
@@ -458,11 +514,15 @@ TinyFootball = function(){
 				dudes[i].sy = dyMove;
 				dudes[i].r = Math.atan2(dudes[i].sy,dudes[i].sx);
 
+
+
 				dudes[i].wx = dudes[i].x;
 				dudes[i].wy = dudes[i].y;
 
 
 			}
+
+			if(typeGame == 'tennis') dudes[i].r = Math.PI/2;
 			
 			if(d<dMin){
 				iDudeIs = i;

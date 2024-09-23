@@ -67,7 +67,7 @@ BatarangGoon = function(level,x,...path){
 Batarang = function(level, wall, x){
 
 	const FPS = 50;
-	const SECONDS = 1;
+	const SECONDS = 1.5;
 
 	let self = this;
 	self.level = level;
@@ -84,7 +84,7 @@ Batarang = function(level, wall, x){
 
 	self.redraw = function(){
 		self.$el.css('left',self.x*BatarangGame.GRID+'px');
-		self.$el.css('transform','scale('+(1+self.dist/100*5)+') translateY('+self.dist*2+'px)');
+		self.$el.css('transform','scale('+(1+self.dist/100*5)+') translateY('+self.dist*1.5+'px)');
 	}
 }
 
@@ -132,6 +132,7 @@ BatarangGame = function(){
 				'padding':'0px',
 				'margin':'0px',
 				'pointer-events':'none',
+				'z-index':200,
 			},
 
 			'bataranglevel':{
@@ -291,7 +292,22 @@ BatarangGame = function(){
 				'box-sizing':'border-box',
 				'border':'10px solid red',
 				'border-radius':'100%',
-			}
+			},
+
+			'bataranggame button':{
+				'display':'block',
+				'position':'absolute',
+				'top':'0px',
+				'left':'0px',
+				'bottom':'0px',
+				'margin':'20px',
+				'right':'0px',
+				'border':'none',
+				'z-index':'100',
+				
+				'background':'rgba(255,100,0,0.5)',
+
+			},
 
 		}
 
@@ -309,7 +325,7 @@ BatarangGame = function(){
 	let xFrontToBack = 0;
 	let batarang;
 
-	let LADDERS = [[],[5,14,20],[3,13,18]];
+	let LADDERS = [[],[5,14,20],[4,13,18]];
 	let EXIT = [10,12,11];
 	let PAUSE = 100000;
 	let BETWEEN = 10000;
@@ -494,9 +510,9 @@ BatarangGame = function(){
 	self.$el = $('<igb>');
 
 	let map = [
-		'W------WW------WW------W',
-		'W------WW------WW------W',
-		'W------WW------WW------W',
+		'W-T----WW-----TWW----T-W',
+		'W-T----WWT-----WW----T-W',
+		'W-T----WW-----TWW----T-W',
 	]
 
 	let $game = $('<bataranggame>').appendTo(self.$el);
@@ -504,20 +520,26 @@ BatarangGame = function(){
 	for(var i=0; i<map.length; i++){
 		let $l = $('<bataranglevel>').appendTo($game);
 		$ls[i] = $l;
-		for(var g=0; g<30; g++){
-			$('<bataranggrid>')
+		for(var g=0; g<map[i].length; g++){
+			let $g = $('<bataranggrid>')
 			.appendTo($l)
 			.attr('level',i)
 			.attr('g',g)
-			.attr('type',map[i][g])
-			.click(spawnBatarang);
+			.attr('type',map[i][g]);
+
+			if(map[i][g]=='T'){
+				$('<button>LAUNCH</button>')
+				.attr('level',i)
+				.attr('g',g)
+				.appendTo($g)
+				.click(spawnBatarang);
+			}
 		}
 
-		
 		for(var l in LADDERS[i]) $('<batarangladder>').appendTo($ls[i]).css('left',LADDERS[i][l]*BatarangGame.GRID+'px');
-		
-	
 	}
+
+	
 
 	let $h = $('<h1>').appendTo($game);
 
@@ -528,6 +550,7 @@ BatarangGame = function(){
 	}
 
 	function spawnBatarang(e){
+
 		if(!isGameActive) return;
 		let level = $(this).attr('level');
 		let wall = Math.floor( $(this).attr('g')/GPW );
@@ -537,8 +560,6 @@ BatarangGame = function(){
 		batarang.$el.appendTo($ls[batarang.level]);
 	}
 
-
-	
 	let intervalQueue;
 	function doNextQueue(){
 

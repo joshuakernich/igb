@@ -235,7 +235,7 @@ Meep = function(color){
 	];
 
 	let fps = 50;
-	let animTime = 1;
+	let animTime = 0.5;
 	let timeStart = new Date().getTime();
 
 	function tick(){
