@@ -132,7 +132,7 @@ BatarangGame = function(){
 				'padding':'0px',
 				'margin':'0px',
 				'pointer-events':'none',
-				'z-index':200,
+				'z-index':2000,
 			},
 
 			'bataranglevel':{
@@ -337,6 +337,7 @@ BatarangGame = function(){
 				'background-size':'50%',
 				'background-position':'center',
 				'background-repeat':'no-repeat',
+				'margin':'0px 50px',
 			},
 
 			'batbutton battrigger:before':{
@@ -384,7 +385,7 @@ BatarangGame = function(){
 		{level:2, x:GPW+1, w:GPW-2, align:'right'},
 
 		{level:0, x:GPW*2+1, w:GPW-3, align:'right'},
-		{level:1, x:GPW*2+1, w:GPW-3, align:'left'},
+		{level:1, x:GPW*2+1, w:GPW-3, align:'right'},
 		{level:2, x:GPW*2+1, w:GPW-3, align:'right'},
 	]
 	let EXIT = [10,12,11];
@@ -607,6 +608,7 @@ BatarangGame = function(){
 			'left':BUTTONS[b].x*BatarangGame.GRID+'px',
 			'top':BUTTONS[b].level*LEVEL+'px',
 			'width':BUTTONS[b].w*BatarangGame.GRID+'px',
+			'text-align':BUTTONS[b].align,
 			})
 		
 		$('<battrigger>').appendTo($frame)
