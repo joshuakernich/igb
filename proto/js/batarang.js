@@ -10,7 +10,7 @@ BatarangGoon = function(level,x,...path){
 	let xFloat = x*100;
 	let isClimbing = false;
 
-	let speed = 3;
+	let speed = 2;
 
 	self.$el = $('<bataranggoon>');
 
