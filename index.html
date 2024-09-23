@@ -54,17 +54,12 @@
 				
 			}
 
-			for(var p in proto){
-				$('<li>').appendTo('.menu-games').text(p).attr('id',p).click(launchProto);
-			}
+			let gameID = window.location.search.substr(1);
 
-			function launchProto() {
-				let id = $(this).attr('id');
+			function launchProto(id){
 				let p = proto[id];
 				
 				$('moduleframe').empty();
-
-				
 
 				if(typeof(p) == 'function'){
 					$('iframe').attr('src',undefined).removeClass('active');
@@ -79,10 +74,32 @@
 				}
 
 				$('menu').addClass('hidden');
-				
 			}
 
-			$('gamebox').css('transform','scale('+400/$('igb').width()+')');
+			function onProtoButton() {
+				let id = $(this).attr('id');
+				console.log(id);
+				window.location.assign(window.location.pathname + '?' + id);
+			}
+
+			if(gameID) launchProto(gameID);
+			else launchMenu();
+
+
+			function launchMenu(){
+				for(var p in proto){
+					$(`
+						<protoapp>
+							<protoicon></protoicon>
+							<protolabel>${p}</protolabel>
+						</protoapp>
+					`).appendTo('protolist').attr('id',p).click(onProtoButton);
+				}
+			}
+				
+			
+			
+			//$('gamebox').css('transform','scale('+400/$('igb').width()+')');
 
 			$('[btn=move]').click(doRandomMove);
 
@@ -104,15 +121,16 @@
 			}
 
 			$('[btn=refresh]').click(function() {
-				window.location = 'https://joshuakernich.github.io/igb/index.html?seed='+Math.random();
+				window.location.assign(window.location.href);
+				//window.location = 'https://joshuakernich.github.io/igb/index.html?seed='+Math.random();
 			})
 
-			$('[btn=menu]').click(function() {
-
-				if(liveModule && liveModule.turnOnOff) liveModule.turnOnOff(false);
+			$('[btn=home]').click(function() {
+				window.location.assign(window.location.pathname);
+				/*if(liveModule && liveModule.turnOnOff) liveModule.turnOnOff(false);
 
 				$('mframe').addClass('active').empty();
-				$('iframe').removeClass('active').attr('src','');
+				$('iframe').removeClass('active').attr('src','');*/
 
 
 
@@ -120,13 +138,6 @@
 
 			let log = [];
 			let players = [];
-			while(players.length<7){
-				players.push({id:players.length,x:0,y:0,z:0});
-				let $p = $('<player>').appendTo('tracker');
-
-				$('<cowl>').appendTo($p);
-				$('<cape>').appendTo($p);
-			}
 
 			let $reticule = $('<reticule>').appendTo('igb');
 
@@ -182,13 +193,6 @@
 		        	let scale = 0.6 + (players[p].Z + 1)/2 * 0.6;
 
 		        	let dx = players[p].X - history[p][0];
-	
-
-		        	if(!$('iframe').hasClass('active')){
-
-		        		$('player').eq(p).css({left:players[p].px+'%',top:players[p].py+'%','transform':'scale('+scale+')'});
-		        		$('player').eq(p).find('cape').css({'transform':'rotate('+dx*20+'deg)'});
-		        	}
 
 		        	$('gbavatar').eq(p).css({left:players[p].px+'%',top:players[p].pz+'%'});
 		        	$('gbavatar').eq(p).find('gbhuman').css({height:100-players[p].py+'px'});
@@ -224,15 +228,6 @@
 			$('.expando').click(function(){
 				$('menu').toggleClass('hidden');
 			})
-
-			/*let x = -1;
-			let dir = 1;
-			setInterval(function(){
-				x += dir*0.01;
-				if(x>0.8) dir = -1;
-				if(x<-0.8) dir = 1;
-				onMessage('M,0,'+x+',0,0');
-			},1000/50);*/
 
 			
 		})
@@ -347,10 +342,11 @@
 			display: block;
 			
 			font-family: sans-serif;
-			margin: 1vw 0.2vw;
-			
-			color: var(--igb-pink);
-
+			margin: 2vw;
+			color: white;
+			position: absolute;
+			bottom: 0px;
+			right: 0px;
 
 		}
 		.active{
@@ -373,69 +369,55 @@
 		mframe{
 			display: none;
 		}
-		
 
-		ul{
-		
-			
-			list-style-type: none;
-			padding: 0px;
-			margin: 0px;
-			position: relative;
+		protolist{
+			display: block;
+			padding: 2.6vw;
 		}
 
-		li{
-			list-style-type: none;
-			margin: 0px;
-			padding: 0px;
-			
-			padding: 0.5vw 0.5vw;
-			
-			
-			
-			background: white;
-			text-align: center;
+		protoapp{
 			display: inline-block;
-			margin: 0.1vw;
+			width: 3vw;
+			height: 3.5vw;
+			margin: 0.5vw;
+			text-align: center;
+			color: white;
+			vertical-align: middle;
+		}
 
-			background: rgba(255, 255, 255, 0.1);
-			color: var(--igb-pink);
-			border: 0.1vw solid var(--igb-pink);
+		protoicon{
+			display: block;
+			width: 3vw;
+			height: 3vw;
+			background: white;
+			border-radius: 0.5vw;
+			box-shadow: 0px 1px 0px black;
+		}
+
+		protolabel{
+			font-size: 0.4vw;
+			margin-top: 0.2vw;
+			text-shadow: 0px 1px 0px black;
 		}
 
 		menu{
 			margin: 2vw;
-			padding: 4vw 1vw 1vw 1vw;
+			padding: 0.1vw;
 			display: block;
 			position: absolute;
 			right: 0px;
 			top: 0px;
 			text-align: right;
 			z-index: 1;
-			background: var(--igb-purple);
-			border: 0.1vw solid var(--igb-pink);
+			background: rgba(255,255,255,0.3);
+			backdrop-filter: 10px;
 			overflow: hidden;
+			border-radius: 2vw;
 		}
 
-		menu.hidden{
-			width: 3vw;
-			height: 3vw;
-			padding: 0vw;
-			
-			box-sizing: border-box;
+		
 
-		}
-
-		tracker{
-			position: absolute;
-			top: 0px;
-			left:0px;
-			right: 0px;
-			bottom: 0px;
-			border: 0.1vw solid var(--igb-pink);
-			overflow: hidden;
-			box-sizing: border-box;
-		}
+		
 
 		player{
 			width: 0vw;
@@ -504,8 +486,14 @@
 			margin: auto;
 			display: block;
 			white-space: nowrap;
+			background: #222;
+			
+		}
 
-			background: var(--igb-purple);
+		.home{
+			background: url(https://wallpaperswide.com/download/earth_sunrise_from_space-wallpaper-3840x1600.jpg);
+			background-size: cover;
+			background-position: center;
 		}
 
 		igbside{
@@ -578,15 +566,18 @@
 		gamebox{
 			display: block;
 			position: absolute;
-			left: 20px;
-			top: 20px;
+			bottom: 50px;
+			right: 80px;
 			width: 160px;
 			height: 100px;
 
-  			perspective: 500px;
+  			perspective: 1500px;
   			transform-style: preserve-3d;
   			pointer-events: none;
-  			transform-origin: top left;
+  			transform-origin: center;
+  			
+  			z-index: 1;
+  			transform: rotateY(20deg) rotateX(-10deg);
 
 		}
 
@@ -596,11 +587,12 @@
 			position: absolute;
 			top: 0px;
 			left: 0px;
-			background: rgba(255, 255, 255, 0.1);
+			background: rgba(255, 255, 255, 0.3);
 			display: inline-block;
 			box-sizing: border-box;
-			box-shadow: inset 0px 0px 10px rgba(255, 255, 255, 0.2);
 			transform-style: preserve-3d;
+			border: 1px solid black;
+
 
 		}
 
@@ -664,42 +656,57 @@
 		gbavatar:nth-of-type(6) gbhuman,gbavatar:nth-of-type(6){ background:yellow }
 
 
+		igbcontrols{
+			display: block;
+			text-align: center;
+		}
 
+		igbcontrol{
+			display: block;
+			width: 2vw;
+			height:2vw;
+			border-radius: 1vw;
+			background: rgba(0,0,0,0.3);
+			line-height: 2vw;
+			overflow: hidden;
+			font-size: 1.5vw;
+			margin: 0.5vw;
+
+		}
 		
 	</style>
 </head>
 <body>
-	<igb>
+	<igb class='home'>
 		<igbside></igbside>
 		<igbside>
-			<tracker></tracker>
+			<protolist></protolist>
+			
 		</igbside>
 		<igbside>
 			<menu>
-				<gamebox>
-					<gameboxside></gameboxside><gameboxside></gameboxside><gameboxside></gameboxside><gameboxside>
-						<gbavatar><gbhuman></gbhuman></gbavatar>
-						<gbavatar><gbhuman></gbhuman></gbavatar>
-						<gbavatar><gbhuman></gbhuman></gbavatar>
-						<gbavatar><gbhuman></gbhuman></gbavatar>
-						<gbavatar><gbhuman></gbhuman></gbavatar>
-						<gbavatar><gbhuman></gbhuman></gbavatar>
-						<gbavatar><gbhuman></gbhuman></gbavatar>
-					</gameboxside>
-				</gamebox>
-				<ul class="menu-function">
-					<li btn='refresh'>REFRESH</li><li btn='menu'>HOME</li><li btn='move'>MOVE</li>
-				</ul>
-				<ul class="menu-games">
-					
-				</ul>
-				<logger>LOADING...</logger>
-				<button class="expando"></button>
+				<
+				<igbcontrols>
+					<igbcontrol btn='home'><b>⌂</b></igbcontrol>
+					<igbcontrol btn='refresh'>↺</igbcontrol>
+					<igbcontrol btn='move'><small>M</small></igbcontrol>
+				<ibgcontrols>
 				
 			</menu>
+			<logger>LOADING...</logger>
 		</igbside>
 		
-
+		<gamebox>
+			<gameboxside></gameboxside><gameboxside></gameboxside><gameboxside></gameboxside><gameboxside>
+				<gbavatar><gbhuman></gbhuman></gbavatar>
+				<gbavatar><gbhuman></gbhuman></gbavatar>
+				<gbavatar><gbhuman></gbhuman></gbavatar>
+				<gbavatar><gbhuman></gbhuman></gbavatar>
+				<gbavatar><gbhuman></gbhuman></gbavatar>
+				<gbavatar><gbhuman></gbhuman></gbavatar>
+				<gbavatar><gbhuman></gbhuman></gbavatar>
+			</gameboxside>
+		</gamebox>
 		<mframe></mframe>
 		<iframe src=""></iframe>
 	
