@@ -628,7 +628,12 @@ BatarangGame = function(){
 
 	function spawnBatarang(e){
 
-		console.log('spawnBatarang');
+
+
+		let $btn = $(e.target).closest('batbutton')
+		.animate({'opacity':0},100)
+		.animate({'opacity':0},1400)
+		.animate({'opacity':1},200);
 
 		if(!isGameActive) return;
 		let level = $(this).attr('level');
