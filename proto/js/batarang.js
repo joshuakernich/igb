@@ -618,9 +618,12 @@ BatarangGame = function(){
 
 	}
 
-
-
 	let $h = $('<h1>').appendTo($game);
+
+	$(`
+		<audio controls loop>
+			<source src="./proto/audio/epic-orchestral-drums-171728.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el);
 
 	function getXFor(wall){
 		if(wall==0) return GPW - xFrontToBack;
