@@ -294,20 +294,68 @@ BatarangGame = function(){
 				'border-radius':'100%',
 			},
 
-			'bataranggame button':{
+			
+			'batbutton':{
 				'display':'block',
 				'position':'absolute',
-				'top':'0px',
-				'left':'0px',
-				'bottom':'0px',
-				'margin':'20px',
-				'right':'0px',
-				'border':'none',
-				'z-index':'100',
 				
-				'background':'rgba(255,100,0,0.5)',
+				
+				'height':LEVEL+'px',
+				
+				'z-index':'1000',
+				
 
 			},
+
+			'batbutton:before':{
+				'content':'""',
+				'position':'absolute',
+				'display':'block',
+				'left':'20px',
+				'top':'20px',
+				'right':'20px',
+				'bottom':'20px',
+				
+				'border-image-source':'url(./proto/img/frame-9-slice.png)',
+				'border-image-slice':'100',
+				'border-image-width': '50px',
+				
+				'box-sizing':'border-box',
+				
+			},
+
+			'batbutton battrigger':{
+				'display':'inline-block',
+				'width':BatarangGame.GRID+'px',
+				'height':'100%',
+				'border':'none',
+				
+				'position':'relative',
+				'background':'transparent',
+
+				'background-image':'url(./proto/img/bat-icon.webp)',
+				'background-size':'50%',
+				'background-position':'center',
+				'background-repeat':'no-repeat',
+			},
+
+			'batbutton battrigger:before':{
+				'content':'""',
+				'position':'absolute',
+				'display':'block',
+				'left': '0px',
+				'top':'50px',
+				'right':'0px',
+				'bottom':'50px',
+				
+				'border-image-source':'url(./proto/img/frame-9-slice.png)',
+				'border-image-slice':'100',
+				'border-image-width': '50px',
+				
+				'box-sizing':'border-box',
+				
+			},
+
 
 		}
 
@@ -326,6 +374,19 @@ BatarangGame = function(){
 	let batarang;
 
 	let LADDERS = [[],[5,14,20],[4,13,18]];
+	let BUTTONS = [
+		{level:0, x:2, w:GPW-3, align:'left'},
+		{level:1, x:2, w:GPW-3, align:'left'},
+		{level:2, x:2, w:GPW-3, align:'left'},
+
+		{level:0, x:GPW+1, w:GPW-2, align:'right'},
+		{level:1, x:GPW+1, w:GPW-2, align:'left'},
+		{level:2, x:GPW+1, w:GPW-2, align:'right'},
+
+		{level:0, x:GPW*2+1, w:GPW-3, align:'right'},
+		{level:1, x:GPW*2+1, w:GPW-3, align:'left'},
+		{level:2, x:GPW*2+1, w:GPW-3, align:'right'},
+	]
 	let EXIT = [10,12,11];
 	let PAUSE = 100000;
 	let BETWEEN = 10000;
@@ -527,19 +588,35 @@ BatarangGame = function(){
 			.attr('g',g)
 			.attr('type',map[i][g]);
 
-			if(map[i][g]=='T'){
+			/*if(map[i][g]=='T'){
 				$('<button>LAUNCH</button>')
 				.attr('level',i)
 				.attr('g',g)
 				.appendTo($g)
 				.click(spawnBatarang);
-			}
+			}*/
 		}
 
 		for(var l in LADDERS[i]) $('<batarangladder>').appendTo($ls[i]).css('left',LADDERS[i][l]*BatarangGame.GRID+'px');
 	}
 
-	
+	for(var b in BUTTONS){
+
+		let $frame = $('<batbutton>').appendTo($game)
+		.css({
+			'left':BUTTONS[b].x*BatarangGame.GRID+'px',
+			'top':BUTTONS[b].level*LEVEL+'px',
+			'width':BUTTONS[b].w*BatarangGame.GRID+'px',
+			})
+		
+		$('<battrigger>').appendTo($frame)
+		.attr('level',BUTTONS[b].level)
+		.attr('g',BUTTONS[b].x)
+		.click(spawnBatarang);
+
+	}
+
+
 
 	let $h = $('<h1>').appendTo($game);
 
@@ -550,6 +627,8 @@ BatarangGame = function(){
 	}
 
 	function spawnBatarang(e){
+
+		console.log('spawnBatarang');
 
 		if(!isGameActive) return;
 		let level = $(this).attr('level');
