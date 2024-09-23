@@ -105,6 +105,8 @@ BatarangGame = function(){
 
 		let css = {
 
+
+
 			'bataranggame':{
 				display:'block',
 				position:'absolute',
@@ -119,6 +121,20 @@ BatarangGame = function(){
 				'border-top':'100px solid #222',
 				'border-bottom':'150px solid #666',
 				'box-sizing':'border-box',
+			},
+
+			'.batarangbg:after':{
+				content:'""',
+				position:'absolute',
+				'top':'0px',
+				'left':'0px',
+				'right':'0px',
+				'bottom':'0px',
+				'background':'url(./proto/img/lighting-overlay.webp)',
+				'background-size':'100%',
+				'pointer-events':'none',
+				'z-index':900,
+				'opacity':0.3,
 			},
 
 			'bataranggame h1':{
@@ -569,7 +585,7 @@ BatarangGame = function(){
 
 
 
-	self.$el = $('<igb>');
+	self.$el = $('<igb class="batarangbg">');
 
 	let map = [
 		'W-T----WW-----TWW----T-W',
@@ -633,7 +649,7 @@ BatarangGame = function(){
 
 	function spawnBatarang(e){
 
-
+		if(batarang) batarang.$el.remove();
 
 		let $btn = $(e.target).closest('batbutton')
 		.animate({'opacity':0},100)
