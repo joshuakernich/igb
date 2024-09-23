@@ -311,14 +311,15 @@ BatarangGame = function(){
 				'content':'""',
 				'position':'absolute',
 				'display':'block',
-				'left':'20px',
-				'top':'20px',
-				'right':'20px',
-				'bottom':'20px',
+				'left':'30px',
+				'top':'30px',
+				'right':'30px',
+				'bottom':'30px',
 				
-				'border-image-source':'url(./proto/img/frame-9-slice.png)',
-				'border-image-slice':'100',
-				'border-image-width': '50px',
+				
+				'border-left':'1px solid white',
+				'border-right':'1px solid white',
+				'border-radius':'30px',
 				
 				'box-sizing':'border-box',
 				
@@ -348,10 +349,9 @@ BatarangGame = function(){
 				'top':'50px',
 				'right':'0px',
 				'bottom':'50px',
-				
-				'border-image-source':'url(./proto/img/frame-9-slice.png)',
-				'border-image-slice':'100',
-				'border-image-width': '50px',
+				'border-left':'1px solid white',
+				'border-right':'1px solid white',
+				'border-radius':'20px',
 				
 				'box-sizing':'border-box',
 				
