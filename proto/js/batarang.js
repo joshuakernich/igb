@@ -480,7 +480,7 @@ BatarangGame = function(){
 		PAUSE,
 	]
 
-	let skipToRound = 6;
+	let skipToRound = 1;
 	while(skipToRound){
 		if(queue[iQueue]=='ROUND'){
 			skipToRound--;
