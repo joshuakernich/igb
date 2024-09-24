@@ -10,7 +10,8 @@ BatarangGoon = function(level,x,...path){
 	let xFloat = x*100;
 	let isClimbing = false;
 
-	let speed = 2;
+	let iSpeed = 0;
+	let speeds = [1,1,1,2,2,2,3,3,4,4,4,4,3,3,2,2,2];
 
 	self.$el = $('<bataranggoon>');
 
@@ -50,7 +51,7 @@ BatarangGoon = function(level,x,...path){
 			} 
 		} else {
 			dir = self.x<path[iPath]?1:-1
-			xFloat += speed*dir;
+			xFloat += speeds[iSpeed++%speeds.length]*dir;
 			self.x = xFloat/100;
 
 			//snap to finish
@@ -64,7 +65,7 @@ BatarangGoon = function(level,x,...path){
 	}
 }
 
-Batarang = function(level, wall, x){
+Batarang = function(level, wall, iPlayer){
 
 	const FPS = 50;
 	const SECONDS = 1.5;
@@ -72,11 +73,12 @@ Batarang = function(level, wall, x){
 	let self = this;
 	self.level = level;
 	self.wall = wall;
+	self.iPlayer = iPlayer;
 	self.x = 0;
 	self.dist = FPS*SECONDS;
 
 	self.$el = $(`
-		<batarang>
+		<batarang iPlayer=${iPlayer}>
 			<bataranginner>
 				<batarangspinner></batarangspinner>
 			</bataranginner>
@@ -304,6 +306,9 @@ BatarangGame = function(){
 				'animation-iteration-count':'infinite',
 				'animation-timing-function':'linear',
 			},
+
+			'batarang[iPlayer=0] batarangspinner':{ 'background':'red' },
+			'batarang[iPlayer=1] batarangspinner':{ 'background':'blue' },
 
 			'batarangpulse':{
 				'display':'block',
@@ -649,28 +654,72 @@ BatarangGame = function(){
 			<source src="./proto/audio/epic-orchestral-drums-171728.mp3" type="audio/mpeg">
 		</audio>`).appendTo(self.$el);
 
-	function getXFor(wall){
-		if(wall==0) return GPW - xFrontToBack;
-		if(wall==1)	return GPW + xSideToSide;
-		if(wall==2) return GPW*2 + xFrontToBack;
+	function getXFor(batarang){
+		if(batarang.wall==0) return GPW - players[batarang.iPlayer].xFrontToBack;
+		if(batarang.wall==1) return GPW + players[batarang.iPlayer].xSideToSide;
+		if(batarang.wall==2) return GPW*2 + players[batarang.iPlayer].xFrontToBack;
 	}
 
+	let batarangs = [];
 	function spawnBatarang(e){
+		
+		let o = $(this).offset();
+		let oGame = $game.offset();
 
-		if(batarang) batarang.$el.remove();
+		let level = $(this).attr('level');
+		let wall = Math.floor( $(this).attr('g')/GPW );
+
+		let pt = {x:0,y:(((o.top-oGame.top)/scale)/H)*100,z:0};
+
+		pt.y = 50;
+
+		if(wall==0) pt.x = 0;
+		if(wall==1) pt.x = ((o.left/scale - W)/W)*100;
+		if(wall==2) pt.x = 100;
+
+		if(wall==0) pt.z = ((o.left/scale)/W)*100;
+		if(wall==1) pt.z = 0;
+		if(wall==2) pt.z = ((o.left/scale-W*2)/W)*100;
+
+
+		function distanceVector( v1, v2 )
+		{
+		    var dx = v1.x - v2.x;
+		    var dy = v1.y - v2.y;
+		    var dz = v1.z - v2.z;
+
+		    return Math.sqrt( dx * dx + dy * dy + dz * dz );
+		}
+
+		let min = 99999;
+		let iMin = 0;
+		for(var i in players){
+			let d = distanceVector(players[i].ptVirtual,pt);
+			if(d<min){
+				min = d;
+				iMin = i;
+			}
+		}
+		
+		let iPlayer = iMin;
+		console.log(iPlayer);
+
+		if(!isGameActive) return;
+
+		if(batarangs[iPlayer]) batarangs[iPlayer].$el.remove();
 
 		let $btn = $(e.target).closest('batbutton')
 		.animate({'opacity':0},100)
 		.animate({'opacity':0},1400)
 		.animate({'opacity':1},200);
 
-		if(!isGameActive) return;
-		let level = $(this).attr('level');
-		let wall = Math.floor( $(this).attr('g')/GPW );
 		
-		batarang = new Batarang(level,wall,getXFor(wall));
+		let batarang = new Batarang(level,wall,iPlayer);
+		batarang.x = getXFor(batarang);
 		batarang.redraw();
 		batarang.$el.appendTo($ls[batarang.level]);
+
+		batarangs[iPlayer] = batarang;
 	}
 
 	let intervalQueue;
@@ -680,7 +729,6 @@ BatarangGame = function(){
 		let g = queue[iQueue];
 		if(!g) return;
 
-		console.log('spawnGoon',g);
 		iQueue++;
 
 		if(g=='ROUND'){
@@ -755,8 +803,12 @@ BatarangGame = function(){
 			if(didGoonDie && !goons.length) doNextQueue();
 		}
 
-		if(batarang){
-			batarang.x = getXFor(batarang.wall);
+		for(var b in batarangs){
+
+			if(!batarangs[b]) continue;
+
+			let batarang = batarangs[b];
+			batarang.x = getXFor(batarang);
 			batarang.dist --;
 			batarang.redraw();
 
@@ -785,15 +837,23 @@ BatarangGame = function(){
 				}
 
 				batarang.$el.remove();
-				batarang = undefined;
+				batarangs[b] = undefined;
 
 			}
 		}
 	}
  
 	self.setPlayers = function(p){
-		xSideToSide = p[0].px/100*GPW;
-		xFrontToBack = (1-p[0].pz/100)*GPW;
+		players = p;
+		players.length = 2;
+
+		for(var i in players){
+
+			players[i].ptVirtual = {x:players[i].px,y:players[i].py,z:100-players[i].pz};
+		
+			players[i].xSideToSide = players[i].px/100*GPW;
+			players[i].xFrontToBack = (1-players[i].pz/100)*GPW;
+		}
 	}
 
 	self.turnOnOff = function(b){
@@ -807,9 +867,9 @@ BatarangGame = function(){
 
 		let x = (e.pageX/scale)/W*GPW;
 		
-		xFrontToBack = GPW-Math.max( 0, Math.min( GPW, x));
-		xSideToSide = Math.max( 0, Math.min( GPW, x-GPW));
-		if( x>GPW*2 ) xFrontToBack = Math.max( 0, Math.min( GPW, x-GPW*2));
+		players[0].xFrontToBack = GPW-Math.max( 0, Math.min( GPW, x));
+		players[0].xSideToSide = Math.max( 0, Math.min( GPW, x-GPW));
+		if( x>GPW*2 ) players[0].xFrontToBack = Math.max( 0, Math.min( GPW, x-GPW*2));
 
 		
 	})
