@@ -179,7 +179,7 @@ BatarangGame = function(){
 				'top':'0px',
 				'right':'0px',
 				'bottom':'0px',
-				'background': 'radial-gradient(transparent, black)',
+				'background': 'radial-gradient(transparent, rgba(0,0,0,1))',
 			},
 
 			'bataranggrid':{
@@ -254,14 +254,18 @@ BatarangGame = function(){
 				'display':'block',
 				'position':'absolute',
 				
-				'width':'150px',
-				'height':'150px',
-				'left':'-75px',
+				'width':'300px',
+				'height':'200px',
+				'left':'-150px',
 				'bottom':'0px',
 				'margin':'auto',
 				
-				'border-radius':'100% 100% 0px 0px',
-				'background':'black',
+				'background-color':'transparent',
+				'border-radius':'0px',
+				'background-image':'url(./proto/img/brick-hole.png)',
+				'background-size':'100%',
+				'background-position':'top center',
+				'background-repeat':'no-repeat',
 			},
 
 
