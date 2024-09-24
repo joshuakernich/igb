@@ -645,7 +645,7 @@ BatarangGame = function(){
 	let $h = $('<h1>').appendTo($game);
 
 	$(`
-		<audio controls loop>
+		<audio autoplay controls loop>
 			<source src="./proto/audio/epic-orchestral-drums-171728.mp3" type="audio/mpeg">
 		</audio>`).appendTo(self.$el);
 
