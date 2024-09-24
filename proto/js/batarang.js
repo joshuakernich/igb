@@ -11,7 +11,7 @@ BatarangGoon = function(level,x,...path){
 	let isClimbing = false;
 
 	let iSpeed = 0;
-	let speeds = [1,1,1,2,2,2,3,3,4,4,4,4,3,3,2,2,2];
+	let speeds = [2];
 
 	self.$el = $('<bataranggoon>');
 
@@ -120,8 +120,8 @@ BatarangGame = function(){
 				'perspective':W+'px',
 				
 				'text-align':'center',
-				'border-top':'100px solid #222',
-				'border-bottom':'150px solid #666',
+				'border-top':'100px solid black',
+				'border-bottom':'150px solid #484031',
 				'box-sizing':'border-box',
 			},
 
@@ -139,7 +139,7 @@ BatarangGame = function(){
 				'left':'0px',
 				'right':'0px',
 				'bottom':'0px',
-				'background':'url(./proto/img/lighting-overlay.webp)',
+				'background':'url(./proto/img/lighting-overlay.png)',
 				'background-size':'100%',
 				'pointer-events':'none',
 				'z-index':900,
@@ -165,9 +165,21 @@ BatarangGame = function(){
 				'height':LEVEL+'px',
 				
 				
-				'background':'#555',
+				'background':'#937337',
+				'background-image':'url(./proto/img/brick-texture.png)',
+
 				'position':'relative',
 				'box-shadow':'inset 0px 10px 0px black',
+			},
+
+			'bataranglevel:after':{
+				'content':'""',
+				'position':'absolute',
+				'left':'0px',
+				'top':'0px',
+				'right':'0px',
+				'bottom':'0px',
+				'background': 'radial-gradient(transparent, black)',
 			},
 
 			'bataranggrid':{
@@ -182,8 +194,19 @@ BatarangGame = function(){
 			},
 
 			'bataranggrid[type=W]':{
-				'background':'#999',
+				'background':'#DBAD51',
+				'background-image':'url(./proto/img/brick-texture.png)',
 				'z-index':'1',
+			},
+
+			'bataranggrid[type=W]:after':{
+				'content':'""',
+				'position':'absolute',
+				'left':'0px',
+				'top':'0px',
+				'right':'0px',
+				'bottom':'0px',
+				'background': 'radial-gradient(transparent, rgba(0,0,0,0.4))',
 			},
 
 			'batarangladder:after':{
@@ -264,12 +287,16 @@ BatarangGame = function(){
 				'content':'""',
 				'display':'block',
 				'position':'absolute',
-				'left':'-30px',
-				'width':'60px',
+				'left':'-50px',
+				'width':'100px',
 				'bottom':'0px',
-				'height':'150px',
-				'background':'orange',
-				'border-radius':"30px 30px 0px 0px",
+				'height':'170px',
+
+				'background-image':'url(./proto/img/inmate.png)',
+				'background-size':'contain',
+				'background-position':'center',
+				'background-repeat':'no-repeat',
+				
 			},
 
 			'batarang':{
@@ -305,6 +332,10 @@ BatarangGame = function(){
 				'animation-duration':'0.5s',
 				'animation-iteration-count':'infinite',
 				'animation-timing-function':'linear',
+
+				'box-sizing':'border-box',
+				'border-top':'5px solid white',
+				'border-bottom':'5px solid black',
 			},
 
 			'batarang[iPlayer="0"] batarangspinner':{ 'background':'red' },
