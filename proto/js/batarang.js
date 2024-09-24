@@ -307,8 +307,8 @@ BatarangGame = function(){
 				'animation-timing-function':'linear',
 			},
 
-			'batarang[iPlayer=0] batarangspinner':{ 'background':'red' },
-			'batarang[iPlayer=1] batarangspinner':{ 'background':'blue' },
+			'batarang[iPlayer="0"] batarangspinner':{ 'background':'red' },
+			'batarang[iPlayer="1"] batarangspinner':{ 'background':'blue' },
 
 			'batarangpulse':{
 				'display':'block',
