@@ -850,6 +850,7 @@ BatarangGame = function(){
 		for(var i in players){
 
 			players[i].ptVirtual = {x:players[i].px,y:players[i].py,z:100-players[i].pz};
+			players[i].ptVirtual.y = 50;
 		
 			players[i].xSideToSide = players[i].px/100*GPW;
 			players[i].xFrontToBack = (1-players[i].pz/100)*GPW;
