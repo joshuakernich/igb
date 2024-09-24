@@ -47,6 +47,7 @@ TinyDude = function(x,y,n){
 	self.x = x;
 	self.y = y;
 	self.r = 0;
+	self.racketHistory = [];
 
 	let meep = new Meep(COLORS[n]);
 	meep.c.wArm = 0;
@@ -76,9 +77,26 @@ TinyDude = function(x,y,n){
 
 			})
 
-			let r = 120 * ((self.racket.x>self.x)?1:-1);
+			let dirHand = ((self.racket.x>self.x)?1:-1)
+			let r = 120 * dirHand;
 
-			self.$racket.find('tinyracketinner').css({transform:`rotate(${r}deg)`});
+			if(self.swing && !self.swinging ){
+
+				self.swinging = true;
+				let rSwing = 20 * dirHand;
+				self.$racket.find('tinyracketinner').css({transform:`rotate(${rSwing}deg)`});
+
+				let $swoosh = $(`<tinyswoosh dir=${dirHand}>`).appendTo(self.$el);
+
+				setTimeout(function(){
+					$swoosh.remove();
+					self.swing = false;
+					self.swinging = false;
+				},500);
+
+			} else if(!self.swinging){
+				self.$racket.find('tinyracketinner').css({transform:`rotate(${r}deg)`});
+			}
 		}
 		
 	}
@@ -127,6 +145,23 @@ TinyFootball = function(){
 
 				'perspective':W+'px',
 				
+			},
+
+			'tinyswoosh':{
+				'display':'block',
+				'width':'200px',
+				'height':'200px',
+				'background':"url(./proto/img/swoosh.png)",
+				'position':'absolute',
+				'left':'0px',
+				'bottom':'60px',
+				'background-size':'100%',
+			},
+
+			'tinyswoosh[dir="-1"]':{
+				'left':'auto',
+				'right':'0px',
+				'transform':'scaleX(-1)',
 			},
 
 
@@ -412,6 +447,7 @@ TinyFootball = function(){
 				'position':'absolute',
 				'bottom':'150px',
 				'left':'0px',
+				'transition':'transform 0.2s'
 			},
 
 			'tinyracketinner:after':{
@@ -484,6 +520,7 @@ TinyFootball = function(){
 	
 	let scoreLeft = 0;
 	let scoreRight = 0;
+	let $sfxSwoosh;
 	
 	let dudes = [];
 	let playerCount = (typeGame=='tennis')?2:6;
@@ -499,11 +536,18 @@ TinyFootball = function(){
 		dudes[1].x = W/2;
 		dudes[1].y = -H/2;
 		$('<tinynet>').appendTo($field);
+
 		dudes[0].$racket = $(`
 			<tinyracket>
 				<tinyracketinner></tinyracketinner>
 			</tinyracket>
 		`).appendTo($playArea);
+
+		$sfxSwoosh = $(`<audio>
+			<source src="./proto/audio/sfx-swoosh.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el);
+
+		
 
 	} else {
 		$('<tinygoal>').appendTo($field);
@@ -596,21 +640,30 @@ TinyFootball = function(){
 			let dy = dudes[i].y - ball.y;
 			let d = Math.sqrt(dx*dx + dy*dy);
 
+
 			let dxMove = dudes[i].wx-dudes[i].x;
 			let dyMove = dudes[i].wy-dudes[i].y;
 			let dMove = Math.sqrt(dxMove*dxMove + dyMove*dyMove);
 
-			if(dMove>30){
+			if(typeGame=='football' && dMove>30){
 				dudes[i].sx = dxMove;
 				dudes[i].sy = dyMove;
-				if(typeGame != 'tennis') dudes[i].r = Math.atan2(dudes[i].sy,dudes[i].sx);
-
-
 
 				dudes[i].wx = dudes[i].x;
 				dudes[i].wy = dudes[i].y;
+			}
 
+			if(dudes[i].racket){
+				dudes[i].racketHistory.push(racket.y);
+				while(dudes[i].racketHistory.length>fps/2) dudes[i].racketHistory.shift();
 
+				let dy = dudes[i].racketHistory[dudes[i].racketHistory.length-1] - dudes[i].racketHistory[0];
+				
+				if( dy < -5 && !dudes[i].swing ){
+					//swing?
+					dudes[i].swing = true;
+					$sfxSwoosh[0].play();
+				}
 			}
 
 			//if(typeGame == 'tennis') dudes[i].r = Math.PI/2;
@@ -676,15 +729,19 @@ TinyFootball = function(){
 		
 			let q = {
 				W:racket.rW, X:racket.rX, Y:racket.rY, Z:racket.rZ,
-
 			};
 
 			/*racket.yaw = getYaw(q);
 			racket.roll = getRoll(q);
 			racket.pitch = getPitch(q);*/
 
+
+
 			racket.x = (racket.px/100)*W;
 			racket.y = H-(racket.pz/100)*H;
+
+
+
 			dudes[0].racket = racket;
 
 			p.length = 1;

@@ -416,7 +416,7 @@
 			text-shadow: 0px 1px 0px black;
 		}
 
-		menu{
+		igbmenu{
 			margin: 2vw;
 			 
 			display: block;
@@ -424,7 +424,7 @@
 			right: 0px;
 			top: 0px;
 			text-align: right;
-			z-index: 1;
+			z-index: 1000;
 			overflow: hidden;
 			padding: 0px;
 			
@@ -669,18 +669,17 @@
 			
 		</igbside>
 		<igbside>
-			<menu>
-	
-				<igbcontrols>
-					<igbcontrol btn='home'><b>⌂</b></igbcontrol>
-					<igbcontrol btn='refresh'>↺</igbcontrol>
-					<igbcontrol btn='move'><small>M</small></igbcontrol>
-				<ibgcontrols>
-				
-			</menu>
-			<logger>LOADING...</logger>
+			
 		</igbside>
-		
+		<igbmenu>
+			<igbcontrols>
+				<igbcontrol btn='home'><b>⌂</b></igbcontrol>
+				<igbcontrol btn='refresh'>↺</igbcontrol>
+				<igbcontrol btn='move'><small>M</small></igbcontrol>
+			<ibgcontrols>
+			
+		</igbmenu>
+		<logger>LOADING...</logger>
 		<gamebox>
 			<gameboxside></gameboxside><gameboxside></gameboxside><gameboxside></gameboxside><gameboxside>
 				<gbavatar><gbhuman></gbhuman></gbavatar>
