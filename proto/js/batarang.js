@@ -123,6 +123,13 @@ BatarangGame = function(){
 				'box-sizing':'border-box',
 			},
 
+			'.batarangbg audio':{
+				'position':'absolute',
+				'left':'2vw',
+				'bottom':'2vw',
+
+			},
+
 			'.batarangbg:after':{
 				content:'""',
 				position:'absolute',
@@ -389,6 +396,7 @@ BatarangGame = function(){
 	let xSideToSide = 0;
 	let xFrontToBack = 0;
 	let batarang;
+	let goonZoom;
 
 	let LADDERS = [[],[5,14,20],[4,13,18]];
 	let BUTTONS = [
@@ -404,7 +412,7 @@ BatarangGame = function(){
 		{level:1, x:GPW*2+1, w:GPW-3, align:'right'},
 		{level:2, x:GPW*2+1, w:GPW-3, align:'right'},
 	]
-	let EXIT = [10,12,11];
+	let EXIT = [11,12,11];
 	let PAUSE = 100000;
 	let BETWEEN = 10000;
 	let SEQUENCE = 1500;
@@ -686,6 +694,7 @@ BatarangGame = function(){
 			doNextQueue();
 		} else if(isNaN(g)){
 			//spawn the goon
+			if(!isGameActive) goonZoome = g;
 			g.redraw();
 			g.$el.appendTo($ls[g.level]);
 			goons.push(g);

@@ -36,23 +36,36 @@
 			const proto = {
 				
 			
-				'🎵 SEQ':window.Sequencer,
-				'🎵 PONG':window.PixelPaddle,
+				'SEQUENCER':window.Sequencer,
+				'PONG':window.PixelPaddle,
 
 				//'SQUIGGLE':window.MrSquiggle,
-				'BAT-ARANG':window.BatarangGame,
-				'BAT-GRAPNEL':window.BatClimbing,
-				'FOOTBALL':window.TinyFootball,
+				
+				'TINY SPORTS':window.TinyFootball,
 
-				'HEADER':window.BallGame,
-				'INVADERS':window.InvadersGame,
-				'RIDDLER':window.Riddler,
+				'HEADERS':window.BallGame,
+				//'INVADERS':window.InvadersGame,
+				
 				
 				'GOALIE':window.GoalieGame,
 				'TENNIS':window.TennisGame,
-				'IGB QUIZ':"quiz IGB/index.html",
+
+				'RIDDLER':window.Riddler,
+				'BAT-ARANG':window.BatarangGame,
+				'BAT-GRAPNEL':window.BatClimbing,
+				//'IGB QUIZ':"quiz IGB/index.html",
 				
 			}
+
+			window.TennisGame.ICON = 'https://imgcdn.stablediffusionweb.com/2024/4/21/b8415d9e-70d0-4d5a-a6df-93d7c9b53613.jpg';
+			window.GoalieGame.ICON = 'https://media.istockphoto.com/id/1328556281/vector/soccer-goalkeeper-catches-the-ball.jpg?s=612x612&w=0&k=20&c=RoMpwtX-BG3dkCJC-oIcPlgZhv1MSkM31np2bnIKKJ8=';
+			window.TinyFootball.ICON = 'https://previews.123rf.com/images/macrovector/macrovector1910/macrovector191000199/130924459-school-sports-ground-isometric-background-with-coach-training-pupils-at-basketball-ground-vector.jpg';
+			window.BallGame.ICON = 'https://thumbs.dreamstime.com/b/soccer-player-head-shooting-ball-22864458.jpg';
+			window.BatarangGame.ICON = 'https://cdn.thisiswhyimbroke.com/images/metal-batarang-replica-prop-streamprops-640x533.jpg';
+			window.BatClimbing.ICON = 'https://static.wikia.nocookie.net/fortnite/images/f/fe/Batman_Grapnel_Gun_-_Item_-_Fortnite.png/revision/latest?cb=20211128172916';
+			window.Riddler.ICON = 'https://art.pixilart.com/25c22542d88a2ca.png';
+			window.Sequencer.ICON = 'https://cdn-icons-png.freepik.com/512/16926/16926808.png';
+			window.PixelPaddle.ICON = 'https://play-lh.googleusercontent.com/VvwMOVG1MxTL4-j0SAyfwsBTmj1IMF-Tty35t3FejiV6_1Mt0jM8L1FoKHB_4ptQ5w=w240-h480-rw';
 
 			let gameID = window.location.search.substr(1);
 
@@ -90,7 +103,7 @@
 				for(var p in proto){
 					$(`
 						<protoapp>
-							<protoicon></protoicon>
+							<protoicon style='background-image:url(${proto[p]['ICON']})'></protoicon>
 							<protolabel>${p}</protolabel>
 						</protoapp>
 					`).appendTo('protolist').attr('id',p).click(onProtoButton);
@@ -151,6 +164,7 @@
 			}
 
 			function ready(){
+				$('[btn=move]').hide();
 				doLog("Let's go...");
 				window.vuplex.postMessage({ type: 'greeting', message: 'Hello from JavaScript!' });
 			  	window.vuplex.addEventListener('message', function(e) { onMessage(e.data) });
@@ -392,6 +406,8 @@
 			background: white;
 			border-radius: 0.5vw;
 			box-shadow: 0px 1px 0px black;
+			background-size: cover;
+			background-position: center;
 		}
 
 		protolabel{
@@ -402,17 +418,16 @@
 
 		menu{
 			margin: 2vw;
-			padding: 0.1vw;
+			 
 			display: block;
 			position: absolute;
 			right: 0px;
 			top: 0px;
 			text-align: right;
 			z-index: 1;
-			background: rgba(255,255,255,0.3);
-			backdrop-filter: 10px;
 			overflow: hidden;
-			border-radius: 2vw;
+			padding: 0px;
+			
 		}
 
 		
@@ -529,39 +544,7 @@
 			background: white;
 		}
 
-		.expando{
-			position: absolute;
-			top: 0px;
-			right: 0px;
-			
-			padding: 0.3em;
-			width: 3vw;
-			height: 3vw;
-			
-			
-			
 		
-			background: white;
-			text-align: center;
-			display: inline-block;
-		
-
-			background: var(--igb-pink);
-			color: var(--igb-purple);
-
-			font-size: 2vw;
-			
-			border: none;
-			line-height: 1.5vw;
-		}
-
-		.expando:after{
-			content: "⛶";
-		}
-
-		menu.hidden .expando{
-			display: block;
-		}
 
 		gamebox{
 			display: block;
@@ -666,12 +649,14 @@
 			width: 2vw;
 			height:2vw;
 			border-radius: 1vw;
-			background: rgba(0,0,0,0.3);
-			line-height: 2vw;
+			background: rgba(255, 255, 255, 0.5);
+			line-height: 1.8vw;
 			overflow: hidden;
 			font-size: 1.5vw;
-			margin: 0.5vw;
-
+			color: white;
+			margin-bottom: 0.5vw;
+			box-shadow: 0px 1px 0px black;
+			text-shadow: 0px -1px black;
 		}
 		
 	</style>
@@ -685,7 +670,7 @@
 		</igbside>
 		<igbside>
 			<menu>
-				<
+	
 				<igbcontrols>
 					<igbcontrol btn='home'><b>⌂</b></igbcontrol>
 					<igbcontrol btn='refresh'>↺</igbcontrol>
