@@ -349,7 +349,7 @@ TinyFootball = function(){
 				'bottom':'50%',
 				'left':'0px',
 				'right':'0px',
-				'height':'100px',
+				'height':'150px',
 				
 				'transform':'rotateX(-50deg)',
 				'border':'10px solid white',
@@ -414,11 +414,20 @@ TinyFootball = function(){
 	let scoreRight = 0;
 	
 	let dudes = [];
-	while(dudes.length<6){
+	let playerCount = (typeGame=='tennis')?2:6;
+	while(dudes.length<playerCount){
 		let dude = new TinyDude(0,0,dudes.length);
 		dude.$el.appendTo($playArea);
 		dudes.push(dude);
 	}
+
+	if(typeGame=='tennis'){
+		dudes[0].r = Math.PI/2;
+		dudes[1].r = -Math.PI/2;
+		dudes[1].x = W/2;
+		dudes[1].y = -H/2;
+	}
+	
 
 	let ball;
 	let balls = [];
@@ -512,7 +521,7 @@ TinyFootball = function(){
 			if(dMove>30){
 				dudes[i].sx = dxMove;
 				dudes[i].sy = dyMove;
-				dudes[i].r = Math.atan2(dudes[i].sy,dudes[i].sx);
+				if(typeGame != 'tennis') dudes[i].r = Math.atan2(dudes[i].sy,dudes[i].sx);
 
 
 
@@ -522,7 +531,7 @@ TinyFootball = function(){
 
 			}
 
-			if(typeGame == 'tennis') dudes[i].r = Math.PI/2;
+			//if(typeGame == 'tennis') dudes[i].r = Math.PI/2;
 			
 			if(d<dMin){
 				iDudeIs = i;
@@ -575,14 +584,29 @@ TinyFootball = function(){
 		//ball.redraw();
 	}
 
-	
+	let racket = {X:0,Y:0,px:40,py:50,rW:0,rX:-0.25,rY:0.5,rZ:0.5};
 	self.setPlayers = function(p){
 		
-		p.length = 6;
-		for(var i=0; i<p.length; i++){
 
-			
-			
+
+		
+
+		if(typeGame=='tennis'){
+
+			racket = p[6];
+		
+			let q = {W:racket.rW, X:racket.rX, Y:racket.rY, Z:racket.rZ};
+
+			racket.yaw = getYaw(q);
+			racket.roll = getRoll(q);
+			racket.pitch = getPitch(q);
+
+			p.length = 1;
+		} else {
+			p.length = 6;
+		}
+		
+		for(var i=0; i<p.length; i++){
 			dudes[i].x = (p[i].px/100)*W;
 			dudes[i].y = H-(p[i].pz/100)*H;
 		}

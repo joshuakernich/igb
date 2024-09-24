@@ -22,6 +22,14 @@ let css = {
 		 'font-weight': 400,
 	},
 
+	'.riddler audio':{
+				'position':'absolute',
+				'left':'2vw',
+				'bottom':'2vw',
+				'z-index':'1',
+
+			},
+
 	'.riddler igbside':{
 		'background-image':'url(./proto/img/riddler-bg.png)',
 		'background-size':'100%',
@@ -201,7 +209,10 @@ Riddler = function(){
 	let self = this;
 	self.$el = $('<igb class="riddler">');
 
-	
+	$(`
+		<audio autoplay controls loop>
+			<source src="./proto/audio/millionaire-2.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el);
 
 	let C = 4;
 	let R = 2;
