@@ -49,6 +49,7 @@ TinyDude = function(x,y,n){
 	self.r = 0;
 
 	let meep = new Meep(COLORS[n]);
+	meep.c.wArm = 0;
 	meep.$el.appendTo(self.$el.find('tinyavatar'));
 
 	self.redraw = function(){
@@ -58,8 +59,6 @@ TinyDude = function(x,y,n){
 		self.$el.css({
 			left:self.x+'px',
 			top:self.y+'px',
-			
-			
 		})
 
 		self.$el.find('tinyfootprint').css({
@@ -69,6 +68,19 @@ TinyDude = function(x,y,n){
 		self.$el.find('tinyavatar').css({
 			'z-index':self.y,
 		})
+
+		if(self.racket){
+			self.$racket.css({
+				left:self.racket.x+'px',
+				top:self.racket.y+'px',
+
+			})
+
+			let r = 120 * ((self.racket.x>self.x)?1:-1);
+
+			self.$racket.find('tinyracketinner').css({transform:`rotate(${r}deg)`});
+		}
+		
 	}
 
 	self.redraw(x,y);
@@ -96,6 +108,14 @@ TinyFootball = function(){
 				'background-size':'100%',
 			},
 
+			'.tinygamebg button':{
+				'padding':'0.5vw',
+				'margin':'2vw 1vw',
+				'background':'rgba(0,0,0,0.5)',
+				'color':'white',
+				'border':'none',
+			},
+
 			'tinygame':{
 				display:'block',
 				position:'absolute',
@@ -108,6 +128,8 @@ TinyFootball = function(){
 				'perspective':W+'px',
 				
 			},
+
+
 
 			'tinygame *':{
 				'pointer-events':'none',
@@ -360,11 +382,62 @@ TinyFootball = function(){
 
 			},
 
+			'tinyracket':{
+				'display':'block',
+				'position':'absolute',
+				'left':'0px',
+				'top':'0px',
+
+				'transform-origin':'bottom center',
+				'transform-style':'preserve-3d',
+				'transform':'rotateX(-50deg)',
+			},
+
+			'tinyracket:before':{
+				'content':'""',
+				'display':'block',
+				'position':'absolute',
+				'width':'100px',
+				'height':'10px',
+				'background':'black',
+				'left':'-50px',
+				'bottom':'0px',
+				'border-radius':'100%',
+				'opacity':'0.2',
+
+			},
+
+			'tinyracketinner':{
+				'display':'block',
+				'position':'absolute',
+				'bottom':'150px',
+				'left':'0px',
+			},
+
+			'tinyracketinner:after':{
+				'content':'""',
+				'display':'block',
+				'position':'absolute',
+				'width':'100px',
+				'height':'200px',
+				
+				'left':'-50px',
+				'bottom':'0px',
+				'background-image':'url(./proto/img/tennis-racket.png)',
+				'background-size':'100%',
+
+
+			},
+
 			'[game=tennis] tinygoal':{
 				'display':'none',
 			},
 
 			'[game=tennis] tinyfootprint:before':{
+				'display':'none',
+			},
+
+			'[game=tennis] tinyfootprint:after':{
 				'display':'none',
 			},
 
@@ -394,22 +467,21 @@ TinyFootball = function(){
 	let $center = $('<igbside>').appendTo(self.$el);
 	let $right = $('<igbside>').appendTo(self.$el);
 
+	$('<button>FOOTBALL</button>').appendTo($right);
+	$('<button>TENNIS</button>').appendTo($right);
+
 	let typeGame = "tennis";
 	let $game = $(`<tinygame game=${typeGame}>`).appendTo($center);
 	let $field = $('<tinyfield>').appendTo($game);
 	$('<tinymarkings>').appendTo($field);
 	let $playArea = $('<tinyplayarea>').appendTo($field);
 
-	
-	$('<tinygoal>').appendTo($field);
-	$('<tinygoal>').appendTo($field);
-	$('<tinynet>').appendTo($field);
 
 	$('<tinyscore>').appendTo($center).text('0');
 	$('<tinyscore>').appendTo($center).text('0');
 
 	let $h = $('<h1>').appendTo($game);
-
+	
 	let scoreLeft = 0;
 	let scoreRight = 0;
 	
@@ -426,6 +498,16 @@ TinyFootball = function(){
 		dudes[1].r = -Math.PI/2;
 		dudes[1].x = W/2;
 		dudes[1].y = -H/2;
+		$('<tinynet>').appendTo($field);
+		dudes[0].$racket = $(`
+			<tinyracket>
+				<tinyracketinner></tinyracketinner>
+			</tinyracket>
+		`).appendTo($playArea);
+
+	} else {
+		$('<tinygoal>').appendTo($field);
+		$('<tinygoal>').appendTo($field);
 	}
 	
 
@@ -588,18 +670,22 @@ TinyFootball = function(){
 	self.setPlayers = function(p){
 		
 
-
-		
-
 		if(typeGame=='tennis'){
 
 			racket = p[6];
 		
-			let q = {W:racket.rW, X:racket.rX, Y:racket.rY, Z:racket.rZ};
+			let q = {
+				W:racket.rW, X:racket.rX, Y:racket.rY, Z:racket.rZ,
 
-			racket.yaw = getYaw(q);
+			};
+
+			/*racket.yaw = getYaw(q);
 			racket.roll = getRoll(q);
-			racket.pitch = getPitch(q);
+			racket.pitch = getPitch(q);*/
+
+			racket.x = (racket.px/100)*W;
+			racket.y = H-(racket.pz/100)*H;
+			dudes[0].racket = racket;
 
 			p.length = 1;
 		} else {
@@ -609,6 +695,7 @@ TinyFootball = function(){
 		for(var i=0; i<p.length; i++){
 			dudes[i].x = (p[i].px/100)*W;
 			dudes[i].y = H-(p[i].pz/100)*H;
+
 		}
 	}
 
@@ -625,6 +712,8 @@ TinyFootball = function(){
 	$game.on('mousemove',function(e){
 		dudes[0].x = e.offsetX;
 		dudes[0].y = e.offsetY;
+
+		
 	});
 
 }

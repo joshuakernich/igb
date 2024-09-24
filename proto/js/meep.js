@@ -75,6 +75,10 @@ Meep = function(color){
 			'.meep-shoe, .meep-head, .meep-body':{
 				'stroke':'transparent',
 				'fill':'white',
+			},
+
+			'.hidden':{
+				'display':'none',
 			}
 		}
 
@@ -84,6 +88,7 @@ Meep = function(color){
 
 	
 	self.$el = $(`<meep></meep>`);
+
 
 	self.redraw = function(){
 
