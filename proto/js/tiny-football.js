@@ -140,6 +140,12 @@ TinyFootball = function(){
 				'border':'none',
 			},
 
+			'.tinygamebg audio':{
+				'position':'absolute',
+				'left':'2vw',
+				'bottom':'2vw',
+			},
+
 			'tinygame':{
 				display:'block',
 				position:'absolute',
@@ -521,6 +527,11 @@ TinyFootball = function(){
 	$('<igbside>').appendTo(self.$el);
 	let $center = $('<igbside>').appendTo(self.$el);
 	let $right = $('<igbside>').appendTo(self.$el);
+
+	$(`
+		<audio autoplay controls loop>
+			<source src="./proto/audio/cute-amp-classy-218551.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el);
 
 	$('<button>FOOTBALL</button>').appendTo($right);
 	$('<button>TENNIS</button>').appendTo($right);
