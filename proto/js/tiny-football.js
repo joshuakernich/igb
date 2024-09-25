@@ -836,7 +836,15 @@ TinyFootball = function(){
 			dudes[i].x = (p[i].px/100)*W;
 			dudes[i].y = H-(p[i].pz/100)*H;
 
+			if(dudes[i].racket){
+				if(dudes[i].racket.x>dudes[i].x) dudes[i].racket.x = dudes[i].x + 50;
+				else dudes[i].racket.x = dudes[i].x - 50;
+
+				dudes[i].racket.y = dudes[i].y;
+			}
 		}
+
+
 	}
 
 	let interval;
