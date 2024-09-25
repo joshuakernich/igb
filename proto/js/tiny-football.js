@@ -3,7 +3,10 @@ TinyBall = function(x,y){
 	let self = this;
 	self.$el = $(`
 		<tinyball>
-			<tinyballsprite></tinyballsprite>
+			
+			<tinyballsprite>
+				<tinyballpulse></tinyballpulse>
+			</tinyballsprite>
 		</tinyball>`
 	);
 
@@ -14,6 +17,10 @@ TinyBall = function(x,y){
 	self.sx = 0;
 	self.sy = 0;
 	self.sz = 0;
+
+	self.pulse = function() {
+		self.$el.find('tinyballpulse').css({'opacity':'1'}).animate({'opacity':'0'});
+	}
 
 
 	self.redraw = function(){
@@ -297,7 +304,20 @@ TinyFootball = function(){
 				'transform':'rotateX(-30deg)',
 			},
 
+			'tinyballpulse':{
+				display:'block',
+				position:'absolute',
+				width:'164px',
+				height:'164px',
+				'border':'10px solid white',
+				'left':'-50px',
+				'top':'-114px',
+				'box-sizing':'border-box',
+				'transform-style':'preserve-3d',
+				'border-radius':"100%",
+				'opacity':'0',
 
+			},
 
 			'tinyballsprite':{
 				display:'block',
@@ -705,7 +725,7 @@ TinyFootball = function(){
 					
 						let trajectory = dx;
 						
-
+						ball.pulse();
 						ball.sx = trajectory*0.1;
 						ball.sy = -30;
 						ball.sz = 5;
