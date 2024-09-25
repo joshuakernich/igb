@@ -57,7 +57,7 @@ TinyDude = function(x,y,n){
 	self.swinging = false;
 
 	let meep = new Meep(COLORS[n]);
-	meep.c.wArm = 0;
+	meep.c.wArm = 0.01;
 	meep.$el.appendTo(self.$el.find('tinyavatar'));
 
 	self.redraw = function(){
@@ -667,7 +667,9 @@ TinyFootball = function(){
 				
 				let dy = dyRacket-dyDude;
 
-				if( dy < -(H*0.05) && !dudes[i].swing ){
+				//console.log(dyRacket,dyDude,dy);
+
+				if( dy < -(H*0.1) && !dudes[i].swing ){
 					//swing?
 					dudes[i].swing = true;
 					$sfxSwoosh[0].play();
@@ -827,8 +829,6 @@ TinyFootball = function(){
 			racket.x = (racket.px/100)*W;
 			racket.y = H-(racket.pz/100)*H;
 
-
-
 			dudes[0].racket = racket;
 
 			p.length = 1;
@@ -840,12 +840,6 @@ TinyFootball = function(){
 			dudes[i].x = (p[i].px/100)*W;
 			dudes[i].y = H-(p[i].pz/100)*H;
 
-			if(dudes[i].racket){
-				if(dudes[i].racket.x>dudes[i].x) dudes[i].racket.x = dudes[i].x + 50;
-				else dudes[i].racket.x = dudes[i].x - 50;
-
-				dudes[i].racket.y = dudes[i].y;
-			}
 		}
 
 
@@ -865,14 +859,14 @@ TinyFootball = function(){
 		dudes[0].x = e.offsetX;
 		dudes[0].y = e.offsetY;
 
-		//racket.x = dudes[0].x + 50;
-		//racket.y = dudes[0].y;
+		racket.x = dudes[0].x + 50;
+		racket.y = dudes[0].y;
 		
 	});
 
 	$game.on('click',function(e){
 		
-		racket.y = dudes[0].y-10;
+		racket.y = racket.y-200;
 		
 	});
 

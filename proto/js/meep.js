@@ -228,7 +228,7 @@ Meep = function(color){
 	//<path class='meep-head' stroke-width=${c.wHead} d='M0,${yHead} l0,${c.hHead-c.wHead}'/>
 	//<path class='meep-body' stroke-width=${c.wBody} d='M0,${yBody} l0,${c.hBody-c.wBody}'/>
 
-	self.redraw();
+	//self.redraw();
 
 	let anim = 
 	[
