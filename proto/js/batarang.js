@@ -687,7 +687,7 @@ BatarangGame = function(){
 	$(`
 		<audio autoplay controls loop>
 			<source src="./proto/audio/epic-orchestral-drums-171728.mp3" type="audio/mpeg">
-		</audio>`).appendTo(self.$el);
+		</audio>`).appendTo(self.$el)[0].volume = 0.5;
 
 	function getXFor(batarang){
 		if(batarang.wall==0) return GPW - players[batarang.iPlayer].xFrontToBack;

@@ -212,7 +212,7 @@ Riddler = function(){
 	$(`
 		<audio autoplay controls loop>
 			<source src="./proto/audio/millionaire-2.mp3" type="audio/mpeg">
-		</audio>`).appendTo(self.$el);
+		</audio>`).appendTo(self.$el)[0].volume = 0.5;
 
 	let C = 4;
 	let R = 2;
