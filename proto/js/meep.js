@@ -195,7 +195,7 @@ Meep = function(color){
 
 		self.$el.html(
 			`
-			<meep-shadow style='width:${c.wHead}px;height:${c.wHead/4}px;'></meep-shadow>
+			
 			<svg width=500 height=1100 viewBox='-250 -1050 500 1100'>
 
 				

@@ -9,9 +9,11 @@ TinyBall = function(x,y){
 
 	self.x = x;
 	self.y = y;
+	self.z = 0;
 
 	self.sx = 0;
 	self.sy = 0;
+	self.sz = 0;
 
 
 	self.redraw = function(){
@@ -22,6 +24,8 @@ TinyBall = function(x,y){
 			left:self.x+'px',
 			top:self.y+'px',
 		})
+
+		self.$el.find('tinyballsprite').css({'height':self.z+'px'});
 	}
 
 	self.redraw(x,y);
@@ -48,6 +52,7 @@ TinyDude = function(x,y,n){
 	self.y = y;
 	self.r = 0;
 	self.racketHistory = [];
+	self.history = [];
 
 	let meep = new Meep(COLORS[n]);
 	meep.c.wArm = 0;
@@ -86,7 +91,7 @@ TinyDude = function(x,y,n){
 				let rSwing = 20 * dirHand;
 				self.$racket.find('tinyracketinner').css({transform:`rotate(${rSwing}deg)`});
 
-				let $swoosh = $(`<tinyswoosh dir=${dirHand}>`).appendTo(self.$el);
+				let $swoosh = $(`<tinyswoosh dir=${dirHand}>`).appendTo(self.$el.find('tinyavatar'));
 
 				setTimeout(function(){
 					$swoosh.remove();
@@ -111,6 +116,7 @@ TinyFootball = function(){
 	let rBall = 25;
 	let rDude = 50;
 	let hGoal = 400;
+	let typeGame = "tennis";
 	
 	if(!TinyFootball.didInit){
 
@@ -153,14 +159,14 @@ TinyFootball = function(){
 				'height':'200px',
 				'background':"url(./proto/img/swoosh.png)",
 				'position':'absolute',
-				'left':'0px',
-				'bottom':'60px',
+				'left':'50px',
+				'bottom':'100px',
 				'background-size':'100%',
 			},
 
 			'tinyswoosh[dir="-1"]':{
 				'left':'auto',
-				'right':'0px',
+				'right':'50px',
 				'transform':'scaleX(-1)',
 			},
 
@@ -248,7 +254,8 @@ TinyFootball = function(){
 				height:rBall*2+'px',
 				'background':'black',
 				'border-radius':rBall+'px',
-				'transform':'translate(-50%,-50%)',
+				'top':-rBall+'px',
+				'left':-rBall+'px',
 				'opacity':0.5,
 			},
 
@@ -284,9 +291,15 @@ TinyFootball = function(){
 			'tinyballsprite':{
 				display:'block',
 				position:'absolute',
-				'top':'0px',
-				'left':'0px',
+				'bottom':'0px',
+				'left':'-32px',
+				'width':'64px',
+				'height':'0px',
+			
 				'transform-style':'preserve-3d',
+				'transform':'rotateX(-30deg)',
+				'transform-origin':'bottom center',
+				'background':'rgba(255,255,255,0.1)',
 			},
 
 			'tinyballsprite:after':{
@@ -297,11 +310,11 @@ TinyFootball = function(){
 				height:'64px',
 				'background-image':'url(proto/img/football.png)',
 				'background-size':'100%',
-				'left':'-32px',
-				'bottom':'0px',
+				'left':'0px',
+				'top':'-64px',
 				'transform-style':'preserve-3d',
-				'transform':'rotateX(-30deg)',
-				'transform-origin':'bottom center',
+				
+				
 			},
 
 
@@ -473,9 +486,7 @@ TinyFootball = function(){
 				'display':'none',
 			},
 
-			'[game=tennis] tinyfootprint:after':{
-				'display':'none',
-			},
+			
 
 			'[game=tennis] tinyballsprite:after':{
 				'background-image':'url(./proto/img/tennis-ball.webp)',
@@ -490,6 +501,14 @@ TinyFootball = function(){
 
 			'[game=tennis] tinymarkings':{
 				'margin':'200px',
+			},
+
+			'[game=tennis] tinyballsprite':{
+				'transform':'rotateX(-50deg)',
+			},
+
+			'[game=tennis] tinyavatar':{
+				'transform':'rotateX(-50deg)',
 			},
 		}
 
@@ -506,7 +525,7 @@ TinyFootball = function(){
 	$('<button>FOOTBALL</button>').appendTo($right);
 	$('<button>TENNIS</button>').appendTo($right);
 
-	let typeGame = "tennis";
+	
 	let $game = $(`<tinygame game=${typeGame}>`).appendTo($center);
 	let $field = $('<tinyfield>').appendTo($game);
 	$('<tinymarkings>').appendTo($field);
@@ -560,8 +579,19 @@ TinyFootball = function(){
 
 	function spawnBall(){
 		
+		
+
 
 		ball = new TinyBall(W/2,H/2);
+
+		if(typeGame=='tennis'){
+			ball.y = -H/2;
+			ball.sy = 10;
+			ball.sx = -10+Math.random()*20;
+			ball.z = 200;
+			ball.sz = 5;
+		}
+
 		ball.$el.appendTo($playArea);
 
 		balls.push(ball);
@@ -572,9 +602,10 @@ TinyFootball = function(){
 	spawnBall();
 	
 
-	let slowdown = 0.95;
+	
 	let wWas;
 	let iDudeWas = -1;
+	let gravity = -0.2;
 
 	function tick(){
 
@@ -584,15 +615,85 @@ TinyFootball = function(){
 			wWas = wScreen;
 		}
 
+		let slowdown = (typeGame=='football')?0.95:1;
 		for(var b in balls){
 			balls[b].sx *= slowdown;
 			balls[b].sy *= slowdown;
+			balls[b].sz += gravity;
 			balls[b].x += balls[b].sx;
 			balls[b].y += balls[b].sy;
+			balls[b].z += balls[b].sz;
+
+			if(balls[b].z<0){
+				balls[b].z = 0;
+				balls[b].sz = -balls[b].sz;
+			}
+
 			balls[b].redraw();
 		}
 
+		if(typeGame=='football') tickFootball();
+		if(typeGame=='tennis') tickTennis();
+	}
 
+	function tickTennis(){
+
+
+		for(i in dudes){
+			if(dudes[i].racket){
+				
+				dudes[i].history.push(dudes[i].y);
+				while(dudes[i].history.length>fps/2) dudes[i].history.shift();
+				let dyDude = dudes[i].history[dudes[i].history.length-1] - dudes[i].history[0];
+
+				dudes[i].racketHistory.push(racket.y);
+				while(dudes[i].racketHistory.length>fps/2) dudes[i].racketHistory.shift();
+				let dyRacket = dudes[i].racketHistory[dudes[i].racketHistory.length-1] - dudes[i].racketHistory[0];
+				
+				let dy = dyRacket-dyDude;
+
+				if( dy < -5 && !dudes[i].swing ){
+					//swing?
+					dudes[i].swing = true;
+					$sfxSwoosh[0].play();
+				}
+
+				if(dudes[i].swinging && ball.sy>0){
+
+
+					let dx = ball.x - dudes[i].x;
+					let dy = ball.y - dudes[i].y;
+
+					
+					let ox = Math.abs(dx);
+					let oy = Math.abs(dy);
+
+					if(ox<(W*0.2) && oy<(H*0.2)){
+						//HIT!
+
+						let dir = (dx>0)?1:-1;
+						
+					
+						let trajectory = ox - (W*0.1);
+						
+
+						ball.sx = trajectory*0.05*dir;
+						ball.sy = -15;
+						ball.sz = 5;
+					}
+				}
+			}
+			dudes[i].redraw();
+		}
+
+
+
+
+
+		if(ball.y>H || ball.y<-H) spawnBall();
+	}
+
+	function tickFootball(){
 		let isLeft = ball.x < rBall;
 		let isRight = ball.x > (W-rBall);
 		let isGoalish = ball.y>(H/2-hGoal/2) && ball.y<(H/2+hGoal/2);
@@ -634,8 +735,6 @@ TinyFootball = function(){
 
 		for(i in dudes){
 
-			
-
 			let dx = dudes[i].x - ball.x;
 			let dy = dudes[i].y - ball.y;
 			let d = Math.sqrt(dx*dx + dy*dy);
@@ -645,39 +744,21 @@ TinyFootball = function(){
 			let dyMove = dudes[i].wy-dudes[i].y;
 			let dMove = Math.sqrt(dxMove*dxMove + dyMove*dyMove);
 
-			if(typeGame=='football' && dMove>30){
+			if(dMove>30){
 				dudes[i].sx = dxMove;
 				dudes[i].sy = dyMove;
-
 				dudes[i].wx = dudes[i].x;
 				dudes[i].wy = dudes[i].y;
+				dudes[i].r = Math.atan2(dyMove,dxMove);
 			}
-
-			if(dudes[i].racket){
-				dudes[i].racketHistory.push(racket.y);
-				while(dudes[i].racketHistory.length>fps/2) dudes[i].racketHistory.shift();
-
-				let dy = dudes[i].racketHistory[dudes[i].racketHistory.length-1] - dudes[i].racketHistory[0];
-				
-				if( dy < -5 && !dudes[i].swing ){
-					//swing?
-					dudes[i].swing = true;
-					$sfxSwoosh[0].play();
-				}
-			}
-
-			//if(typeGame == 'tennis') dudes[i].r = Math.PI/2;
 			
 			if(d<dMin){
 				iDudeIs = i;
 				dMin = d;
 			}
-
 			
 			dudes[i].redraw();
 		}
-
-
 
 		if(iDudeIs>-1){
 		
@@ -694,12 +775,8 @@ TinyFootball = function(){
 				dudes[iDudeIs].countdown--;
 				if(dudes[iDudeIs].countdown<=0){
 
-					
-
 					ball.x = dudes[iDudeIs].x - Math.cos(r)*(rBall+rDude);
 					ball.y = dudes[iDudeIs].y - Math.sin(r)*(rBall+rDude);
-
-
 
 					ball.sx = -Math.cos(r)*35;
 					ball.sy = -Math.sin(r)*35;
@@ -712,11 +789,6 @@ TinyFootball = function(){
 		iDudeWas = iDudeIs;
 		
 		ball.redraw();
-
-		//ball.step();
-
-
-		//ball.redraw();
 	}
 
 	let racket = {X:0,Y:0,px:40,py:50,rW:0,rX:-0.25,rY:0.5,rZ:0.5};
@@ -727,11 +799,11 @@ TinyFootball = function(){
 
 			racket = p[6];
 		
-			let q = {
+			/*let q = {
 				W:racket.rW, X:racket.rX, Y:racket.rY, Z:racket.rZ,
 			};
 
-			/*racket.yaw = getYaw(q);
+			racket.yaw = getYaw(q);
 			racket.roll = getRoll(q);
 			racket.pitch = getPitch(q);*/
 
@@ -770,6 +842,14 @@ TinyFootball = function(){
 		dudes[0].x = e.offsetX;
 		dudes[0].y = e.offsetY;
 
+		racket.x = dudes[0].x + 50;
+		racket.y = dudes[0].y;
+		
+	});
+
+	$game.on('click',function(e){
+		
+		racket.y = dudes[0].y-10;
 		
 	});
 
