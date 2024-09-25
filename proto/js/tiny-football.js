@@ -93,7 +93,7 @@ TinyDude = function(x,y,n){
 			if(self.swing && !self.swinging ){
 
 				self.swinging = true;
-				let rSwing = 20 * self.dirHand;
+				let rSwing = -20 * self.dirHand;
 				self.$racket.find('tinyracketinner').css({transform:`rotate(${rSwing}deg)`});
 
 				let $swoosh = $(`<tinyswoosh dir=${self.dirHand}>`).appendTo(self.$el.find('tinyavatar'));
@@ -471,7 +471,7 @@ TinyFootball = function(){
 				'position':'absolute',
 				'bottom':'150px',
 				'left':'0px',
-				'transition':'transform 0.2s'
+				'transition':'transform 0.1s'
 			},
 
 			'tinyracketinner:after':{
@@ -535,7 +535,7 @@ TinyFootball = function(){
 
 	$(`
 		<audio autoplay controls loop>
-			<source src="./proto/audio/cute-amp-classy-218551.mp3" type="audio/mpeg">
+			<source src="./proto/audio/funny-kids_long-190860.mp3" type="audio/mpeg">
 		</audio>`).appendTo(self.$el)[0].volume = 0.25;
 
 	$('<button>FOOTBALL</button>').appendTo($right);
@@ -555,7 +555,7 @@ TinyFootball = function(){
 	
 	let scoreLeft = 0;
 	let scoreRight = 0;
-	let $sfxSwoosh;
+	let sfx = {};
 	
 	let dudes = [];
 	let playerCount = (typeGame=='tennis')?2:6;
@@ -578,8 +578,16 @@ TinyFootball = function(){
 			</tinyracket>
 		`).appendTo($playArea);
 
-		$sfxSwoosh = $(`<audio>
-			<source src="./proto/audio/sfx-swoosh.mp3" type="audio/mpeg">
+		sfx.$swoosh = $(`<audio>
+			<source src="./proto/audio/tennis-swoosh.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el);
+
+		sfx.$bounce = $(`<audio>
+			<source src="./proto/audio/tennis-bounce.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el);
+
+		sfx.$hit = $(`<audio>
+			<source src="./proto/audio/tennis-hit.mp3" type="audio/mpeg">
 		</audio>`).appendTo(self.$el);
 
 		
@@ -602,7 +610,7 @@ TinyFootball = function(){
 
 		if(typeGame=='tennis'){
 			ball.y = -H/2;
-			ball.sy = 15;
+			ball.sy = 20;
 			ball.sx = -10+Math.random()*20;
 			ball.z = 200;
 			ball.sz = 5;
@@ -621,7 +629,7 @@ TinyFootball = function(){
 	
 	let wWas;
 	let iDudeWas = -1;
-	let gravity = -0.4;
+	let gravity = -0.5;
 
 	function tick(){
 
@@ -643,6 +651,8 @@ TinyFootball = function(){
 			if(balls[b].z<0){
 				balls[b].z = 0;
 				balls[b].sz = -balls[b].sz;
+
+				if(balls[b] == ball) sfx.$bounce[0].play();
 			}
 
 			balls[b].redraw();
@@ -673,7 +683,7 @@ TinyFootball = function(){
 				if( dy < -(H*0.1) && !dudes[i].swing ){
 					//swing?
 					dudes[i].swing = true;
-					$sfxSwoosh[0].play();
+					sfx.$swoosh[0].play();
 				}
 
 				if(dudes[i].swinging && ball.sy>0){
@@ -688,7 +698,7 @@ TinyFootball = function(){
 
 					if(ox<(W*0.2) && oy<(H*0.2)){
 						//HIT!
-
+						sfx.$hit[0].play();
 						let dir = (dx>0)?1:-1;
 						
 
@@ -697,7 +707,7 @@ TinyFootball = function(){
 						
 
 						ball.sx = trajectory*0.1;
-						ball.sy = -20;
+						ball.sy = -30;
 						ball.sz = 5;
 					}
 				}
