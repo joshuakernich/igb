@@ -55,6 +55,7 @@ TinyDude = function(x,y,n){
 	self.history = [];
 	self.swing = false;
 	self.swinging = false;
+	self.dirHand = 1;
 
 	let meep = new Meep(COLORS[n]);
 	meep.c.wArm = 0.01;
@@ -79,23 +80,23 @@ TinyDude = function(x,y,n){
 
 		if(self.racket){
 
-			let dirHand = (self.racket.x>self.x)?1:-1;
+			self.dirHand = (self.racket.x>self.x)?1:-1;
 
 			self.$racket.css({
-				left:(self.x+dirHand*50)+'px',
+				left:(self.x+self.dirHand*50)+'px',
 				top:self.y+'px',
 
 			})
 
-			let r = 120 * dirHand;
+			let r = 120 * self.dirHand;
 
 			if(self.swing && !self.swinging ){
 
 				self.swinging = true;
-				let rSwing = 20 * dirHand;
+				let rSwing = 20 * self.dirHand;
 				self.$racket.find('tinyracketinner').css({transform:`rotate(${rSwing}deg)`});
 
-				let $swoosh = $(`<tinyswoosh dir=${dirHand}>`).appendTo(self.$el.find('tinyavatar'));
+				let $swoosh = $(`<tinyswoosh dir=${self.dirHand}>`).appendTo(self.$el.find('tinyavatar'));
 
 				setTimeout(function(){
 					$swoosh.remove();
@@ -601,7 +602,7 @@ TinyFootball = function(){
 
 		if(typeGame=='tennis'){
 			ball.y = -H/2;
-			ball.sy = 10;
+			ball.sy = 15;
 			ball.sx = -10+Math.random()*20;
 			ball.z = 200;
 			ball.sz = 5;
@@ -620,7 +621,7 @@ TinyFootball = function(){
 	
 	let wWas;
 	let iDudeWas = -1;
-	let gravity = -0.2;
+	let gravity = -0.4;
 
 	function tick(){
 
@@ -658,11 +659,11 @@ TinyFootball = function(){
 			if(dudes[i].racket){
 				
 				dudes[i].history.push(dudes[i].y);
-				while(dudes[i].history.length>fps/2) dudes[i].history.shift();
+				while(dudes[i].history.length>fps/5) dudes[i].history.shift();
 				let dyDude = dudes[i].history[dudes[i].history.length-1] - dudes[i].history[0];
 
 				dudes[i].racketHistory.push(racket.y);
-				while(dudes[i].racketHistory.length>fps/2) dudes[i].racketHistory.shift();
+				while(dudes[i].racketHistory.length>fps/5) dudes[i].racketHistory.shift();
 				let dyRacket = dudes[i].racketHistory[dudes[i].racketHistory.length-1] - dudes[i].racketHistory[0];
 				
 				let dy = dyRacket-dyDude;
@@ -677,8 +678,8 @@ TinyFootball = function(){
 
 				if(dudes[i].swinging && ball.sy>0){
 
-
-					let dx = ball.x - dudes[i].x;
+					
+					let dx = ball.x - (dudes[i].x + dudes[i].dirHand*150);
 					let dy = ball.y - dudes[i].y;
 
 					
@@ -690,12 +691,13 @@ TinyFootball = function(){
 
 						let dir = (dx>0)?1:-1;
 						
+
 					
-						let trajectory = ox - (W*0.1);
+						let trajectory = dx;
 						
 
-						ball.sx = trajectory*0.05*dir;
-						ball.sy = -15;
+						ball.sx = trajectory*0.1;
+						ball.sy = -20;
 						ball.sz = 5;
 					}
 				}
