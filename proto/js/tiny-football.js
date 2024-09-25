@@ -78,13 +78,15 @@ TinyDude = function(x,y,n){
 		})
 
 		if(self.racket){
+
+			let dirHand = (self.racket.x>self.x)?1:-1;
+
 			self.$racket.css({
-				left:self.racket.x+'px',
-				top:self.racket.y+'px',
+				left:(self.x+dirHand*50)+'px',
+				top:self.y+'px',
 
 			})
 
-			let dirHand = ((self.racket.x>self.x)?1:-1)
 			let r = 120 * dirHand;
 
 			if(self.swing && !self.swinging ){
@@ -533,7 +535,7 @@ TinyFootball = function(){
 	$(`
 		<audio autoplay controls loop>
 			<source src="./proto/audio/cute-amp-classy-218551.mp3" type="audio/mpeg">
-		</audio>`).appendTo(self.$el)[0].volume = 0.5;
+		</audio>`).appendTo(self.$el)[0].volume = 0.25;
 
 	$('<button>FOOTBALL</button>').appendTo($right);
 	$('<button>TENNIS</button>').appendTo($right);
@@ -665,7 +667,7 @@ TinyFootball = function(){
 				
 				let dy = dyRacket-dyDude;
 
-				if( dy < -5 && !dudes[i].swing ){
+				if( dy < -(H*0.05) && !dudes[i].swing ){
 					//swing?
 					dudes[i].swing = true;
 					$sfxSwoosh[0].play();
@@ -863,8 +865,8 @@ TinyFootball = function(){
 		dudes[0].x = e.offsetX;
 		dudes[0].y = e.offsetY;
 
-		racket.x = dudes[0].x + 50;
-		racket.y = dudes[0].y;
+		//racket.x = dudes[0].x + 50;
+		//racket.y = dudes[0].y;
 		
 	});
 
