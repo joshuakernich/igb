@@ -53,6 +53,8 @@ TinyDude = function(x,y,n){
 	self.r = 0;
 	self.racketHistory = [];
 	self.history = [];
+	self.swing = false;
+	self.swinging = false;
 
 	let meep = new Meep(COLORS[n]);
 	meep.c.wArm = 0;
@@ -531,7 +533,7 @@ TinyFootball = function(){
 	$(`
 		<audio autoplay controls loop>
 			<source src="./proto/audio/cute-amp-classy-218551.mp3" type="audio/mpeg">
-		</audio>`).appendTo(self.$el);
+		</audio>`).appendTo(self.$el)[0].volume = 0.5;
 
 	$('<button>FOOTBALL</button>').appendTo($right);
 	$('<button>TENNIS</button>').appendTo($right);
