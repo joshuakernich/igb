@@ -63,6 +63,7 @@ TinyDude = function(x,y,n){
 	self.swing = false;
 	self.swinging = false;
 	self.dirHand = 1;
+	self.dirSwing = 1;
 
 	let meep = new Meep(COLORS[n]);
 	meep.c.wArm = 0.01;
@@ -100,6 +101,7 @@ TinyDude = function(x,y,n){
 			if(self.swing && !self.swinging ){
 
 				self.swinging = true;
+				self.dirSwing = self.dirHand;
 				let rSwing = -20 * self.dirHand;
 				self.$racket.find('tinyracketinner').css({transform:`rotate(${rSwing}deg)`});
 
@@ -558,8 +560,8 @@ TinyFootball = function(){
 			<source src="./proto/audio/funny-kids_long-190860.mp3" type="audio/mpeg">
 		</audio>`).appendTo(self.$el)[0].volume = 0.25;
 
-	$('<button>FOOTBALL</button>').appendTo($right);
-	$('<button>TENNIS</button>').appendTo($right);
+	/*$('<button>FOOTBALL</button>').appendTo($right);
+	$('<button>TENNIS</button>').appendTo($right);*/
 
 	
 	let $game = $(`<tinygame game=${typeGame}>`).appendTo($center);
@@ -589,7 +591,7 @@ TinyFootball = function(){
 		dudes[0].r = Math.PI/2;
 		dudes[1].r = -Math.PI/2;
 		dudes[1].x = W/2;
-		dudes[1].y = -H/2;
+		dudes[1].y = -H*0.6;
 		$('<tinynet>').appendTo($field);
 
 		dudes[0].$racket = $(`
@@ -686,7 +688,24 @@ TinyFootball = function(){
 
 
 		for(i in dudes){
-			if(dudes[i].racket){
+
+			let dx = ball.x - (dudes[i].x + dudes[i].dirSwing*150);
+			let dy = ball.y - dudes[i].y;
+
+			let ox = Math.abs(dx);
+			let oy = Math.abs(dy);
+
+			if(i==1){
+
+				let m = fps;
+				dudes[i].x = (dudes[i].x*m+ball.x)/(m+1);
+				dudes[i].dirSwing = (dudes[i].x<ball.x)?1:-1;
+				//dudes[i].swinging = true;
+				dudes[i].yFacing = 1;
+
+				dudes[i].swinging = (oy<(H*0.1));
+			}
+			else {
 				
 				dudes[i].history.push(dudes[i].y);
 				while(dudes[i].history.length>fps/5) dudes[i].history.shift();
@@ -698,40 +717,37 @@ TinyFootball = function(){
 				
 				let dy = dyRacket-dyDude;
 
-				//console.log(dyRacket,dyDude,dy);
-
 				if( dy < -(H*0.1) && !dudes[i].swing ){
 					//swing?
 					dudes[i].swing = true;
 					sfx.$swoosh[0].play();
 				}
 
-				if(dudes[i].swinging && ball.sy>0){
+				dudes[i].yFacing = -1;
+			}
 
-					
-					let dx = ball.x - (dudes[i].x + dudes[i].dirHand*150);
-					let dy = ball.y - dudes[i].y;
 
-					
-					let ox = Math.abs(dx);
-					let oy = Math.abs(dy);
+			let yDirBall = (ball.sy>0)?1:-1;
 
-					if(ox<(W*0.2) && oy<(H*0.2)){
-						//HIT!
-						sfx.$hit[0].play();
-						let dir = (dx>0)?1:-1;
-						
+			if(dudes[i].swinging && yDirBall != dudes[i].yFacing){
 
-					
-						let trajectory = dx;
-						
-						ball.pulse();
-						ball.sx = trajectory*0.1;
-						ball.sy = -30;
-						ball.sz = 5;
-					}
+				if(ox<(W*0.2) && oy<(H*0.2)){
+					//HIT!
+					sfx.$hit[0].play();
+					let dir = (dx>0)?1:-1;
+				
+
+					// rig this a bit better
+					let trajectory = dx;
+					let upness =  15 - ball.z*0.05;
+
+					ball.pulse();
+					ball.sx = trajectory*0.1;
+					ball.sy = (25+upness) * dudes[i].yFacing;
+					ball.sz = upness;
 				}
 			}
+
 			dudes[i].redraw();
 		}
 
