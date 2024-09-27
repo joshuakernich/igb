@@ -97,15 +97,23 @@ TinyDude = function(x,y,n){
 			})
 
 			let r = 120 * self.dirHand;
+			let rSwing = -20 * self.dirHand;
+
+			if(self.yFacing==1){
+				r = 45*self.dirHand;
+				rSwing = 130*self.dirHand;
+			}
+
 
 			if(self.swing && !self.swinging ){
 
 				self.swinging = true;
 				self.dirSwing = self.dirHand;
-				let rSwing = -20 * self.dirHand;
+
 				self.$racket.find('tinyracketinner').css({transform:`rotate(${rSwing}deg)`});
 
 				let $swoosh = $(`<tinyswoosh dir=${self.dirHand}>`).appendTo(self.$el.find('tinyavatar'));
+
 
 				setTimeout(function(){
 					$swoosh.remove();
@@ -600,6 +608,12 @@ TinyFootball = function(){
 			</tinyracket>
 		`).appendTo($playArea);
 
+		dudes[1].$racket = $(`
+			<tinyracket>
+				<tinyracketinner></tinyracketinner>
+			</tinyracket>
+		`).appendTo($playArea);
+
 		sfx.$swoosh = $(`<audio>
 			<source src="./proto/audio/tennis-swoosh.mp3" type="audio/mpeg">
 		</audio>`).appendTo(self.$el);
@@ -632,10 +646,10 @@ TinyFootball = function(){
 
 		if(typeGame=='tennis'){
 			ball.y = -H/2;
-			ball.sy = 20;
+			ball.sy = 25;
 			ball.sx = -10+Math.random()*20;
 			ball.z = 200;
-			ball.sz = 5;
+			ball.sz = 10;
 		}
 
 		ball.$el.appendTo($playArea);
@@ -651,7 +665,7 @@ TinyFootball = function(){
 	
 	let wWas;
 	let iDudeWas = -1;
-	let gravity = -0.5;
+	let gravity = -1;
 
 	function tick(){
 
@@ -697,13 +711,19 @@ TinyFootball = function(){
 
 			if(i==1){
 
-				let m = fps;
+				let m = fps/2;
 				dudes[i].x = (dudes[i].x*m+ball.x)/(m+1);
-				dudes[i].dirSwing = (dudes[i].x<ball.x)?1:-1;
+				dudes[i].dirHand = dudes[i].dirSwing = (dudes[i].x<ball.x)?1:-1;
 				//dudes[i].swinging = true;
 				dudes[i].yFacing = 1;
 
-				dudes[i].swinging = (oy<(H*0.1));
+				dudes[i].racket = {x:dudes[i].x + 100*dudes[i].dirHand,y:dudes[i].y};
+
+				if( !dudes[i].swinging && oy<(H*0.1) ){
+					
+					dudes[i].swing = true;
+					sfx.$swoosh[0].play();
+				}
 			}
 			else {
 				
@@ -735,15 +755,14 @@ TinyFootball = function(){
 					//HIT!
 					sfx.$hit[0].play();
 					let dir = (dx>0)?1:-1;
-				
 
 					// rig this a bit better
 					let trajectory = dx;
-					let upness =  15 - ball.z*0.05;
+					let upness =  22 - ball.z*0.05;
 
 					ball.pulse();
 					ball.sx = trajectory*0.1;
-					ball.sy = (25+upness) * dudes[i].yFacing;
+					ball.sy = 30 * dudes[i].yFacing;
 					ball.sz = upness;
 				}
 			}

@@ -18,7 +18,7 @@ let css = {
 		'transform-style': 'preserve-3d',
 		'position':'relative',
 
-		 'font-family': "Trade Winds",
+		 'font-family': "Bangers",
 		 'font-weight': 400,
 	},
 
