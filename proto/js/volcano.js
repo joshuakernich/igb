@@ -33,7 +33,6 @@ Volcano = function(){
 			'volcanoscroller':{
 				display:'block',
 				position:'absolute',
-				
 				'left':'-3vw',
 				'right':'0px',
 				'bottom':'0px',
@@ -47,7 +46,6 @@ Volcano = function(){
 			'volcanoplatform':{
 				display:'block',
 				position:'absolute',
-				
 				'left':'0px',
 				'right':'0px',
 				'bottom':'0px',
@@ -59,27 +57,23 @@ Volcano = function(){
 				'box-sizing':"border-box",
 				'border-top':"0.2vw solid #a85a59",
 				'box-shadow':"0px 5px 10px rgba(0,0,0,0.2)",
-
 			},
 
 			'volcanoplatform:after':{
 				content:'""',
 				display:'block',
 				position:'absolute',
-				
 				'left':'0px',
 				'right':'0px',
 				'top':'-0.5vw',
 				'height':'0.5vw',
 				'background':'#a85a59',
 				'border-radius':'100% 100% 0px 0px',
-
 			},
 
 			'volcanoarena':{
 				display:'block',
 				position:'absolute',
-				
 				'left':'50%',
 				'bottom':'2vw',
 			},
@@ -105,10 +99,7 @@ Volcano = function(){
 				'top':'-10vw',
 				'left':'0px',
 				'right':'0px',
-				
 			}
-
-
 		}
 
 		$("head").append('<style>'+Css.of(css)+'</style>');
@@ -124,14 +115,12 @@ Volcano = function(){
 	$('<igbside>').appendTo(self.$el);
 
 	let $game = $('<volcanogame>').appendTo($front);
-
 	let $scroller = $('<volcanoscroller>').appendTo($game);
 	let $arena = $('<volcanoarena>').appendTo($scroller);
 
-
 	$('<h1>').appendTo($scroller).text('BAD ASS!');
 
-	let map = [0,-3,-1,2.5,4,0,-2,2,-1,3,-2,2,0];
+	let map = [0,-3,-1,2.5,4.5,1,-2,2,-1,3,-1.5,2,0];
 
 	for(var i=0; i<map.length; i++){
 		$('<volcanoplatform>').appendTo($arena).css({left:(map[i]*GRID)+'vw', bottom:(i*GRID)+'vw'});
@@ -145,48 +134,34 @@ Volcano = function(){
 		player.$el = $('<volcanoplayer>').appendTo($arena);
 		players[p] = player;
 	}
-	
 
 	self.setPlayers = function(p){
-		
 		p.length = PLAYERCOUNT;
-
 		for(var i in p){
 			players[i].x = (p[i].px/100 - 0.5)*(33.3/GRID);
 		}
 	}
 
 	$game.on('mousemove',function(e){
-
 		let px = (e.pageX/$(document).innerWidth())*3-1;
-	
-
 		let player = {px:px*100};
-
 		self.setPlayers([player,player]);
-
-		
 	})
 
 	let GRIDPERSTAGE = 4;
 	let iStage = 0;
 	function tick(){
-
 		let iMin = iStage*GRIDPERSTAGE;
 		for(var i in players){
 
 			let iLevelWas =  Math.floor(players[i].y);
-
 			players[i].sy -= GRAVITY;
 			players[i].y += players[i].sy;
-
 			let iLevelIs =  Math.floor(players[i].y);
 
 			if(players[i].sy < 0 && iLevelIs<iLevelWas){
-
 				let dist = map[iLevelWas] - players[i].x;
-
-				if(Math.abs(dist) < GRID/4){
+				if(Math.abs(dist) < GRID/5){
 					players[i].sy = -0.1;
 					players[i].y = iLevelWas;
 					players[i].isGrounded = true;
@@ -205,8 +180,6 @@ Volcano = function(){
 				bottom:(players[i].y*GRID)+'vw',
 				left:(players[i].x*GRID)+'vw',
 			});
-
-			
 		}
 
 		let iNewStage = Math.floor(iMin/GRIDPERSTAGE);
@@ -217,11 +190,8 @@ Volcano = function(){
 			$parallax.animate({bottom:-(iNewStage*GRIDPERSTAGE*GRID)/3+'vw'});
 			iStage = iNewStage;
 		}
-
-
 	}
 
 	let fps = 50;
 	setInterval(tick,1000/fps);
-
 }
