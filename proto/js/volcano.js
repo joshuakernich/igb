@@ -90,7 +90,7 @@ Volcano = function(){
 	let $arena = $('<volcanoarena>').appendTo($scroller);
 
 
-	let map = [0,-4,2,-1,3,6,-2, 2];
+	let map = [0,-4,2,-1,3,6,-2,2,-3,3,-2,4,-2,2,-1,0];
 
 	for(var i=0; i<map.length; i++){
 		$('<volcanoplatform>').appendTo($arena).css({left:(map[i]*GRID)+'vw', bottom:(i*GRID)+'vw'});
@@ -99,7 +99,7 @@ Volcano = function(){
 	let players = [];
 	let GRAVITY = 0.01;
 	for(var p=0; p<2; p++){
-		let player = {x:0,y:5,sy:0};
+		let player = {x:0,y:1,sy:0};
 		player.$el = $('<volcanoplayer>').appendTo($arena);
 		players[p] = player;
 	}
@@ -126,7 +126,11 @@ Volcano = function(){
 		
 	})
 
+	let GRIDPERSTAGE = 5;
+	let iStage = 0;
 	function tick(){
+
+		let iMin = iStage*GRIDPERSTAGE;
 		for(var i in players){
 
 			let iLevelWas =  Math.floor(players[i].y);
@@ -144,12 +148,13 @@ Volcano = function(){
 					players[i].sy = -0.1;
 					players[i].y = iLevelWas;
 					players[i].isGrounded = true;
+					iMin = Math.min(iLevelWas);
 				} else if(players[i].isGrounded){
 					players[i].y = iLevelWas + 0.15;
 					players[i].sy = 0.22;
 					players[i].isGrounded = false;
-				} else if(iLevelIs<-2){
-					players[i].y = 10;
+				} else if(iLevelIs<-3){
+					players[i].y = 1;
 					players[i].sy = 0;
 				}
 			}
@@ -158,7 +163,19 @@ Volcano = function(){
 				bottom:(players[i].y*GRID)+'vw',
 				left:(players[i].x*GRID)+'vw',
 			});
+
+			
 		}
+
+		let iNewStage = Math.floor(iMin/GRIDPERSTAGE);
+		if(iNewStage<0) iNewStage = 0;
+
+		if(iNewStage!= iStage){
+			$scroller.animate({bottom:-iNewStage*GRIDPERSTAGE*GRID+'vw'});
+			iStage = iNewStage;
+		}
+
+
 	}
 
 	let fps = 50;
