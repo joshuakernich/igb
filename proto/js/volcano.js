@@ -1,6 +1,6 @@
 Volcano = function(){
 
-	const GRID = 2;
+	const GRID = 3;
 
 	if(!Volcano.didInit){
 
@@ -9,6 +9,16 @@ Volcano = function(){
 		let css = {
 			'.volcanowrapper':{
 				'background':'#5555dd',
+			},
+
+			'volacanoparallax':{
+				'content':'""',
+				'position':'absolute',
+				'left':'0px',
+				'bottom':'0px',
+				'right':'0px',
+				'height':'200px',
+				'background':'orange',
 			},
 
 			'volcanogame':{
@@ -24,11 +34,11 @@ Volcano = function(){
 				display:'block',
 				position:'absolute',
 				
-				'left':'0px',
+				'left':'-3vw',
 				'right':'0px',
 				'bottom':'0px',
-				'width':'33.3vw',
-				'height':'33.3vw',
+				'width':'39.33vw',
+				'height':'39.33vw',
 				'background':'url(./proto/img/volcano.png)',
 				'background-size':'100%',
 				'border-bottom':'2vw solid orange',
@@ -41,14 +51,28 @@ Volcano = function(){
 				'left':'0px',
 				'right':'0px',
 				'bottom':'0px',
-				'width':GRID*2+'vw',
+				'width':GRID+'vw',
 				'height':'1vw',
 				'background':'#653332',
 				'border-radius':'0.2vw 0.2vw 100% 100%',
 				'transform':'translate(-50%, 100%)',
 				'box-sizing':"border-box",
-				'border-top':"0.2vw solid white",
+				'border-top':"0.2vw solid #a85a59",
 				'box-shadow':"0px 5px 10px rgba(0,0,0,0.2)",
+
+			},
+
+			'volcanoplatform:after':{
+				content:'""',
+				display:'block',
+				position:'absolute',
+				
+				'left':'0px',
+				'right':'0px',
+				'top':'-0.5vw',
+				'height':'0.5vw',
+				'background':'#a85a59',
+				'border-radius':'100% 100% 0px 0px',
 
 			},
 
@@ -67,11 +91,24 @@ Volcano = function(){
 				'display':'block',
 				'position':"absolute",
 				'bottom':'0px',
+				'transform':'translateX(-50%)',
 			},
 
-			'volcanoplayer:last-of-type':{
+			'volcanoplayer:nth-of-type(2)':{
 				'background':'blue',
+			},
+
+			'volcanogame h1':{
+				'color':'white',
+				'text-align':'center',
+				'position':'absolute',
+				'top':'-10vw',
+				'left':'0px',
+				'right':'0px',
+				
 			}
+
+
 		}
 
 		$("head").append('<style>'+Css.of(css)+'</style>');
@@ -79,6 +116,8 @@ Volcano = function(){
 
 	let self = this;
 	self.$el = $('<igb class="volcanowrapper">');
+
+	let $parallax = $('<volacanoparallax>').appendTo(self.$el);
 
 	$('<igbside>').appendTo(self.$el);
 	let $front = $('<igbside>').appendTo(self.$el);
@@ -90,15 +129,18 @@ Volcano = function(){
 	let $arena = $('<volcanoarena>').appendTo($scroller);
 
 
-	let map = [0,-4,2,-1,3,6,-2,2,-3,3,-2,4,-2,2,-1,0];
+	$('<h1>').appendTo($scroller).text('BAD ASS!');
+
+	let map = [0,-3,-1,2.5,4,0,-2,2,-1,3,-2,2,0];
 
 	for(var i=0; i<map.length; i++){
 		$('<volcanoplatform>').appendTo($arena).css({left:(map[i]*GRID)+'vw', bottom:(i*GRID)+'vw'});
 	}
 
+	let PLAYERCOUNT = 1;
 	let players = [];
 	let GRAVITY = 0.01;
-	for(var p=0; p<2; p++){
+	for(var p=0; p<PLAYERCOUNT; p++){
 		let player = {x:0,y:1,sy:0};
 		player.$el = $('<volcanoplayer>').appendTo($arena);
 		players[p] = player;
@@ -107,7 +149,7 @@ Volcano = function(){
 
 	self.setPlayers = function(p){
 		
-		p.length = 2;
+		p.length = PLAYERCOUNT;
 
 		for(var i in p){
 			players[i].x = (p[i].px/100 - 0.5)*(33.3/GRID);
@@ -126,7 +168,7 @@ Volcano = function(){
 		
 	})
 
-	let GRIDPERSTAGE = 5;
+	let GRIDPERSTAGE = 4;
 	let iStage = 0;
 	function tick(){
 
@@ -144,14 +186,14 @@ Volcano = function(){
 
 				let dist = map[iLevelWas] - players[i].x;
 
-				if(Math.abs(dist) < GRID/2){
+				if(Math.abs(dist) < GRID/4){
 					players[i].sy = -0.1;
 					players[i].y = iLevelWas;
 					players[i].isGrounded = true;
 					iMin = Math.min(iLevelWas);
 				} else if(players[i].isGrounded){
 					players[i].y = iLevelWas + 0.15;
-					players[i].sy = 0.22;
+					players[i].sy = 0.18;
 					players[i].isGrounded = false;
 				} else if(iLevelIs<-3){
 					players[i].y = 1;
@@ -172,6 +214,7 @@ Volcano = function(){
 
 		if(iNewStage!= iStage){
 			$scroller.animate({bottom:-iNewStage*GRIDPERSTAGE*GRID+'vw'});
+			$parallax.animate({bottom:-(iNewStage*GRIDPERSTAGE*GRID)/3+'vw'});
 			iStage = iNewStage;
 		}
 
