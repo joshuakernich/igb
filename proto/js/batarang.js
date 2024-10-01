@@ -432,6 +432,7 @@ BatarangGame = function(){
 				'position':'absolute',
 				'bottom':'0px',
 				'transform':'translateX(-50%)',
+				'z-index':'1',
 			},
 
 			'bat-reticule[player="0"]':{
@@ -677,14 +678,6 @@ BatarangGame = function(){
 			.attr('level',i)
 			.attr('g',g)
 			.attr('type',map[i][g]);
-
-			/*if(map[i][g]=='T'){
-				$('<button>LAUNCH</button>')
-				.attr('level',i)
-				.attr('g',g)
-				.appendTo($g)
-				.click(spawnBatarang);
-			}*/
 		}
 
 		for(var l in LADDERS[i]) $('<batarangladder>').appendTo($ls[i]).css('left',LADDERS[i][l]*BatarangGame.GRID+'px');
