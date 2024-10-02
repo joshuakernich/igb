@@ -253,7 +253,7 @@ Volcano = function(){
 		if((timeNow-timeSpawn)>1700){
 			timeSpawn = timeNow;
 			let spawnFromY = Math.min(11.9,threshold+9);
-			let platform = {x:(spawnRange*0.25+Math.random()*spawnRange*0.75)*(platforms.length%2?1:-1),y:spawnFromY,sy:-0.02};
+			let platform = {x:(spawnRange*0.4+Math.random()*spawnRange*0.6)*(platforms.length%2?1:-1),y:spawnFromY,sy:-0.02};
 			platform.$el = $('<volcanoplatform>').prependTo($arena).css({left:platform.x*GRID+'vw',bottom:platform.y*GRID+'vw'});
 			platforms.push(platform);
 
