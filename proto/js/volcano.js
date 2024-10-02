@@ -41,6 +41,7 @@ Volcano = function(){
 				'background':'url(./proto/img/volcano.png)',
 				'background-size':'100%',
 				'border-bottom':'2vw solid orange',
+				
 			},
 
 			'volcanoplatform':{
@@ -120,10 +121,19 @@ Volcano = function(){
 
 	$('<h1>').appendTo($scroller).text('BAD ASS!');
 
-	let map = [0,-3,-1,2.5,4.5,1,-2,2,-1,3,-1.5,2,0];
+	let platforms = [
+		{x:-4,y:0,sy:0,isCheckpoint:true, spawnRange:2},
+		{x:3.5,y:4,sy:0,isCheckpoint:true, spawnRange:1.5},
+		{x:-2.5,y:8,sy:0,isCheckpoint:true, spawnRange:1.5},
+		{x:0,y:12,sy:0,isCheckpoint:true, spawnRange:1},
+	]
 
-	for(var i=0; i<map.length; i++){
-		$('<volcanoplatform>').appendTo($arena).css({left:(map[i]*GRID)+'vw', bottom:(i*GRID)+'vw'});
+
+
+	
+
+	for(var i=0; i<platforms.length; i++){
+		platforms[i].$el = $('<volcanoplatform>').appendTo($arena).css({left:platforms[i].x*GRID+'vw', bottom:platforms[i].y*GRID+'vw'});
 	}
 
 	let PLAYERCOUNT = 1;
@@ -148,33 +158,66 @@ Volcano = function(){
 		self.setPlayers([player,player]);
 	})
 
-	let GRIDPERSTAGE = 4;
-	let iStage = 0;
+	
+	let threshold = -2;
+	let timeSpawn = -1;
+	let spawnRange = 2;
 	function tick(){
-		let iMin = iStage*GRIDPERSTAGE;
+
+		let didThresholdChange = false;
+
+		for(var p in platforms){
+			platforms[p].y += platforms[p].sy;
+			platforms[p].$el.css({bottom:platforms[p].y*GRID+'vw'});
+		}
+
 		for(var i in players){
 
-			let iLevelWas =  Math.floor(players[i].y);
+			let yWas = players[i].y;
 			players[i].sy -= GRAVITY;
 			players[i].y += players[i].sy;
-			let iLevelIs =  Math.floor(players[i].y);
+			let yNow = players[i].y;
 
-			if(players[i].sy < 0 && iLevelIs<iLevelWas){
-				let dist = map[iLevelWas] - players[i].x;
-				if(Math.abs(dist) < GRID/5){
-					players[i].sy = -0.1;
-					players[i].y = iLevelWas;
-					players[i].isGrounded = true;
-					iMin = Math.min(iLevelWas);
-				} else if(players[i].isGrounded){
-					players[i].y = iLevelWas + 0.15;
+			if(yNow<yWas){
+				//we're falling
+
+				let isGrounded = false;
+				for(var p in platforms){
+					let dx = Math.abs(platforms[p].x - players[i].x);
+					let wouldLandHere = (dx<GRID/5);
+					let isFallingThrough = (yWas>=platforms[p].y && yNow<platforms[p].y);
+
+					//console.log(yWas,wouldLandHere,isFallingThrough);
+					
+					if(wouldLandHere && isFallingThrough){
+						players[i].y = platforms[p].y;
+						players[i].sy = -0.1;
+						players[i].didLandOn = platforms[p];
+						isGrounded = true;
+
+						if(platforms[p].isCheckpoint){
+
+							if(threshold != platforms[p].y-2){
+								didThresholdChange = true;
+								threshold = platforms[p].y -2;
+								spawnRange = platforms[p].spawnRange;
+							}
+						}
+					}
+				}
+
+				if(!isGrounded && players[i].didLandOn){
+					players[i].y = players[i].didLandOn.y + 0.15;
 					players[i].sy = 0.18;
-					players[i].isGrounded = false;
-				} else if(iLevelIs<-3){
-					players[i].y = 1;
-					players[i].sy = 0;
+					players[i].didLandOn = false;
 				}
 			}
+
+			if(players[i].y < threshold){
+				players[i].y = threshold+2;
+				players[i].sy = 0;
+			}
+
 
 			players[i].$el.css({
 				bottom:(players[i].y*GRID)+'vw',
@@ -182,14 +225,41 @@ Volcano = function(){
 			});
 		}
 
-		let iNewStage = Math.floor(iMin/GRIDPERSTAGE);
+		//iSlide += 0.01;
+
+		//let yScroll = Math.max(1,players[0].y-3);
+		
+
+		//$arena.css({bottom:-iSlide*GRID+'vw'});
+		//$scroller.css({bottom:-yScroll*GRID+'vw'});
+
+		/*let iNewStage = Math.floor(iMin/GRIDPERSTAGE);
 		if(iNewStage<0) iNewStage = 0;
 
 		if(iNewStage!= iStage){
 			$scroller.animate({bottom:-iNewStage*GRIDPERSTAGE*GRID+'vw'});
 			$parallax.animate({bottom:-(iNewStage*GRIDPERSTAGE*GRID)/3+'vw'});
 			iStage = iNewStage;
+		}*/
+
+		if( didThresholdChange ){
+			didThresholdChange = false;
+			$scroller.animate({bottom:-(threshold+2)*GRID+'vw'});
+			$parallax.animate({bottom:(-(threshold+2)/3*GRID)+'vw'});
 		}
+
+		let timeNow = new Date().getTime();
+
+		if((timeNow-timeSpawn)>1700){
+			timeSpawn = timeNow;
+			let spawnFromY = Math.min(11.9,threshold+9);
+			let platform = {x:(spawnRange*0.25+Math.random()*spawnRange*0.75)*(platforms.length%2?1:-1),y:spawnFromY,sy:-0.02};
+			platform.$el = $('<volcanoplatform>').prependTo($arena).css({left:platform.x*GRID+'vw',bottom:platform.y*GRID+'vw'});
+			platforms.push(platform);
+
+
+		}
+
 	}
 
 	let fps = 50;
