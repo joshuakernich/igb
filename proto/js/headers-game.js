@@ -129,7 +129,9 @@ Dude = function(p,rDude){
 
 }
 
-BallGame = function () {
+
+
+HeadersGame = function () {
 	
 	let W = 1728;
 	let H = 1080;
@@ -236,10 +238,16 @@ BallGame = function () {
 			transform:'scaleX(-1)',
 		},
 
-		'.footballbg':{
+		'.ballgamewrapper':{
 			'background-image':'url(proto/img/20180220_021.jpg)',
 			'background-size':'100%',
 			'background-position':'center bottom -70px',
+		},
+
+		'.ballgamewrapper audio':{
+			'position':'absolute',
+			'left':'2vw',
+			'bottom':'2vw',
 		},
 
 		'bballhoop, bballhoopfront':{
@@ -295,12 +303,25 @@ BallGame = function () {
 	$("head").append('<style>'+Css.of(css)+'</style>');
 
 	let self = this;
-	self.$el = $('<igb class="footballbg">');
+	self.$el = $('<igb class="ballgamewrapper">');
 
 	$('<igbside>').appendTo(self.$el);
 	let $center = $('<igbside>').appendTo(self.$el);
 	let $right = $('<igbside>').appendTo(self.$el);
 	
+	$(`
+		<audio autoplay controls loop>
+			<source src="./proto/audio/funny-kids_long-190860.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el)[0].volume = 0.25;
+
+	let sfx = {};
+	sfx.$bounce = $(`<audio>
+			<source src="./proto/audio/football-bounce.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el);
+
+	sfx.$cheer = $(`<audio>
+			<source src="./proto/audio/crowd-cheer.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el);
 
 	let gameType;
 	let $game = $('<ballgame>').appendTo($center);
@@ -401,9 +422,6 @@ BallGame = function () {
 			}
 
 			dudes[p].setX(players[p].px/100*W);
-
-			
-
 			dudes[p].setY(players[p].py/100*H);
 			dudes[p].setHeight((1-players[p].py/100)*H);
 		}
@@ -433,22 +451,23 @@ BallGame = function () {
 				
 				if(isGoal){
 					scoreRight++;
+					sfx.$cheer[0].play();
 					spawnBall();
 				}
 				else if(isAbove){
-					
 					ball.isAbove = true;
 					spawnBall();
 				} else {
 					ball.x = W-rBall;
 					ball.sx = -10;
+					sfx.$bounce[0].play();
 				}
 
 			} else if(ball.x<rBall){
 				
 				if(isGoal){
 					scoreLeft++;
-					
+					sfx.$cheer[0].play();
 					spawnBall();
 				} else if(isAbove){
 					ball.isAbove = true;
@@ -456,12 +475,14 @@ BallGame = function () {
 				} else {
 					ball.x = rBall;
 					ball.sx = 10;
+					sfx.$bounce[0].play();
 				}
 			}
 
 			if(ball.y>(H-rBall)){
 				ball.y = H-rBall;
 				ball.sy = -40;
+				sfx.$bounce[0].play();
 			} else if(ball.y<rBall){
 				ball.y = rBall;
 				ball.sy = 1;
@@ -511,9 +532,14 @@ BallGame = function () {
 			ball.sy = -Math.abs(ball.sy)*0.5;
 			ball.y = H-rBall;
 
+
+
 			if(ball.isActive){
 				if(ball.x>W/2) scoreRight++;
 				else scoreLeft++;
+
+				sfx.$bounce[0].play();	
+				sfx.$cheer[0].play();
 
 				spawnBall( ball.x>W/2?W*0.75:W*0.25 );
 			}
@@ -522,23 +548,26 @@ BallGame = function () {
 		if(ball.isActive){
 			if(isLeft){
 				ball.x = farLeft;
-				ball.sx = Math.abs(ball.sx);	
+				ball.sx = Math.abs(ball.sx);
+				sfx.$bounce[0].play();	
 			}
 
 			if(isRight){
 				ball.x = farRight;
 				ball.sx = -Math.abs(ball.sx);
+				sfx.$bounce[0].play();
 			}
 
 			let isHittingNet = ball.y > (H-netHeight-rBall+20) && ball.x > (W/2-rBall) && ball.x < (W/2+rBall);
 			let isFromTheSide = ball.y > (H-netHeight);
 
 			if(isHittingNet && isFromTheSide){
-
+				sfx.$bounce[0].play();	
 				ball.sx = Math.abs(ball.sx) * (ball.x > W/2)?1:-1;
 				ball.x = W/2 + (rBall + 20)*(ball.x > W/2?1:-1);
 
 			} else if( isHittingNet ){
+				sfx.$bounce[0].play();	
 				ball.y = H-netHeight-rBall+20;
 				ball.sy = -10;
 			}
@@ -568,6 +597,7 @@ BallGame = function () {
 			if(isGround){
 				ball.sy = -40;
 				ball.y = H-rBall;
+				sfx.$bounce[0].play();
 			}
 
 			let hoopAt = 350 + 100;
@@ -591,9 +621,11 @@ BallGame = function () {
 			} else if(isAbove && isLeft){
 				ball.sx = -ball.sx;
 				ball.x = farLeft;
+				sfx.$bounce[0].play();
 			} else if(isAbove && isRight){
 				ball.sx = -ball.sx;
 				ball.x = farRight;
+				sfx.$bounce[0].play();
 			} else if( !isAbove && !isBelow ){
 
 				if(ball.x > (hoopRight + rBall)){
@@ -601,21 +633,25 @@ BallGame = function () {
 					ball.sy = 5;
 					ball.x = farRight - hoopReach/2;
 					scoreRight ++;
+					sfx.$cheer[0].play();
 					spawnBall();
 				} else if( ball.x < (hoopLeft - rBall)){
 					ball.sx = -2;
 					ball.sy = 5;
 					ball.x = farLeft + hoopReach/2;
 					scoreLeft ++;
+					sfx.$cheer[0].play();
 					spawnBall();
 				} else if(ball.x>hoopRight){
 					ball.x = hoopRight;
 					ball.sx = -10;
 					ball.sy = -10;
+					sfx.$bounce[0].play();
 				} else if(ball.x<hoopLeft){
 					ball.x = hoopLeft;
 					ball.sx = 10;
 					ball.sy = -10;
+					sfx.$bounce[0].play();
 				} 
 			}
 		} else {
@@ -668,7 +704,7 @@ BallGame = function () {
 
 				ball.sx = Math.cos(r) * v;
 				ball.sy = Math.sin(r) * v;
-
+				sfx.$bounce[0].play();
 			}
 
 			dudes[p].wiggleArms();

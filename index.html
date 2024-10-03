@@ -16,7 +16,7 @@
 	<script type="text/javascript" src="./proto/js/meep.js"></script>
 
 	<script type="text/javascript" src="./proto/js/sequencer.js"></script>
-	<script type="text/javascript" src="./proto/js/ballgame.js"></script>
+	<script type="text/javascript" src="./proto/js/headers-game.js"></script>
 	<script type="text/javascript" src="./proto/js/invaders.js"></script>
 	<script type="text/javascript" src="./proto/js/pixelpaddle.js"></script>
 	<script type="text/javascript" src="./proto/js/Riddler.js"></script>
@@ -28,6 +28,7 @@
 	<script type="text/javascript" src="./proto/js/batarang.js"></script>
 	<script type="text/javascript" src="./proto/js/batclimbing.js"></script>
 	<script type="text/javascript" src="./proto/js/volcano.js"></script>
+	<script type="text/javascript" src="./proto/js/adventure.js"></script>
 	
 	
 
@@ -36,36 +37,24 @@
 
 			let liveModule;
 			const proto = {
-				
-			
 				'SEQUENCER':window.Sequencer,
 				'PONG':window.PixelPaddle,
-
-				//'SQUIGGLE':window.MrSquiggle,
-				
 				'TINY-TENNIS':window.TinyFootball,
-
-				'HEADERS':window.BallGame,
-				//'INVADERS':window.InvadersGame,
-				
-				
+				'HEADERS':window.HeadersGame,
 				'GOALIE':window.GoalieGame,
-				//'TENNIS':window.TennisGame,
-
 				'RIDDLER':window.Riddler,
 				'BAT-ARANG':window.BatarangGame,
 				'BAT-GRAPNEL':window.BatClimbing,
 				'VOLCANO':window.Volcano,
-				//'BATTLE-BOX':window.BattleBoxGame,
-				//'IGB QUIZ':"quiz IGB/index.html",
-				
-			}
+				'ADVENTURE':window.Adventure,
+			};
 
+			window.HeadersGame.ICON = './proto/img/icon-headers.png';
 			window.Volcano.ICON = 'https://img.freepik.com/premium-photo/pixel-art-volcano-amidst-vibrant-purple-backdrop_811279-60506.jpg';
 			window.TennisGame.ICON = 'https://imgcdn.stablediffusionweb.com/2024/4/21/b8415d9e-70d0-4d5a-a6df-93d7c9b53613.jpg';
 			window.GoalieGame.ICON = 'https://media.istockphoto.com/id/1328556281/vector/soccer-goalkeeper-catches-the-ball.jpg?s=612x612&w=0&k=20&c=RoMpwtX-BG3dkCJC-oIcPlgZhv1MSkM31np2bnIKKJ8=';
 			window.TinyFootball.ICON = 'https://thumbs.dreamstime.com/b/vector-bit-pixel-art-tennis-player-white-background-80598578.jpg';
-			window.BallGame.ICON = './proto/img/icon-headers.png';
+			
 			window.BatarangGame.ICON = 'https://cdn.thisiswhyimbroke.com/images/metal-batarang-replica-prop-streamprops-640x533.jpg';
 			window.BatClimbing.ICON = './proto/img/icon-grapnel.png';
 			window.Riddler.ICON = 'https://art.pixilart.com/25c22542d88a2ca.png';
@@ -265,6 +254,34 @@
 
 			100%{
 				transform: rotate(360deg);
+			}
+		}
+
+		@keyframes throb{
+			0%{
+				height: 3vw;
+			}
+
+			50%{
+				height: 3.2vw;
+			}
+
+			100%{
+				height: 3vw;
+			}
+		}
+
+		@keyframes blink{
+			0%{
+				height: 3vw;
+			}
+
+			50%{
+				height: 3.2vw;
+			}
+
+			100%{
+				height: 3vw;
 			}
 		}
 
