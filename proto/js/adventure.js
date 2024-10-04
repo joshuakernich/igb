@@ -1,4 +1,4 @@
-AdventureMaze = function(puzzle){
+AdventureMaze = function(puzzle,sfx){
 
 	if(!AdventureMaze.didInit){
 		AdventureMaze.didInit = true;
@@ -32,6 +32,16 @@ AdventureMaze = function(puzzle){
 
 				.adventuremaze td[shaded="0"]{
 					background:red;
+					border-color: transparent;
+				}
+
+				.adventuremaze td[type="1"]{
+					background:blue;
+					border-color: white;
+				}
+
+				.adventuremaze td[shaded="1"]{
+					background:blue;
 					border-color: transparent;
 				}
 			</style>
@@ -99,7 +109,10 @@ AdventureMaze = function(puzzle){
 		} 
 	}
 
+	let nPaint = 0;
 	function repaint(){
+		nPaint++;
+		sfx.$pops[nPaint%sfx.$pops.length][0].play();
 		let isComplete = true;
 		for(var r=0; r<puzzle.length; r++){
 			for(var c=0; c<puzzle[r].length; c++){
@@ -185,6 +198,16 @@ Adventure = function(){
 				'animation':'throb 0.4s infinite'
 			},
 
+			'adventureplayer:nth-of-type(2)':{
+				'color':'blue',
+				'border-radius':'1.5vw',
+				'animation-delay':'-1s',
+			},
+
+			'adventureplayer:nth-of-type(2):before':{
+				'animation-delay':'-1s',
+			},
+
 			'adventureplayer:before':{
 				'content':'". ."',
 				'display':'block',
@@ -209,6 +232,10 @@ Adventure = function(){
 				'border-radius':'1vw',
 				'z-index':'1',
 				'pointer-events':'none',
+			},
+
+			'adventurecursor:nth-of-type(2)':{
+				'border-color':'blue',
 			},
 
 			'adventurebarrier':{
@@ -238,6 +265,30 @@ Adventure = function(){
 			'adventurebarrier .adventuremaze td':{
 				'border':'none',
 			},
+
+			'adventuregame h':{
+				'position':'absolute',
+				'display':'span',
+				'left':'33.3vw',
+				'right':'33.3vw',
+				'margin':'auto',
+
+				'line-height':'2vw',
+				'font-size':'1.2vw',
+				'bottom':'7vw',
+				'color':'red',
+				'text-align':'center',
+			},
+
+			'adventuregame h span':{
+				'background':'black',
+			},
+
+			'adventuregame h span:first-of-type':{ 'padding-left':'0.5vw' },
+			'adventuregame h span:last-of-type':{ 'padding-right':'0.5vw' },
+
+			'adventuregame [nPlayer="0"]':{ 'color':'red', },
+			'adventuregame [nPlayer="1"]':{ 'color':'blue', },
 		}
 
 		$("head").append('<style>'+Css.of(css)+'</style>');
@@ -263,32 +314,35 @@ Adventure = function(){
 		`);
 	}
 
-	const PLAYERCOUNT = 1;
-	const PUZZLES = [
+	
+	const PUZZLEMAPS = [
 		[
 			'   ',
 			'0++',
 			'   ',
 		],
 		[
-			' 0 ',
+			' 1 ',
 			' + ',
 			' + ',
 		],
 		[
 			'0++',
 			'+ +',
-			'+++',
+			'++1',
 		],
 		[
 			'+++  ',
 			'+ +  ',
-			'+ +++',
+			'+ 1++',
 			'+++ +',
 			'0++++',
 		]
 
 	]
+
+	
+
 
 	let self = this;
 	self.$el = $('<igb class="adventurewrapper">');
@@ -299,86 +353,213 @@ Adventure = function(){
 	let $arena = $('<adventurearena>').appendTo($anchor);
 	let $platform = $('<adventureplatform>').appendTo($game);
 
-	let puzzle;
+	let $h = $('<h>').appendTo($game).text('');
+	let paused = false;
+
+	
 
 	$(`
 		<audio autoplay controls loop>
 			<source src="./proto/audio/scenery-125577.mp3" type="audio/mpeg">
 		</audio>`).appendTo(self.$el)[0].volume = 0.5;
 
+	let sfx = {};
 
-	let players = [];
-	for(var i=0; i<PLAYERCOUNT; i++){
-		let player = {x:0,y:0,tx:0,ty:0};
-		player.$cursor = $('<adventurecursor>').appendTo($anchor);
-		player.$el = $('<adventureplayer>').appendTo($arena);
-		players[i] = player;
+	sfx.$pops = [];
+	sfx.$pops[0] = $(`<audio>
+			<source src="./proto/audio/sfx-tinypop.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el);
+	sfx.$pops[1] = $(`<audio>
+			<source src="./proto/audio/sfx-tinypop-2.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el);
+	sfx.$pops[2] = $(`<audio>
+			<source src="./proto/audio/sfx-tinypop-3.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el);
+
+	let puzzles = [];
+	for(var i=0; i<PUZZLEMAPS.length; i++) puzzles[i] = new AdventureMaze(PUZZLEMAPS[i],sfx);
+
+	let players = [
+		{x:0,y:0,tx:0,ty:0,active:true},
+		{x:3,y:0,tx:0,ty:0,active:false},
+	];
+
+	for(var i=0; i<players.length; i++){
+		players[i].$cursor = $('<adventurecursor>').appendTo($anchor);
+		players[i].$el = $('<adventureplayer>').appendTo($arena);
 	}
 
 	const W2 = 33.3/2;
 	const H2 = (33.3/16*10)/2;
 
 	let actors = [
-		{x:2,puzzle:new AdventureMaze(PUZZLES[0])},
-		{x:4,puzzle:new AdventureMaze(PUZZLES[1])},
-		{x:6,puzzle:new AdventureMaze(PUZZLES[2])},
-		{x:8,puzzle:new AdventureMaze(PUZZLES[3])},
+		{
+			x:2,
+			puzzle:puzzles[0],
+			queue:[
+				{do:doSay,with:["What's this contraption?"]},
+				{do:doPuzzle,with:[puzzles[0]]},
+				{do:doSay,with:["Easy peasy."]},
+			]
+		},
+		{
+			x:3,
+			queue:[
+				{do:doSay,with:["Oh! Hello, friend."]},
+				{do:doPlayerActivate,with:[1]},
+				{do:doSay,with:["Hi, Red. I'm Blue!",1]},
+			]
+		},
+		{	
+			x:4,
+			puzzle:puzzles[1],
+			queue:[
+				{do:doSay,with:["Looks like a job for Blue.",1]},
+				{do:doPuzzle,with:[puzzles[1]]},
+				{do:doSay,with:["Marvellous!",1]},
+			],
+		},
+		{
+			x:6,
+			puzzle:puzzles[2],
+			queue:[
+				{do:doPuzzle,with:[puzzles[2]]},
+				{do:doSay,with:["That felt like a parable on collaboration!",0]},
+				{do:doSay,with:["WTF is a parable?",1]},
+				{do:doSay,with:["You, my friend, are a parable.",0]},
+				{do:doSay,with:["...?",1]},
+			],
+		},
+		{
+			x:8,
+			puzzle:puzzles[3],
+			queue:[
+				{do:doPuzzle,with:[puzzles[3]]},
+				{do:doSay,with:["I'm tired of puzzles.",1]},
+				{do:doSay,with:["But dude... life itself is a puzzle!",0]},
+				{do:doSay,with:["Exactly.",1]},
+			],
+		},
 	];
 	for(var a in actors){
-		actors[a].$el = $('<adventurebarrier>').appendTo($arena).css({left:actors[a].x*W2+'vw'});
-		actors[a].puzzle.$el.clone().appendTo(actors[a].$el);
+		
+		if(actors[a].puzzle){
+			actors[a].$el = $('<adventurebarrier>').appendTo($arena).css({left:actors[a].x*W2+'vw'});
+			actors[a].puzzle.$el.clone().appendTo(actors[a].$el);
+		}
 	}
 
+	let actorLive;
+	let puzzleLive;
+
+	function doActor(actor){
+		paused = true;
+		actorLive = actor;
+		actorLive.activated = true;
+		doActorStep();
+	}
+
+	function doActorStep(){
+		let action = actorLive.queue.shift();
+		if(action) action.do.apply(null,action.with);
+		else{
+			paused = false;
+			actorLive.$el.remove();
+			actorLive = undefined;
+		}
+	}
+
+	function doSay(bit,nPlayer){
+
+		$h.attr('nPlayer',nPlayer);
+
+		let len = 0;
+		let intSay = setInterval(function(){
+			sfx.$pops[len%3][0].play();
+			$('<span>'+bit[len]+'</span>').appendTo($h);
+			len++;
+			if(len>=bit.length){
+				clearInterval(intSay);
+				setTimeout(finishSay,1500);
+			}
+		},70)
+		//setTimeout(finishSay,1500);
+	}
+
+	function finishSay(){
+		$h.text('');
+		sfx.$pops[0][0].play();
+		doActorStep();
+	}
+
+	function doPuzzle(puzzle){
+		sfx.$pops[1][0].play();
+		puzzleLive = puzzle;
+		puzzleLive.$el.appendTo($puzzle);
+		puzzleLive.callback = onPuzzleComplete;
+	}
+
+	function doPlayerActivate(n){
+		players[n].active = true;
+		doActorStep();
+	}
 
 	function onPuzzleComplete(){
-		puzzle.$el.remove();
-		puzzle.$actor.remove();
-		puzzle = undefined;
+		let puzzleDying = puzzleLive;
+		puzzleLive = undefined;
+
+		setTimeout(function(){
+			sfx.$pops[0][0].play();
+			puzzleDying.$el.remove();
+			doActorStep();
+		},500);
 	}
 
 	self.setPlayers = function(p){
 		for(var i in players){
 			players[i].tx = p[i].X;
 			players[i].ty = p[i].Z;
-			players[i].$cursor.css({left:players[i].tx*W2+'vw',bottom:H2+players[i].ty*H2+'vw'});
+			
+			if(players[i].active) players[i].$cursor.css({left:players[i].tx*W2+'vw',bottom:H2+players[i].ty*H2+'vw'});
 
-			if(puzzle) puzzle.setPlayerCursor(i,players[i].tx*W2,-players[i].ty*H2);
+			if(puzzleLive) puzzleLive.setPlayerCursor(i,players[i].tx*W2,-players[i].ty*H2);
 		}
 	}
 
 	let ox = 0;
 	let walk = 0.01;
 	let tolerance = 0.02;
+
 	function tick(){
 
-		if(puzzle) return;
+		if(paused) return;
 
+		let cntActivePlayer = 0;
 		let ax = 0;
 		for(var i in players){
-			let px = players[i].x - ox;
-			if(px<(players[i].tx+tolerance)) players[i].x += walk;
-			if(px>(players[i].tx-tolerance)) players[i].x -= walk;
-			players[i].$el.css({left:players[i].x*W2+'vw'});
-			ax += players[i].x;
+			
+			if(players[i].active){
+				let px = players[i].x - ox;
+				if(px<(players[i].tx+tolerance)) players[i].x += walk;
+				if(px>(players[i].tx-tolerance)) players[i].x -= walk;
+				ax += players[i].x;
 
-			//collide with actors
-			for(var a in actors){
-				
-				if(!actors[a].activated){
-					let dx = Math.abs( actors[a].x - players[i].x );
-					if(dx<0.2){
-						actors[a].activated = true;
-						puzzle = actors[a].puzzle;
-						puzzle.$actor = actors[a].$el;
-						puzzle.$el.appendTo($puzzle);
-						puzzle.callback = onPuzzleComplete;
+				cntActivePlayer++;
 
-					}
-				} 
+				//collide with actors
+				for(var a in actors){
+					
+					if(!actors[a].activated){
+						let dx = Math.abs( actors[a].x - players[i].x );
+						if(dx<0.2) doActor(actors[a]);
+					} 
+				}
 			}
+
+			players[i].$el.css({left:players[i].x*W2+'vw'});
 		}
 
-		let oxNew = ax/players.length;
+		let oxNew = ax/cntActivePlayer;
 		let dx = oxNew - ox;
 		if(dx>0.3) ox += walk;
 		if(dx<-0.3) ox -= walk;
@@ -405,6 +586,6 @@ Adventure = function(){
 		if(px>1) px = 1;
 		if(px<-1) px = -1;
 
-		self.setPlayers([{X:px,Z:py}]);
+		self.setPlayers([{X:px,Z:py},{X:px-0.2,Z:py-0.2}]);
 	});
 }
