@@ -322,7 +322,6 @@ Adventure = function(){
 
 			'adventureaudio':{
 				
-				
 				'position':'absolute',
 				'left':'0px',
 				'bottom':'0px',
@@ -342,6 +341,28 @@ Adventure = function(){
 
 			'adventureaudio.playing:after':{
 				'content':'"⏸︎"'
+			},
+
+			'adventuredeath':{
+				'display':'block',
+				'position':'absolute',
+				'top':'0px',
+				'left':'0px',
+				'right':'0px',
+				'bottom':'0px',
+				'background':"url(./proto/img/anim-red.gif)",
+				'background-size':'33.3%',
+				'color':'black',
+				'text-align':'center',
+			},
+
+			'adventuredeath:after':{
+				'content':'". ."',
+				'display':'block',
+				
+				'font-size':'15vw',
+				'line-height':'15vw',
+				
 			}
 		}
 
@@ -402,6 +423,7 @@ Adventure = function(){
 	self.$el = $('<igb class="adventurewrapper">');
 	let $game = $('<adventuregame>').appendTo(self.$el);
 	let $puzzle = $('<adventurepuzzle>').appendTo(self.$el);
+	let $death = $('<adventuredeath>').appendTo(self.$el).hide();
 	
 
 	let $anchor = $('<adventureanchor>').appendTo($game);
@@ -450,7 +472,7 @@ Adventure = function(){
 		{x:3,y:0,tx:0,ty:0,active:false},
 	];
 
-	let monster = {x:-2};
+	let monster = {x:-4};
 	let $monster = $('<adventuremonster>').appendTo($arena);
 
 	for(var i=0; i<players.length; i++){
@@ -626,8 +648,7 @@ Adventure = function(){
 
 	function tick(){
 
-		if(paused) return;
-
+		
 		let didWalkBackwards = false;
 		let cntActivePlayer = 0;
 		let ax = 0;
@@ -635,26 +656,31 @@ Adventure = function(){
 		for(var i in players){
 			
 			if(players[i].active){
-				let px = players[i].x - ox;
-				if(px<(players[i].tx-tolerance)) players[i].x += walk;
-				if(px>(players[i].tx+tolerance)){
-					players[i].x -= walk;
-					didWalkBackwards = true;
-
-				}
+				
 				ax += players[i].x;
 				minx = Math.min(players[i].x,minx);
-
 				cntActivePlayer++;
 
-				//collide with actors
-				for(var a in actors){
-					
-					if(!actors[a].activated){
-						let dx = Math.abs( actors[a].x - players[i].x );
-						if(dx<0.2) doActor(actors[a]);
-					} 
+				if(!paused){
+
+					let px = players[i].x - ox;
+					if(px<(players[i].tx-tolerance)) players[i].x += walk;
+					if(px>(players[i].tx+tolerance)){
+						players[i].x -= walk;
+						didWalkBackwards = true;
+
+					}
+
+					//collide with actors
+					for(var a in actors){
+						
+						if(!actors[a].activated){
+							let dx = Math.abs( actors[a].x - players[i].x );
+							if(dx<0.2) doActor(actors[a]);
+						} 
+					}
 				}
+				
 			}
 
 			players[i].$el.css({left:players[i].x*W2+'vw'});
@@ -665,17 +691,20 @@ Adventure = function(){
 		if(dx>0.3) ox += walk;
 		if(dx<-0.3) ox -= walk;
 
-		if(didWalkBackwards){
-			if(monster.x<(ox-3.1)) monster.x = ox-3.1;
-			monster.x += walk/2;
-		} else {
-			monster.x += walk/4;
-		}
+		if(monster.x<(ox-3.1)) monster.x = ox-3.1;
+
+		monster.x += walk/4;
+
 
 		let dxMonster = minx - monster.x;
 		let volume = 1-dxMonster/2;
 		sfx.$music[0].volume = Math.max(0, Math.min(0.5,0.5-0.5*volume));
 		sfx.$musicDark[0].volume = Math.max(0, Math.min(1,volume));
+
+		if(dxMonster<0.15){
+			$death.show();
+			paused = true;
+		}
 
 		$arena.css({left:-ox*W2+'vw'});
 		$platform.css({'background-position-x':-ox*W2+'vw'});
