@@ -182,6 +182,28 @@ Adventure = function(){
 				'width':'0px',
 			},
 
+			'adventuremonster':{
+				'display':'block',
+				'position':'absolute',
+				'left':'0px',
+				'bottom':'0px',
+				'width':'3vw',
+				'height':'10vw',
+				'background':'black',
+				'transform':'translateX(-50%)',
+				'text-align':'center',
+				'color':'white',
+			},
+
+			'adventuremonster:after':{
+				'content':'". ."',
+				'display':'block',
+				'animation':'blink 3s infinite',
+				'font-size':'2vw',
+				'line-height':'2vw',
+				'height':'3.5vw',
+			},
+
 			'adventureplayer':{
 				'display':'block',
 				'position':'absolute',
@@ -249,7 +271,6 @@ Adventure = function(){
 				'transform':'translateX(-50%)',
 				'text-align':'center',
 				'color':'white',
-				
 			},
 
 			'adventurebarrier .adventuremaze':{
@@ -259,7 +280,6 @@ Adventure = function(){
 				'left':'0vw',
 				'border':'none',
 				'box-sizing':'border-box',
-
 			},
 
 			'adventurebarrier .adventuremaze td':{
@@ -284,11 +304,45 @@ Adventure = function(){
 				'background':'black',
 			},
 
+			'adventurebanner':{
+				'position':'absolute',
+				'display':'block',
+				'transform':'translateX(-50%,50%)',
+				'bottom':'8vw',
+				'font-size':'1.5vw',
+				'line-height':'1.5vw',
+				'color':'white',
+			},
+
 			'adventuregame h span:first-of-type':{ 'padding-left':'0.5vw' },
 			'adventuregame h span:last-of-type':{ 'padding-right':'0.5vw' },
 
 			'adventuregame [nPlayer="0"]':{ 'color':'red', },
 			'adventuregame [nPlayer="1"]':{ 'color':'blue', },
+
+			'adventureaudio':{
+				
+				
+				'position':'absolute',
+				'left':'0px',
+				'bottom':'0px',
+				'margin':'3vw',
+				
+				'border-radius':'1vw',
+				'text-align':'center',
+				'color':'white',
+				'line-height':'2vw',
+				'font-size':'1.5vw',
+			},
+
+			'adventureaudio:after':{
+				'content':'"▶"',
+
+			},
+
+			'adventureaudio.playing:after':{
+				'content':'"⏸︎"'
+			}
 		}
 
 		$("head").append('<style>'+Css.of(css)+'</style>');
@@ -348,6 +402,7 @@ Adventure = function(){
 	self.$el = $('<igb class="adventurewrapper">');
 	let $game = $('<adventuregame>').appendTo(self.$el);
 	let $puzzle = $('<adventurepuzzle>').appendTo(self.$el);
+	
 
 	let $anchor = $('<adventureanchor>').appendTo($game);
 	let $arena = $('<adventurearena>').appendTo($anchor);
@@ -358,12 +413,23 @@ Adventure = function(){
 
 	
 
-	$(`
-		<audio autoplay controls loop>
-			<source src="./proto/audio/scenery-125577.mp3" type="audio/mpeg">
-		</audio>`).appendTo(self.$el)[0].volume = 0.5;
+	
+
+	
 
 	let sfx = {};
+	sfx.$music = $(`<audio autoplay loop>
+			<source src="./proto/audio/scenery-125577.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el);
+
+	sfx.$musicDark = $(`<audio autoplay loop>
+			<source src="./proto/audio/scary-forest-90162.mp3" type="audio/mpeg">
+		</audio>`).appendTo(sfx.$music);
+
+	let $btnAudio = $('<adventureaudio>').appendTo(self.$el).click(function(){
+		sfx.$music[0].play();
+		sfx.$musicDark[0].play();
+	})
 
 	sfx.$pops = [];
 	sfx.$pops[0] = $(`<audio>
@@ -384,6 +450,9 @@ Adventure = function(){
 		{x:3,y:0,tx:0,ty:0,active:false},
 	];
 
+	let monster = {x:-2};
+	let $monster = $('<adventuremonster>').appendTo($arena);
+
 	for(var i=0; i<players.length; i++){
 		players[i].$cursor = $('<adventurecursor>').appendTo($anchor);
 		players[i].$el = $('<adventureplayer>').appendTo($arena);
@@ -393,6 +462,7 @@ Adventure = function(){
 	const H2 = (33.3/16*10)/2;
 
 	let actors = [
+		
 		{
 			x:2,
 			puzzle:puzzles[0],
@@ -421,17 +491,23 @@ Adventure = function(){
 		},
 		{
 			x:6,
+			text:"Immersive Gamebox Presents...",
+		},
+		{
+			x:9,
 			puzzle:puzzles[2],
 			queue:[
 				{do:doPuzzle,with:[puzzles[2]]},
 				{do:doSay,with:["That felt like a parable on collaboration!",0]},
 				{do:doSay,with:["WTF is a parable?",1]},
-				{do:doSay,with:["You, my friend, are a parable.",0]},
-				{do:doSay,with:["...?",1]},
 			],
 		},
 		{
-			x:8,
+			x:11,
+			text:"An Original Cooperative Adventure...",
+		},
+		{
+			x:14,
 			puzzle:puzzles[3],
 			queue:[
 				{do:doPuzzle,with:[puzzles[3]]},
@@ -440,6 +516,17 @@ Adventure = function(){
 				{do:doSay,with:["Exactly.",1]},
 			],
 		},
+		{
+			x:16,
+			text:"THE FOLLOWER",
+			style:{
+				'color':'black',
+				'bottom':'0vw',
+				'font-size':'5vw',
+				'line-height':'3.5vw',
+			}
+		},
+		
 	];
 	for(var a in actors){
 		
@@ -447,16 +534,23 @@ Adventure = function(){
 			actors[a].$el = $('<adventurebarrier>').appendTo($arena).css({left:actors[a].x*W2+'vw'});
 			actors[a].puzzle.$el.clone().appendTo(actors[a].$el);
 		}
+
+		if(actors[a].text){
+			actors[a].$el = $('<adventurebanner>').appendTo($arena).css({left:actors[a].x*W2+'vw'}).text(actors[a].text);
+			if(actors[a].style) actors[a].$el.css(actors[a].style);
+		}
 	}
 
 	let actorLive;
 	let puzzleLive;
 
 	function doActor(actor){
-		paused = true;
-		actorLive = actor;
-		actorLive.activated = true;
-		doActorStep();
+		if(actor.queue && actor.queue.length){
+			paused = true;
+			actorLive = actor;
+			actorLive.activated = true;
+			doActorStep();
+		}
 	}
 
 	function doActorStep(){
@@ -464,7 +558,7 @@ Adventure = function(){
 		if(action) action.do.apply(null,action.with);
 		else{
 			paused = false;
-			actorLive.$el.remove();
+			if(actorLive.$el) actorLive.$el.remove();
 			actorLive = undefined;
 		}
 	}
@@ -528,21 +622,28 @@ Adventure = function(){
 
 	let ox = 0;
 	let walk = 0.01;
-	let tolerance = 0.02;
+	let tolerance = 0.04;
 
 	function tick(){
 
 		if(paused) return;
 
+		let didWalkBackwards = false;
 		let cntActivePlayer = 0;
 		let ax = 0;
+		let minx = 999999;
 		for(var i in players){
 			
 			if(players[i].active){
 				let px = players[i].x - ox;
-				if(px<(players[i].tx+tolerance)) players[i].x += walk;
-				if(px>(players[i].tx-tolerance)) players[i].x -= walk;
+				if(px<(players[i].tx-tolerance)) players[i].x += walk;
+				if(px>(players[i].tx+tolerance)){
+					players[i].x -= walk;
+					didWalkBackwards = true;
+
+				}
 				ax += players[i].x;
+				minx = Math.min(players[i].x,minx);
 
 				cntActivePlayer++;
 
@@ -564,9 +665,22 @@ Adventure = function(){
 		if(dx>0.3) ox += walk;
 		if(dx<-0.3) ox -= walk;
 
+		if(didWalkBackwards){
+			if(monster.x<(ox-3.1)) monster.x = ox-3.1;
+			monster.x += walk/2;
+		} else {
+			monster.x += walk/4;
+		}
+
+		let dxMonster = minx - monster.x;
+		let volume = 1-dxMonster/2;
+		sfx.$music[0].volume = Math.max(0, Math.min(0.5,0.5-0.5*volume));
+		sfx.$musicDark[0].volume = Math.max(0, Math.min(1,volume));
+
 		$arena.css({left:-ox*W2+'vw'});
 		$platform.css({'background-position-x':-ox*W2+'vw'});
 		$game.css({'background-position-x':-ox*W2*0.2+'vw'});
+		$monster.css({'left':monster.x*W2+'vw'});
 	}
 
 	setInterval(tick,1000/50);
