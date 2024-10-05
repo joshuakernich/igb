@@ -432,7 +432,7 @@ Adventure = function(){
 
 	let $h = $('<h>').appendTo($game).text('');
 	let paused = false;
-
+	let dead = false;
 	
 
 	
@@ -446,6 +446,10 @@ Adventure = function(){
 
 	sfx.$musicDark = $(`<audio autoplay loop>
 			<source src="./proto/audio/scary-forest-90162.mp3" type="audio/mpeg">
+		</audio>`).appendTo(sfx.$music);
+
+	sfx.$jumpScare = $(`<audio>
+			<source src="./proto/audio/jump-scare.mp3" type="audio/mpeg">
 		</audio>`).appendTo(sfx.$music);
 
 	let $btnAudio = $('<adventureaudio>').appendTo(self.$el).click(function(){
@@ -701,15 +705,20 @@ Adventure = function(){
 		sfx.$music[0].volume = Math.max(0, Math.min(0.5,0.5-0.5*volume));
 		sfx.$musicDark[0].volume = Math.max(0, Math.min(1,volume));
 
-		if(dxMonster<0.15){
-			$death.show();
-			paused = true;
-		}
+		if(dxMonster<0.15 && !dead) doDeath();
+			
 
 		$arena.css({left:-ox*W2+'vw'});
 		$platform.css({'background-position-x':-ox*W2+'vw'});
 		$game.css({'background-position-x':-ox*W2*0.2+'vw'});
 		$monster.css({'left':monster.x*W2+'vw'});
+	}
+
+	function doDeath(){
+		dead = true;
+		$death.show();
+		paused = true;
+		sfx.$jumpScare[0].play();
 	}
 
 	setInterval(tick,1000/50);
