@@ -919,6 +919,7 @@ Adventure = function(){
 		dead = true;
 		$death.show();
 		paused = true;
+		sfx.$jumpScare[0].volume = 0.5;
 		sfx.$jumpScare[0].play();
 	}
 
