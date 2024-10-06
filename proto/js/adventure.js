@@ -80,7 +80,8 @@ AdventureMaze = function(puzzle,sfx){
 
 		let type = puzzle[y]?puzzle[y][x]:undefined;
 
-		if(!chains[nPlayer].length && type==nPlayer){
+		
+		if(!chains[nPlayer].length && type==''+nPlayer){
 			//it begins
 			chains[nPlayer].push({x:x,y:y});
 			cells[y][x].n = nPlayer;
@@ -688,8 +689,6 @@ Adventure = function(){
 	let xMax = -3;
 	for(var a in actors){
 
-		
-		
 		if(actors[a].puzzle){
 			actors[a].$el = $('<adventurebarrier>').appendTo($arena).css({left:actors[a].x*W2+'vw'});
 			actors[a].puzzle.$el.clone().appendTo(actors[a].$el);
@@ -708,9 +707,6 @@ Adventure = function(){
 			let $pit = $('<adventurepit>').appendTo($arena).css({left:xMax*W2+'vw',width:PIT*W2+'vw'});
 			xMin = xMax + PIT;
 			xMax = xMin;
-
-			console.log($pit);
-			
 		}
 	}
 
@@ -733,9 +729,9 @@ Adventure = function(){
 		let action = actorLive.queue.shift();
 		if(action) action.do.apply(null,action.with);
 		else{
+			tracking = true;
 			paused = false;
 			if(actorLive.$el){
-
 				new AdventurePop(-1.5,-5,3,5).$el.css({left:actorLive.x*W2+'vw',bottom:'0px'}).appendTo($arena);
 				actorLive.$el.remove();
 			}
@@ -763,12 +759,13 @@ Adventure = function(){
 	function doTrigger(x,y){
 
 		for(var i in players){
-
-			players[i].trigger = {x:x,y:y+0.03*i};
-			players[i].trigger.$el = $('<adventurecursor class="trigger">')
-			.appendTo($anchor)
-			.attr('nPlayer',i)
-			.css({left:players[i].trigger.x*W2+'vw',bottom:H2+players[i].trigger.y*H2+'vw'});
+			if(players[i].active){
+				players[i].trigger = {x:x,y:y+0.03*i};
+				players[i].trigger.$el = $('<adventurecursor class="trigger">')
+				.appendTo($anchor)
+				.attr('nPlayer',i)
+				.css({left:players[i].trigger.x*W2+'vw',bottom:H2+players[i].trigger.y*H2+'vw'});
+			}
 		}
 		
 	}
@@ -819,26 +816,48 @@ Adventure = function(){
 	}
 
 	self.setPlayers = function(p){
-		for(var i in players){
+
+		let didUntrigger = false;
+
+		for(var i=0; i<players.length; i++){
 			players[i].tx = p[i].X;
 			players[i].ty = p[i].Z;
 			
-			if(players[i].active) players[i].$cursor.css({left:players[i].tx*W2+'vw',bottom:H2+players[i].ty*H2+'vw'});
+			if(players[i].active){
+				players[i].$cursor.css({left:players[i].tx*W2+'vw',bottom:H2+players[i].ty*H2+'vw'});
 
-			if(puzzleLive) puzzleLive.setPlayerCursor(i,players[i].tx*W2,-players[i].ty*H2);
+				if(puzzleLive) puzzleLive.setPlayerCursor(i,players[i].tx*W2,-players[i].ty*H2);
 			
-			if(players[i].trigger){
-				let dx = players[i].tx - players[i].trigger.x;
-				let dy = players[i].ty - players[i].trigger.y;
-				let d = Math.sqrt(dx*dx+dy*dy);
+				if(players[i].trigger){
+					let dx = players[i].tx - players[i].trigger.x;
+					let dy = players[i].ty - players[i].trigger.y;
+					let d = Math.sqrt(dx*dx+dy*dy);
 
-				if(d<0.1){
-					console.log('TRIGGERED');
-					players[i].trigger.$el.remove();
-					players[i].trigger = undefined;
-					players[i].oneToOneTracking = true;
+					if(d<0.1){
+
+						if( players[i].oneToOneTracking ){
+							players[i].trigger.$el.remove();
+							players[i].trigger = undefined;
+							players[i].oneToOneTracking = false;
+							players[i].x = actorLive.x + PIT + 0.1;
+							players[i].y = 0;
+							didUntrigger = true;
+
+						} else {
+							players[i].trigger.x += PIT;
+							players[i].trigger.$el.css({left:players[i].trigger.x*W2+'vw'});
+							players[i].oneToOneTracking = true;
+						}
+					}
 				}
 			}
+		}
+
+
+		if(didUntrigger){
+			let hasTrigger = false;
+			for(var i=0; i<players.length; i++) if( players[i].trigger ) hasTrigger = true;
+			if(!hasTrigger) doActorStep();
 		}
 	}
 
@@ -847,6 +866,7 @@ Adventure = function(){
 	let tolerance = 0.04;
 
 	function tick(){
+
 
 		
 		let didWalkBackwards = false;
@@ -868,7 +888,6 @@ Adventure = function(){
 					if(px>(players[i].tx+tolerance)){
 						players[i].x -= walk;
 						didWalkBackwards = true;
-
 					}
 
 					//collide with actors
@@ -881,19 +900,21 @@ Adventure = function(){
 					}
 				} else if( players[i].oneToOneTracking ){
 					players[i].x = ox + players[i].tx;
-					players[i].y = players[i].ty;
+					players[i].y = players[i].ty+0.1;
 				}
 				
 			}
 
-			players[i].$el.css({left:players[i].x*W2+'vw'});
+			players[i].$el.css({
+				left:players[i].x*W2+'vw', 
+				bottom:players[i].y*H2+'vw'});
 		}
 
 		if(tracking){
 			let oxNew = ax/cntActivePlayer;
 			let dx = oxNew - ox;
-			if(dx>0.25) ox += walk;
-			if(dx<-0.25) ox -= walk;
+			if(dx>0.2) ox += walk;
+			if(dx<-0.2) ox -= walk;
 		}
 
 		if(monster.x<(ox-3.1)) monster.x = ox-3.1;
