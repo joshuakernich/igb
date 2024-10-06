@@ -125,6 +125,41 @@ AdventureMaze = function(puzzle,sfx){
 	}
 }
 
+AdventurePop = function(x,y,w,h){
+	let self = this;
+	let particles = 5;
+	let rMin = Math.min(w/4,h/4);
+	let rMax = Math.min(w/3,h/3);
+
+	self.$el = $('<adventurepop>');
+	for(var i=0; i<particles; i++){
+
+		let pr = rMin + Math.random()*(rMax-rMin);
+		let cx = x + w/2;
+		let cy = y + h/2;
+		let ox = Math.random() * (w/2-pr) * ((Math.random()>0.5)?1:-1);
+		let oy = Math.random() * (h/2-pr) * ((Math.random()>0.5)?1:-1);
+
+		let $p = $('<adventureparticle>')
+		.appendTo(self.$el)
+		.css({
+			left:(cx+ox)+'vw',
+			top:(cy+oy)+'vw',
+			width:(pr*2)+'vw',
+			height:(pr*2)+'vw',
+		})
+		
+		.animate({
+			left:(cx + ox*2)+'vw',
+			top:(cy + oy*2-5-Math.random()*5)+'vw',
+			width:'0vw',
+			height:'0vw',
+		},200+Math.random()*1000);
+	}
+
+	setTimeout(self.$el.remove,1500);
+}
+
 Adventure = function(){
 
 	if(!Adventure.didInit){
@@ -132,6 +167,18 @@ Adventure = function(){
 		Adventure.didInit = true;
 
 		let css = {
+			'adventurepop':{
+				'display':'block',
+				'position':'absolute',
+			},
+
+			'adventureparticle':{
+				'display':'block',
+				'position':'absolute',
+				'background':'black',
+				'transform':'translate(-50%,-50%)',
+			},
+
 			'adventuregame':{
 				'display':'block',
 				'position':'absolute',
@@ -150,12 +197,47 @@ Adventure = function(){
 				'display':'block',
 				'position':'absolute',
 				'left':'0px',
+				'width':'15vw',
+				'bottom':'-10vw',
+				'height':'10vw',
+				'background':'black',
+			},
+
+			'adventureplatform:after':{
+				'content':'""',
+				'display':'block',
+				'position':'absolute',
+				'left':'0px',
 				'right':'0px',
-				
-				'bottom':'0px',
+				'top':'-2.2vw',
 				'height':'3vw',
 				'background-image':'url(./proto/img/platform-grass.png)',
-				'background-size':'15%',
+				'background-size':'15vw',
+				'background-position':'top left',
+			},
+
+			'adventurepit':{
+				'display':'block',
+				'position':'absolute',
+				'left':'0px',
+				'width':'15vw',
+				'height':'10vw',
+				'top':'0vw',
+				'bottom':'0vw',
+				
+			},
+
+			'adventurepit:after':{
+				'content':'""',
+				'display':'block',
+				'position':'absolute',
+				'left':'0px',
+				'right':'0px',
+				'bottom':'0px',
+				'height':'3vw',
+				'background-image':'url(./proto/img/platform-spikes.png)',
+				'background-size':'15vw',
+				'background-position':'top left',
 			},
 
 			'adventurepuzzle':{
@@ -256,8 +338,12 @@ Adventure = function(){
 				'pointer-events':'none',
 			},
 
-			'adventurecursor:nth-of-type(2)':{
+			'adventurecursor[nPlayer="1"]':{
 				'border-color':'blue',
+			},
+
+			'adventurecursor.trigger':{
+				'border-style':'dashed',
 			},
 
 			'adventurebarrier':{
@@ -307,7 +393,7 @@ Adventure = function(){
 			'adventurebanner':{
 				'position':'absolute',
 				'display':'block',
-				'transform':'translateX(-50%,50%)',
+				'transform':'translateX(-50%)',
 				'bottom':'8vw',
 				'font-size':'1.5vw',
 				'line-height':'1.5vw',
@@ -352,17 +438,41 @@ Adventure = function(){
 				'bottom':'0px',
 				'background':"url(./proto/img/anim-red.gif)",
 				'background-size':'33.3%',
-				'color':'black',
+				
 				'text-align':'center',
+				
 			},
+
+			
 
 			'adventuredeath:after':{
 				'content':'". ."',
 				'display':'block',
+				'color':'white',
+				'text-shadow':'0px 0px 2vw white',
+				'font-size':'13vw',
+				'line-height':'10vw',
+				'background':'black',
+				'position':'absolute',
+				'left':'39vw',
+				'right':'39vw',
+				'top':'5vw',
+				'bottom':'0vw',
+				'box-shadow':'0px 0px 2vw 1vw red',
 				
-				'font-size':'15vw',
-				'line-height':'15vw',
-				
+			},
+
+			'.adventurewrapper:after':{
+				'content':'""',
+				'display':'block',
+				'position':'absolute',
+				'box-sizing':'border-box',
+				'border-left':'0.1vw dashed black',
+				'border-right':'0.1vw dashed black',
+				'left':'33.3vw',
+				'right':'33.3vw',
+				'top':'0px',
+				'bottom':'0px',
 			}
 		}
 
@@ -428,11 +538,12 @@ Adventure = function(){
 
 	let $anchor = $('<adventureanchor>').appendTo($game);
 	let $arena = $('<adventurearena>').appendTo($anchor);
-	let $platform = $('<adventureplatform>').appendTo($game);
+	
 
 	let $h = $('<h>').appendTo($game).text('');
 	let paused = false;
 	let dead = false;
+	let tracking = true;
 	
 
 	
@@ -480,12 +591,13 @@ Adventure = function(){
 	let $monster = $('<adventuremonster>').appendTo($arena);
 
 	for(var i=0; i<players.length; i++){
-		players[i].$cursor = $('<adventurecursor>').appendTo($anchor);
+		players[i].$cursor = $('<adventurecursor>').appendTo($anchor).attr('nPlayer',i);
 		players[i].$el = $('<adventureplayer>').appendTo($arena);
 	}
 
 	const W2 = 33.3/2;
 	const H2 = (33.3/16*10)/2;
+	const PIT = 1.2;
 
 	let actors = [
 		
@@ -520,7 +632,7 @@ Adventure = function(){
 			text:"Immersive Gamebox Presents...",
 		},
 		{
-			x:9,
+			x:8,
 			puzzle:puzzles[2],
 			queue:[
 				{do:doPuzzle,with:[puzzles[2]]},
@@ -529,11 +641,11 @@ Adventure = function(){
 			],
 		},
 		{
-			x:11,
+			x:10,
 			text:"An Original Cooperative Adventure...",
 		},
 		{
-			x:14,
+			x:12,
 			puzzle:puzzles[3],
 			queue:[
 				{do:doPuzzle,with:[puzzles[3]]},
@@ -543,7 +655,7 @@ Adventure = function(){
 			],
 		},
 		{
-			x:16,
+			x:14,
 			text:"THE FOLLOWER",
 			style:{
 				'color':'black',
@@ -552,9 +664,31 @@ Adventure = function(){
 				'line-height':'3.5vw',
 			}
 		},
+		{
+			x:16,
+			isPit:true,
+			queue:[
+				{do:doPit,with:[0]},
+			]
+		},
+		
+		{
+			x:17,
+		},
+		{
+			x:20,
+		},
 		
 	];
+
+	//players[0].x = 14;
+	let ox = players[0].x;
+
+	let xMin = -3;
+	let xMax = -3;
 	for(var a in actors){
+
+		
 		
 		if(actors[a].puzzle){
 			actors[a].$el = $('<adventurebarrier>').appendTo($arena).css({left:actors[a].x*W2+'vw'});
@@ -565,10 +699,26 @@ Adventure = function(){
 			actors[a].$el = $('<adventurebanner>').appendTo($arena).css({left:actors[a].x*W2+'vw'}).text(actors[a].text);
 			if(actors[a].style) actors[a].$el.css(actors[a].style);
 		}
+
+		xMax = Math.max( actors[a].x, xMax );
+
+		if(actors[a].isPit){
+			$('<adventureplatform>').appendTo($arena).css({left:xMin*W2+'vw',width:(xMax-xMin)*W2+'vw'});
+			
+			let $pit = $('<adventurepit>').appendTo($arena).css({left:xMax*W2+'vw',width:PIT*W2+'vw'});
+			xMin = xMax + PIT;
+			xMax = xMin;
+
+			console.log($pit);
+			
+		}
 	}
+
+	if(xMax > xMin) $('<adventureplatform>').appendTo($arena).css({left:xMin*W2+'vw',width:(xMax-xMin)*W2+'vw'});
 
 	let actorLive;
 	let puzzleLive;
+	let actorTrigger;
 
 	function doActor(actor){
 		if(actor.queue && actor.queue.length){
@@ -584,9 +734,43 @@ Adventure = function(){
 		if(action) action.do.apply(null,action.with);
 		else{
 			paused = false;
-			if(actorLive.$el) actorLive.$el.remove();
+			if(actorLive.$el){
+
+				new AdventurePop(-1.5,-5,3,5).$el.css({left:actorLive.x*W2+'vw',bottom:'0px'}).appendTo($arena);
+				actorLive.$el.remove();
+			}
 			actorLive = undefined;
 		}
+	}
+
+	function doPit(){
+		paused = true;
+		tracking = false;
+		$arena.animate({'bottom':'10vw'},2000);
+		$({ax:ox}).animate({ax:actorLive.x+PIT/2}, {
+		    duration: 2000,
+		    step: function(e) { 
+		       ox = e;
+		    },
+		    complete: doPitGame,
+		});
+	}
+
+	function doPitGame(){
+		doTrigger(-PIT/2,0);
+	}
+
+	function doTrigger(x,y){
+
+		for(var i in players){
+
+			players[i].trigger = {x:x,y:y+0.03*i};
+			players[i].trigger.$el = $('<adventurecursor class="trigger">')
+			.appendTo($anchor)
+			.attr('nPlayer',i)
+			.css({left:players[i].trigger.x*W2+'vw',bottom:H2+players[i].trigger.y*H2+'vw'});
+		}
+		
 	}
 
 	function doSay(bit,nPlayer){
@@ -603,7 +787,6 @@ Adventure = function(){
 				setTimeout(finishSay,1500);
 			}
 		},70)
-		//setTimeout(finishSay,1500);
 	}
 
 	function finishSay(){
@@ -643,10 +826,23 @@ Adventure = function(){
 			if(players[i].active) players[i].$cursor.css({left:players[i].tx*W2+'vw',bottom:H2+players[i].ty*H2+'vw'});
 
 			if(puzzleLive) puzzleLive.setPlayerCursor(i,players[i].tx*W2,-players[i].ty*H2);
+			
+			if(players[i].trigger){
+				let dx = players[i].tx - players[i].trigger.x;
+				let dy = players[i].ty - players[i].trigger.y;
+				let d = Math.sqrt(dx*dx+dy*dy);
+
+				if(d<0.1){
+					console.log('TRIGGERED');
+					players[i].trigger.$el.remove();
+					players[i].trigger = undefined;
+					players[i].oneToOneTracking = true;
+				}
+			}
 		}
 	}
 
-	let ox = 0;
+	
 	let walk = 0.01;
 	let tolerance = 0.04;
 
@@ -683,6 +879,9 @@ Adventure = function(){
 							if(dx<0.2) doActor(actors[a]);
 						} 
 					}
+				} else if( players[i].oneToOneTracking ){
+					players[i].x = ox + players[i].tx;
+					players[i].y = players[i].ty;
 				}
 				
 			}
@@ -690,10 +889,12 @@ Adventure = function(){
 			players[i].$el.css({left:players[i].x*W2+'vw'});
 		}
 
-		let oxNew = ax/cntActivePlayer;
-		let dx = oxNew - ox;
-		if(dx>0.3) ox += walk;
-		if(dx<-0.3) ox -= walk;
+		if(tracking){
+			let oxNew = ax/cntActivePlayer;
+			let dx = oxNew - ox;
+			if(dx>0.25) ox += walk;
+			if(dx<-0.25) ox -= walk;
+		}
 
 		if(monster.x<(ox-3.1)) monster.x = ox-3.1;
 
@@ -709,7 +910,7 @@ Adventure = function(){
 			
 
 		$arena.css({left:-ox*W2+'vw'});
-		$platform.css({'background-position-x':-ox*W2+'vw'});
+		//$platform.css({'background-position-x':-ox*W2+'vw'});
 		$game.css({'background-position-x':-ox*W2*0.2+'vw'});
 		$monster.css({'left':monster.x*W2+'vw'});
 	}
