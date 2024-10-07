@@ -24,24 +24,23 @@ BatarangGoon = function(level,x,...path){
 				// climb up
 				isClimbing = true;
 				self.$el.delay(100).animate({'bottom':'250px'},{easing:'linear',duration:2500,complete:function(){
-					//self.level--;
+					self.level--;
 					iPath++;
 					isClimbing = false;
 				}})
 
-				setTimeout(function(){ self.level--; },1250);
 
 			} else if(path[iPath]=='D'){
 
 				// climb down
 				isClimbing = true;
 				self.$el.delay(100).animate({'bottom':'-250px'},{easing:'linear',duration:2500,complete:function(){
-					//self.level++;
+					self.level++;
 					iPath++;
 					isClimbing = false;
 				}})
 
-				setTimeout(function(){ self.level++; },1250);
+				
 				
 			} else if(path[iPath]=='B'){
 				self.plantBombAt = self.x;
