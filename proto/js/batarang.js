@@ -29,7 +29,7 @@ BatarangGoon = function(level,x,...path){
 					isClimbing = false;
 				}})
 
-				setInterval(function(){ self.level--; },1250);
+				setTimeout(function(){ self.level--; },1250);
 
 			} else if(path[iPath]=='D'){
 
@@ -41,7 +41,7 @@ BatarangGoon = function(level,x,...path){
 					isClimbing = false;
 				}})
 
-				setInterval(function(){ self.level++; },1250);
+				setTimeout(function(){ self.level++; },1250);
 				
 			} else if(path[iPath]=='B'){
 				self.plantBombAt = self.x;
