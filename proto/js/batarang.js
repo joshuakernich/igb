@@ -23,21 +23,25 @@ BatarangGoon = function(level,x,...path){
 
 				// climb up
 				isClimbing = true;
-				self.$el.animate({'bottom':'250px'},{easing:'linear',duration:1000,complete:function(){
-					self.level--;
+				self.$el.delay(100).animate({'bottom':'250px'},{easing:'linear',duration:2500,complete:function(){
+					//self.level--;
 					iPath++;
 					isClimbing = false;
 				}})
+
+				setInterval(function(){ self.level--; },1250);
 
 			} else if(path[iPath]=='D'){
 
 				// climb down
 				isClimbing = true;
-				self.$el.animate({'bottom':'-250px'},{easing:'linear',duration:1000,complete:function(){
-					self.level++;
+				self.$el.delay(100).animate({'bottom':'-250px'},{easing:'linear',duration:2500,complete:function(){
+					//self.level++;
 					iPath++;
 					isClimbing = false;
 				}})
+
+				setInterval(function(){ self.level++; },1250);
 				
 			} else if(path[iPath]=='B'){
 				self.plantBombAt = self.x;
@@ -121,6 +125,13 @@ BatarangGame = function(){
 				'border-top':'100px solid black',
 				'border-bottom':'150px solid #484031',
 				'box-sizing':'border-box',
+			},
+
+			'batarangscroller':{
+				display:'block',
+				position:'absolute',
+				'top':'0px',
+				'left':'0px',
 			},
 
 			'.batarangbg':{
@@ -255,8 +266,8 @@ BatarangGame = function(){
 				'bottom':'0px',
 				'margin':'auto',
 				
-				'border-left':'10px solid black',
-				'border-right':'10px solid black',
+				'background':'url(./proto/img/ladder.png)',
+				'background-size':'100%',
 				'box-sizing':'border-box',
 			},
 
@@ -392,33 +403,43 @@ BatarangGame = function(){
 				'z-index':'1000',
 			},
 
+			'batbutton:after':{
+				'content':'""',
+				'position':'absolute',
+				'display':'block',
+				'left':'10px',
+				'bottom':'50%',
+				'right':'10px',
+				'border-top':'3px dashed rgba(255,255,255,0.3)',
+				'box-sizing':'border-box',
+
+			},
+
 			'batbutton:before':{
 				'content':'""',
 				'position':'absolute',
 				'display':'block',
-				'left':'30px',
-				'top':'30px',
-				'right':'30px',
-				'bottom':'30px',
-				'border-left':'1px solid white',
-				'border-right':'1px solid white',
-				'border-radius':'30px',
+				'left':'10px',
+				'top':'50px',
+				'right':'10px',
+				'bottom':'50px',
+				'border-left':'3px solid white',
+				'border-right':'3px solid white',
+
 				'box-sizing':'border-box',
+
 			},
 
 			'batbutton battrigger':{
 				'display':'inline-block',
-				'width':(BatarangGame.GRID-100)+'px',
+				'width':BatarangGame.GRID+'px',
 				'height':'100%',
 				'border':'none',
 				'position':'relative',
-				'background':'transparent',
-				'background-image':'url(./proto/img/bat-icon.webp)',
-				'background-image':'url(./proto/img/reticule-white.png)',
-				'background-size':'50%',
-				'background-position':'center',
-				'background-repeat':'no-repeat',
-				'margin':'0px 50px',
+				'width':'100%',
+				
+				
+				'z-index':'2',
 			},
 
 			'batbutton battrigger:before':{
@@ -426,17 +447,28 @@ BatarangGame = function(){
 				'position':'absolute',
 				'display':'block',
 				'left': '0px',
-				'top':'50px',
+				'top':'0px',
 				'right':'0px',
-				'bottom':'50px',
-				'border-left':'4px solid white',
-				'border-right':'4px solid white',
-				'border-radius':'20px',
+				'bottom':'0px',
+				'width':'120px',
+				'height':'120px',
+				
+				'border-radius':'100%',
+				'margin':'auto',
 				
 				'box-sizing':'border-box',
 
 
+				'background':'rgba(255,0,0,0.8)',
+				'border':'3px solid white',
+				'box-shadow':'inset 0px 50px rgba(255,255,255,0.2)',
 				
+
+				'background-image':'url(./proto/img/reticule-white.png)',
+				'background-size':'80%',
+				'background-position':'center',
+				'background-repeat':'no-repeat',
+				'display':'none',
 			},
 
 			'bat-reticule':{
@@ -489,11 +521,21 @@ BatarangGame = function(){
 		{level:1, x:GPW+1, w:GPW-2, align:'left'},
 		{level:2, x:GPW+1, w:GPW-2, align:'right'},
 
-		{level:0, x:GPW*2+1, w:GPW-3, align:'right'},
-		{level:1, x:GPW*2+1, w:GPW-3, align:'right'},
-		{level:2, x:GPW*2+1, w:GPW-3, align:'right'},
+		{level:0, x:GPW*2+1, w:GPW-2, align:'right'},
+		{level:1, x:GPW*2+1, w:GPW-2, align:'left'},
+		{level:2, x:GPW*2+1, w:GPW-2, align:'right'},
+
+		{level:0, x:GPW*3+1, w:GPW-2, align:'right'},
+		{level:1, x:GPW*3+1, w:GPW-2, align:'left'},
+		{level:2, x:GPW*3+1, w:GPW-2, align:'right'},
+
+		{level:0, x:GPW*4+1, w:GPW-3, align:'right'},
+		{level:1, x:GPW*4+1, w:GPW-3, align:'right'},
+		{level:2, x:GPW*4+1, w:GPW-3, align:'right'},
 	]
 	let EXIT = [11,12,11];
+
+
 	let PAUSE = 100000;
 	let BETWEEN = 10000;
 	BETWEEN = PAUSE;
@@ -514,12 +556,17 @@ BatarangGame = function(){
 	
 
 	let queue = [
+		toRight,
+		3000,
+		toLeft,
+		3000,
 		'ROUND', // ROUND 1
 		1000,
 		new BatarangGoon(0,GPW*2,EXIT[0],'B',EXIT[0]+1.5,EXIT[0],'E'), // BOMBER 1
 		PAUSE,
 		'GO',
 		1000,
+
 		new BatarangGoon(1,GPW,LADDERS[1][1],'U',EXIT[0],'E'),
 		BETWEEN,
 		new BatarangGoon(2,GPW*2,LADDERS[2][1],'U',LADDERS[1][0],'U',EXIT[0],'E'),
@@ -664,31 +711,34 @@ BatarangGame = function(){
 		PAUSE,
 	]
 
-	let skipToRound = 1;
+	/*let skipToRound = 1;
 	while(skipToRound){
 		if(queue[iQueue]=='ROUND'){
 			skipToRound--;
 		} 
 		iQueue++;
 	}
-	iQueue--;
+	iQueue--;*/
 
 
 
 	self.$el = $('<igb class="batarangbg">');
 
 	let map = [
-		'W-T----WW-----TWW----T-W',
-		'W-T----WWT-----WW----T-W',
-		'W-T----WW-----TWW----T-W',
+		'W------WW------WW------WW------WW------W',
+		'W------WW------WW------WW------WW------W',
+		'W------WW------WW------WW------WW------W',
 	]
 
 	
 
+	
+
 	let $game = $('<bataranggame>').appendTo(self.$el);
+	let $scroller = $('<batarangscroller>').appendTo($game);
 
 	for(var i=0; i<map.length; i++){
-		let $l = $('<bataranglevel>').appendTo($game);
+		let $l = $('<bataranglevel>').appendTo($scroller);
 		$ls[i] = $l;
 		for(var g=0; g<map[i].length; g++){
 			let $g = $('<bataranggrid>')
@@ -703,7 +753,7 @@ BatarangGame = function(){
 
 	for(var b in BUTTONS){
 
-		let $frame = $('<batbutton>').appendTo($game)
+		let $frame = $('<batbutton>').appendTo($scroller)
 		.css({
 			'left':BUTTONS[b].x*BatarangGame.GRID+'px',
 			'top':BUTTONS[b].level*LEVEL+'px',
@@ -715,9 +765,6 @@ BatarangGame = function(){
 		.attr('level',BUTTONS[b].level)
 		.attr('g',BUTTONS[b].x)
 		.click(spawnBatarang);
-
-
-
 	}
 
 	let $h = $('<h1>').appendTo($game);
@@ -792,8 +839,18 @@ BatarangGame = function(){
 		batarang.redraw();
 		batarang.$el.appendTo($ls[batarang.level]);
 		batarangs[iPlayer] = batarang;
+	}
 
+	function toCenter(){
+		$scroller.animate({left:-W+'px'},2000);
+	}
 
+	function toLeft(){
+		$scroller.animate({left:0+'px'},2000);
+	}
+
+	function toRight(){
+		$scroller.animate({left:-W*2+'px'},2000);
 	}
 
 	let intervalQueue;
@@ -802,6 +859,8 @@ BatarangGame = function(){
 		clearInterval(intervalQueue);
 		let g = queue[iQueue];
 		if(!g) return;
+
+		let type = typeof g;
 
 		iQueue++;
 
@@ -813,6 +872,9 @@ BatarangGame = function(){
 			$h.text('GO!');
 			isGameActive = true;
 			setTimeout(function(){$h.text('')},1000);
+			doNextQueue();
+		} else if(type=='function'){
+			g();
 			doNextQueue();
 		} else if(isNaN(g)){
 			//spawn the goon
