@@ -8,7 +8,7 @@ BatarangGoon = function(level,x,...path){
 	let isClimbing = false;
 
 	let iSpeed = 0;
-	let speeds = [2];
+	let speeds = [1.5];
 
 	self.$el = $('<bataranggoon>');
 
@@ -424,7 +424,7 @@ BatarangGame = function(){
 
 			'batbutton battrigger':{
 				'display':'inline-block',
-				'width':BatarangGame.GRID+'px',
+				'width':(BatarangGame.GRID-100)+'px',
 				'height':'100%',
 				'border':'none',
 				

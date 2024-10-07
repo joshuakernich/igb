@@ -588,7 +588,7 @@ Adventure = function(){
 		{x:3,y:0,tx:0,ty:0,active:false},
 	];
 
-	let monster = {x:-4};
+	let monster = {x:-2.8,active:false};
 	let $monster = $('<adventuremonster>').appendTo($arena);
 
 	for(var i=0; i<players.length; i++){
@@ -650,9 +650,11 @@ Adventure = function(){
 			puzzle:puzzles[3],
 			queue:[
 				{do:doPuzzle,with:[puzzles[3]]},
+				{do:doMonsterActivate},
 				{do:doSay,with:["I'm tired of puzzles.",1]},
 				{do:doSay,with:["But dude... life itself is a puzzle!",0]},
 				{do:doSay,with:["Exactly.",1]},
+				
 			],
 		},
 		{
@@ -664,6 +666,7 @@ Adventure = function(){
 				'font-size':'5vw',
 				'line-height':'3.5vw',
 			}
+
 		},
 		{
 			x:16,
@@ -799,6 +802,11 @@ Adventure = function(){
 		puzzleLive.callback = onPuzzleComplete;
 	}
 
+	function doMonsterActivate(){
+		monster.active = true;
+		doActorStep();
+	}
+
 	function doPlayerActivate(n){
 		players[n].active = true;
 		doActorStep();
@@ -917,9 +925,10 @@ Adventure = function(){
 			if(dx<-0.2) ox -= walk;
 		}
 
+		
 		if(monster.x<(ox-3.1)) monster.x = ox-3.1;
-
-		monster.x += walk/4;
+		if(monster.active) monster.x += walk/4;
+		
 
 
 		let dxMonster = minx - monster.x;
