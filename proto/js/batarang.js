@@ -287,13 +287,11 @@ BatarangGame = function(){
 				'content':'""',
 				'display':'block',
 				'position':'absolute',
-				
 				'width':'300px',
 				'height':'200px',
 				'left':'-150px',
 				'bottom':'0px',
 				'margin':'auto',
-				
 				'background-color':'transparent',
 				'border-radius':'0px',
 				'background-image':'url(./proto/img/brick-hole.png)',
@@ -301,7 +299,6 @@ BatarangGame = function(){
 				'background-position':'top center',
 				'background-repeat':'no-repeat',
 			},
-
 
 
 			'batarangzone':{
@@ -329,12 +326,10 @@ BatarangGame = function(){
 				'width':'100px',
 				'bottom':'0px',
 				'height':'170px',
-
 				'background-image':'url(./proto/img/inmate.png)',
 				'background-size':'contain',
 				'background-position':'center',
-				'background-repeat':'no-repeat',
-				
+				'background-repeat':'no-repeat',	
 			},
 
 			'batarang':{
@@ -370,7 +365,6 @@ BatarangGame = function(){
 				'animation-duration':'0.5s',
 				'animation-iteration-count':'infinite',
 				'animation-timing-function':'linear',
-
 				'box-sizing':'border-box',
 				'border-top':'5px solid white',
 				'border-bottom':'5px solid black',
@@ -391,17 +385,11 @@ BatarangGame = function(){
 				'border-radius':'100%',
 			},
 
-			
 			'batbutton':{
 				'display':'block',
 				'position':'absolute',
-				
-				
 				'height':LEVEL+'px',
-				
 				'z-index':'1000',
-				
-
 			},
 
 			'batbutton:before':{
@@ -412,14 +400,10 @@ BatarangGame = function(){
 				'top':'30px',
 				'right':'30px',
 				'bottom':'30px',
-				
-				
 				'border-left':'1px solid white',
 				'border-right':'1px solid white',
 				'border-radius':'30px',
-				
 				'box-sizing':'border-box',
-				
 			},
 
 			'batbutton battrigger':{
@@ -427,10 +411,8 @@ BatarangGame = function(){
 				'width':(BatarangGame.GRID-100)+'px',
 				'height':'100%',
 				'border':'none',
-				
 				'position':'relative',
 				'background':'transparent',
-
 				'background-image':'url(./proto/img/bat-icon.webp)',
 				'background-image':'url(./proto/img/reticule-white.png)',
 				'background-size':'50%',
