@@ -123,6 +123,12 @@ BatarangGame = function(){
 				'box-sizing':'border-box',
 			},
 
+			'.batarangbg':{
+				'background':'url(https://img.freepik.com/premium-photo/night-sky-with-full-bright-moon-clouds_366165-1377.jpg?w=360)',
+				'background-size':'100%',
+				'background-position':'center',
+			},
+
 			'.batarangbg audio':{
 				'position':'absolute',
 				'left':'2vw',
@@ -180,6 +186,8 @@ BatarangGame = function(){
 				'background': 'radial-gradient(transparent, rgba(0,0,0,1))',
 			},
 
+			
+
 			'bataranggrid':{
 				display:'inline-block',
 				'width':BatarangGame.GRID+'px',
@@ -188,6 +196,34 @@ BatarangGame = function(){
 				
 				
 				'position':'relative',
+				
+			},
+
+			'bataranglevel:nth-of-type(3) bataranggrid:not([type=W]):after':{
+				'content':'""',
+				'position':'absolute',
+				'left':'0px',
+				'top':'0px',
+				'right':'0px',
+				'bottom':'0px',
+				'background': 'url(./proto/img/bat-arch.png)',
+				'z-index':'1',
+			},
+
+			'bataranglevel:nth-of-type(2) bataranggrid:not([type=W]):after':{
+				'content':'""',
+				'position':'absolute',
+				'left':'0px',
+				'top':'0px',
+				'right':'0px',
+				'bottom':'0px',
+				'background': 'url(./proto/img/bat-window.png)',
+				'z-index':'1',
+			},
+
+			'bataranglevel:nth-of-type(1)':{
+				
+				'background': 'url(./proto/img/bat-fence.png)',
 				
 			},
 
@@ -308,7 +344,7 @@ BatarangGame = function(){
 				'top':'50%',
 				'width':'0px',
 				'height':'0px',
-				'z-index':'1',
+				'z-index':'2',
 			},
 
 			'bataranginner':{
@@ -461,7 +497,7 @@ BatarangGame = function(){
 	let batarang;
 	let goonZoom;
 
-	let LADDERS = [[],[5,13,20],[4,12,18]];
+	let LADDERS = [[],[5.5,13.5,20.5],[4.5,11.5,18.5]];
 	let BUTTONS = [
 		{level:0, x:2, w:GPW-3, align:'left'},
 		{level:1, x:2, w:GPW-3, align:'left'},
