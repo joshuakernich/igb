@@ -614,7 +614,7 @@ BatarangGame = function(){
 
 	let LADDERS = [[],[5.5,13.5,20.5],[4.5,11.5,18.5]];
 	let BUTTONS = [
-		/*{level:0, x:2, w:GPW-3, align:'left'},
+		{level:0, x:2, w:GPW-3, align:'left'},
 		{level:1, x:2, w:GPW-3, align:'left'},
 		{level:2, x:2, w:GPW-3, align:'left'},
 
@@ -632,7 +632,7 @@ BatarangGame = function(){
 
 		{level:0, x:GPW*4+1, w:GPW-3, align:'right'},
 		{level:1, x:GPW*4+1, w:GPW-3, align:'right'},
-		{level:2, x:GPW*4+1, w:GPW-3, align:'right'},*/
+		{level:2, x:GPW*4+1, w:GPW-3, align:'right'},
 	]
 	let EXIT = [11,12,11];
 
@@ -864,7 +864,7 @@ BatarangGame = function(){
 		.attr('wall',Math.floor(BUTTONS[b].x/GPW))
 		.css({
 			'left':BUTTONS[b].x*BatarangGame.GRID+'px',
-			'top':BUTTONS[b].level*LEVEL+'px',
+			'top':50 + BUTTONS[b].level*LEVEL+'px',
 			'width':BUTTONS[b].w*BatarangGame.GRID+'px',
 			'text-align':BUTTONS[b].align,
 			})
@@ -877,10 +877,10 @@ BatarangGame = function(){
 	}
 
 	let batscopes = [];
-	for(var i=0; i<3; i++){
+	/*for(var i=0; i<3; i++){
 		batscopes[i] = new BatarangScope(W,H);
 		batscopes[i].$el.appendTo($scroller).css({left:W*i+'px'});
-	}
+	}*/
 
 	let $h = $('<h1>').appendTo($game);
 
@@ -898,7 +898,7 @@ BatarangGame = function(){
 	let batarangs = [];
 	function spawnBatarang(e){
 		
-		let $scope = scopeTo( $(this).data('btn') );
+		//let $scope = scopeTo( $(this).data('btn') );
 
 		let o = $(this).offset();
 		let oGame = $game.offset();
@@ -1005,7 +1005,7 @@ BatarangGame = function(){
 		}
 	}
 
-	//doNextQueue();
+	doNextQueue();
 
 	function tick(){
 
