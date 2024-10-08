@@ -134,6 +134,7 @@ BatarangGame = function(){
 	let GPW = 8; //GRIDS PER WALL
 	let GRID = BatarangGame.GRID = W/GPW;
 	let LEVEL = 250;
+	const PROXIMITY = 0.8;
 
 	if(!BatarangGame.didInit){
 
@@ -1099,8 +1100,14 @@ BatarangGame = function(){
 
 			let p = players[0].proximity[i];
 
-			if(p<=0.5){
-				batscopes[i].redraw(0,p*2-0.5);
+
+			if(p<=PROXIMITY){
+
+				let amt = p/PROXIMITY;
+				console.log(amt);
+				console.log(amt*2-1);
+
+				batscopes[i].redraw(0,amt*2-1);
 			} else {
 				batscopes[i].redraw(-1,0);
 			}
@@ -1108,7 +1115,7 @@ BatarangGame = function(){
 	}
  
 
-	const PROXIMITY = 0.5;
+	
 
 	self.setPlayers = function(p){
 		players = p;
@@ -1146,7 +1153,7 @@ BatarangGame = function(){
 		players[0].xSideToSide = players[1].xSideToSide = Math.max( 0, Math.min( GPW, x-GPW));
 		if( x>GPW*2 ) players[0].xFrontToBack = players[1].xFrontToBack = Math.max( 0, Math.min( GPW, x-GPW*2));
 
-		players[0].proximity = [0.25,0.25,0.25];
+		players[0].proximity = [0.9,0.9,0.9];
 	})
 
 }
