@@ -66,15 +66,21 @@ BatarangGoon = function(level,x,...path){
 
 Batarang = function(level, wall, iPlayer){
 
+	const LEVEL = 250;
 	const FPS = 50;
-	const SECONDS = 2;
+	const SECONDS = 0.5;
+	const TICKS = FPS*SECONDS;
+	const YTRAVEL = LEVEL*3.2 - level*LEVEL;
 
 	let self = this;
 	self.level = level;
 	self.wall = wall;
 	self.iPlayer = iPlayer;
 	self.x = 0;
-	self.dist = FPS*SECONDS;
+	self.dist = TICKS;
+	self.flying = false;
+	self.$reticule = undefined;
+
 
 	self.$el = $(`
 		<batarang iPlayer=${iPlayer}>
@@ -84,10 +90,25 @@ Batarang = function(level, wall, iPlayer){
 		</batarang>`);
 
 	self.redraw = function(){
+
+		let amt = self.dist/TICKS;
+
 		self.$el.css('left',self.x*BatarangGame.GRID+'px');
-		self.$el.css('transform','scale('+(1+self.dist/100*5)+') translateY('+self.dist*1+'px)');
+		self.$el.css('top',LEVEL/2 + amt*YTRAVEL+'px');
+		self.$el.css('transform','scale('+(1+self.dist/100*5)+')');
 
 		if(self.$reticule) self.$reticule.css('left',self.x*BatarangGame.GRID+'px');
+	}
+
+	self.doFlying = function(){
+		self.$el.addClass('flying');
+		self.$reticule.addClass('locked');
+		self.flying = true;
+	}
+
+	self.die = function() {
+		self.$el.remove();
+		self.$reticule.remove();
 	}
 }
 
@@ -142,8 +163,6 @@ BatarangGame = function(){
 
 		let css = {
 
-
-
 			'bataranggame':{
 				display:'block',
 				position:'absolute',
@@ -153,12 +172,7 @@ BatarangGame = function(){
 				height:H+'px',
 				'transform-origin':'top left',
 				'perspective':W+'px',
-				
 				'text-align':'center',
-
-				
-				
-				
 			},
 
 			'batarangscroller':{
@@ -216,13 +230,9 @@ BatarangGame = function(){
 			'bataranglevel':{
 				display:'block',
 				'height':LEVEL+'px',
-				
-				
 				'background':'#937337',
 				'background-image':'url(./proto/img/brick-texture.png)',
-
 				'position':'relative',
-				
 			},
 
 			'bataranglevel:after':{
@@ -232,21 +242,14 @@ BatarangGame = function(){
 				'top':'0px',
 				'right':'0px',
 				'bottom':'0px',
-	
 				'display':'none',
 			},
-
-			
 
 			'bataranggrid':{
 				display:'inline-block',
 				'width':BatarangGame.GRID+'px',
 				'height':'100%',
-				
-				
-				
 				'position':'relative',
-				
 			},
 
 			'bataranglevel:nth-of-type(3) bataranggrid:not([type=W]):after':{
@@ -384,8 +387,7 @@ BatarangGame = function(){
 			'batarang':{
 				'display':'block',
 				'position':'absolute',
-				'left':'50%',
-				'top':'50%',
+				
 				'width':'0px',
 				'height':'0px',
 				'z-index':'4',
@@ -410,13 +412,18 @@ BatarangGame = function(){
 				'height':'40px',
 				'background':'black',
 				'border-radius':"100% 100% 0px 0px",
+				
+				'box-sizing':'border-box',
+				'border-top':'5px solid white',
+				'border-bottom':'5px solid black',
+				'transform':'rotate(15deg)',
+			},
+
+			'batarang.flying batarangspinner':{
 				'animation':'spin',
 				'animation-duration':'0.5s',
 				'animation-iteration-count':'infinite',
 				'animation-timing-function':'linear',
-				'box-sizing':'border-box',
-				'border-top':'5px solid white',
-				'border-bottom':'5px solid black',
 			},
 
 			'batarang[iPlayer="0"] batarangspinner':{ 'background':'red' },
@@ -439,9 +446,9 @@ BatarangGame = function(){
 				'position':'absolute',
 				'height':LEVEL+'px',
 				'z-index':'1000',
-			},
 
-			
+				'border-color':'cyan',
+			},
 
 			'batbutton:before':{
 				'content':'""',
@@ -451,11 +458,12 @@ BatarangGame = function(){
 				'top':'30px',
 				'bottom':'30px',
 				'width':BatarangGame.GRID/4+'px',
-				'border-top':'3px solid cyan',
-				'border-left':'3px solid cyan',
-				'border-bottom':'3px solid cyan',
+				'border-top':'3px solid',
+				'border-left':'3px solid',
+				'border-bottom':'3px solid',
 				'box-sizing':'border-box',
-
+				'transition':'0.5s',
+				'border-color':'inherit',
 			},
 
 			'batbutton:after':{
@@ -466,11 +474,42 @@ BatarangGame = function(){
 				'top':'30px',
 				'bottom':'30px',
 				'width':BatarangGame.GRID/4+'px',
-				'border-top':'3px solid cyan',
-				'border-right':'3px solid cyan',
-				'border-bottom':'3px solid cyan',
+				'border-top':'solid',
+				'border-right':'solid',
+				'border-bottom':'solid',
+				'border-width':'3px',
 				'box-sizing':'border-box',
+				'transition':'0.5s',
 
+				
+
+				'border-color':'inherit',
+			},
+
+			'batbutton:not(.focus)':{
+				'border-color':'cyan',
+			},
+
+			'batbutton.focus:before':{
+				'border-width':'10px',
+				'top':'0px',
+				'left':'0px',
+				'bottom':'0px',
+			},
+
+			'batbutton.focus:after':{
+				'border-width':'10px',
+				'top':'0px',
+				'right':'0px',
+				'bottom':'0px',
+			},
+
+			'batbutton[player="0"]':{ 
+				'border-color':'red' 
+			},
+
+			'batbutton[player="1"]':{ 
+				'border-color':'blue' 
 			},
 
 			'batbutton battrigger':{
@@ -480,8 +519,6 @@ BatarangGame = function(){
 				'border':'none',
 				'position':'relative',
 				'width':'100%',
-				
-				
 				'z-index':'2',
 			},
 
@@ -495,18 +532,12 @@ BatarangGame = function(){
 				'bottom':'0px',
 				'width':'120px',
 				'height':'120px',
-				
 				'border-radius':'100%',
 				'margin':'auto',
-				
 				'box-sizing':'border-box',
-
-
 				'background':'rgba(255,0,0,0.8)',
 				'border':'3px solid white',
 				'box-shadow':'inset 0px 50px rgba(255,255,255,0.2)',
-				
-
 				'background-image':'url(./proto/img/reticule-white.png)',
 				'background-size':'80%',
 				'background-position':'center',
@@ -518,7 +549,7 @@ BatarangGame = function(){
 				'display':'block',
 				'width':'100px',
 				'height':LEVEL+'px',
-				'background-image':'url(./proto/img/reticule-white.png)',
+				//'background-image':'url(./proto/img/reticule-white.png)',
 				'background-size':'100%',
 				'background-position':'center',
 				'background-repeat':'no-repeat',
@@ -528,13 +559,40 @@ BatarangGame = function(){
 				'z-index':'1',
 			},
 
+			
+
 			'bat-reticule[player="0"]':{
-				'background-image':'url(./proto/img/reticule-red.png)',
+				//'background-image':'url(./proto/img/reticule-red.png)',
 			},
 
 			'bat-reticule[player="1"]':{
-				'background-image':'url(./proto/img/reticule-blue.png)',
+				//'background-image':'url(./proto/img/reticule-blue.png)',
 			},
+
+			'bat-reticule:after':{
+				'content':'""',
+				'display':'inline-block',
+				'width':'100px',
+				'height':'100px',
+				'border-radius':'50px',
+				'border':'10px solid cyan',
+				'position':'absolute',
+				'left':'0px',
+				'right':'0px',
+				'top':'0px',
+				'bottom':'0px',
+				'margin':'auto',
+				'box-sizing':'border-box',
+				'transition':'all 0.2s',
+			},
+
+			'bat-reticule.locked:after':{
+				'width':'20px',
+				'height':'20px',
+			},
+
+			'bat-reticule[player="0"]:after':{ 'border':'10px solid red', },			
+			'bat-reticule[player="1"]:after':{ 'border':'10px solid blue', },
 
 			'bat-scope':{
 				'position':'absolute',
@@ -653,7 +711,7 @@ BatarangGame = function(){
 	iQueue = 85;*/
 
 	
-	//iQueue = 6;
+	iQueue = 10;
 	
 
 	let queue = [
@@ -834,15 +892,8 @@ BatarangGame = function(){
 		'W------WW------WW------WW------WW------W',
 	]
 
-	
-
-	
-
 	let $game = $('<bataranggame>').appendTo(self.$el);
 	let $scroller = $('<batarangscroller>').appendTo($game);
-
-	
-
 
 	for(var i=0; i<map.length; i++){
 		let $l = $('<bataranglevel>').appendTo($scroller);
@@ -873,7 +924,7 @@ BatarangGame = function(){
 		.attr('level',BUTTONS[b].level)
 		.attr('g',BUTTONS[b].x)
 		.data('btn',BUTTONS[b])
-		.click(spawnBatarang);
+		.click(onZone);
 	}
 
 	let batscopes = [];
@@ -889,6 +940,27 @@ BatarangGame = function(){
 			<source src="./proto/audio/epic-orchestral-drums-171728.mp3" type="audio/mpeg">
 		</audio>`).appendTo(self.$el)[0].volume = 0.5;
 
+	let sfx = {};
+	sfx.zoom = $(`<audio>
+			<source src="./proto/audio/sfx-zoom.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el)[0];
+
+	sfx.throw = $(`<audio>
+			<source src="./proto/audio/sfx-throw.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el)[0];
+
+	sfx.hit = $(`<audio>
+			<source src="./proto/audio/sfx-swipe.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el)[0];
+
+	sfx.hit.volume = 0.2;
+
+
+	sfx.ouch = $(`<audio>
+			<source src="./proto/audio/sfx-grunt.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el)[0];
+
+
 	function getXFor(batarang){
 		if(batarang.wall==0) return GPW - players[batarang.iPlayer].xFrontToBack;
 		if(batarang.wall==1) return GPW + players[batarang.iPlayer].xSideToSide;
@@ -896,61 +968,51 @@ BatarangGame = function(){
 	}
 
 	let batarangs = [];
-	function spawnBatarang(e){
-		
-		//let $scope = scopeTo( $(this).data('btn') );
-
-		let o = $(this).offset();
-		let oGame = $game.offset();
-
-		let level = $(this).attr('level');
-		let wall = Math.floor( $(this).attr('g')/GPW );
-
-		let pt = {x:0,y:(((o.top-oGame.top)/scale)/H)*100,z:0};
-
-		pt.y = 50;
-
-		if(wall==0) pt.x = 0;
-		if(wall==1) pt.x = ((o.left/scale - W)/W)*100;
-		if(wall==2) pt.x = 100;
-
-		if(wall==0) pt.z = ((o.left/scale)/W)*100;
-		if(wall==1) pt.z = 0;
-		if(wall==2) pt.z = ((o.left/scale-W*2)/W)*100;
-
-
-		function distanceVector( v1, v2 )
-		{
-		    var dx = v1.x - v2.x;
-		    var dy = v1.y - v2.y;
-		    var dz = v1.z - v2.z;
-
-		    return Math.sqrt( dx * dx + dy * dy + dz * dz );
-		}
-
-		let min = 99999;
-		let iMin = 0;
-		for(var i in players){
-			let d = distanceVector(players[i].ptVirtual,pt);
-			if(d<min){
-				min = d;
-				iMin = i;
-			}
-		}
-		
-		let iPlayer = iMin;
+	function onZone(e){
 
 		if(!isGameActive) return;
 
-		if(batarangs[iPlayer]) batarangs[iPlayer].$el.remove();
+		let btn = $(this).data('btn');
+		let wall = Math.floor(btn.x/GPW);
+		let level = btn.level;
 
-		let $btn = self.$el.find(`batbutton[wall="${wall}"]`)
-		.animate({'opacity':0},100)
-		.animate({'opacity':0},2000)
-		.animate({'opacity':1},200);
+		let minDist = 100;
+		let iPlayer = 0;
+		for(var i=0; i<players.length; i++){
+			if(players[i].proximity[wall] < minDist){
+				minDist = players[i].proximity[wall];
+				iPlayer = i;
+			}
+		}
+
+		sfx.zoom.play();
+		//self.$el.find(`batbutton[wall="${wall}"]`).css('opacity',0);
+		
+		self.$el.find(`batbutton[player="${iPlayer}"]`)
+		.removeClass('focus')
+		.removeAttr('player');
+
+		$(this)
+		.closest('batbutton')
+		.css('opacity',1)
+		.addClass('focus')
+		.attr('player',iPlayer);
+
+		if(batarangs[iPlayer]){
+			batarangs[iPlayer].die();
+			batarangs[iPlayer] = undefined;
+		}
+		
+		setTimeout(function(){
+			spawnBatarang(iPlayer,wall,level);
+		},700);		
+	}
+
+	function spawnBatarang(iPlayer,wall,level){
+		
+		if(batarangs[iPlayer]) batarangs[iPlayer].die();
 		
 		let batarang = new Batarang(level,wall,iPlayer);
-
 		batarang.x = getXFor(batarang);
 		batarang.$reticule = $('<bat-reticule>').appendTo($ls[batarang.level]).attr('player',iPlayer);
 		batarang.redraw();
@@ -1062,7 +1124,7 @@ BatarangGame = function(){
 
 			let batarang = batarangs[b];
 			batarang.x = getXFor(batarang);
-			batarang.dist --;
+			if(batarang.flying) batarang.dist --;
 			batarang.redraw();
 
 			if(batarang.dist == 0){
@@ -1079,20 +1141,33 @@ BatarangGame = function(){
 					if(goons[g].level==batarang.level){
 						let dx = Math.abs( goons[g].x - batarang.x );
 						if(dx<0.5){
+							sfx.ouch.play();
 							goons[g].$el.remove();
 							goons.splice(g,1);
 							g--;
 							if(!goons.length) doNextQueue();
 						}
 					}
-					
-
 				}
 
+				sfx.hit.play();
 				batarang.$reticule.remove();
 				batarang.$el.remove();
 				batarangs[b] = undefined;
 
+				spawnBatarang(batarang.iPlayer,batarang.wall,batarang.level);
+
+			} else if(!batarang.flying){
+
+				for(var g=0; g<goons.length; g++){
+					if(goons[g].level==batarang.level){
+						let dx = Math.abs( goons[g].x - batarang.x );
+						if(dx<0.5){
+							batarang.doFlying(); //Found a goon! Throw it!
+							sfx.throw.play();
+						}
+					}
+				}
 			}
 		}
 
@@ -1114,9 +1189,6 @@ BatarangGame = function(){
 		}
 	}
  
-
-	
-
 	self.setPlayers = function(p){
 		players = p;
 		players.length = 2;
