@@ -9,6 +9,7 @@ BatarangGoon = function(level,x,...path){
 
 	let iSpeed = 0;
 	let speeds = [1.5];
+	
 
 	self.$el = $('<bataranggoon>');
 
@@ -46,7 +47,11 @@ BatarangGoon = function(level,x,...path){
 				self.plantBombAt = self.x;
 				iPath++;
 			} else if(path[iPath]=='E'){
-				self.dead = true;
+				isClimbing = true;
+				isClimbing = true;
+				self.$el.delay(100).animate({'bottom':'-0px'},{duration:500,complete:function(){
+					self.dead = true;
+				}})
 			} 
 		} else {
 			dir = self.x<path[iPath]?1:-1
@@ -691,7 +696,7 @@ BatarangGame = function(){
 		{level:1, x:GPW*4+1, w:GPW-3, align:'right'},
 		{level:2, x:GPW*4+1, w:GPW-3, align:'right'},
 	]
-	let EXIT = [11,12,11];
+	let EXIT = [11,11.5,10];
 
 
 	let PAUSE = 100000;
@@ -710,7 +715,7 @@ BatarangGame = function(){
 	iQueue = 85;*/
 
 	
-	iQueue = 10;
+	//iQueue = 10;
 	
 
 	let queue = [
