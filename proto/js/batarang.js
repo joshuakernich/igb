@@ -696,7 +696,7 @@ BatarangGame = function(){
 		{level:1, x:GPW*4+1, w:GPW-3, align:'right'},
 		{level:2, x:GPW*4+1, w:GPW-3, align:'right'},
 	]
-	let EXIT = [11,11.5,10];
+	let EXIT = [11,11.5,10.5];
 
 
 	let PAUSE = 100000;
