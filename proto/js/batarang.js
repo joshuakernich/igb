@@ -591,6 +591,10 @@ BatarangGame = function(){
 				'bottom':'0px',
 			},
 
+			'bataranglevel.focus bataranggrid':{
+				'background-color':'#999',
+			},
+
 			'bataranglevel[player="0"] batarangzoomer':{ 
 				'border-color':'red',
 			},
@@ -706,6 +710,7 @@ BatarangGame = function(){
 				'width':W+'px',
 				'display':'inline-block',
 				'height':LEVEL*3+'px',
+
 			},
 		}
 
