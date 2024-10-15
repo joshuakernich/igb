@@ -102,8 +102,8 @@ Batarang = function(level, wall, iPlayer){
 		let wx = self.x%BatarangGame.GPW;
 
 		//clamp reticule and adjust x to suit
-		wx = Math.max( 1, Math.min(BatarangGame.GPW-1, wx));
-		self.x = self.wall * BatarangGame.GPW + wx;
+		//wx = Math.max( 1, Math.min(BatarangGame.GPW-1, wx));
+		//self.x = self.wall * BatarangGame.GPW + wx;
 
 		self.$el.css('left',wx*BatarangGame.GRID+'px');
 		self.$el.css('top',LEVEL/2 + amt*YTRAVEL+'px');
@@ -212,7 +212,7 @@ BatarangGame = function(){
 				'left':'0px',
 				'bottom':'0px',
 				'box-sizing':'border-box',
-				'border-bottom':(H-LEVEL*2-PADDING_TOP)+'px solid #484031',
+				'border-bottom':(H-LEVEL*3-PADDING_TOP)+'px solid #484031',
 			},
 
 			'.batarangbg':{
@@ -246,8 +246,8 @@ BatarangGame = function(){
 				'position':'absolute',
 				'left':'0px',
 				'right':'0px',
-				'top':'-100px',
-				'line-height':H+'px',
+				'bottom':'0px',
+				'line-height':(H-LEVEL*3-PADDING_TOP)+'px',
 				'font-size':'150px',
 				'color':'white',
 				'padding':'0px',
@@ -367,9 +367,7 @@ BatarangGame = function(){
 				'display':'none',
 			},
 
-			'bataranggrid.destroyed:after':{
-				'display':'none',
-			},
+			
 
 			'batarangladder:after':{
 				'content':'""',
@@ -536,6 +534,7 @@ BatarangGame = function(){
 				'transform':'scale(1.2)',
 				'transition':'transform 0.7s',
 				'z-index':Z_ZOOM,
+				'box-shadow': '0px 0px 200px 100px black',
 			},
 
 			'batarangzoomer:before':{
@@ -571,6 +570,10 @@ BatarangGame = function(){
 				'transition':'0.5s',
 				'border-color':'inherit',
 				'z-index':Z_UX,
+			},
+
+			'bataranggame.disabled batarangzoomer:before, bataranggame.disabled batarangzoomer:after':{
+				'display':'none',
 			},
 
 			'bataranglevel batarangzoomer:not(.focus)':{
@@ -1028,19 +1031,26 @@ BatarangGame = function(){
 		.removeClass('focus')
 		.removeAttr('player');
 
-		$(this)
-		.css('bataranglevel',1)
-		.addClass('focus')
-		.attr('player',iPlayer);
+		let isSameZone = (batarangs[iPlayer] && batarangs[iPlayer].wall == wall && batarangs[iPlayer].level == level);
 
+	
 		if(batarangs[iPlayer]){
 			batarangs[iPlayer].die();
 			batarangs[iPlayer] = undefined;
+			sfx.locking.pause();
+		}
+
+		if(!isSameZone){
+			$(this)
+			.addClass('focus')
+			.attr('player',iPlayer);
+
+			setTimeout(function(){
+				spawnBatarang(iPlayer,wall,level);
+			},700);	
 		}
 		
-		setTimeout(function(){
-			spawnBatarang(iPlayer,wall,level);
-		},700);		
+			
 	}
 
 	function spawnBatarang(iPlayer,wall,level){
@@ -1084,12 +1094,14 @@ BatarangGame = function(){
 
 			clearBatarangs();
 
-			$h.text('GET READY...');
+			$h.text('STAND BY...');
 			isGameActive = false;
+			$game.addClass('disabled');
 			doNextQueue();
 		} else if(g=='GO'){
 			$h.text('GO!');
 			isGameActive = true;
+			$game.removeClass('disabled');
 			setTimeout(function(){$h.text('')},1000);
 			doNextQueue();
 		} else if(type=='function'){
