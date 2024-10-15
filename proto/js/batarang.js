@@ -177,6 +177,15 @@ BatarangGame = function(){
 	const PADDING_TOP = 100;
 	const WALLS = 1;
 
+	const Z_BG = 1;
+	const Z_MG = 2;
+	const Z_FG = 3;
+	const Z_LIGHTING = 4;
+	const Z_FOCUS = 5;
+	const Z_ZOOM = 6;
+	const Z_UX = 7;
+	const Z_TOP = 8;
+
 	if(!BatarangGame.didInit){
 
 		BatarangGame.didInit = true;
@@ -229,7 +238,7 @@ BatarangGame = function(){
 				'background':'url(./proto/img/lighting-overlay.png)',
 				'background-size':'100%',
 				'pointer-events':'none',
-				'z-index':3,
+				'z-index':Z_LIGHTING,
 				'opacity':0.3,
 			},
 
@@ -244,7 +253,7 @@ BatarangGame = function(){
 				'padding':'0px',
 				'margin':'0px',
 				'pointer-events':'none',
-				'z-index':2000,
+				'z-index':Z_TOP,
 			},
 
 			'batarangzoomer':{
@@ -257,8 +266,7 @@ BatarangGame = function(){
 
 			'batarangzoomerworld':{
 				'display':'inline-block',
-				'background-color':'#937337',
-				'background-image':'url(./proto/img/brick-texture.png)',
+			
 				'position':'relative',
 				'height':LEVEL+'px',
 
@@ -292,6 +300,20 @@ BatarangGame = function(){
 				'position':'relative',
 			},
 
+			'bataranggrid:before':{
+				'content':'""',
+				'position':'absolute',
+				'left':'0px',
+				'top':'0px',
+				'right':'0px',
+				'bottom':'0px',
+				'background':'#6B5628',
+				'background-image':'url(./proto/img/brick-texture.png)',
+				'background-size':'100%',
+				'background-position':'center',
+				'z-index':Z_BG,
+			},
+
 			'bataranggrid:after':{
 				'background-size':'100%',
 				'background-position':'center',
@@ -305,7 +327,8 @@ BatarangGame = function(){
 				'right':'0px',
 				'bottom':'0px',
 				'background-image': 'url(./proto/img/bat-arch.png)',
-				'z-index':'1',
+				'background-position':'top center',
+				'z-index':Z_FG,
 			},
 
 			'bataranglevel:nth-of-type(2) bataranggrid:not([type=W]):after':{
@@ -316,17 +339,16 @@ BatarangGame = function(){
 				'right':'0px',
 				'bottom':'0px',
 				'background-image': 'url(./proto/img/bat-window.png)',
-				'z-index':'1',
+				'z-index':Z_FG,
 			},
 
-			'bataranglevel:nth-of-type(1) batarangzoomerworld':{
+			'bataranglevel:nth-of-type(1) bataranggrid:before':{
 				'background': 'url(./proto/img/bat-fence.png)',
 			},
 
 			'bataranggrid[type=W]':{
-				'background':'#DBAD51',
-				'background-image':'url(./proto/img/brick-texture.png)',
-				'z-index':'1',
+				
+				
 			},
 
 			'bataranggrid[type=W]:after':{
@@ -336,8 +358,17 @@ BatarangGame = function(){
 				'top':'0px',
 				'right':'0px',
 				'bottom':'0px',
-				'background': 'linear-gradient(to left, rgba(0,0,0,0.2), transparent, rgba(0,0,0,0.2))',
-				'z-index':'1',
+				'background':'#DBAD51',
+				'background-image':'url(./proto/img/brick-texture.png)',
+				'z-index':Z_FG,
+			},
+
+			'bataranggrid.destroyed:before':{
+				'display':'none',
+			},
+
+			'bataranggrid.destroyed:after':{
+				'display':'none',
 			},
 
 			'batarangladder:after':{
@@ -374,11 +405,15 @@ BatarangGame = function(){
 			},
 
 			'batarangbomb.explode:after':{
-				'width':'200px',
-				'height':'200px',
-				'left':'-100px',
-				'bottom':'-75px',
-				'background':'red',
+				'width':GRID+'px',
+				'height':LEVEL+'px',
+				'left':-GRID/2+'px',
+				'bottom':'0px',
+				'background':'url(./proto/img/bat-explosion.gif)',
+				'background-position':'center',
+				'background-size':'150%',
+				'border-radius':'0px',
+				'z-index':Z_UX,
 			},
 
 			'batarangbomb.exploded:after':{
@@ -414,6 +449,7 @@ BatarangGame = function(){
 				'position':'absolute',
 				'left':'0px',
 				'bottom':'0px',
+				'z-index':Z_MG,
 			},
 
 			'bataranggoon:after':{
@@ -436,7 +472,7 @@ BatarangGame = function(){
 				
 				'width':'0px',
 				'height':'0px',
-				'z-index':'4',
+				'z-index':Z_TOP,
 			},
 
 			'bataranginner':{
@@ -485,31 +521,30 @@ BatarangGame = function(){
 				'box-sizing':'border-box',
 				'border':'10px solid red',
 				'border-radius':'100%',
-				
+				'z-index':Z_UX,
 			},
 
 			'bataranglevel.focus':{
-				'z-index':'4',
+				'z-index':Z_FOCUS,
 			},
 
 			'bataranglevel.focus batarangzoomer batarangzoomerworld':{
-				'background-color':'#ddd',
 				'filter': 'grayscale(100%) contrast(100%) invert(100%)',
 			},
 
 			'bataranglevel.focus batarangzoomer':{
 				'transform':'scale(1.2)',
-				'z-index':'4',
 				'transition':'transform 0.7s',
+				'z-index':Z_ZOOM,
 			},
 
 			'batarangzoomer:before':{
 				'content':'""',
 				'position':'absolute',
 				'display':'block',
-				'left':'25px',
-				'top':'30px',
-				'bottom':'30px',
+				'left':'10px',
+				'top':'10px',
+				'bottom':'10px',
 				'width':BatarangGame.GRID/4+'px',
 				'border-top':'3px solid',
 				'border-left':'3px solid',
@@ -517,16 +552,16 @@ BatarangGame = function(){
 				'box-sizing':'border-box',
 				'transition':'0.5s',
 				'border-color':'inherit',
-				'z-index':'1',
+				'z-index':Z_UX,
 			},
 
 			'batarangzoomer:after':{
 				'content':'""',
 				'position':'absolute',
 				'display':'block',
-				'right':'25px',
-				'top':'30px',
-				'bottom':'30px',
+				'right':'10px',
+				'top':'10px',
+				'bottom':'10px',
 				'width':BatarangGame.GRID/4+'px',
 				'border-top':'solid',
 				'border-right':'solid',
@@ -534,8 +569,8 @@ BatarangGame = function(){
 				'border-width':'3px',
 				'box-sizing':'border-box',
 				'transition':'0.5s',
-
 				'border-color':'inherit',
+				'z-index':Z_UX,
 			},
 
 			'bataranglevel batarangzoomer:not(.focus)':{
@@ -572,7 +607,7 @@ BatarangGame = function(){
 				'position':'absolute',
 				'top':'50%',
 				'transform':'translate(-50%,-50%)',
-				'z-index':'10',
+				'z-index':Z_UX,
 				
 			},
 
@@ -616,7 +651,7 @@ BatarangGame = function(){
 				'width':W+'px',
 				'height':H+'px',		
 				
-				'z-index':'3',
+				'z-index':Z_UX,
 			},
 
 			'bat-scope-bit':{
@@ -691,8 +726,8 @@ BatarangGame = function(){
 	let batarang;
 	let goonZoom;
 
-	let LADDERS = [[],[5.5,12.5,19.5],[5.5,12.5,20.5]];
-	let EXIT = [12.5,13.5,11.5];
+	let LADDERS = [[],[5.5,13.5,19.5],[4.5,12.5,20.5]];
+	let EXIT = [10.5,11.5,10.5];
 
 	let PAUSE = 100000;
 	let BETWEEN = 10000;
@@ -865,14 +900,14 @@ BatarangGame = function(){
 		PAUSE,
 	]
 
-	/*let skipToRound = 1;
+	let skipToRound = 1;
 	while(skipToRound){
 		if(queue[iQueue]=='ROUND'){
 			skipToRound--;
 		} 
 		iQueue++;
 	}
-	iQueue--;*/
+	iQueue--;
 
 
 
@@ -967,7 +1002,7 @@ BatarangGame = function(){
 	let batarangs = [];
 	function onZone(e){
 
-		//if(!isGameActive) return;
+		if(!isGameActive) return;
 
 		let wall = $(this).attr('wall')
 		let level = $(this).attr('level')
@@ -1005,6 +1040,7 @@ BatarangGame = function(){
 
 	function spawnBatarang(iPlayer,wall,level){
 
+		if(!isGameActive) return;
 		if(batarangs[iPlayer]) batarangs[iPlayer].die();
 		
 		let batarang = new Batarang(level,wall,iPlayer);
@@ -1040,6 +1076,9 @@ BatarangGame = function(){
 		iQueue++;
 
 		if(g=='ROUND'){
+
+			clearBatarangs();
+
 			$h.text('GET READY...');
 			isGameActive = false;
 			doNextQueue();
@@ -1064,6 +1103,19 @@ BatarangGame = function(){
 	}
 
 	doNextQueue();
+
+	function clearBatarangs(){
+		for(var b in batarangs){
+			if(batarangs[b]){
+				batarangs[b].$reticule.remove();
+				batarangs[b].$el.remove();
+				batarangs[b] = undefined;
+			}
+		}
+
+		self.$el.find('.focus').removeAttr('player');
+		self.$el.find('.focus').removeClass('focus');
+	}
 
 	function tick(){
 
@@ -1090,17 +1142,21 @@ BatarangGame = function(){
 			
 			if(goons[g].plantBombAt){
 
+				let xBomb = Math.floor(goons[g].plantBombAt);
+
 				let $bomb = $('<batarangbomb>')
-				.prependTo($ls[goons[g].level])
-				.css('left',goons[g].x*BatarangGame.GRID+'px');
+				.appendTo($gs[goons[g].level][xBomb])
+				.css('left',0.5*BatarangGame.GRID+'px');
 
 				setTimeout(function(){
 					$bomb.addClass('explode');
 				},1000);
 
 				setTimeout(function(){
-					$bomb.removeClass('explode');
-					$bomb.addClass('exploded');
+					//$bomb.removeClass('explode');
+					//$bomb.addClass('exploded');
+					$bomb.remove();
+					$gs[goons[g].level][xBomb].addClass('destroyed');
 				},1500);
 
 				goons[g].plantBombAt = undefined;
@@ -1130,9 +1186,11 @@ BatarangGame = function(){
 				
 				$('batarangpulse').remove();
 
+				let wx = batarang.x%BatarangGame.GPW*BatarangGame.GRID;
+
 				$('<batarangpulse>')
 				.appendTo($ls[batarang.wall][batarang.level])
-				.css('left',batarang.x%BatarangGame.GPW*BatarangGame.GRID+'px')
+				.css('left',wx+'px')
 				.animate({width:'200px',height:'200px','opacity':0})
 
 				for(var g=0; g<goons.length; g++){
