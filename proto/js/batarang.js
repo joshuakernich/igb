@@ -24,7 +24,7 @@ BatarangGoon = function(level,x,...path){
 
 				// climb up
 				isClimbing = true;
-				self.$el.delay(100).animate({'bottom':'250px'},{easing:'linear',duration:2500,complete:function(){
+				self.$el.delay(100).animate({'bottom':BatarangGame.LEVEL+'px'},{easing:'linear',duration:2500,complete:function(){
 					self.level--;
 					iPath++;
 					isClimbing = false;
@@ -35,7 +35,7 @@ BatarangGoon = function(level,x,...path){
 
 				// climb down
 				isClimbing = true;
-				self.$el.delay(100).animate({'bottom':'-250px'},{easing:'linear',duration:2500,complete:function(){
+				self.$el.delay(100).animate({'bottom':-BatarangGame.LEVEL+'px'},{easing:'linear',duration:2500,complete:function(){
 					self.level++;
 					iPath++;
 					isClimbing = false;
@@ -65,7 +65,7 @@ BatarangGoon = function(level,x,...path){
 	}
 
 	self.redraw = function(){
-		self.$el.css('left',self.x*BatarangGame.GRID+'px');
+		self.$el.css('left',(self.x%1)*BatarangGame.GRID+'px');
 	}
 }
 
@@ -99,11 +99,14 @@ Batarang = function(level, wall, iPlayer){
 
 		let amt = self.dist/TICKS;
 
-		self.$el.css('left',self.x*BatarangGame.GRID+'px');
+		let wx = self.x%BatarangGame.GPW;
+
+		self.$el.css('left',wx*BatarangGame.GRID+'px');
 		self.$el.css('top',LEVEL/2 + amt*YTRAVEL+'px');
 		self.$el.css('transform','scale('+(1+self.dist/100*5)+')');
 
-		if(self.$reticule) self.$reticule.css('left',self.x*BatarangGame.GRID+'px');
+		//TODO convert x into local coordinates
+		if(self.$reticule) self.$reticule.css('left',wx*BatarangGame.GRID+'px');
 
 		self.$reticule.css({
 			width:100 + self.locking/LOCKING * 100,
@@ -161,12 +164,14 @@ BatarangScope = function(W,H){
 
 BatarangGame = function(){
 	
-	let W = 1600;
-	let H = 1000;
-	let GPW = 8; //GRIDS PER WALL
+	let W = BatarangGame.W = 1600;
+	let H = BatarangGame.H = 1000;
+	let GPW = BatarangGame.GPW = 8; //GRIDS PER WALL
 	let GRID = BatarangGame.GRID = W/GPW;
-	let LEVEL = 250;
+	let LEVEL = BatarangGame.LEVEL = 200;
 	const PROXIMITY = 0.8;
+	const PADDING_TOP = 100;
+	const WALLS = 1;
 
 	if(!BatarangGame.didInit){
 
@@ -187,14 +192,14 @@ BatarangGame = function(){
 			},
 
 			'batarangscroller':{
-				'padding-top':'50px',
+				'padding-top':PADDING_TOP+'px',
 				display:'block',
 				position:'absolute',
 				'top':'0px',
 				'left':'0px',
 				'bottom':'0px',
 				'box-sizing':'border-box',
-				'border-bottom':'200px solid #484031',
+				'border-bottom':(H-LEVEL*2-PADDING_TOP)+'px solid #484031',
 			},
 
 			'.batarangbg':{
@@ -220,7 +225,7 @@ BatarangGame = function(){
 				'background':'url(./proto/img/lighting-overlay.png)',
 				'background-size':'100%',
 				'pointer-events':'none',
-				'z-index':900,
+				'z-index':3,
 				'opacity':0.3,
 			},
 
@@ -238,12 +243,32 @@ BatarangGame = function(){
 				'z-index':2000,
 			},
 
+			'batarangzoomer':{
+				'display':'inline-block',
+				'position':'relative',
+				'height':LEVEL+'px',
+				'box-sizing':'border-box',
+				'overflow':'hidden',
+			},
+
+			'batarangzoomerworld':{
+				'display':'inline-block',
+				'background-color':'#937337',
+				'background-image':'url(./proto/img/brick-texture.png)',
+				'position':'relative',
+				'height':LEVEL+'px',
+
+			},
+
 			'bataranglevel':{
 				display:'block',
 				'height':LEVEL+'px',
-				'background':'#937337',
-				'background-image':'url(./proto/img/brick-texture.png)',
+				
+				
 				'position':'relative',
+				
+				
+				'transform':'scale(1)',
 			},
 
 			'bataranglevel:after':{
@@ -263,6 +288,11 @@ BatarangGame = function(){
 				'position':'relative',
 			},
 
+			'bataranggrid:after':{
+				'background-size':'100%',
+				'background-position':'center',
+			},
+
 			'bataranglevel:nth-of-type(3) bataranggrid:not([type=W]):after':{
 				'content':'""',
 				'position':'absolute',
@@ -270,7 +300,7 @@ BatarangGame = function(){
 				'top':'0px',
 				'right':'0px',
 				'bottom':'0px',
-				'background': 'url(./proto/img/bat-arch.png)',
+				'background-image': 'url(./proto/img/bat-arch.png)',
 				'z-index':'1',
 			},
 
@@ -281,11 +311,11 @@ BatarangGame = function(){
 				'top':'0px',
 				'right':'0px',
 				'bottom':'0px',
-				'background': 'url(./proto/img/bat-window.png)',
+				'background-image': 'url(./proto/img/bat-window.png)',
 				'z-index':'1',
 			},
 
-			'bataranglevel:nth-of-type(1)':{
+			'bataranglevel:nth-of-type(1) batarangzoomerworld':{
 				'background': 'url(./proto/img/bat-fence.png)',
 			},
 
@@ -303,6 +333,7 @@ BatarangGame = function(){
 				'right':'0px',
 				'bottom':'0px',
 				'background': 'linear-gradient(to left, rgba(0,0,0,0.2), transparent, rgba(0,0,0,0.2))',
+				'z-index':'1',
 			},
 
 			'batarangladder:after':{
@@ -388,7 +419,7 @@ BatarangGame = function(){
 				'left':'-50px',
 				'width':'100px',
 				'bottom':'0px',
-				'height':'170px',
+				'height':LEVEL*0.7+'px',
 				'background-image':'url(./proto/img/inmate.png)',
 				'background-size':'contain',
 				'background-position':'center',
@@ -450,18 +481,25 @@ BatarangGame = function(){
 				'box-sizing':'border-box',
 				'border':'10px solid red',
 				'border-radius':'100%',
+				
 			},
 
-			'batbutton':{
-				'display':'block',
-				'position':'absolute',
-				'height':LEVEL+'px',
-				'z-index':'1000',
-
-				'border-color':'cyan',
+			'bataranglevel.focus':{
+				'z-index':'4',
 			},
 
-			'batbutton:before':{
+			'bataranglevel.focus batarangzoomer batarangzoomerworld':{
+				'background-color':'#ddd',
+				'filter': 'grayscale(100%) contrast(100%) invert(100%)',
+			},
+
+			'bataranglevel.focus batarangzoomer':{
+				'transform':'scale(1.2)',
+				'z-index':'4',
+				'transition':'transform 0.7s',
+			},
+
+			'batarangzoomer:before':{
 				'content':'""',
 				'position':'absolute',
 				'display':'block',
@@ -475,9 +513,10 @@ BatarangGame = function(){
 				'box-sizing':'border-box',
 				'transition':'0.5s',
 				'border-color':'inherit',
+				'z-index':'1',
 			},
 
-			'batbutton:after':{
+			'batarangzoomer:after':{
 				'content':'""',
 				'position':'absolute',
 				'display':'block',
@@ -495,64 +534,32 @@ BatarangGame = function(){
 				'border-color':'inherit',
 			},
 
-			'batbutton:not(.focus)':{
+			'bataranglevel batarangzoomer:not(.focus)':{
 				'border-color':'cyan',
 			},
 
-			'batbutton.focus:before':{
+			'bataranglevel.focus batarangzoomer:before':{
 				'border-width':'10px',
 				'top':'0px',
 				'left':'0px',
 				'bottom':'0px',
 			},
 
-			'batbutton.focus:after':{
+			'bataranglevel.focus batarangzoomer:after':{
 				'border-width':'10px',
 				'top':'0px',
 				'right':'0px',
 				'bottom':'0px',
 			},
 
-			'batbutton[player="0"]':{ 
-				'border-color':'red' 
+			'bataranglevel[player="0"] batarangzoomer':{ 
+				'border-color':'red',
 			},
 
-			'batbutton[player="1"]':{ 
+			'bataranglevel[player="1"] batarangzoomer':{ 
 				'border-color':'blue' 
 			},
 
-			'batbutton battrigger':{
-				'display':'inline-block',
-				'width':BatarangGame.GRID+'px',
-				'height':'100%',
-				'border':'none',
-				'position':'relative',
-				'width':'100%',
-				'z-index':'2',
-			},
-
-			'batbutton battrigger:before':{
-				'content':'""',
-				'position':'absolute',
-				'display':'block',
-				'left': '0px',
-				'top':'0px',
-				'right':'0px',
-				'bottom':'0px',
-				'width':'120px',
-				'height':'120px',
-				'border-radius':'100%',
-				'margin':'auto',
-				'box-sizing':'border-box',
-				'background':'rgba(255,0,0,0.8)',
-				'border':'3px solid white',
-				'box-shadow':'inset 0px 50px rgba(255,255,255,0.2)',
-				'background-image':'url(./proto/img/reticule-white.png)',
-				'background-size':'80%',
-				'background-position':'center',
-				'background-repeat':'no-repeat',
-				'display':'none',
-			},
 
 			'bat-reticule':{
 				'display':'block',
@@ -561,7 +568,7 @@ BatarangGame = function(){
 				'position':'absolute',
 				'top':'50%',
 				'transform':'translate(-50%,-50%)',
-				'z-index':'1',
+				'z-index':'10',
 				
 			},
 
@@ -656,6 +663,11 @@ BatarangGame = function(){
 				'border':'5px solid blue',
 			},
 
+			'batarangwall':{
+				'width':W+'px',
+				'display':'inline-block',
+				'height':LEVEL*3+'px',
+			},
 		}
 
 		$("head").append('<style>'+Css.of(css)+'</style>');
@@ -667,37 +679,16 @@ BatarangGame = function(){
 	const LOCKING = 1 * FPS;
 	let interval;
 	let goons = [];
-	let $ls = [];
+	let $ls = []; //levels in the structure $ls[nWall][nLevel]
+	let $gs = []; //grids in the structure $ls[nLevel][nGrid]
 	
 	let xSideToSide = 0;
 	let xFrontToBack = 0;
 	let batarang;
 	let goonZoom;
 
-	let LADDERS = [[],[5.5,13.5,20.5],[4.5,11.5,18.5]];
-	let BUTTONS = [
-		{level:0, x:2, w:GPW-3, align:'left'},
-		{level:1, x:2, w:GPW-3, align:'left'},
-		{level:2, x:2, w:GPW-3, align:'left'},
-
-		{level:0, x:GPW+1, w:GPW-2, align:'right'},
-		{level:1, x:GPW+1, w:GPW-2, align:'left'},
-		{level:2, x:GPW+1, w:GPW-2, align:'right'},
-
-		{level:0, x:GPW*2+1, w:GPW-2, align:'right'},
-		{level:1, x:GPW*2+1, w:GPW-2, align:'left'},
-		{level:2, x:GPW*2+1, w:GPW-2, align:'right'},
-
-		{level:0, x:GPW*3+1, w:GPW-2, align:'right'},
-		{level:1, x:GPW*3+1, w:GPW-2, align:'left'},
-		{level:2, x:GPW*3+1, w:GPW-2, align:'right'},
-
-		{level:0, x:GPW*4+1, w:GPW-3, align:'right'},
-		{level:1, x:GPW*4+1, w:GPW-3, align:'right'},
-		{level:2, x:GPW*4+1, w:GPW-3, align:'right'},
-	]
-	let EXIT = [11,11.5,10.5];
-
+	let LADDERS = [[],[5.5,12.5,19.5],[5.5,12.5,20.5]];
+	let EXIT = [12.5,13.5,11.5];
 
 	let PAUSE = 100000;
 	let BETWEEN = 10000;
@@ -719,16 +710,9 @@ BatarangGame = function(){
 	
 
 	let queue = [
-		toRight,
-
-		2000,
-		new BatarangGoon(0,GPW*2,EXIT[0],'B',EXIT[0]+1.5,EXIT[0],'E'), // BOMBER 1
-		1000,
-		toLeft,
-		3000,
 		'ROUND', // ROUND 1
 		1000,
-		
+		new BatarangGoon(0,GPW*2,EXIT[0],'B',EXIT[0]+1.5,EXIT[0],'E'), // BOMBER 1
 		PAUSE,
 		'GO',
 		1000,
@@ -890,52 +874,54 @@ BatarangGame = function(){
 
 	self.$el = $('<igb class="batarangbg">');
 
-	let map = [
-		'W------WW------WW------WW------WW------W',
-		'W------WW------WW------WW------WW------W',
-		'W------WW------WW------WW------WW------W',
-	]
-
 	let $game = $('<bataranggame>').appendTo(self.$el);
 	let $scroller = $('<batarangscroller>').appendTo($game);
 
-	for(var i=0; i<map.length; i++){
-		let $l = $('<bataranglevel>').appendTo($scroller);
-		$ls[i] = $l;
-		for(var g=0; g<map[i].length; g++){
-			let $g = $('<bataranggrid>')
-			.appendTo($l)
-			.attr('level',i)
-			.attr('g',g)
-			.attr('type',map[i][g]);
+	
+	for(var w=0; w<3; w++){
+		let $wall = $('<batarangwall>').appendTo($scroller);
+		$ls[w] = [];
+		for(var l=0; l<3; l++){
+
+			let $level = $('<bataranglevel>')
+			.appendTo($wall)
+			.attr('level',l)
+			.attr('wall',w)
+			.click(onZone);
+
+			$ls[w][l] = $level;
+
+			let $zoomer = $('<batarangzoomer>');
+			let $world = $('<batarangzoomerworld>').appendTo($zoomer)
+
+			for(var g=0; g<GPW; g++){
+				let type = '-';
+				if(g<WALLS||g>=(GPW-WALLS)) type = "W";
+
+				if(g==WALLS) $zoomer.appendTo($level);
+				let $g = $('<bataranggrid>')
+				.appendTo(type=='W'?$level:$world)
+				.attr('type',type);
+
+				if(!$gs[l]) $gs[l] = [];
+				
+				$gs[l][w*GPW+g] = $g;
+			}
 		}
-
-		for(var l in LADDERS[i]) $('<batarangladder>').appendTo($ls[i]).css('left',LADDERS[i][l]*BatarangGame.GRID+'px');
 	}
 
-	for(var b in BUTTONS){
+	for(var l in LADDERS){
+		for(var n in LADDERS[l]){
 
-		let $frame = $('<batbutton>').appendTo($scroller)
-		.attr('wall',Math.floor(BUTTONS[b].x/GPW))
-		.css({
-			'left':BUTTONS[b].x*BatarangGame.GRID+'px',
-			'top':50 + BUTTONS[b].level*LEVEL+'px',
-			'width':BUTTONS[b].w*BatarangGame.GRID+'px',
-			'text-align':BUTTONS[b].align,
-			})
-		
-		$('<battrigger>').appendTo($frame)
-		.attr('level',BUTTONS[b].level)
-		.attr('g',BUTTONS[b].x)
-		.data('btn',BUTTONS[b])
-		.click(onZone);
+			let g = Math.floor(LADDERS[l][n]);
+
+			let $ladder = $('<batarangladder>').appendTo($gs[l][g]).css({left:LADDERS[l][n]%1*GRID});
+
+			console.log( l,g,$ladder );
+		}
 	}
 
-	let batscopes = [];
-	/*for(var i=0; i<3; i++){
-		batscopes[i] = new BatarangScope(W,H);
-		batscopes[i].$el.appendTo($scroller).css({left:W*i+'px'});
-	}*/
+	
 
 	let $h = $('<h1>').appendTo($game);
 
@@ -977,11 +963,10 @@ BatarangGame = function(){
 	let batarangs = [];
 	function onZone(e){
 
-		if(!isGameActive) return;
+		//if(!isGameActive) return;
 
-		let btn = $(this).data('btn');
-		let wall = Math.floor(btn.x/GPW);
-		let level = btn.level;
+		let wall = $(this).attr('wall')
+		let level = $(this).attr('level')
 
 		let minDist = 100;
 		let iPlayer = 0;
@@ -995,13 +980,12 @@ BatarangGame = function(){
 		sfx.zoom.play();
 		//self.$el.find(`batbutton[wall="${wall}"]`).css('opacity',0);
 		
-		self.$el.find(`batbutton[player="${iPlayer}"]`)
+		self.$el.find(`bataranglevel[player="${iPlayer}"]`)
 		.removeClass('focus')
 		.removeAttr('player');
 
 		$(this)
-		.closest('batbutton')
-		.css('opacity',1)
+		.css('bataranglevel',1)
 		.addClass('focus')
 		.attr('player',iPlayer);
 
@@ -1017,14 +1001,16 @@ BatarangGame = function(){
 
 	function spawnBatarang(iPlayer,wall,level){
 		
+		console.log('spawnBatarang',iPlayer,wall,level);
+
 		if(batarangs[iPlayer]) batarangs[iPlayer].die();
 		
 		let batarang = new Batarang(level,wall,iPlayer);
 		batarang.x = getXFor(batarang);
 		batarang.locking = LOCKING;
-		batarang.$reticule = $('<bat-reticule>').appendTo($ls[batarang.level]).attr('player',iPlayer);
+		batarang.$reticule = $('<bat-reticule>').appendTo($ls[wall][batarang.level]).attr('player',iPlayer);
 		batarang.redraw();
-		batarang.$el.appendTo($ls[batarang.level]);
+		batarang.$el.appendTo($ls[wall][batarang.level]);
 		batarangs[iPlayer] = batarang;
 	}
 
@@ -1067,7 +1053,7 @@ BatarangGame = function(){
 			//spawn the goon
 			if(!isGameActive) goonZoome = g;
 			g.redraw();
-			g.$el.appendTo($ls[g.level]);
+			g.$el.appendTo($gs[g.level][Math.floor(g.x)]);
 			goons.push(g);
 			doNextQueue();
 		} else{
@@ -1092,8 +1078,11 @@ BatarangGame = function(){
 			goons[g].step();
 			goons[g].redraw();
 			
-			if( !goons[g].$el.parent().is($ls[goons[g].level])){
-				goons[g].$el.appendTo($ls[goons[g].level]);
+			let x = Math.floor(goons[g].x);
+
+
+			if( !goons[g].$el.parent().is($gs[goons[g].level][x])){
+				goons[g].$el.appendTo($gs[goons[g].level][x]);
 				goons[g].$el.css({'bottom':'0px'});
 			}
 			
@@ -1174,7 +1163,6 @@ BatarangGame = function(){
 					if(goons[g].level==batarang.level){
 						let dx = Math.abs( goons[g].x - batarang.x );
 						if(dx<0.5) isLocking = true;
-							
 					}
 				}
 
@@ -1195,20 +1183,7 @@ BatarangGame = function(){
 			}
 		}
 
-		for(var i=0; i<batscopes.length; i++){
-
-			let p = players[0].proximity[i];
-
-
-			if(p<=PROXIMITY){
-
-				let amt = p/PROXIMITY;
-
-				batscopes[i].redraw(0,amt*2-1);
-			} else {
-				batscopes[i].redraw(-1,0);
-			}
-		}
+		
 	}
  
 	self.setPlayers = function(p){
