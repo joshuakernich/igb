@@ -537,6 +537,22 @@ BatarangGame = function(){
 				'box-shadow': '0px 0px 200px 100px black',
 			},
 
+			'batarangzoomertint':{
+				'display':'none',
+				'position':'absolute',
+				'left':'0px',
+				'top':'0px',
+				'right':'0px',
+				'bottom':'0px',
+				'background':'red',
+				'z-index':Z_UX,
+				'opacity':'0.2',
+			},
+
+			'bataranglevel.focus batarangzoomertint':{
+				'display':'block',
+			},
+
 			'batarangzoomer:before':{
 				'content':'""',
 				'position':'absolute',
@@ -606,6 +622,9 @@ BatarangGame = function(){
 				'border-color':'blue' 
 			},
 
+			'bataranglevel[player="1"] batarangzoomertint':{
+				'background':'blue',
+			},
 
 			'bat-reticule':{
 				'display':'block',
@@ -940,6 +959,7 @@ BatarangGame = function(){
 
 			let $zoomer = $('<batarangzoomer>');
 			let $world = $('<batarangzoomerworld>').appendTo($zoomer)
+			let $tint = $('<batarangzoomertint>').appendTo($zoomer)
 
 			for(var g=0; g<GPW; g++){
 				let type = '-';
