@@ -101,6 +101,10 @@ Batarang = function(level, wall, iPlayer){
 
 		let wx = self.x%BatarangGame.GPW;
 
+		//clamp reticule and adjust x to suit
+		wx = Math.max( 1, Math.min(BatarangGame.GPW-1, wx));
+		self.x = self.wall * BatarangGame.GPW + wx;
+
 		self.$el.css('left',wx*BatarangGame.GRID+'px');
 		self.$el.css('top',LEVEL/2 + amt*YTRAVEL+'px');
 		self.$el.css('transform','scale('+(1+self.dist/100*5)+')');
@@ -1000,8 +1004,6 @@ BatarangGame = function(){
 	}
 
 	function spawnBatarang(iPlayer,wall,level){
-		
-		console.log('spawnBatarang',iPlayer,wall,level);
 
 		if(batarangs[iPlayer]) batarangs[iPlayer].die();
 		
@@ -1129,8 +1131,8 @@ BatarangGame = function(){
 				$('batarangpulse').remove();
 
 				$('<batarangpulse>')
-				.appendTo($ls[batarang.level])
-				.css('left',batarang.x*BatarangGame.GRID+'px')
+				.appendTo($ls[batarang.wall][batarang.level])
+				.css('left',batarang.x%BatarangGame.GPW*BatarangGame.GRID+'px')
 				.animate({width:'200px',height:'200px','opacity':0})
 
 				for(var g=0; g<goons.length; g++){
