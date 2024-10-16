@@ -73,7 +73,7 @@ Batarang = function(level, wall, iPlayer){
 
 	const LEVEL = 250;
 	const FPS = 50;
-	const SECONDS = 0.5;
+	const SECONDS = 1.0;
 	const TICKS = FPS*SECONDS;
 	const YTRAVEL = LEVEL*3.2 - level*LEVEL;
 	const LOCKING = FPS * 1;
@@ -534,7 +534,6 @@ BatarangGame = function(){
 				'transform':'scale(1.2)',
 				'transition':'transform 0.7s',
 				'z-index':Z_ZOOM,
-				'box-shadow': '0px 0px 200px 100px black',
 			},
 
 			'batarangzoomertint':{
@@ -616,10 +615,12 @@ BatarangGame = function(){
 
 			'bataranglevel[player="0"] batarangzoomer':{ 
 				'border-color':'red',
+				'box-shadow': '0px 0px 200px 100px red',
 			},
 
 			'bataranglevel[player="1"] batarangzoomer':{ 
-				'border-color':'blue' 
+				'border-color':'blue',
+				'box-shadow': '0px 0px 200px 100px blue',
 			},
 
 			'bataranglevel[player="1"] batarangzoomertint':{
