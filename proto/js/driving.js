@@ -142,14 +142,14 @@ DrivingGame = function(){
 
 			drivingfog{
 				width:${GRID*5}px;
-				height:${GRID*5}px;
+				height:${H*4}px;
 				transform-origin: top center;
 				position:absolute;
 				transform: rotateX(90deg);
-				background:#222;
+				background:radial-gradient(circle at bottom center,rgba(0,0,0,0.5),rgba(0,0,0,0.1),transparent);
 				top:0px;
-				left:0px;
-				opacity: 0.2;
+				left:0px;	
+
 			}
 
 			drivinggrid{
@@ -163,7 +163,7 @@ DrivingGame = function(){
 			}
 
 			drivinggrid[type='H']{
-				background:#333;
+				background:#222;
 			}
 
 		</style>
@@ -184,7 +184,7 @@ DrivingGame = function(){
 	let $plane = $('<drivingplane>').appendTo($world);
 
 	let $car = $(`<drivingcar>`).appendTo($plane);
-	new Box3D(WCAR,LCAR,HCAR,'red').$el.appendTo($car);
+	new Box3D(WCAR,LCAR,HCAR,'purple').$el.appendTo($car);
 
 	
 
@@ -259,10 +259,15 @@ DrivingGame = function(){
 		{x:-0.25,y:10},	
 		{x:0.25,y:15},	
 		{x:-0.25,y:20},	
-		{x:0.25,y:25},	
-		{x:-0.25,y:30},	
+		{x:1,y:25},	
+		{x:-1,y:25},	
 		{x:0.25,y:35},	
 		{x:-0.25,y:40},	
+		{x:1,y:45},	
+		{x:-1,y:45},	
+		{x:0,y:55},	
+		{x:0.3,y:60},	
+		{x:-0.3,y:60},	
 	]
 
 	$layers = [];
@@ -273,7 +278,7 @@ DrivingGame = function(){
 			let $g = $('<drivinggrid>').appendTo($layer).attr('type',TRACK[t][g]);
 
 			if(TRACK[t][g]==' '){
-				new Box3D(GRID-100,GRID-100,GRID*Math.random()*4,'#555').$el.appendTo($g).css({
+				new Box3D(GRID-100,GRID-100,GRID*(0.5+Math.random()*3),'purple').$el.appendTo($g).css({
 					transform:'translate(50px,50px)',
 				})
 			}
@@ -286,7 +291,7 @@ DrivingGame = function(){
 
 	for(var c in cars){
 		let $c = $(`<drivingcar>`).appendTo($plane).css({left:cars[c].x*GRID+'px',bottom:cars[c].y*GRID+'px'});
-		new Box3D(WCAR,LCAR,HCAR,'#999').$el.appendTo($c);
+		new Box3D(WCAR,LCAR,HCAR,'black').$el.appendTo($c);
 	}
 
 
