@@ -13,7 +13,7 @@ Box3D = function(w,l,h){
 				position:absolute;
 				box-sizing:border-box;
 				background:rgba(255,0,0,0.5);
-				box-shadow: inset 0px 0px 50px white;
+				
 				transform-style: preserve-3d;
 			}
 
@@ -129,7 +129,7 @@ DrivingGame = function(){
 				width:${GRID*5}px;
 				left:${-GRID*2.5}px;
 				transform-style: preserve-3d;
-				transform: translateZ(1px);
+				
 			}
 
 			drivinggrid{
@@ -139,7 +139,7 @@ DrivingGame = function(){
 				height:${GRID}px;
 				box-sizing: border-box;
 				transform-style: preserve-3d;
-				border: 10px solid red;
+				transform: translateZ(1px);
 			}
 
 			drivinggrid[type='H']{
@@ -200,6 +200,26 @@ DrivingGame = function(){
 		'  H  ',
 		'  H  ',
 		'  H  ',
+		' HHH ',
+		' H H ',
+		' H H ',
+		' H H ',
+		' H H ',
+		' H H ',
+		' H H ',
+		' H H ',
+		' HHH ',
+		'  H  ',
+		'  H  ',
+		'  H  ',
+		'  H  ',
+		'  H  ',
+		'  H  ',
+		'  H  ',
+		'  H  ',
+		'  H  ',
+		'  H  ',
+		'  H  ',
 		'  H  ',
 		'  H  ',
 		'  H  ',
@@ -215,6 +235,10 @@ DrivingGame = function(){
 		{x:-0.25,y:10},	
 		{x:0.25,y:15},	
 		{x:-0.25,y:20},	
+		{x:0.25,y:25},	
+		{x:-0.25,y:30},	
+		{x:0.25,y:35},	
+		{x:-0.25,y:40},	
 	]
 
 	
