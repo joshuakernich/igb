@@ -108,7 +108,7 @@ DrivingGame = function(){
 				right:0px;
 				margin:auto;
 				transform-style: preserve-3d;
-				background-image:url(https://i.pinimg.com/564x/a1/a7/ac/a1a7aca8cdcabb0b6f29774a2b1eb971.jpg);
+				background: #333;
 				background-size:100%;
 			}
 
@@ -159,6 +159,8 @@ DrivingGame = function(){
 	let players = [{px:0}];
 	let iTick = 0;
 	let speed = 70;
+	let steer = 5;
+	let ox = 0;
 	function tick(){
 		let w = $(document).innerWidth()/3;
 		$game.css('transform','scale('+(w/W)+')');
@@ -168,12 +170,16 @@ DrivingGame = function(){
 		
 		let prog = speed*iTick;
 
+		if(players[0].px<40) ox--;
+		if(players[0].px>60) ox++;
+
 		$car.css({
 			left:players[0].px+'%',
 			bottom: (prog+50) + 'px',
 		})
 
 		$plane.css({
+			left:-ox*steer+'px',
 			bottom:-prog+'px',
 		})
 	}
