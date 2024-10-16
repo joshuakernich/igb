@@ -16,7 +16,7 @@ Box3D = function(w,l,h,color){
 				
 				transform-style: preserve-3d;
 				
-
+				text-align:center;
 			}
 
 
@@ -69,6 +69,7 @@ DrivingGame = function(){
 	const HCAR = 50;
 	const FLOAT = 5;
 	const GRID = W;
+	const PURPLE = '#230B39';
 
 	$("head").append(`
 		<style>
@@ -117,15 +118,35 @@ DrivingGame = function(){
 				transform-style: preserve-3d;
 				width:${WCAR}px;
 				height:${LCAR}px;
-				background:black;
+				background:rgba(0,0,0,0.6);
 				position:absolute;
 				left:0px;
 				bottom:50px;
-				transform: translateX(-50%);
+				transform: translateX(-50%) translateZ(2px);
+				box-shadow: 0px 0px 10px black;
 			}
 
 			drivingcar box3D{
-				transform: translateY(-10px);
+				transform: translateZ(10px);
+				font-size:70px;
+				color:red;
+
+				line-height:${HCAR*0.7}px;
+				text-shadow: 0px 0px 20px red;
+			}
+
+			drivingcar box3Dside:nth-of-type(5):before{
+				content:".";
+				display:inline-block;
+				margin-right: 25px;
+				
+			}
+
+			drivingcar box3Dside:nth-of-type(5):after{
+				content:".";
+				line-height:${HCAR*0.7}px;
+				display:inline-block;
+				margin-left: 25px;
 			}
 
 			drivinglayer{
@@ -168,25 +189,6 @@ DrivingGame = function(){
 
 		</style>
 	`);
-
-
-	let self = this;
-	let intTick;
-
-	self.$el = $('<igb>');
-
-	let $left = $('<igbside>').appendTo(self.$el);
-	let $front = $('<igbside>').appendTo(self.$el);
-	let $right = $('<igbside>').appendTo(self.$el);
-
-	let $game = $('<drivinggame>').appendTo($front);
-	let $world = $('<drivingworld>').appendTo($game);
-	let $plane = $('<drivingplane>').appendTo($world);
-
-	let $car = $(`<drivingcar>`).appendTo($plane);
-	new Box3D(WCAR,LCAR,HCAR,'purple').$el.appendTo($car);
-
-	
 
 	const TRACK = [
 		'  H  ',
@@ -270,6 +272,23 @@ DrivingGame = function(){
 		{x:-0.3,y:60},	
 	]
 
+	let self = this;
+	let intTick;
+
+	self.$el = $('<igb>');
+
+	let $left = $('<igbside>').appendTo(self.$el);
+	let $front = $('<igbside>').appendTo(self.$el);
+	let $right = $('<igbside>').appendTo(self.$el);
+
+	let $game = $('<drivinggame>').appendTo($front);
+	let $world = $('<drivingworld>').appendTo($game);
+	let $plane = $('<drivingplane>').appendTo($world);
+
+	let $car = $(`<drivingcar>`).appendTo($plane);
+	new Box3D(WCAR,LCAR,HCAR,PURPLE).$el.appendTo($car);
+
+
 	$layers = [];
 	
 	for(var t in TRACK){
@@ -278,7 +297,7 @@ DrivingGame = function(){
 			let $g = $('<drivinggrid>').appendTo($layer).attr('type',TRACK[t][g]);
 
 			if(TRACK[t][g]==' '){
-				new Box3D(GRID-100,GRID-100,GRID*(0.5+Math.random()*3),'purple').$el.appendTo($g).css({
+				new Box3D(GRID-100,GRID-100,GRID*(0.5+Math.random()*3),PURPLE).$el.appendTo($g).css({
 					transform:'translate(50px,50px)',
 				})
 			}
