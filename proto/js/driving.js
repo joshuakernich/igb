@@ -76,22 +76,40 @@ DrivingGame = function(){
 				perspective:${W}px;
 			}
 
-			drivingtrack{
+			drivingworld{
 				display:block;
 				width:${W}px;
-				height:${W*20}px;
-				background: #333;
+				height:${H}px;
+				
 				box-sizing:border-box;
-				border-left:50px solid red;
-				border-right:50px solid red;
+				
+				transform-origin:bottom center;
+				position:absolute;
+				bottom:0px;
+				left:0px;
+				right:0px;
+				
+				transform:rotateX(90deg);
+				transform-style: preserve-3d;
+				z-index:1;
+			}
+
+			drivingplane{
+				display:block;
+				width:${W}px;
+				height:${W*100}px;
+				
+				box-sizing:border-box;
+				
 				transform-origin:bottom center;
 				position:absolute;
 				bottom:0px;
 				left:0px;
 				right:0px;
 				margin:auto;
-				transform:rotateX(90deg);
 				transform-style: preserve-3d;
+				background-image:url(https://i.pinimg.com/564x/a1/a7/ac/a1a7aca8cdcabb0b6f29774a2b1eb971.jpg);
+				background-size:100%;
 			}
 
 			drivingcar{
@@ -119,17 +137,28 @@ DrivingGame = function(){
 	let $right = $('<igbside>').appendTo(self.$el);
 
 	let $game = $('<drivinggame>').appendTo($front);
-	let $track = $('<drivingtrack>').appendTo($game);
-	let $car = $(`<drivingcar>`).appendTo($track);
+	let $world = $('<drivingworld>').appendTo($game);
+	let $plane = $('<drivingplane>').appendTo($world);
 
+	let $car = $(`<drivingcar>`).appendTo($plane);
 	new Box3D(WCAR,LCAR,HCAR).$el.appendTo($car).css('transform','translateZ(40px)');
 
-	let nodes = [
-
+	let cars = [
+		{x:25,y:10},	
+		{x:75,y:20},	
+		{x:25,y:30},	
+		{x:75,y:40},	
 	]
+
+	for(var c in cars){
+		let $c = $(`<drivingcar>`).appendTo($plane).css({left:cars[c].x+'%',bottom:cars[c].y*1000+'px'});
+		new Box3D(WCAR,LCAR,HCAR).$el.appendTo($c).css('transform','translateZ(40px)');
+	}
+
 
 	let players = [{px:0}];
 	let iTick = 0;
+	let speed = 70;
 	function tick(){
 		let w = $(document).innerWidth()/3;
 		$game.css('transform','scale('+(w/W)+')');
@@ -137,8 +166,15 @@ DrivingGame = function(){
 		iTick++;
 		//$car.css('transform',`rotateZ(${iTick}deg)`);
 		
+		let prog = speed*iTick;
+
 		$car.css({
 			left:players[0].px+'%',
+			bottom: (prog+50) + 'px',
+		})
+
+		$plane.css({
+			bottom:-prog+'px',
 		})
 	}
 
