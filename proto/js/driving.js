@@ -15,8 +15,8 @@ Box3D = function(w,l,h,color){
 				
 				
 				transform-style: preserve-3d;
-				border: 5px solid black;
-		
+				
+
 			}
 
 
@@ -140,6 +140,18 @@ DrivingGame = function(){
 				
 			}
 
+			drivingfog{
+				width:${GRID*5}px;
+				height:${GRID*5}px;
+				transform-origin: top center;
+				position:absolute;
+				transform: rotateX(90deg);
+				background:#222;
+				top:0px;
+				left:0px;
+				opacity: 0.2;
+			}
+
 			drivinggrid{
 				display:inline-block;
 				background: black;
@@ -253,6 +265,7 @@ DrivingGame = function(){
 		{x:-0.25,y:40},	
 	]
 
+	$layers = [];
 	
 	for(var t in TRACK){
 		let $layer = $('<drivinglayer>').appendTo($plane);
@@ -260,12 +273,15 @@ DrivingGame = function(){
 			let $g = $('<drivinggrid>').appendTo($layer).attr('type',TRACK[t][g]);
 
 			if(TRACK[t][g]==' '){
-				new Box3D(GRID-100,GRID-100,GRID,'#333').$el.appendTo($g).css({
-					left:'50px',
-					top:'50px',
+				new Box3D(GRID-100,GRID-100,GRID*Math.random()*4,'#555').$el.appendTo($g).css({
+					transform:'translate(50px,50px)',
 				})
 			}
 		}
+
+		let $fog = $('<drivingfog>').appendTo($layer);
+
+		$layers[t] = $layer;
 	}
 
 	for(var c in cars){
@@ -276,7 +292,7 @@ DrivingGame = function(){
 
 	let players = [{px:0}];
 	let iTick = 0;
-	let speed = GRID/20;
+	let speed = 1/20;
 	let steer = 5;
 	let xCenter = 0;
 	function tick(){
@@ -297,13 +313,30 @@ DrivingGame = function(){
 
 		$car.css({
 			left:txActual*GRID+'px',
-			bottom: (prog+50) + 'px',
+			bottom: (prog+0.1)*GRID + 'px',
 		})
 
 		$plane.css({
 			left:-xCenter*GRID+'px',
-			bottom:-prog+'px',
+			bottom:-prog*GRID+'px',
 		})
+
+		//console.log('prog',prog);
+
+		
+		let maxRender = $layers.length - Math.floor(prog);
+
+		let minRender = $layers.length - Math.floor(prog) - 10;
+
+
+		
+		for(var r=0; r<$layers.length; r++){
+
+			if(r<minRender || r>maxRender) $layers[r].css('opacity','0');
+			else $layers[r].css('opacity','1');
+
+
+		}
 	}
 
 	self.setPlayers = function(p){
