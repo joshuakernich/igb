@@ -235,7 +235,7 @@ DrivingGame = function(){
 	let iTick = 0;
 	let speed = GRID/20;
 	let steer = 5;
-	let ox = 50;
+	let xCenter = 0;
 	function tick(){
 		let w = $(document).innerWidth()/3;
 		$game.css('transform','scale('+(w/W)+')');
@@ -246,17 +246,19 @@ DrivingGame = function(){
 		//let ox
 		let prog = speed*iTick;
 
-		let ox = (players[0].px/100-0.5);
+		let txRelative = (players[0].px/100-0.5);
+		let txActual = xCenter + txRelative;
 
-		
+
+		xCenter = (xCenter*19 + txActual)/20;
 
 		$car.css({
-			left:ox*GRID+'px',
+			left:txActual*GRID+'px',
 			bottom: (prog+50) + 'px',
 		})
 
 		$plane.css({
-			
+			left:-xCenter*GRID+'px',
 			bottom:-prog+'px',
 		})
 	}
