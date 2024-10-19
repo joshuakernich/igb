@@ -198,6 +198,34 @@ DrivingGame = function(){
 				background:#222;
 			}
 
+			drivinggrid[type=' ']:before{
+				content:"";
+				display:block;
+				width:5%;
+				height:100%;
+				background:#999;
+				position:absolute;
+				left:0px;
+				top:0px;
+				transform-origin:left center;
+				transform-style: preserve-3d;
+				transform: rotateY(-90deg);
+			}
+
+			drivinggrid[type=' ']:after{
+				content:"";
+				display:block;
+				width:5%;
+				height:100%;
+				background:#999;
+				position:absolute;
+				right:0px;
+				top:0px;
+				transform-origin:right center;
+				transform-style: preserve-3d;
+				transform: rotateY(90deg);
+			}
+
 		</style>
 	`);
 
