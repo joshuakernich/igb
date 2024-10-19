@@ -38,7 +38,7 @@
 			
 
 			let liveModule;
-			const proto = {
+			const PROTO = {
 				'SEQUENCER':window.Sequencer,
 				'PONG':window.PixelPaddle,
 				'TINY-TENNIS':window.TinyFootball,
@@ -53,23 +53,26 @@
 				'RACER':'./javascript-racer-master/igb.html',
 			};
 
-			window.Adventure.ICON = './proto/img/icon-adventure.png';
-			window.HeadersGame.ICON = './proto/img/icon-headers.png';
-			window.Volcano.ICON = 'https://img.freepik.com/premium-photo/pixel-art-volcano-amidst-vibrant-purple-backdrop_811279-60506.jpg';
-			window.TennisGame.ICON = 'https://imgcdn.stablediffusionweb.com/2024/4/21/b8415d9e-70d0-4d5a-a6df-93d7c9b53613.jpg';
-			window.GoalieGame.ICON = 'https://media.istockphoto.com/id/1328556281/vector/soccer-goalkeeper-catches-the-ball.jpg?s=612x612&w=0&k=20&c=RoMpwtX-BG3dkCJC-oIcPlgZhv1MSkM31np2bnIKKJ8=';
-			window.TinyFootball.ICON = 'https://thumbs.dreamstime.com/b/vector-bit-pixel-art-tennis-player-white-background-80598578.jpg';
-			
-			window.BatarangGame.ICON = 'https://cdn.thisiswhyimbroke.com/images/metal-batarang-replica-prop-streamprops-640x533.jpg';
-			window.BatClimbing.ICON = './proto/img/icon-grapnel.png';
-			window.Riddler.ICON = 'https://art.pixilart.com/25c22542d88a2ca.png';
-			window.Sequencer.ICON = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRv98I4I2dS0_MpTEslbm0s9EYzedPtcvDLKg&s';
-			window.PixelPaddle.ICON = 'https://play-lh.googleusercontent.com/VvwMOVG1MxTL4-j0SAyfwsBTmj1IMF-Tty35t3FejiV6_1Mt0jM8L1FoKHB_4ptQ5w=w240-h480-rw';
+			const ICONS = {
+
+				'SEQUENCER':'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRv98I4I2dS0_MpTEslbm0s9EYzedPtcvDLKg&s',
+				'PONG':'https://play-lh.googleusercontent.com/VvwMOVG1MxTL4-j0SAyfwsBTmj1IMF-Tty35t3FejiV6_1Mt0jM8L1FoKHB_4ptQ5w=w240-h480-rw',
+				'TINY-TENNIS':'https://thumbs.dreamstime.com/b/vector-bit-pixel-art-tennis-player-white-background-80598578.jpg',
+				'HEADERS':'./proto/img/icon-headers.png',
+				'GOALIE':'https://media.istockphoto.com/id/1328556281/vector/soccer-goalkeeper-catches-the-ball.jpg?s=612x612&w=0&k=20&c=RoMpwtX-BG3dkCJC-oIcPlgZhv1MSkM31np2bnIKKJ8=',
+				'RIDDLER':'https://art.pixilart.com/25c22542d88a2ca.png',
+				'BAT-ARANG':'https://cdn.thisiswhyimbroke.com/images/metal-batarang-replica-prop-streamprops-640x533.jpg',
+				'BAT-GRAPNEL':'./proto/img/icon-grapnel.png',
+				'VOLCANO':'https://img.freepik.com/premium-photo/pixel-art-volcano-amidst-vibrant-purple-backdrop_811279-60506.jpg',
+				'ADVENTURE':'./proto/img/icon-adventure.png',
+				'DRIVING':undefined,
+				'RACER':'https://www.dizionariovideogiochi.it/lib/exe/fetch.php?media=archivio_dvg_13:outrun_-_ferrari.png',
+			}
 
 			let gameID = window.location.search.substr(1);
 
 			function launchProto(id){
-				let p = proto[id];
+				let p = PROTO[id];
 				
 				$('moduleframe').empty();
 
@@ -99,10 +102,10 @@
 
 
 			function launchMenu(){
-				for(var p in proto){
+				for(var p in PROTO){
 					$(`
 						<protoapp>
-							<protoicon style='background-image:url(${proto[p]['ICON']})'></protoicon>
+							<protoicon style='background-image:url(${ICONS[p]})'></protoicon>
 							<protolabel>${p}</protolabel>
 						</protoapp>
 					`).appendTo('protolist').attr('id',p).click(onProtoButton);
