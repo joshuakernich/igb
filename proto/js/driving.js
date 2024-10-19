@@ -88,6 +88,30 @@ DrivingGame = function(){
 				background: black;
 			}
 
+			drivinggame:before{
+				content:"";
+				width:1px;
+				height:100%;
+				background:red;
+				position:absolute;
+				left:0px;
+				top:0px;
+				display:block;
+				z-index: 100;
+			}
+
+			drivinggame:after{
+				content:"";
+				width:1px;
+				height:100%;
+				background:red;
+				position:absolute;
+				right:0px;
+				top:0px;
+				display:block;
+				z-index: 100;
+			}
+
 			drivingworld{
 				display:block;
 				box-sizing:border-box;

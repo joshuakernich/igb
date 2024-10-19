@@ -9,6 +9,7 @@
 	<!--script type="text/javascript" src="./I Don't Know Much/Tone.js"></script-->
 
 	
+	
 	<script type="text/javascript" src="./proto/lib/Css.js"></script>
 	<script type="text/javascript" src="./proto/lib/bezier.js"></script>
 	<script type="text/javascript" src="./proto/lib/matter.min.js"></script>
@@ -29,7 +30,7 @@
 	<script type="text/javascript" src="./proto/js/batclimbing.js"></script>
 	<script type="text/javascript" src="./proto/js/volcano.js"></script>
 	<script type="text/javascript" src="./proto/js/adventure.js"></script>
-	<script type="text/javascript" src="./proto/js/driving.js?version=1"></script>
+	<script type="text/javascript" src="./proto/js/driving.js"></script>
 	
 	<script type="text/javascript">
 		$(function () {
@@ -49,6 +50,7 @@
 				'VOLCANO':window.Volcano,
 				'ADVENTURE':window.Adventure,
 				'DRIVING':window.DrivingGame,
+				'RACER':'./javascript-racer-master/igb.html',
 			};
 
 			window.Adventure.ICON = './proto/img/icon-adventure.png';
@@ -214,7 +216,8 @@
 		       if( liveModule ){
 	        		if(liveModule.setPlayers) liveModule.setPlayers(players);
 	        	} else {
-	        		$('iframe')[0].contentWindow.postMessage(players);
+	        		console.log('TRY!');
+	        		$('iframe')[0].contentWindow.postMessage(players,'*');
 	        	} 
 
 
@@ -668,7 +671,7 @@
 			</gameboxside>
 		</gamebox>
 		<mframe></mframe>
-		<iframe src=""></iframe>
+		<iframe sandbox="allow-same-origin allow-scripts" src=""></iframe>
 	
 	</igb>
 	
