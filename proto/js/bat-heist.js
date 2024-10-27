@@ -1,4 +1,25 @@
 
+BatHeistButton = function(actor){
+	let self = this;
+	self.$el = $('<heistbutton>').text(actor.value);
+	
+	self.actor = actor;
+	self.offset = {x:0,y:0};
+	self.complete = false;
+
+	self.trigger = function(){
+		
+	}
+
+	self.die = function(){
+	
+	}
+
+	self.interactWith = function(other,d){
+		
+	}
+}
+
 BatHeistLamp = function(actor){
 	let self = this;
 	self.$el = $('<heistlamp>');
@@ -7,6 +28,7 @@ BatHeistLamp = function(actor){
 
 	self.actor = actor;
 	self.offset = {x:0,y:-BatHeist.LAMP.H/2};
+	self.complete = true;
 
 	self.trigger = function(){
 		$upper.hide();
@@ -18,7 +40,7 @@ BatHeistLamp = function(actor){
 		self.dead = true;
 		$(actor).stop();
 		self.$el.empty();
-		$('<heistpulse>').appendTo(self.$el);
+		$('<heistpulse>').appendTo(self.$el).addClass('pulse');
 	}
 
 	self.interactWith = function(other,d){
@@ -32,6 +54,7 @@ BatHeistGoon = function(actor){
 	let self = this;
 	self.$el = $('<heistgoon>');
 	self.offset = {x:0,y:-BatHeist.GOON.H + BatHeist.GOON.W/2};
+	self.complete = true;
 
 	let xAnchor = actor.x;
 	let nTick = Math.random()*LOOP;
@@ -79,6 +102,7 @@ BatHeistHostage = function(actor){
 	let self = this;
 	self.$el = $('<heistgoon>').attr('is','goody').attr('pose','sit');
 	self.offset = {x:0,y:-BatHeist.HOSTAGE.H/2};
+	self.complete = false;
 
 	let $ropes = $('<heistropes>').appendTo(self.$el);
 
@@ -86,7 +110,7 @@ BatHeistHostage = function(actor){
 		if(self.free && !self.dead){
 			let dir = actor.x > 0.5?1:-1
 			actor.x += dir * 0.002;
-			self.complete = (actor.x<0 || actor.x>1);
+			self.complete = (actor.x<0.1 || actor.x>1.1);
 		}
 	}
 
@@ -115,7 +139,10 @@ BatHeistHostage = function(actor){
 	}
 }
 
-BatHeistActor = function(actor) {
+BatHeistActor = function(actor,w,h) {
+
+	actor = { ...actor };
+
 	let self = this;
 	self.$el = $('<heistactor>');
 	self.model = actor;
@@ -127,17 +154,18 @@ BatHeistActor = function(actor) {
 	if(actor.type=='lamp') self.sprite = new BatHeistLamp(actor);
 	if(actor.type=='goon') self.sprite = new BatHeistGoon(actor);
 	if(actor.type=='hostage') self.sprite = new BatHeistHostage(actor);
+	if(actor.type=='button') self.sprite = new BatHeistButton(actor);
 
 	self.sprite.$el.appendTo(self.$el);
 
 	let $target = $('<heisttarget>').appendTo(self.$el);
 
 	self.getX = function(){
-		return self.model.x*BatHeist.ARENA.W + self.sprite.offset.x;
+		return self.model.x*w + self.sprite.offset.x;
 	}
 
 	self.getY = function(){
-		return self.model.y*BatHeist.ARENA.H + self.sprite.offset.y;
+		return self.model.y*h + self.sprite.offset.y;
 	}
 
 	self.trigger = function() {
@@ -179,7 +207,7 @@ BatHeistActor = function(actor) {
 	self.redraw = function() {
 		if(self.sprite.redraw) self.sprite.redraw();
 
-		self.$el.css({left:self.model.x*BatHeist.ARENA.W +'px',top:self.model.y*BatHeist.ARENA.H + 'px'});
+		self.$el.css({left:self.model.x*w +'px',top:self.model.y*h + 'px'});
 		$target.css({left:self.sprite.offset.x +'px',top:self.sprite.offset.y + 'px'});
 	}
 
@@ -189,15 +217,33 @@ BatHeistActor = function(actor) {
 }
 
 BatHeistArena = function(layout){
+
+	if(!layout.w) layout.w = BatHeist.ARENA.W;
+	if(!layout.h) layout.h = BatHeist.ARENA.H;
+	if(!layout.scale) layout.scale = 0.5;
+
+	layout.x -= layout.w/2;
+	layout.y -= layout.h/2;
+
 	let self = this;
 	self.complete = false;
 	self.$el = $('<heistarena>');
-	self.$el.css({left:layout.wall*BatHeist.W+layout.x+'px',top:layout.y+'px'});
+	self.$el.css({
+		left:layout.wall*BatHeist.W+layout.x+'px',
+		top:layout.y+'px',
+		width:layout.w+'px',
+		height:layout.h+'px',
+	});
 
-	let $stage = $('<heiststage>').appendTo(self.$el);
+	let $stage = $('<heiststage>').appendTo(self.$el).css({transform:'scale('+layout.scale+')'});
 	let $toggle = $('<heisttoggle>').appendTo(self.$el);
-	let $info = $('<heistinfo>').appendTo(self.$el).text(layout.ins);
+	let $reset = $('<heistreset>').appendTo(self.$el);
+	let $fail = $('<heistfail>').appendTo(self.$el);
+	let $infoLeft = $('<heistinfo class="left">').appendTo(self.$el);
+	let $infoRight = $('<heistinfo class="right">').appendTo(self.$el);
 	let $reticule = $('<heistreticule>').appendTo(self.$el);
+	let $pulse = $('<heistpulse>').appendTo(self.$el);
+	
 	let $projectile = $(`
 		<heistprojectile>
 			<heistspinner></heistspinner>
@@ -205,10 +251,29 @@ BatHeistArena = function(layout){
 
 	self.$toggle = $toggle;
 
+
 	let actors = [];
-	for(var a in layout.actors){
-		actors[a] = new BatHeistActor(layout.actors[a]);
-		actors[a].$el.appendTo($stage);
+	self.reset = function(){
+
+		self.$el.removeClass('fail');
+		$fail.text('');
+
+		for(var a in actors) actors[a].$el.remove();
+		actors = [];
+		
+		for(var a in layout.actors){
+			actors[a] = new BatHeistActor(layout.actors[a],layout.w,layout.h);
+			actors[a].$el.appendTo($stage);
+		}
+
+		self.dead = false;
+	}
+
+	$reset.click(self.reset);
+	self.reset();
+
+	function to2Digit(cnt){
+		return cnt.toString().length>1?cnt.toString():'0'+cnt.toString();
 	}
 
 	const FPTHROW = BatHeist.FPS/2;
@@ -225,6 +290,17 @@ BatHeistArena = function(layout){
 	self.step = function(players) {
 
 		if(self.dead) return;
+
+		let date = new Date();
+
+		let hrs = to2Digit( date.getHours() );
+		let mins = to2Digit( date.getMinutes() );
+		let secs = to2Digit( date.getSeconds() ) ;
+		let ms = to2Digit( Math.floor(date.getMilliseconds()%1000/10) );
+
+		let stamp = `${hrs}:${mins}:${secs}:${ms}`
+
+		$infoRight.text(`Zoom x 2.0 | ${stamp} local time`);
 
 		// FIND THE RETICULE
 		let rx;
@@ -247,8 +323,8 @@ BatHeistArena = function(layout){
 		let padding = BatHeist.RTARGET*2.5;
 		if(rx<padding) rx = padding;
 		if(ry<padding) ry = padding
-		if(rx>BatHeist.ARENA.W-padding) rx = BatHeist.ARENA.W-padding;
-		if(ry>BatHeist.ARENA.H-padding) ry = BatHeist.ARENA.H-padding;
+		if(rx>layout.w-padding) rx = layout.w-padding;
+		if(ry>layout.h-padding) ry = layout.h-padding;
 
 		let failState = undefined;
 		
@@ -256,12 +332,16 @@ BatHeistArena = function(layout){
 		let dMin = HITRANGE;
 		let targeting = undefined;
 
+		let cntGoon = 0;
+		let cntHostage = 0;
+
 		for(var a in actors) actors[a].step();
 		for(var a=0; a<actors.length; a++) for(var b=a+1; b<actors.length; b++) actors[a].collide(actors[b]);
 		for(var a in actors) actors[a].redraw();
 		for(var a in actors){
 			if(actors[a].failState) failState = actors[a].failState;
-			if(actors[a].type=='hostage' && !actors[a].complete) isComplete = false;
+			
+			if(!actors[a].complete) isComplete = false;
 
 			let dx = actors[a].getX() - rx;
 			let dy = actors[a].getY() - ry;
@@ -271,6 +351,9 @@ BatHeistArena = function(layout){
 				dMin = d;
 				targeting = actors[a];
 			}
+
+			if(!actors[a].complete && actors[a].type=='hostage') cntHostage++;
+			if(!actors[a].dead && !actors[a].triggered && actors[a].type=='goon') cntGoon++;
 		}
 
 		if(self.isFocused){
@@ -282,6 +365,9 @@ BatHeistArena = function(layout){
 					cntThrow = 0;
 					if(targeting) targeting.trigger();
 					isThrow = false;
+					$projectile.removeClass('flying');
+
+					$pulse.css({left:rx,top:ry}).addClass('pulse');
 				}
 
 			} else {
@@ -292,6 +378,9 @@ BatHeistArena = function(layout){
 				if(cntFocus>=FPFOCUS){
 					cntFocus = 0;
 					isThrow = true;
+					$projectile.addClass('flying');
+
+					$pulse.removeClass('pulse');
 				}
 			}
 
@@ -315,6 +404,8 @@ BatHeistArena = function(layout){
 				top:yBottom - (yBottom-ry)*amt, 
 				transform: 'scale('+(2-amt)+')',
 			});
+
+			$infoLeft.text(to2Digit(cntGoon)+' hostiles | '+to2Digit(cntHostage)+' hostages');
 		}
 		
 	}
@@ -327,13 +418,16 @@ BatHeistArena = function(layout){
 
 	self.die = function(failState){
 		self.dead = true;
-		$info.text(failState);
+		$fail.text(failState);
+		self.$el.addClass('fail');
 	}
 
 	self.setFocus = function(b){
 		self.isFocused = b;
 		self.$el.removeClass('focus');
 		if(b) self.$el.addClass('focus');
+
+		$stage.css('transform','scale('+(b?1:layout.scale)+')')
 	}
 }
 
@@ -357,7 +451,7 @@ BatHeistGame = function(){
 
 	$("head").append(`
 		<style>
-			@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700');
+			@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 
 			heistgame{
 				width:${W*3}px;
@@ -366,8 +460,24 @@ BatHeistGame = function(){
 				background:#333;
 				box-sizing:border-box;
 				transform-origin: top left;
-				font-family: "Chakra Petch";
+				font-family: "Space Mono";
 				font-weight: 300;
+			}
+
+			heistgame:after{
+				content:"";
+				width: 33.3%;
+				height: 100%;
+				display: block;
+				position: absolute;
+				left: 0px;
+				right:0px;
+				top: 0px;
+				left: 0px;
+				margin: auto;
+				box-shadow: 0px 0px 50px black;
+				z-index 10;
+				pointer-events: none;
 			}
 
 			heistarena h1{
@@ -398,6 +508,9 @@ BatHeistGame = function(){
 				top:0px;
 				bottom:0px;
 				right:0px;
+				background:#444;
+				transform: scale(0.5);
+				transition: transform 0.5s;
 			}
 
 			heistreticule{
@@ -415,11 +528,9 @@ BatHeistGame = function(){
 			heistarena{
 				display:block;
 				position:absolute;
-				background:#444;
+				
 				width:${ARENA.W}px;
 				height:${ARENA.H}px;
-				transform: scale(0.5);
-				transition: transform 0.5s;
 			}
 
 			heistarena:before{
@@ -434,6 +545,7 @@ BatHeistGame = function(){
 				border-right: none;
 
 				display:none;
+				z-index: 2;
 			}
 
 			heistarena:after{
@@ -448,6 +560,7 @@ BatHeistGame = function(){
 				border-left: none;
 
 				display:none;
+				z-index: 2;
 			}
 
 			heistinfo{
@@ -456,10 +569,29 @@ BatHeistGame = function(){
 				top: 100%;
 				left: 0px;
 				color: white;
-				font-size: 50px;
+				font-size: 20px;
 				line-height: 70px;
-
 				display: none;
+			}
+
+			heistfail{
+				display:block;
+				position:absolute;
+				top: 0px;
+				left: 0px;
+				right: 0px;
+				bottom: 0px;
+				text-align: center;
+				color: white;
+				font-size: 50px;
+				line-height:${ARENA.H}px;
+				pointer-events: none;
+			}
+
+
+			heistinfo.right{
+				left: auto;
+				right: 0px;
 			}
 
 			heistarena heisttarget{
@@ -467,8 +599,11 @@ BatHeistGame = function(){
 			}
 
 			heistarena.focus{
+				z-index: 3;
+			}
+
+			heistarena.focus heiststage{
 				transform: scale(1);
-				z-index: 1;
 			}
 
 			heistarena.focus heisttarget,
@@ -476,9 +611,17 @@ BatHeistGame = function(){
 			heistarena.focus:before,
 			heistarena.focus:after,
 			heistarena.focus heistinfo,
-			heistarena.focus heistprojectile
+			heistarena.focus heistprojectile,
+			heistarena.focus heistreset
 			{
 				display: block;
+			}
+
+			heistprojectile.flying heistspinner:after{
+				animation: spin;
+				animation-iteration-count: infinite;
+				animation-duration: 0.3s;
+				animation-timing-function: linear;
 			}
 
 			heistprojectile{
@@ -486,17 +629,32 @@ BatHeistGame = function(){
 				width: 0px;
 				height: 0px;
 				position: absolute;
-
 				display: none;
 			}
 
 			heistprojectile heistspinner{
 				display:block;
-				width: ${RTARGET*2}px;
-				height: ${RTARGET*2}px;
-				background: white;
+				width: 0px;
+				height: 0px;
 				position: absolute;
-				transform: translate(-50%,-50%);
+				transform: scaleY(0.5);
+			}
+
+			heistprojectile heistspinner:after{
+				content:"";
+				display:block;
+				width: ${RTARGET*4}px;
+				height: ${RTARGET*2}px;
+
+				position: absolute;
+				background-image: url(./proto/img/bat-symbol.png);
+				background-size: 100%;
+				background-position: center;
+				background-repeat: no-repeat;
+				left: ${-RTARGET*2}px;
+				top: ${-RTARGET}px;
+				
+				
 			}
 
 			heisttarget{
@@ -505,10 +663,36 @@ BatHeistGame = function(){
 				height: ${RTARGET*2}px;
 				
 				border-radius: 100%;
-				border: 5px dashed white;
+				
 				box-sizing: border-box;
 				position: absolute;
 				transform: translate(-50%,-50%);
+
+				background: linear-gradient( to bottom right, transparent, white, transparent, white, transparent );
+				background-size: 200%;
+
+				animation-name: shimmer;
+				animation-iteration-count: infinite;
+				animation-timing-function: linear;
+				animation-duration: 1s;
+				opacity: 0.3;
+
+				box-shadow: 0px 0px 10px white;
+			}
+
+			heistarena.fail heisttarget,
+			heistarena.fail heistreticule{
+				display: none;
+			}
+
+			heistbutton{
+				display:block;
+				position:absolute;
+				top:0px;
+				left:0px;
+				width:100px;
+				height:100px;
+				transform: translate(-50%, -50%);
 			}
 
 			heistlamp{
@@ -591,10 +775,13 @@ BatHeistGame = function(){
 			heistpulse{
 				position:absolute;
 				display:block;
-				
 				width:0px;
 				height:0px;
 				z-index:1;
+				opacity: 0;
+			}
+
+			heistpulse.pulse{
 				animation: heistpulse;
 				animation-duration: 0.5s;
 				animation-fill-mode: forwards;
@@ -604,10 +791,13 @@ BatHeistGame = function(){
 				content:" ";
 				position:absolute;
 				display:block;
-				width:${BatHeist.GOON.W}px;
-				height:${BatHeist.GOON.W}px;
+				width:${BatHeist.GOON.W*2}px;
+				height:${BatHeist.GOON.W*2}px;
 				transform:translate(-50%, -50%);
-				background:white;
+				box-sizing: border-box;
+				
+				border-radius: 100%;
+				background: radial-gradient( transparent, transparent, white, transparent, transparent)
 			}
 
 			heistoverlay{
@@ -627,6 +817,7 @@ BatHeistGame = function(){
 			heistgame.focus heistoverlay{
 				opacity:1;
 				display: block;
+				z-index: 2;
 			}
 
 			heisticon{
@@ -642,17 +833,35 @@ BatHeistGame = function(){
 
 			}
 
+			heistreset{
+				display: block;
+				position: absolute;
+				top: 120px;
+				right: -150px;
+				width: 150px;
+				height: 120px;
+				background: no-repeat center url(./proto/img/reset-ccw.svg);
+				background-size: 80px;
+				z-index: 3;
+
+				display: none;
+			}
+
 			heisttoggle{
 				display: block;
 				position: absolute;
 				top: 0px;
 				right: 0px;
-				width: 100%;
-				height: 100%;
+				bottom: 0px;
+				left: 0px;
+				width: 200px;
+				height: 200px;
 				background: no-repeat center url(./proto/img/zoom-in.svg);
-				background-size: 200px;
-				transition: all 0.5s;
+				background-size: 100px;
+
+				margin: auto;
 				z-index: 1;
+				
 			}
 
 			heistarena.complete heisttoggle{
@@ -661,23 +870,36 @@ BatHeistGame = function(){
 
 			heistarena.focus heisttoggle{
 				width: 150px;
-				height: 150px;
+				height: 120px;
 				background-size: 100px;
 				background-image: url(./proto/img/zoom-out.svg);
+				z-index: 4;
+				right: -150px;
 
+				top: 0px;
+				bottom: auto;
+				left: auto;
 			}
 
 			@keyframes heistpulse{
 				0%{
 					transform:scale(1);
-				}
-
-				50%{
-					transform:scale(1.5) rotate(-90deg);
+					opacity: 1;
 				}
 
 				100%{
-					transform:scale(0) rotate(-180deg);
+					transform:scale(1.5);
+					opacity: 0;
+				}
+			}
+
+			@keyframes shimmer{
+				0%{
+					background-position: 0% 0%;
+				}
+
+				100%{
+					background-position: 200% 200%;
 				}
 			}
 
@@ -690,10 +912,22 @@ BatHeistGame = function(){
 	let $game = $('<heistgame>').appendTo(self.$el);
 
 	let PUZZLES = [
+		/*{
+			wall:0,
+			x:W*0.8,
+			y:H*0.6,
+			w:300,
+			h:300,
+			actors:[
+				{type:'button',x:0.1,y:0.1},
+				{type:'button',x:0.2,y:0.1},
+				{type:'button',x:0.2,y:0.1},
+			]
+		},*/
 		{
 			wall:0,
-			x:W*0.2,
-			y:H*0.2,
+			x:W*0.5,
+			y:H*0.5,
 			actors:[
 				{type:'goon',x:0.2,y:1},
 				{type:'hostage',x:0.4,y:1},
@@ -705,8 +939,8 @@ BatHeistGame = function(){
 		},
 		{
 			wall:1,
-			x:W*0.25,
-			y:H*0.2,
+			x:W*0.5,
+			y:H*0.5,
 			actors:[
 				{type:'lamp',x:0.25,y:0.2},
 				{type:'lamp',x:0.5,y:0.2},
@@ -722,8 +956,9 @@ BatHeistGame = function(){
 		},
 		{
 			wall:2,
-			x:W*0.05,
-			y:H*0.1,
+			x:W*0.4,
+			y:H*0.5,
+			w: 800,
 			actors:[
 				{type:'lamp',x:0.5,y:0.2},
 				{type:'goon',x:0.5,y:1},
