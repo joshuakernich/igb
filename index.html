@@ -31,6 +31,7 @@
 	<script type="text/javascript" src="./proto/js/volcano.js"></script>
 	<script type="text/javascript" src="./proto/js/adventure.js"></script>
 	<script type="text/javascript" src="./proto/js/driving.js"></script>
+	<script type="text/javascript" src="./proto/js/bat-heist.js"></script>
 	
 	<script type="text/javascript">
 		$(function () {
@@ -47,6 +48,7 @@
 				'RIDDLER':window.Riddler,
 				'BAT-ARANG':window.BatarangGame,
 				'BAT-GRAPNEL':window.BatClimbing,
+				'BAT-HEIST':window.BatHeistGame,
 				'VOLCANO':window.Volcano,
 				'ADVENTURE':window.Adventure,
 				'DRIVING':window.DrivingGame,
@@ -267,10 +269,6 @@
 			}
 		}
 
-		
-
-		
-
 		body{
 			background: black;
 			--igb-purple: #330357;
@@ -281,8 +279,6 @@
 		  font-weight: 600;
 		  font-style: bold;
 		  font-size: 0.7vw;
-
-   			
 		}
 
 		audio{
@@ -290,7 +286,6 @@
 			left:2vw;
 			bottom:2vw;
 		}
-		
 
 		dot{
 			position: fixed;
