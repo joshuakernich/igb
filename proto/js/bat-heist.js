@@ -141,6 +141,7 @@ BatHeistActor = function(actor) {
 	}
 
 	self.trigger = function() {
+		self.triggered = true;
 		if(self.sprite.trigger) self.sprite.trigger();
 		$target.hide();
 	}
@@ -197,6 +198,10 @@ BatHeistArena = function(layout){
 	let $toggle = $('<heisttoggle>').appendTo(self.$el);
 	let $info = $('<heistinfo>').appendTo(self.$el).text(layout.ins);
 	let $reticule = $('<heistreticule>').appendTo(self.$el);
+	let $projectile = $(`
+		<heistprojectile>
+			<heistspinner></heistspinner>
+		</heistprojectile>`).appendTo(self.$el);
 
 	self.$toggle = $toggle;
 
@@ -206,13 +211,17 @@ BatHeistArena = function(layout){
 		actors[a].$el.appendTo($stage);
 	}
 
-	const FOCUS = BatHeist.FPS;
+	const FPTHROW = BatHeist.FPS/2;
+	const FPFOCUS = BatHeist.FPS/2;
 	const SIZEMAX = BatHeist.RTARGET*4;
 	const SIZEMIN = BatHeist.RTARGET*2;
 	const SIZERANGE = SIZEMAX-SIZEMIN;
 	const HITRANGE = BatHeist.RTARGET*4;
 
+	let isThrow = false;
+	let cntThrow = 0;
 	let cntFocus = 0;
+
 	self.step = function(players) {
 
 		if(self.dead) return;
@@ -242,6 +251,7 @@ BatHeistArena = function(layout){
 		if(ry>BatHeist.ARENA.H-padding) ry = BatHeist.ARENA.H-padding;
 
 		let failState = undefined;
+		
 		let isComplete = true;
 		let dMin = HITRANGE;
 		let targeting = undefined;
@@ -257,19 +267,32 @@ BatHeistArena = function(layout){
 			let dy = actors[a].getY() - ry;
 			let d = Math.sqrt(dx*dx+dy*dy);
 
-			if(d<dMin){
+			if(d<dMin && !actors[a].triggered){
 				dMin = d;
 				targeting = actors[a];
 			}
 		}
 
 		if(self.isFocused){
-			if(dMin<HITRANGE) cntFocus++;
-			else if(cntFocus) cntFocus--;
 
-			if(cntFocus>FOCUS){
-				cntFocus = 0;
-				targeting.trigger();
+			if(isThrow){
+				cntThrow++;
+
+				if(cntThrow>=FPTHROW){
+					cntThrow = 0;
+					if(targeting) targeting.trigger();
+					isThrow = false;
+				}
+
+			} else {
+				
+				if(dMin<HITRANGE) cntFocus++;
+				else if(cntFocus) cntFocus = 0;
+
+				if(cntFocus>=FPFOCUS){
+					cntFocus = 0;
+					isThrow = true;
+				}
 			}
 
 			if(failState) self.die(failState);
@@ -278,14 +301,21 @@ BatHeistArena = function(layout){
 			$reticule.css({
 				left:rx,
 				top:ry, 
-				width: SIZEMAX - cntFocus/FOCUS * SIZERANGE,
-				height: SIZEMAX - cntFocus/FOCUS * SIZERANGE,
+				width: SIZEMAX - cntFocus/FPFOCUS * SIZERANGE,
+				height: SIZEMAX - cntFocus/FPFOCUS * SIZERANGE,
+			});
+
+
+			let amt = cntThrow/FPTHROW;
+
+			let yBottom = BatHeist.H - layout.y;
+
+			$projectile.css({
+				left:rx,
+				top:yBottom - (yBottom-ry)*amt, 
+				transform: 'scale('+(2-amt)+')',
 			});
 		}
-
-		
-
-
 		
 	}
 
@@ -445,12 +475,29 @@ BatHeistGame = function(){
 			heistarena.focus heistreticule,
 			heistarena.focus:before,
 			heistarena.focus:after,
-			heistarena.focus heistinfo
+			heistarena.focus heistinfo,
+			heistarena.focus heistprojectile
 			{
 				display: block;
 			}
 
+			heistprojectile{
+				display:block;
+				width: 0px;
+				height: 0px;
+				position: absolute;
 
+				display: none;
+			}
+
+			heistprojectile heistspinner{
+				display:block;
+				width: ${RTARGET*2}px;
+				height: ${RTARGET*2}px;
+				background: white;
+				position: absolute;
+				transform: translate(-50%,-50%);
+			}
 
 			heisttarget{
 				display:block;
