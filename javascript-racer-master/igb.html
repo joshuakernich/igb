@@ -5,7 +5,11 @@
   <title>Javascript Racer - v4 (final)</title>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
   <link href="common.css" rel="stylesheet" type="text/css" />
+  <script type="text/javascript" src="../shared/jq.js"></script>
   <style type="text/css">
+    body{
+      background: #555;
+    }
   
     #racer{
     
@@ -15,13 +19,13 @@
       right: 0px;
       bottom: 0px;
       margin: auto;
-      width: 1600px;
-      height: 1000px;
+      width: 800px;
+      height: 500px;
     }
 
     #canvas{
-      width: 1600px;
-      height: 1000px;
+      width: 800px;
+      height: 500px;
     }
   </style>
     
@@ -114,8 +118,8 @@
 
     var fps            = 60;                      // how many 'update' frames per second
     var step           = 1/fps;                   // how long is each frame (in seconds)
-    var width          = 1024;                    // logical canvas width
-    var height         = 768;                     // logical canvas height
+    var width          = 800;                    // logical canvas width
+    var height         = 500;                     // logical canvas height
     var centrifugal    = 0.3;                     // centrifugal force multiplier when going around curves
     var offRoadDecel   = 0.99;                    // speed multiplier when off road (e.g. you lose 2% speed each update frame)
     var skySpeed       = 0.001;                   // background sky layer scroll speed when going around curve (or up hill)
@@ -146,7 +150,7 @@
     var fogDensity     = 5;                       // exponential fog density
     var position       = 0;                       // current camera Z position (add playerZ to get player's absolute Z position)
     var speed          = 0;                       // current speed
-    var maxSpeed       = segmentLength/step;      // top speed (ensure we can't move more than 1 segment in a single frame to make collision detection easier)
+    var maxSpeed       = segmentLength/step/2;      // top speed (ensure we can't move more than 1 segment in a single frame to make collision detection easier)
     var accel          =  maxSpeed/5;             // acceleration rate - tuned until it 'felt' right
     var breaking       = -maxSpeed;               // deceleration rate when braking
     var decel          = -maxSpeed/5;             // 'natural' deceleration rate when neither accelerating, nor braking
@@ -702,6 +706,7 @@
 
     //=========================================================================
 
+    let wWas = 0;
     window.addEventListener(
       "message",
       (event) => {
@@ -709,6 +714,13 @@
         
          keyLeft = (p1.X<-0.15);
          keyRight = (p1.X>0.15);
+
+         let w = $(document).innerWidth();
+         if(w!=wWas){
+          $('#canvas').css('transform','scale('+(w/3)/800+')');
+          wWas = w;
+         }
+         
       },
       false,
     );
