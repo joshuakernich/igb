@@ -117,8 +117,7 @@
 				
 			
 			
-			//$('gamebox').css('transform','scale('+400/$('igb').width()+')');
-
+			
 			$('[btn=move]').click(doRandomMove);
 
 			function doRandomMove(){
@@ -249,6 +248,11 @@
 				$('menu').toggleClass('hidden');
 			})
 
+			setInterval(function(){
+				let scale = $(document).innerWidth()/3000;
+				$('gameboxwrapper').css('transform','scale('+scale+')');
+			});
+			
 			
 		})
 	</script>
@@ -522,24 +526,32 @@
 			background: white;
 		}
 
-		
+		gameboxwrapper{
+			display: block;
+			position: absolute;
+			bottom: 0px;
+			right: 0px;
+			transform-origin: bottom right;
+
+			width: 160px;
+			height: 100px;
+			z-index: 1;
+		}
 
 		gamebox{
 			display: block;
 			position: absolute;
-			bottom: 50px;
-			right: 80px;
+			bottom: 150px;
+			right: 100px;
 			width: 160px;
 			height: 100px;
-
   			perspective: 1500px;
   			transform-style: preserve-3d;
   			pointer-events: none;
   			transform-origin: center;
-  			
   			z-index: 1;
   			transform: rotateY(20deg) rotateX(-10deg);
-
+  			transform-origin: bottom right;
 		}
 
 		gameboxside{
@@ -553,8 +565,6 @@
 			box-sizing: border-box;
 			transform-style: preserve-3d;
 			border: 1px solid black;
-
-
 		}
 
 		gameboxside:nth-of-type(1){
@@ -658,17 +668,19 @@
 			
 		</igbmenu>
 		<logger>LOADING...</logger>
-		<gamebox>
-			<gameboxside></gameboxside><gameboxside></gameboxside><gameboxside></gameboxside><gameboxside>
-				<gbavatar><gbhuman></gbhuman></gbavatar>
-				<gbavatar><gbhuman></gbhuman></gbavatar>
-				<gbavatar><gbhuman></gbhuman></gbavatar>
-				<gbavatar><gbhuman></gbhuman></gbavatar>
-				<gbavatar><gbhuman></gbhuman></gbavatar>
-				<gbavatar><gbhuman></gbhuman></gbavatar>
-				<gbavatar><gbhuman></gbhuman></gbavatar>
-			</gameboxside>
-		</gamebox>
+		<gameboxwrapper>
+			<gamebox>
+				<gameboxside></gameboxside><gameboxside></gameboxside><gameboxside></gameboxside><gameboxside>
+					<gbavatar><gbhuman></gbhuman></gbavatar>
+					<gbavatar><gbhuman></gbhuman></gbavatar>
+					<gbavatar><gbhuman></gbhuman></gbavatar>
+					<gbavatar><gbhuman></gbhuman></gbavatar>
+					<gbavatar><gbhuman></gbhuman></gbavatar>
+					<gbavatar><gbhuman></gbhuman></gbavatar>
+					<gbavatar><gbhuman></gbhuman></gbavatar>
+				</gameboxside>
+			</gamebox>
+		</gameboxwrapper>
 		<mframe></mframe>
 		<iframe sandbox="allow-same-origin allow-scripts" src=""></iframe>
 	

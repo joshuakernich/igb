@@ -1,7 +1,7 @@
 
 BatHeistDisplay = function(actor){
 	let self = this;
-	self.$el = $('<heistdisplay>').text(actor.value);
+	self.$el = $('<heistdisplay>').text(actor.target);
 	
 	self.actor = actor;
 	self.offset = {x:0,y:0};
