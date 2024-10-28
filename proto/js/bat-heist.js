@@ -1,14 +1,43 @@
 
-BatHeistButton = function(actor){
+BatHeistDisplay = function(actor){
 	let self = this;
-	self.$el = $('<heistbutton>').text(actor.value);
+	self.$el = $('<heistdisplay>').text(actor.value);
 	
 	self.actor = actor;
 	self.offset = {x:0,y:0};
 	self.complete = false;
 
 	self.trigger = function(){
+		return true;
+	}
+
+	self.die = function(){
+	
+	}
+
+	self.interactWith = function(other,d){
 		
+	}
+
+	self.setValue = function(value){
+		self.$el.text(value);
+	}
+
+	self.checkValue = function(value){
+		if(value==actor.target) self.complete = true;
+	}
+}
+
+BatHeistButton = function(actor){
+	let self = this;
+	self.$el = $('<heistbutton>').text(actor.value);
+	
+	self.actor = actor;
+	self.offset = {x:0,y:0};
+	self.complete = true;
+
+	self.trigger = function(){
+		return false;
 	}
 
 	self.die = function(){
@@ -34,6 +63,8 @@ BatHeistLamp = function(actor){
 		$upper.hide();
 		self.offset.y = 0;
 		$(actor).animate({y:1},{duration:300,easing:'linear',complete:self.die});
+
+		return true;
 	}
 
 	self.die = function(){
@@ -44,7 +75,7 @@ BatHeistLamp = function(actor){
 	}
 
 	self.interactWith = function(other,d){
-		if(d<BatHeist.RTARGET*2) self.die();
+		if(d<BatHeist.DCOLLIDE) self.die();
 	}
 }
 
@@ -62,6 +93,8 @@ BatHeistGoon = function(actor){
 	self.trigger = function(){
 		self.triggered = true;
 		self.$el.attr('pose','dead');
+
+		return true;
 	}
 
 	self.step = function(){
@@ -82,7 +115,7 @@ BatHeistGoon = function(actor){
 
 		if(self.triggered) return;
 
-		if(d<BatHeist.RTARGET*2 && other.type=='lamp') self.die();
+		if(d<BatHeist.DCOLLIDE && other.type=='lamp') self.die();
 
 		if(other.type=='hostage' && other.sprite.free){
 			self.alert();
@@ -120,6 +153,8 @@ BatHeistHostage = function(actor){
 		$ropes.hide();
 		self.$el.attr('pose','stand');
 		self.offset.y = -BatHeist.GOON.H + BatHeist.GOON.W/2;
+
+		return true;
 	}
 
 	self.die = function(){
@@ -128,7 +163,7 @@ BatHeistHostage = function(actor){
 
 	self.interactWith = function(other,d) {
 
-		if(d>BatHeist.RTARGET*2) return undefined;
+		if(d>BatHeist.DCOLLIDE) return undefined;
 
 		if(other.type=='lamp'){
 			self.die();
@@ -155,6 +190,7 @@ BatHeistActor = function(actor,w,h) {
 	if(actor.type=='goon') self.sprite = new BatHeistGoon(actor);
 	if(actor.type=='hostage') self.sprite = new BatHeistHostage(actor);
 	if(actor.type=='button') self.sprite = new BatHeistButton(actor);
+	if(actor.type=='display') self.sprite = new BatHeistDisplay(actor);
 
 	self.sprite.$el.appendTo(self.$el);
 
@@ -169,9 +205,9 @@ BatHeistActor = function(actor,w,h) {
 	}
 
 	self.trigger = function() {
-		self.triggered = true;
-		if(self.sprite.trigger) self.sprite.trigger();
-		$target.hide();
+
+		if(self.sprite.trigger) self.triggered = self.sprite.trigger();
+		if(self.triggered) $target.hide();
 	}
 
 	self.step = function() {
@@ -262,8 +298,9 @@ BatHeistArena = function(layout){
 		actors = [];
 		
 		for(var a in layout.actors){
-			actors[a] = new BatHeistActor(layout.actors[a],layout.w,layout.h);
-			actors[a].$el.appendTo($stage);
+			let actor = new BatHeistActor(layout.actors[a],layout.w,layout.h);
+			actor.$el.appendTo($stage);
+			actors.push(actor);
 		}
 
 		self.dead = false;
@@ -277,11 +314,11 @@ BatHeistArena = function(layout){
 	}
 
 	const FPTHROW = BatHeist.FPS/2;
-	const FPFOCUS = BatHeist.FPS/2;
-	const SIZEMAX = BatHeist.RTARGET*4;
+	const FPFOCUS = BatHeist.FPS;
+	const SIZEMAX = BatHeist.RTARGET*3;
 	const SIZEMIN = BatHeist.RTARGET*2;
 	const SIZERANGE = SIZEMAX-SIZEMIN;
-	const HITRANGE = BatHeist.RTARGET*4;
+	const HITRANGE = BatHeist.RTARGET*2;
 
 	let isThrow = false;
 	let cntThrow = 0;
@@ -320,7 +357,7 @@ BatHeistArena = function(layout){
 		rx = rx*BatHeist.W-layout.x;
 		ry = ry*BatHeist.H-layout.y;
 
-		let padding = BatHeist.RTARGET*2.5;
+		let padding = BatHeist.RTARGET*2;
 		if(rx<padding) rx = padding;
 		if(ry<padding) ry = padding
 		if(rx>layout.w-padding) rx = layout.w-padding;
@@ -347,7 +384,7 @@ BatHeistArena = function(layout){
 			let dy = actors[a].getY() - ry;
 			let d = Math.sqrt(dx*dx+dy*dy);
 
-			if(d<dMin && !actors[a].triggered){
+			if(d<dMin && !actors[a].triggered && !actors[a].dead){
 				dMin = d;
 				targeting = actors[a];
 			}
@@ -363,7 +400,10 @@ BatHeistArena = function(layout){
 
 				if(cntThrow>=FPTHROW){
 					cntThrow = 0;
-					if(targeting) targeting.trigger();
+					if(targeting){
+						targeting.trigger();
+						if(targeting.type=='button') hitButton(targeting.model.value);
+					}
 					isThrow = false;
 					$projectile.removeClass('flying');
 
@@ -429,6 +469,20 @@ BatHeistArena = function(layout){
 
 		$stage.css('transform','scale('+(b?1:layout.scale)+')')
 	}
+
+	let textInput = '';
+	let hitButton = function(value){
+
+		if(value=='C'){
+			textInput = '';
+		} else if(value == 'E'){
+			for(var a in actors) if(actors[a].type=='display') actors[a].sprite.checkValue(textInput);
+		} else {
+			textInput += value;
+		}
+
+		for(var a in actors) if(actors[a].type=='display') actors[a].sprite.setValue(textInput);
+	}
 }
 
 BatHeistGame = function(){
@@ -448,6 +502,7 @@ BatHeistGame = function(){
 	BatHeist.W = W;
 	BatHeist.H = H;
 	BatHeist.FPS = FPS;
+	BatHeist.DCOLLIDE = RTARGET*2;
 
 	$("head").append(`
 		<style>
@@ -508,7 +563,7 @@ BatHeistGame = function(){
 				top:0px;
 				bottom:0px;
 				right:0px;
-				background:#444;
+				
 				transform: scale(0.5);
 				transition: transform 0.5s;
 			}
@@ -519,10 +574,33 @@ BatHeistGame = function(){
 				width: ${RTARGET*4}px;
 				height: ${RTARGET*4}px;
 				transform: translate(-50%, -50%);
-				box-sizing: border-box;
-				border: 10px dashed red;
-
 				display:none;
+			}
+
+			heistreticule:before{
+				content:"";
+				display:block;
+				position:absolute;
+				left:0px;
+				top:0px;
+				bottom:0px;
+				width:10%;
+				border: 5px solid red;
+				border-right: none;
+				z-index: 2;
+			}
+
+			heistreticule:after{
+				content:"";
+				display:block;
+				position:absolute;
+				right:0px;
+				top:0px;
+				bottom:0px;
+				width:10%;
+				border: 5px solid red;
+				border-left: none;
+				z-index: 2;
 			}
 
 			heistarena{
@@ -603,7 +681,8 @@ BatHeistGame = function(){
 			}
 
 			heistarena.focus heiststage{
-				transform: scale(1);
+				background:#444;
+				
 			}
 
 			heistarena.focus heisttarget,
@@ -662,8 +741,6 @@ BatHeistGame = function(){
 				width: ${RTARGET*2}px;
 				height: ${RTARGET*2}px;
 				
-				border-radius: 100%;
-				
 				box-sizing: border-box;
 				position: absolute;
 				transform: translate(-50%,-50%);
@@ -685,14 +762,34 @@ BatHeistGame = function(){
 				display: none;
 			}
 
+			heistdisplay{
+				display:block;
+				position:absolute;
+				top:0px;
+				left:0px;
+				width: ${RTARGET*12}px;
+				height:${RTARGET*3}px;
+				font-size: ${RTARGET*2}px;
+				line-height: ${RTARGET*3}px;
+				background: black;
+				transform: translate(-50%, -50%);
+				text-align: left;
+				color: orange;
+				padding: 0px ${RTARGET/2}px;
+			}
+
 			heistbutton{
 				display:block;
 				position:absolute;
 				top:0px;
 				left:0px;
-				width:100px;
-				height:100px;
+				width: ${RTARGET*3}px;
+				height:${RTARGET*3}px;
+				font-size: ${RTARGET*2}px;
+				line-height: ${RTARGET*3}px;
+				background: orange;
 				transform: translate(-50%, -50%);
+				text-align: center;
 			}
 
 			heistlamp{
@@ -912,22 +1009,34 @@ BatHeistGame = function(){
 	let $game = $('<heistgame>').appendTo(self.$el);
 
 	let PUZZLES = [
-		/*{
-			wall:0,
-			x:W*0.8,
-			y:H*0.6,
-			w:300,
-			h:300,
-			actors:[
-				{type:'button',x:0.1,y:0.1},
-				{type:'button',x:0.2,y:0.1},
-				{type:'button',x:0.2,y:0.1},
-			]
-		},*/
 		{
 			wall:0,
-			x:W*0.5,
+			x:W*0.7,
+			y:H*0.6,
+			w:500,
+			h:500,
+			scale:0.2,
+			actors:[
+				{type:'display',x:0.5,y:0.1,target:'1395'},
+				{type:'button',x:0.3,y:0.3,value:'1'},
+				{type:'button',x:0.5,y:0.3,value:'2'},
+				{type:'button',x:0.7,y:0.3,value:'3'},
+				{type:'button',x:0.3,y:0.5,value:'4'},
+				{type:'button',x:0.5,y:0.5,value:'5'},
+				{type:'button',x:0.7,y:0.5,value:'6'},
+				{type:'button',x:0.3,y:0.7,value:'7'},
+				{type:'button',x:0.5,y:0.7,value:'8'},
+				{type:'button',x:0.7,y:0.7,value:'9'},
+				{type:'button',x:0.3,y:0.9,value:'C'},
+				{type:'button',x:0.5,y:0.9,value:'0'},
+				{type:'button',x:0.7,y:0.9,value:'E'},
+			]
+		},
+		{
+			wall:0,
+			x:W*0.4,
 			y:H*0.5,
+			w:800,
 			actors:[
 				{type:'goon',x:0.2,y:1},
 				{type:'hostage',x:0.4,y:1},
