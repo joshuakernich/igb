@@ -101,33 +101,53 @@ BatHeistLamp = function(actor){
 }
 
 BatHeistGoon = function(actor){
-	const LOOP = BatHeist.FPS*5;
+	const FPLOOP = BatHeist.FPS*10;
+	const FPNOTICING = BatHeist.FPS;
 
 	let self = this;
 	self.$el = new BatHeistFigure('#990000','#bb0000').$el;
 	self.offset = {x:0,y:-BatHeist.GOON.H + BatHeist.GOON.W/2};
 	self.complete = true;
 
-	
+	let $cone = $('<heistcone>').prependTo(self.$el);
 
 	let xAnchor = actor.x;
-	let nTick = Math.random()*LOOP;
+	let nTick = Math.random()*FPLOOP;
+
+	let isNoticing = false;
+	let cntNoticing = 0;
+	
 
 	self.trigger = function(){
 		self.triggered = true;
 		self.$el.attr('pose','dead');
-
+		$cone.hide();
+		self.$el.css('transform',`rotateX(90deg) translateY(${BatHeist.GOON.W}px)`);
 		return true;
 	}
 
 	self.step = function(){
 		if(!self.triggered && !self.dead) nTick++;
-		actor.x = xAnchor + Math.cos(nTick/LOOP*Math.PI*2) * 0.2;
+
+		let x = actor.x;
+		actor.x = xAnchor + Math.cos(nTick/FPLOOP*Math.PI*2) * 1;
+
+		let dir = actor.x - x;
+		let r = (dir>0)?0:0.5;
+
+		self.$el.css('transform','rotate('+r*360+'deg)')
+
+		//interactions happen AFTER a step so this flag persists from the previous interactions
+		if(isNoticing) cntNoticing++;
+		else cntNoticing = 0;
+
+		isNoticing = false;
 	}
 
 	self.die = function(){
 		self.dead = true;
 		self.$el.attr('pose','dead');
+		$cone.hide();
 	}
 
 	self.alert = function(){
@@ -140,12 +160,14 @@ BatHeistGoon = function(actor){
 
 		if(d<BatHeist.DCOLLIDE && other.type=='lamp') self.die();
 
-		if(other.type=='hostage' && other.sprite.free){
+		if ((other.type=='hostage' && other.sprite.free) || (other.type=='goon' && other.sprite.triggered)) isNoticing = true;
+
+		if(cntNoticing >= FPNOTICING && other.type=='hostage' && other.sprite.free){
 			self.alert();
 			return "Hostage has been spotted!";
 		}
 
-		if(other.type=='goon' && other.sprite.triggered){
+		if(cntNoticing >= FPNOTICING && other.type=='goon' && other.sprite.triggered){
 			self.alert();
 			return "You have been spotted!";
 		}
@@ -162,8 +184,8 @@ BatHeistHostage = function(actor){
 
 	self.step = function(){
 		if(self.free && !self.dead){
-			let dir = actor.x > 0.5?1:-1
-			actor.x += dir * 0.002;
+			let dir = actor.x > 2?1:-1
+			actor.x += dir * 0.02;
 			self.complete = (actor.x<0.1 || actor.x>1.1);
 		}
 	}
@@ -193,7 +215,7 @@ BatHeistHostage = function(actor){
 	}
 }
 
-BatHeistActor = function(actor,w,h) {
+BatHeistActor = function(actor) {
 
 	actor = { ...actor };
 
@@ -215,14 +237,12 @@ BatHeistActor = function(actor,w,h) {
 
 	self.sprite.$el.appendTo(self.$el);
 
-	
-
 	self.getX = function(){
-		return self.model.x*w;
+		return self.model.x;
 	}
 
 	self.getY = function(){
-		return self.model.y*h;
+		return self.model.y;
 	}
 
 	self.trigger = function() {
@@ -264,7 +284,7 @@ BatHeistActor = function(actor,w,h) {
 	self.redraw = function() {
 		if(self.sprite.redraw) self.sprite.redraw();
 
-		self.$el.css({left:self.model.x*w +'px',top:self.model.y*h + 'px'});
+		self.$el.css({left:(self.model.x+0.5)*BatHeist.GRIDSIZE +'px',top:(self.model.y+0.5)*BatHeist.GRIDSIZE + 'px'});
 		//$target.css({left:self.sprite.offset.x +'px',top:self.sprite.offset.y + 'px'});
 	}
 
@@ -303,26 +323,28 @@ BatHeistArena = function(layout){
 		}
 	}
 
-	//let $toggle = $('<heisttoggle>').appendTo(self.$el);
-	//let $reset = $('<heistreset>').appendTo(self.$el);
-	//let $fail = $('<heistfail>').appendTo(self.$el);
-	
-	let $reticule = $('<heistreticule>').appendTo($stage);
-	let $pulse = $('<heistpulse>').appendTo($stage);
-	
-	let $projectile = $(`
-		<heistprojectile>
-			<heistspinner></heistspinner>
-		</heistprojectile>`).appendTo(self.$el);
+	let reticules = [];
+	for(var i=0; i<layout.playerCount; i++){
+		reticules[i] = 
+		{ 
+			$reticule:$('<heistreticule>').appendTo($stage), 
+			$pulse:$('<heistpulse>').appendTo($stage),
+			$projectile:$(`<heistprojectile><heistspinner></heistspinner></heistprojectile>`).appendTo(self.$el),
+			rx:0, 
+			ry:0,
+			cntThrow:0,
+			cntFocus:0,
+			isThrow:false, 
+		};
+	}
 
-	//self.$toggle = $toggle;
-
+	
 
 	let actors = [];
 	self.reset = function(){
 
 		self.$el.removeClass('fail');
-		//$fail.text('');
+		self.failState = '';
 
 		for(var a in actors) actors[a].$el.remove();
 		actors = [];
@@ -336,7 +358,6 @@ BatHeistArena = function(layout){
 		self.dead = false;
 	}
 
-	//$reset.click(self.reset);
 	self.reset();
 
 	function to2Digit(cnt){
@@ -345,62 +366,17 @@ BatHeistArena = function(layout){
 
 	const FPTHROW = BatHeist.FPS/2;
 	const FPFOCUS = BatHeist.FPS;
-	const SIZEMAX = BatHeist.GRIDSIZE/2;
-	const SIZEMIN = BatHeist.GRIDSIZE;
-	const SIZERANGE = SIZEMAX-SIZEMIN;
-	const HITRANGE = BatHeist.GRIDSIZE;
-
-	let isThrow = false;
-	let cntThrow = 0;
-	let cntFocus = 0;
+	const SIZEFROM = BatHeist.GRIDSIZE/4;
+	const SIZETO = BatHeist.GRIDSIZE;
+	const SIZERANGE = SIZEFROM-SIZETO;
+	const HITRANGE = 1;
 
 	self.step = function(players) {
 
 		if(self.dead) return;
 
-		let date = new Date();
-
-		let hrs = to2Digit( date.getHours() );
-		let mins = to2Digit( date.getMinutes() );
-		let secs = to2Digit( date.getSeconds() ) ;
-		let ms = to2Digit( Math.floor(date.getMilliseconds()%1000/10) );
-
-		let stamp = `${hrs}:${mins}:${secs}:${ms}`
-
-		//$infoRight.text(`Zoom x 2.0 | ${stamp} local time`);
-
-		self.infoRight = `Zoom x 2.0 | ${stamp} local time`;
-
-		// FIND THE RETICULE
-		let rx;
-		let ry;
-
-		if(layout.wall==0){
-			rx = (players[0].pz/100);
-			ry = (players[0].px/100);
-		} else if(layout.wall==1){
-			rx = players[0].px/100;
-			ry = (1-players[0].pz/100);
-		} else if(layout.wall==2){
-			rx = (1-players[0].pz/100);
-			ry = (1-players[0].px/100);
-		}
-
-		rx = rx*BatHeist.ARENA.W;
-		ry = ry*BatHeist.ARENA.H;
-
-		let padding = BatHeist.GRIDSIZE/2;
-		if(rx<padding) rx = padding;
-		if(ry<padding) ry = padding
-		if(rx>layout.w-padding) rx = layout.w-padding;
-		if(ry>layout.h-padding) ry = layout.h-padding;
-
 		let failState = undefined;
-		
 		let isComplete = true;
-		let dMin = HITRANGE;
-		let targeting = undefined;
-
 		let cntGoon = 0;
 		let cntHostage = 0;
 
@@ -409,80 +385,126 @@ BatHeistArena = function(layout){
 		for(var a in actors) actors[a].redraw();
 		for(var a in actors){
 			if(actors[a].failState) failState = actors[a].failState;
-			
 			if(!actors[a].complete) isComplete = false;
-
-			let dx = actors[a].getX() - rx;
-			let dy = actors[a].getY() - ry;
-			let d = Math.sqrt(dx*dx+dy*dy);
-
-			if(d<dMin && !actors[a].triggered && !actors[a].dead){
-				dMin = d;
-				targeting = actors[a];
-			}
-
 			if(!actors[a].complete && actors[a].type=='hostage') cntHostage++;
 			if(!actors[a].dead && !actors[a].triggered && actors[a].type=='goon') cntGoon++;
 		}
 
 		if(self.isFocused){
 
-			if(isThrow){
-				cntThrow++;
+			for(var r in reticules){
 
-				if(cntThrow>=FPTHROW){
-					cntThrow = 0;
-					if(targeting){
-						targeting.trigger();
-						if(targeting.type=='button') hitButton(targeting.model.value);
+				let rx;
+				let ry;
+
+				if(layout.wall==0){
+					rx = (players[r].pz/100);
+					ry = (players[r].px/100);
+				} else if(layout.wall==1){
+					rx = players[r].px/100;
+					ry = (1-players[r].pz/100);
+				} else if(layout.wall==2){
+					rx = (1-players[r].pz/100);
+					ry = (1-players[r].px/100);
+				}
+
+				// convert back to a number between -1 and 1 and then multiply it
+				const MULTIPLY = 3;
+				rx = (rx*2-1)*MULTIPLY;
+				ry = (ry*2-1)*MULTIPLY;
+
+				rx = BatHeist.GRID/2 + rx*(BatHeist.GRID/2) - 0.5;
+				ry = BatHeist.GRID/2 + ry*(BatHeist.GRID/2) - 0.5;
+
+				if(rx<0) rx = 0;
+				if(ry<0) ry = 0
+				if(rx>BatHeist.GRID-1) rx = BatHeist.GRID-1;
+				if(ry>BatHeist.GRID-1) ry = BatHeist.GRID-1;
+
+				// TO DO CONVERT TO GRID COORD
+
+				reticules[r].rx = rx;
+				reticules[r].ry = ry;
+
+				let dMin = HITRANGE;
+				reticules[r].targeting = undefined;
+
+				for(var a in actors){
+
+					let dx = actors[a].getX() - reticules[r].rx;
+					let dy = actors[a].getY() - reticules[r].ry;
+
+					let d = Math.sqrt(dx*dx+dy*dy);
+
+					if(d<dMin && !actors[a].triggered && !actors[a].dead){
+						dMin = d;
+						reticules[r].targeting = actors[a];
 					}
-					isThrow = false;
-					$projectile.removeClass('flying');
-
-					$pulse.css({left:rx,top:ry}).addClass('pulse');
 				}
 
-			} else {
+				if(reticules[r].isThrow){
+					reticules[r].cntThrow++;
 
-				//dMin = HITRANGE;
-				
-				if(dMin<HITRANGE) cntFocus++;
-				else if(cntFocus) cntFocus = 0;
+					if(reticules[r].cntThrow>=FPTHROW){
+						reticules[r].cntThrow = 0;
+						if(reticules[r].targeting){
+							reticules[r].targeting.trigger();
+							if(reticules[r].targeting.type=='button') hitButton(reticules[r].targeting.model.value);
+						}
+						reticules[r].isThrow = false;
+						reticules[r].$projectile.removeClass('flying');
+						reticules[r].$pulse.css({
+							left:(reticules[r].rx+0.5) * BatHeist.GRIDSIZE,
+							top:(reticules[r].ry+0.5) * BatHeist.GRIDSIZE,
+						}).addClass('pulse');
+					}
 
-				if(cntFocus>=FPFOCUS){
-					cntFocus = 0;
-					isThrow = true;
-					$projectile.addClass('flying');
+				} else {
 
-					$pulse.removeClass('pulse');
+					if(reticules[r].targeting) reticules[r].cntFocus++;
+					else if(reticules[r].cntFocus) reticules[r].cntFocus = 0;
+
+					if(reticules[r].cntFocus>=FPFOCUS){
+						reticules[r].cntFocus = 0;
+						reticules[r].isThrow = true;
+						reticules[r].$projectile.addClass('flying');
+						reticules[r].$pulse.removeClass('pulse');
+					}
 				}
+
+				reticules[r].$reticule.css({
+					left: (reticules[r].rx+0.5) * BatHeist.GRIDSIZE,
+					top: (reticules[r].ry+0.5) * BatHeist.GRIDSIZE, 
+					width: SIZEFROM - reticules[r].cntFocus/FPFOCUS * SIZERANGE,
+					height: SIZEFROM - reticules[r].cntFocus/FPFOCUS * SIZERANGE,
+				});
+
+				let amt = reticules[r].cntThrow/FPTHROW;
+				let yBottom = BatHeist.H - layout.y;
+				let yRange = yBottom-((reticules[r].ry+0.5) * BatHeist.GRIDSIZE);
+				let y = yBottom - yRange*amt;
+
+				reticules[r].$projectile.css({
+					left:(reticules[r].rx+0.5) * BatHeist.GRIDSIZE,
+					top:y, 
+					transform: 'scale('+(2-amt)+')',
+				});
 			}
+
+			
 
 			if(failState) self.die(failState);
 			if(isComplete) self.setComplete();
 
-			$reticule.css({
-				left:rx,
-				top:ry, 
-				width: SIZEMAX - cntFocus/FPFOCUS * SIZERANGE,
-				height: SIZEMAX - cntFocus/FPFOCUS * SIZERANGE,
-			});
+			let date = new Date();
+			let hrs = to2Digit( date.getHours() );
+			let mins = to2Digit( date.getMinutes() );
+			let secs = to2Digit( date.getSeconds() ) ;
+			let ms = to2Digit( Math.floor(date.getMilliseconds()%1000/10) );
+			let stamp = `${hrs}:${mins}:${secs}:${ms}`;
 
-
-			let amt = cntThrow/FPTHROW;
-
-			let yBottom = BatHeist.H - layout.y;
-
-			$projectile.css({
-				left:rx,
-				top:yBottom - (yBottom-ry)*amt, 
-				transform: 'scale('+(2-amt)+')',
-			});
-
-
+			self.infoRight = `Zoom x 2.0 | ${stamp} local time`;
 			self.infoLeft = to2Digit(cntGoon)+' hostiles | '+to2Digit(cntHostage)+' hostages';
-
-			//$infoLeft.text(to2Digit(cntGoon)+' hostiles | '+to2Digit(cntHostage)+' hostages');
 		}
 		
 	}
@@ -495,6 +517,7 @@ BatHeistArena = function(layout){
 
 	self.die = function(failState){
 		self.dead = true;
+		self.failState = failState;
 		//$fail.text(failState);
 		self.$el.addClass('fail');
 	}
@@ -532,7 +555,7 @@ BatHeist3DGame = function(){
 	BatHeist.GRID = 5;
 	BatHeist.GRIDSIZE = BatHeist.ARENA.W/BatHeist.GRID;
 	BatHeist.LAMP = {STRING:10,W:80,H:150};
-	BatHeist.GOON = {W:BatHeist.GRIDSIZE*0.6,H:BatHeist.GRIDSIZE*1.5};
+	BatHeist.GOON = {W:BatHeist.GRIDSIZE*0.6,H:BatHeist.GRIDSIZE*1};
 	BatHeist.HOSTAGE = {W:BatHeist.GRIDSIZE*0.6,H:BatHeist.GRIDSIZE*1.2};
 	
 	BatHeist.W = 1600;
@@ -543,6 +566,18 @@ BatHeist3DGame = function(){
 	$("head").append(`
 		<style>
 			@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+			heistcone{
+				display:block;
+				position: absolute;
+				width: ${BatHeist.GRIDSIZE*5}px;
+				height: ${BatHeist.GRIDSIZE*5}px;
+				background: linear-gradient(to bottom right, rgba(255,255,255,0.2), transparent, transparent);
+				top: 0px;
+				left: 0px;
+				transform: rotate(-45deg);
+				transform-origin: top left;
+			}
 
 			heistgame{
 				width:${BatHeist.W*3}px;
@@ -564,7 +599,7 @@ BatHeist3DGame = function(){
 				height:${BatHeist.H}px;
 				position:relative;
 				box-sizing: border-box;
-				border: 5px solid red;
+				
 			}
 
 			heistgame heistgoggles{
@@ -592,7 +627,7 @@ BatHeist3DGame = function(){
 			heistwall heistwallstage{
 				box-sizing:border-box;
 				
-				transform: rotateX(${BatHeist.ANGLE}deg);
+				transform: rotateX(${BatHeist.ANGLE}deg) translateY(-20px);
 				position:absolute;
 				top: 0px;
 				left: 0px;
@@ -722,6 +757,11 @@ BatHeist3DGame = function(){
 				z-index: 2;
 			}
 
+			heistreticule:last-of-type:before,
+			heistreticule:last-of-type:after{
+				border-color:blue;
+			}
+
 			heistarena{
 				display:block;
 				position:absolute;
@@ -766,7 +806,7 @@ BatHeist3DGame = function(){
 				display:block;
 				position:absolute;
 				bottom: 100px;
-				left: 200px;
+				left: 250px;
 				color: white;
 				font-size: 20px;
 				line-height: 70px;
@@ -782,15 +822,15 @@ BatHeist3DGame = function(){
 				bottom: 0px;
 				text-align: center;
 				color: white;
-				font-size: 50px;
-				line-height:${BatHeist.ARENA.H}px;
+				font-size:${BatHeist.H/15}px;
+				line-height:${BatHeist.H}px;
 				pointer-events: none;
 			}
 
 
 			heistinfo.right{
 				left: auto;
-				right: 200px;
+				right: 250px;
 			}
 
 			heistarena heisttarget{
@@ -811,7 +851,7 @@ BatHeist3DGame = function(){
 			heistarena.focus heistreticule,
 			heistarena.focus:before,
 			heistarena.focus:after,
-			heistarena.focus heistprojectile,
+			heistwall.focus heistprojectile,
 			heistwall.focus heistinfo,
 			heistwall.focus heistreset,
 			heistwall.focus heisttoggle
@@ -1068,7 +1108,7 @@ BatHeist3DGame = function(){
 				display: block;
 				position: absolute;
 				top: 200px;
-				left: 110px;
+				left: 190px;
 				width: 120px;
 				height: 120px;
 				background: red;
@@ -1083,7 +1123,7 @@ BatHeist3DGame = function(){
 				display: block;
 				position: absolute;
 				top: 200px;
-				right: 100px;
+				right: 190px;
 				width: 120px;
 				height: 120px;
 				background: no-repeat center url(./proto/img/zoom-out.svg);
@@ -1136,6 +1176,7 @@ BatHeist3DGame = function(){
 		$('<heisttoggle>').appendTo($w).click(unfocus);
 		$('<heistinfo class="left">').appendTo($w).text('left');
 		$('<heistinfo class="right">').appendTo($w).text('right');
+		$('<heistfail>').appendTo($w);
 	}
 	
 	let PUZZLES = [
@@ -1162,43 +1203,51 @@ BatHeist3DGame = function(){
 		},*/
 		{
 			wall:0,
+			playerCount:1,
 			x:BatHeist.W*0.5,
 			y:BatHeist.H*0.5,
 			actors:[
-				{type:'goon',x:0.5,y:0.7},
-				{type:'hostage',x:0.3,y:0.5},
-				{type:'hostage',x:0.5,y:0.5},
-				{type:'hostage',x:0.7,y:0.5},
+				{type:'goon',x:2,y:1},
+				{type:'hostage',x:1,y:2},
+				{type:'hostage',x:2,y:2},
+				{type:'hostage',x:3,y:2},
 			],
 		},
 		{
 			wall:1,
+			playerCount:2,
 			x:BatHeist.W*0.5,
 			y:BatHeist.H*0.5,
 			actors:[
 				/*{type:'lamp',x:0.25,y:0.2},
 				{type:'lamp',x:0.5,y:0.2},
 				{type:'lamp',x:0.75,y:0.2},*/
-				{type:'goon',x:0.3,y:0.1},
-				{type:'goon',x:0.7,y:0.9},
-				{type:'hostage',x:0.3,y:0.5},
-				{type:'hostage',x:0.5,y:0.5},
-				{type:'hostage',x:0.7,y:0.5},
+				{type:'goon',x:2,y:0},
+				{type:'goon',x:3,y:4},
+				{type:'hostage',x:1,y:2},
+				{type:'hostage',x:2,y:2},
+				{type:'hostage',x:3,y:2},
 			],
 		},
 		{
 			wall:2,
+			playerCount:2,
 			x:BatHeist.W*0.5,
 			y:BatHeist.H*0.5,
 			actors:[
 				//{type:'lamp',x:0.5,y:0.2},
-				{type:'goon',x:0.5,y:1},
-				{type:'goon',x:0.5,y:1},
-				{type:'hostage',x:0.2,y:1},
-				{type:'hostage',x:0.8,y:1},
+				{type:'goon',x:2,y:3},
+				{type:'goon',x:2,y:1},
+				{type:'hostage',x:1,y:2},
+				{type:'hostage',x:3,y:2},
 			],
 		},
 	]
+
+	let $players = [];
+	for(var i=0; i<2; i++){
+		$players[i] = $('<heistbatarang>');
+	}
 
 	let arenas = [];
 	for(var p=0; p<PUZZLES.length; p++){
@@ -1244,14 +1293,14 @@ BatHeist3DGame = function(){
 
 		for(var a in arenas) arenas[a].step(players);
 
-		if(idFocus != undefined && arenas[idFocus].complete){
-			unfocus();
-		}
-
 		if(idFocus != undefined){
 			$walls[ arenas[idFocus].layout.wall ].find('heistinfo.left').text( arenas[idFocus].infoLeft );
 			$walls[ arenas[idFocus].layout.wall ].find('heistinfo.right').text( arenas[idFocus].infoRight );
+			$walls[ arenas[idFocus].layout.wall ].find('heistfail').text( arenas[idFocus].failState );
+			if(arenas[idFocus].complete) unfocus();
 		}
+
+
 	}
 
 	setInterval(tick,1000/BatHeist.FPS);
