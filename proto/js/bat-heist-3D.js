@@ -17,6 +17,23 @@ BatHeistFigure = function(dark,light){
 		'transform':`scale(0.5) translateZ(${BatHeist.GOON.H}px)`,
 		'background':light,
 	})
+
+
+}
+
+BatHeistSprite = function(){
+	let self = this;
+	self.$el = $('<heistsprite>');
+
+
+
+	self.setDeg = function(deg){
+		self.$el.attr('deg',deg);
+	}
+	
+	self.setPose = function(pose) {
+		self.$el.attr('pose',pose);
+	}
 }
 
 
@@ -105,7 +122,13 @@ BatHeistGoon = function(actor){
 	const FPNOTICING = BatHeist.FPS;
 
 	let self = this;
-	self.$el = new BatHeistFigure('#990000','#bb0000').$el;
+	//self.$el = new BatHeistFigure('#999999','#bbbbbb').$el;
+
+	self.$el = $('<heistempty>');
+	let sprite = new BatHeistSprite();
+	sprite.setPose('walk');
+	sprite.$el.appendTo(self.$el);
+	
 	self.offset = {x:0,y:-BatHeist.GOON.H + BatHeist.GOON.W/2};
 	self.complete = true;
 
@@ -116,26 +139,34 @@ BatHeistGoon = function(actor){
 
 	let isNoticing = false;
 	let cntNoticing = 0;
-	
+
+	let mode = 'patrol';
 
 	self.trigger = function(){
 		self.triggered = true;
 		self.$el.attr('pose','dead');
 		$cone.hide();
-		self.$el.css('transform',`rotateX(90deg) translateY(${BatHeist.GOON.W}px)`);
 		return true;
 	}
 
 	self.step = function(){
 		if(!self.triggered && !self.dead) nTick++;
 
-		let x = actor.x;
-		actor.x = xAnchor + Math.cos(nTick/FPLOOP*Math.PI*2) * 1;
+		let amt = nTick/FPLOOP;
+		let rotate = 0;
+		
+		if(mode=='patrol'){
+			let x = actor.x;
+			actor.x = xAnchor + Math.cos(amt*Math.PI*2) * 1;
+			let dir = actor.x - x;
+			rotate = (dir>0)?0:0.5;
+		}
 
-		let dir = actor.x - x;
-		let r = (dir>0)?0:0.5;
+		let deg = (rotate*360);
+		let degCone = deg-45;
+		sprite.setDeg(deg);
+		$cone.css('transform','rotate('+degCone+'deg)');
 
-		self.$el.css('transform','rotate('+r*360+'deg)')
 
 		//interactions happen AFTER a step so this flag persists from the previous interactions
 		if(isNoticing) cntNoticing++;
@@ -176,25 +207,31 @@ BatHeistGoon = function(actor){
 
 BatHeistHostage = function(actor){
 	let self = this;
-	self.$el = new BatHeistFigure('#009900','#00bb00').$el;
+	
 	self.offset = {x:0,y:-BatHeist.HOSTAGE.H/2};
 	self.complete = false;
+
+	self.$el = $('<heistempty>');
+	let sprite = new BatHeistSprite();
+	sprite.setPose('stand');
+	sprite.$el.appendTo(self.$el);
 
 	let $ropes = $('<heistropes>').appendTo(self.$el);
 
 	self.step = function(){
 		if(self.free && !self.dead){
-			let dir = actor.x > 2?1:-1
+			let dir = actor.x > 2?1:-1;
+			let deg = actor.x > 2?0:180;
 			actor.x += dir * 0.02;
 			self.complete = (actor.x<0.1 || actor.x>1.1);
+			sprite.setDeg(deg);
 		}
 	}
 
 	self.trigger = function(){
 		self.free = true;
-
+		sprite.setPose('walk');
 		$ropes.hide();
-		self.$el.attr('pose','stand');
 		self.offset.y = -BatHeist.GOON.H + BatHeist.GOON.W/2;
 
 		return true;
@@ -330,11 +367,13 @@ BatHeistArena = function(layout){
 			$reticule:$('<heistreticule>').appendTo($stage), 
 			$pulse:$('<heistpulse>').appendTo($stage),
 			$projectile:$(`<heistprojectile><heistspinner></heistspinner></heistprojectile>`).appendTo(self.$el),
+			$start:$('<heiststart>').appendTo($stage),
 			rx:0, 
 			ry:0,
 			cntThrow:0,
 			cntFocus:0,
 			isThrow:false, 
+			isArmed:false,
 		};
 	}
 
@@ -369,7 +408,7 @@ BatHeistArena = function(layout){
 	const SIZEFROM = BatHeist.GRIDSIZE/4;
 	const SIZETO = BatHeist.GRIDSIZE;
 	const SIZERANGE = SIZEFROM-SIZETO;
-	const HITRANGE = 1;
+	const HITRANGE = 0.5;
 
 	self.step = function(players) {
 
@@ -392,7 +431,7 @@ BatHeistArena = function(layout){
 
 		if(self.isFocused){
 
-			for(var r in reticules){
+			for(var r=0; r<reticules.length; r++){
 
 				let rx;
 				let ry;
@@ -409,36 +448,47 @@ BatHeistArena = function(layout){
 				}
 
 				// convert back to a number between -1 and 1 and then multiply it
-				const MULTIPLY = 3;
+				const MULTIPLY = 3.5;
 				rx = (rx*2-1)*MULTIPLY;
 				ry = (ry*2-1)*MULTIPLY;
 
 				rx = BatHeist.GRID/2 + rx*(BatHeist.GRID/2) - 0.5;
 				ry = BatHeist.GRID/2 + ry*(BatHeist.GRID/2) - 0.5;
 
-				if(rx<0) rx = 0;
+				/*if(rx<0) rx = 0;
 				if(ry<0) ry = 0
 				if(rx>BatHeist.GRID-1) rx = BatHeist.GRID-1;
-				if(ry>BatHeist.GRID-1) ry = BatHeist.GRID-1;
+				if(ry>BatHeist.GRID-1) ry = BatHeist.GRID-1;*/
 
-				// TO DO CONVERT TO GRID COORD
+				if(r==0 && rx<=-1 && ry>0 && ry<BatHeist.GRID-1){
+					reticules[r].isArmed = true;
+				}
+
+				if(r==1 && rx>=BatHeist.GRID && ry>0 && ry<BatHeist.GRID-1){
+					reticules[r].isArmed = true;
+				}
+
 
 				reticules[r].rx = rx;
 				reticules[r].ry = ry;
 
-				let dMin = HITRANGE;
+				
 				reticules[r].targeting = undefined;
 
-				for(var a in actors){
+				if(reticules[r].isArmed){
 
-					let dx = actors[a].getX() - reticules[r].rx;
-					let dy = actors[a].getY() - reticules[r].ry;
+					let dMin = HITRANGE;
+					for(var a in actors){
 
-					let d = Math.sqrt(dx*dx+dy*dy);
+						let dx = actors[a].getX() - reticules[r].rx;
+						let dy = actors[a].getY() - reticules[r].ry;
 
-					if(d<dMin && !actors[a].triggered && !actors[a].dead){
-						dMin = d;
-						reticules[r].targeting = actors[a];
+						let d = Math.sqrt(dx*dx+dy*dy);
+
+						if(d<dMin && !actors[a].triggered && !actors[a].dead){
+							dMin = d;
+							reticules[r].targeting = actors[a];
+						}
 					}
 				}
 
@@ -452,6 +502,7 @@ BatHeistArena = function(layout){
 							if(reticules[r].targeting.type=='button') hitButton(reticules[r].targeting.model.value);
 						}
 						reticules[r].isThrow = false;
+						reticules[r].isArmed = false;
 						reticules[r].$projectile.removeClass('flying');
 						reticules[r].$pulse.css({
 							left:(reticules[r].rx+0.5) * BatHeist.GRIDSIZE,
@@ -472,6 +523,26 @@ BatHeistArena = function(layout){
 					}
 				}
 
+					
+				
+
+				let amt = reticules[r].cntThrow/FPTHROW;
+				let yBottom = BatHeist.H/1.2 - layout.y;
+				let yRange = yBottom-((reticules[r].ry+0.5) * BatHeist.GRIDSIZE);
+				let y = yBottom - yRange*amt;
+				let opacity = reticules[r].isArmed?1:0;
+
+				reticules[r].$projectile.css({
+					left:(reticules[r].rx+0.5) * BatHeist.GRIDSIZE,
+					top:y, 
+					transform: 'scale('+(2-amt)+')',
+					opacity: opacity,
+				});
+
+				reticules[r].$start.css({
+					opacity: reticules[r].isArmed?0:1,
+				})
+
 				reticules[r].$reticule.css({
 					left: (reticules[r].rx+0.5) * BatHeist.GRIDSIZE,
 					top: (reticules[r].ry+0.5) * BatHeist.GRIDSIZE, 
@@ -479,16 +550,7 @@ BatHeistArena = function(layout){
 					height: SIZEFROM - reticules[r].cntFocus/FPFOCUS * SIZERANGE,
 				});
 
-				let amt = reticules[r].cntThrow/FPTHROW;
-				let yBottom = BatHeist.H - layout.y;
-				let yRange = yBottom-((reticules[r].ry+0.5) * BatHeist.GRIDSIZE);
-				let y = yBottom - yRange*amt;
-
-				reticules[r].$projectile.css({
-					left:(reticules[r].rx+0.5) * BatHeist.GRIDSIZE,
-					top:y, 
-					transform: 'scale('+(2-amt)+')',
-				});
+				
 			}
 
 			
@@ -557,11 +619,12 @@ BatHeist3DGame = function(){
 	BatHeist.LAMP = {STRING:10,W:80,H:150};
 	BatHeist.GOON = {W:BatHeist.GRIDSIZE*0.6,H:BatHeist.GRIDSIZE*1};
 	BatHeist.HOSTAGE = {W:BatHeist.GRIDSIZE*0.6,H:BatHeist.GRIDSIZE*1.2};
-	
+	BatHeist.ZOOMSCALE = 1.5;
+
 	BatHeist.W = 1600;
 	BatHeist.H = 1000;
 	BatHeist.FPS = 60;
-	BatHeist.DCOLLIDE = BatHeist.GRIDSIZE;
+	BatHeist.DCOLLIDE = BatHeist.GRIDSIZE/2;
 
 	$("head").append(`
 		<style>
@@ -570,20 +633,21 @@ BatHeist3DGame = function(){
 			heistcone{
 				display:block;
 				position: absolute;
-				width: ${BatHeist.GRIDSIZE*5}px;
-				height: ${BatHeist.GRIDSIZE*5}px;
+				width: ${BatHeist.GRIDSIZE*2}px;
+				height: ${BatHeist.GRIDSIZE*2}px;
 				background: linear-gradient(to bottom right, rgba(255,255,255,0.2), transparent, transparent);
 				top: 0px;
 				left: 0px;
 				transform: rotate(-45deg);
 				transform-origin: top left;
+				display: none;
 			}
 
 			heistgame{
 				width:${BatHeist.W*3}px;
 				height:${BatHeist.H}px;
 				display:block;
-				background:#333;
+				background:#0F151C;
 				box-sizing:border-box;
 				transform-origin: top left;
 				font-family: "Space Mono";
@@ -606,8 +670,6 @@ BatHeist3DGame = function(){
 				display: none;
 			}
 
-			
-
 			heistgame.focus heistwall heistgoggles{
 				background: black;
 				display:block;
@@ -622,6 +684,7 @@ BatHeist3DGame = function(){
 			heistgame.focus heistwall.focus heistgoggles{
 				background: url(./proto/img/bat-goggles.png);
 				background-size: cover;
+				z-index: -1;
 			}
 
 			heistwall heistwallstage{
@@ -729,6 +792,7 @@ BatHeist3DGame = function(){
 				height: ${BatHeist.GRIDSIZE}px;
 				transform: translate(-50%, -50%);
 				display:none;
+
 			}
 
 			heistreticule:before{
@@ -741,7 +805,7 @@ BatHeist3DGame = function(){
 				width:10%;
 				border: 5px solid red;
 				border-right: none;
-				z-index: 2;
+				z-index: 100;
 			}
 
 			heistreticule:after{
@@ -754,12 +818,54 @@ BatHeist3DGame = function(){
 				width:10%;
 				border: 5px solid red;
 				border-left: none;
-				z-index: 2;
+				z-index: 100;
 			}
 
 			heistreticule:last-of-type:before,
 			heistreticule:last-of-type:after{
 				border-color:blue;
+			}
+
+			heiststart{
+				display: block;
+				position: absolute;
+				width: ${BatHeist.GRIDSIZE*2}px;
+				height: ${BatHeist.ARENA.H}px;
+
+				background: url(./proto/img/bat-symbol.png);
+				background-size: 70%;
+				top: 0px;
+				left: ${-BatHeist.GRIDSIZE*2}px;
+				background-repeat: no-repeat;
+				background-position: center;
+				background-color: rgba(255,0,0,0.2);
+
+				display: none;
+
+			}	
+
+			heiststart:after{
+				content:"HOVER TO ARM";
+				position: absolute;
+				display: block;
+				top: ${BatHeist.ARENA.H/2 + BatHeist.GRIDSIZE/2}px;
+				width: ${BatHeist.GRIDSIZE*2}px;
+
+				left: 0px,
+				background: red,
+				font-size:10px;
+				color: white;
+				text-align: center;
+			}
+
+			heiststart[armed]{
+				display: none;
+			}
+
+			heiststart:last-of-type{
+				left: auto;
+				right: ${-BatHeist.GRIDSIZE*2}px;
+				background-color: rgba(0,0,255,0.2);
 			}
 
 			heistarena{
@@ -843,18 +949,19 @@ BatHeist3DGame = function(){
 			}
 
 			heistarena.focus heistworld{
-				background:#444;
+				background:#0F151C;
 				
 			}
 
-			heistarena.focus heisttarget,
+			
 			heistarena.focus heistreticule,
 			heistarena.focus:before,
 			heistarena.focus:after,
 			heistwall.focus heistprojectile,
 			heistwall.focus heistinfo,
 			heistwall.focus heistreset,
-			heistwall.focus heisttoggle
+			heistwall.focus heisttoggle,
+			heistwall.focus heiststart
 			{
 				display: block;
 			}
@@ -872,6 +979,18 @@ BatHeist3DGame = function(){
 				height: 0px;
 				position: absolute;
 				display: none;
+			}
+
+			heistempty{
+				display:block;
+				width: 0px;
+				height: 0px;
+				position: absolute;
+
+
+				transform-style: preserve-3d;
+				transform: rotateX(-10deg);
+				top: 20px;
 			}
 
 			heistprojectile heistspinner{
@@ -910,6 +1029,8 @@ BatHeist3DGame = function(){
 
 				border: 5px dashed white;
 				border-radius: ${BatHeist.GRIDSIZE/2}px;
+
+
 			}
 
 			heistarena.fail heisttarget,
@@ -1034,13 +1155,14 @@ BatHeist3DGame = function(){
 			heistropes{
 				position:absolute;
 				display:block;
-				width:120%;
-				height:40%;
+				width:${BatHeist.GRIDSIZE}px;
+				height:${BatHeist.GRIDSIZE}px;
 				background:url(./proto/img/bat-ropes.png);
-				background-size: 100%;
+				background-size: 90%;
 				background-repeat: no-repeat;
-				top: 40%;
-				left:-10%;
+				bottom:0px;
+				left:${-BatHeist.GRIDSIZE/2}px;
+				transform-style: preserve-3d;
 			}
 
 			heistpulse{
@@ -1155,6 +1277,61 @@ BatHeist3DGame = function(){
 				}
 			}
 
+			heistsprite:after{
+				content:"";
+				width: 200px;
+				height: 200px;
+				background-image: url(./proto/img/sprite-char-dark.png);
+				background-size: 800%;
+				background-position-y: -400%;
+				display: block;
+				position: absolute;
+				bottom: -60px;
+				left: -100px;
+				transform-style: preserve-3d;
+			}
+
+			heistsprite[pose='stand']:after{
+
+				background-position-x: -400%;
+				background-position-y: 000%;
+			}
+
+			heistsprite[pose='walk']:after{
+				animation-name: frame6;
+				animation-duration: 1s;
+				animation-iteration-count: infinite;
+				animation-timing-function: steps(6);
+			}
+
+			heistsprite[deg='0']:after{ background-position-y: -600%; }
+			heistsprite[deg='90']:after{ background-position-y: -400%; }
+			heistsprite[deg='180']:after{ background-position-y: -700%; }
+			heistsprite[deg='270']:after{ background-position-y: -500%; }
+
+			heistsprite{
+				width: 0px;
+				height: 0px;
+				display: block;
+				position: absolute;
+				top: 0px;
+				left: 0px;
+
+				transform-style: preserve-3d;
+				
+
+			}
+
+			@keyframes frame6{
+				0%{
+					background-position-x: 0%;
+				}
+
+				100%{
+					background-position-x: -600%;
+				}
+			}
+
 		</style>`
 	);
 
@@ -1203,11 +1380,11 @@ BatHeist3DGame = function(){
 		},*/
 		{
 			wall:0,
-			playerCount:1,
+			playerCount:2,
 			x:BatHeist.W*0.5,
 			y:BatHeist.H*0.5,
 			actors:[
-				{type:'goon',x:2,y:1},
+				{type:'goon',path:[{x:0,y:0},{x:4,y:0},{x:4,y:4}]},
 				{type:'hostage',x:1,y:2},
 				{type:'hostage',x:2,y:2},
 				{type:'hostage',x:3,y:2},
@@ -1246,7 +1423,7 @@ BatHeist3DGame = function(){
 
 	let $players = [];
 	for(var i=0; i<2; i++){
-		$players[i] = $('<heistbatarang>');
+		$players[i] = $(`<heistprojectile><heistspinner></heistspinner></heistprojectile>`).appendTo(self.$el);
 	}
 
 	let arenas = [];
@@ -1299,8 +1476,6 @@ BatHeist3DGame = function(){
 			$walls[ arenas[idFocus].layout.wall ].find('heistfail').text( arenas[idFocus].failState );
 			if(arenas[idFocus].complete) unfocus();
 		}
-
-
 	}
 
 	setInterval(tick,1000/BatHeist.FPS);

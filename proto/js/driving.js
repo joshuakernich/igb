@@ -42,10 +42,6 @@ Box3D = function(w,l,h,color){
 				right: 0px;
 			}
 
-			
-
-
-
 		</style>
 	`);
 
@@ -253,71 +249,7 @@ DrivingGame = function(){
 		</style>
 	`);
 
-	const TRACK = [
-		'  H   ',
-		'  H\  ',
-		'  HH  ',
-		'  HH  ',
-		'  HHH ',
-		'  HHH ',
-		'  H H ',
-		'  H H ',
-		'  H H ',
-		'  H H ',
-		'  H H ',
-		' HHHH ',
-		' HHHH ',
-		' H H  ',
-		' H H  ',
-		' H H  ',
-		' H H  ',
-		' H H  ',
-		' H H  ',
-		' HVH  ',
-		' HHH  ',
-		' HHH  ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		' HHH  ',
-		' HHH  ',
-		' H H  ',
-		' H H  ',
-		' H H  ',
-		' H H  ',
-		' H H  ',
-		' H H  ',
-		' H H  ',
-		' HHH  ',
-		' HHH  ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-		'  H   ',
-	]
+	
 
 	let cars = [
 		{x:2.25,y:5},	
@@ -346,8 +278,14 @@ DrivingGame = function(){
 
 	$layers = [];
 	
-	for(var t in TRACK){
+	for(var i=0; i<20; i++){
 		let $layer = $('<drivinglayer>').appendTo($plane);
+		let $track = $('<drivingtrack>').appendTo($layer);
+		$layers[t] = $layer;
+	}
+
+	/*for(var t in TRACK){
+		
 		for(var g=0; g<TRACK[t].length; g++){
 			let $g = $('<drivinggrid>').appendTo($layer).attr('type',TRACK[t][g]);
 
@@ -360,8 +298,10 @@ DrivingGame = function(){
 
 		let $fog = $('<drivingfog>').appendTo($layer);
 
-		$layers[t] = $layer;
-	}
+		
+	}*/
+
+
 
 	for(var c in cars){
 		let $c = $(`<drivingcar>`).appendTo($plane).css({left:cars[c].x*GRID+'px',bottom:cars[c].y*GRID+'px'});
