@@ -1384,7 +1384,7 @@ BatHeist3DGame = function(){
 			x:BatHeist.W*0.5,
 			y:BatHeist.H*0.5,
 			actors:[
-				{type:'goon',path:[{x:0,y:0},{x:4,y:0},{x:4,y:4}]},
+				{type:'goon',x:2,y:0},
 				{type:'hostage',x:1,y:2},
 				{type:'hostage',x:2,y:2},
 				{type:'hostage',x:3,y:2},
