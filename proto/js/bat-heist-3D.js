@@ -360,6 +360,13 @@ BatHeistArena = function(layout){
 		}
 	}
 
+	self.doArm = function(e){
+	
+		e.stopPropagation();
+		let id  = $(this).attr('id');
+		reticules[id].isArmed = true;
+	}
+
 	let reticules = [];
 	for(var i=0; i<layout.playerCount; i++){
 		reticules[i] = 
@@ -367,7 +374,7 @@ BatHeistArena = function(layout){
 			$reticule:$('<heistreticule>').appendTo($stage), 
 			$pulse:$('<heistpulse>').appendTo($stage),
 			$projectile:$(`<heistprojectile><heistspinner></heistspinner></heistprojectile>`).appendTo(self.$el),
-			$start:$('<heiststart>HOVER TO ARM</heiststart>').appendTo($stage),
+			$start:$('<heiststart>HOVER<br>TO ARM</heiststart>').appendTo($stage).click(self.doArm).attr('id',i),
 			$arrow:$('<heistarrow>').appendTo($stage),
 			rx:0, 
 			ry:0,
@@ -417,6 +424,8 @@ BatHeistArena = function(layout){
 	const SIZETO = BatHeist.GRIDSIZE/2;
 	const SIZERANGE = SIZEFROM-SIZETO;
 	const HITRANGE = 0.5;
+
+	
 
 	self.step = function(players) {
 
@@ -908,18 +917,20 @@ BatHeist3DGame = function(){
 				bottom: 0px;
 				left: ${-BatHeist.GRIDSIZE*1.75}px;
 				background-repeat: no-repeat;
-				background-position: center;
+				background-position-x: center;
+				background-position-y: 15px;
 
 				display: none;
 
-				line-height: ${BatHeist.GRIDSIZE*2.5}px;
+				line-height: 15px;
 				color: red;
-				font-size:5px;
+				font-size:12px;
 				border-radius: 100%;
 				font-weight: bold;
 				text-align: center;
+				box-sizing: border-box;
+				padding-top: 50px;
 			}	
-
 			
 			heiststart[armed]{
 				display: none;
@@ -1055,7 +1066,7 @@ BatHeist3DGame = function(){
 				height: 0px;
 				position: absolute;
 				transform-style: preserve-3d;
-				transform: rotateX(-10deg);
+				transform: rotateX(-80deg);
 				top: 20px;
 			}
 
@@ -1353,38 +1364,19 @@ BatHeist3DGame = function(){
 	}
 	
 	let PUZZLES = [
-		/*{
-			wall:0,
-			x:W*0.7,
-			y:H*0.6,
-			scale:0.2,
-			actors:[
-				{type:'display',x:0.5,y:0.1,target:'1395'},
-				{type:'button',x:0.3,y:0.3,value:'1'},
-				{type:'button',x:0.5,y:0.3,value:'2'},
-				{type:'button',x:0.7,y:0.3,value:'3'},
-				{type:'button',x:0.3,y:0.5,value:'4'},
-				{type:'button',x:0.5,y:0.5,value:'5'},
-				{type:'button',x:0.7,y:0.5,value:'6'},
-				{type:'button',x:0.3,y:0.7,value:'7'},
-				{type:'button',x:0.5,y:0.7,value:'8'},
-				{type:'button',x:0.7,y:0.7,value:'9'},
-				{type:'button',x:0.3,y:0.9,value:'C'},
-				{type:'button',x:0.5,y:0.9,value:'0'},
-				{type:'button',x:0.7,y:0.9,value:'E'},
-			]
-		},*/
+		
 		{
 			wall:0,
 			playerCount:2,
 			x:BatHeist.W*0.5,
 			y:BatHeist.H*0.5,
 			actors:[
-				{type:'goon',x:2,y:0},
 				{type:'hostage',x:1,y:2},
-				{type:'hostage',x:2,y:2},
+				{type:'hostage',x:2,y:3},
 				{type:'hostage',x:3,y:2},
 			],
+
+			ins: 'Free the hostages',
 		},
 		{
 			wall:1,
@@ -1392,15 +1384,14 @@ BatHeist3DGame = function(){
 			x:BatHeist.W*0.5,
 			y:BatHeist.H*0.5,
 			actors:[
-				/*{type:'lamp',x:0.25,y:0.2},
-				{type:'lamp',x:0.5,y:0.2},
-				{type:'lamp',x:0.75,y:0.2},*/
-				{type:'goon',x:2,y:0},
+			
 				{type:'goon',x:3,y:4},
 				{type:'hostage',x:1,y:2},
 				{type:'hostage',x:2,y:2},
 				{type:'hostage',x:3,y:2},
 			],
+
+			ins: 'Free the hostages',
 		},
 		{
 			wall:2,
@@ -1409,11 +1400,13 @@ BatHeist3DGame = function(){
 			y:BatHeist.H*0.5,
 			actors:[
 				//{type:'lamp',x:0.5,y:0.2},
-				{type:'goon',x:2,y:3},
-				{type:'goon',x:2,y:1},
+				{type:'goon',x:2,y:0},
+				{type:'goon',x:2,y:4},
 				{type:'hostage',x:1,y:2},
 				{type:'hostage',x:3,y:2},
 			],
+
+			ins: 'Free the hostages',
 		},
 	]
 
@@ -1437,7 +1430,7 @@ BatHeist3DGame = function(){
 		let id = $(this).closest('heistarena').attr('id');
 
 		if(id==idFocus){
-			unfocus();
+			//unfocus();
 		} else {
 			idFocus = id;
 			arenas[idFocus].setFocus(true);

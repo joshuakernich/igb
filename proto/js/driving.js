@@ -14,7 +14,9 @@ Box3D = function(w,l,h,color){
 				box-sizing:border-box;
 				transform-style: preserve-3d;
 				text-align:center;
-			}
+
+				border: 1px solid white;
+			}	
 
 			box3Dside.box3D-back{
 				transform-origin: bottom center;
@@ -119,6 +121,9 @@ DrivingGame = function(){
 				transform-style: preserve-3d;
 				z-index:1;
 				pointer-events:none;
+
+				width: 0px;
+				height: 0px;
 			}
 
 			drivingplane{
@@ -127,22 +132,37 @@ DrivingGame = function(){
 				position:absolute;
 				bottom:0px;
 				left:0px;
-				width:0px;
 				transform-style: preserve-3d;
-				z-index:1;
+
+				background: blue;
+
+				width: 0px;
+				height: 0px;
 			}
 
 			drivingcar{
 				display:block;
-				transform-style: preserve-3d;
-				width:${WCAR*GRID}px;
-				height:${LCAR*GRID}px;
-				background:rgba(0,0,0,0.6);
 				position:absolute;
 				left:0px;
-				bottom:50px;
-				transform: translateX(-50%) translateZ(2px);
-				box-shadow: 0px 0px 10px black;
+				
+				width: 0px;
+				height: 0px;
+				transform-style: preserve-3d;
+			}
+
+			drivingcarinner{
+				display:block;
+				position:absolute;
+				left:${-WCAR/2*GRID}px;
+				top:${-WCAR/2*GRID}px;
+				width:${WCAR*GRID}px;
+				height:${LCAR*GRID}px;
+				transform: translateZ(5px);
+				transform-style: preserve-3d;
+				background: red;
+
+				
+				
 			}
 
 			drivingcar box3D{
@@ -150,7 +170,6 @@ DrivingGame = function(){
 				font-size:70px;
 				color:red;
 				line-height:${HCAR*0.7*GRID}px;
-				text-shadow: 0px 0px 20px red;
 			}
 
 			drivingcar box3Dside.box3D-front:before{
@@ -168,85 +187,17 @@ DrivingGame = function(){
 
 			drivinglayer{
 				display:block;
-				position:relative;
-				white-space:nowrap;
-				transform-origin: bottom center;
-				width:${GRID*5}px;
+				position:absolute;
+				width:${GRID*3}px;
 				height:${GRID}px;
-				background: gray;
-				left:0px;
-				transform-style: preserve-3d;
-			}
-
-			drivingfog{
-				width:${GRID*5}px;
-				height:${H*4}px;
-				transform-origin: top center;
-				position:absolute;
-				transform: rotateX(90deg);
-				background-image: url(./proto/img/bat-fog-halo.png);
+				
+				background-image: url(./proto/img/bat-road.png);
 				background-size: 100%;
-				background-position: bottom center;
-				top:0px;
-				left:0px;	
-				display: none;
-			}
-
-			drivinggrid{
-				display:inline-block;
-				background: black;
-				width:${GRID}px;
-				height:${GRID}px;
-				box-sizing: border-box;
 				transform-style: preserve-3d;
-				transform: translateZ(1px);
+			
+				left: 0px;
 			}
 
-			drivinggrid box3Dside.box3D-back,
-			drivinggrid box3Dside.box3D-bottom{
-				display:none;
-			}
-
-			drivinggrid box3Dside.box3D-front,
-			drivinggrid box3Dside.box3D-left,
-			drivinggrid box3Dside.box3D-right
-			{
-				background-image:url(./proto/img/bat-city-window.png);
-				background-size: 100%;
-				background-position: bottom center;
-			}
-
-			drivinggrid[type='H']{
-				background:#222;
-			}
-
-			drivinggrid[type=' ']:before{
-				content:"";
-				display:block;
-				width:5%;
-				height:100%;
-				background:#999;
-				position:absolute;
-				left:0px;
-				top:0px;
-				transform-origin:left center;
-				transform-style: preserve-3d;
-				transform: rotateY(-90deg);
-			}
-
-			drivinggrid[type=' ']:after{
-				content:"";
-				display:block;
-				width:5%;
-				height:100%;
-				background:#999;
-				position:absolute;
-				right:0px;
-				top:0px;
-				transform-origin:right center;
-				transform-style: preserve-3d;
-				transform: rotateY(90deg);
-			}
 
 		</style>
 	`);
@@ -275,14 +226,15 @@ DrivingGame = function(){
 	let $plane = $('<drivingplane>').appendTo($world);
 
 	let $car = $(`<drivingcar>`).appendTo($plane);
-	new Box3D(WCAR*GRID,LCAR*GRID,HCAR*GRID,PURPLE).$el.appendTo($car);
+	let $i = $(`<drivingcarinner>`).appendTo($car);
+	new Box3D(WCAR*GRID,LCAR*GRID,HCAR*GRID,PURPLE).$el.appendTo($i);
 
 
 	$layers = [];
 	
 	for(var i=0; i<20; i++){
 		let $layer = $('<drivinglayer>').appendTo($plane);
-		let $track = $('<drivingtrack>').appendTo($layer);
+
 		$layers[i] = $layer;
 	}
 
@@ -307,15 +259,46 @@ DrivingGame = function(){
 
 	for(var c in cars){
 		let $c = $(`<drivingcar>`).appendTo($plane).css({left:cars[c].x*GRID+'px',bottom:cars[c].y*GRID+'px'});
-		new Box3D(WCAR*GRID,LCAR*GRID,HCAR*GRID,'black').$el.appendTo($c);
+		let $i = $(`<drivingcarinner>`).appendTo($c);
+		new Box3D(WCAR*GRID,LCAR*GRID,HCAR*GRID,'black').$el.appendTo($i);
 	}
 
 
 	let players = [{px:0}];
 	let iTick = 0;
 	let speed = 2.5/FPS;
-	let steer = FPS/2;
+	let steer = FPS*0.2;
 	let xCenter = 2.5;
+
+	let iyTrack = -1;
+
+	let curve = [{x:0,r:0}];
+
+	function addStraight(count) {
+		let xAnchor = curve[curve.length-1].x;
+		while(count){
+			count--;
+			curve.push({x:xAnchor,r:0});
+		}
+	}
+
+	function addSlide(count,dir) {
+		let xAnchor = curve[curve.length-1].x;
+
+		while(count){
+			count--;
+			xAnchor += 0.4*dir;
+			curve.push({x:xAnchor,r:dir*0.4});
+		}
+	}
+
+	while(curve.length<200){
+		addStraight(5+Math.floor(Math.random()*5));
+		addSlide(5+Math.floor(Math.random()*5),(Math.random()>0.5?1:-1));
+	}
+	
+	
+
 	function tick(){
 		let w = $(document).innerWidth()/3;
 		$game.css('transform','scale('+(w/W)+')');
@@ -327,24 +310,33 @@ DrivingGame = function(){
 		let txRelative = (players[0].px/100-0.5);
 		let txActual = xCenter + txRelative;
 
-		
-
 		let xLeft = txActual - WCAR/2;
 		let xRight = txActual + WCAR/2;
 
 		let ixLeft = Math.floor(xLeft);
 		let ixRight = Math.floor(xRight);
-		let iy = Math.floor(prog);
+		let iyProgress = Math.floor(prog)-1;
 
-		//if( TRACK[iy][ixLeft] == ' ' ) txActual = ixLeft + 1 + WCAR/2;
-		//if( TRACK[iy][ixRight] == ' ' ) txActual = ixRight - WCAR/2;
-		
+
+		while(iyTrack<(iyProgress+$layers.length)){
+
+			iyTrack++;
+			let n = iyTrack%$layers.length;
+			$layers[n].css({
+				'bottom':(iyTrack*GRID)+'px',
+				'left':curve[iyTrack].x*GRID+'px',
+				'transform':'rotate('+curve[iyTrack].r*55+'deg)',
+			});
+		}
+
 		xCenter = (xCenter*(steer-1) + txActual)/steer;
 
+		let r = txRelative*90;
 
 		$car.css({
-			left:txActual*GRID+'px',
+			left:txActual*GRID +'px',
 			bottom: (prog+0.1)*GRID + 'px',
+			'transform':'rotateZ('+r+'deg)',
 		})
 
 		$plane.css({
@@ -352,22 +344,9 @@ DrivingGame = function(){
 			bottom:-prog*GRID+'px',
 		})
 
-		//console.log('prog',prog);
 
 		
-		let maxRender = $layers.length - Math.floor(prog) + 1;
-
-		let minRender = $layers.length - Math.floor(prog) - 6;
-
-
 		
-		for(var r=0; r<$layers.length; r++){
-
-			if(r<minRender || r>maxRender) $layers[r].css('opacity','0');
-			else $layers[r].css('opacity','1');
-
-
-		}
 	}
 
 	self.setPlayers = function(p){
