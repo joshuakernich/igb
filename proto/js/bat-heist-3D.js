@@ -144,7 +144,7 @@ BatHeistGoon = function(actor){
 
 	self.trigger = function(){
 		self.triggered = true;
-		self.$el.attr('pose','dead');
+		sprite.setPose('dead');
 		$cone.hide();
 		return true;
 	}
@@ -177,7 +177,7 @@ BatHeistGoon = function(actor){
 
 	self.die = function(){
 		self.dead = true;
-		self.$el.attr('pose','dead');
+		sprite.setPose('dead');
 		$cone.hide();
 	}
 
@@ -367,7 +367,8 @@ BatHeistArena = function(layout){
 			$reticule:$('<heistreticule>').appendTo($stage), 
 			$pulse:$('<heistpulse>').appendTo($stage),
 			$projectile:$(`<heistprojectile><heistspinner></heistspinner></heistprojectile>`).appendTo(self.$el),
-			$start:$('<heiststart>').appendTo($stage),
+			$start:$('<heiststart>HOVER TO ARM</heiststart>').appendTo($stage),
+			$arrow:$('<heistarrow>').appendTo($stage),
 			rx:0, 
 			ry:0,
 			cntThrow:0,
@@ -394,6 +395,13 @@ BatHeistArena = function(layout){
 			actors.push(actor);
 		}
 
+		for(var r in reticules){
+			reticules[r].isArmed = false;
+			reticules[r].isThrow = false;
+			reticules[r].cntThrow = 0;
+			reticules[r].cntFocus = 0;
+		}
+
 		self.dead = false;
 	}
 
@@ -405,8 +413,8 @@ BatHeistArena = function(layout){
 
 	const FPTHROW = BatHeist.FPS/2;
 	const FPFOCUS = BatHeist.FPS;
-	const SIZEFROM = BatHeist.GRIDSIZE/4;
-	const SIZETO = BatHeist.GRIDSIZE;
+	const SIZEFROM = BatHeist.GRIDSIZE;
+	const SIZETO = BatHeist.GRIDSIZE/2;
 	const SIZERANGE = SIZEFROM-SIZETO;
 	const HITRANGE = 0.5;
 
@@ -449,11 +457,11 @@ BatHeistArena = function(layout){
 
 				// convert back to a number between -1 and 1 and then multiply it
 				const MULTIPLY = 3.5;
-				rx = (rx*2-1)*MULTIPLY;
-				ry = (ry*2-1)*MULTIPLY;
+				let ox = (rx*2-1)*MULTIPLY;
+				let oy = (ry*2-1)*MULTIPLY;
 
-				rx = BatHeist.GRID/2 + rx*(BatHeist.GRID/2) - 0.5;
-				ry = BatHeist.GRID/2 + ry*(BatHeist.GRID/2) - 0.5;
+				rx = BatHeist.GRID/2 + ox*(BatHeist.GRID/2) - 0.5;
+				ry = BatHeist.GRID/2 + oy*(BatHeist.GRID/2) - 0.5;
 
 				/*if(rx<0) rx = 0;
 				if(ry<0) ry = 0
@@ -528,15 +536,32 @@ BatHeistArena = function(layout){
 
 				let amt = reticules[r].cntThrow/FPTHROW;
 				let yBottom = BatHeist.H/1.2 - layout.y;
-				let yRange = yBottom-((reticules[r].ry+0.5) * BatHeist.GRIDSIZE);
-				let y = yBottom - yRange*amt;
-				let opacity = reticules[r].isArmed?1:0;
+				let yDif = yBottom-((reticules[r].ry+0.5) * BatHeist.GRIDSIZE);
+				let y = yBottom - yDif*amt;
+				let xStart = BatHeist.ARENA.W/2 + (r==0?-1:1)*200;
+				let x = (reticules[r].rx+0.5) * BatHeist.GRIDSIZE;
+				let xDif = x-xStart;
+
+				let dist = Math.sqrt(xDif*xDif + yDif*yDif);
+
+				let degs = Math.atan2(yDif,-xDif)*180/Math.PI;
+				
+				
+
+				reticules[r].$arrow.css({
+					left:xStart + xDif*amt,
+					top:yBottom, 
+					height: dist-30,
+					opacity: reticules[r].isArmed && !reticules[r].isThrow?1:0,
+					transform: `rotate(${degs+90}deg)`,
+				});
 
 				reticules[r].$projectile.css({
-					left:(reticules[r].rx+0.5) * BatHeist.GRIDSIZE,
+					left:xStart + xDif*amt,
 					top:y, 
-					transform: 'scale('+(2-amt)+')',
-					opacity: opacity,
+					transform: `rotate(${degs-90}deg) scale(${2-amt})`,
+					opacity: reticules[r].isArmed?1:0,
+
 				});
 
 				reticules[r].$start.css({
@@ -548,8 +573,12 @@ BatHeistArena = function(layout){
 					top: (reticules[r].ry+0.5) * BatHeist.GRIDSIZE, 
 					width: SIZEFROM - reticules[r].cntFocus/FPFOCUS * SIZERANGE,
 					height: SIZEFROM - reticules[r].cntFocus/FPFOCUS * SIZERANGE,
+					opacity: reticules[r].isArmed?1:0.3,
 				});
 
+
+				if( reticules[r].isArmed ) reticules[r].$reticule.attr('armed','armed');
+				else reticules[r].$reticule.removeAttr('armed');
 				
 			}
 
@@ -619,7 +648,7 @@ BatHeist3DGame = function(){
 	BatHeist.LAMP = {STRING:10,W:80,H:150};
 	BatHeist.GOON = {W:BatHeist.GRIDSIZE*0.6,H:BatHeist.GRIDSIZE*1};
 	BatHeist.HOSTAGE = {W:BatHeist.GRIDSIZE*0.6,H:BatHeist.GRIDSIZE*1.2};
-	BatHeist.ZOOMSCALE = 1.5;
+	BatHeist.ZOOMSCALE = 1.8;
 
 	BatHeist.W = 1600;
 	BatHeist.H = 1000;
@@ -773,6 +802,23 @@ BatHeist3DGame = function(){
 				transform-style: preserve-3d;
 			}
 
+			heistarrow{
+				display:block;
+				position:absolute;
+				left:-3px;
+				top:0px;
+				width: 0px;
+				height: 100px;
+				border-left: 6px dashed red;
+				transform-origin: top center;
+				opacity: 0;
+				pointer-events: none;
+			}
+
+			heistarrow:last-of-type{
+				border-color: blue;
+			}
+
 			heiststage{
 				
 				display:block;
@@ -792,10 +838,21 @@ BatHeist3DGame = function(){
 				height: ${BatHeist.GRIDSIZE}px;
 				transform: translate(-50%, -50%);
 				display:none;
+				border-radius: 100%;
 
+				
+				background-size: 60%;
+				background-position: center;
+				background-repeat: no-repeat;
+
+				pointer-events: none;
 			}
 
-			heistreticule:before{
+			heistreticule[armed]{
+				background-image: url(./proto/img/bat-symbol-red.png);
+			}
+
+			heistreticule:before, heiststart:before{
 				content:"";
 				display:block;
 				position:absolute;
@@ -806,9 +863,10 @@ BatHeist3DGame = function(){
 				border: 5px solid red;
 				border-right: none;
 				z-index: 100;
+				border-radius: 100%;
 			}
 
-			heistreticule:after{
+			heistreticule:after, heiststart:after{
 				content:"";
 				display:block;
 				position:absolute;
@@ -819,8 +877,11 @@ BatHeist3DGame = function(){
 				border: 5px solid red;
 				border-left: none;
 				z-index: 100;
+				border-radius: 100%;
 			}
 
+			heiststart:last-of-type:before,
+			heiststart:last-of-type:after,
 			heistreticule:last-of-type:before,
 			heistreticule:last-of-type:after{
 				border-color:blue;
@@ -829,43 +890,36 @@ BatHeist3DGame = function(){
 			heiststart{
 				display: block;
 				position: absolute;
-				width: ${BatHeist.GRIDSIZE*2}px;
-				height: ${BatHeist.ARENA.H}px;
+				width: ${BatHeist.GRIDSIZE*1.5}px;
+				height: ${BatHeist.GRIDSIZE*1.5}px;
 
-				background: url(./proto/img/bat-symbol.png);
+				background-image: url(./proto/img/bat-symbol-red.png);
 				background-size: 70%;
-				top: 0px;
-				left: ${-BatHeist.GRIDSIZE*2}px;
+				top: ${BatHeist.GRIDSIZE*1.75}px;
+				left: ${-BatHeist.GRIDSIZE*1.75}px;
 				background-repeat: no-repeat;
 				background-position: center;
-				background-color: rgba(255,0,0,0.2);
 
 				display: none;
 
+				line-height: ${BatHeist.GRIDSIZE*2.5}px;
+				color: red;
+				font-size:5px;
+				border-radius: 100%;
+				font-weight: bold;
+				text-align: center;
 			}	
 
-			heiststart:after{
-				content:"HOVER TO ARM";
-				position: absolute;
-				display: block;
-				top: ${BatHeist.ARENA.H/2 + BatHeist.GRIDSIZE/2}px;
-				width: ${BatHeist.GRIDSIZE*2}px;
-
-				left: 0px,
-				background: red,
-				font-size:10px;
-				color: white;
-				text-align: center;
-			}
-
+			
 			heiststart[armed]{
 				display: none;
 			}
 
 			heiststart:last-of-type{
 				left: auto;
-				right: ${-BatHeist.GRIDSIZE*2}px;
-				background-color: rgba(0,0,255,0.2);
+				right: ${-BatHeist.GRIDSIZE*1.75}px;
+				background-image: url(./proto/img/bat-symbol-blue.png);
+				color: blue;
 			}
 
 			heistarena{
@@ -911,12 +965,15 @@ BatHeist3DGame = function(){
 			heistinfo{
 				display:block;
 				position:absolute;
-				bottom: 100px;
+				bottom: 180px;
 				left: 250px;
 				color: white;
 				font-size: 20px;
 				line-height: 70px;
 				display: none;
+				opacity: 0;
+
+
 			}
 
 			heistfail{
@@ -944,7 +1001,7 @@ BatHeist3DGame = function(){
 			}
 
 			heistarena.focus{
-				transform: scale3d(1.5,1.5,1.5);
+				transform: scale3d(${BatHeist.ZOOMSCALE},${BatHeist.ZOOMSCALE},${BatHeist.ZOOMSCALE}) translateY(-50px);
 				transform-style: preserve-3d;
 			}
 
@@ -1008,14 +1065,18 @@ BatHeist3DGame = function(){
 				height: ${BatHeist.GRIDSIZE}px;
 
 				position: absolute;
-				background-image: url(./proto/img/bat-symbol.png);
+				
+				background-image: url(./proto/img/bat-symbol-red.png);
 				background-size: 100%;
 				background-position: center;
 				background-repeat: no-repeat;
 				left: ${-BatHeist.GRIDSIZE}px;
 				top: ${-BatHeist.GRIDSIZE/2}px;
-				
-				
+			}
+
+			heistprojectile:last-of-type heistspinner:after,
+			heistreticule[armed]:last-of-type{
+				background-image: url(./proto/img/bat-symbol-blue.png);
 			}
 
 			heisttarget{
@@ -1068,90 +1129,7 @@ BatHeist3DGame = function(){
 				text-align: center;
 			}
 
-			heistlamp{
-				display:block;
-				position:absolute;
-				top:0px;
-				left:0px;
-				width:0px;
-				height:0px;
-			}
-
-			heistlampupper{
-				display:block;
-				position:absolute;
-				bottom:${BatHeist.LAMP.H/2}px;
-				left:${-BatHeist.LAMP.STRING/2}px;
-				width:${BatHeist.LAMP.STRING}px;
-				height:${BatHeist.LAMP.H/2}px;
-				background:orange;
-			}
-
-			heistlamplower{
-				display:block;
-				position:absolute;
-				bottom:0px;
-				left:${-BatHeist.LAMP.STRING/2}px;
-				width:${BatHeist.LAMP.STRING}px;
-				height:${BatHeist.LAMP.H/2}px;
-				background:orange;
-			}
-
-			heistlamplower:after{
-				display:block;
-				position:absolute;
-				content:"";
-				width:${BatHeist.LAMP.W}px;
-				left:${-BatHeist.LAMP.W/2+BatHeist.LAMP.STRING/2}px;
-				height:${BatHeist.LAMP.W/2}px;
-				border-radius:100% 100% 0px 0px;
-				background:orange;
-				bottom: 0px;
-			}
-
-			heistgoon{
-				display:block;
-				position:absolute;
-				bottom:0px;
-				width:${BatHeist.GOON.W}px;
-				height:${BatHeist.GOON.H}px;
-				left: ${-BatHeist.GOON.W/2}px;
-				background: red;
-				border-radius:${BatHeist.GOON.W/2}px;
-			}
-
-			heistgoon:after{
-				content:"";
-				display:block;
-				position:absolute;
-				width: 200%;
-				height: 40%;
-				background-image: url(./proto/img/bat-rifle.png);
-				background-size: contain;
-				background-position: center;
-				background-repeat: no-repeat;
-				top: 40%;
-				left: -25%;
-				transform: rotate(20deg);
-			}
-
-			heistgoon[is='goody']{
-				background:green;
-			}
-
-			heistgoon[is='goody']:after{
-				display: none;
-			}
-
-			heistgoon[pose='sit']{
-				height:${BatHeist.HOSTAGE.H}px;
-			}
-
-			heistgoon[pose='dead']{
-				width:${BatHeist.GOON.H/2}px;
-				height:${BatHeist.GOON.W}px;
-			}
-
+			
 			heistropes{
 				position:absolute;
 				display:block;
@@ -1229,23 +1207,24 @@ BatHeist3DGame = function(){
 			heistreset{
 				display: block;
 				position: absolute;
-				top: 200px;
-				left: 190px;
+				top: 120px;
+				left: 350px;
 				width: 120px;
 				height: 120px;
-				background: red;
+				
 				background: no-repeat center url(./proto/img/reset-ccw.svg);
 				background-size: 80px;
 				z-index: 3;
 
 				display: none;
+				opacity: 0.3;
 			}
 
 			heisttoggle{
 				display: block;
 				position: absolute;
-				top: 200px;
-				right: 190px;
+				top: 130px;
+				right: 340px;
 				width: 120px;
 				height: 120px;
 				background: no-repeat center url(./proto/img/zoom-out.svg);
@@ -1253,6 +1232,7 @@ BatHeist3DGame = function(){
 				margin: auto;
 				z-index: 3;
 				display: none;
+				opacity: 0.3;
 			}
 
 			@keyframes heistpulse{
@@ -1291,10 +1271,21 @@ BatHeist3DGame = function(){
 				transform-style: preserve-3d;
 			}
 
-			heistsprite[pose='stand']:after{
+			
 
+			heistsprite[deg='0']:after{ background-position-y: -600%; }
+			heistsprite[deg='90']:after{ background-position-y: -400%; }
+			heistsprite[deg='180']:after{ background-position-y: -700%; }
+			heistsprite[deg='270']:after{ background-position-y: -500%; }
+
+			heistsprite[pose='stand']:after{
 				background-position-x: -400%;
 				background-position-y: 000%;
+			}
+
+			heistsprite[pose='dead']:after{
+				background-position-x: -500%;
+				background-position-y: -100%;
 			}
 
 			heistsprite[pose='walk']:after{
@@ -1303,11 +1294,6 @@ BatHeist3DGame = function(){
 				animation-iteration-count: infinite;
 				animation-timing-function: steps(6);
 			}
-
-			heistsprite[deg='0']:after{ background-position-y: -600%; }
-			heistsprite[deg='90']:after{ background-position-y: -400%; }
-			heistsprite[deg='180']:after{ background-position-y: -700%; }
-			heistsprite[deg='270']:after{ background-position-y: -500%; }
 
 			heistsprite{
 				width: 0px;
