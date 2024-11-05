@@ -172,6 +172,8 @@ DrivingGame = function(){
 				white-space:nowrap;
 				transform-origin: bottom center;
 				width:${GRID*5}px;
+				height:${GRID}px;
+				background: gray;
 				left:0px;
 				transform-style: preserve-3d;
 			}
@@ -281,7 +283,7 @@ DrivingGame = function(){
 	for(var i=0; i<20; i++){
 		let $layer = $('<drivinglayer>').appendTo($plane);
 		let $track = $('<drivingtrack>').appendTo($layer);
-		$layers[t] = $layer;
+		$layers[i] = $layer;
 	}
 
 	/*for(var t in TRACK){
@@ -332,10 +334,10 @@ DrivingGame = function(){
 
 		let ixLeft = Math.floor(xLeft);
 		let ixRight = Math.floor(xRight);
-		let iy = TRACK.length - Math.ceil(prog);
+		let iy = Math.floor(prog);
 
-		if( TRACK[iy][ixLeft] == ' ' ) txActual = ixLeft + 1 + WCAR/2;
-		if( TRACK[iy][ixRight] == ' ' ) txActual = ixRight - WCAR/2;
+		//if( TRACK[iy][ixLeft] == ' ' ) txActual = ixLeft + 1 + WCAR/2;
+		//if( TRACK[iy][ixRight] == ' ' ) txActual = ixRight - WCAR/2;
 		
 		xCenter = (xCenter*(steer-1) + txActual)/steer;
 

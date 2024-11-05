@@ -619,6 +619,16 @@ BatHeistArena = function(layout){
 		if(b) self.$el.addClass('focus');
 
 		//$world.css('transform','scale('+(b?1:layout.scale)+')')
+
+		for(var r in reticules){
+			reticules[r].isArmed = false;
+			reticules[r].isThrow = false;
+			reticules[r].cntThrow = 0;
+			reticules[r].cntFocus = 0;
+			reticules[r].$reticule.css('opacity',0);
+			reticules[r].$projectile.css('opacity',0);
+			reticules[r].$arrow.css('opacity',0);
+		}
 	}
 
 	let textInput = '';
@@ -895,7 +905,7 @@ BatHeist3DGame = function(){
 
 				background-image: url(./proto/img/bat-symbol-red.png);
 				background-size: 70%;
-				top: ${BatHeist.GRIDSIZE*1.75}px;
+				bottom: 0px;
 				left: ${-BatHeist.GRIDSIZE*1.75}px;
 				background-repeat: no-repeat;
 				background-position: center;
@@ -1036,6 +1046,7 @@ BatHeist3DGame = function(){
 				height: 0px;
 				position: absolute;
 				display: none;
+				transform-style: preserve-3d;
 			}
 
 			heistempty{
@@ -1043,8 +1054,6 @@ BatHeist3DGame = function(){
 				width: 0px;
 				height: 0px;
 				position: absolute;
-
-
 				transform-style: preserve-3d;
 				transform: rotateX(-10deg);
 				top: 20px;
@@ -1055,7 +1064,8 @@ BatHeist3DGame = function(){
 				width: 0px;
 				height: 0px;
 				position: absolute;
-				transform: scaleY(0.5);
+				transform: scaleY(0.5) translateZ(${BatHeist.GRIDSIZE}px);
+				transform-style: preserve-3d;
 			}
 
 			heistprojectile heistspinner:after{
