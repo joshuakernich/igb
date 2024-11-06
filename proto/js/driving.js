@@ -342,8 +342,6 @@ DrivingGame = function(){
 			}
 		}
 		
-		
-
 		let r = txRelative*45;
 		car.r += r*0.02;
 
