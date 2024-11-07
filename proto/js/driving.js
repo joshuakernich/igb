@@ -15,7 +15,7 @@ Box3D = function(w,l,h,color){
 				transform-style: preserve-3d;
 				text-align:center;
 
-				
+				border-radius: 20px;
 			}	
 
 			box3Dside.box3D-back{
@@ -67,8 +67,8 @@ DrivingGame = function(){
 	const W = 400;
 	const H = 250;
 	const GRID = W;
-	const WCAR = 0.25;
-	const LCAR = 0.35;
+	const WCAR = 0.3;
+	const LCAR = 0.5;
 	const HCAR = 0.1;
 	const FLOAT = 5;
 	
@@ -76,13 +76,19 @@ DrivingGame = function(){
 
 	$("head").append(`
 		<style>
+			.drivingbg{
+				background-image: url(./proto/img/bat-skyline.png);
+				background-size: 33.3%;
+			}
+
 			drivinggame{
 				display:block;
 				width:${W}px;
 				height:${H}px;
 				box-sizing:border-box;
 				transform-origin:top left;
-				background: black;
+
+				
 			}
 
 			drivingviewport{
@@ -94,8 +100,6 @@ DrivingGame = function(){
 				width:${W}px;
 				height:${H}px;
 
-				overflow: hidden;
-				background: black;
 			}
 
 			drivingcamera{
@@ -211,18 +215,12 @@ DrivingGame = function(){
 
 	
 
-	let cars = [
-		{x:2.25,y:5},	
-		{x:2.75,y:10},	
-		{x:2.25,y:15},	
-		{x:2.75,y:20},	
-		{x:2.75,y:25},	
-	]
+	
 
 	let self = this;
 	let intTick;
 
-	self.$el = $('<igb>');
+	self.$el = $('<igb class="drivingbg">');
 
 	let $left = $('<igbside>').appendTo(self.$el);
 	let $front = $('<igbside>').appendTo(self.$el);
@@ -239,36 +237,24 @@ DrivingGame = function(){
 
 	let $car = $(`<drivingcar>`).appendTo($plane);
 	let $i = $(`<drivingcarinner>`).appendTo($car);
-	new Box3D(WCAR*GRID,LCAR*GRID,HCAR*GRID,PURPLE).$el.appendTo($i);
+	new Box3D(WCAR*GRID,LCAR*GRID,HCAR*GRID,'black').$el.appendTo($i);
 
 
 	$layers = [];
-	
-	
 
-	/*for(var t in TRACK){
-		
-		for(var g=0; g<TRACK[t].length; g++){
-			let $g = $('<drivinggrid>').appendTo($layer).attr('type',TRACK[t][g]);
-
-			if(TRACK[t][g]==' '){
-				new Box3D(GRID-100,GRID-100,GRID*(0.5+Math.random()*3),PURPLE).$el.appendTo($g).css({
-					transform:'translate(50px,50px)',
-				})
-			}
-		}
-
-		let $fog = $('<drivingfog>').appendTo($layer);
-
-		
-	}*/
-
-
+	let cars = [
+		{progress:10,lane:-1,speed:0.5},
+		{progress:20,lane:1,speed:0.5},
+		{progress:30,lane:-1,speed:0.5},
+		{progress:40,lane:0,speed:0.5},
+	]
 
 	for(var c in cars){
-		let $c = $(`<drivingcar>`).appendTo($plane).css({left:cars[c].x*GRID+'px',bottom:cars[c].y*GRID+'px'});
+		let $c = $(`<drivingcar>`).appendTo($plane);
 		let $i = $(`<drivingcarinner>`).appendTo($c);
 		new Box3D(WCAR*GRID,LCAR*GRID,HCAR*GRID,'black').$el.appendTo($i);
+
+		cars[c].$el = $c;
 	}
 
 
@@ -304,6 +290,9 @@ DrivingGame = function(){
 	while(curve.length<1000){
 		addStraight(5+Math.floor(Math.random()*5));
 		addSlide(10+Math.floor(Math.random()*5),(Math.random()>0.5?1:-1));
+
+		if(curve[curve.length-1].r > 90) addSlide(10,-1);
+		if(curve[curve.length-1].r < -90) addSlide(10,1);
 	}
 
 
@@ -341,10 +330,9 @@ DrivingGame = function(){
 				});
 			}
 		}
-		
+
 		let r = txRelative*45;
 		car.r += r*0.02;
-
 
 		$car.css({
 			left: car.x*GRID +'px',
@@ -353,12 +341,39 @@ DrivingGame = function(){
 		})
 
 
+
+
 		let cx = Math.sin(car.r*Math.PI/180)*0.25;
 		let cy = Math.cos(car.r*Math.PI/180)*0.25;
 		
 	    $camera.css('transform',"rotateY(" + car.r + "deg)");
 	   	$plane.css('bottom',-(car.y-cy)*GRID+'px');
 	   	$plane.css('left',-(car.x-cx)*GRID+'px');
+
+	   	for(var c in cars){
+	   		cars[c].progress += speed*cars[c].speed;
+
+	   		let iSeg = Math.floor( cars[c].progress );
+	   		let iNext = iSeg+1;
+	   		let leftover = cars[c].progress%1;
+	   	
+	   		let r = curve[iSeg].r;
+	   		let x1 = curve[iSeg].x + Math.sin(Math.PI/2)*cars[c].lane; 
+	   		let y1 = curve[iSeg].y + Math.cos(Math.PI/2)*cars[c].lane; 
+	   		let x2 = curve[iNext].x + Math.sin(Math.PI/2)*cars[c].lane; 
+	   		let y2 = curve[iNext].y + Math.cos(Math.PI/2)*cars[c].lane; 
+
+
+	   		let x = x1 + (x2-x1)*leftover;
+	   		let y = y1 + (y2-y1)*leftover;
+	   		
+
+	   		cars[c].$el.css({
+	   			'left':x*GRID+'px',
+	   			'bottom':y*GRID+'px',
+	   			'transform':'rotate('+(r*180/Math.PI)+'deg)',
+	   		})
+	   	}
 		
 	}
 
