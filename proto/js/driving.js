@@ -269,6 +269,7 @@ DrivingGame = function(){
 			drivingthruster[boosting='true']{
 				background: yellow;
 				border-color: red;
+				box-shadow: 0px 0px 10px red;
 			}
 
 			
@@ -406,8 +407,13 @@ DrivingGame = function(){
 
 	let car = {x:0,y:0,r:0};
 
+	let iProgress = 0;
 	let iRender = 0;
 	let boosting = 0;
+
+	function dist(a,b){
+		return Math.hypot(b.x-a.x,b.y-a.y);
+	}
 
 	function tick(){
 		let w = $(document).innerWidth()/3;
@@ -420,20 +426,16 @@ DrivingGame = function(){
 		car.x += Math.sin(car.r*Math.PI/180)*speed*(boosting>0?2:1);
 		car.y += Math.cos(car.r*Math.PI/180)*speed*(boosting>0?2:1);
 
-		if(iRender<curve.length){
-			let dx = curve[iRender].x - car.x;
-			let dy = curve[iRender].y - car.y;
-			let d = Math.sqrt(dx*dx+dy*dy);
+		if( dist(car,curve[iProgress]) > dist(car,curve[iProgress+1])) iProgress++;
 
-			if(d<($layers.length-3)){
-				iRender++;
-				let n = iRender%$layers.length;
-				$layers[n].css({
-					'bottom':curve[iRender].y*GRID+'px',
-					'left':curve[iRender].x*GRID+'px',
-					'transform':'rotate('+curve[iRender].r*180/Math.PI+'deg) skew('+-curve[iRender].skew*180/Math.PI+'deg)',
-				});
-			}
+		while(iRender < (iProgress + $layers.length-2)){
+			iRender++;
+			let n = iRender%$layers.length;
+			$layers[n].css({
+				'bottom':curve[iRender].y*GRID+'px',
+				'left':curve[iRender].x*GRID+'px',
+				'transform':'rotate('+curve[iRender].r*180/Math.PI+'deg) skew('+-curve[iRender].skew*180/Math.PI+'deg)',
+			});
 		}
 
 		for(var b in boosts){
