@@ -155,7 +155,7 @@ DrivingGame = function(){
 				display:block;
 				position:absolute;
 				left:${-WCAR/2*GRID}px;
-				top:${-WCAR/2*GRID}px;
+				top:${-LCAR/2*GRID}px;
 				width:${WCAR*GRID}px;
 				height:${LCAR*GRID}px;
 				transform: translateZ(5px);
@@ -174,16 +174,33 @@ DrivingGame = function(){
 			}
 
 			drivingcar box3Dside.box3D-front:before{
-				content:".";
-				display:inline-block;
-				margin-right: 25px;
+				content:"";
+				display:block;
+				position: absolute;
+
+				bottom: 2px;
+				left: 2px;
+				right: 2px;
+				box-sizing: border-box;
+				height: 30%;
+				border-left: 15px solid red;
+				border-right: 15px solid red;
+				border-radius: 5px;
 			}
 
 			drivingcar box3Dside.box3D-front:after{
-				content:".";
-				line-height:${HCAR*0.7*GRID}px;
-				display:inline-block;
-				margin-left: 25px;
+				content:"";
+				display:block;
+				position: absolute;
+				top: 2px;
+				left: 0px;
+				right: 0px;
+				box-sizing: border-box;
+				width: 30%;
+				height: 5px;
+				background: red;
+				margin: auto;
+				border-radius: 100%;
 			}
 
 			drivinglayer{
@@ -192,6 +209,7 @@ DrivingGame = function(){
 				width:0px;
 				height:0px;
 				transform-style: preserve-3d;
+				transform-origin: center;
 			}
 
 			drivinglayer:after{
@@ -207,6 +225,43 @@ DrivingGame = function(){
 				bottom: 0px;
 			}
 
+			drivingboost{
+				display:block;
+				position:absolute;
+				width: 0px;
+				height: 0px;
+
+
+
+			}
+
+			drivingboost:after{
+				content:"";
+				display:block;
+				width: ${GRID}px;
+				height: ${GRID}px;
+				position: absolute;
+				left: ${-GRID/2}px;
+				top: ${-GRID/2}px;
+				background: url(./proto/img/bat-boost.png);
+				background-position: center;
+				background-size: 50%;
+				background-repeat: no-repeat;
+			}
+
+			drivingthruster{
+				width: ${HCAR*0.7*GRID}px;
+				height: ${HCAR*0.7*GRID}px;
+				position: absolute;
+				display: block;
+				background: red;
+				
+				left: 0px;
+				right: 0px;
+				bottom: 0px;
+				margin: auto;
+				border-radius: 100%;
+			}
 
 			
 
@@ -239,24 +294,36 @@ DrivingGame = function(){
 	let $i = $(`<drivingcarinner>`).appendTo($car);
 	new Box3D(WCAR*GRID,LCAR*GRID,HCAR*GRID,'black').$el.appendTo($i);
 
+	let $thruster = $('<drivingthruster>').appendTo( $car.find('.box3D-front'));
+
 
 	$layers = [];
 
 	let cars = [
+		{progress:10,lane:1,speed:0.95},
 		{progress:10,lane:-1,speed:0.5},
 		{progress:20,lane:1,speed:0.5},
 		{progress:30,lane:-1,speed:0.5},
 		{progress:40,lane:0,speed:0.5},
 	]
 
+	let boosts = [
+		{progress:0,lane:-1},
+		{progress:1,lane:0},
+		{progress:2,lane:1},
+		{progress:10,lane:1},
+		{progress:20,lane:-1},
+		{progress:30,lane:1},
+		{progress:40,lane:0},
+	]
+
 	for(var c in cars){
 		let $c = $(`<drivingcar>`).appendTo($plane);
 		let $i = $(`<drivingcarinner>`).appendTo($c);
-		new Box3D(WCAR*GRID,LCAR*GRID,HCAR*GRID,'black').$el.appendTo($i);
+		new Box3D(WCAR*GRID,LCAR*GRID,HCAR*2*GRID,'black').$el.appendTo($i);
 
 		cars[c].$el = $c;
 	}
-
 
 	let players = [{px:0}];
 	let iTick = 0;
@@ -267,6 +334,28 @@ DrivingGame = function(){
 	let iyTrack = -1;
 
 	let curve = [{x:0,y:0,r:0}];
+
+	function getPosition(progress,lane){
+
+		let iSeg = Math.floor( progress );
+   		let iNext = iSeg+1;
+   		let leftover = progress%1;
+   		
+   		let x1 = curve[iSeg].x + Math.sin(curve[iSeg].r + Math.PI/2)*lane; 
+   		let y1 = curve[iSeg].y + Math.cos(curve[iSeg].r + Math.PI/2)*lane; 
+
+   		let x2 = curve[iNext].x + Math.sin(curve[iNext].r + Math.PI/2)*lane; 
+   		let y2 = curve[iNext].y + Math.cos(curve[iNext].r + Math.PI/2)*lane; 
+
+   		let x = x1 + (x2-x1)*leftover;
+	   	let y = y1 + (y2-y1)*leftover;
+
+		return {
+			x:x,
+			y:y,
+			r:curve[iSeg].r,
+		}
+	}
 
 	function add(deg){
 		let r = curve[curve.length-1].r;
@@ -296,9 +385,18 @@ DrivingGame = function(){
 	}
 
 
-	for(var l=0; l<15; l++) $layers[l] = $('<drivinglayer>').appendTo($plane);
+	for(var l=0; l<10; l++) $layers[l] = $('<drivinglayer>').appendTo($plane);
 	
-	
+	for(var b in boosts){
+
+		let p = getPosition(boosts[b].progress,boosts[b].lane);
+
+		boosts[b].$el = $(`<drivingboost>`).appendTo($plane).css({
+			left:p.x*GRID+'px',
+			bottom:p.y*GRID+'px',
+			transform:'rotate('+p.r*180/Math.PI+'deg)',
+		})
+	}
 
 	let car = {x:0,y:0,r:0};
 
@@ -320,7 +418,7 @@ DrivingGame = function(){
 			let dy = curve[iRender].y - car.y;
 			let d = Math.sqrt(dx*dx+dy*dy);
 
-			if(d<12){
+			if(d<($layers.length-3)){
 				iRender++;
 				let n = iRender%$layers.length;
 				$layers[n].css({
@@ -340,9 +438,6 @@ DrivingGame = function(){
 			'transform':'rotateZ('+(car.r+r)+'deg)',
 		})
 
-
-
-
 		let cx = Math.sin(car.r*Math.PI/180)*0.25;
 		let cy = Math.cos(car.r*Math.PI/180)*0.25;
 		
@@ -352,26 +447,12 @@ DrivingGame = function(){
 
 	   	for(var c in cars){
 	   		cars[c].progress += speed*cars[c].speed;
-
-	   		let iSeg = Math.floor( cars[c].progress );
-	   		let iNext = iSeg+1;
-	   		let leftover = cars[c].progress%1;
-	   	
-	   		let r = curve[iSeg].r;
-	   		let x1 = curve[iSeg].x + Math.sin(Math.PI/2)*cars[c].lane; 
-	   		let y1 = curve[iSeg].y + Math.cos(Math.PI/2)*cars[c].lane; 
-	   		let x2 = curve[iNext].x + Math.sin(Math.PI/2)*cars[c].lane; 
-	   		let y2 = curve[iNext].y + Math.cos(Math.PI/2)*cars[c].lane; 
-
-
-	   		let x = x1 + (x2-x1)*leftover;
-	   		let y = y1 + (y2-y1)*leftover;
+	   		let p = getPosition(cars[c].progress,cars[c].lane);
 	   		
-
 	   		cars[c].$el.css({
-	   			'left':x*GRID+'px',
-	   			'bottom':y*GRID+'px',
-	   			'transform':'rotate('+(r*180/Math.PI)+'deg)',
+	   			'left':p.x*GRID+'px',
+	   			'bottom':p.y*GRID+'px',
+	   			'transform':'rotate('+(p.r*180/Math.PI)+'deg)',
 	   		})
 	   	}
 		
@@ -389,8 +470,12 @@ DrivingGame = function(){
 
 	self.turnOnOff(true);
 
-	$game.on('mousemove',function(e){
+	$(document).on('mousemove',function(e){
 
-		players[0].px = e.offsetX/W*100;
+		let w = $(document).innerWidth()/3;
+		let x = (e.pageX - w)/w*100;
+		if(x>100) x = 100;
+		if(x<0) x = 0;
+		players[0].px = x;
 	});
 }
