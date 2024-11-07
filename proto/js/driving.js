@@ -261,6 +261,14 @@ DrivingGame = function(){
 				bottom: 0px;
 				margin: auto;
 				border-radius: 100%;
+				
+				border: 5px solid #222;
+				box-sizing: border-box;
+			}
+
+			drivingthruster[boosting='true']{
+				background: yellow;
+				border-color: red;
 			}
 
 			
@@ -308,9 +316,7 @@ DrivingGame = function(){
 	]
 
 	let boosts = [
-		{progress:0,lane:-1},
-		{progress:1,lane:0},
-		{progress:2,lane:1},
+
 		{progress:10,lane:1},
 		{progress:20,lane:-1},
 		{progress:30,lane:1},
@@ -389,18 +395,19 @@ DrivingGame = function(){
 	
 	for(var b in boosts){
 
-		let p = getPosition(boosts[b].progress,boosts[b].lane);
+		boosts[b].p = getPosition(boosts[b].progress,boosts[b].lane);
 
 		boosts[b].$el = $(`<drivingboost>`).appendTo($plane).css({
-			left:p.x*GRID+'px',
-			bottom:p.y*GRID+'px',
-			transform:'rotate('+p.r*180/Math.PI+'deg)',
+			left:boosts[b].p.x*GRID+'px',
+			bottom:boosts[b].p.y*GRID+'px',
+			transform:'rotate('+boosts[b].p.r*180/Math.PI+'deg)',
 		})
 	}
 
 	let car = {x:0,y:0,r:0};
 
 	let iRender = 0;
+	let boosting = 0;
 
 	function tick(){
 		let w = $(document).innerWidth()/3;
@@ -408,10 +415,10 @@ DrivingGame = function(){
 
 		let txRelative = (players[0].px/100*2-1);
 
+		boosting --;
 
-		car.x += Math.sin(car.r*Math.PI/180)*speed;
-		car.y += Math.cos(car.r*Math.PI/180)*speed;
-
+		car.x += Math.sin(car.r*Math.PI/180)*speed*(boosting>0?2:1);
+		car.y += Math.cos(car.r*Math.PI/180)*speed*(boosting>0?2:1);
 
 		if(iRender<curve.length){
 			let dx = curve[iRender].x - car.x;
@@ -429,6 +436,15 @@ DrivingGame = function(){
 			}
 		}
 
+		for(var b in boosts){
+			let dx = boosts[b].p.x - car.x;
+			let dy = boosts[b].p.y - car.y;
+			let d = Math.sqrt(dx*dx+dy*dy);
+
+			if(d<0.5) boosting = FPS;
+		}
+
+
 		let r = txRelative*45;
 		car.r += r*0.02;
 
@@ -441,6 +457,7 @@ DrivingGame = function(){
 		let cx = Math.sin(car.r*Math.PI/180)*0.25;
 		let cy = Math.cos(car.r*Math.PI/180)*0.25;
 		
+		$thruster.attr('boosting',boosting>0);
 	    $camera.css('transform',"rotateY(" + car.r + "deg)");
 	   	$plane.css('bottom',-(car.y-cy)*GRID+'px');
 	   	$plane.css('left',-(car.x-cx)*GRID+'px');
