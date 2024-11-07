@@ -71,6 +71,7 @@ DrivingGame = function(){
 	const LCAR = 0.5;
 	const HCAR = 0.1;
 	const FLOAT = 5;
+	const WROAD = 3;
 	
 	const PURPLE = '#230B39';
 
@@ -216,12 +217,12 @@ DrivingGame = function(){
 				content:"";
 				display:block;
 				position:absolute;
-				width:${GRID*3}px;
+				width:${GRID*WROAD}px;
 				height:${GRID*1.1}px;
 				background-image: url(./proto/img/bat-road.png);
 				background-size: 100%;
 				transform-style: preserve-3d;
-				left: ${-GRID*3/2}px;
+				left: ${-GRID*WROAD/2}px;
 				bottom: 0px;
 			}
 
@@ -351,6 +352,14 @@ DrivingGame = function(){
    		let x1 = curve[iSeg].x + Math.sin(curve[iSeg].r + Math.PI/2)*lane; 
    		let y1 = curve[iSeg].y + Math.cos(curve[iSeg].r + Math.PI/2)*lane; 
 
+   		if(leftover==0){
+   			return {
+				x:x1,
+				y:y1,
+				r:curve[iSeg].r,
+			}
+   		}
+
    		let x2 = curve[iNext].x + Math.sin(curve[iNext].r + Math.PI/2)*lane; 
    		let y2 = curve[iNext].y + Math.cos(curve[iNext].r + Math.PI/2)*lane; 
 
@@ -410,6 +419,7 @@ DrivingGame = function(){
 	let iProgress = 0;
 	let iRender = 0;
 	let boosting = 0;
+	let bogging = 0;
 
 	function dist(a,b){
 		return Math.hypot(b.x-a.x,b.y-a.y);
@@ -422,11 +432,20 @@ DrivingGame = function(){
 		let txRelative = (players[0].px/100*2-1);
 
 		boosting --;
+		bogging --;
 
-		car.x += Math.sin(car.r*Math.PI/180)*speed*(boosting>0?2:1);
-		car.y += Math.cos(car.r*Math.PI/180)*speed*(boosting>0?2:1);
+		let modifier = (bogging > 0)?0.4:(boosting > 0?2:1);
+
+		car.x += Math.sin(car.r*Math.PI/180)*speed*(modifier);
+		car.y += Math.cos(car.r*Math.PI/180)*speed*(modifier);
+
 
 		if( dist(car,curve[iProgress]) > dist(car,curve[iProgress+1])) iProgress++;
+
+		//TO DO figure out offset on plane
+		//let d = dist(car,curve[iProgress]);
+		//let r = Math.atan2(car.y-curve[iProgress].y,car.x-curve[iProgress].x);
+
 
 		while(iRender < (iProgress + $layers.length-2)){
 			iRender++;
@@ -438,13 +457,8 @@ DrivingGame = function(){
 			});
 		}
 
-		for(var b in boosts){
-			let dx = boosts[b].p.x - car.x;
-			let dy = boosts[b].p.y - car.y;
-			let d = Math.sqrt(dx*dx+dy*dy);
-
-			if(d<0.5) boosting = FPS;
-		}
+		
+		
 
 
 		let r = txRelative*45;
@@ -466,14 +480,17 @@ DrivingGame = function(){
 
 	   	for(var c in cars){
 	   		cars[c].progress += speed*cars[c].speed;
-	   		let p = getPosition(cars[c].progress,cars[c].lane);
+	   		cars[c].p = getPosition(cars[c].progress,cars[c].lane);
 	   		
 	   		cars[c].$el.css({
-	   			'left':p.x*GRID+'px',
-	   			'bottom':p.y*GRID+'px',
-	   			'transform':'rotate('+(p.r*180/Math.PI)+'deg)',
+	   			'left':cars[c].p.x*GRID+'px',
+	   			'bottom':cars[c].p.y*GRID+'px',
+	   			'transform':'rotate('+(cars[c].p.r*180/Math.PI)+'deg)',
 	   		})
 	   	}
+
+	   	for(var b in boosts) if(dist(boosts[b].p,car)<0.5) boosting = FPS;
+		for(var c in cars) if(dist(cars[c].p,car)<0.5) bogging = FPS/2;
 		
 	}
 
