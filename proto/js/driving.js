@@ -357,7 +357,7 @@ DrivingGame = function(){
 
 	let sfx = {};
 
-	sfx.music = $(`<audio autoplay controls loop>
+	sfx.music = $(`<audio autoplay loop>
 			<source src="./proto/audio/powerful-victory-trailer-103656.mp3" type="audio/mpeg">
 		</audio>`).appendTo(self.$el)[0];
 
@@ -377,10 +377,15 @@ DrivingGame = function(){
 			<source src="./proto/audio/car-scrape.mp3" type="audio/mpeg">
 		</audio>`).appendTo(self.$el)[0];
 
+	sfx.screech = $(`<audio autoplay loop>
+			<source src="./proto/audio/car-screech.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el)[0];
+
 	sfx.music.volume = 0.5;
 	sfx.boost.volume = 0.5;
 	sfx.hit.volume = 0.5;
 	sfx.scrape.volume = 0;
+	sfx.screech.volume = 0;
 
 
 	$layers = [];
@@ -396,14 +401,14 @@ DrivingGame = function(){
 		cars[i] = { progress:5+i*15, lane:[0,1,-1][Math.floor(Math.random()*2)], speed:0.5};
 	}
 
-	cars.push( { isTarget:true, progress:6, lane:-1, speed:0.95} );
-	cars.push( { isTarget:true, progress:11, lane:0, speed:0.95} );
-	cars.push( { isTarget:true, progress:17, lane:1, speed:0.95} );
+	cars.push( { isTarget:true, progress:16, lane:-1, speed:0.95} );
+	cars.push( { isTarget:true, progress:26, lane:0, speed:0.95} );
+	cars.push( { isTarget:true, progress:36, lane:1, speed:0.95} );
 
 	for(var c in cars){
 		let $c = $(`<drivingcar>`).appendTo($plane);
 		let $i = $(`<drivingcarinner>`).appendTo($c);
-		new Box3D(WCAR*GRID,LCAR*GRID,HCAR*2*GRID,cars[c].isTarget?'white':'black').$el.appendTo($i);
+		new Box3D(WCAR*GRID,WCAR*GRID,HCAR*2*GRID,cars[c].isTarget?'white':'black').$el.appendTo($i);
 
 		if( cars[c].isTarget ) $('<drivingmarker>').appendTo( $c );
 
@@ -412,11 +417,12 @@ DrivingGame = function(){
 
 	let players = [{px:0}];
 	let iTick = 0;
-	let speed = 4;
+	let speed = 6;
 	let steer = 0.2;
 	let xCenter = 0;
-
 	let iyTrack = -1;
+
+	const BOOST = 1.5;
 
 	let curve = [{x:0,y:0,r:0}];
 
@@ -516,10 +522,14 @@ DrivingGame = function(){
 
 		let txRelative = (players[0].px/100*2-1);
 
+		
+
 		boosting --;
 		bogging --;
 
-		let modifier = (bogging > 0)?0.4:(boosting > 0?2:1);
+		let modifier = (bogging > 0)?0.4:(boosting > 0?BOOST:1);
+
+		sfx.screech.volume = Math.abs(txRelative) * (modifier>1?0.2:0.1);
 
 		//modifier = 0;
 
@@ -531,21 +541,20 @@ DrivingGame = function(){
 
 		if( dist(car,curve[iProgress]) > dist(car,curve[iProgress+1])) iProgress++;
 
-		//TO DO figure out offset on plane
+		
 		let d = dist(car,curve[iProgress]);
 		let rOffset = Math.atan2(car.x-curve[iProgress].x,car.y-curve[iProgress].y);
 		let rRelative = rOffset +-curve[iProgress].r;
 
-		
 
-		let ox = Math.sin(rRelative)*d;
-		let oy = Math.cos(rRelative)*d;
+		let lane = Math.sin(rRelative)*d;
 		let max = (WROAD/2-WCAR/2);
 
 		let r = txRelative*45;
+		
 
-		let tooFarLeft = (ox<-max);
-		let tooFarRight = (ox>max);
+		let tooFarLeft = (lane<-max);
+		let tooFarRight = (lane>max);
 
 		if(tooFarLeft || tooFarRight){
 			
@@ -610,7 +619,7 @@ DrivingGame = function(){
 	   	}
 
 	   	for(var b in boosts) if(dist(boosts[b].p,car)<0.5) boosting = FPS;
-		for(var c in cars) if(dist(cars[c].p,car)<0.5) bogging = FPS/2;
+		for(var c in cars) if(dist(cars[c].p,car)<0.3) bogging = FPS/2;
 		
 		if(boosting == FPS) sfx.boost.play();
 		if(bogging == FPS/2) sfx.hit.play();
@@ -641,5 +650,6 @@ DrivingGame = function(){
 		sfx.music.play();
 		sfx.idle.play();
 		sfx.scrape.play();
+		sfx.screech.play();
 	})
 }
