@@ -273,7 +273,52 @@ DrivingGame = function(){
 				box-shadow: 0px 0px 10px red;
 			}
 
-			
+			drivingspark{
+				position: absolute;
+				width: 150%;
+				height: 250%;
+				background: url(./proto/img/explode-white.png);
+				background-size: 700%;
+				bottom: 0px;
+				left: -25%;
+				
+				animation: frame7;
+				animation-duration: 0.5s;
+				animation-fill-mode: forwards;
+				animation-timing-function: steps(7);
+				background-position-x: 0%;
+
+				animation-iteration-count: infinite;
+
+			}
+
+			drivingmarker{
+				display: block;
+				position: absolute;
+				width: ${WCAR*GRID}px;
+				height: ${(WCAR*2)*GRID}px;
+				background-image: url(./proto/img/bat-arrow.png);
+				background-repeat: no-repeat;
+				background-size: 80%;
+				left: ${-WCAR/2*GRID}px;
+				bottom: 0px;
+				transform-style: preserve-3d;
+				transform-origin: bottom center;
+				transform: rotateX(-90deg);
+
+				
+
+			}
+
+			@keyframes frame7{
+				0%{
+					background-position-x: 0%;
+				}
+
+				100%{
+					background-position-x: -700%;
+				}
+			}
 
 		</style>
 	`);
@@ -304,39 +349,71 @@ DrivingGame = function(){
 	let $i = $(`<drivingcarinner>`).appendTo($car);
 	new Box3D(WCAR*GRID,LCAR*GRID,HCAR*GRID,'black').$el.appendTo($i);
 
+	
 	let $thruster = $('<drivingthruster>').appendTo( $car.find('.box3D-front'));
+	let $sparkLeft = $('<drivingspark>').appendTo( $car.find('.box3D-left'));
+	let $sparkRight = $('<drivingspark>').appendTo( $car.find('.box3D-right'));
+	let $sparkBack = $('<drivingspark>').appendTo( $car.find('.box3D-back'));
+
+	let sfx = {};
+
+	sfx.music = $(`<audio autoplay controls loop>
+			<source src="./proto/audio/powerful-victory-trailer-103656.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el)[0];
+
+	sfx.idle = $(`<audio autoplay loop>
+			<source src="./proto/audio/car-idle.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el)[0];
+
+	sfx.boost = $(`<audio>
+			<source src="./proto/audio/car-boost.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el)[0];
+
+	sfx.hit = $(`<audio>
+			<source src="./proto/audio/car-hit.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el)[0];
+
+	sfx.scrape = $(`<audio autoplay loop>
+			<source src="./proto/audio/car-scrape.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el)[0];
+
+	sfx.music.volume = 0.5;
+	sfx.boost.volume = 0.5;
+	sfx.hit.volume = 0.5;
+	sfx.scrape.volume = 0;
 
 
 	$layers = [];
 
 	let cars = [
-		{progress:10,lane:1,speed:0.95},
-		{progress:10,lane:-1,speed:0.5},
-		{progress:20,lane:1,speed:0.5},
-		{progress:30,lane:-1,speed:0.5},
-		{progress:40,lane:0,speed:0.5},
 	]
 
 	let boosts = [
-
-		{progress:10,lane:1},
-		{progress:20,lane:-1},
-		{progress:30,lane:1},
-		{progress:40,lane:0},
 	]
+
+	for(var i=0; i<20; i++){
+		boosts[i] = { progress:10+i*20, lane:[0,1,-1][Math.floor(Math.random()*2)]};
+		cars[i] = { progress:5+i*15, lane:[0,1,-1][Math.floor(Math.random()*2)], speed:0.5};
+	}
+
+	cars.push( { isTarget:true, progress:6, lane:-1, speed:0.95} );
+	cars.push( { isTarget:true, progress:11, lane:0, speed:0.95} );
+	cars.push( { isTarget:true, progress:17, lane:1, speed:0.95} );
 
 	for(var c in cars){
 		let $c = $(`<drivingcar>`).appendTo($plane);
 		let $i = $(`<drivingcarinner>`).appendTo($c);
-		new Box3D(WCAR*GRID,LCAR*GRID,HCAR*2*GRID,'black').$el.appendTo($i);
+		new Box3D(WCAR*GRID,LCAR*GRID,HCAR*2*GRID,cars[c].isTarget?'white':'black').$el.appendTo($i);
+
+		if( cars[c].isTarget ) $('<drivingmarker>').appendTo( $c );
 
 		cars[c].$el = $c;
 	}
 
 	let players = [{px:0}];
 	let iTick = 0;
-	let speed = 4/FPS;
-	let steer = FPS*0.2;
+	let speed = 4;
+	let steer = 0.2;
 	let xCenter = 0;
 
 	let iyTrack = -1;
@@ -425,7 +502,15 @@ DrivingGame = function(){
 		return Math.hypot(b.x-a.x,b.y-a.y);
 	}
 
+	let was = new Date().getTime();
 	function tick(){
+
+		let now = new Date().getTime();
+		let elapsed = (now-was)/1000;
+		was = now;
+
+		//elapsed = 0;
+
 		let w = $(document).innerWidth()/3;
 		$game.css('transform','scale('+(w/W)+')');
 
@@ -436,15 +521,42 @@ DrivingGame = function(){
 
 		let modifier = (bogging > 0)?0.4:(boosting > 0?2:1);
 
-		car.x += Math.sin(car.r*Math.PI/180)*speed*(modifier);
-		car.y += Math.cos(car.r*Math.PI/180)*speed*(modifier);
+		//modifier = 0;
+
+		car.x += Math.sin(car.r*Math.PI/180)*speed*modifier*elapsed;
+		car.y += Math.cos(car.r*Math.PI/180)*speed*modifier*elapsed;
+
+		sfx.idle.volume = (bogging > 0)?0.2:0.3;
 
 
 		if( dist(car,curve[iProgress]) > dist(car,curve[iProgress+1])) iProgress++;
 
 		//TO DO figure out offset on plane
-		//let d = dist(car,curve[iProgress]);
-		//let r = Math.atan2(car.y-curve[iProgress].y,car.x-curve[iProgress].x);
+		let d = dist(car,curve[iProgress]);
+		let rOffset = Math.atan2(car.x-curve[iProgress].x,car.y-curve[iProgress].y);
+		let rRelative = rOffset +-curve[iProgress].r;
+
+		
+
+		let ox = Math.sin(rRelative)*d;
+		let oy = Math.cos(rRelative)*d;
+		let max = (WROAD/2-WCAR/2);
+
+		let r = txRelative*45;
+
+		let tooFarLeft = (ox<-max);
+		let tooFarRight = (ox>max);
+
+		if(tooFarLeft || tooFarRight){
+			
+			//car.r = curve[iProgress].r;
+			car.x = curve[iProgress].x + Math.sin(rOffset)*max;
+			car.y = curve[iProgress].y + Math.cos(rOffset)*max;
+
+			if(tooFarLeft && r<0 ) r = 0;
+			if(tooFarRight && r>0 ) r = 0;
+		}
+
 
 
 		while(iRender < (iProgress + $layers.length-2)){
@@ -459,9 +571,6 @@ DrivingGame = function(){
 
 		
 		
-
-
-		let r = txRelative*45;
 		car.r += r*0.02;
 
 		$car.css({
@@ -469,6 +578,17 @@ DrivingGame = function(){
 			bottom: car.y*GRID + 'px',
 			'transform':'rotateZ('+(car.r+r)+'deg)',
 		})
+
+		$sparkBack.css('opacity',bogging>FPS/4?1:0);
+		$sparkLeft.css('opacity',tooFarLeft?1:0);
+		$sparkRight.css('opacity',tooFarRight?1:0);
+
+		if(tooFarLeft||tooFarRight) sfx.scrape.volume = 0.5;
+
+
+		if(sfx.scrape.volume>0.1) sfx.scrape.volume -= 0.05;
+		else sfx.scrape.volume = 0;
+
 
 		let cx = Math.sin(car.r*Math.PI/180)*0.25;
 		let cy = Math.cos(car.r*Math.PI/180)*0.25;
@@ -479,7 +599,7 @@ DrivingGame = function(){
 	   	$plane.css('left',-(car.x-cx)*GRID+'px');
 
 	   	for(var c in cars){
-	   		cars[c].progress += speed*cars[c].speed;
+	   		cars[c].progress += speed*cars[c].speed*elapsed;
 	   		cars[c].p = getPosition(cars[c].progress,cars[c].lane);
 	   		
 	   		cars[c].$el.css({
@@ -492,6 +612,8 @@ DrivingGame = function(){
 	   	for(var b in boosts) if(dist(boosts[b].p,car)<0.5) boosting = FPS;
 		for(var c in cars) if(dist(cars[c].p,car)<0.5) bogging = FPS/2;
 		
+		if(boosting == FPS) sfx.boost.play();
+		if(bogging == FPS/2) sfx.hit.play();
 	}
 
 	self.setPlayers = function(p){
@@ -514,4 +636,10 @@ DrivingGame = function(){
 		if(x<0) x = 0;
 		players[0].px = x;
 	});
+
+	$(document).click(function() {
+		sfx.music.play();
+		sfx.idle.play();
+		sfx.scrape.play();
+	})
 }
