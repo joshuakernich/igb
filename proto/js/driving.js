@@ -709,7 +709,7 @@ DrivingGame = function(){
 
 		
 		
-		car.r += r*0.02;
+		car.r += r*elapsed;
 
 		$car.css({
 			left: car.x*GRID +'px',
