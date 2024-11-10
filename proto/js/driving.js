@@ -15,7 +15,7 @@ Box3D = function(w,l,h,color){
 				transform-style: preserve-3d;
 				text-align:center;
 
-				border-radius: 20px;
+				border-radius: 25%;
 			}	
 
 			box3Dside.box3D-back{
@@ -72,6 +72,7 @@ DrivingGame = function(){
 	const HCAR = 0.1;
 	const FLOAT = 5;
 	const WROAD = 3;
+	const SIGHT = 3;
 	
 	const PURPLE = '#230B39';
 
@@ -310,6 +311,101 @@ DrivingGame = function(){
 
 			}
 
+			drivingaim{
+				display: block;
+				position: absolute;
+				
+				height: ${SIGHT*GRID}px;
+				
+				position: absolute;
+				bottom: 0px;
+				left: 0px;
+				transform-origin: bottom center;
+				
+				transform-style: preserve-3d;
+			}
+
+			drivingaim:before{
+				content:"";
+				display: block;
+				position: absolute;
+				background: rgba(0,0,255,0.5);
+				width: ${WCAR/4*GRID}px;
+				height: ${SIGHT*GRID}px;
+				
+				bottom: 0px;
+				left: ${-WCAR/8*GRID}px;
+
+				transform: translateZ(${HCAR*GRID}px); 
+				transform-style: preserve-3d;
+
+				background: linear-gradient(to bottom, blue, transparent);
+
+			}
+
+			drivingaim:after{
+				content:"";
+				display: block;
+				position: absolute;
+				width: ${HCAR*2*GRID}px;
+				height: ${HCAR*2*GRID}px;
+				transform-style: preserve-3d;
+				top: ${-HCAR*GRID}px;
+				left: ${-HCAR*GRID}px;
+				
+				transform-style: preserve-3d;
+				transform: rotateX(-90deg); 
+				
+				
+				box-sizing: border-box;
+				transform-origin: bottom center;
+
+				background: url(./proto/img/bat-reticule-square.png);
+				background-size: 100%;
+
+			}
+
+			drivingmissile{
+				display: block;
+				position: absolute;
+				bottom: 0px;
+				left: 0px;
+				transform-style: preserve-3d;
+			}
+
+			
+
+			drivingmissile:before{
+				content:"";
+				display: block;
+				position: absolute;
+				width: ${WCAR/4*GRID}px;
+				height: ${WCAR/2*GRID}px;
+				background: white;
+				bottom: 0px;
+				left: ${-WCAR/8*GRID}px;
+				transform-style: preserve-3d;
+				transform: translateZ(${(HCAR+WCAR/8)*GRID}px);
+				border-radius: 100% 100% 0px 0px;
+			}
+
+			drivingmissile:after{
+				content:"";
+				display: block;
+				position: absolute;
+				width: ${WCAR/4*GRID}px;
+				height: ${WCAR/4*GRID}px;
+				background: black;
+				bottom: 0px;
+				left: ${-WCAR/8*GRID}px;
+				transform-style: preserve-3d;
+				transform: translateZ(${(HCAR)*GRID}px) rotateX(-90deg);
+				border-radius: 100%;
+				border: 5px solid white;
+				box-sizing: border-box;
+				background: red;
+			}
+
 			@keyframes frame7{
 				0%{
 					background-position-x: 0%;
@@ -354,6 +450,8 @@ DrivingGame = function(){
 	let $sparkLeft = $('<drivingspark>').appendTo( $car.find('.box3D-left'));
 	let $sparkRight = $('<drivingspark>').appendTo( $car.find('.box3D-right'));
 	let $sparkBack = $('<drivingspark>').appendTo( $car.find('.box3D-back'));
+	let $aim = $('<drivingaim>').appendTo( $car );
+	let $missile = $('<drivingmissile>').appendTo($plane);
 
 	let sfx = {};
 
@@ -381,6 +479,10 @@ DrivingGame = function(){
 			<source src="./proto/audio/car-screech.mp3" type="audio/mpeg">
 		</audio>`).appendTo(self.$el)[0];
 
+	sfx.missile = $(`<audio>
+			<source src="./proto/audio/car-missile.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el)[0];
+
 	sfx.music.volume = 0.5;
 	sfx.boost.volume = 0.5;
 	sfx.hit.volume = 0.5;
@@ -397,8 +499,8 @@ DrivingGame = function(){
 	]
 
 	for(var i=0; i<20; i++){
-		boosts[i] = { progress:10+i*20, lane:[0,1,-1][Math.floor(Math.random()*2)]};
-		cars[i] = { progress:5+i*15, lane:[0,1,-1][Math.floor(Math.random()*2)], speed:0.5};
+		boosts[i] = { progress:20+i*20, lane:[0,1,-1][Math.floor(Math.random()*2)]};
+		cars[i] = { progress:25+i*15, lane:[0,1,-1][Math.floor(Math.random()*2)], speed:0.5};
 	}
 
 	cars.push( { isTarget:true, progress:16, lane:-1, speed:0.95} );
@@ -415,7 +517,7 @@ DrivingGame = function(){
 		cars[c].$el = $c;
 	}
 
-	let players = [{px:0}];
+	let players = [{px:0},{px:0}];
 	let iTick = 0;
 	let speed = 6;
 	let steer = 0.2;
@@ -475,6 +577,8 @@ DrivingGame = function(){
 		while(count--) add(0.05*dir);
 	}
 
+	addStraight(20);
+
 	while(curve.length<1000){
 		addStraight(5+Math.floor(Math.random()*5));
 		addSlide(10+Math.floor(Math.random()*5),(Math.random()>0.5?1:-1));
@@ -503,6 +607,7 @@ DrivingGame = function(){
 	let iRender = 0;
 	let boosting = 0;
 	let bogging = 0;
+	let missile = {};
 
 	function dist(a,b){
 		return Math.hypot(b.x-a.x,b.y-a.y);
@@ -515,7 +620,7 @@ DrivingGame = function(){
 		let elapsed = (now-was)/1000;
 		was = now;
 
-		//elapsed = 0;
+		
 
 		let w = $(document).innerWidth()/3;
 		$game.css('transform','scale('+(w/W)+')');
@@ -531,7 +636,7 @@ DrivingGame = function(){
 
 		sfx.screech.volume = Math.abs(txRelative) * (modifier>1?0.2:0.1);
 
-		//modifier = 0;
+	
 
 		car.x += Math.sin(car.r*Math.PI/180)*speed*modifier*elapsed;
 		car.y += Math.cos(car.r*Math.PI/180)*speed*modifier*elapsed;
@@ -602,10 +707,14 @@ DrivingGame = function(){
 		let cx = Math.sin(car.r*Math.PI/180)*0.25;
 		let cy = Math.cos(car.r*Math.PI/180)*0.25;
 		
+		let oxTargeting = players[1].px/100*2-1;
+		let rTargeting = 40*oxTargeting;
+
 		$thruster.attr('boosting',boosting>0);
 	    $camera.css('transform',"rotateY(" + car.r + "deg)");
 	   	$plane.css('bottom',-(car.y-cy)*GRID+'px');
 	   	$plane.css('left',-(car.x-cx)*GRID+'px');
+	  	
 
 	   	for(var c in cars){
 	   		cars[c].progress += speed*cars[c].speed*elapsed;
@@ -623,11 +732,41 @@ DrivingGame = function(){
 		
 		if(boosting == FPS) sfx.boost.play();
 		if(bogging == FPS/2) sfx.hit.play();
+
+		
+		
+
+		if(missile.flying){
+			missile.flying--;
+			missile.x += Math.sin(missile.r*Math.PI/180)*speed*elapsed*2;
+			missile.y += Math.cos(missile.r*Math.PI/180)*speed*elapsed*2;
+
+			for(var c=0; c<cars.length; c++){
+				if(dist(missile,cars[c].p)<0.3){
+					missile.flying = 0;
+					goBoom(cars[c]);
+					cars.splice(c,1);
+					c--;
+				}
+			}
+
+		} else{
+			missile.x = car.x;
+			missile.y = car.y;
+			missile.r = car.r + rTargeting;
+		}
+
+		$aim.css('transform',"rotateZ(" + (-r+rTargeting) + "deg)");
+		$missile.css({
+			left: missile.x*GRID+'px',
+			bottom: missile.y*GRID+'px',
+			transform: "rotateZ("+missile.r+"deg)",
+		})
 	}
 
 	self.setPlayers = function(p){
 		players = p;
-		players.length = 1;
+		players.length = 2;
 	}
 
 	self.turnOnOff = function(b){
@@ -643,7 +782,9 @@ DrivingGame = function(){
 		let x = (e.pageX - w)/w*100;
 		if(x>100) x = 100;
 		if(x<0) x = 0;
+
 		players[0].px = x;
+		players[1].px = x;
 	});
 
 	$(document).click(function() {
@@ -651,5 +792,22 @@ DrivingGame = function(){
 		sfx.idle.play();
 		sfx.scrape.play();
 		sfx.screech.play();
+
+		missile.flying = FPS;
+		sfx.missile.play();
+		sfx.missile.currentTime = 0;
 	})
+
+	function goBoom(car){
+
+		let x = 0;
+		let y = 0;
+		let boom = {progress:0};
+
+		$(boom).animate({progress:1},{step:function(n){
+			
+		}})
+
+		car.$el.hide();
+	}
 }
