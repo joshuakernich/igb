@@ -544,7 +544,7 @@ BatHeistArena = function(layout){
 				
 
 				let amt = reticules[r].cntThrow/FPTHROW;
-				let yBottom = BatHeist.H/1.2 - layout.y;
+				let yBottom = BatHeist.H/1.2 - layout.y - 70;
 				let yDif = yBottom-((reticules[r].ry+0.5) * BatHeist.GRIDSIZE);
 				let y = yBottom - yDif*amt;
 				let xStart = BatHeist.ARENA.W/2 + (r==0?-1:1)*200;
@@ -568,7 +568,7 @@ BatHeistArena = function(layout){
 				reticules[r].$projectile.css({
 					left:xStart + xDif*amt,
 					top:y, 
-					transform: `rotate(${degs-90}deg) scale(${2-amt})`,
+					transform: `rotate(${degs/4-20}deg) scale(${2-amt})`,
 					opacity: reticules[r].isArmed?1:0,
 
 				});
@@ -732,7 +732,7 @@ BatHeist3DGame = function(){
 			heistgame.focus heistwall.focus heistgoggles{
 				background: url(./proto/img/bat-goggles.png);
 				background-size: cover;
-				z-index: -1;
+				
 			}
 
 			heistwall heistwallstage{
@@ -832,6 +832,7 @@ BatHeist3DGame = function(){
 				transform-origin: top center;
 				opacity: 0;
 				pointer-events: none;
+				display: none;
 			}
 
 			heistarrow:last-of-type{
@@ -953,35 +954,7 @@ BatHeist3DGame = function(){
 				transition: all 0.5s;
 			}
 
-			/*heistarena:before{
-				content:"";
-				display:block;
-				position:absolute;
-				left:0px;
-				top:0px;
-				bottom:0px;
-				width:10%;
-				border: 5px solid white;
-				border-right: none;
-
-				display:none;
-				z-index: 2;
-			}
-
-			heistarena:after{
-				content:"";
-				display:block;
-				position:absolute;
-				right:0px;
-				top:0px;
-				bottom:0px;
-				width:10%;
-				border: 5px solid white;
-				border-left: none;
-
-				display:none;
-				z-index: 2;
-			}*/
+			
 
 			heistinfo{
 				display:block;
@@ -1208,7 +1181,6 @@ BatHeist3DGame = function(){
 
 			heistgame.focus heistoverlay{
 				opacity:1;
-				/*display: block;*/
 				z-index: 2;
 			}
 
@@ -1228,8 +1200,8 @@ BatHeist3DGame = function(){
 			heistreset{
 				display: block;
 				position: absolute;
-				top: 120px;
-				left: 350px;
+				top: 150px;
+				left: 370px;
 				width: 120px;
 				height: 120px;
 				
@@ -1244,8 +1216,8 @@ BatHeist3DGame = function(){
 			heisttoggle{
 				display: block;
 				position: absolute;
-				top: 130px;
-				right: 340px;
+				top: 150px;
+				right: 370px;
 				width: 120px;
 				height: 120px;
 				background: no-repeat center url(./proto/img/zoom-out.svg);
@@ -1355,8 +1327,9 @@ BatHeist3DGame = function(){
 		$walls[i] = $w;
 		$stages[i] = $s;
 
-		$('<heistgoggles>').appendTo($w);
+		
 		$('<heistreset>').appendTo($w).click(onResetArena);
+		$('<heistgoggles>').appendTo($w);
 		$('<heisttoggle>').appendTo($w).click(unfocus);
 		$('<heistinfo class="left">').appendTo($w).text('left');
 		$('<heistinfo class="right">').appendTo($w).text('right');
@@ -1504,6 +1477,8 @@ BatHeist3DGame = function(){
 			players[0].pz = (1 - y)*100;
 		}
 		
+		players[1].px = players[0].px;
+		players[1].pz = players[0].pz;
 
 		
 		players[0].proximity = [0.9,0.9,0.9];
