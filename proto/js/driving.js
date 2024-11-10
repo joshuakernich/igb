@@ -283,10 +283,10 @@ DrivingGame = function(){
 				bottom: 0px;
 				left: -25%;
 				
-				animation: frame7;
+				animation: frame6;
 				animation-duration: 0.5s;
 				animation-fill-mode: forwards;
-				animation-timing-function: steps(7);
+				animation-timing-function: steps(6);
 				background-position-x: 0%;
 
 				animation-iteration-count: infinite;
@@ -406,13 +406,33 @@ DrivingGame = function(){
 				background: red;
 			}
 
-			@keyframes frame7{
+			drivingboom{
+				position: absolute;
+				width: ${GRID}px;
+				height: ${GRID/2}px;
+				background: url(./proto/img/explode-white.png);
+				background-size: 700%;
+				bottom: 0px;
+				left: ${-GRID/2}px;
+				
+				animation: frame6;
+				animation-duration: 0.5s;
+				animation-fill-mode: forwards;
+				animation-timing-function: steps(6);
+				background-position-x: 0%;
+
+				transform: rotateX(-90deg);
+				transform-origin: bottom center;
+
+			}
+
+			@keyframes frame6{
 				0%{
 					background-position-x: 0%;
 				}
 
 				100%{
-					background-position-x: -700%;
+					background-position-x: -600%;
 				}
 			}
 
@@ -483,6 +503,10 @@ DrivingGame = function(){
 			<source src="./proto/audio/car-missile.mp3" type="audio/mpeg">
 		</audio>`).appendTo(self.$el)[0];
 
+	sfx.explode = $(`<audio>
+			<source src="./proto/audio/car-explode.mp3" type="audio/mpeg">
+		</audio>`).appendTo(self.$el)[0];
+
 	sfx.music.volume = 0.5;
 	sfx.boost.volume = 0.5;
 	sfx.hit.volume = 0.5;
@@ -506,6 +530,7 @@ DrivingGame = function(){
 	cars.push( { isTarget:true, progress:16, lane:-1, speed:0.95} );
 	cars.push( { isTarget:true, progress:26, lane:0, speed:0.95} );
 	cars.push( { isTarget:true, progress:36, lane:1, speed:0.95} );
+	cars.push( { progress:5, lane:0, speed:0.95} );
 
 	for(var c in cars){
 		let $c = $(`<drivingcar>`).appendTo($plane);
@@ -636,8 +661,7 @@ DrivingGame = function(){
 
 		sfx.screech.volume = Math.abs(txRelative) * (modifier>1?0.2:0.1);
 
-	
-
+		
 		car.x += Math.sin(car.r*Math.PI/180)*speed*modifier*elapsed;
 		car.y += Math.cos(car.r*Math.PI/180)*speed*modifier*elapsed;
 
@@ -804,10 +828,11 @@ DrivingGame = function(){
 		let y = 0;
 		let boom = {progress:0};
 
-		$(boom).animate({progress:1},{step:function(n){
-			
-		}})
+		car.$el.empty();
+		$('<drivingboom>').appendTo(car.$el);
 
-		car.$el.hide();
+		sfx.explode.play();
+
+		
 	}
 }
