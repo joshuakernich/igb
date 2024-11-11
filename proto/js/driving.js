@@ -433,16 +433,64 @@ DrivingGame = function(){
 
 			}
 
-			drivingwheel{
+			drivingwheel, drivinghud{
 				position: absolute;
 				display: block;
-				width: ${W*0.6}px;
-				height: ${W*0.6}px;
-				left: ${W*0.2}px;
-				top: ${H-40}px;
+				width: ${W*0.8}px;
+				height: ${W*0.8}px;
+				left: ${W*0.1}px;
+				top: ${H-30}px;
 				background: url(./proto/img/bat-steering-wheel.png);
 				background-size: 100%;
+
+			}
+
+			drivingwheel{
+				opacity: 0.5;
+			}
+
+			drivinghud{
+				background: none;
+			}
+
+			drivingarrow{
+				position: absolute;
+				display: block;
+				width: 100%;
+				height: 100%;
+				background: url(./proto/img/bat-steering-arrow.png);
+				background-size: 100%;
+			}
+
+			drivingbtn{
+				position: absolute;
+				left: 0px;
+				right: 0px;
+				bottom: 0px;
+				top: 0px;
+				width: 5vw;
+				height: 5vw;
+				border: 0.1vw solid white;
+				box-sizing: border-box;
+				margin: auto;
 				z-index: 100;
+
+				background-image: url(./proto/img/bat-emp.gif);
+				background-size: 60%;
+				background-position: center;
+				background-repeat: no-repeat;
+			}
+
+			drivingbtn:before{
+				content:"TAP TO FIRE EMP";
+				position: absolute;
+				top: -1vw;
+				font-size: 0.5vw;
+				line-height: 1vw;
+				text-align: center;
+				color: white;
+				left: 0px;
+				right: 0px;
 			}
 
 			@keyframes frame6{
@@ -493,6 +541,16 @@ DrivingGame = function(){
 	let $missile = $('<drivingmissile>').appendTo($plane);
 
 	let $steeringWheel = $('<drivingwheel>').appendTo($game);
+
+	$('<drivingbtn>').appendTo($left);
+	$('<drivingbtn>').appendTo($right);
+
+
+	let $hud = $('<drivinghud>').appendTo($game);
+	let $arrows = [];
+	for(var i=0; i<5; i++){
+		$arrows[i] = $('<drivingarrow>').appendTo($hud).css('transform','rotate('+i*5+'deg)')
+	}
 
 	let sfx = {};
 
@@ -679,6 +737,8 @@ DrivingGame = function(){
 	let bogging = 0;
 	let missile = {};
 
+	const MISSILETIME = FPS;
+
 	function dist(a,b){
 		return Math.hypot(b.x-a.x,b.y-a.y);
 	}
@@ -724,7 +784,11 @@ DrivingGame = function(){
 		let lane = Math.sin(rRelative)*d;
 		let max = (WROAD/2-WCAR/2);
 
-		let r = txRelative*45;
+		let r = txRelative*25;
+
+		let rAmt = Math.abs(txRelative);
+		$hud.css('transform','scaleX('+(txRelative>0?1:-1)+')')
+		for(var a=0; a<$arrows.length; a++) $arrows[a].css('opacity',(rAmt > (a+1)/($arrows.length+2))?1:0);
 		
 
 		let tooFarLeft = (lane<-max);
@@ -754,7 +818,7 @@ DrivingGame = function(){
 
 		
 		
-		car.r += r*elapsed;
+		car.r += r*elapsed*2;
 
 		$car.css({
 			left: car.x*GRID +'px',
@@ -804,8 +868,9 @@ DrivingGame = function(){
 		if(boosting == FPS) sfx.boost.play();
 		if(bogging == FPS/2) sfx.hit.play();
 
-		if(missile.flying){
-			missile.flying--;
+
+		if(missile.flying > 0 && missile.flying < MISSILETIME ){
+			
 			missile.x += Math.sin(missile.r*Math.PI/180)*speed*elapsed*2;
 			missile.y += Math.cos(missile.r*Math.PI/180)*speed*elapsed*2;
 
@@ -823,6 +888,8 @@ DrivingGame = function(){
 			missile.y = car.y;
 			missile.r = car.r + rTargeting;
 		}
+
+		missile.flying--;
 
 
 		$aim.css('transform',"rotateZ(" + (-r+rTargeting) + "deg)");
@@ -864,7 +931,7 @@ DrivingGame = function(){
 		sfx.scrape.play();
 		sfx.screech.play();
 
-		missile.flying = FPS;
+		missile.flying = MISSILETIME;
 		sfx.missile.play();
 		sfx.missile.currentTime = 0;
 	})
