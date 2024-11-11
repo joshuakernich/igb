@@ -71,7 +71,7 @@ DrivingGame = function(){
 	const LCAR = 0.5;
 	const HCAR = 0.1;
 	const FLOAT = 5;
-	const WROAD = 3;
+	const WROAD = 4;
 	const SIGHT = 3;
 	
 	const PURPLE = '#230B39';
@@ -221,7 +221,8 @@ DrivingGame = function(){
 				width:${GRID*WROAD}px;
 				height:${GRID*1.1}px;
 				background-image: url(./proto/img/bat-road.png);
-				background-size: 100%;
+				background-size: 75%;
+				background-position: center;
 				transform-style: preserve-3d;
 				left: ${-GRID*WROAD/2}px;
 				bottom: 0px;
@@ -341,6 +342,8 @@ DrivingGame = function(){
 
 				background: linear-gradient(to bottom, blue, transparent);
 
+				opacity:0;
+
 			}
 
 			drivingaim:after{
@@ -387,23 +390,27 @@ DrivingGame = function(){
 				transform-style: preserve-3d;
 				transform: translateZ(${(HCAR+WCAR/8)*GRID}px);
 				border-radius: 100% 100% 0px 0px;
+
+				display:none;
 			}
 
 			drivingmissile:after{
 				content:"";
 				display: block;
 				position: absolute;
-				width: ${WCAR/4*GRID}px;
-				height: ${WCAR/4*GRID}px;
-				background: black;
+				width: ${WCAR/2*GRID}px;
+				height: ${WCAR/2*GRID}px;
+				
 				bottom: 0px;
-				left: ${-WCAR/8*GRID}px;
+				left: ${-WCAR/4*GRID}px;
 				transform-style: preserve-3d;
 				transform: translateZ(${(HCAR)*GRID}px) rotateX(-90deg);
-				border-radius: 100%;
-				border: 5px solid white;
+				
 				box-sizing: border-box;
-				background: red;
+				
+
+				background-image: url(./proto/img/bat-emp.gif);
+				background-size: 100%;
 			}
 
 			drivingboom{
@@ -424,6 +431,18 @@ DrivingGame = function(){
 				transform: rotateX(-90deg);
 				transform-origin: bottom center;
 
+			}
+
+			drivingwheel{
+				position: absolute;
+				display: block;
+				width: ${W*0.6}px;
+				height: ${W*0.6}px;
+				left: ${W*0.2}px;
+				top: ${H-40}px;
+				background: url(./proto/img/bat-steering-wheel.png);
+				background-size: 100%;
+				z-index: 100;
 			}
 
 			@keyframes frame6{
@@ -472,6 +491,8 @@ DrivingGame = function(){
 	let $sparkBack = $('<drivingspark>').appendTo( $car.find('.box3D-back'));
 	let $aim = $('<drivingaim>').appendTo( $car );
 	let $missile = $('<drivingmissile>').appendTo($plane);
+
+	let $steeringWheel = $('<drivingwheel>').appendTo($game);
 
 	let sfx = {};
 
@@ -523,14 +544,14 @@ DrivingGame = function(){
 	]
 
 	for(var i=0; i<20; i++){
-		boosts[i] = { progress:20+i*20, lane:[0,1,-1][Math.floor(Math.random()*2)]};
+		
 		cars[i] = { progress:25+i*15, lane:[0,1,-1][Math.floor(Math.random()*2)], speed:0.5};
 	}
 
 	cars.push( { isTarget:true, progress:16, lane:-1, speed:0.95} );
 	cars.push( { isTarget:true, progress:26, lane:0, speed:0.95} );
 	cars.push( { isTarget:true, progress:36, lane:1, speed:0.95} );
-	cars.push( { progress:5, lane:0, speed:0.95} );
+
 
 	for(var c in cars){
 		let $c = $(`<drivingcar>`).appendTo($plane);
@@ -602,11 +623,35 @@ DrivingGame = function(){
 		while(count--) add(0.05*dir);
 	}
 
-	addStraight(20);
+	function shuffle(array) {
+	  let currentIndex = array.length;
+
+	  // While there remain elements to shuffle...
+	  while (currentIndex != 0) {
+
+	    // Pick a remaining element...
+	    let randomIndex = Math.floor(Math.random() * currentIndex);
+	    currentIndex--;
+
+	    // And swap it with the current element.
+	    [array[currentIndex], array[randomIndex]] = [
+	      array[randomIndex], array[currentIndex]];
+	  }
+
+	  return array;
+	}
 
 	while(curve.length<1000){
-		addStraight(5+Math.floor(Math.random()*5));
-		addSlide(10+Math.floor(Math.random()*5),(Math.random()>0.5?1:-1));
+
+		let lanes = shuffle([-1,0,1]);
+
+		boosts.push({ progress:curve.length+10, lane:lanes.pop() });
+		boosts.push({ progress:curve.length+25, lane:lanes.pop() });
+		boosts.push({ progress:curve.length+40, lane:lanes.pop() });
+
+		addStraight(50);
+
+		addSlide(10,(Math.random()>0.5?1:-1));
 
 		if(curve[curve.length-1].r > 90) addSlide(10,-1);
 		if(curve[curve.length-1].r < -90) addSlide(10,1);
@@ -728,11 +773,13 @@ DrivingGame = function(){
 		else sfx.scrape.volume = 0;
 
 
-		let cx = Math.sin(car.r*Math.PI/180)*0.25;
-		let cy = Math.cos(car.r*Math.PI/180)*0.25;
+		let cx = Math.sin(car.r*Math.PI/180)*0.5;
+		let cy = Math.cos(car.r*Math.PI/180)*0.5;
 		
 		let oxTargeting = players[1].px/100*2-1;
 		let rTargeting = 40*oxTargeting;
+
+		rTargeting = 0; 
 
 		$thruster.attr('boosting',boosting>0);
 	    $camera.css('transform',"rotateY(" + car.r + "deg)");
@@ -757,9 +804,6 @@ DrivingGame = function(){
 		if(boosting == FPS) sfx.boost.play();
 		if(bogging == FPS/2) sfx.hit.play();
 
-		
-		
-
 		if(missile.flying){
 			missile.flying--;
 			missile.x += Math.sin(missile.r*Math.PI/180)*speed*elapsed*2;
@@ -780,12 +824,15 @@ DrivingGame = function(){
 			missile.r = car.r + rTargeting;
 		}
 
+
 		$aim.css('transform',"rotateZ(" + (-r+rTargeting) + "deg)");
 		$missile.css({
 			left: missile.x*GRID+'px',
 			bottom: missile.y*GRID+'px',
 			transform: "rotateZ("+missile.r+"deg)",
 		})
+
+		$steeringWheel.css('transform','rotate('+r+'deg)');
 	}
 
 	self.setPlayers = function(p){
