@@ -1,26 +1,258 @@
+
+
+BatVinesPlayer = function(n){
+
+    const FPFOCUS = BatVines.FPS;
+    const FPTHROW = BatVines.FPS/2;
+
+    let self = this;
+    self.$el = $('<batvinesplayer>');
+    self.isActive = false;
+    self.isCutting = false;
+
+
+    let $zone = $('<batvineszone>').appendTo(self.$el);
+    let $batarang = $('<batvinesbatarang>').appendTo(self.$el);
+    $('<batvinesspinner>').appendTo($batarang);
+
+    $zone.hide();
+    $batarang.hide();
+
+    let dir = n==0?-1:1;
+
+    let sx = -2;
+    let sy = BatVines.ARENA.H + 2;
+    if(n==1) sx = BatVines.ARENA.W+2;
+
+    $zone.css('left',sx*BatVines.GRIDSIZE+'px');
+    $zone.css('top',BatVines.ARENA.H*BatVines.GRIDSIZE+'px');
+
+    $batarang.css('left',sx*BatVines.GRIDSIZE+'px');
+    $batarang.css('top',sy*BatVines.GRIDSIZE+'px');
+    $batarang.css('transform','scale(5) rotate('+(-dir*10)+'deg)');
+    
+    
+    self.targeting = 0;
+    self.throwing = 0;
+
+    let $reticule = $('<batvinesreticule>').appendTo(self.$el);
+
+    self.setPos = function(px,py){
+
+        let amtFocus = self.targeting/FPFOCUS;
+        if(amtFocus>1) amtFocus = 1;
+
+        $reticule.css({
+            left:px*BatVines.GRIDSIZE+'px',
+            top:py*BatVines.GRIDSIZE+'px',
+            width: (2-amtFocus)*BatVines.GRIDSIZE+'px',
+            height: (2-amtFocus)*BatVines.GRIDSIZE+'px',
+        })
+
+        if(self.isThrowing){
+
+            self.throwing ++;
+            let amtThrow = self.throwing/FPTHROW;
+            if(amtThrow>1)amtThrow = 1;
+           
+            let dx = (px-sx);
+            let dy = (py-sy);
+
+            let x = sx + dx*amtThrow;
+            let y = sy + dy*amtThrow;
+            $batarang.css({
+                'left':x*BatVines.GRIDSIZE+'px',
+                'top':y*BatVines.GRIDSIZE+'px',
+                'transform':'scale('+(5-amtThrow*4)+')',
+            });
+
+        } else {
+
+            if(!self.isActive && n==0 && px<0 && py>BatVines.ARENA.H) self.isActive = true;
+            if(!self.isActive && n==1 && px>BatVines.ARENA.W && py>BatVines.ARENA.H) self.isActive = true;
+
+            if(self.isActive && self.targeting>=FPFOCUS) self.isThrowing = true;
+
+            if(self.isActive){
+                $batarang.show();
+                $zone.hide();
+            } else {
+                $batarang.hide();
+                $zone.show();
+            }
+        }
+
+        self.isCutting = self.throwing>=FPTHROW;
+    }
+
+    self.reset = function(){
+        self.isCutting = false;
+        self.isActive = false;
+        self.isThrowing = false;
+        self.targeting = 0;
+        self.throwing = 0;
+    }
+}
+
 BatVinesArena = function(layout) {
 
     let self = this;
+    self.failState = undefined;
+    self.active = false;
+    self.isFailed = false;
+    self.isCleared = false;
+
     self.$el = $('<batvinesarena>');
     self.$el.css({
         left:layout.x+'px',
         top:layout.y+'px',
+        transform:'scale('+layout.scale+')',
     });
 
+
+
     let knots = [];
+    let ropes = [];
+    let actors = [];
+    let players = [];
 
-    for(var r in layout.ropes) layout.ropes[r].$el.appendTo(self.$el);
+    self.reset = function(){
 
-    for(var a in layout.actors) layout.actors[a].$el.appendTo(self.$el);
+        self.failState = undefined;
+        self.isFailed = false;
+        self.isCleared = false;
+        
+        self.$el.empty();
 
-    for(var k in layout.knots){
-        knots[k] = new BatVinesKnot(
-            layout.ropes[layout.knots[k].ropeLeft],
-            layout.ropes[layout.knots[k].ropeRight],
-            layout.actors[layout.knots[k].actor]
-            );
+        knots = [];
+        ropes = [];
+        actors = [];
+        players = [];
+
+        for(var r in layout.ropes){
+            ropes[r] = new BatVinesRope( layout.ropes[r].x, layout.ropes[r].y, layout.ropes[r].length );
+            ropes[r].$el.appendTo(self.$el);
+        }
+        for(var a in layout.actors){
+            actors[a] = new BatVinesActor( layout.actors[a].x, layout.actors[a].y, layout.actors[a].r, layout.actors[a].type );
+            actors[a].$el.appendTo(self.$el);
+        }
+        for(var k in layout.knots){
+            knots[k] = new BatVinesKnot(
+                ropes[layout.knots[k].ropeLeft],
+                ropes[layout.knots[k].ropeRight],
+                actors[layout.knots[k].actor]
+                );
+        }
+        
+        for(var i=0; i<2; i++){
+            players[i] = new BatVinesPlayer(i);
+            players[i].$el.appendTo(self.$el);
+        }
     }
- 
+
+    self.reset();
+
+    self.step = function() {
+
+       for(var a in actors) actors[a].step();
+
+       for(var a=0; a<actors.length; a++){
+            for(var b=a+1; b<actors.length; b++){
+                actors[a].interactWith(actors[b]);
+                actors[b].interactWith(actors[a]);
+            }
+        }
+
+        let complete = true;
+        for(var a in actors){
+            if( actors[a].failState ) self.failState = actors[a].failState;
+            if( !actors[a].complete ) complete = false;
+        }
+
+        if(self.failState && !self.isFailed){
+            self.$el.html('FAIL!');
+            self.isFailed = true;
+            $('<batvinesreset>').appendTo(self.$el).click(self.reset);
+        }
+        if(complete){
+            self.$el.html('CLEAR!');
+            self.isCleared = true;
+        }
+    }
+
+    self.setPlayerPositions = function(positions){
+        for(var n in players){
+
+            let rx = 0;
+            let ry = 0;
+
+            if(layout.wall==0){
+                rx = (positions[n].pz/100);
+                ry = (positions[n].px/100);
+            } else if(layout.wall==1){
+                rx = positions[n].px/100;
+                ry = (1-positions[n].pz/100);
+            } else if(layout.wall==2){
+                rx = (1-positions[n].pz/100);
+                ry = (1-positions[n].px/100);
+            }
+
+            rx = rx*3 - 1;
+            ry = ry*3 - 1;
+               
+            //get the grid position
+            let gx = rx*BatVines.ARENA.W;
+            let gy = ry*BatVines.ARENA.H;
+
+            if(players[n].isActive){
+
+                let isTargeting = undefined;
+
+                for(var r in ropes){
+                    let dx = ropes[r].tx - gx;
+                    let dy = ropes[r].ty - gy;
+                    let d = Math.hypot(dx,dy);
+
+                    if(!ropes[r].isCut && d<0.5) isTargeting = ropes[r];
+                }
+
+                if( isTargeting ) players[n].targeting++;
+                else players[n].targeting = 0;
+
+                if(players[n].isCutting){
+                    
+                    if(isTargeting) isTargeting.doCut();
+                    
+
+                    players[n].reset();
+                }
+            }
+
+            players[n].setPos(gx,gy);
+        }
+    }
+
+    self.setActive = function(b){
+
+        self.active = b;
+        self.$el.attr('active',b);
+
+        if(b){
+            self.$el.css({
+                left:BatVines.W/2-BatVines.ARENA.W/2*BatVines.GRIDSIZE+'px',
+                top:BatVines.H/2-BatVines.ARENA.H/2*BatVines.GRIDSIZE+'px',
+                transform:'scale(1)',
+            });
+        } else {
+            self.$el.css({
+                left:layout.x+'px',
+                top:layout.y+'px',
+                transform:'scale('+layout.scale+')',
+            });
+        }
+    }
+
 
 
 }
@@ -36,7 +268,8 @@ BatVinesRope = function(x,y,length){
     let $svg = $(`<svg viewBox='${-self.length} ${-self.length} ${self.length*2} ${self.length*2}' width=${self.length*2*BatVines.GRIDSIZE} height=${self.length*BatVines.GRIDSIZE*2}><path></path></svg>`).appendTo(self.$el);
     let $path = $svg.find('path');
 
-    self.$target = $('<batvinetarget>').appendTo(self.$el);
+    self.$target = $('<batvinestarget>').appendTo(self.$el);
+    self.isCut = false;
 
     self.to = function(x2,y2,hang) {
 
@@ -46,6 +279,9 @@ BatVinesRope = function(x,y,length){
         $path.attr('d',`M0,0 C 0 ${hang}, ${x2} ${hang}, ${x2} ${y2}`);
 
         let pt = getPointOnBezier(0,0,0,hang,x2,hang,x2,y2,0.2);
+
+        self.tx = self.x + pt.x;
+        self.ty = self.y + pt.y;
 
         self.$target.css('left',pt.x*BatVines.GRIDSIZE+'px');
         self.$target.css('top',pt.y*BatVines.GRIDSIZE+'px');
@@ -59,21 +295,31 @@ BatVinesRope = function(x,y,length){
         return {x:x,y:y};
     }
 
+    self.doCut = function(){
+        self.isCut = true;
+        self.$target.click();
+    }
 }
 
-BatVinesActor = function(x,y,r){
+BatVinesActor = function(x,y,r,type){
     let self = this;
     self.x = x;
     self.y = y;
+    self.sy = 0;
     self.r = r;
-    self.gravity = true;
+    self.type = type;
+    self.grounded = 0;
+    self.gravity = false;
+    self.dead = false;
+    self.failState = undefined;
+    self.complete = (type !='goody');
 
-     self.$el = $('<batactor>').css({
+     self.$el = $('<batactor>').attr('type',self.type).css({
         width:self.r*2*BatVines.GRIDSIZE+'px',
         height:self.r*2*BatVines.GRIDSIZE+'px',
     })
 
-     self.to = function(x,y){
+    self.to = function(x,y){
 
         self.x = x;
         self.y = y;
@@ -81,16 +327,59 @@ BatVinesActor = function(x,y,r){
         self.$el.css({
             left:self.x*BatVines.GRIDSIZE+'px',
             top:self.y*BatVines.GRIDSIZE+'px',
-        })
-       
-     }
+        }) 
+    }
 
-    self.tick = function(elapsed){
-        self.y += elapsed*BatVines.GRAVITY;
+    self.step = function(){
+
+        if(self.dead){
+            self.$el.remove();
+            if(self.type=='goody') self.failState = 'You killed a goody!';
+            return;
+        }
+
+        if(self.gravity) self.sy += BatVines.GRAVITY;
+        self.y += self.sy;
+
+        if((self.y+self.r) > BatVines.ARENA.H){
+            self.y = BatVines.ARENA.H-self.r;
+            self.sy = 1;
+            self.grounded ++;
+
+            if(self.grounded > BatVines.FPS) self.complete = true;
+        }
+
+        self.to(self.x,self.y);
+    }
+
+    self.interactWith = function(other) {
+
+        if(self.dead || other.dead) return;
+
+        let dx = other.x - self.x;
+        let dy = other.y - self.y;
+        let d = Math.hypot(dx,dy);
+
+        let isAttack = (self.type=='baddy' && other.type=='goody');
+
+        if(d<(self.r+other.r)){
+            //genuine collision
+            if(self.type=='plant-mouth') other.dead = true;
+            if(isAttack) other.dead = true;
+        }
+
+        if(isAttack && Math.abs(dy) < 1){
+
+            let dir = dx>0?1:-1;
+            self.x += dir*0.1;
+        }
     }
 }
 
 BatVinesKnot = function(left,right,slave){
+
+    if(!right) right = left;
+
     let mx = ((left.x + left.length) + (right.x - right.length))/2;
 
 
@@ -124,7 +413,7 @@ BatVinesKnot = function(left,right,slave){
         }});
     }
 
-    right.$target.click(function(){
+    if( left != right ) right.$target.click(function(){
         right.$el.hide();
         right = undefined;
         if(left) dangle(left);
@@ -133,6 +422,7 @@ BatVinesKnot = function(left,right,slave){
 
     left.$target.click(function(){
         left.$el.hide();
+        if(left==right) right = undefined;
         left = undefined;
         if(right) dangle(right);
         else drop(slave);
@@ -142,11 +432,12 @@ BatVinesKnot = function(left,right,slave){
 BatVinesGame = function(){
 
     BatVines = {};
+    BatVines.FPS = 50;
     BatVines.W = 1600;
     BatVines.H = 1000;
     BatVines.GRIDSIZE = 50;
-
-    const ARENA = {w:12,h:8};
+    BatVines.GRAVITY = 0.03;
+    BatVines.ARENA = {W:12,H:10};
 
     $("head").append(`
         <style>
@@ -159,13 +450,206 @@ BatVinesGame = function(){
                 pointer-events: none;
             }
 
+            batvinesbg{
+                display:block;
+                width: 100%;
+                height: 100%;
+                position: absolute;
+                left: 0px;
+                top: 0px;
+
+                background-image:url(./proto/img/bat-greenhouse-bg.png);
+                background-size: 100%;
+                
+            }
+
            batvinesarena{
                 position: absolute;
                 display: inline-block;
-                width: ${ARENA.w*BatVines.GRIDSIZE}px;
-                height: ${ARENA.h*BatVines.GRIDSIZE}px;
-                background: #777;
-                transform: translate(-50%,-50%);
+                width: ${BatVines.ARENA.W*BatVines.GRIDSIZE}px;
+                height: ${BatVines.ARENA.H*BatVines.GRIDSIZE}px;
+               
+                
+                line-height: ${BatVines.ARENA.H*BatVines.GRIDSIZE}px;
+                font-size: ${BatVines.GRIDSIZE*2}px;
+                transform-origin: top left;
+                color: white;
+           }   
+
+           batvinesreset{
+            position: absolute;
+            left: 0px;
+            right: 0px;
+            bottom: ${BatVines.GRIDSIZE}px;
+            width: ${3*BatVines.GRIDSIZE}px;
+            height: ${3*BatVines.GRIDSIZE}px;
+           
+            background: no-repeat center url(./proto/img/reset-ccw.svg);
+            background-size: 50%;
+            margin: auto;
+            z-index: 4;
+            pointer-events: auto;
+           }
+
+           batvinesarena batvinesreticule,
+           batvinesarena batvinestarget,
+           batvinesarena batvinesprojectile{
+                display: none;
+           }
+
+           batvinesarena[active='true'] batvinesreticule,
+           batvinesarena[active='true'] batvinestarget,
+           batvinesarena[active='true'] batvinesprojectile
+           {
+                display: block;
+           }
+
+           batzoombutton{
+                position: absolute;
+                display: block;
+                position: absolute;
+                pointer-events: auto;
+           }
+
+           batzoombutton:before{
+                content:"";
+                position: absolute;
+                display: block;
+                position: absolute;
+                top: 0px;
+                left: 0px;
+                bottom: 0px;
+                width: 10%;
+                box-sizing: border-box;
+                border: 2px solid white;
+                border-right: none;
+           } 
+
+            batzoombutton:after{
+                content:"";
+                position: absolute;
+                display: block;
+                position: absolute;
+                top: 0px;
+                right: 0px;
+                bottom: 0px;
+                width: 10%;
+                box-sizing: border-box;
+                border: 2px solid white;
+                border-left: none;
+           }
+
+           batvinesarena[active='true']{
+             z-index: 2;
+           }
+
+           batvinesarena[active='true']:before{
+            content:"";
+            position: absolute;
+            left: -100%;
+            right: -100%;
+            top: 100%;
+            height: 100px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.3), transparent);
+           }
+
+           batvinesarena[active='true']:after{
+            content:"";
+            position: absolute;
+            left: -100%;
+            right: -100%;
+            bottom: 100%;
+            height: 100px;
+            background: linear-gradient(to top, rgba(0,0,0,0.3), transparent);
+           }
+
+           batvinesplayer{
+                display: block;
+                position: absolute;
+                top: 0px;
+                left: 0px;
+                right: 0px;
+                bottom: 0px;
+                pointer-events: none;
+           }
+
+           batvinesprojectile{
+                display: block;
+                position: absolute;
+                top: 0px;
+                left: 0px;
+           }
+
+           batvineszone{
+                display: block;
+                position: absolute;
+                
+                width: ${BatVines.ARENA.W*BatVines.GRIDSIZE}px;
+                height: ${BatVines.ARENA.W*BatVines.GRIDSIZE}px;
+                border-radius: 100%;
+                background: rgba(255,0,0,0.1);
+                transform: translate(-50%, -50px);
+
+                border: 10px dashed red;
+           }
+
+
+
+           batvinesbatarang{
+                display: block;
+                position: absolute;
+                top: ${BatVines.ARENA.H*BatVines.GRIDSIZE + 50}px;
+                
+           }
+
+
+
+           batvinesreticule{
+                display: block;
+                position: absolute;
+                top: 0px;
+                left: 0px;
+                width: ${BatVines.GRIDSIZE}px;
+                height: ${BatVines.GRIDSIZE}px;
+                transform: translate(-50%, -50%);
+                box-sizing: border-box;
+                border: 5px solid red;
+                border-radius: 100%;
+           }
+
+
+
+            batvinesspinner{
+                display: block;
+                position: absolute;
+               transform: scaleY(0.5);
+           }
+
+           batvinesspinner:after{
+                content:"";
+                display: block;
+                position: absolute;
+                top: ${-BatVines.GRIDSIZE}px;
+                left: ${-BatVines.GRIDSIZE}px;
+                width: ${BatVines.GRIDSIZE*2}px;
+                height: ${BatVines.GRIDSIZE*2}px;
+                background: url(./proto/img/bat-symbol-red.png);
+                background-position: center;
+                background-repeat: no-repeat;
+                background-size: 100%;
+           }
+
+           batvinesplayer:last-of-type batvinesspinner:after{
+             background-image: url(./proto/img/bat-symbol-blue.png);
+           }
+
+           batvinesplayer:last-of-type batvineszone{
+             border-color: blue;
+            background: rgba(0,0,255,0.1);
+           }
+
+           batvinesplayer:last-of-type batvinesreticule{
+             border-color: blue;
            }
 
            batrope{
@@ -181,6 +665,17 @@ BatVinesGame = function(){
                 background: black;
                 border-radius: 100%;
                 transform: translate(-50%,-50%);
+                background-size: 100%;
+           }
+
+           batactor[type="baddy"]{
+                 background: red;
+           }
+
+           batactor[type="plant-mouth"]{
+                 background-color: transparent;
+                 background-image: url(./proto/img/bat-plant-mouth.png);
+                 border-radius: 0px;
            }
 
            svg{
@@ -194,16 +689,56 @@ BatVinesGame = function(){
                 fill: none;
            }
 
-           batvinetarget{
-             display: block;
-                position: absolute;
-            width: 50px;
-            height: 50px;
+           batvinestarget{
+            display: block;
+            position: absolute;
+            width: ${BatVines.GRIDSIZE/2}px;
+            height: ${BatVines.GRIDSIZE/2}px;
             box-sizing: border-box;
             border: 5px solid white;
             transform: translate(-50%, -50%);
             border-radius: 100%;
             pointer-events: auto;
+           }
+
+           batvinesgogglesbg{
+            
+           }
+
+           batvinesgoggles{
+            z-index: 3;
+           }
+
+           batvinesgoggles, batvinesgogglesbg{
+             display: block;
+            position: absolute;
+            top: 0px;
+            left: 0px;
+            right: 0px;
+            bottom: 0px;
+            
+           }
+
+           batvineswall{
+            display:inline-block;
+            width: 33.3%;
+            height: 100%;
+            position:relative;
+           }
+
+            batvineswall[active='true'] batvinesgogglesbg{
+                 z-index: 1;
+                backdrop-filter: blur(20px);
+                background: rgba(100,100,100,0.4);
+            }
+
+           batvineswall[active='true'] batvinesgoggles{
+            background: url(./proto/img/bat-goggles.png);
+            background-size: 100%;
+           }
+
+            batvineswall[active='false'] batvinesgoggles{
+            background: black;
            }
 
         </style>
@@ -214,17 +749,18 @@ BatVinesGame = function(){
 
 
 
-    const ARENAS = [
-
+    const MAPS = [
         {
             wall:0,
-            x:BatVines.W/2,
-            y:BatVines.H/2,
+            x:400,
+            y:480,
+            scale:0.3,
             ropes:[
-                new BatVinesRope(1,0,4),
-                new BatVinesRope(5,0,5),
-                new BatVinesRope(3,0,7),
-                new BatVinesRope(8,0,5),
+                {x:3,y:0,length:3},
+                {x:8,y:0,length:4},
+                
+                /*new BatVinesRope(3,0,3),
+                new BatVinesRope(8,0,4),*/
             ],
 
             platforms:[
@@ -232,24 +768,31 @@ BatVinesGame = function(){
             ],
 
             actors:[
-                new BatVinesActor(0,0,0.5),
-                new BatVinesActor(0,0,0.5),
+                {x:0,y:0,r:0.5,type:'goody'},
+                {x:0,y:0,r:1,type:'plant-mouth'},
+                {x:8,y:BatVines.ARENA.H,r:0.5,type:'baddy'},
+
+                /*new BatVinesActor(0,0,0.5,'goody'),
+                new BatVinesActor(0,0,1,'plant-mouth'),
+                new BatVinesActor(8,BatVines.ARENA.H,0.5,'baddy'),*/
             ],
 
             knots:[
-                {ropeLeft:0,ropeRight:1,actor:0},
-                {ropeLeft:2,ropeRight:3,actor:1},
+               {ropeLeft:0,ropeRight:-1,actor:0},
+               {ropeLeft:1,ropeRight:-1,actor:1},
             ],
         },
         {
             wall:1,
-            x:BatVines.W/2,
-            y:BatVines.H/2,
+            x:150,
+            y:150,
+            scale:0.8,
             ropes:[
-                new BatVinesRope(5,0,6),
-                new BatVinesRope(10,0,5),
-                new BatVinesRope(3,0,6),
-                new BatVinesRope(8,0,7),
+                {x:3,y:0,length:7},
+                {x:8,y:0,length:5},
+
+                //new BatVinesRope(3,0,7),
+                //new BatVinesRope(8,0,5),
             ],
 
             platforms:[
@@ -257,8 +800,39 @@ BatVinesGame = function(){
             ],
 
             actors:[
-                new BatVinesActor(0,0,0.5),
-                new BatVinesActor(0,0,0.5),
+                 {x:0,y:0,r:0.5,type:'goody'},
+                //new BatVinesActor(0,0,0.5,'goody'),
+            ],
+
+            knots:[
+                {ropeLeft:0,ropeRight:1,actor:0},
+            ],
+        },
+        {
+            wall:2,
+            x:350,
+            y:400,
+            scale:0.4,
+            ropes:[
+                {x:5,y:0,length:6},
+                {x:10,y:0,length:5},
+                {x:3,y:0,length:6},
+                {x:8,y:0,length:7},
+                //new BatVinesRope(5,0,6),
+                //new BatVinesRope(10,0,5),
+                //new BatVinesRope(3,0,6),
+                //new BatVinesRope(8,0,7),
+            ],
+
+            platforms:[
+
+            ],
+
+            actors:[
+                {x:0,y:0,r:0.5,type:'goody'},
+                {x:0,y:0,r:0.5,type:'goody'},
+                //new BatVinesActor(0,0,0.5,'goody'),
+                //new BatVinesActor(0,0,0.5,'goody'),
             ],
 
             knots:[
@@ -270,34 +844,106 @@ BatVinesGame = function(){
 
 
     let $game = $('<batvinesgame>').appendTo(self.$el);
+    let $bg = $('<batvinesbg>').appendTo($game);
 
     let $walls = [];
     for(var i=0; i<3; i++){
-        $walls[i] = $('<igbside>').appendTo($game);
+        $walls[i] = $('<batvineswall>').appendTo($game);
+        $('<batvinesgogglesbg>').appendTo($walls[i]);
+        $('<batvinesgoggles>').appendTo($walls[i]);
     }
 
-    for(var a in ARENAS){
-        new BatVinesArena(ARENAS[a]).$el.appendTo($walls[ARENAS[a].wall]);
+    let arenas = [];
+    for(var m in MAPS){
+        arenas[m] = new BatVinesArena(MAPS[m]);
+        arenas[m].$el.attr('id',m);
+        arenas[m].$el.appendTo($walls[MAPS[m].wall]);
+        arenas[m].$el.click(onArena);
+
+        $('<batzoombutton>')
+        .appendTo($walls[MAPS[m].wall])
+        .css({
+            left: MAPS[m].x + 'px',
+            top: MAPS[m].y + 'px',
+            width: MAPS[m].scale * BatVines.ARENA.W * BatVines.GRIDSIZE + 'px',
+            height: MAPS[m].scale * BatVines.ARENA.H * BatVines.GRIDSIZE + 'px',
+        })
+        .attr('id',m)
+        .click(onArena);
     }
 
-    //new BatVinesArena().$el.appendTo($walls[1]);
-    /*let r1 = new BatRope(100,100,200);
-    let r2 = new BatRope(500,100,350);
-    let a = new BatActor(200,300,20);
+    let idActive = -1;
+    function onArena(){
+        idActive = $(this).attr('id');
+        arenas[idActive].setActive(true);
+        for(var w=0; w<$walls.length; w++) $walls[w].attr('active',w==MAPS[idActive].wall);
+        $('batzoombutton').hide();
+    }
 
-    r1.$el.appendTo($walls[1]);
-    r2.$el.appendTo($walls[1]);
-    a.$el.appendTo($walls[1]);
-
-    new BatRopeController(r1,r2,a);*/
-
+    let scale = 1;
     function tick(){
         let w = $(document).innerWidth();
         let s = w/(BatVines.W*3);
-        $game.css('transform','scale('+s+')');
+
+        if( s!=scale ) $game.css('transform','scale('+s+')');
+        scale = s;
+
+        for(var a in arenas) arenas[a].step();
+        if(idActive>-1){
+            arenas[idActive].setPlayerPositions(players);
+            if(arenas[idActive].isCleared){
+                arenas[idActive].setActive(false);
+                for(var w2 in $walls) $walls[w2].removeAttr('active');
+                idActive = -1;
+                $('batzoombutton').show();
+            }
+        }
+
+
     }
 
-    setInterval(tick,100);
+    setInterval(tick,1000/BatVines.FPS);
+
+    let players = [{},{}];
+    self.setPlayers = function(p){
+        players = p;
+        players.length = 2;
+
+        for(var i in players){
+            players[i].proximity = [];
+            players[i].proximity[0] = 1+players[i].X;
+            players[i].proximity[1] = 1-players[i].Z;
+            players[i].proximity[2] = 1-players[i].X;
+        }
+    }
+
+    $(document).on('mousemove',function(e){
+
+        let oy = $game.offset().top;
+        let x = (e.pageX/scale)/BatVines.W;
+        let y = (e.pageY-oy)/scale/BatVines.H;
+
+
+        if( x < 1 ){
+            //left wall
+            players[0].px = (y)*100;
+            players[0].pz = (x)*100;
+        } else if( x > 2 ){
+            //right wall
+            players[0].px = (1 - y)*100;
+            players[0].pz = (3 - x)*100;
+        }
+        else{
+            //front wall
+            players[0].px = (x - 1)*100;
+            players[0].pz = (1 - y)*100;
+        }
+
+        players[1].px = players[0].px + 5;
+        players[1].pz = players[0].pz + 5;
+
+        players[0].proximity = [0.9,0.9,0.9];
+    })
 
 }
 
