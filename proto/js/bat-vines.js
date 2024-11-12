@@ -1,6 +1,33 @@
+AudioContext = function(){
+    let self = this;
+    self.$el = $('<div>');
+   let audio = {};
 
+    self.add = function(id,src,volume,loop,autoplay){
+        let attr = ''+(autoplay?'autoplay ':'')+(loop?'loop ':'');
+        audio[id] = $(`<audio ${attr}>
+            <source src=${src} type="audio/mpeg">
+        </audio>`).appendTo(self.$el)[0];
+        audio[id].volume = volume;
+    }
+
+    self.play = function(id,restart){
+        audio[id].play();
+        if(restart) audio[id].currentTime = 0;
+    }
+
+    self.stop = function(id){
+        audio[id].pause();
+    }
+}
 
 BatVinesPlayer = function(n){
+
+    let audio = new AudioContext();
+    audio.add('throw','./proto/audio/sfx-throw.mp3',0.2);
+    audio.add('locking','./proto/audio/sfx-locking.mp3',0.1,true);
+    audio.add('cut','./proto/audio/sfx-swipe.mp3',0.1);
+    audio.add('reload','./proto/audio/sfx-reload.mp3',0.1);
 
     const FPFOCUS = BatVines.FPS;
     const FPTHROW = BatVines.FPS/2;
@@ -42,6 +69,9 @@ BatVinesPlayer = function(n){
         let amtFocus = self.targeting/FPFOCUS;
         if(amtFocus>1) amtFocus = 1;
 
+        if(amtFocus>0 && !self.isThrowing) audio.play('locking');
+        else audio.stop('locking');
+
         $reticule.css({
             left:px*BatVines.GRIDSIZE+'px',
             top:py*BatVines.GRIDSIZE+'px',
@@ -69,21 +99,31 @@ BatVinesPlayer = function(n){
 
         } else {
 
-            if(!self.isActive && n==0 && px<0 && py>BatVines.ARENA.H) self.isActive = true;
-            if(!self.isActive && n==1 && px>BatVines.ARENA.W && py>BatVines.ARENA.H) self.isActive = true;
+            if(
+                (!self.isActive && n==0 && px<0 && py>BatVines.ARENA.H) ||
+                (!self.isActive && n==1 && px>BatVines.ARENA.W && py>BatVines.ARENA.H)
+            ){
 
-            if(self.isActive && self.targeting>=FPFOCUS) self.isThrowing = true;
+                audio.play('reload');
+                self.isActive = true;
+            }
+
+            if(self.isActive && self.targeting>=FPFOCUS){
+                audio.play('throw');
+                self.isThrowing = true;
+            }
 
             $zone.css('opacity',self.isActive?0:1);
             $batarang.css('opacity',self.isActive?1:0);
         }
 
         self.isCutting = self.throwing>=FPTHROW;
+        if(self.isCutting) audio.play('cut');
     }
 
     self.reset = function(){
         self.isCutting = false;
-        self.isActive = false;
+       // self.isActive = false;
         self.isThrowing = false;
         self.targeting = 0;
         self.throwing = 0;
@@ -136,7 +176,7 @@ BatVinesArena = function(layout) {
             ropes[r].$el.appendTo(self.$el);
         }
         for(var a in layout.actors){
-            actors[a] = new BatVinesActor( layout.actors[a].x, layout.actors[a].y, layout.actors[a].r, layout.actors[a].type );
+            actors[a] = new BatVinesActor( layout.actors[a].x, layout.actors[a].y, layout.actors[a].w, layout.actors[a].h, layout.actors[a].type );
             actors[a].$el.appendTo(self.$el);
         }
         for(var k in layout.knots){
@@ -180,6 +220,7 @@ BatVinesArena = function(layout) {
         if(complete){
             self.$el.html('CLEAR!');
             self.isCleared = true;
+            for(var p in players) players[p].isActive = false;
         }
     }
 
@@ -305,12 +346,13 @@ BatVinesRope = function(x,y,length){
     }
 }
 
-BatVinesActor = function(x,y,r,type){
+BatVinesActor = function(x,y,w,h,type){
     let self = this;
     self.x = x;
     self.y = y;
     self.sy = 0;
-    self.r = r;
+    self.w = w;
+    self.h = h;
     self.type = type;
     self.grounded = 0;
     self.gravity = false;
@@ -319,8 +361,8 @@ BatVinesActor = function(x,y,r,type){
     self.complete = (type !='goody');
 
      self.$el = $('<batactor>').attr('type',self.type).css({
-        width:self.r*2*BatVines.GRIDSIZE+'px',
-        height:self.r*2*BatVines.GRIDSIZE+'px',
+        width:self.w*BatVines.GRIDSIZE+'px',
+        height:self.h*BatVines.GRIDSIZE+'px',
     })
 
     self.to = function(x,y){
@@ -345,8 +387,8 @@ BatVinesActor = function(x,y,r,type){
         if(self.gravity) self.sy += BatVines.GRAVITY;
         self.y += self.sy;
 
-        if((self.y+self.r) > BatVines.ARENA.H){
-            self.y = BatVines.ARENA.H-self.r;
+        if((self.y+self.h/2) > BatVines.ARENA.H){
+            self.y = BatVines.ARENA.H-self.h/2;
             self.sy = 1;
             self.grounded ++;
 
@@ -366,7 +408,7 @@ BatVinesActor = function(x,y,r,type){
 
         let isAttack = (self.type=='baddy' && other.type=='goody');
 
-        if(d<(self.r+other.r)){
+        if(d<1){
             //genuine collision
             if(self.type=='plant-mouth') other.dead = true;
             if(isAttack) other.dead = true;
@@ -669,13 +711,26 @@ BatVinesGame = function(){
                 display: block;
                 position: absolute;
                 background: black;
-                border-radius: 100%;
+                
                 transform: translate(-50%,-50%);
                 background-size: 100%;
+                 border-radius: 50% 50% 0px 0px;
            }
 
-           batactor[type="baddy"]{
-                 background: red;
+          
+
+           batactor[type="baddy"]:after{
+                content:"";
+                width: 150%;
+                height: 100%;
+
+                background: url(./proto/img/bat-goon-head.png);
+                background-size: 100%;
+                background-repeat: no-repeat;
+                position: absolute;
+                bottom: 50%;
+                left: -25%;
+                display: block
            }
 
            batactor[type="plant-mouth"]{
@@ -690,7 +745,7 @@ BatVinesGame = function(){
            }
 
            path{
-                stroke-width: 0.1px;
+                stroke-width: 0.3px;
                 stroke: black;
                 fill: none;
            }
@@ -735,7 +790,10 @@ BatVinesGame = function(){
             batvineswall[active='true'] batvinesgogglesbg{
                  z-index: 1;
                 backdrop-filter: blur(20px);
-                background: rgba(100,100,100,0.4);
+                background-color: rgba(100,100,100,0.4);
+                background-image: url(./proto/img/bat-vines-frame.png);
+                background-size: 80%;
+                background-position: center;
             }
 
            batvineswall[active='true'] batvinesgoggles{
@@ -774,9 +832,9 @@ BatVinesGame = function(){
             ],
 
             actors:[
-                {x:0,y:0,r:0.5,type:'goody'},
-                {x:0,y:0,r:1,type:'plant-mouth'},
-                {x:8,y:BatVines.ARENA.H,r:0.5,type:'baddy'},
+                {x:0,y:0,w:1,h:2,type:'goody'},
+                {x:0,y:0,w:2,h:2,type:'plant-mouth'},
+                {x:8,y:BatVines.ARENA.H,w:1,h:2,type:'baddy'},
 
                 /*new BatVinesActor(0,0,0.5,'goody'),
                 new BatVinesActor(0,0,1,'plant-mouth'),
@@ -806,7 +864,7 @@ BatVinesGame = function(){
             ],
 
             actors:[
-                 {x:0,y:0,r:0.5,type:'goody'},
+                 {x:0,y:0,w:1,h:2,type:'goody'},
                 //new BatVinesActor(0,0,0.5,'goody'),
             ],
 
@@ -835,8 +893,8 @@ BatVinesGame = function(){
             ],
 
             actors:[
-                {x:0,y:0,r:0.5,type:'goody'},
-                {x:0,y:0,r:0.5,type:'goody'},
+                {x:0,y:0,w:1,h:2,type:'goody'},
+                {x:0,y:0,w:1,h:2,type:'goody'},
                 //new BatVinesActor(0,0,0.5,'goody'),
                 //new BatVinesActor(0,0,0.5,'goody'),
             ],
@@ -848,6 +906,15 @@ BatVinesGame = function(){
         }
     ]
 
+    
+
+    
+    let audio = new AudioContext();
+    audio.add('music','./proto/audio/mystery-girl-bgm-184949.mp3',0.3,true,true);
+    audio.add('zoom','./proto/audio/sfx-zoom.mp3',0.5);
+    
+
+    
 
     let $game = $('<batvinesgame>').appendTo(self.$el);
     let $bg = $('<batvinesbg>').appendTo($game);
@@ -864,7 +931,7 @@ BatVinesGame = function(){
         arenas[m] = new BatVinesArena(MAPS[m]);
         arenas[m].$el.attr('id',m);
         arenas[m].$el.appendTo($walls[MAPS[m].wall]);
-        arenas[m].$el.click(onArena);
+        
 
         $('<batzoombutton>')
         .appendTo($walls[MAPS[m].wall])
@@ -884,6 +951,8 @@ BatVinesGame = function(){
         arenas[idActive].setActive(true);
         for(var w=0; w<$walls.length; w++) $walls[w].attr('active',w==MAPS[idActive].wall);
         $('batzoombutton').hide();
+
+        audio.play('zoom');
     }
 
     let scale = 1;
@@ -950,6 +1019,10 @@ BatVinesGame = function(){
 
         players[0].proximity = [0.9,0.9,0.9];
     })
+
+    $(document).on('click',function(e){
+        audio.play('music');
+    });
 
 }
 
