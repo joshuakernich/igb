@@ -15,8 +15,8 @@ BatVinesPlayer = function(n){
     let $batarang = $('<batvinesbatarang>').appendTo(self.$el);
     $('<batvinesspinner>').appendTo($batarang);
 
-    $zone.hide();
-    $batarang.hide();
+    $zone.css('opacity',0);
+    $batarang.css('opacity',0);
 
     let dir = n==0?-1:1;
 
@@ -74,13 +74,8 @@ BatVinesPlayer = function(n){
 
             if(self.isActive && self.targeting>=FPFOCUS) self.isThrowing = true;
 
-            if(self.isActive){
-                $batarang.show();
-                $zone.hide();
-            } else {
-                $batarang.hide();
-                $zone.show();
-            }
+            $zone.css('opacity',self.isActive?0:1);
+            $batarang.css('opacity',self.isActive?1:0);
         }
 
         self.isCutting = self.throwing>=FPTHROW;
@@ -228,11 +223,13 @@ BatVinesArena = function(layout) {
                 else players[n].targeting = 0;
 
                 if(players[n].isCutting){
+
+                    players[n].reset();
                     
                     if(isTargeting) isTargeting.doCut();
                     
 
-                    players[n].reset();
+                    
                 }
             }
 
@@ -304,7 +301,7 @@ BatVinesRope = function(x,y,length){
 
     self.doCut = function(){
         self.isCut = true;
-        self.$target.click();
+        self.$target.trigger('click');
     }
 }
 
@@ -481,6 +478,8 @@ BatVinesGame = function(){
                 font-size: ${BatVines.GRIDSIZE*2}px;
                 transform-origin: top left;
                 color: white;
+
+                transition: all 0.5s;
            }   
 
            batvinesreset{
