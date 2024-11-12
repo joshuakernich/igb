@@ -60,6 +60,7 @@ BatVinesPlayer = function(n){
 
             let x = sx + dx*amtThrow;
             let y = sy + dy*amtThrow;
+
             $batarang.css({
                 'left':x*BatVines.GRIDSIZE+'px',
                 'top':y*BatVines.GRIDSIZE+'px',
@@ -91,6 +92,12 @@ BatVinesPlayer = function(n){
         self.isThrowing = false;
         self.targeting = 0;
         self.throwing = 0;
+
+        $batarang.css({
+            'left':sx*BatVines.GRIDSIZE+'px',
+            'top':sy*BatVines.GRIDSIZE+'px',
+            'transform':'scale('+(5)+')',
+        });
     }
 }
 
