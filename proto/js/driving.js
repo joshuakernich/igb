@@ -555,6 +555,9 @@ DrivingGame = function(){
 	new Box3D(WCAR*GRID,LCAR*GRID,HCAR*GRID,'black').$el.appendTo($i);
 
 	
+	$car.find('.box3D-left').css('background','#222');
+	$car.find('.box3D-right').css('background','#222');
+
 	let $thruster = $('<drivingthruster>').appendTo( $car.find('.box3D-front'));
 	let $sparkLeft = $('<drivingspark>').appendTo( $car.find('.box3D-left'));
 	let $sparkRight = $('<drivingspark>').appendTo( $car.find('.box3D-right'));
@@ -869,12 +872,13 @@ DrivingGame = function(){
 		let rTargeting = 0; 
 		
 
-		let pxTargeting = oxTargeting*W/2;
+		let pxTargeting = txRelative*W/3;
 
 		$thruster.attr('boosting',boosting>0);
 	    $camera.css('transform',"rotateY(" + car.r + "deg)");
+	    $camera.css('left',pxTargeting+'px');
 	   	$plane.css('bottom',-(car.y-cy)*GRID+'px');
-	   	$plane.css('left',-(car.x-cx)*GRID + pxTargeting+'px');
+	   	$plane.css('left',-(car.x-cx)*GRID+'px');
 	  	
 
 	   	for(var c in cars){
