@@ -72,7 +72,7 @@ DrivingGame = function(){
 	const HCAR = 0.15;
 	const FLOAT = 5;
 	const WROAD = 4;
-	const SIGHT = 3;
+	const SIGHT = 5;
 	
 	const PURPLE = '#230B39';
 
@@ -869,9 +869,9 @@ DrivingGame = function(){
 		let oxTargeting = players[1].px/100*2-1;
 		
 
-		let rTargeting = 0; 
-		
 
+
+		let rTargeting = txRelative*35;
 		let pxTargeting = txRelative*W/3;
 
 		$thruster.attr('boosting',boosting>0);
