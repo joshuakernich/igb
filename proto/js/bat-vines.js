@@ -118,6 +118,8 @@ BatVinesPlayer = function(n){
             $reticule.css('opacity',self.isActive?1:0.5);
         }
 
+        $batarang.attr('active',self.isThrowing);
+
         self.isCutting = self.throwing>=FPTHROW;
         if(self.isCutting) audio.play('cut');
     }
@@ -360,6 +362,9 @@ BatVinesActor = function(x,y,w,h,type){
     self.dead = false;
     self.failState = undefined;
     self.complete = (type !='goody');
+    self.isAttacking = false;
+    self.dir = 1;
+    self.pause = 0;
 
      self.$el = $('<batactor>').attr('type',self.type).css({
         width:self.w*BatVines.GRIDSIZE+'px',
@@ -399,12 +404,27 @@ BatVinesActor = function(x,y,w,h,type){
             if(self.grounded > BatVines.FPS) self.complete = true;
         }
 
+        if(self.type=='baddy' && !self.isAttacking && self.pause--<0){
+            //back and forth
+            self.x += self.dir * 0.05;
+            if(self.dir == 1 && self.x>BatVines.ARENA.W){
+                self.pause = BatVines.FPS/2;
+                self.dir = -1;
+            }
+            if(self.dir == -1 && self.x<0){
+                self.pause = BatVines.FPS/2;
+                self.dir = 1;
+            }
+        }
+
         self.to(self.x,self.y);
     }
 
     self.interactWith = function(other) {
 
         if(self.dead || other.dead) return;
+
+        self.isAttacking = false;
 
         let dx = other.x - self.x;
         let dy = other.y - self.y;
@@ -413,13 +433,13 @@ BatVinesActor = function(x,y,w,h,type){
         let isAttack = (self.type=='baddy' && other.type=='goody');
 
         if(d<1){
+            self.isAttacking = true;
             //genuine collision
             if(self.type=='plant-mouth') other.dead = true;
             if(isAttack) other.dead = true;
         }
 
         if(isAttack && Math.abs(dy) < 1){
-
             let dir = dx>0?1:-1;
             self.x += dir*0.1;
         }
@@ -723,6 +743,13 @@ BatVinesGame = function(){
              background-image: url(./proto/img/bat-symbol-blue.png);
            }
 
+           batvinesbatarang[active='true'] batvinesspinner:after{
+                animation: batspin;
+                animation-duration: 0.3s;
+                animation-iteration-count: infinite;
+                animation-timing-function: linear;
+           }
+
            batvinesplayer:last-of-type batvineszone{
              border-color: blue;
             background: rgba(0,0,255,0.1);
@@ -840,6 +867,15 @@ BatVinesGame = function(){
 
             batvineswall[active='false'] batvinesgoggles{
             background: black;
+           }
+
+           @keyframes batspin{
+            0%{
+                transform: rotate(0deg);
+            }
+            100%{
+                transform: rotate(360deg);
+            }
            }
 
         </style>

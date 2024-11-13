@@ -629,12 +629,12 @@ DrivingGame = function(){
 
 	for(var i=0; i<20; i++){
 		
-		cars[i] = { progress:25+i*15, lane:[0,1,-1][Math.floor(Math.random()*2)], speed:0.5};
+		cars[i] = { progress:40+i*15, lane:[0,1,-1][Math.floor(Math.random()*2)], speed:0.5};
 	}
 
-	cars.push( { isTarget:true, progress:16, lane:-1, speed:0.95} );
-	cars.push( { isTarget:true, progress:26, lane:0, speed:0.95} );
-	cars.push( { isTarget:true, progress:36, lane:1, speed:0.95} );
+	cars.push( { isTarget:true, progress:26, lane:-1, speed:0.95} );
+	cars.push( { isTarget:true, progress:36, lane:0, speed:0.95} );
+	cars.push( { isTarget:true, progress:46, lane:1, speed:0.95} );
 
 
 	for(var c in cars){
@@ -735,10 +735,7 @@ DrivingGame = function(){
 
 		addStraight(50);
 
-		addSlide(10,(Math.random()>0.5?1:-1));
-
-		if(curve[curve.length-1].r > 90) addSlide(10,-1);
-		if(curve[curve.length-1].r < -90) addSlide(10,1);
+		addSlide(20,(Math.random()>0.5?1:-1));
 	}
 
 
