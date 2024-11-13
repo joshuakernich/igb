@@ -93,6 +93,28 @@ DrivingGame = function(){
 				
 			}
 
+			drivinggame:before{
+				content:"";
+				display:block;
+				position: absolute;
+				top:0px;
+				left: 0px;
+				bottom: 0px;
+				border-left: 1px solid red;
+				z-index: 100;
+			}
+
+			drivinggame:after{
+				content:"";
+				display:block;
+				position: absolute;
+				top:0px;
+				right: 0px;
+				bottom: 0px;
+				border-right: 1px solid red;
+				z-index: 100;
+			}
+
 			drivingviewport{
 				display:block;
 				position: absolute;
@@ -540,7 +562,7 @@ DrivingGame = function(){
 	let $aim = $('<drivingaim>').appendTo( $car );
 	let $missile = $('<drivingmissile>').appendTo($plane);
 
-	let $steeringWheel = $('<drivingwheel>').appendTo($game);
+	let $steeringWheel = $('<drivingwheel>');//.appendTo($game);
 
 	$('<drivingbtn>').appendTo($left);
 	$('<drivingbtn>').appendTo($right);
@@ -549,7 +571,8 @@ DrivingGame = function(){
 	let $hud = $('<drivinghud>').appendTo($game);
 	let $arrows = [];
 	for(var i=0; i<5; i++){
-		$arrows[i] = $('<drivingarrow>').appendTo($hud).css('transform','rotate('+i*5+'deg)')
+		//$arrows[i] = $('<drivingarrow>').appendTo($hud).css('transform','rotate('+i*5+'deg)')
+		$arrows[i] = $('<drivingarrow>').appendTo($hud).css('left',i*15+'px')
 	}
 
 	let sfx = {};
@@ -586,9 +609,9 @@ DrivingGame = function(){
 			<source src="./proto/audio/car-explode.mp3" type="audio/mpeg">
 		</audio>`).appendTo(self.$el)[0];
 
-	sfx.music.volume = 0.5;
-	sfx.boost.volume = 0.5;
-	sfx.hit.volume = 0.5;
+	sfx.music.volume = 0.3;
+	sfx.boost.volume = 0.3;
+	sfx.hit.volume = 0.3;
 	sfx.scrape.volume = 0;
 	sfx.screech.volume = 0;
 
@@ -784,7 +807,7 @@ DrivingGame = function(){
 		let lane = Math.sin(rRelative)*d;
 		let max = (WROAD/2-WCAR/2);
 
-		let r = txRelative*25;
+		let r = txRelative*70;
 
 		let rAmt = Math.abs(txRelative);
 		$hud.css('transform','scaleX('+(txRelative>0?1:-1)+')')
@@ -818,7 +841,7 @@ DrivingGame = function(){
 
 		
 		
-		car.r += r*elapsed*2;
+		car.r += r*elapsed*0.5;
 
 		$car.css({
 			left: car.x*GRID +'px',
@@ -841,14 +864,17 @@ DrivingGame = function(){
 		let cy = Math.cos(car.r*Math.PI/180)*0.5;
 		
 		let oxTargeting = players[1].px/100*2-1;
-		let rTargeting = 40*oxTargeting;
+		
 
-		rTargeting = 0; 
+		let rTargeting = 0; 
+		
+
+		let pxTargeting = oxTargeting*W/2;
 
 		$thruster.attr('boosting',boosting>0);
 	    $camera.css('transform',"rotateY(" + car.r + "deg)");
 	   	$plane.css('bottom',-(car.y-cy)*GRID+'px');
-	   	$plane.css('left',-(car.x-cx)*GRID+'px');
+	   	$plane.css('left',-(car.x-cx)*GRID + pxTargeting+'px');
 	  	
 
 	   	for(var c in cars){
@@ -858,7 +884,7 @@ DrivingGame = function(){
 	   		cars[c].$el.css({
 	   			'left':cars[c].p.x*GRID+'px',
 	   			'bottom':cars[c].p.y*GRID+'px',
-	   			'transform':'rotate('+(cars[c].p.r*180/Math.PI)+'deg)',
+	   			'transform':'rotate('+((cars[c].p.r)*180/Math.PI)+'deg)',
 	   		})
 	   	}
 
