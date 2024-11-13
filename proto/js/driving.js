@@ -647,14 +647,14 @@ DrivingGame = function(){
 		cars[c].$el = $c;
 	}
 
+	const STRAFE = 5;
+	const SPEED = 6;
+	const BOOST = 1.5;
+
 	let players = [{px:0},{px:0}];
 	let iTick = 0;
-	let speed = 6;
-	let steer = 0.2;
 	let xCenter = 0;
 	let iyTrack = -1;
-
-	const BOOST = 1.5;
 
 	let curve = [{x:0,y:0,r:0}];
 
@@ -760,7 +760,7 @@ DrivingGame = function(){
 	let bogging = 0;
 	let missile = {};
 
-	const MISSILETIME = FPS;
+	const MISSILETIME = FPS*2;
 
 	function dist(a,b){
 		return Math.hypot(b.x-a.x,b.y-a.y);
@@ -789,12 +789,24 @@ DrivingGame = function(){
 
 		sfx.screech.volume = Math.abs(txRelative) * (modifier>1?0.2:0.1);
 
+		let forward = {
+			x:Math.sin(car.r*Math.PI/180)*SPEED*modifier*elapsed,
+			y:Math.cos(car.r*Math.PI/180)*SPEED*modifier*elapsed
+		}
+
+		let oxStrafe = txRelative*STRAFE;
+
+
+
+		let strafe = {
+			x:Math.sin(car.r*Math.PI/180+90)*oxStrafe*modifier*elapsed,
+			y:Math.cos(car.r*Math.PI/180+90)*oxStrafe*modifier*elapsed
+		}
 		
-		car.x += Math.sin(car.r*Math.PI/180)*speed*modifier*elapsed;
-		car.y += Math.cos(car.r*Math.PI/180)*speed*modifier*elapsed;
+		car.x += forward.x + strafe.x;
+		car.y += forward.y + strafe.y;
 
 		sfx.idle.volume = (bogging > 0)?0.2:0.3;
-
 
 		if( dist(car,curve[iProgress]) > dist(car,curve[iProgress+1])) iProgress++;
 
@@ -860,14 +872,12 @@ DrivingGame = function(){
 		else sfx.scrape.volume = 0;
 
 
-		let cx = Math.sin(car.r*Math.PI/180)*0.5;
-		let cy = Math.cos(car.r*Math.PI/180)*0.5;
+		let cameraDistance = 0.5;
+		let cx = Math.sin(car.r*Math.PI/180)*cameraDistance;
+		let cy = Math.cos(car.r*Math.PI/180)*cameraDistance;
 		
 		let oxTargeting = players[1].px/100*2-1;
 		
-
-
-
 		let rTargeting = txRelative*35;
 		let pxTargeting = txRelative*W/3;
 
@@ -879,7 +889,7 @@ DrivingGame = function(){
 	  	
 
 	   	for(var c in cars){
-	   		cars[c].progress += speed*cars[c].speed*elapsed;
+	   		cars[c].progress += SPEED*cars[c].speed*elapsed;
 	   		cars[c].p = getPosition(cars[c].progress,cars[c].lane);
 	   		
 	   		cars[c].$el.css({
@@ -890,7 +900,12 @@ DrivingGame = function(){
 	   	}
 
 	   	for(var b in boosts) if(dist(boosts[b].p,car)<0.5) boosting = FPS;
-		for(var c in cars) if(dist(cars[c].p,car)<0.3) bogging = FPS/2;
+		for(var c in cars){
+
+			let d = dist(cars[c].p,car);
+
+			if(d<WCAR) bogging = FPS/2;
+		}
 		
 		if(boosting == FPS) sfx.boost.play();
 		if(bogging == FPS/2) sfx.hit.play();
@@ -898,8 +913,8 @@ DrivingGame = function(){
 
 		if(missile.flying > 0 && missile.flying < MISSILETIME ){
 			
-			missile.x += Math.sin(missile.r*Math.PI/180)*speed*elapsed*2;
-			missile.y += Math.cos(missile.r*Math.PI/180)*speed*elapsed*2;
+			missile.x += Math.sin(missile.r*Math.PI/180)*SPEED*elapsed*2;
+			missile.y += Math.cos(missile.r*Math.PI/180)*SPEED*elapsed*2;
 
 			for(var c=0; c<cars.length; c++){
 				if(dist(missile,cars[c].p)<0.3){
