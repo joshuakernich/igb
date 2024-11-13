@@ -75,8 +75,8 @@ BatVinesPlayer = function(n){
         $reticule.css({
             left:px*BatVines.GRIDSIZE+'px',
             top:py*BatVines.GRIDSIZE+'px',
-            width: (2-amtFocus)*BatVines.GRIDSIZE+'px',
-            height: (2-amtFocus)*BatVines.GRIDSIZE+'px',
+            width: (2.5-amtFocus*1.5)*BatVines.GRIDSIZE+'px',
+            height: (1.5-amtFocus*0.5)*BatVines.GRIDSIZE+'px',
         })
 
         if(self.isThrowing){
@@ -115,6 +115,7 @@ BatVinesPlayer = function(n){
 
             $zone.css('opacity',self.isActive?0:1);
             $batarang.css('opacity',self.isActive?1:0);
+            $reticule.css('opacity',self.isActive?1:0.5);
         }
 
         self.isCutting = self.throwing>=FPTHROW;
@@ -370,9 +371,12 @@ BatVinesActor = function(x,y,w,h,type){
         self.x = x;
         self.y = y;
 
+        let rot = (type=='goody')?(self.grounded?0:-45):0;
+
         self.$el.css({
             left:self.x*BatVines.GRIDSIZE+'px',
             top:self.y*BatVines.GRIDSIZE+'px',
+            transform:'translate(-50%, -50%) rotate('+rot+'deg)',
         }) 
     }
 
@@ -661,8 +665,36 @@ BatVinesGame = function(){
                 height: ${BatVines.GRIDSIZE}px;
                 transform: translate(-50%, -50%);
                 box-sizing: border-box;
-                border: 5px solid red;
-                border-radius: 100%;
+                
+               
+           }
+
+           batvinesreticule:before{
+                content:"";
+                position: absolute;
+                display: block;
+                position: absolute;
+                top: 0px;
+                left: 0px;
+                bottom: 0px;
+                width: 25%;
+                box-sizing: border-box;
+                border: 4px solid red;
+                border-right: none;
+           } 
+
+            batvinesreticule:after{
+                content:"";
+                position: absolute;
+                display: block;
+                position: absolute;
+                top: 0px;
+                right: 0px;
+                bottom: 0px;
+                width: 25%;
+                box-sizing: border-box;
+                border: 4px solid red;
+                border-left: none;
            }
 
 
@@ -696,7 +728,9 @@ BatVinesGame = function(){
             background: rgba(0,0,255,0.1);
            }
 
-           batvinesplayer:last-of-type batvinesreticule{
+           batvinesplayer:last-of-type batvinesreticule:before,
+           batvinesplayer:last-of-type batvinesreticule:after
+           {
              border-color: blue;
            }
 
@@ -714,23 +748,26 @@ BatVinesGame = function(){
                 
                 transform: translate(-50%,-50%);
                 background-size: 100%;
-                 border-radius: 50% 50% 0px 0px;
+                 border-radius: 50% 50% 10% 10%;
            }
 
-          
-
-           batactor[type="baddy"]:after{
-                content:"";
-                width: 150%;
-                height: 100%;
-
-                background: url(./proto/img/bat-goon-head.png);
-                background-size: 100%;
+            batactor[type="goody"]:after, batactor[type="baddy"]:after{
+                content:". .";
+                width: 100%;
+                height: 50%;
+                background: black;
+                border-radius: 100%;
                 background-repeat: no-repeat;
                 position: absolute;
-                bottom: 50%;
-                left: -25%;
-                display: block
+                bottom: 70%;
+                left: 0%;
+                display: block;
+                font-size: 25px;
+                line-height: 25px;
+           }
+
+           batactor[type="baddy"]:after{
+                color: red;
            }
 
            batactor[type="plant-mouth"]{
@@ -878,10 +915,10 @@ BatVinesGame = function(){
             y:400,
             scale:0.4,
             ropes:[
-                {x:5,y:0,length:6},
+                {x:5,y:0,length:7},
                 {x:10,y:0,length:5},
-                {x:3,y:0,length:6},
-                {x:8,y:0,length:7},
+                {x:2,y:0,length:8},
+                {x:7,y:0,length:6},
                 //new BatVinesRope(5,0,6),
                 //new BatVinesRope(10,0,5),
                 //new BatVinesRope(3,0,6),
