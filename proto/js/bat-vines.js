@@ -350,6 +350,10 @@ BatVinesRope = function(x,y,length){
 }
 
 BatVinesActor = function(x,y,w,h,type){
+
+    const WALK = 0.05;
+    const RUN = 0.15;
+
     let self = this;
     self.x = x;
     self.y = y;
@@ -401,12 +405,18 @@ BatVinesActor = function(x,y,w,h,type){
             self.sy = 1;
             self.grounded ++;
 
-            if(self.grounded > BatVines.FPS) self.complete = true;
+            if(self.type=='goody'){
+                let dir = (self.x<BatVines.ARENA.W/2)?-1:1;
+                self.x += WALK * dir;
+                 if(self.x < 0 || self.x > BatVines.ARENA.W) self.complete = true;
+            }
+
+           
         }
 
         if(self.type=='baddy' && !self.isAttacking && self.pause--<0){
             //back and forth
-            self.x += self.dir * 0.05;
+            self.x += self.dir * WALK;
             if(self.dir == 1 && self.x>BatVines.ARENA.W){
                 self.pause = BatVines.FPS/2;
                 self.dir = -1;
@@ -430,18 +440,20 @@ BatVinesActor = function(x,y,w,h,type){
         let dy = other.y - self.y;
         let d = Math.hypot(dx,dy);
 
-        let isAttack = (self.type=='baddy' && other.type=='goody');
+        let shouldAttack = (self.type=='baddy' && other.type=='goody');
 
         if(d<1){
-            self.isAttacking = true;
             //genuine collision
             if(self.type=='plant-mouth') other.dead = true;
-            if(isAttack) other.dead = true;
+            if(shouldAttack) other.dead = true;
         }
 
-        if(isAttack && Math.abs(dy) < 1){
+        if(shouldAttack && Math.abs(dy) < 1){
+            self.isAttacking = true;
             let dir = dx>0?1:-1;
-            self.x += dir*0.1;
+            self.x += dir*RUN;
+
+            console.log('CHASE HIM!')
         }
     }
 }
