@@ -1044,6 +1044,12 @@ BatVinesGame = function(){
             {puzzle:6,wall:0,x:MX,y:MY,scale:S},
             {puzzle:7,wall:1,x:MX,y:MY,scale:S},
             {puzzle:8,wall:2,x:MX,y:MY,scale:S},
+        ],
+        [
+            //LEVEL 3
+            {puzzle:9,wall:0,x:MX,y:MY,scale:S},
+            {puzzle:10,wall:1,x:MX,y:MY,scale:S},
+            {puzzle:11,wall:2,x:MX,y:MY,scale:S},
         ]
     ]
 
@@ -1211,6 +1217,60 @@ BatVinesGame = function(){
                
             ],
         },
+        {
+            //Level 4a Two citizens. One Monster.
+            ropes:[
+                {x:BatVines.ARENA.W*0.2,y:0,length:5},
+                {x:BatVines.ARENA.W*0.8,y:0,length:5},
+            ],
+            actors:[
+                GOODY,
+                GOODY,
+                {x:BatVines.ARENA.W*0.1,y:BatVines.ARENA.H,w:3,h:3,type:'baddy'},
+            ],
+
+            knots:[
+                {ropeLeft:0,ropeRight:-1,actor:0},
+                {ropeLeft:1,ropeRight:-1,actor:1},
+            ],
+        },
+        {
+            //Level 4b Two double-vine citizens. One Monster.
+            ropes:[
+                {x:BatVines.ARENA.W*0.2,y:0,length:8},
+                {x:BatVines.ARENA.W*0.4,y:0,length:6},
+                {x:BatVines.ARENA.W*0.6,y:0,length:6},
+                {x:BatVines.ARENA.W*0.8,y:0,length:8},
+            ],
+            actors:[
+                GOODY,
+                GOODY,
+                {x:BatVines.ARENA.W*0.1,y:BatVines.ARENA.H,w:3,h:3,type:'baddy'},
+            ],
+
+            knots:[
+                {ropeLeft:0,ropeRight:1,actor:0},
+                {ropeLeft:2,ropeRight:3,actor:1},
+            ],
+        },
+        {
+            //Level 4c One fragment. Two crawling monsters. One citizen.
+            ropes:[
+                {x:BatVines.ARENA.W*0.3,y:0,length:3},
+                {x:BatVines.ARENA.W*0.7,y:0,length:5},
+            ],
+            actors:[
+                {w:2,h:2,type:'fragment'},
+                GOODY,
+                {x:BatVines.ARENA.W*0.1,y:BatVines.ARENA.H,w:3,h:3,type:'baddy'},
+                {x:BatVines.ARENA.W*0.9,y:BatVines.ARENA.H,w:3,h:3,type:'baddy'},
+            ],
+
+            knots:[
+                {ropeLeft:0,ropeRight:-1,actor:0},
+                {ropeLeft:1,ropeRight:-1,actor:1},
+            ],
+        }
     ]
 
     
@@ -1240,8 +1300,6 @@ BatVinesGame = function(){
     let arenas = [];
     function doNextLevel(){
         iLevel++;
-
-        iLevel = 2;
 
         for(var m in LEVELS[iLevel]){
             let map = LEVELS[iLevel][m];
