@@ -21,6 +21,42 @@ AudioContext = function(){
     }
 }
 
+BatVinesPop = function(x,y,w,h){
+    let self = this;
+    let particles = 5;
+    let rMin = Math.min(w/4,h/4);
+    let rMax = Math.min(w/3,h/3);
+
+
+    self.$el = $('<batvinespop>');
+    for(var i=0; i<particles; i++){
+
+        let pr = rMin + Math.random()*(rMax-rMin);
+        let cx = x + w/2;
+        let cy = y + h/2;
+        let ox = Math.random() * (w/2-pr) * ((Math.random()>0.5)?1:-1);
+        let oy = Math.random() * (h/2-pr) * ((Math.random()>0.5)?1:-1);
+
+        let $p = $('<batvinesparticle>')
+        .appendTo(self.$el)
+        .css({
+            left:(cx+ox)+'px',
+            top:(cy+oy)+'px',
+            width:(pr*2)+'px',
+            height:(pr*2)+'px',
+        })
+        
+        .animate({
+            left:(cx + ox*2)+'px',
+            top:(cy + oy*2-5-Math.random()*5)+'px',
+            width:'0px',
+            height:'0px',
+        },200+Math.random()*1000);
+    }
+
+    setTimeout(self.$el.remove,1500);
+}
+
 BatVinesPlayer = function(n){
 
     let audio = new AudioContext();
@@ -29,7 +65,7 @@ BatVinesPlayer = function(n){
     audio.add('cut','./proto/audio/sfx-swipe.mp3',0.1);
     audio.add('reload','./proto/audio/sfx-reload.mp3',0.1);
 
-    const FPFOCUS = BatVines.FPS;
+    const FPFOCUS = BatVines.FPS/2;
     const FPTHROW = BatVines.FPS/2;
 
     let self = this;
@@ -94,7 +130,7 @@ BatVinesPlayer = function(n){
             $batarang.css({
                 'left':x*BatVines.GRIDSIZE+'px',
                 'top':y*BatVines.GRIDSIZE+'px',
-                'transform':'scale('+(5-amtThrow*4)+')',
+                'transform':'scale('+(5-amtThrow*4)+') rotate('+(-dir*10)+'deg)',
             });
 
         } else {
@@ -134,12 +170,12 @@ BatVinesPlayer = function(n){
         $batarang.css({
             'left':sx*BatVines.GRIDSIZE+'px',
             'top':sy*BatVines.GRIDSIZE+'px',
-            'transform':'scale('+(5)+')',
+            'transform':'scale('+(5)+') rotate('+(-dir*10)+'deg)',
         });
     }
 }
 
-BatVinesArena = function(layout) {
+BatVinesArena = function(layout,puzzle) {
 
     let self = this;
     self.failState = undefined;
@@ -174,19 +210,19 @@ BatVinesArena = function(layout) {
         actors = [];
         players = [];
 
-        for(var r in layout.ropes){
-            ropes[r] = new BatVinesRope( layout.ropes[r].x, layout.ropes[r].y, layout.ropes[r].length );
+        for(var r in puzzle.ropes){
+            ropes[r] = new BatVinesRope( puzzle.ropes[r].x, puzzle.ropes[r].y, puzzle.ropes[r].length );
             ropes[r].$el.appendTo(self.$el);
         }
-        for(var a in layout.actors){
-            actors[a] = new BatVinesActor( layout.actors[a].x, layout.actors[a].y, layout.actors[a].w, layout.actors[a].h, layout.actors[a].type );
+        for(var a in puzzle.actors){
+            actors[a] = new BatVinesActor( puzzle.actors[a].x, puzzle.actors[a].y, puzzle.actors[a].w, puzzle.actors[a].h, puzzle.actors[a].type );
             actors[a].$el.appendTo(self.$el);
         }
-        for(var k in layout.knots){
+        for(var k in puzzle.knots){
             knots[k] = new BatVinesKnot(
-                ropes[layout.knots[k].ropeLeft],
-                ropes[layout.knots[k].ropeRight],
-                actors[layout.knots[k].actor]
+                ropes[puzzle.knots[k].ropeLeft],
+                ropes[puzzle.knots[k].ropeRight],
+                actors[puzzle.knots[k].actor]
                 );
         }
         
@@ -216,9 +252,13 @@ BatVinesArena = function(layout) {
         }
 
         if(self.failState && !self.isFailed){
-            self.$el.html('FAIL!');
+            
             self.isFailed = true;
-            $('<batvinesreset>').appendTo(self.$el).click(self.reset);
+            
+            setTimeout(function(){
+                self.$el.html(self.failState);
+                $('<batvinesreset>').appendTo(self.$el).click(self.reset);
+            },500);
         }
         if(complete){
             self.$el.html('CLEAR!');
@@ -267,13 +307,8 @@ BatVinesArena = function(layout) {
                 else players[n].targeting = 0;
 
                 if(players[n].isCutting){
-
                     players[n].reset();
-                    
                     if(isTargeting) isTargeting.doCut();
-                    
-
-                    
                 }
             }
 
@@ -285,6 +320,8 @@ BatVinesArena = function(layout) {
 
         self.active = b;
         self.$el.attr('active',b);
+
+        for(var n in players) players[n].reset();
 
         if(b){
             self.$el.css({
@@ -351,8 +388,10 @@ BatVinesRope = function(x,y,length){
 
 BatVinesActor = function(x,y,w,h,type){
 
+    const STOMP = 0.03;
     const WALK = 0.05;
-    const RUN = 0.15;
+    const RUN = 0.07;
+    const CHASE = 0.1;
 
     let self = this;
     self.x = x;
@@ -385,15 +424,20 @@ BatVinesActor = function(x,y,w,h,type){
         self.$el.css({
             left:self.x*BatVines.GRIDSIZE+'px',
             top:self.y*BatVines.GRIDSIZE+'px',
-            transform:'translate(-50%, -50%) rotate('+rot+'deg)',
+            transform:'translate(-50%, -50%) rotate('+rot+'deg) scaleX('+self.dir+')',
         }) 
     }
 
     self.step = function(){
 
         if(self.dead){
-            self.$el.remove();
-            if(self.type=='goody') self.failState = 'You killed a goody!';
+
+           if(self.$el.attr('type')){
+                self.$el.removeAttr('type');
+                new BatVinesPop(0,0,self.w*BatVines.GRIDSIZE,self.h*BatVines.GRIDSIZE).$el.appendTo(self.$el);
+                if(self.type=='goody') self.failState = 'You killed a goody!';
+           }
+        
             return;
         }
 
@@ -406,17 +450,15 @@ BatVinesActor = function(x,y,w,h,type){
             self.grounded ++;
 
             if(self.type=='goody'){
-                let dir = (self.x<BatVines.ARENA.W/2)?-1:1;
-                self.x += WALK * dir;
+                self.dir = (self.x<BatVines.ARENA.W/2)?-1:1;
+                self.x += RUN * self.dir;
                  if(self.x < 0 || self.x > BatVines.ARENA.W) self.complete = true;
             }
-
-           
         }
 
         if(self.type=='baddy' && !self.isAttacking && self.pause--<0){
             //back and forth
-            self.x += self.dir * WALK;
+            self.x += self.dir * STOMP;
             if(self.dir == 1 && self.x>BatVines.ARENA.W){
                 self.pause = BatVines.FPS/2;
                 self.dir = -1;
@@ -439,21 +481,22 @@ BatVinesActor = function(x,y,w,h,type){
         let dx = other.x - self.x;
         let dy = other.y - self.y;
         let d = Math.hypot(dx,dy);
+        let dir = dx>0?1:-1;
 
-        let shouldAttack = (self.type=='baddy' && other.type=='goody');
+        let shouldAttack = (self.type=='baddy' && other.type=='goody' && dir == self.dir);
 
-        if(d<1){
-            //genuine collision
-            if(self.type=='plant-mouth') other.dead = true;
+        if(d<1.5){
+            //BAD THING HIT OTHER THING
+            if(self.type=='mouth') other.dead = true;
+            if(self.type=='fragment' && !self.grounded) other.dead = true;
             if(shouldAttack) other.dead = true;
         }
 
         if(shouldAttack && Math.abs(dy) < 1){
+            //CHASE THE HUMAN!
             self.isAttacking = true;
-            let dir = dx>0?1:-1;
-            self.x += dir*RUN;
-
-            console.log('CHASE HIM!')
+            self.dir = dx>0?1:-1;
+            self.x += self.dir*CHASE;
         }
     }
 }
@@ -519,10 +562,44 @@ BatVinesGame = function(){
     BatVines.H = 1000;
     BatVines.GRIDSIZE = 50;
     BatVines.GRAVITY = 0.03;
-    BatVines.ARENA = {W:12,H:10};
+    BatVines.ARENA = {W:16,H:10};
 
     $("head").append(`
         <style>
+
+            @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap');
+
+            @keyframes batspin{
+                0%{
+                    transform: rotate(0deg);
+                }
+                100%{
+                    transform: rotate(360deg);
+                }
+            }
+
+            @keyframes sprite4{
+                0%{
+                    background-position-x: 0%;
+                }
+                100%{
+                     background-position-x: -400%;
+                }
+            }
+
+            batvinespop{
+                display:block;
+                position:absolute;
+            }
+
+            batvinesparticle{
+                display:block;
+                position:absolute;
+                background:white;
+                transform:translate(-50%,-50%);
+                border-radius: 100%;
+            }
+
             batvinesgame{
                 display:block;
                 width: ${BatVines.W*3}px;
@@ -530,6 +607,9 @@ BatVinesGame = function(){
                 transform-origin: top left;
                 text-align: center;
                 pointer-events: none;
+                background: green;
+                font-family: "Lexend", serif;
+                font-weight:100;
             }
 
             batvinesbg{
@@ -542,6 +622,7 @@ BatVinesGame = function(){
 
                 background-image:url(./proto/img/bat-greenhouse-bg.png);
                 background-size: 100%;
+                opacity: 0.8;
                 
             }
 
@@ -553,7 +634,7 @@ BatVinesGame = function(){
                
                 
                 line-height: ${BatVines.ARENA.H*BatVines.GRIDSIZE}px;
-                font-size: ${BatVines.GRIDSIZE*2}px;
+                font-size: ${BatVines.GRIDSIZE*1.5}px;
                 transform-origin: top left;
                 color: white;
 
@@ -575,15 +656,32 @@ BatVinesGame = function(){
             pointer-events: auto;
            }
 
+           batvineszoomout{
+             position: absolute;
+            top: ${3*BatVines.GRIDSIZE}px;
+            right:${3*BatVines.GRIDSIZE}px;
+           
+            width: ${3*BatVines.GRIDSIZE}px;
+            height: ${3*BatVines.GRIDSIZE}px;
+           
+            background: no-repeat center url(./proto/img/zoom-out.svg);
+            background-size: 50%;
+            z-index: 4;
+            pointer-events: auto;
+           }
+
            batvinesarena batvinesreticule,
            batvinesarena batvinestarget,
-           batvinesarena batvinesprojectile{
+           batvinesarena batvinesbatarang,
+           batvinesarena batvineszone
+           {
                 display: none;
            }
 
            batvinesarena[active='true'] batvinesreticule,
            batvinesarena[active='true'] batvinestarget,
-           batvinesarena[active='true'] batvinesprojectile
+           batvinesarena[active='true'] batvinesbatarang,
+           batvinesarena[active='true'] batvineszone
            {
                 display: block;
            }
@@ -593,6 +691,7 @@ BatVinesGame = function(){
                 display: block;
                 position: absolute;
                 pointer-events: auto;
+                background: rgba(255,255,255,0.1);
            }
 
            batzoombutton:before{
@@ -633,8 +732,13 @@ BatVinesGame = function(){
             left: -100%;
             right: -100%;
             top: 100%;
-            height: 100px;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.3), transparent);
+            height: 200px;
+            background-color: rgba(0,0,0,0.3);
+            background-image: url(./proto/img/plant-floor.png);
+            background-size: 5%;
+           
+            backgrounnd-repeat: repeat-x;
+ 
            }
 
            batvinesarena[active='true']:after{
@@ -783,36 +887,52 @@ BatVinesGame = function(){
            batactor{
                 display: block;
                 position: absolute;
-                background: black;
+               
                 
                 transform: translate(-50%,-50%);
                 background-size: 100%;
-                 border-radius: 50% 50% 10% 10%;
+                
            }
 
-            batactor[type="goody"]:after, batactor[type="baddy"]:after{
-                content:". .";
-                width: 100%;
-                height: 50%;
-                background: black;
-                border-radius: 100%;
-                background-repeat: no-repeat;
-                position: absolute;
-                bottom: 70%;
-                left: 0%;
-                display: block;
-                font-size: 25px;
-                line-height: 25px;
+           batactor[type="baddy"]{
+                background-image: url(./proto/img/plant-walk.png);
+                background-size: 400%;
+               
+                animation: sprite4;
+                animation-iteration-count: infinite;
+                animation-timing-function: steps(4);
+                animation-duration: 0.7s;
+                animation-fill-mode: forwards;
            }
 
-           batactor[type="baddy"]:after{
-                color: red;
+           
+
+            batactor[type="goody"]{
+                background-image: url(./proto/img/plant-dude.png);
+                background-size: 400%;
+               
+                animation: sprite4;
+                animation-iteration-count: infinite;
+                animation-timing-function: steps(4);
+                animation-duration: 0.7s;
+                animation-fill-mode: forwards;
            }
 
-           batactor[type="plant-mouth"]{
-                 background-color: transparent;
-                 background-image: url(./proto/img/bat-plant-mouth.png);
-                 border-radius: 0px;
+           
+
+           batactor[type="mouth"]{
+                background-image: url(./proto/img/plant-mouth.png);
+                 background-size: 400%;
+                
+                animation: sprite4;
+                animation-iteration-count: infinite;
+                animation-timing-function: steps(4);
+                animation-duration: 0.7s;
+                animation-fill-mode: forwards;
+           }
+
+            batactor[type="fragment"]{
+                 background-image: url(./proto/img/plant-fragment-vines.png);
            }
 
            svg{
@@ -863,8 +983,16 @@ BatVinesGame = function(){
             position:relative;
            }
 
+           batvineszoomout{
+            display: none;
+           }
+
+            batvineswall[active='true'] batvineszoomout{
+                display: block;
+            }
+
             batvineswall[active='true'] batvinesgogglesbg{
-                 z-index: 1;
+                z-index: 1;
                 backdrop-filter: blur(20px);
                 background-color: rgba(100,100,100,0.4);
                 background-image: url(./proto/img/bat-vines-frame.png);
@@ -877,18 +1005,12 @@ BatVinesGame = function(){
             background-size: 100%;
            }
 
-            batvineswall[active='false'] batvinesgoggles{
+        batvineswall[active='false'] batvinesgoggles{
             background: black;
            }
 
-           @keyframes batspin{
-            0%{
-                transform: rotate(0deg);
-            }
-            100%{
-                transform: rotate(360deg);
-            }
-           }
+           
+           
 
         </style>
     `);
@@ -896,36 +1018,99 @@ BatVinesGame = function(){
     let self = this;
     self.$el = $('<igb>');
 
+    // standard arena position and scale for testing
+    const MX = BatVines.W/2 - BatVines.ARENA.W/2*BatVines.GRIDSIZE/2;
+    const MY = BatVines.H/2 - BatVines.ARENA.W/2*BatVines.GRIDSIZE/2;
+    const S = 0.5;
 
+    const LEVELS = [
 
-    const MAPS = [
+        [
+            {puzzle:0,wall:0,x:MX,y:MY,scale:S},
+            {puzzle:1,wall:1,x:MX,y:MY,scale:S},
+            {puzzle:2,wall:2,x:MX,y:MY,scale:S},
+        ],
+        [
+            {puzzle:3,wall:0,x:MX,y:MY,scale:S},
+            {puzzle:4,wall:1,x:MX,y:MY,scale:S},
+            {puzzle:5,wall:2,x:MX,y:MY,scale:S},
+        ]
+    ]
+
+    const PUZZLES = [
+        
         {
-            wall:0,
-            x:400,
-            y:480,
-            scale:0.3,
+            //Two citizens. Two vines.
             ropes:[
-                {x:3,y:0,length:3},
-                {x:8,y:0,length:4},
-                
-                /*new BatVinesRope(3,0,3),
-                new BatVinesRope(8,0,4),*/
+                {x:BatVines.ARENA.W*0.4,y:0,length:3}, 
+                {x:BatVines.ARENA.W*0.6,y:0,length:5} 
             ],
-
-            platforms:[
-
+            actors:[ 
+                {x:0,y:0,w:2,h:2,type:'goody'},
+                {x:0,y:0,w:2,h:2,type:'goody'},
             ],
-
+            knots:[
+               {ropeLeft:0,ropeRight:-1,actor:0},
+               {ropeLeft:1,ropeRight:-1,actor:1},
+            ],
+        },
+        {
+            //One citizen. One double-vine.
+            ropes:[
+                {x:BatVines.ARENA.W*0.3,y:0,length:7}, 
+                {x:BatVines.ARENA.W*0.6,y:0,length:6} 
+            ],
+            actors:[ 
+                {x:0,y:0,w:2,h:2,type:'goody'},
+            ],
+            knots:[
+               {ropeLeft:0,ropeRight:1,actor:0},
+            ],
+        },
+        {
+            //Two citizen. Two double-vines.
+            ropes:[
+                {x:BatVines.ARENA.W*0.3,y:0,length:6}, 
+                {x:BatVines.ARENA.W*0.5,y:0,length:8},
+                {x:BatVines.ARENA.W*0.6,y:0,length:5}, 
+                {x:BatVines.ARENA.W*0.8,y:0,length:5}, 
+            ],
+            actors:[ 
+                {x:0,y:0,w:2,h:2,type:'goody'},
+                {x:0,y:0,w:2,h:2,type:'goody'},
+            ],
+            knots:[
+               {ropeLeft:0,ropeRight:2,actor:0},
+               {ropeLeft:1,ropeRight:3,actor:1},
+            ],
+        },
+        {
+            ropes:[
+                {x:6,y:0,length:3}, 
+                {x:11,y:0,length:4} 
+            ],
+            actors:[ 
+                {x:0,y:0,w:2,h:2,type:'goody'},
+                {x:0,y:0,w:2,h:2,type:'goody'},
+                {x:8,y:BatVines.ARENA.H,w:3,h:3,type:'baddy'},
+            ],
+            knots:[
+               {ropeLeft:0,ropeRight:-1,actor:0},
+               {ropeLeft:1,ropeRight:-1,actor:1},
+            ],
+        },
+        {
+            wall:0,x:950,y:350,scale:0.4,
+            ropes:[
+                {x:6,y:0,length:3},
+                {x:11,y:0,length:4},
+            ],
             actors:[
-                {x:0,y:0,w:1,h:2,type:'goody'},
-                {x:0,y:0,w:2,h:2,type:'plant-mouth'},
-                {x:8,y:BatVines.ARENA.H,w:1,h:2,type:'baddy'},
-
-                /*new BatVinesActor(0,0,0.5,'goody'),
-                new BatVinesActor(0,0,1,'plant-mouth'),
-                new BatVinesActor(8,BatVines.ARENA.H,0.5,'baddy'),*/
+                {x:0,y:0,w:2,h:2,type:'goody'},
+                {x:0,y:0,w:2,h:2,type:'fragment'},
+                {x:0,y:BatVines.ARENA.H,w:3,h:3,type:'baddy'},
+                {x:BatVines.ARENA.W,y:BatVines.ARENA.H,w:3,h:3,type:'baddy'},
             ],
-
             knots:[
                {ropeLeft:0,ropeRight:-1,actor:0},
                {ropeLeft:1,ropeRight:-1,actor:1},
@@ -933,24 +1118,17 @@ BatVinesGame = function(){
         },
         {
             wall:1,
-            x:150,
-            y:150,
-            scale:0.8,
+            x:200,
+            y:85,
+            scale:0.7,
             ropes:[
                 {x:3,y:0,length:7},
                 {x:8,y:0,length:5},
-
-                //new BatVinesRope(3,0,7),
-                //new BatVinesRope(8,0,5),
-            ],
-
-            platforms:[
-
             ],
 
             actors:[
-                 {x:0,y:0,w:1,h:2,type:'goody'},
-                //new BatVinesActor(0,0,0.5,'goody'),
+                 {x:0,y:0,w:2,h:2,type:'goody'},
+                 {x:8,y:BatVines.ARENA.H,w:3,h:3,type:'mouth'},
             ],
 
             knots:[
@@ -967,21 +1145,10 @@ BatVinesGame = function(){
                 {x:10,y:0,length:5},
                 {x:2,y:0,length:8},
                 {x:7,y:0,length:6},
-                //new BatVinesRope(5,0,6),
-                //new BatVinesRope(10,0,5),
-                //new BatVinesRope(3,0,6),
-                //new BatVinesRope(8,0,7),
             ],
-
-            platforms:[
-
-            ],
-
             actors:[
-                {x:0,y:0,w:1,h:2,type:'goody'},
-                {x:0,y:0,w:1,h:2,type:'goody'},
-                //new BatVinesActor(0,0,0.5,'goody'),
-                //new BatVinesActor(0,0,0.5,'goody'),
+                {x:0,y:0,w:2,h:2,type:'goody'},
+                {x:0,y:0,w:2,h:2,type:'goody'},
             ],
 
             knots:[
@@ -998,9 +1165,6 @@ BatVinesGame = function(){
     audio.add('music','./proto/audio/mystery-girl-bgm-184949.mp3',0.3,true,true);
     audio.add('zoom','./proto/audio/sfx-zoom.mp3',0.5);
     
-
-    
-
     let $game = $('<batvinesgame>').appendTo(self.$el);
     let $bg = $('<batvinesbg>').appendTo($game);
 
@@ -1009,38 +1173,46 @@ BatVinesGame = function(){
         $walls[i] = $('<batvineswall>').appendTo($game);
         $('<batvinesgogglesbg>').appendTo($walls[i]);
         $('<batvinesgoggles>').appendTo($walls[i]);
+        $('<batvineszoomout>').appendTo($walls[i]).click(doArenaClose);
     }
 
+    function clearArenas(){
+        $('batzoombutton').remove();
+        while(arenas.length) arenas.pop().$el.remove();
+    }
+
+    let iLevel = -1;
     let arenas = [];
-    for(var m in MAPS){
-        arenas[m] = new BatVinesArena(MAPS[m]);
-        arenas[m].$el.attr('id',m);
-        arenas[m].$el.appendTo($walls[MAPS[m].wall]);
-        
+    function doNextLevel(){
+        iLevel++;
 
-        $('<batzoombutton>')
-        .appendTo($walls[MAPS[m].wall])
-        .css({
-            left: MAPS[m].x + 'px',
-            top: MAPS[m].y + 'px',
-            width: MAPS[m].scale * BatVines.ARENA.W * BatVines.GRIDSIZE + 'px',
-            height: MAPS[m].scale * BatVines.ARENA.H * BatVines.GRIDSIZE + 'px',
-        })
-        .attr('id',m)
-        .click(onArena);
+        for(var m in LEVELS[iLevel]){
+            let map = LEVELS[iLevel][m];
+            let puzzle = PUZZLES[map.puzzle];
+
+            arenas[m] = new BatVinesArena(map,puzzle);
+            arenas[m].$el.attr('id',m);
+            arenas[m].$el.appendTo($walls[map.wall]);
+
+            $('<batzoombutton>')
+            .appendTo($walls[map.wall])
+            .css({
+                left: map.x + 'px',
+                top: map.y + 'px',
+                width: map.scale * BatVines.ARENA.W * BatVines.GRIDSIZE + 'px',
+                height: map.scale * BatVines.ARENA.H * BatVines.GRIDSIZE + 'px',
+            })
+            .attr('id',m)
+            .click(doArenaOpen);
+        }
     }
+
+    doNextLevel();
 
     let idActive = -1;
-    function onArena(){
-        idActive = $(this).attr('id');
-        arenas[idActive].setActive(true);
-        for(var w=0; w<$walls.length; w++) $walls[w].attr('active',w==MAPS[idActive].wall);
-        $('batzoombutton').hide();
-
-        audio.play('zoom');
-    }
-
+    let idLastActive = -1;
     let scale = 1;
+
     function tick(){
         let w = $(document).innerWidth();
         let s = w/(BatVines.W*3);
@@ -1052,14 +1224,35 @@ BatVinesGame = function(){
         if(idActive>-1){
             arenas[idActive].setPlayerPositions(players);
             if(arenas[idActive].isCleared){
-                arenas[idActive].setActive(false);
-                for(var w2 in $walls) $walls[w2].removeAttr('active');
                 idActive = -1;
-                $('batzoombutton').show();
+                setTimeout(doArenaClose,1000);
             }
         }
+    }
 
 
+    function doArenaOpen(){
+        idActive = idLastActive = $(this).attr('id');
+        arenas[idActive].setActive(true);
+        for(var w=0; w<$walls.length; w++) $walls[w].attr('active',w==LEVELS[iLevel][idActive].wall);
+        $('batzoombutton').hide();
+
+        audio.play('zoom');
+    }
+
+    function doArenaClose(){
+        
+        arenas[idLastActive].setActive(false);
+        for(var w2 in $walls) $walls[w2].removeAttr('active');
+        $('batzoombutton').show();
+
+        let isCleared = true;
+        for(var a in arenas) isCleared = isCleared && arenas[a].isCleared;
+        
+        if(isCleared){
+            clearArenas();
+            setTimeout(doNextLevel,1000);
+        }
     }
 
     setInterval(tick,1000/BatVines.FPS);

@@ -70,9 +70,19 @@ DrivingGame = function(){
 	const WCAR = 0.4;
 	const LCAR = 0.5;
 	const HCAR = 0.15;
-	const FLOAT = 5;
+	
 	const WROAD = 4;
 	const SIGHT = 5;
+	const STRAFE = 3;
+	const SPEED = 6;
+	const MISSILESPEED = 18;
+	const BOOST = 1.5;
+
+	const STEER = 35;
+	const VISUAL = 50;
+
+	const BOOSTTIME = FPS*1;
+	const MISSILETIME = FPS*2;
 	
 	const PURPLE = '#230B39';
 
@@ -647,9 +657,7 @@ DrivingGame = function(){
 		cars[c].$el = $c;
 	}
 
-	const STRAFE = 5;
-	const SPEED = 6;
-	const BOOST = 1.5;
+	
 
 	let players = [{px:0},{px:0}];
 	let iTick = 0;
@@ -752,7 +760,7 @@ DrivingGame = function(){
 		})
 	}
 
-	let car = {x:0,y:0,r:0};
+	let car = {x:0,y:1,r:0};
 
 	let iProgress = 0;
 	let iRender = 0;
@@ -760,7 +768,7 @@ DrivingGame = function(){
 	let bogging = 0;
 	let missile = {};
 
-	const MISSILETIME = FPS*2;
+	
 
 	function dist(a,b){
 		return Math.hypot(b.x-a.x,b.y-a.y);
@@ -780,7 +788,7 @@ DrivingGame = function(){
 
 		let txRelative = (players[0].px/100*2-1);
 
-		
+		//elapsed = 0;
 
 		boosting --;
 		bogging --;
@@ -819,7 +827,8 @@ DrivingGame = function(){
 		let lane = Math.sin(rRelative)*d;
 		let max = (WROAD/2-WCAR/2);
 
-		let r = txRelative*70;
+		let r = STEER*txRelative;
+		let rVisual = VISUAL*txRelative;
 
 		let rAmt = Math.abs(txRelative);
 		$hud.css('transform','scaleX('+(txRelative>0?1:-1)+')')
@@ -853,12 +862,12 @@ DrivingGame = function(){
 
 		
 		
-		car.r += r*elapsed*0.5;
+		car.r += elapsed*r;
 
 		$car.css({
 			left: car.x*GRID +'px',
 			bottom: car.y*GRID + 'px',
-			'transform':'rotateZ('+(car.r+r)+'deg)',
+			'transform':'rotateZ('+(car.r + rVisual)+'deg)',
 		})
 
 		$sparkBack.css('opacity',bogging>FPS/4?1:0);
@@ -876,14 +885,11 @@ DrivingGame = function(){
 		let cx = Math.sin(car.r*Math.PI/180)*cameraDistance;
 		let cy = Math.cos(car.r*Math.PI/180)*cameraDistance;
 		
-		let oxTargeting = players[1].px/100*2-1;
-		
-		let rTargeting = txRelative*35;
-		let pxTargeting = txRelative*W/3;
+		let pxTracking = txRelative*W/3;
 
 		$thruster.attr('boosting',boosting>0);
 	    $camera.css('transform',"rotateY(" + car.r + "deg)");
-	    $camera.css('left',pxTargeting+'px');
+	    $camera.css('left',pxTracking+'px');
 	   	$plane.css('bottom',-(car.y-cy)*GRID+'px');
 	   	$plane.css('left',-(car.x-cx)*GRID+'px');
 	  	
@@ -899,7 +905,7 @@ DrivingGame = function(){
 	   		})
 	   	}
 
-	   	for(var b in boosts) if(dist(boosts[b].p,car)<0.5) boosting = FPS;
+	   	for(var b in boosts) if(dist(boosts[b].p,car)<0.5) boosting = BOOSTTIME;
 		for(var c in cars){
 
 			let d = dist(cars[c].p,car);
@@ -913,8 +919,8 @@ DrivingGame = function(){
 
 		if(missile.flying > 0 && missile.flying < MISSILETIME ){
 			
-			missile.x += Math.sin(missile.r*Math.PI/180)*SPEED*elapsed*2;
-			missile.y += Math.cos(missile.r*Math.PI/180)*SPEED*elapsed*2;
+			missile.x += Math.sin(missile.r*Math.PI/180)*MISSILESPEED*elapsed;
+			missile.y += Math.cos(missile.r*Math.PI/180)*MISSILESPEED*elapsed;
 
 			for(var c=0; c<cars.length; c++){
 				if(dist(missile,cars[c].p)<0.3){
@@ -928,14 +934,15 @@ DrivingGame = function(){
 		} else{
 			missile.x = car.x;
 			missile.y = car.y;
-			missile.r = car.r + rTargeting;
+			missile.r = car.r + r;
 		}
 
 		missile.flying--;
 
 
-		$aim.css('transform',"rotateZ(" + (-r+rTargeting) + "deg)");
+		$aim.css('transform',"rotateZ(" + (-r*0.5)  + "deg)");
 		$missile.css({
+			opacity: (missile.flying>0)?1:0,
 			left: missile.x*GRID+'px',
 			bottom: missile.y*GRID+'px',
 			transform: "rotateZ("+missile.r+"deg)",
