@@ -1023,31 +1023,41 @@ BatVinesGame = function(){
     const MY = BatVines.H/2 - BatVines.ARENA.W/2*BatVines.GRIDSIZE/2;
     const S = 0.5;
 
+    const GOODY = {x:0,y:0,w:2,h:2,type:'goody'};
+
     const LEVELS = [
 
         [
+            //LEVEL 1
             {puzzle:0,wall:0,x:MX,y:MY,scale:S},
             {puzzle:1,wall:1,x:MX,y:MY,scale:S},
             {puzzle:2,wall:2,x:MX,y:MY,scale:S},
         ],
         [
+            //LEVEL 2
             {puzzle:3,wall:0,x:MX,y:MY,scale:S},
             {puzzle:4,wall:1,x:MX,y:MY,scale:S},
             {puzzle:5,wall:2,x:MX,y:MY,scale:S},
+        ],
+        [
+            //LEVEL 3
+            {puzzle:6,wall:0,x:MX,y:MY,scale:S},
+            {puzzle:7,wall:1,x:MX,y:MY,scale:S},
+            {puzzle:8,wall:2,x:MX,y:MY,scale:S},
         ]
     ]
 
     const PUZZLES = [
         
         {
-            //Two citizens. Two vines.
+            //LEVEL 1a Two citizens. Two vines.
             ropes:[
                 {x:BatVines.ARENA.W*0.4,y:0,length:3}, 
                 {x:BatVines.ARENA.W*0.6,y:0,length:5} 
             ],
             actors:[ 
-                {x:0,y:0,w:2,h:2,type:'goody'},
-                {x:0,y:0,w:2,h:2,type:'goody'},
+                GOODY,
+                GOODY
             ],
             knots:[
                {ropeLeft:0,ropeRight:-1,actor:0},
@@ -1055,20 +1065,20 @@ BatVinesGame = function(){
             ],
         },
         {
-            //One citizen. One double-vine.
+            //LEVEL 1b One citizen. One double-vine.
             ropes:[
                 {x:BatVines.ARENA.W*0.3,y:0,length:7}, 
                 {x:BatVines.ARENA.W*0.6,y:0,length:6} 
             ],
             actors:[ 
-                {x:0,y:0,w:2,h:2,type:'goody'},
+               GOODY
             ],
             knots:[
                {ropeLeft:0,ropeRight:1,actor:0},
             ],
         },
         {
-            //Two citizen. Two double-vines.
+            //LEVEL 1c Two citizen. Two double-vines.
             ropes:[
                 {x:BatVines.ARENA.W*0.3,y:0,length:6}, 
                 {x:BatVines.ARENA.W*0.5,y:0,length:8},
@@ -1076,8 +1086,8 @@ BatVinesGame = function(){
                 {x:BatVines.ARENA.W*0.8,y:0,length:5}, 
             ],
             actors:[ 
-                {x:0,y:0,w:2,h:2,type:'goody'},
-                {x:0,y:0,w:2,h:2,type:'goody'},
+               GOODY,
+               GOODY
             ],
             knots:[
                {ropeLeft:0,ropeRight:2,actor:0},
@@ -1085,77 +1095,122 @@ BatVinesGame = function(){
             ],
         },
         {
+            //LEVEL 2a One double-vine citizen. One mouth monster.
             ropes:[
-                {x:6,y:0,length:3}, 
-                {x:11,y:0,length:4} 
+                {x:BatVines.ARENA.W*0.3,y:0,length:6}, 
+                {x:BatVines.ARENA.W*0.7,y:0,length:6} 
             ],
             actors:[ 
-                {x:0,y:0,w:2,h:2,type:'goody'},
-                {x:0,y:0,w:2,h:2,type:'goody'},
-                {x:8,y:BatVines.ARENA.H,w:3,h:3,type:'baddy'},
+                GOODY,
+                {x:BatVines.ARENA.W*0.3,y:BatVines.ARENA.H,w:3,h:3,type:'mouth'},
             ],
             knots:[
-               {ropeLeft:0,ropeRight:-1,actor:0},
-               {ropeLeft:1,ropeRight:-1,actor:1},
+               {ropeLeft:0,ropeRight:1,actor:0},
             ],
         },
         {
-            wall:0,x:950,y:350,scale:0.4,
+            //LEVEL 2b Two double-vine citizens. One mouth monster. // VERY GOOD PUZZLE
             ropes:[
-                {x:6,y:0,length:3},
-                {x:11,y:0,length:4},
+                {x:BatVines.ARENA.W*0.3,y:0,length:6}, 
+                {x:BatVines.ARENA.W*0.5,y:0,length:8},
+                {x:BatVines.ARENA.W*0.6,y:0,length:5}, 
+                {x:BatVines.ARENA.W*0.8,y:0,length:5}, 
             ],
             actors:[
-                {x:0,y:0,w:2,h:2,type:'goody'},
-                {x:0,y:0,w:2,h:2,type:'fragment'},
-                {x:0,y:BatVines.ARENA.H,w:3,h:3,type:'baddy'},
-                {x:BatVines.ARENA.W,y:BatVines.ARENA.H,w:3,h:3,type:'baddy'},
+                GOODY,
+                GOODY,
+                {x:BatVines.ARENA.W*0.55,y:BatVines.ARENA.H,w:3,h:3,type:'mouth'},
             ],
             knots:[
-               {ropeLeft:0,ropeRight:-1,actor:0},
-               {ropeLeft:1,ropeRight:-1,actor:1},
+               {ropeLeft:0,ropeRight:2,actor:0},
+               {ropeLeft:1,ropeRight:3,actor:1},
             ],
         },
         {
-            wall:1,
-            x:200,
-            y:85,
-            scale:0.7,
+            //LEVEL 2c Three double-vine citizens. Two mouth monsters.
             ropes:[
-                {x:3,y:0,length:7},
-                {x:8,y:0,length:5},
+                {x:BatVines.ARENA.W*0.2,y:0,length:6}, 
+                {x:BatVines.ARENA.W*0.3,y:0,length:8},
+                {x:BatVines.ARENA.W*0.4,y:0,length:8},
+                {x:BatVines.ARENA.W*0.5,y:0,length:8},
+                {x:BatVines.ARENA.W*0.6,y:0,length:5}, 
+                {x:BatVines.ARENA.W*0.8,y:0,length:5}, 
             ],
-
             actors:[
-                 {x:0,y:0,w:2,h:2,type:'goody'},
-                 {x:8,y:BatVines.ARENA.H,w:3,h:3,type:'mouth'},
+                GOODY,
+                GOODY,
+                GOODY,
+                {x:BatVines.ARENA.W*0.55,y:BatVines.ARENA.H,w:3,h:3,type:'mouth'},
+            ],
+            knots:[
+               {ropeLeft:0,ropeRight:2,actor:0},
+               {ropeLeft:1,ropeRight:4,actor:1},
+               {ropeLeft:3,ropeRight:5,actor:2},
+            ],
+        },
+        {
+            //Level 3a One fragment. Two mouth monsters. One citizen.
+            ropes:[
+                {x:BatVines.ARENA.W*0.5,y:0,length:6},
+                {x:BatVines.ARENA.W*0.7,y:0,length:3},
+            ],
+            actors:[
+                GOODY,
+                {w:2,h:2,type:'fragment'},
+                {x:BatVines.ARENA.W*0.3,y:BatVines.ARENA.H,w:3,h:3,type:'mouth'},
+                {x:BatVines.ARENA.W*0.7,y:BatVines.ARENA.H,w:3,h:3,type:'mouth'},
             ],
 
             knots:[
+                {ropeLeft:0,ropeRight:-1,actor:0},
+                {ropeLeft:1,ropeRight:-1,actor:1},
+            ],
+        },
+        {
+            //Level 3b One double-vine fragment. Two mouth monsters. One citizen.
+            ropes:[
+                {x:BatVines.ARENA.W*0.55,y:0,length:3},
+                {x:BatVines.ARENA.W*0.3,y:0,length:9},
+                {x:BatVines.ARENA.W*0.7,y:0,length:9},
+            ],
+            actors:[
+                GOODY,
+                {w:2,h:2,type:'fragment'},
+                {x:BatVines.ARENA.W*0.3,y:BatVines.ARENA.H,w:3,h:3,type:'mouth'},
+                {x:BatVines.ARENA.W*0.7,y:BatVines.ARENA.H,w:3,h:3,type:'mouth'},
+            ],
+
+            knots:[
+                {ropeLeft:0,ropeRight:-1,actor:0},
+                {ropeLeft:1,ropeRight:2,actor:1},
+            ],
+        },
+        {
+            //Level 3c One double-vine fragment. Two mouth monsters. Two citizen.
+            ropes:[
+                {x:BatVines.ARENA.W*0.1,y:0,length:8},
+                {x:BatVines.ARENA.W*0.45,y:0,length:7},
+                {x:BatVines.ARENA.W*0.5,y:0,length:3},
+                {x:BatVines.ARENA.W*0.55,y:0,length:9},
+                {x:BatVines.ARENA.W*0.9,y:0,length:9},
+            ],
+            actors:[
+                {w:2,h:2,type:'fragment'},
+                GOODY,
+                {w:2,h:2,type:'fragment'},
+                {x:BatVines.ARENA.W*0.1,y:BatVines.ARENA.H,w:3,h:3,type:'mouth'},
+                {x:BatVines.ARENA.W*0.5,y:BatVines.ARENA.H,w:3,h:3,type:'mouth'},
+                {x:BatVines.ARENA.W*0.9,y:BatVines.ARENA.H,w:3,h:3,type:'mouth'},
+            ],
+
+            knots:[
+                
                 {ropeLeft:0,ropeRight:1,actor:0},
+                {ropeLeft:2,ropeRight:-1,actor:1},
+                {ropeLeft:3,ropeRight:4,actor:2},
+               
             ],
         },
-        {
-            wall:2,
-            x:350,
-            y:400,
-            scale:0.4,
-            ropes:[
-                {x:5,y:0,length:7},
-                {x:10,y:0,length:5},
-                {x:2,y:0,length:8},
-                {x:7,y:0,length:6},
-            ],
-            actors:[
-                {x:0,y:0,w:2,h:2,type:'goody'},
-                {x:0,y:0,w:2,h:2,type:'goody'},
-            ],
-
-            knots:[
-                {ropeLeft:0,ropeRight:1,actor:0},
-                {ropeLeft:2,ropeRight:3,actor:1},
-            ],
-        }
     ]
 
     
@@ -1185,6 +1240,8 @@ BatVinesGame = function(){
     let arenas = [];
     function doNextLevel(){
         iLevel++;
+
+        iLevel = 2;
 
         for(var m in LEVELS[iLevel]){
             let map = LEVELS[iLevel][m];
@@ -1242,6 +1299,7 @@ BatVinesGame = function(){
 
     function doArenaClose(){
         
+        idActive = -1;
         arenas[idLastActive].setActive(false);
         for(var w2 in $walls) $walls[w2].removeAttr('active');
         $('batzoombutton').show();
