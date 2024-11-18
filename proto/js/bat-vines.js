@@ -1,3 +1,188 @@
+Scene3D = function(){
+    
+    const W = 160;
+    const H = 100;
+
+    if( !Scene3D.isStyled) $("head").append(`
+        <style>
+            scene3D{
+                display:block;
+                width: ${W}px;
+                height: ${H}px;
+                background: radial-gradient(red,black);
+                
+                transform-origin: top left;
+                overflow: hidden;
+            }
+
+            world3D{
+                display:block;
+                position: absolute;
+                left: ${W/2}px;
+                top: ${H/2}px;
+                perspective-origin: center;
+                perspective: ${W}px;
+            }
+        </style>
+    `);
+
+    Scene3D.isStyled = true;
+   
+    let self = this;
+    self.$el = $(`
+        <scene3D>
+        </scene3D>`
+    );
+
+    let $world = $('<world3D>').appendTo(self.$el);
+
+    new Building3D().$el.appendTo($world).css('transform','translateZ(-2000px) rotateX(-45deg)');
+}
+
+Building3D = function(){
+    
+    let self = this;
+    self.$el = $('<building3d>');
+
+    if( !Building3D.isStyled) $("head").append(`
+        <style>
+            building3d{
+                display:block;
+                position: absolute;
+                transform-style: preserve-3d;
+            }
+        </style>
+    `);
+
+    Building3D.isStyled = true;
+   
+    const W = 160;
+    const D = 160;
+    const H = 100;
+
+    const FLOORMAP =
+    [
+        'H H H',
+        'H H H',
+        'HHHHH',
+    ]
+
+    const DIRS = [
+        {x:0,y:-1},
+        {x:1,y:0},
+        {x:0,y:1},
+        {x:-1,y:0},
+    ]
+
+    function getWalls(y,x){
+
+        let map = [];
+        for(var d in DIRS){
+            map[d] = (FLOORMAP[y+DIRS[d].y][x+DIRS[d].x] == 'H')?0:1;
+        }
+
+        return map;
+    }
+
+    for(var r in FLOORMAP){
+        for(var c in FLOORMAP[r]){
+            let type = FLOORMAP[r][c];
+
+            if(type == 'H'){
+                let room = new Room3D(W,D,H,undefined,getWalls(r,c));
+                room.$el.appendTo(self.$el).css('transform',`translate3D(${W*c}px,${0}px,${D*r}px)`)
+            }
+            
+        }
+    }
+}
+
+/*
+    w width
+    l depth
+    h height
+    color css wall color
+    walls array toggling walls
+*/
+Room3D = function(w,l,h,color,walls){
+
+    if(!w) w = 100;
+    if(!l) l = 100;
+    if(!h) h = 100;
+    if(!color) color = 'radial-gradient(gray,black)';
+    if(!walls) walls = [1,1,1,1];
+
+    if( !Room3D.isStyled) $("head").append(`
+        <style>
+            room3D{
+                display:block;
+                transform-style: preserve-3d;
+                width: 0px;
+                height: 0px;
+            }
+
+            room3Dside{
+                display:block;
+                position:absolute;
+                top: 0px;
+                left: 0px;
+                width: 0px;
+                height: 0px;
+
+                box-sizing:border-box;
+                transform-style: preserve-3d;
+                text-align:center;
+                transform-origin: center;
+            }  
+
+            room3Dsurface{
+                display:block;
+                position:absolute;
+                transform: translate(-50%,-50%);
+            }
+
+        </style>
+    `);
+
+    Room3D.isStyled = true;
+
+    let self = this;
+
+    self.$el = $(`
+        <room3D>
+            <room3Dside class='room3D-bottom' style='transform:translateY(${h/2}px) rotateX(90deg);'>
+                <room3Dsurface style='background:${color};width:${w}px;height:${l}px;'></room3Dsurface>
+            </room3Dside>
+            <room3Dside class='room3D-top' style='transform:translateY(${-h/2}px) rotateX(90deg);'>
+                <room3Dsurface style='background:${color};width:${w}px;height:${l}px;'></room3Dsurface>
+            </room3Dside>
+
+            ${ walls[0]?`
+                <room3Dside class='room3D-back' style='transform:translateZ(${-l/2}px)'>
+                    <room3Dsurface style='background:${color};width:${w}px;height:${h}px;'></room3Dsurface>
+                </room3Dside>`:'' } 
+
+            ${ walls[1]?`
+                <room3Dside class='room3D-right' style='transform:translateX(${w/2}px) rotateY(90deg)'>
+                    <room3Dsurface style='background:${color};width:${l}px;height:${h}px;'></room3Dsurface>
+                </room3Dside>`:'' } 
+
+            ${ walls[2]?`
+                <room3Dside class='room3D-front' style='transform:translateZ(${l/2}px)'>
+                    <room3Dsurface style='background:${color};width:${w}px;height:${h}px;'></room3Dsurface>
+                </room3Dside>`:'' } 
+
+            ${ walls[3]?`
+                <room3Dside class='room3D-left' style='transform:translateX(${-w/2}px) rotateY(90deg)'>
+                    <room3Dsurface style='background:${color};width:${l}px;height:${h}px;'></room3Dsurface>
+                </room3Dside>`:'' } 
+            
+        </room3D>
+        `)
+}
+
+
+
 AudioContext = function(){
     let self = this;
     self.$el = $('<div>');
@@ -215,7 +400,7 @@ BatVinesArena = function(layout,puzzle) {
             ropes[r].$el.appendTo(self.$el);
         }
         for(var a in puzzle.actors){
-            actors[a] = new BatVinesActor( puzzle.actors[a].x, puzzle.actors[a].y, puzzle.actors[a].w, puzzle.actors[a].h, puzzle.actors[a].type );
+            actors[a] = new BatVinesActor( puzzle.actors[a].x, puzzle.actors[a].y, puzzle.actors[a].w, puzzle.actors[a].h, puzzle.actors[a].type, puzzle.actors[a].dir );
             actors[a].$el.appendTo(self.$el);
         }
         for(var k in puzzle.knots){
@@ -249,6 +434,11 @@ BatVinesArena = function(layout,puzzle) {
         for(var a in actors){
             if( actors[a].failState ) self.failState = actors[a].failState;
             if( !actors[a].complete ) complete = false;
+            if( actors[a].spawning ){
+                actors.push(actors[a].spawning);
+                actors[a].spawning.$el.prependTo(self.$el);
+                actors[a].spawning = undefined;
+            }
         }
 
         if(self.failState && !self.isFailed){
@@ -386,10 +576,26 @@ BatVinesRope = function(x,y,length){
     }
 }
 
-BatVinesActor = function(x,y,w,h,type){
+BatVinesActor = function(x,y,w,h,type,dir){
+
+    const SIZE = {
+        'goody':{w:1.5,h:1.5},
+        'mouth':{w:2,h:2},
+        'baddy':{w:3,h:3},
+        'spitter':{w:1.5,h:1.5},
+        'arrow':{w:1,h:0.5},
+        'fragment':{w:1.5,h:1.5},
+        'beam':{w:4,h:1},
+    }
+
+    if(SIZE[type]){
+        w = SIZE[type].w;
+        h = SIZE[type].h;
+    }
 
     const STOMP = 0.03;
     const WALK = 0.05;
+    const SPIT = 0.5;
     const RUN = 0.07;
     const CHASE = 0.1;
 
@@ -406,8 +612,9 @@ BatVinesActor = function(x,y,w,h,type){
     self.failState = undefined;
     self.complete = (type !='goody');
     self.isAttacking = false;
-    self.dir = 1;
+    self.dir = dir?dir:1;
     self.pause = 0;
+    self.state = undefined;
 
      self.$el = $('<batactor>').attr('type',self.type).css({
         width:self.w*BatVines.GRIDSIZE+'px',
@@ -425,10 +632,15 @@ BatVinesActor = function(x,y,w,h,type){
             left:self.x*BatVines.GRIDSIZE+'px',
             top:self.y*BatVines.GRIDSIZE+'px',
             transform:'translate(-50%, -50%) rotate('+rot+'deg) scaleX('+self.dir+')',
-        }) 
+        }) .attr('state',self.state);
     }
 
+    let nFrame = -1;
+
     self.step = function(){
+
+        nFrame ++;
+
 
         if(self.dead){
 
@@ -440,6 +652,8 @@ BatVinesActor = function(x,y,w,h,type){
         
             return;
         }
+
+        //APPLY GRAVITY 
 
         if(self.gravity) self.sy += BatVines.GRAVITY;
         self.y += self.sy;
@@ -456,6 +670,8 @@ BatVinesActor = function(x,y,w,h,type){
             }
         }
 
+        //DO UNIQUE BEHAVIOURS
+
         if(self.type=='baddy' && !self.isAttacking && self.pause--<0){
             //back and forth
             self.x += self.dir * STOMP;
@@ -468,6 +684,18 @@ BatVinesActor = function(x,y,w,h,type){
                 self.dir = 1;
             }
         }
+
+        if(self.type=='arrow'){
+            self.x += self.dir * SPIT;
+            if(self.x<0 || self.x>BatVines.ARENA.W) self.dead = true;
+        }
+
+        if(self.type=='spitter'){
+            self.state = (nFrame%BatVines.FPS*2 < BatVines.FPS*1)?'spit':'inhale';
+            if(nFrame%BatVines.FPS*2==0) self.spawning = new BatVinesActor( self.x, self.y, 2, 1, "arrow", self.dir);
+        }
+
+        // REDRAW
 
         self.to(self.x,self.y);
     }
@@ -580,6 +808,18 @@ BatVinesGame = function(){
 
             @keyframes sprite4{
                 0%{
+                    background-position-x: 0%;
+                }
+                100%{
+                     background-position-x: -400%;
+                }
+            }
+
+             @keyframes sprite4pause{
+                0%{
+                    background-position-x: 0%;
+                }
+                40%{
                     background-position-x: 0%;
                 }
                 100%{
@@ -891,7 +1131,11 @@ BatVinesGame = function(){
                 
                 transform: translate(-50%,-50%);
                 background-size: 100%;
-                
+           }
+
+           batactor[type="beam"]{
+                background-image: url(./proto/img/plant-beam.png);
+                background-size: 100%;
            }
 
            batactor[type="baddy"]{
@@ -903,6 +1147,27 @@ BatVinesGame = function(){
                 animation-timing-function: steps(4);
                 animation-duration: 0.7s;
                 animation-fill-mode: forwards;
+           }
+
+           batactor[type="spitter"]{
+                background-image: url(./proto/img/plant-spitter.png);
+                background-size: 400%;
+
+                animation: sprite4;
+                animation-timing-function: steps(4);
+                animation-duration: 0.5s;
+                animation-fill-mode: forwards;
+           }
+
+           batactor[type="spitter"][state='spit']{
+                animation: none;
+           }
+
+           batactor[type="arrow"]{
+                background-image: url(./proto/img/plant-spit-arrow.png);
+
+                background-position: center;
+                background-repeat: no-repeat;
            }
 
            
@@ -1027,6 +1292,7 @@ BatVinesGame = function(){
 
     const LEVELS = [
 
+       
         [
             //LEVEL 1
             {puzzle:0,wall:0,x:MX,y:MY,scale:S},
@@ -1046,10 +1312,14 @@ BatVinesGame = function(){
             {puzzle:8,wall:2,x:MX,y:MY,scale:S},
         ],
         [
-            //LEVEL 3
+            //LEVEL 4
             {puzzle:9,wall:0,x:MX,y:MY,scale:S},
             {puzzle:10,wall:1,x:MX,y:MY,scale:S},
             {puzzle:11,wall:2,x:MX,y:MY,scale:S},
+        ],
+        [
+            //TESTING
+            {puzzle:12,wall:0,x:MX,y:MY,scale:S},
         ]
     ]
 
@@ -1270,14 +1540,30 @@ BatVinesGame = function(){
                 {ropeLeft:0,ropeRight:-1,actor:0},
                 {ropeLeft:1,ropeRight:-1,actor:1},
             ],
+        },
+        {
+            // spitters
+            ropes:[
+                {x:BatVines.ARENA.W*0.1,y:0,length:4},
+                {x:BatVines.ARENA.W*0.4,y:0,length:3},
+                {x:BatVines.ARENA.W*0.6,y:0,length:3},
+                {x:BatVines.ARENA.W*0.9,y:0,length:7},
+            ],
+            actors:[
+                GOODY,
+                {w:3,h:3,dir:-1,type:'spitter'},
+                {w:8,h:2,type:'beam'},
+            ],
+
+            knots:[
+                {ropeLeft:0,ropeRight:-1,actor:0},
+                {ropeLeft:3,ropeRight:-1,actor:1},
+            ],
         }
     ]
 
-    
-
-    
     let audio = new AudioContext();
-    audio.add('music','./proto/audio/mystery-girl-bgm-184949.mp3',0.3,true,true);
+    audio.add('music','./proto/audio/quirky-fun-comedy-250869.mp3',0.3,true,true);
     audio.add('zoom','./proto/audio/sfx-zoom.mp3',0.5);
     
     let $game = $('<batvinesgame>').appendTo(self.$el);
@@ -1289,6 +1575,8 @@ BatVinesGame = function(){
         $('<batvinesgogglesbg>').appendTo($walls[i]);
         $('<batvinesgoggles>').appendTo($walls[i]);
         $('<batvineszoomout>').appendTo($walls[i]).click(doArenaClose);
+        
+        //new Scene3D().$el.appendTo($walls[i]).css('transform','scale('+10+')')
     }
 
     function clearArenas(){

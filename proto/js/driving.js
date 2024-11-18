@@ -71,7 +71,7 @@ DrivingGame = function(){
 	const LCAR = 0.5;
 	const HCAR = 0.15;
 	
-	const WROAD = 4;
+	const WROAD = 3.6;
 	const SIGHT = 5;
 	const STRAFE = 3;
 	const SPEED = 6;
@@ -650,7 +650,9 @@ DrivingGame = function(){
 	for(var c in cars){
 		let $c = $(`<drivingcar>`).appendTo($plane);
 		let $i = $(`<drivingcarinner>`).appendTo($c);
-		new Box3D(WCAR*GRID,WCAR*GRID,HCAR*2*GRID,cars[c].isTarget?'white':'black').$el.appendTo($i);
+
+		if(cars[c].isTarget) new Box3D(0.2*GRID,WCAR*GRID,0.3*GRID,'white').$el.appendTo($i);
+		else new Box3D(WCAR*GRID,WCAR*GRID,HCAR*2*GRID,'black').$el.appendTo($i);
 
 		if( cars[c].isTarget ) $('<drivingmarker>').appendTo( $c );
 
