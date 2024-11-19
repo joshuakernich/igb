@@ -82,7 +82,7 @@ DrivingGame = function(){
 	const VISUAL = 50;
 
 	const BOOSTTIME = FPS*1;
-	const MISSILETIME = FPS*2;
+	const MISSILETIME = FPS*1.5;
 	
 	const PURPLE = '#230B39';
 
@@ -790,7 +790,7 @@ DrivingGame = function(){
 
 		let txRelative = (players[0].px/100*2-1);
 
-		//elapsed = 0;
+	
 
 		boosting --;
 		bogging --;
