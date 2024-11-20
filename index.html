@@ -80,7 +80,7 @@
 				'BAT-HEIST-3D':'./proto/img/bat-goggles.png',
 			}
 
-			let gameID = window.location.search.substr(1);
+			let gameID = window.location.search.substr(1).split('&')[0];
 
 			function launchProto(id){
 				let p = PROTO[id];
@@ -96,7 +96,7 @@
 
 				} else {
 
-					$('.loader').attr('src',p+'?seed='+Math.random()).addClass('active');
+					$('.loader').attr('src',p).addClass('active');
 				}
 
 				$('menu').addClass('hidden');
@@ -104,7 +104,6 @@
 
 			function onProtoButton() {
 				let id = $(this).attr('id');
-				console.log(id);
 				window.location.assign(window.location.pathname + '?' + id);
 			}
 

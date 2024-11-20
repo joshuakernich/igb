@@ -193,8 +193,8 @@ let css = {
 		'color':'white',
 		'border':'none',
 		'font':'inherit',
-		'font-size':'0.5vw',
-		'padding':'1.5vw',
+		'font-size':'1vw',
+		'padding':'1vw',
 	},
 
 	'.riddler h1':{
@@ -220,6 +220,7 @@ let css = {
 		'background-size':'100%',
 		'background-position':'center',
 		'background-repeat':'no-repeat',
+		'pointer-events':'none',
 	},
 
 	'riddlerbombtimer':{
@@ -328,7 +329,7 @@ Riddler = function(){
 	audio.add('boom',"./proto/audio/riddler-boom.mp3");
 	audio.add('music',"./proto/audio/riddler-music.mp3",0.5,true,false);
 	audio.add('select',"./proto/audio/riddler-select.mp3");
-	audio.add('perfect',"./proto/audio/riddler-perfect.mp3");
+	audio.add('correct',"./proto/audio/riddler-correct.mp3");
 	audio.add('fail',"./proto/audio/riddler-fail.mp3");
 	audio.add('incorrect',"./proto/audio/riddler-fail-short.mp3");
 	audio.add('tv-on',"./proto/audio/riddler-tv-on.mp3");
@@ -336,6 +337,7 @@ Riddler = function(){
 	audio.add('laugh-a',"./proto/audio/riddler-laugh.mp3");
 	audio.add('laugh-b',"./proto/audio/riddler-laugh-b.mp3");
 	audio.add('intro',"./proto/audio/riddler-intro.mp3");
+	audio.add('intro-finale',"./proto/audio/riddler-intro-finale.mp3");
 
 
 	let C = 4;
@@ -357,6 +359,7 @@ Riddler = function(){
 	}
 
 	$('<button>SKIP</button>').appendTo(sides[2]).click(doCorrect);
+
 	let $bomb = $('<riddlerbomb>').appendTo(sides[1]);
 	let $timer = $('<riddlerbombtimer>').appendTo($bomb);
 
@@ -396,21 +399,31 @@ Riddler = function(){
 		if (isSelected) selected.push(this);
 		else selected.splice( selected.indexOf(this), 1 );
 
-		let combo = {'I':0,'B':0,'C':0,'T':0,'S':0,'total':0};
-		for(var s in selected){
-			let shape = $(selected[s]).attr('s');
-
-			if(!shape) shape = 'B';
-	
-			combo[shape]++;
-			combo['total']++;
-		}
 
 		if(question.type=='notnot'){
 			isTouchCorrect = true;
+
+			let combo = {'I':0,'B':0,'C':0,'T':0,'S':0,'total':0};
+			for(var s in selected){
+				let shape = $(selected[s]).attr('s');
+
+				if(!shape) shape = 'B';
+		
+				combo[shape]++;
+				combo['total']++;
+			}
+
+			/*for(var c in combo){
+
+				let isNotRequired = rules[c]==undefined;
+				let isTooMany = combo[c]>rules[c];
+				if((combo[c]>0&&rules[c]==undefined) || combo[c]>rules[c]) $mistake = $(this); // too many of these
+			}*/
+
 			for(var r in rules){
-			
+				// THIS ISN'T ABOUT MOVEMENT
 				if(r != 'R' && r!= 'L'){
+					// MOVEMENT RULES
 					if(r.length==1){
 						//right thing but not right number
 						if(combo[r] != rules[r]) isTouchCorrect = false;
@@ -448,15 +461,16 @@ Riddler = function(){
 				let value = $(selected[s]).attr('s');
 
 				if(value=='0') cntRight++;
-				else cntWrong++;
+				else $mistake = $(selected[s]);
 			}
 
 			resetRiddlerTicker(cntRight);
 
+
 			if(cntRight==COUNT){
 
-				clearInterval(tickRiddler);
-				doCorrect();
+				clearTimeout(tickRiddler);
+				isTouchCorrect = true;
 			}
 		}
 
@@ -475,8 +489,11 @@ Riddler = function(){
 	}
 
 
-	let timePerShuffle = 1500;
+	const MAXSHUFFLE = 1500;
+	const MINSHUFFLE = 400;
+	let timePerShuffle = MAXSHUFFLE;
 	let hasTickerStarted = false;
+	let tickRiddler;
 
 	function onRiddlerTicker(){
 
@@ -490,13 +507,14 @@ Riddler = function(){
 			
 		})
 
-		setTimeout(onRiddlerTicker,timePerShuffle);
+		tickRiddler = setTimeout(onRiddlerTicker,timePerShuffle);
+		hasTickerStarted = true;
 	}
 
 	
 	function resetRiddlerTicker(cntCorrect){
-		timePerShuffle = 1500 - cntCorrect*50;
-		if(!hasTickerStarted) setTimeout(onRiddlerTicker,timePerShuffle);
+		timePerShuffle = MINSHUFFLE + (MAXSHUFFLE-MINSHUFFLE)*(1-cntCorrect/(COUNT-1));
+		if(!hasTickerStarted) tickRiddler = setTimeout(onRiddlerTicker,timePerShuffle);
 		hasTickerStarted = true;
 	}
 
@@ -561,7 +579,7 @@ Riddler = function(){
 
 	function celebrateCorrect(){
 
-		audio.play('perfect',true);
+		audio.play('correct',true);
 		
 		self.$el.find('riddlerscreen')
 		.removeClass('selected')
@@ -593,9 +611,11 @@ Riddler = function(){
 		if(question.type=='notnot'){
 			
 			let q = question.q;
-			for(var i in q){
+			let total = 0;
+			let nots = 0;
+			for(var i=0; i<q.length; i++){
 				let rule = q[i].split('-');
-				let count = rule[0];
+				let count = parseInt(rule[0]);
 				let shape = rule[1];
 
 				rules[shape] = parseInt(count);
@@ -611,10 +631,18 @@ Riddler = function(){
 				else {
 					isTouchCorrect = false;
 					text = 'Touch '+count+' '+(not?'NOT ':'')+SHAPES[shape]+(count>1?'s':'');
+					total += count;
+					if(not) nots += count;
 				}
+
+				if(i>0) text = '…and '+text;
+
+				if(i<q.length-1) text = text+'…';
 
 				things.push({s:'I',t:'<riddlertext>'+text+'</riddlertext>'});
 			}
+
+			rules['total'] = total;
 
 			if(question.s){
 				for(var s=0; s<question.s.length; s++){
@@ -631,49 +659,68 @@ Riddler = function(){
 			for(var id in question.wrongs) things.push({s:question.wrongs[id],symbol:question.wrongs[id]});
 		}
 
-		if(question.type=='final') {
+		
+		
+
+		
+		if(question.type=='final'){
+			isEnabled = false;
 			isTouchCorrect = false;
-			while(things.length<COUNT) things.push({s:things.length,symbol:LIST[things.length]});
-			resetRiddlerTicker(0);
+			doIntroFinale();
+		} else {
+
+			let order = [];
+			while(order.length<COUNT) order[order.length] = order.length;
+			shuffle(order);
+
+			for(var t=0; t<things.length; t++) paintScreen(order[t],things[t].s,things[t].t,things[t].symbol,200 + t*200);
+
+			isEnabled = true;
+			self.$el.addClass('enabled');
 		}
+	}
 
-			
-		//}
+	function doIntroFinale(){
 
-		/*if(question.type=='move'){
-			let q = question.q;
-			for(var i in q){
-				let rule =  q[i].split('-');
-				let count = rule[0];
-				let shape = rule[1];
-				let text = 'Move '+count+' player'+(count>1?'s':'')+' to the '+MOVES[shape];
-				things.push({s:'I',t:'<p>'+text+'</p>'});
-
-				rules[shape] = parseInt(count);
-			}
-
-			sides[1].find('riddlerscreen').addClass('on');
-
-			
-		}*/
-
+		
+		
 		let order = [];
 		while(order.length<COUNT) order[order.length] = order.length;
 		shuffle(order);
 
-		for(var t=0; t<things.length; t++){
+		let text = '<riddlertext>WHERE<br>AM I?</riddlertext>';
 
-			
-				paintScreen(order[t],things[t].s,things[t].t,things[t].symbol,200 + t*200);
-			
-			
-		}
+		for(var i=0; i<order.length; i++) paintScreen(order[i],i,text,undefined,7000 + i*100);
 
-		self.$el.addClass('enabled');
-		isEnabled = true;
+		audio.stop('music');
+		audio.play('boom',true);
+		audio.play('tension');
+		
+		setTimeout(function(){
+			audio.play('intro-finale');
+		},2000);
+
+
+		setTimeout(function(){
+			audio.stop('tension');
+			audio.play('boom',true);
+			self.$el.find('riddlerscreen').empty().removeClass('on').attr('s','B');
+		},12000);
+
+		setTimeout(function(){
+
+			for(var i=0; i<order.length; i++) paintScreen(order[i],order[i],undefined,'riddler');
+
+			audio.play('music',true);
+
+			onRiddlerTicker();
+
+			isEnabled = true;
+			self.$el.addClass('enabled');
+		},17000);
+		
+		
 	}
-
-
 
 	function paintScreen(n,s,t,symbol,delay){
 
@@ -841,13 +888,24 @@ Riddler = function(){
 
 	let hasStarted = false;
 	$(document).click(function(){
-		if(!hasStarted) audio.play('tension');
-		hasStarted = true;
+		if(!hasStarted){
+			audio.play((iQuestion==-1||iQuestion==questions.length-1)?'tension':'music');
+			hasStarted = true;
+		}
 	});
 
-	
+	let skipID = window.location.search.substr(1).split('&')[1];
 
-	doIntro();
+
+	if(skipID!=undefined){
+		iQuestion = skipID-1;
+		nextQuestion();
+	} else {
+		doIntro();
+	}
+	//
+	//
+
 	self.setPlayers([{px:15}]);
 
 
