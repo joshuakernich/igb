@@ -4,20 +4,22 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>IGB Prototypes</title>
-	<script type="text/javascript" src="./shared/jq.js"></script>
-	<script type="text/javascript" src="./proto/lib/jquery-ui.min.js"></script>
+	
 
 	<!--script type="text/javascript" src="./I Don't Know Much/Tone.js"></script-->
 
 	
-	
+	<!-- libraries -->
+	<script type="text/javascript" src="./shared/jq.js"></script>
+	<script type="text/javascript" src="./proto/lib/jquery-ui.min.js"></script>
 	<script type="text/javascript" src="./proto/lib/Css.js"></script>
 	<script type="text/javascript" src="./proto/lib/bezier.js"></script>
 	<script type="text/javascript" src="./proto/lib/matter.min.js"></script>
 
+	<!-- utilities -->
 	<script type="text/javascript" src="./proto/js/meep.js"></script>
+	<script type="text/javascript" src="./proto/js/audio-context.js"></script>
 
-	<script type="text/javascript" src="./proto/js/sequencer.js"></script>
 	<script type="text/javascript" src="./proto/js/headers-game.js"></script>
 	<script type="text/javascript" src="./proto/js/invaders.js"></script>
 	<script type="text/javascript" src="./proto/js/pixelpaddle.js"></script>s
@@ -269,7 +271,13 @@
 
 		@import url('https://fonts.googleapis.com/css2?family=Trade+Winds&display=swap');*/
 
-		@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+		
+
+		@font-face {
+		  font-family: VCRFONT;
+		  src: url(./proto/font/VCR_OSD_MONO_1.001.ttf);
+		}
+
 
 		@keyframes spin{
 			0%{

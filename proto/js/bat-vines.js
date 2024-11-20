@@ -183,28 +183,7 @@ Room3D = function(w,l,h,color,walls){
 
 
 
-AudioContext = function(){
-    let self = this;
-    self.$el = $('<div>');
-   let audio = {};
 
-    self.add = function(id,src,volume,loop,autoplay){
-        let attr = ''+(autoplay?'autoplay ':'')+(loop?'loop ':'');
-        audio[id] = $(`<audio ${attr}>
-            <source src=${src} type="audio/mpeg">
-        </audio>`).appendTo(self.$el)[0];
-        audio[id].volume = volume;
-    }
-
-    self.play = function(id,restart){
-        audio[id].play();
-        if(restart) audio[id].currentTime = 0;
-    }
-
-    self.stop = function(id){
-        audio[id].pause();
-    }
-}
 
 BatVinesPop = function(x,y,w,h){
     let self = this;
