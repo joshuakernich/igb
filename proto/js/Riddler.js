@@ -254,6 +254,27 @@ Riddler = function(){
 
 	const COUNT = 20;
 
+	const DICTIONARY = {
+		'cheese':'🧀',
+		'shoe':'👞',
+		'bag':'👜',
+		'moon':'🌝',
+		'burger':'🍔',
+		'pizza':'🍕',
+		'melon':'🍉',
+		'raindrop':'💧',
+		'snowman':'⛄',
+		'clock':'🕑',
+		'car':'🚗',
+		'helicopter':'🚁',
+		'rocket':'🚀',
+		'umbrella':'☂',
+		'pumpkin':'🎃',
+	}
+
+	const SYMBOLS = [];
+	for(var d in DICTIONARY) SYMBOLS.push({name:d,symbol:DICTIONARY[d]});
+
 	const LIST = [
 		'riddler',
 		'🧀','👞','👙','👜','🌝','🍔','🍕','🍉','💧','⛄',
@@ -303,20 +324,7 @@ Riddler = function(){
 		'R':'right',
 	}
 
-	let SHAPES = {
-		'A':'cheese',
-		'B':'fire',
-		'C':'snowman',
-
-		'?':'riddle screen',
-		'*':'blank screen',
-	}
-
-	let SYMBOLS = {
-		'A':'🧀',
-		'B':'🔥',
-		'C':'⛄',
-	}
+	
 
 	let iQuestion = -1;
 	
@@ -639,6 +647,16 @@ Riddler = function(){
 		let things = [];
 		question = questions[iQuestion];
 		
+		let symbols = SYMBOLS.concat();
+		shuffle(symbols);
+
+		let symbolsForQuestion = {
+			'A':symbols[0],
+			'B':symbols[1],
+			'C':symbols[2],
+			'?':{name:'riddle screen'},
+			'*':{name:'blank screen'},
+		}
 
 		isMistake = false;
 		isTouchCorrect = true;
@@ -666,7 +684,7 @@ Riddler = function(){
 				}
 				else {
 					isTouchCorrect = false;
-					text = 'Touch '+count+' '+(not?'NOT ':'')+SHAPES[shape]+(count>1?'s':'');
+					text = 'Touch '+count+' '+(not?'NOT ':'')+symbolsForQuestion[shape].name+(count>1?'s':'');
 					total += count;
 				}
 
@@ -682,7 +700,7 @@ Riddler = function(){
 			if(question.s){
 				for(var s=0; s<question.s.length; s++){
 					let shape = question.s[s];
-					things.push({s:shape,symbol:SYMBOLS[shape]});
+					things.push({s:shape,symbol:symbolsForQuestion[shape].symbol});
 				}
 			}
 		}
