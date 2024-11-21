@@ -258,7 +258,6 @@ Riddler = function(){
 		'cheese':'🧀',
 		'shoe':'👞',
 		'bag':'👜',
-		'moon':'🌝',
 		'burger':'🍔',
 		'pizza':'🍕',
 		'melon':'🍉',
