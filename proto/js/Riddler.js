@@ -278,19 +278,19 @@ Riddler = function(){
 		{type:'riddle',q:['Some things are not right'],rights:['poker-mistake-3C','poker-mistake-5S'],wrongs:['poker-AS','poker-2S','poker-3S','poker-4C','poker-5S']},
 
 		//not not
-		{type:'notnot',q:['3-C'],s:'CSTCSTCST'},
-		{type:'notnot',q:['3-NC'],s:'CSTCSTCST'},
-		{type:'notnot',q:['3-S','1-NS'],s:'CSTCSTCST'},
-		{type:'notnot',q:['2-S','2-NS','2-NC'],s:'CSTCSTCST'},
-		{type:'notnot',q:['5-B'],s:'CSTCSTCST'},
-		{type:'notnot',q:['1-I'],s:'CSTCSTCST'},
-		{type:'notnot',q:['1-B','1-S','1-T','1-C','3-I'],s:'CSTCSTCST'},
+		{type:'notnot',q:['3-A'],s:'ABCABCABC'},
+		{type:'notnot',q:['3-NA'],s:'ABCABCABC'},
+		{type:'notnot',q:['3-B','1-NB'],s:'ABCABCABC'},
+		{type:'notnot',q:['2-B','2-NB','2-NA'],s:'ABCABCABC'},
+		{type:'notnot',q:['5-*'],s:'ABCABCABC'},
+		{type:'notnot',q:['1-?'],s:'ABCABCABC'},
+		{type:'notnot',q:['1-*','1-B','1-C','1-A','3-?'],s:'ABCABCABC'},
 		
 		//movement
-		{type:'notnot',q:['1-R','2-I']},
+		{type:'notnot',q:['1-R','2-?']},
 		{type:'notnot',q:['2-R']},
 		{type:'notnot',q:['1-R','1-L']},
-		{type:'notnot',q:['1-S','1-NS','2-I','2-B','1-R','1-L'],s:'CSTCSTCST'},
+		{type:'notnot',q:['1-B','1-NB','2-?','2-*','1-R','1-L'],s:'ABCABCABC'},
 
 		//final
 		{type:'final',q:['Something is not right'],rights:['⬅'],wrongs:['🍔','🍕','🍉','👞','⛄']},
@@ -304,17 +304,18 @@ Riddler = function(){
 	}
 
 	let SHAPES = {
-		'C':'cheese',
-		'S':'fire',
-		'T':'snowman',
-		'B':'blank screen',
-		'I':'riddle screen',
+		'A':'cheese',
+		'B':'fire',
+		'C':'snowman',
+
+		'?':'riddle screen',
+		'*':'blank screen',
 	}
 
 	let SYMBOLS = {
-		'C':'🧀',
-		'S':'🔥',
-		'T':'⛄',
+		'A':'🧀',
+		'B':'🔥',
+		'C':'⛄',
 	}
 
 	let iQuestion = -1;
@@ -403,24 +404,59 @@ Riddler = function(){
 		if(question.type=='notnot'){
 			isTouchCorrect = true;
 
-			let combo = {'I':0,'B':0,'C':0,'T':0,'S':0,'total':0};
+			let combo = {
+				'A':0,'B':0,'C':0,
+				'*':0,'?':0,
+			};
+
+			let total = 0;
+			let notsTotal = 0;
+
 			for(var s in selected){
 				let shape = $(selected[s]).attr('s');
 
-				if(!shape) shape = 'B';
-		
+				if(!shape) shape = '*';
 				combo[shape]++;
-				combo['total']++;
+
+				total++;
+				if(rules[shape]==undefined) notsTotal ++;
+				if(rules[shape]==undefined && rules['N'+shape]>0) $mistake = $(selected[s]);
+				
 			}
 
-			/*for(var c in combo){
 
-				let isNotRequired = rules[c]==undefined;
-				let isTooMany = combo[c]>rules[c];
-				if((combo[c]>0&&rules[c]==undefined) || combo[c]>rules[c]) $mistake = $(this); // too many of these
-			}*/
+			let totalRequired = 0;
+			let notsRequired = 0;
 
 			for(var r in rules){
+				
+				if(r!= 'L' && r!= 'R'){
+					totalRequired += rules[r];
+					if( r.length>1 ) notsRequired += rules[r];
+				}
+			}
+
+			for(var c in combo) combo['N'+c] = total - combo[c];
+
+			if(total<totalRequired) isTouchCorrect = false;
+
+			if(total>totalRequired){
+				$mistake = $(selected[s]);
+			} else if (notsTotal>notsRequired){
+				$mistake = $(selected[s]);
+			}else {
+				for(var c in combo){
+
+					let input = combo[c];
+					let goal = rules[c];
+
+					if(input < goal) isTouchCorrect = false;
+
+					if(c.length==1 && input>goal) $mistake = $(selected[s]);
+				}
+			}
+
+			/*for(var r in rules){
 				// THIS ISN'T ABOUT MOVEMENT
 				if(r != 'R' && r!= 'L'){
 					// MOVEMENT RULES
@@ -429,11 +465,11 @@ Riddler = function(){
 						if(combo[r] != rules[r]) isTouchCorrect = false;
 					} else {
 						let s = r[1];
-						if((combo['total'] - combo[s]) < rules[r]) isTouchCorrect = false;
+						if((total - combo[s]) < rules[r]) isTouchCorrect = false;
 
 					}
 				}			
-			}
+			}*/
 		}
 		
 
@@ -598,7 +634,7 @@ Riddler = function(){
 		selected = [];
 		iQuestion ++;
 
-		self.$el.find('riddlerscreen').empty().removeClass('selected on fail').attr('s','B');
+		self.$el.find('riddlerscreen').empty().removeClass('selected on fail').attr('s','*');
 
 		let things = [];
 		question = questions[iQuestion];
@@ -612,7 +648,7 @@ Riddler = function(){
 			
 			let q = question.q;
 			let total = 0;
-			let nots = 0;
+			
 			for(var i=0; i<q.length; i++){
 				let rule = q[i].split('-');
 				let count = parseInt(rule[0]);
@@ -632,17 +668,16 @@ Riddler = function(){
 					isTouchCorrect = false;
 					text = 'Touch '+count+' '+(not?'NOT ':'')+SHAPES[shape]+(count>1?'s':'');
 					total += count;
-					if(not) nots += count;
 				}
 
 				if(i>0) text = '…and '+text;
 
 				if(i<q.length-1) text = text+'…';
 
-				things.push({s:'I',t:'<riddlertext>'+text+'</riddlertext>'});
+				things.push({s:'?',t:'<riddlertext>'+text+'</riddlertext>'});
 			}
 
-			rules['total'] = total;
+
 
 			if(question.s){
 				for(var s=0; s<question.s.length; s++){
@@ -704,7 +739,7 @@ Riddler = function(){
 		setTimeout(function(){
 			audio.stop('tension');
 			audio.play('boom',true);
-			self.$el.find('riddlerscreen').empty().removeClass('on').attr('s','B');
+			self.$el.find('riddlerscreen').empty().removeClass('on').attr('s','*');
 		},12000);
 
 		setTimeout(function(){
@@ -858,7 +893,7 @@ Riddler = function(){
 
 	function doIntroComplete(){
 		
-		self.$el.find('riddlerscreen').empty().removeClass('selected on fail').attr('s','B');
+		self.$el.find('riddlerscreen').empty().removeClass('selected on fail').attr('s','*');
 		audio.play('select',true);
 
 		
