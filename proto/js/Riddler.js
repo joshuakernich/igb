@@ -299,6 +299,7 @@ Riddler = function(){
 		//not right
 		{type:'riddle',q:['Something is not right'],rights:['⬅'],wrongs:['🍔','🍕','🍉','👞','⛄']},
 		{type:'riddle',q:['Some things are not right'],rights:['poker-mistake-3C','poker-mistake-5S'],wrongs:['poker-AS','poker-2S','poker-3S','poker-4C','poker-5S']},
+		{type:'riddle',q:['Some things are not wrong'],rights:['poker-AS','poker-2S','poker-3S','poker-4C','poker-5S'],wrongs:['poker-mistake-3C','poker-mistake-5S']},
 		{type:'riddle',q:["What's left?"],rights:['⬅','👈','🖐'],wrongs:['↔','⬆','⬇','↘','🤚','👉','👆','👇']},
 
 		//not not
@@ -710,9 +711,12 @@ Riddler = function(){
 
 		if(question.type=='riddle'){
 			isTouchCorrect = false;
-			for(var iq in question.q) things.push({s:'I',t:'<riddlertext>'+question.q[iq]+'</riddlertext>'});
+			
 			for(var ir in question.rights) things.push({s:question.rights[ir],symbol:question.rights[ir]});
 			for(var id in question.wrongs) things.push({s:question.wrongs[id],symbol:question.wrongs[id]});
+			shuffle(things);
+
+			for(var iq in question.q) things.unshift({s:'I',t:'<riddlertext>'+question.q[iq]+'</riddlertext>'});
 		}
 
 		
@@ -728,6 +732,7 @@ Riddler = function(){
 			let order = [];
 			while(order.length<COUNT) order[order.length] = order.length;
 			shuffle(order);
+			
 
 			for(var t=0; t<things.length; t++) paintScreen(order[t],things[t].s,things[t].t,things[t].symbol,200 + t*200);
 
