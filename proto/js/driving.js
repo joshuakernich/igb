@@ -591,7 +591,7 @@ DrivingGame = function(){
 	let sfx = {};
 
 	sfx.music = $(`<audio autoplay loop>
-			<source src="./proto/audio/powerful-victory-trailer-103656.mp3" type="audio/mpeg">
+			<source src="./proto/audio/car-music.mp3" type="audio/mpeg">
 		</audio>`).appendTo(self.$el)[0];
 
 	sfx.idle = $(`<audio autoplay loop>

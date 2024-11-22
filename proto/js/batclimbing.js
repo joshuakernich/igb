@@ -24,6 +24,11 @@ BatClimbing = function(){
 				'perspective':W+'px',
 				
 				'text-align':'center',
+
+
+				'background-image': 'url(./proto/img/bat-skyline.png)',
+				'background-size': '33.3%',
+			
 			},
 
 			'batside':{
@@ -46,6 +51,7 @@ BatClimbing = function(){
 				'margin':'auto',
 
 				'padding-bottom':'150px',
+
 			},
 
 			'batlevel':{
@@ -53,8 +59,9 @@ BatClimbing = function(){
 				'height':'300px',
 				'border-top':'20px solid black',
 				'box-sizing':'border-box',
-				'background':'#555',
+				'background':'linear-gradient(to right, #28113D, #210A37, #210A37, #210A37, #210A37, #210A37, #28113D)',
 				'position':'relative',
+
 			},
 
 			'batgrid':{
@@ -74,7 +81,7 @@ BatClimbing = function(){
 				'right':'20px',
 				'top':'20px',
 				'bottom':'40px',
-				'background':'rgba(255,255,255,0.1)',
+				'background':'rgba(255,255,255,0.05)',
 			},
 
 			'batwindow':{
@@ -198,7 +205,8 @@ BatClimbing = function(){
 				'display':'block',
 				'height':'100px',
 				'width':'100px',
-				'background':'white',
+				'border':'2px solid white',
+				'box-sizing':'border-box',
 				'position':'absolute',
 				'bottom':'70px',
 				'left':'-50px',
@@ -209,13 +217,13 @@ BatClimbing = function(){
 				'content':'""',
 				'position':'absolute',
 				'display':'block',
-				'height':'50px',
-				'width':'50px',
-				'border-top':'20px solid orange',
-				'border-right':'20px solid orange',
+				'height':'30px',
+				'width':'30px',
+				'border-top':'2px solid white',
+				'border-right':'2px solid white',
 				'box-sizing':'border-box',
 				'bottom':'95px',
-				'left':'-25px',
+				'left':'-15px',
 				'transform':'rotate(-45deg)',
 			},
 
@@ -319,6 +327,12 @@ BatClimbing = function(){
 		['---------','-S----^--','---------'],
 	]
 
+	let audio = new AudioContext();
+	audio.add('music','./proto/audio/climb-music.mp3',0.5,true,true);
+	audio.add('hook','./proto/audio/climb-hook.mp3',1);
+	audio.add('winch','./proto/audio/climb-winch.mp3',0.2);
+	audio.add('arm','./proto/audio/climb-arm.mp3',0.5);
+	audio.add('bounce','./proto/audio/climb-bounce.mp3',0.1);
 
 	let towers = [];
 	let windows = [];
@@ -351,7 +365,7 @@ BatClimbing = function(){
 				let $g = $('<batgrid>').appendTo($l);
 
 				if(type=='C') checkpoints.push({ t:t, x:n+0.5, ox:0, y:l, $el:$('<batcheckpoint>').appendTo($g) });
-				if(type=='S') man = { t:t, x:n+0.5, ox:0, y:l, $el:$('<batman>').appendTo($l) };
+				if(type=='S') man = { dir:1, t:t, x:n+0.5, ox:0, y:l, $el:$('<batman>').appendTo($l) };
 				if(type=='}' || type=='{') throwers.push({ tick:0, t:t, x:n+0.5, y:l, $el:$('<batthrower>').appendTo($g), dir:type=='}'?1:-1 });
 				if(type=='B') boxes.push({ t:t, x:n+0.5, y:l, $el:$('<batbox>').appendTo($g) });
 				if(type=='W') windows.push({ t:t, tick:0, x:n+0.5, y:l, $el:$('<batwindow>').appendTo($g) });
@@ -362,8 +376,12 @@ BatClimbing = function(){
 		}
 	}
 	
-	let iStage = Math.floor((data.length-man.y-1)/3);
-	self.$el.find('battower').css({'bottom':-iStage*3*LEVEL+'px'});
+	const FLOORSPERSTAGE = 3;
+	let iStage = Math.floor((data.length-man.y-1)/FLOORSPERSTAGE);
+	let yMin = 0;
+	let yMax = yMin + 3;
+
+	self.$el.find('battower').css({'bottom':-iStage*FLOORSPERSTAGE*LEVEL+'px'});
 
 	let wWas;
 	let iDudeWas = -1;
@@ -381,6 +399,8 @@ BatClimbing = function(){
 		if(t==2) return -1 + (1-pxFrontToBack)*11;
 	}
 
+	
+
 	function tick(){
 
 		let wScreen = self.$el.width();
@@ -397,9 +417,11 @@ BatClimbing = function(){
 		if(dirtyTracking) man.x = getXForT(man.t);
 		dirtyTracking = false;
 
-
 		if(man.x<0.2) man.x = 0.2;
 		if(man.x>8.8) man.x = 8.8;
+
+		if(isLeft) man.dir = -1;
+		if(isRight) man.dir = 1;
 
 		for(var g in grapnels){
 			if(grapnels[g].t == man.t && grapnels[g].y == man.y && Math.abs(man.ox) < GRID){
@@ -414,9 +436,11 @@ BatClimbing = function(){
 
 						man.$el.css({'bottom':'-300px'});
 
-						let iStage = Math.floor((data.length-man.y-1)/3);
+						iStage = Math.floor((data.length-man.y-1)/FLOORSPERSTAGE);
+						yMax = data.length - iStage*FLOORSPERSTAGE;
+						yMin = yMax - FLOORSPERSTAGE;
 
-						self.$el.find('battower').animate({'bottom':-iStage*3*LEVEL+'px'});
+						self.$el.find('battower').animate({'bottom':-iStage*FLOORSPERSTAGE*LEVEL+'px'});
 					}
 
 					if(grapnels[g].dir == '>'){
@@ -445,11 +469,29 @@ BatClimbing = function(){
 
 					
 					grapshot.y = man.y;
-					grapshot.$el.appendTo(towers[man.t].$ls[man.y]).css({'left':grapshot.x*GRID+'px','width':LEVEL});
+
+					grapshot.$el
+					.appendTo(towers[man.t].$ls[man.y])
+					.css({'left':grapshot.x*GRID+'px'})
+					
+
+					
+					setTimeout(function(){
+						audio.play('hook',true);
+					},200);
+
+					setTimeout(function(){
+						audio.play('winch',true) 
+					},650);
+
+					setTimeout(function(){
+						audio.stop('winch') 
+						audio.play('arm',true) 
+					},1200);
 
 					man.$el
-					.delay(200)
-					.animate({'bottom':'50px',},{duration:500,start:function(){ isRetractGrapshot = true; } ,complete:hideGrapshot})
+					.delay(500)
+					.animate({'bottom':'50px',},{duration:600,start:function(){ isRetractGrapshot = true; } ,complete:hideGrapshot})
 					.animate({'bottom':'0px',},{duration:200})
 				}
 			}
@@ -498,6 +540,15 @@ BatClimbing = function(){
 						.animate({'bottom':'0px'},100);
 
 						boxes[b].$el.css({'bottom':'10px'}).animate({'bottom':'0px'},100);
+
+						console.log(barrels[n].y, yMin, yMax);
+
+						if(barrels[n].y>yMin && barrels[n].y<yMax){
+							audio.play('bounce',true);
+							setTimeout(function(){
+								audio.play('bounce',true);
+							},200)
+						}
 					}
 				}
 			}
@@ -505,7 +556,7 @@ BatClimbing = function(){
 			if(barrels[n].x<0 || barrels[n].x>9) barrels[n].$el.remove();
 		}
 
-		man.$el.css({left:(man.x*GRID+man.ox)+'px'});
+		man.$el.css({left:(man.x*GRID+man.ox)+'px','transform':'scaleX('+man.dir+')'});
 
 		let dx = grapshot.x*GRID - (man.x*GRID + man.ox);
 		let dy = (grapshot.y-1)*LEVEL - man.y*LEVEL + parseFloat(man.$el.css('bottom')) + 130;
@@ -520,6 +571,10 @@ BatClimbing = function(){
 	function hideGrapshot(){
 		grapshot.$el.remove();
 	}
+
+	$(document).on('click',function(e){
+		audio.play('music');
+	});
 
 
 	$(document).on('keydown',function(e){

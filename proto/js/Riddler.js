@@ -283,7 +283,6 @@ Riddler = function(){
 	let questions = [
 
 	
-
 		//riddles
 		{type:'riddle',q:['I have a face…','…and I have hands'],rights:['🕑'],wrongs:['🙌','🧀','👞','👙','👜','🌝']},
 		{type:'riddle',q:['I am not alive…','…but I grow…','…and water kills me'],rights:['🔥'],wrongs:['🍔','🍕','🍉','💧','⛄']},
@@ -293,27 +292,32 @@ Riddler = function(){
 		{type:'riddle',q:['The more you use me…','…the smaller I get'],rights:['✏'],wrongs:['🦋','🎄','👞','👙','📺','🦆']},
 		{type:'riddle',q:['The more you take away…','…the bigger I get'],rights:['🕳'],wrongs:['🏦','🧀','💰','👙','📺','🦆']},
 
+		//sides
+		{type:'riddle',q:['What has two sides?'],rights:['🪙'],wrongs:['🕑','♥','📽','⬜','♠','🔺','♦','💰','♣']},
+		{type:'riddle',q:['What does NOT have two sides?'],rights:['⬜','🔺','🔶','🔴','❌','🔻'],wrongs:[]},
+
 		//not right
 		{type:'riddle',q:['Something is not right'],rights:['⬅'],wrongs:['🍔','🍕','🍉','👞','⛄']},
 		{type:'riddle',q:['Some things are not right'],rights:['poker-mistake-3C','poker-mistake-5S'],wrongs:['poker-AS','poker-2S','poker-3S','poker-4C','poker-5S']},
+		{type:'riddle',q:["What's left?"],rights:['⬅','👈','🖐'],wrongs:['↔','⬆','⬇','↘','🤚','👉','👆','👇']},
 
 		//not not
-		{type:'notnot',q:['3-A'],s:'ABCABCABC'},
-		{type:'notnot',q:['3-NA'],s:'ABCABCABC'},
-		{type:'notnot',q:['3-B','1-NB'],s:'ABCABCABC'},
-		{type:'notnot',q:['2-B','2-NB','2-NA'],s:'ABCABCABC'},
-		{type:'notnot',q:['5-*'],s:'ABCABCABC'},
-		{type:'notnot',q:['1-?'],s:'ABCABCABC'},
-		{type:'notnot',q:['1-*','1-B','1-C','1-A','3-?'],s:'ABCABCABC'},
+		{type:'notnot',q:['3-A'],s:'AAABBBCCC'},
+		{type:'notnot',q:['3-NA'],s:'AAABBBCCC'},
+		{type:'notnot',q:['3-B','1-NB'],s:'AAABBBCCC'},
+		{type:'notnot',q:['2-B','2-NB','2-NA'],s:'AAABBBCCC'},
+		{type:'notnot',q:['5-*'],s:'AAABBBCCC'},
+		{type:'notnot',q:['1-?'],s:'AAABBBCCC'},
+		{type:'notnot',q:['1-*','1-B','1-C','1-A','3-?'],s:'AAABBBCCC'},
 		
 		//movement
 		{type:'notnot',q:['1-R','2-?']},
 		{type:'notnot',q:['2-R']},
 		{type:'notnot',q:['1-R','1-L']},
-		{type:'notnot',q:['1-B','1-NB','2-?','2-*','1-R','1-L'],s:'ABCABCABC'},
+		{type:'notnot',q:['1-B','1-NB','2-?','2-*','1-R','1-L'],s:'AAABBBCCC'},
 
 		//final
-		{type:'final',q:['Something is not right'],rights:['⬅'],wrongs:['🍔','🍕','🍉','👞','⛄']},
+		{type:'final'},
 
 		
 	];
@@ -654,7 +658,7 @@ Riddler = function(){
 			'B':symbols[1],
 			'C':symbols[2],
 			'?':{name:'riddle screen'},
-			'*':{name:'blank screen'},
+			'*':{name:'nothing'},
 		}
 
 		isMistake = false;
