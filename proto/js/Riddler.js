@@ -337,6 +337,8 @@ Riddler = function(){
 	let self = this;
 	self.$el = $('<igb class="riddler">');
 
+
+
 	let audio = new AudioContext();
 	audio.add('tension',"./proto/audio/riddler-tension.mp3",0.5,false,true);
 	audio.add('boom',"./proto/audio/riddler-boom.mp3");
@@ -718,10 +720,7 @@ Riddler = function(){
 
 			for(var iq in question.q) things.unshift({s:'I',t:'<riddlertext>'+question.q[iq]+'</riddlertext>'});
 		}
-
-		
-		
-
+	
 		
 		if(question.type=='final'){
 			isEnabled = false;
@@ -770,7 +769,7 @@ Riddler = function(){
 
 		setTimeout(function(){
 
-			for(var i=0; i<order.length; i++) paintScreen(order[i],order[i],undefined,'riddler');
+			for(var i=0; i<order.length; i++) paintScreen(order[i],i,undefined,'riddler');
 
 			audio.play('music',true);
 
