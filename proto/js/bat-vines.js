@@ -9,7 +9,7 @@ Scene3D = function(){
                 display:block;
                 width: ${W}px;
                 height: ${H}px;
-                background: radial-gradient(red,black);
+                
                 
                 transform-origin: top left;
                 overflow: hidden;
@@ -36,7 +36,7 @@ Scene3D = function(){
 
     let $world = $('<world3D>').appendTo(self.$el);
 
-    new Building3D().$el.appendTo($world).css('transform','translateZ(-2000px) rotateX(-45deg)');
+    new Building3D().$el.appendTo($world);
 }
 
 Building3D = function(){
@@ -62,9 +62,14 @@ Building3D = function(){
 
     const FLOORMAP =
     [
-        'H H H',
-        'H H H',
-        'HHHHH',
+        [
+            'AH234',
+            '  1  ',
+            '  0  ',
+        ],
+        [
+            '98765',
+        ]
     ]
 
     const DIRS = [
@@ -74,27 +79,52 @@ Building3D = function(){
         {x:-1,y:0},
     ]
 
-    function getWalls(y,x){
+    function getWalls(level,y,x){
 
         let map = [];
         for(var d in DIRS){
-            map[d] = (FLOORMAP[y+DIRS[d].y][x+DIRS[d].x] == 'H')?0:1;
+
+            let adjacent = level[y+DIRS[d].y]?level[y+DIRS[d].y][x+DIRS[d].x]:undefined;
+
+            if(adjacent==undefined) adjacent = ' ';
+
+            map[d] = (adjacent == ' ')?1:0;
+           
         }
 
         return map;
     }
 
-    for(var r in FLOORMAP){
-        for(var c in FLOORMAP[r]){
-            let type = FLOORMAP[r][c];
+    function buildLevel(level,y){
+        for(var r=0; r<level.length; r++){
+            for(var c=0; c<level[r].length; c++){
+                let type = level[r][c];
 
-            if(type == 'H'){
-                let room = new Room3D(W,D,H,undefined,getWalls(r,c));
-                room.$el.appendTo(self.$el).css('transform',`translate3D(${W*c}px,${0}px,${D*r}px)`)
+                if(type != ' '){
+                    let room = new Room3D(W,D,H,'center/25% url(./proto/img/plant-wall.png)',getWalls(level,r,c));
+                    room.$el.appendTo(self.$el).css('transform',`translate3D(${W*c}px,${-H*y}px,${D*r}px)`);
+
+                   room.$el.attr('x',c);
+                   room.$el.attr('level',y);
+                   room.$el.attr('y',r);
+                }
+                
             }
-            
         }
     }
+
+
+
+    buildLevel(FLOORMAP[0],0);
+    buildLevel(FLOORMAP[1],1);
+
+    self.$el.find(`room3D .room3D-front`).hide();
+
+    for(var i=0; i<4; i++){
+        self.$el.find(`room3D[x='${i}'][level='${0}'][y='${0}'] .room3D-top`).hide();
+        self.$el.find(`room3D[x='${i}'][level='${1}'][y='${0}'] .room3D-bottom`).hide();
+    }
+
 }
 
 /*
@@ -919,7 +949,7 @@ BatVinesGame = function(){
                 height: ${BatVines.H}px;
                 transform-origin: top left;
                 text-align: center;
-                pointer-events: none;
+                /*pointer-events: none;*/
                 background: green;
                 font-family: "Lexend", serif;
                 font-weight:100;
