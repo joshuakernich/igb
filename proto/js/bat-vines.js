@@ -949,7 +949,7 @@ BatVinesGame = function(){
                 height: ${BatVines.H}px;
                 transform-origin: top left;
                 text-align: center;
-                /*pointer-events: none;*/
+                pointer-events: none;
                 background: green;
                 font-family: "Lexend", serif;
                 font-weight:100;
