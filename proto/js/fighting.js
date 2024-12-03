@@ -16,7 +16,12 @@ BatFighter = function($warning,$hit,$message){
 	let $fistLeft = $('<fighterfist>').appendTo(self.$el);
 	let $fistRight = $('<fighterfist>').appendTo(self.$el);
 
-	
+	for(var i=0; i<3; i++){
+		$('<fightpow>').appendTo(self.$el).css({
+			'left':(i%2)*100+'%',
+			'top':30+i*15+'%',
+		}).hide().click(onPow);
+	}
 
 	let n = 0;
 
@@ -97,6 +102,7 @@ BatFighter = function($warning,$hit,$message){
 	function doHitLeft(){
 		audio.stop('warning');
 		audio.play('boom',true);
+		audio.play('hit',true);
 		$hit.show();
 
 		$message.text('HIT!');
@@ -108,6 +114,7 @@ BatFighter = function($warning,$hit,$message){
 		},500);
 	}
 
+	let intervalReset;
 	function doMissLeft(){
 		audio.stop('warning');
 		audio.play('slowmo',true);
@@ -115,7 +122,13 @@ BatFighter = function($warning,$hit,$message){
 		$message.text('DODGED!');
 
 		setTimeout(function(){
+			nPow = -1;
+			self.$el.find('fightpow').show();
+		},500);
+
+		setTimeout(function(){
 			$message.empty();
+			
 		},1000);
 
 		$fistLeft.css('z-index',1).animate({
@@ -130,7 +143,7 @@ BatFighter = function($warning,$hit,$message){
 			'bottom':'10%',
 		},2500);
 
-		setTimeout(function(){
+		intervalReset = setTimeout(function(){
 			self.to = undefined;
 			audio.stop('slowmo');
 			audio.play('reverse',true);
@@ -140,6 +153,7 @@ BatFighter = function($warning,$hit,$message){
 
 	function resetFists(){
 		$message.empty();
+		self.$el.find('fightpow').hide();
 
 		$fistLeft.animate({
 				bottom: '40%',
@@ -163,6 +177,26 @@ BatFighter = function($warning,$hit,$message){
 	audio.add('footsteps','./proto/audio/fight-footsteps.mp3',1,true);
 	audio.add('slowmo','./proto/audio/fight-slowmo.mp3', 0.5);
 	audio.add('reverse','./proto/audio/fight-reverse.mp3', 0.5);
+	audio.add('hit','./proto/audio/fight-hit.mp3', 0.5);
+
+	audio.add('pow-first','./proto/audio/fight-pow-first.mp3', 1);
+	audio.add('pow-second','./proto/audio/fight-pow-second.mp3', 1);
+	audio.add('pow-last','./proto/audio/fight-pow-last.mp3', 1);
+	let pows = ['pow-first','pow-second','pow-last'];
+	
+	let nPow = -1;
+	function onPow(){
+		$(this).hide();
+		nPow ++;
+		audio.play(pows[nPow],true);
+		if(nPow==2){
+			audio.play('boom',true);
+			clearInterval(intervalReset);
+			self.to = undefined;
+			audio.stop('slowmo');
+			resetFists();
+		}
+	}
 
 	self.tick = function(){
 
@@ -220,6 +254,7 @@ BatFightGame = function(){
 				background-repeat: no-repeat;
 
 				font-family: "Bangers", system-ui;
+				
 			}
 
 			fightlayer{
@@ -389,6 +424,22 @@ BatFightGame = function(){
 				margin: auto;
 			}
 
+			fightpow{
+				position: absolute;
+				display: block;
+				width: 150px;
+				height: 150px;
+				border: 20px solid white;
+				box-sizing: border-box;
+				transform: translate(-50%, -50%);
+				border-radius: 100%;
+				opacity: 0.5;
+				z-index: 10;
+				background: rgba(255,255,255,0.5);
+
+				pointer-events: auto;
+			}
+
 			@keyframes flash{
 				0%{
 					opacity:1;
@@ -420,21 +471,30 @@ BatFightGame = function(){
 	let $warning = $('<fightwarning>').appendTo($game).hide();
 	let $hit = $('<fighthit>').appendTo($game).hide();
 	let $message = $('<fightmessage>').appendTo($game);
+	
+	
 
-
+	
 	let fighter = new BatFighter($warning,$hit,$message);
 	fighter.$el.appendTo($fg);
 
 	let audio = new AudioContext();
 	audio.add('music','./proto/audio/fight-music.mp3',0.5,true,true);
+	
 
+	
+	let layerWas = -1;
 	function tick(){
 		let w = $(document).innerWidth();
 		let scale = (w/3)/W;
 		$game.css('transform','scale('+scale+')');
 
 		fighter.tick();
-		self.$el.find('fightlayer').eq(Math.round(fighter.at.layer)).append(fighter.$el);
+		if(layerWas != fighter.at.layer){
+			self.$el.find('fightlayer').eq(Math.round(fighter.at.layer)).append(fighter.$el);
+			layerWas = fighter.at.layer;
+		}
+		
 	}
 
 	setInterval(tick,1000/FPS);
