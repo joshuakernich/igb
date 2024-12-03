@@ -5,7 +5,7 @@ BatFighter = function($warning,$hit,$message){
 	const PUNCHLEFT = {x:600,y:0,scale:1,layer:2};
 	const MISSLEFT = {x:600,y:0,scale:1,layer:2};
 	const HIDELEFT = {x:270,y:150,scale:0.5,layer:0};
-	const PEAKLEFT = {x:500,y:150,scale:0.5,layer:0};
+	const PEAKLEFT = {x:500,y:150,scale:0.5,layer:2};
 	const HIDERIGHT = {x:900,y:300,scale:0.2,layer:0};
 	const PEAKRIGHT = {x:800,y:300,scale:0.2,layer:0};
 	
@@ -31,9 +31,23 @@ BatFighter = function($warning,$hit,$message){
 		{ time:500, pt:HIDERIGHT },
 		{ time:1000, pt:HIDELEFT },
 		{ time:500, pt:PEAKLEFT },
+
+		{ fn:doThrowWarningLeft },
+		{ fn:doThrowLeft },
+		{ fn:doThrowHitLeft },
+
+		{ time:1000, pt:HIDELEFT },
+		{ time:500, pt:PEAKLEFT },
+
+		{ fn:doThrowWarningLeft },
+		{ fn:doThrowLeft },
+		{ fn:doThrowMissLeft },
+
+		{ time:1000, pt:HIDELEFT },
+		{ time:500, pt:PEAKLEFT },
 		{ time:1000, pt:CENTER },
 
-		{ fn:doWarningLeft },
+		{ time:300, fn:doWarningLeft },
 		{ fn:doPunchLeft },
 		{ fn:doHitLeft },
 
@@ -62,6 +76,23 @@ BatFighter = function($warning,$hit,$message){
 	let iSequence = -1;
 
 
+	function doThrowWarningLeft(){
+
+
+		audio.play('warning',true);
+		
+		setTimeout(function(){
+			$warning.show();
+		},200);
+
+		setTimeout(function(){
+			$warning.hide();
+		},700)
+
+		setTimeout(function(){
+			self.to = undefined;
+		},900)
+	}
 
 	function doWarningLeft(){
 
@@ -84,6 +115,71 @@ BatFighter = function($warning,$hit,$message){
 		setTimeout(function(){
 			self.to = undefined;
 		},900)
+	}
+
+	let $projectile;
+
+	function doThrowLeft(){
+		
+		audio.play('throw',true);
+
+		setTimeout(function(){
+			$projectile = $('<fightprojectile>')
+			.appendTo(self.$el)
+			.css({
+				left:'50%',
+				bottom:'50%',
+			})
+			.animate({
+				width:'500px',
+				height:'500px',
+			},{
+				duration:500,
+				easing:'linear',
+			})
+		},100)
+
+		
+
+		setTimeout(function(){
+
+			self.to = undefined;
+		},600);
+	}
+
+	function doThrowHitLeft(){
+		audio.stop('warning');
+		audio.play('boom',true);
+		audio.play('crash',true);
+		
+		$hit.show();
+
+		$message.text('HIT!');
+
+		setTimeout(function(){
+			self.to = undefined;
+			$message.empty();
+			$projectile.remove();
+		},800);
+	}
+
+	function doThrowMissLeft(){
+		audio.stop('warning');
+		$message.text('DODGED!');
+		audio.play('reverse',true);
+
+		$projectile.animate(
+		{width:700,height:700,opacity:0},
+		{
+			duration:500,
+			easing:'linear',
+		});
+
+		setTimeout(function(){
+			self.to = undefined;
+			$message.empty();
+			$projectile.remove();
+		},800);
 	}
 
 	function doPunchLeft(){
@@ -178,6 +274,8 @@ BatFighter = function($warning,$hit,$message){
 	audio.add('slowmo','./proto/audio/fight-slowmo.mp3', 0.5);
 	audio.add('reverse','./proto/audio/fight-reverse.mp3', 0.5);
 	audio.add('hit','./proto/audio/fight-hit.mp3', 0.5);
+	audio.add('throw','./proto/audio/fight-throw.mp3', 0.5);
+	audio.add('crash','./proto/audio/fight-crash.mp3', 0.2);
 
 	audio.add('pow-first','./proto/audio/fight-pow-first.mp3', 1);
 	audio.add('pow-second','./proto/audio/fight-pow-second.mp3', 1);
@@ -212,10 +310,12 @@ BatFighter = function($warning,$hit,$message){
 			if(self.to.pt){
 				audio.play('footsteps');	
 				$(self.at).animate(self.to.pt,self.to.time);
+				
 				setTimeout(function(){
-					self.to = undefined;
 					audio.stop('footsteps');
+					self.to = undefined;
 				},self.to.time);
+				
 				
 			}
 		}
@@ -392,23 +492,33 @@ BatFightGame = function(){
 				animation-iteration-count: infinite;
 			}
 
+			fightprojectile{
+				display: block;
+				width: 100px;
+				height: 100px;
+				background: white;
+				border-radius: 100%;
+				position: absolute;
+				transform: translate(-50%, -50%);
+			}
+
 			fightwarning:before{
 				content:"DODGE";
 
-				
-				font-size: 40px;
+				font-size: 100px;
+				line-height: ${H}px;
 
 				text-align: center;
 
 				color: white;
 				position: absolute;
-				top: 45%;
+				top: 0px;
 				left: 0px;
 				right: 0px;
 
 			}
 
-			fightwarning:after{
+			/*fightwarning:after{
 				content:"";
 				
 				background-image: url(./proto/img/fight-fist-icon.png);
@@ -422,7 +532,7 @@ BatFightGame = function(){
 				top: 20%;
 				right: 0px;
 				margin: auto;
-			}
+			}*/
 
 			fightpow{
 				position: absolute;
