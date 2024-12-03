@@ -1,4 +1,4 @@
-BatFighter = function($warning,$hit){
+BatFighter = function($warning,$hit,$message){
 
 	const CENTER = {x:800,y:0,scale:1,layer:2};
 	const WARNLEFT = {x:600,y:0,scale:1,layer:2};
@@ -30,8 +30,18 @@ BatFighter = function($warning,$hit){
 
 		{ fn:doWarningLeft },
 		{ fn:doPunchLeft },
+		{ fn:doHitLeft },
 
-		{ time:300, pt:CENTER }
+		{ time:1000, pt:CENTER },
+		{ time:500, pt:HIDERIGHT },
+		{ time:1000, pt:HIDELEFT },
+		{ time:1000, pt:CENTER },
+
+		{ fn:doWarningLeft },
+		{ fn:doPunchLeft },
+		{ fn:doMissLeft },
+
+		{ time:1000, pt:CENTER }
 
 		/*{ time:200, pt:PUNCHLEFT },
 		{ time:300, fn:doPunchLeft },
@@ -80,7 +90,7 @@ BatFighter = function($warning,$hit){
 		},200);
 
 		setTimeout(function(){
-			doMissLeft();
+			self.to = undefined;
 		},200);
 	}
 
@@ -88,11 +98,25 @@ BatFighter = function($warning,$hit){
 		audio.stop('warning');
 		audio.play('boom',true);
 		$hit.show();
+
+		$message.text('HIT!');
+
+		setTimeout(function(){
+			self.to = undefined;
+
+			resetFists();
+		},500);
 	}
 
 	function doMissLeft(){
 		audio.stop('warning');
 		audio.play('slowmo',true);
+
+		$message.text('DODGED!');
+
+		setTimeout(function(){
+			$message.empty();
+		},1000);
 
 		$fistLeft.css('z-index',1).animate({
 			'left':'150%',
@@ -115,6 +139,8 @@ BatFighter = function($warning,$hit){
 	}
 
 	function resetFists(){
+		$message.empty();
+
 		$fistLeft.animate({
 				bottom: '40%',
 				left: '-10%',
@@ -135,8 +161,8 @@ BatFighter = function($warning,$hit){
 	audio.add('punch','./proto/audio/fight-punch.mp3',0.3);
 	audio.add('boom','./proto/audio/riddler-boom.mp3');
 	audio.add('footsteps','./proto/audio/fight-footsteps.mp3',1,true);
-	audio.add('slowmo','./proto/audio/fight-slowmo.mp3');
-	audio.add('reverse','./proto/audio/fight-reverse.mp3');
+	audio.add('slowmo','./proto/audio/fight-slowmo.mp3', 0.5);
+	audio.add('reverse','./proto/audio/fight-reverse.mp3', 0.5);
 
 	self.tick = function(){
 
@@ -178,6 +204,9 @@ BatFightGame = function(){
 
 	$("head").append(`
 		<style>
+
+			@import url('https://fonts.googleapis.com/css2?family=Bangers&display=swap');
+
 			fightgame{
 				display:block;
 				position:absolute;
@@ -189,6 +218,8 @@ BatFightGame = function(){
 				transform-origin: top left;
 				background-size: ${W}px;
 				background-repeat: no-repeat;
+
+				font-family: "Bangers", system-ui;
 			}
 
 			fightlayer{
@@ -299,6 +330,16 @@ BatFightGame = function(){
 				border: 10px solid red;
 			}
 
+			fightmessage{
+				display:block;
+				position:absolute;
+				width: 50%;
+				line-height: ${H/2}px;
+				color: white;
+				text-align: center;
+				font-size: 100px;
+			}
+
 			fightwarning{
 				display:block;
 				position:absolute;
@@ -378,9 +419,10 @@ BatFightGame = function(){
 
 	let $warning = $('<fightwarning>').appendTo($game).hide();
 	let $hit = $('<fighthit>').appendTo($game).hide();
+	let $message = $('<fightmessage>').appendTo($game);
 
 
-	let fighter = new BatFighter($warning,$hit);
+	let fighter = new BatFighter($warning,$hit,$message);
 	fighter.$el.appendTo($fg);
 
 	let audio = new AudioContext();
