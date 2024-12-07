@@ -74,14 +74,12 @@ BatClimbing = function(){
 			},
 
 
-			
-
-			'batside:nth-of-type(2) batlevel:first-of-type:before':{
-				'content':'"ACE CHEMICALS"',
+			'batside:nth-of-type(2) batlevel:first-of-type:after':{
+				'content':'"ACE"',
 				'text-align':'center',
-				'line-height':'160px',
+				'line-height':'360px',
 				'color':'white',
-				'font-size':'200px',
+				'font-size':'500px',
 				'display':"block",
 				'position':'absolute',
 				'left':'0px',
@@ -89,8 +87,28 @@ BatClimbing = function(){
 				'bottom':'0px',
 				'text-shadow': '0px 0px 20px yellow, 0px 0px 50px white',
 				'white-space':'normal',
-				'perspective':'500px',
+				
 				'transform':'rotateX(45deg)',
+				
+				'transform-origin':'bottom center',
+				'z-index':'1',
+			},
+
+			'batside:nth-of-type(2) batlevel:first-of-type:before':{
+				'content':'"CHEMICALS"',
+				'text-align':'center',
+				'line-height':'100px',
+				'color':'white',
+				'font-size':'100px',
+				'display':"block",
+				'position':'absolute',
+				'left':'0px',
+				'right':'0px',
+				'bottom':'-160px',
+				'text-shadow': '0px 0px 20px yellow, 0px 0px 50px white',
+				'white-space':'normal',
+				
+				'letter-spacing':'30px',
 				
 				'transform-origin':'bottom center',
 				'z-index':'1',
@@ -143,9 +161,9 @@ BatClimbing = function(){
 			'batgrid[scaffold="Y"]':{
 				'box-sizing':'border-box',
 				
-				'border-left':'20px solid #2C1641',
-				'border-right':'20px solid #2C1641',
-				'border-top':'40px solid #2C1641 !important',
+				'border-left':'20px solid #333',
+				'border-right':'20px solid #333',
+				'border-top':'20px solid #333 !important',
 
 			},
 
@@ -159,26 +177,28 @@ BatClimbing = function(){
 				'top':'20px',
 				'bottom':'40px',
 				'background':'white',
+				'overflow':'hidden',
 			},
 
 			'batwindow.peak:after':{
 				'content':'""',
 				'display':'block',
 				'position':'absolute',
-				'left':'50%',
-				'right':'0px',
-				'top':'40px',
-				'bottom':'0px',
-				'background':'orange',
-				'border-radius':'50px 0px 0px 0px',
+				'left':'20px',
+				'top':'50px',
+				
+				'width':'150px',
+				'height':'235px',
+
+				'background-image':'url(./proto/img/climb-goon.png)',
+				'background-size':'100%',
+				'opacity':'0.5',
 			},
 
 			'batwindow.attack:after':{
-				'left':'10px',
-				'right':'10px',
-				'top':'40px',
-				'border-radius':'50px 50px 0px 0px',
-				'background':'red',
+				'left':'-50px',
+				'opacity':'1',
+				'width':'220px',
 			},
 
 
@@ -189,51 +209,52 @@ BatClimbing = function(){
 				'width':'0px',
 				'position':'absolute',
 				'bottom':'0px',
-				'z-index':'200',
+				'z-index':'10',
 				
 			},
 
 			'batjoker:after':{
 				'content':'" "',
 				'display':'block',
-				'height':'200px',
-				'width':'100px',
-				'background':'black',
+				'height':'230px',
+				'width':'150px',
+				
 				'position':'absolute',
 				'bottom':'0px',
-				'left':'-50px',
+				
 				'border-radius':'50px 50px 0px 0px',
-				'background-image':'url(./proto/img/climb-joker-face.png)',
+				'background-image':'url(./proto/img/climb-joker.png)',
 				'background-size':'100%',
-				'background-position':'top center',
-				'background-repeat':'no-repeat',
-				'box-shadow':'inset 0px 2px white',
+				
 
 
+				'transform':'translateX(-50%)',
 			},
 
 			'batthrower:after':{
 				'content':'" "',
 				'display':'block',
-				'height':'200px',
-				'width':'100px',
-				'background':'orange',
+				'height':'235px',
+				'width':'150px',
+				'background':'url(./proto/img/climb-goon.png)',
+				'background-size':'100%',
 				'position':'absolute',
 				'bottom':'0px',
-				'left':'-50px',
-				'border-radius':'50px 50px 0px 0px',
+				
+				'transform':'translateX(-50%)',
 			},
 
 			'batman:after':{
 				'content':'""',
 				'display':'block',
-				'height':'230px',
-				'width':'100px',
+				'height':'235px',
+				'width':'150px',
 				'position':'absolute',
 				'bottom':'0px',
-				'left':'-50px',
+
 				'background-image':'url(./proto/img/climb-avatar-red.png)',
 				'background-size':'100%',
+				'transform':'translateX(-50%)',
 			},
 
 			'batcheckpoint:after':{
@@ -355,15 +376,6 @@ BatClimbing = function(){
 				'left':'0px',
 			},
 
-			'batjokerbarrel':{
-				'display':'block',
-				'height':'100px',
-				'width':'100px',
-				'background':'purple',
-				'position':"absolute",
-				'transform':'translate(-50%, -100%)',
-				'border-radius':"100%",
-			},
 
 
 		}
@@ -391,7 +403,7 @@ BatClimbing = function(){
 	[
 		['------>--','----J----','--<------'],
 		['----^----','  -----  ','----^----'],
-		['--^------','<---S--->','------^--'],
+		['--^------','<---C--->','------^--'],
 
 		['---------','}---^---{','---------'],
 		['---------','--^---^--','---------'],
@@ -440,6 +452,10 @@ BatClimbing = function(){
 	audio.add('winch','./proto/audio/climb-winch.mp3',0.2);
 	audio.add('arm','./proto/audio/climb-arm.mp3',0.5);
 	audio.add('bounce','./proto/audio/climb-bounce.mp3',0.1);
+	
+	audio.add('pow','./proto/audio/fight-pow-last.mp3',0.5);
+	audio.add('hit','./proto/audio/fight-hit.mp3',0.2);
+	audio.add('boom','./proto/audio/riddler-boom.mp3',0.5);
 
 	let towers = [];
 	let windows = [];
@@ -447,7 +463,19 @@ BatClimbing = function(){
 	let boxes = [];
 	let throwers = [];
 	let barrels = [];
-	let checkpoints = [];
+
+	let isLeft = false;
+	let isRight = false;
+	let isRetractGrapshot = false;
+	let isGrappleTime = false;
+	let isFalling = false;
+
+	let man;
+	let joker;
+
+	const FLOORSPERSTAGE = 3;
+	let iStage = 10;
+
 
 	for(var t=0; t<3; t++){
 
@@ -457,61 +485,83 @@ BatClimbing = function(){
 
 	}
 
-	for(var l in data){
+	function respawn(){
 
-		for(var t=0; t<data[l].length; t++){
+		for(t in towers) towers[t].$el.empty();
 
-			let $l = $('<batlevel>').appendTo(towers[t].$el);
+		windows.length = 0;
+		grapnels.length = 0;
+		boxes.length = 0;
+		throwers.length = 0;
+		barrels.length = 0;
+		isGrappleTime = false;
+		isFalling = false;
+		man = undefined;
+		
 
-			towers[t].$ls[l] = $l;
+		for(var l in data){
 
-			for(var n=0; n<data[l][t].length; n++){
-				
-				let type = data[l][t][n];
+			let iStageForLevel = Math.floor((data.length-l-1)/FLOORSPERSTAGE);
 
-				let $g = $('<batgrid>').appendTo($l).attr('type',type);
+			for(var t=0; t<data[l].length; t++){
 
-				if(fall[l] && fall[l][t][n] == 'Y'){
-					$g.attr('fall','Y');
+				let $l = $('<batlevel>').appendTo(towers[t].$el);
+
+				towers[t].$ls[l] = $l;
+
+				for(var n=0; n<data[l][t].length; n++){
+					
+					let type = data[l][t][n];
+
+					let $g = $('<batgrid>').appendTo($l).attr('type',type);
+
+					if(fall[l] && fall[l][t][n] == 'Y'){
+						$g.attr('fall','Y');
+					}
+
+					if(SCAFFOLD[l] && SCAFFOLD[l][t][n] == 'Y'){
+						$g.attr('scaffold','Y');
+					}
+
+					if(fall[l-1] && fall[l-1][t][n] == 'Y'){
+						$g.attr('fall','Y');
+					}
+					
+
+					if(!man && type=='C' && iStage == iStageForLevel){
+						man = { dir:1, t:t, x:n+0.5, ox:0, y:l, $el:$('<batman>').appendTo($l) };
+						self.$el.find('battower').css({'bottom':-iStage*FLOORSPERSTAGE*LEVEL+'px'});
+					}
+
+					if(type=='J') joker = { iStage:iStageForLevel, n:0, dir:1, t:t, x:n+0.5, ox:0, y:l, $el:$('<batjoker>').appendTo($l) };
+					if(type=='}' || type=='{') throwers.push({ iStage:iStageForLevel, tick:0, t:t, x:n+0.5, y:l, $el:$('<batthrower>').appendTo($g), dir:type=='}'?1:-1 });
+					if(type=='B') boxes.push({ t:t, x:n+0.5, y:l, $el:$('<batbox>').appendTo($g) });
+					if(type=='W') windows.push({ t:t, tick:0, x:n+0.5, y:l, $el:$('<batwindow>').appendTo($g) });
+					if(type=='^' || type=='>' || type=='<') grapnels.push({ dir:type, t:t, x:n+0.5, y:l, $el:$('<batgrapnel>').appendTo($g).attr('type',type) });
+					
+
 				}
-
-				if(SCAFFOLD[l] && SCAFFOLD[l][t][n] == 'Y'){
-					$g.attr('scaffold','Y');
-				}
-
-				if(fall[l-1] && fall[l-1][t][n] == 'Y'){
-					$g.attr('fall','Y');
-				}
-				
-				if(type=='C') checkpoints.push({ t:t, x:n+0.5, ox:0, y:l, $el:$('<batcheckpoint>').appendTo($g) });
-				if(type=='S') man = { dir:1, t:t, x:n+0.5, ox:0, y:l, $el:$('<batman>').appendTo($l) };
-				if(type=='J') joker = { n:0, dir:1, t:t, x:n+0.5, ox:0, y:l, $el:$('<batjoker>').appendTo($l) };
-				if(type=='}' || type=='{') throwers.push({ tick:0, t:t, x:n+0.5, y:l, $el:$('<batthrower>').appendTo($g), dir:type=='}'?1:-1 });
-				if(type=='B') boxes.push({ t:t, x:n+0.5, y:l, $el:$('<batbox>').appendTo($g) });
-				if(type=='W') windows.push({ t:t, tick:0, x:n+0.5, y:l, $el:$('<batwindow>').appendTo($g) });
-				if(type=='^' || type=='>' || type=='<') grapnels.push({ dir:type, t:t, x:n+0.5, y:l, $el:$('<batgrapnel>').appendTo($g).attr('type',type) });
-				
-
 			}
 		}
-	}
-	
-	const FLOORSPERSTAGE = 3;
-	let iStage = Math.floor((data.length-man.y-1)/FLOORSPERSTAGE);
-	let yMin = 0;
-	let yMax = yMin + 3;
 
-	self.$el.find('battower').css({'bottom':-iStage*FLOORSPERSTAGE*LEVEL+'px'});
+
+	}
+
+
+
+	respawn();
+
+	
+	
+	
+
+	
 
 	let wWas;
 	let iDudeWas = -1;
 	let interval;
 	let fps = 50;
-	let isLeft = false;
-	let isRight = false;
-	let isRetractGrapshot = false;
-	let isGrappleTime = false;
-	let isFalling = false;
+	
 
 	let grapshot = { $el:$('<grapshot>') }
 
@@ -545,7 +595,7 @@ BatClimbing = function(){
 		if(man.x>8.8) man.x = 8.8;
 
 		if(!isGrappleTime && !isFalling){
-			let ix = Math.round(man.x);
+			let ix = Math.floor(man.x);
 			if(fall[man.y] && fall[man.y][man.t][ix] == 'Y'){
 				man.y++;
 				isFalling = true;
@@ -579,8 +629,7 @@ BatClimbing = function(){
 						man.$el.css({'bottom':'-300px'});
 
 						iStage = Math.floor((data.length-man.y-1)/FLOORSPERSTAGE);
-						yMax = data.length - iStage*FLOORSPERSTAGE;
-						yMin = yMax - FLOORSPERSTAGE;
+						console.log('to stage',iStage);
 
 						self.$el.find('battower').animate({'bottom':-iStage*FLOORSPERSTAGE*LEVEL+'px'});
 					}
@@ -656,7 +705,8 @@ BatClimbing = function(){
 					$el:$('<batbarrel>').appendTo(towers[throwers[n].t].$ls[throwers[n].y]), 
 					t:throwers[n].t, 
 					x:throwers[n].x, 
-					y:throwers[n].y 
+					y:throwers[n].y,
+					iStage:throwers[n].iStage,
 				});
 			}
 		}
@@ -682,7 +732,8 @@ BatClimbing = function(){
 
 						boxes[b].$el.css({'bottom':'10px'}).animate({'bottom':'0px'},100);
 
-						if(barrels[n].y>yMin && barrels[n].y<yMax){
+						if(barrels[n].iStage == iStage){
+
 							audio.play('bounce',true);
 							setTimeout(function(){
 								audio.play('bounce',true);
@@ -693,6 +744,23 @@ BatClimbing = function(){
 			}
 
 			if(barrels[n].x<0 || barrels[n].x>9) barrels[n].$el.remove();
+
+
+			if( !isFalling && !isGrappleTime &&
+				barrels[n].t == man.t &&
+				barrels[n].y == man.y &&
+				Math.abs( barrels[n].x - man.x ) < 0.5 ){
+				
+				// death!
+				die();
+			}
+		}
+
+		function die(){
+			audio.play('hit',true);
+			audio.play('boom',true);
+			respawn();
+
 		}
 
 		function getPtOnBezier(t, p0, p1, p2, p3){
@@ -720,88 +788,76 @@ BatClimbing = function(){
 			return {x:x,y:y};
 		}
 
+
+
 		//JOKER LOGIC 
-		if( !isGrappleTime ) tx = man.x + (man.t-1) * 10;
-		let dxJoker = joker.x - tx;
-		let dJoker = dxJoker>0?-1:1;
-		joker.dir = dJoker;
 
-		if(dxJoker > 0.2 || dxJoker < -0.2) joker.x += dJoker*0.1;
-		if(joker.x<2.5) joker.x = 2.5;
-		if(joker.x>6.5) joker.x = 6.5;
+		if(iStage == joker.iStage){
+			if( !isGrappleTime ) tx = man.x + (man.t-1) * 10;
+			let dxJoker = joker.x - tx;
+			let dJoker = dxJoker>0?-1:1;
+			joker.dir = dJoker;
 
-		joker.$el.css({left:(joker.x*GRID)+'px','transform':'scaleX('+joker.dir+')'});
+			if(dxJoker > 1 || dxJoker < -1) joker.x += dJoker*0.1;
+			if(joker.x<2.5) joker.x = 2.5;
+			if(joker.x>6.5) joker.x = 6.5;
 
-		joker.n++;
-		if(joker.n%(fps*4)==0){
-			//THROW BARREL
+			joker.$el.css({left:(joker.x*GRID)+'px','transform':'scaleX('+joker.dir+')'});
 
-			let x = man.x;
-			if(man.t==0) x = data[0][0].length - 0.5;
-			if(man.t==2) x = 0.5;
+			joker.n++;
+			if(joker.n%(fps*4)==0){
+				//THROW BARREL
 
-			let target = {t:man.t, x:x, y:man.y};
+				let x = man.x;
+				if(man.t==0) x = data[0][0].length - 0.5;
+				if(man.t==2) x = 0.5;
 
-			let ptTarget = getGlobalGameXY(target);
-			let ptJoker = getGlobalGameXY(joker);
-			ptJoker.y += 150;
+				let target = {t:man.t, x:x, y:man.y};
 
-			
-			let $barrel = $('<batbarrel>').appendTo($game);
+				let ptTarget = getGlobalGameXY(target);
+				let ptJoker = getGlobalGameXY(joker);
+				ptJoker.y += 150;
 
-		
-			let tx = ptTarget.x - ptJoker.x;
-			let dir = tx>0?1:-1;
-			let time = Math.abs(tx)/W * 500 + 800;
-			let ptA = {x:(ptJoker.x+ptTarget.x)/2,y:ptJoker.y+300};
-			let ptB = {x:(ptJoker.x+ptTarget.x)/2,y:ptTarget.y+500};
-			
-
-			$({amt:0}).animate({amt:1},{duration:time,step:function(amt){
-
-				let pt = getPtOnBezier( amt, ptJoker, ptA, ptB, ptTarget );
-
-				$barrel.css({
-					left: pt.x + 'px',
-					bottom: pt.y + 'px',
-				})
-			},complete:function(){
-
-				//add joker to array
-
-				barrels.push({ 
-					dir:dir,
-					$el:$barrel.appendTo(towers[target.t].$ls[target.y]), 
-					t:target.t, 
-					x:target.x, 
-					y:target.y,
-					
-				});
-
-				$barrel.css({
-					bottom:0,
-					left:target.x*GRID,
-				}).animate({bottom:50},{duration:50,ease:'linear'}).animate({bottom:0},{duration:200,ease:'linear'});
-
-			}})
-
-		
-
-			
-	
-			//console.log(o);
-			//$barrel.offset(o);
-
-			/*barrels.push({ 
-				dir:joker.dir,
-				$el:$('<batbarrel>').appendTo(towers[joker.t].$ls[joker.y]), 
-				t:joker.t, 
-				x:joker.x, 
-				y:joker.y,
-				bounce: 5,
-				yBounce:1,
 				
-			});*/
+				let $barrel = $('<batbarrel>').appendTo($game);
+
+			
+				let tx = ptTarget.x - ptJoker.x;
+				let dir = tx>0?1:-1;
+				let time = Math.abs(tx)/W * 500 + 800;
+				let ptA = {x:(ptJoker.x+ptTarget.x)/2,y:ptJoker.y+300};
+				let ptB = {x:(ptJoker.x+ptTarget.x)/2,y:ptTarget.y+500};
+				
+
+				$({amt:0}).animate({amt:1},{duration:time,step:function(amt){
+
+					let pt = getPtOnBezier( amt, ptJoker, ptA, ptB, ptTarget );
+
+					$barrel.css({
+						left: pt.x + 'px',
+						bottom: pt.y + 'px',
+					})
+				},complete:function(){
+
+					//add joker barrel to array
+
+					barrels.push({ 
+						dir:dir,
+						$el:$barrel.appendTo(towers[target.t].$ls[target.y]), 
+						t:target.t, 
+						x:target.x, 
+						y:target.y,
+						
+					});
+
+					$barrel.css({
+						bottom:0,
+						left:target.x*GRID,
+					}).animate({bottom:50},{duration:50,ease:'linear'}).animate({bottom:0},{duration:200,ease:'linear'});
+
+				}})
+
+			}
 		}
 
 		
