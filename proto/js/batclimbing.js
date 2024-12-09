@@ -430,6 +430,34 @@ BatClimbing = function(){
 				 'z-index':'1',
 			},
 
+			'batskips:before':{
+				'content':'"SKIP TO"',
+
+			},
+
+			'batskips':{
+				'position':'absolute',
+				'left':'0px',
+				'bottom':'100px',
+				'width':W+'px',
+				'text-align':'center',
+				'z-index':'100',
+				'font-size':'30px',
+				'color':'white',
+			},
+
+			'batskips button':{
+				'font':'inherit',
+				
+				'width':'100px',
+				'height':'100px',
+				'color':'inherit',
+				
+				'border':'none',
+				'background':'rgba(255,255,255,0.1)',
+				'margin':'10px',
+			},
+
 
 
 		}
@@ -542,6 +570,13 @@ BatClimbing = function(){
 
 	}
 
+
+	let $skips = $('<batskips>').appendTo($game);
+
+	for(var i=0; i<data.length/3; i++){
+		$('<button>').appendTo($skips).text(i+1).data('iStage',i).click(skipTo);
+	}
+
 	
 	let wWas;
 	let iDudeWas = -1;
@@ -549,7 +584,7 @@ BatClimbing = function(){
 	let fps = 50;
 	
 
-	let grapshot = { $el:$('<grapshot>') }
+	let grapshot = { $el:$('<grapshot>') };
 
 	function getXForT(t){
 
@@ -1060,4 +1095,10 @@ BatClimbing = function(){
 	}
 
 	respawn();
+
+	function skipTo(){
+		iStage = $(this).data('iStage');
+		$skips.hide();
+		respawn(iStage);
+	}
 }
