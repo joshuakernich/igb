@@ -584,7 +584,9 @@ BatClimbing = function(){
 	let fps = 50;
 	
 
-	let grapshot = { $el:$('<grapshot>') };
+	let grapshot = { 
+		$el:$('<grapshot>') 
+	};
 
 	function getXForT(t){
 
@@ -688,17 +690,22 @@ BatClimbing = function(){
 					grapshot.t = man.t;
 
 					grapshot.$el.appendTo(towers[grapshot.t].$ls[grapshot.y]);
-					grapshot.$el.css({'left':grapshot.x*GRID+'px'});
+					//grapshot.$el.css({'left':grapshot.x*GRID+'px'});
 
 					man.$el.attr('pose','grapple');
 
-					$(man).animate({ox:0,oy:0},{
+					grapshot.deploy = 0;
+					$(grapshot).animate({deploy:1},200);
+					audio.play('hook',true);
+
+					$(man).delay(500).animate({ox:0,oy:0},{
 						duration:500 + extra,
 						start:function(){
 							audio.play('winch',true);
 						},
 						complete:function(){ 
 							audio.stop('winch',true);
+							audio.play('arm',true);
 							man.$el.attr('pose','idle');
 							grapshot.$el.remove();
 							isTransit = false; 
@@ -955,12 +962,22 @@ BatClimbing = function(){
 
 		
 
-		let dx = grapshot.x*GRID - (man.x*GRID + man.ox);
-		let dy = (grapshot.y-1)*LEVEL - man.y*LEVEL + parseFloat(man.$el.css('bottom')) + 130;
-		let d = Math.sqrt(dx*dx+dy*dy);
+		let dx = (grapshot.x - man.x)*GRID - man.ox;
+		let dy = (grapshot.y - man.y)*GRID + man.oy - 150;
+
+		
+		let d = Math.hypot(dx,dy);
 		let r = Math.atan2(dy,dx) + Math.PI;
 
-		grapshot.$el.css({'transform':'rotate('+r+'rad)', 'width':d+'px'});
+		let x = dx + dx*grapshot.deploy;
+		let y = dy + dy*grapshot.deploy;
+
+		grapshot.$el.css({
+			'left':grapshot.x*GRID-dx*(1-grapshot.deploy)+'px',
+			'top':-dy*(1-grapshot.deploy)+'px',
+			'transform':'rotate('+r+'rad)', 
+			'width':d*grapshot.deploy+'px'
+		});
 	}
 
 	function doPow(){
