@@ -698,7 +698,7 @@ BatClimbing = function(){
 					$(grapshot).animate({deploy:1},200);
 					audio.play('hook',true);
 
-					$(man).delay(500).animate({ox:0,oy:0},{
+					$(man).delay(300).animate({ox:0,oy:0},{
 						duration:500 + extra,
 						start:function(){
 							audio.play('winch',true);
