@@ -1,17 +1,11 @@
-BatFighter = function($warning,$hit,$message){
+BatFighter = function(){
 
-	const CENTER = {x:800,y:0,scale:1,layer:2};
-	const WARNLEFT = {x:600,y:0,scale:1,layer:2};
-	const PUNCHLEFT = {x:600,y:0,scale:1,layer:2};
-	const MISSLEFT = {x:600,y:0,scale:1,layer:2};
-	const HIDELEFT = {x:270,y:150,scale:0.5,layer:0};
-	const PEAKLEFT = {x:500,y:150,scale:0.5,layer:2};
-	const HIDERIGHT = {x:900,y:300,scale:0.2,layer:0};
-	const PEAKRIGHT = {x:800,y:300,scale:0.2,layer:0};
-	
+
 
 	let self = this;
 	self.$el = $('<fighter>');
+
+	let $panel = $('<fightpanel>').appendTo(self.$el).hide();
 
 	let $fistLeft = $('<fighterfist>').appendTo(self.$el);
 	let $fistRight = $('<fighterfist>').appendTo(self.$el);
@@ -26,67 +20,84 @@ BatFighter = function($warning,$hit,$message){
 	let n = 0;
 
 	let sequence = [
-		{ time:500, pt:HIDERIGHT },
-		{ time:500, pt:PEAKRIGHT },
-		{ time:500, pt:HIDERIGHT },
-		{ time:1000, pt:HIDELEFT },
-		{ time:500, pt:PEAKLEFT },
-
-		{ fn:doThrowWarningLeft },
-		{ fn:doThrowLeft },
-		{ fn:doThrowHitLeft },
-
-		{ time:1000, pt:HIDELEFT },
-		{ time:500, pt:PEAKLEFT },
-
-		{ fn:doThrowWarningLeft },
-		{ fn:doThrowLeft },
-		{ fn:doThrowMissLeft },
-
-		{ time:1000, pt:HIDELEFT },
-		{ time:500, pt:PEAKLEFT },
-		{ time:1000, pt:CENTER },
-
-		{ time:300, fn:doWarningLeft },
-		{ fn:doPunchLeft },
-		{ fn:doHitLeft },
-
-		{ time:1000, pt:CENTER },
-		{ time:500, pt:HIDERIGHT },
-		{ time:1000, pt:HIDELEFT },
-		{ time:1000, pt:CENTER },
-
-		{ fn:doWarningLeft },
-		{ fn:doPunchLeft },
-		{ fn:doMissLeft },
-
-		{ time:1000, pt:CENTER }
-
-		/*{ time:200, pt:PUNCHLEFT },
-		{ time:300, fn:doPunchLeft },
-		{ time:300, fn:doMissLeft },
 		
-		{ time:300, pt:CENTER, pose:'idle' },*/
 	]
 
-	self.at = {x:870,y:300,scale:0.2,layer:0};
+	self.at = {x:0,scale:1,iLayer:0};
 
 	self.to = undefined;
 
 	let iSequence = -1;
 
+	function getPt(iWall,iSide,iLayer=0){
+
+		return{
+			iWall:iWall,iSide:iSide, iLayer:iLayer,
+			x:(iWall + 0.5) * BatFightGame.W + iSide * BatFightGame.W/6,
+			scale:1-iLayer*0.3,
+		}
+	}
+
+	self.spawn = function(iWall,iSide,iLayer=0) {
+		sequence.push({ 
+			time:0, 
+			pt: getPt(iWall,iSide,iLayer),
+		})
+		return self;
+	}
+
+	self.peak = function(){
+
+		let anchor = sequence[sequence.length-1].pt;
+
+		sequence.push({ 
+			time:500, 
+			pt: getPt(anchor.iWall,anchor.iSide*0.5,anchor.iLayer),
+		})
+
+		sequence.push({ 
+			time:500, 
+			pt: getPt(anchor.iWall,anchor.iSide,anchor.iLayer),
+		})
+		return self;
+	}
+
+	self.sneak = function(iWall,iSide,iLayer=0) {
+		sequence.push({ 
+			time:1000, 
+			pt: getPt(iWall,iSide,iLayer),
+		})
+		return self;
+	}
+
+	self.punch = function(iWall,iSide){
+	
+		sequence.push({
+			fn:function(){ doWarning(iWall,iSide) },
+		})
+
+		sequence.push({
+			fn:function(){ doPunch(iWall,iSide) },
+		})
+
+		sequence.push({
+			fn:function(){ doMiss(iWall,iSide) },
+		})
+
+		return self;
+	}
+
 
 	function doThrowWarningLeft(){
-
 
 		audio.play('warning',true);
 		
 		setTimeout(function(){
-			$warning.show();
+			$panel.show();
 		},200);
 
 		setTimeout(function(){
-			$warning.hide();
+			$panel.hide();
 		},700)
 
 		setTimeout(function(){
@@ -94,22 +105,21 @@ BatFighter = function($warning,$hit,$message){
 		},900)
 	}
 
-	function doWarningLeft(){
+	function doWarning(iWall,iSide){
 
-		$(self.at).animate(WARNLEFT,300);
+		let pt = getPt(iWall,iSide);
+		$(self.at).animate({x:pt.x},300);
 
-		$fistLeft.animate({
-			'left':'-35%',
-			'bottom':'50%'
-		},300);
+
+
 		audio.play('warning',true);
 		
 		setTimeout(function(){
-			$warning.show();
+			$panel.show();
 		},200);
 
 		setTimeout(function(){
-			$warning.hide();
+			$panel.hide();
 		},700)
 
 		setTimeout(function(){
@@ -152,20 +162,20 @@ BatFighter = function($warning,$hit,$message){
 		audio.play('boom',true);
 		audio.play('crash',true);
 		
-		$hit.show();
+		$panel.show();
 
-		$message.text('HIT!');
+		$panel.text('HIT!');
 
 		setTimeout(function(){
 			self.to = undefined;
-			$message.empty();
+			$panel.empty();
 			$projectile.remove();
 		},800);
 	}
 
 	function doThrowMissLeft(){
 		audio.stop('warning');
-		$message.text('DODGED!');
+		$panel.text('DODGED!');
 		audio.play('reverse',true);
 
 		$projectile.animate(
@@ -177,14 +187,18 @@ BatFighter = function($warning,$hit,$message){
 
 		setTimeout(function(){
 			self.to = undefined;
-			$message.empty();
+			$panel.empty();
 			$projectile.remove();
 		},800);
 	}
 
-	function doPunchLeft(){
-		$fistLeft.animate({
-			'left':'-30%',
+	function doPunch(iWall,iSide){
+
+		let pt = getPt(iWall,iSide);
+
+		let $fist = iSide==-1?$fistLeft:$fistRight;
+
+		$fist.animate({
 			'bottom':'30%',
 			'width':'300px',
 			'height':'300px',
@@ -199,9 +213,9 @@ BatFighter = function($warning,$hit,$message){
 		audio.stop('warning');
 		audio.play('boom',true);
 		audio.play('hit',true);
-		$hit.show();
+		$panel.show();
 
-		$message.text('HIT!');
+		$panel.text('HIT!');
 
 		setTimeout(function(){
 			self.to = undefined;
@@ -211,11 +225,11 @@ BatFighter = function($warning,$hit,$message){
 	}
 
 	let intervalReset;
-	function doMissLeft(){
+	function doMiss(){
 		audio.stop('warning');
 		audio.play('slowmo',true);
 
-		$message.text('DODGED!');
+		$panel.text('DODGED!');
 
 		setTimeout(function(){
 			nPow = -1;
@@ -223,21 +237,21 @@ BatFighter = function($warning,$hit,$message){
 		},500);
 
 		setTimeout(function(){
-			$message.empty();
+			$panel.empty();
 			
 		},1000);
 
-		$fistLeft.css('z-index',1).animate({
-			'left':'150%',
-			'bottom':'20%',
-			'width':'150px',
-			'height':'150px',
-		},2500);
+		$fistLeft.animate({
+				bottom: '40%',
+				width: '100px',
+				height: '100px',
+			},2500);
 
 		$fistRight.animate({
-			'left':'170%',
-			'bottom':'10%',
-		},2500);
+				bottom: '40%',
+				width: '100px',
+				height: '100px',
+			},2500);
 
 		intervalReset = setTimeout(function(){
 			self.to = undefined;
@@ -248,19 +262,17 @@ BatFighter = function($warning,$hit,$message){
 	}
 
 	function resetFists(){
-		$message.empty();
+		$panel.empty();
 		self.$el.find('fightpow').hide();
 
 		$fistLeft.animate({
 				bottom: '40%',
-				left: '-10%',
 				width: '100px',
 				height: '100px',
 			},300);
 
 		$fistRight.animate({
 				bottom: '40%',
-				left: '110%',
 				width: '100px',
 				height: '100px',
 			},300);
@@ -302,29 +314,26 @@ BatFighter = function($warning,$hit,$message){
 			iSequence++;
 			self.to = sequence[iSequence%sequence.length];
 
-			$warning.hide();
-			$hit.hide();
+			$panel.hide();
 
 			if(self.to.fn) self.to.fn();
-			if(self.to.pose) self.$el.attr('pose',self.to.pose?self.to.pose:'idle');
+
 			if(self.to.pt){
 				audio.play('footsteps');	
-				$(self.at).animate(self.to.pt,self.to.time);
+				$(self.at).animate({
+					x:self.to.pt.x,
+					scale:self.to.pt.scale
+				},self.to.time);
 				
 				setTimeout(function(){
 					audio.stop('footsteps');
 					self.to = undefined;
 				},self.to.time);
-				
-				
 			}
 		}
 
-	
-
 		self.$el.css({
 			'left':self.at.x+'px',
-			'bottom':self.at.y+'px',
 			'transform':'scale('+self.at.scale+') translateX(-50%)',
 		})
 	}
@@ -332,8 +341,8 @@ BatFighter = function($warning,$hit,$message){
 
 BatFightGame = function(){
 
-	const W = 1600;
-	const H = 1000;
+	const W = BatFightGame.W = 1600;
+	const H = BatFightGame.H = 1000;
 	const FPS = 50;
 
 	$("head").append(`
@@ -346,7 +355,7 @@ BatFightGame = function(){
 				position:absolute;
 				top: 0px;
 				left: 0px;
-				width: ${W}px;
+				width: ${W*3}px;
 				height: ${H}px;
 				background: url(./proto/img/fight-bg.png);
 				transform-origin: top left;
@@ -354,7 +363,21 @@ BatFightGame = function(){
 				background-repeat: no-repeat;
 
 				font-family: "Bangers", system-ui;
+
+				background: linear-gradient(to bottom, #5B0100, #140000);
 				
+			}
+
+			fightgame:after{
+				content:"";
+				display:block;
+				position:absolute;
+				top: 0px;
+				left: ${W}px;
+				width: ${W}px;
+				height: ${H}px;
+				border-left: 1px solid white;
+				border-right: 1px solid white;
 			}
 
 			fightlayer{
@@ -366,34 +389,7 @@ BatFightGame = function(){
 				height: ${H}px;
 			}
 
-			fightlayer:nth-of-type(2):before{
-				content:"";
-				display:block;
-				position:absolute;
-				top: 0px;
-				left: 0px;
-				width: ${W*0.265}px;
-				height: ${H}px;
-				background: url(./proto/img/fight-bg.png);
-				background-size: ${W}px;
-				
-				background-repeat: no-repeat;
-			}
-
-			fightlayer:nth-of-type(2):after{
-				content:"";
-				display:block;
-				position:absolute;
-				top: 0px;
-				right: 0px;
-				width: ${W*0.468}px;
-				height: ${H}px;
-				background: url(./proto/img/fight-bg.png);
-				background-size: ${W}px;
-				
-				background-position: top right;
-				background-repeat: no-repeat;
-			}
+			
 
 			fighter{
 				display:block;
@@ -423,73 +419,51 @@ BatFightGame = function(){
 				height: 100px;
 				border-radius: 25%;
 				background: black;
-				transform: translate(-50%,-50%);
+	
 				display:block;
 				position:absolute;
 				bottom: 40%;
-				left: -10%;
+				left: -30%;
 				
 				border: 5px solid gray;
 				box-sizing: border-box;
 			}
 
 			fighterfist:last-of-type{
-				left: 110%;
+				left: auto;
+				right: -30%;
 			}
 
-			fighter[pose='warn-left'] fighterfist:first-of-type{
-				
-				left: -50%;
-				bottom: 50%;
-				transform: scale(0.8);
-			}
 
-			fighter[pose='punch-left'] fighterfist:first-of-type{
-				
-				left: -50%;
-				bottom: 50%;
-				z-index: 2;
-				transform: scale(3);
-				
-			}
-
-			fighthit{
+			fightpanel{
 				display:block;
 				position:absolute;
-				width: 50%;
-				height: 100%;
-				top: 0px;
+				width: ${W/3}px;
+				height: ${H}px;
+				padding: 50px;
+				bottom: 0px;
 				left: 0px;
-				background: radial-gradient( transparent, rgba(255,0,0,0.5) );
-				box-sizing: border-box;
-				border: 10px solid red;
-			}
+				background: rgba(255,255,255,0.1);
+				background-size: 20%;
+				animation: flash;
+				animation-duration: 0.2s;
+				animation-iteration-count: infinite;
+				
+				transform: translateX(-50%);
 
-			fightmessage{
-				display:block;
-				position:absolute;
-				width: 50%;
 				line-height: ${H/2}px;
 				color: white;
 				text-align: center;
 				font-size: 100px;
+
+				box-sizing: border-box;
+				
+				background: radial-gradient( transparent, rgba(255,255,255,0.5) );
+				z-index: 10;
 			}
 
-			fightwarning{
-				display:block;
-				position:absolute;
-				width: 50%;
-				height: 100%;
-				top: 0px;
-				left: 0px;
-				background: rgba(255,255,255,0.1);
-				
-				
-				background-size: 20%;
-
-				animation: flash;
-				animation-duration: 0.2s;
-				animation-iteration-count: infinite;
+			fightpanel[type='hit']{
+				background: rgba(255,255,255,0.5);
 			}
 
 			fightprojectile{
@@ -502,54 +476,7 @@ BatFightGame = function(){
 				transform: translate(-50%, -50%);
 			}
 
-			fightwarning:before{
-				content:"DODGE";
-
-				font-size: 100px;
-				line-height: ${H}px;
-
-				text-align: center;
-
-				color: white;
-				position: absolute;
-				top: 0px;
-				left: 0px;
-				right: 0px;
-
-			}
-
-			/*fightwarning:after{
-				content:"";
-				
-				background-image: url(./proto/img/fight-fist-icon.png);
-				background-position: center;
-				background-repeat: no-repeat;
-				background-size: 100%;
-				width: 20%;
-				position: absolute;
-				bottom: 0px;
-				left: 0px;
-				top: 20%;
-				right: 0px;
-				margin: auto;
-			}*/
-
-			fightpow{
-				position: absolute;
-				display: block;
-				width: 150px;
-				height: 150px;
-				border: 20px solid white;
-				box-sizing: border-box;
-				transform: translate(-50%, -50%);
-				border-radius: 100%;
-				opacity: 0.5;
-				z-index: 10;
-				background: rgba(255,255,255,0.5);
-
-				pointer-events: auto;
-			}
-
+			
 			@keyframes flash{
 				0%{
 					opacity:1;
@@ -569,29 +496,36 @@ BatFightGame = function(){
 
 	let self = this;
 	self.$el = $('<igb>');
-	$('<igbside>').appendTo(self.$el);
-	let $front = $('<igbside>').appendTo(self.$el);
-	$('<igbside>').appendTo(self.$el);
+	
 
-	let $game = $('<fightgame>').appendTo($front);
+	let $game = $('<fightgame>').appendTo(self.$el);
 	let $bg = $('<fightlayer>').appendTo($game);
 	let $mg = $('<fightlayer>').appendTo($game);
 	let $fg = $('<fightlayer>').appendTo($game);
 
-	let $warning = $('<fightwarning>').appendTo($game).hide();
-	let $hit = $('<fighthit>').appendTo($game).hide();
-	let $message = $('<fightmessage>').appendTo($game);
 	
 	
 
-	
-	let fighter = new BatFighter($warning,$hit,$message);
-	fighter.$el.appendTo($fg);
+
+	const LEVELS = 
+	[
+		[
+			new BatFighter().spawn(1,-1,1).peak().sneak(1,1,1).peak().sneak(1,0,0).punch(1,-1,0).sneak(1,0,0).punch(1,1,0),
+		]
+	]
 
 	let audio = new AudioContext();
 	audio.add('music','./proto/audio/fight-music.mp3',0.5,true,true);
 	
 
+	let iLevel = -1;
+	function doNextLevel(){
+		iLevel++;
+		for(var n in LEVELS[iLevel]) LEVELS[iLevel][n].$el.appendTo($game);
+		setInterval(tick,1000/FPS);
+	}
+
+	doNextLevel();
 	
 	let layerWas = -1;
 	function tick(){
@@ -599,15 +533,9 @@ BatFightGame = function(){
 		let scale = (w/3)/W;
 		$game.css('transform','scale('+scale+')');
 
-		fighter.tick();
-		if(layerWas != fighter.at.layer){
-			self.$el.find('fightlayer').eq(Math.round(fighter.at.layer)).append(fighter.$el);
-			layerWas = fighter.at.layer;
-		}
+		for(var n in LEVELS[iLevel]) LEVELS[iLevel][n].tick();
 		
 	}
-
-	setInterval(tick,1000/FPS);
 
 	$(document).click(function(){
 		audio.play('music');
