@@ -525,7 +525,7 @@ BatClimbing = function(){
 
 		['---------','--------^','---------'],
 		['---------','--^------','---------'],
-		['---------','-C-C--^--','---------'],
+		['---------','-CC---^--','---------'],
 	]
 
 	let audio = new AudioContext();
@@ -672,6 +672,8 @@ BatClimbing = function(){
 		
 		for(var c in climbers){
 
+			climbers[c].xWas = climbers[c].x;
+
 			//KEYBOARD CONTROL
 			if(isLeft || isRight){
 				let dir = isLeft?-1:(isRight?1:-1);
@@ -705,6 +707,8 @@ BatClimbing = function(){
 
 			// HIT BARRELS
 			for(var n in barrels) collideWith(climbers[c],barrels[n]);
+
+			if(climbers[c].xWas != climbers[c].x) climbers[c].dir = (climbers[c].xWas>climbers[c].x)?-1:1;
 
 			// RENDER CLIMBERS and GRAPPLE LINES
 			climbers[c].$el.css({
