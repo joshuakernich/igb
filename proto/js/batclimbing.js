@@ -485,7 +485,7 @@ BatClimbing = function(){
 	[
 		['------>--','----J----','--<------'],
 		['----^----','  -----  ','----^----'],
-		['--^------','<---C--->','------^--'],
+		['--^------','<--CC--->','------^--'],
 
 		['---------','}---^---{','---------'],
 		['---------','--^---^--','---------'],
@@ -493,39 +493,39 @@ BatClimbing = function(){
 
 		['^}-----B-','---------','-B-----{^'],
 		['-B------^','---------','^------B-'],
-		['^--------','<-C----->','--------^'],
+		['^--------','<-CC---->','--------^'],
 		
 		['---------','--^------','<--W-W---'],
 		['------{->','-------->','------{-^'],
-		['^--------','<-}------','<-------C'],
+		['^--------','<-}------','<------CC'],
 
 		['---------','------{->','--------^'],
 		['---------','^-}------','<--------'],
-		['---------','---------','-C-W-W--^'],
+		['---------','---------','CC-W-W--^'],
 		
 		['---------','-}-----B-','-^-}-----'],
 		['---------','-------->','--------^'],
-		['---------','^--W-W--C','---------'],
+		['---------','^--W-W-CC','---------'],
 
 		['---------','-B----{-^','---------'],
 		['---------','^--------','---------'],
-		['---------','----^---C','---------'],
+		['---------','----^--CC','---------'],
 
 		['---------','--B---{-^','---------'],
 		['---------','^--------','---------'],
-		['---------','--^-----C','---------'],
+		['---------','--^----CC','---------'],
 
 		['---------','---W---W^','---------'],
 		['---------','^W---W---','---------'],
-		['---------','C--W---W^','---------'],
+		['---------','CC-W---W^','---------'],
 
 		['---------','^--W-----','---------'],
 		['---------','-----W--^','---------'],
-		['---------','^--W----C','---------'],
+		['---------','^--W---CC','---------'],
 
 		['---------','--------^','---------'],
 		['---------','--^------','---------'],
-		['---------','-C----^--','---------'],
+		['---------','-C-C--^--','---------'],
 	]
 
 	let audio = new AudioContext();
@@ -547,15 +547,13 @@ BatClimbing = function(){
 	let boxes = [];
 	let throwers = [];
 	let barrels = [];
+	let climbers = [];
 
 	let isLeft = false;
 	let isRight = false;
 
-	let isTransit = false;
-	let isGrappling = false;
 	
 
-	let man;
 	let joker;
 
 	const FLOORSPERSTAGE = 3;
@@ -583,16 +581,10 @@ BatClimbing = function(){
 	let interval;
 	let fps = 50;
 	
-
-	let grapshot = { 
-		$el:$('<grapshot>') 
-	};
-
-	function getXForT(t){
-
-		if(t==0) return -1 + pxFrontToBack*11;
-		if(t==1) return -1 + pxSideToSide*11;
-		if(t==2) return -1 + (1-pxFrontToBack)*11;
+	function getXForT(n,t){
+		if(t==0) return -1 + players[n].pxFrontToBack*11;
+		if(t==1) return -1 + players[n].pxSideToSide*11;
+		if(t==2) return -1 + (1-players[n].pxFrontToBack)*11;
 	}
 
 	let tx = 0;
@@ -606,129 +598,15 @@ BatClimbing = function(){
 			wWas = wScreen;
 		}
 
-
-		if(isLeft || isRight){
-
-			let dir = isLeft?-1:(isRight?1:-1);
-
-			if(man.t == 0) pxFrontToBack += dir*0.01;
-			if(man.t == 1) pxSideToSide += dir*0.01;
-			if(man.t == 2) pxFrontToBack -= dir*0.01;
-
-			dirtyTracking = true;
-		}
-
-
-		if(dirtyTracking) man.x = getXForT(man.t);
-		dirtyTracking = false;
-
-		if(man.x<0.2) man.x = 0.2;
-		if(man.x>8.8) man.x = 8.8;
-
-		if(!isTransit){
-			let ix = Math.floor(man.x);
-			if(fall[man.y] && fall[man.y][man.t][ix] == 'Y'){
-
-				isTransit = true;
-
-				man.y++;
-				
-				man.$el.appendTo(towers[man.t].$ls[man.y]);
-				man.$marker.appendTo(towers[man.t].$ls[man.y]);
-
-				man.oy = LEVEL;
-				$(man).animate({oy:0},{easing:'linear',duration:300,complete:function(){ isTransit=false; }});
-			}
-		}
-		
-
-		if(isLeft) man.dir = -1;
-		if(isRight) man.dir = 1;
-
-
-		for(var g in grapnels){
-
-
-
-			if(grapnels[g].t == man.t && grapnels[g].y == man.y){
-
-				let d = Math.abs(man.x-grapnels[g].x);
-
-				if(!isTransit && d<0.2){
-
-					isTransit = true;
-					isGrappling = true;
-
-					let ptWas = getGlobalGameXY(man);
-
-					if(grapnels[g].dir == '>') man.t = grapnels[g].t+1;
-					if(grapnels[g].dir == '<') man.t = grapnels[g].t-1;
-					if(grapnels[g].dir == '^') man.y = grapnels[g].y-1;
-					if(grapnels[g].dir == '^') man.oy = LEVEL;
-
-					man.x = getXForT(man.t);
-
-					let tx = grapnels[g].x;
-					if(grapnels[g].dir == '>') tx = 0.5;
-					if(grapnels[g].dir == '<') tx = 8.5;
-
-					
-					
-					let ptNow = getGlobalGameXY(man);
-
-					man.ox = ptWas.x-ptNow.x;
-					man.oy = ptWas.y-ptNow.y;
-
-					towers[man.t].$ls[man.y].append(man.$el);
-					towers[man.t].$ls[man.y].append(man.$marker);
-
-					let dist = Math.abs(man.ox);
-					let extra = dist>1?500:0;
-
-					grapshot.x = tx;
-					grapshot.y = man.y;
-					grapshot.t = man.t;
-
-					grapshot.$el.appendTo(towers[grapshot.t].$ls[grapshot.y]);
-					//grapshot.$el.css({'left':grapshot.x*GRID+'px'});
-
-					man.$el.attr('pose','grapple');
-
-					grapshot.deploy = 0;
-					$(grapshot).animate({deploy:1},200);
-					audio.play('hook',true);
-
-					$(man).delay(300).animate({ox:0,oy:0},{
-						duration:500 + extra,
-						start:function(){
-							audio.play('winch',true);
-						},
-						complete:function(){ 
-							audio.stop('winch',true);
-							audio.play('arm',true);
-							man.$el.attr('pose','idle');
-							grapshot.$el.remove();
-							isTransit = false; 
-						}});
-
-					iStage = Math.floor((data.length-man.y-1)/FLOORSPERSTAGE);
-					
-					self.$el.find('battower').animate({'bottom':-iStage*FLOORSPERSTAGE*LEVEL+'px'});
-
-				}
-			}
-		}
-
+		//ITERATE WINDOWS
 		for(var n in windows){
 			windows[n].tick = (windows[n].tick+1)%(fps*3);
-
 			if(windows[n].tick == fps) windows[n].$el.addClass('peak');
 			if(windows[n].tick == fps*2) windows[n].$el.addClass('attack');
 			if(windows[n].tick == 0) windows[n].$el.removeClass('peak attack');
-
-			if( windows[n].tick > fps*2 ) collideWith(windows[n]);
 		}
 
+		//ITERATE THROWERS
 		for(var n in throwers){
 
 			if(throwers[n].dead) continue;
@@ -751,10 +629,10 @@ BatClimbing = function(){
 					iStage:throwers[n].iStage,
 				});
 			}
-
-			collideWith(throwers[n],kill);
 		}
 
+
+		// ITERATE BARRELS
 		for(var n in barrels){
 
 			barrels[n].x += 0.075*barrels[n].dir;
@@ -788,70 +666,88 @@ BatClimbing = function(){
 			}
 
 			if(barrels[n].x<0 || barrels[n].x>9) barrels[n].$el.remove();
-
-			collideWith(barrels[n]);
 		}
 
-		function collideWith(thing,fn){
-			if( !isTransit &&
-				thing.t == man.t &&
-				thing.y == man.y &&
-				Math.abs( thing.x - man.x ) < 0.5 ){
+		let yMax = 0;
+		
+		for(var c in climbers){
 
-				if(fn){
-					fn(thing);
-				} else {
-					die();
-				}
+			//KEYBOARD CONTROL
+			if(isLeft || isRight){
+				let dir = isLeft?-1:(isRight?1:-1);
+				if(climbers[c].t == 0) players[c].pxFrontToBack += dir*0.01;
+				if(climbers[c].t == 1) players[c].pxSideToSide += dir*0.01;
+				if(climbers[c].t == 2) players[c].pxFrontToBack -= dir*0.01;
+
+				players[c].pxFrontToBack = Math.min( 1, Math.max( 0, players[c].pxFrontToBack ))
+				players[c].pxSideToSide = Math.min( 1, Math.max( 0, players[c].pxSideToSide ))
 			}
+
+			// MOVE
+			climbers[c].x = getXForT(c,climbers[c].t);
+			if(climbers[c].x<0.2) climbers[c].x = 0.2;
+			if(climbers[c].x>8.8) climbers[c].x = 8.8;
+
+			// FALL
+			if(!climbers[c].isTransit){
+				let ix = Math.floor(climbers[c].x);
+				if(fall[climbers[c].y] && fall[climbers[c].y][climbers[c].t][ix] == 'Y') fallDown(climbers[c]);
+			}
+
+			// HIT GRAPPLES
+			for(var n in grapnels) collideWith(climbers[c],grapnels[n],grapple);
+
+			// HIT WINDOWS
+			for(var n in windows) if( windows[n].tick > fps*2 ) collideWith(climbers[c],windows[n]);
+
+			// HIT THROWERS
+			for(var n in throwers) collideWith(climbers[c],throwers[n],kill);
+
+			// HIT BARRELS
+			for(var n in barrels) collideWith(climbers[c],barrels[n]);
+
+			// RENDER CLIMBERS and GRAPPLE LINES
+			climbers[c].$el.css({
+				left:(climbers[c].x*GRID+climbers[c].ox)+'px',
+				bottom:climbers[c].oy+'px',
+				'transform':'scaleX('+climbers[c].dir+')'
+			});
+			climbers[c].$marker.css({left:(climbers[c].x*GRID)+'px'});
+
+			let dx = (climbers[c].grapshot.x - climbers[c].x)*GRID - climbers[c].ox;
+			let dy = (climbers[c].grapshot.y - climbers[c].y)*GRID + climbers[c].oy - 150;
+			let d = Math.hypot(dx,dy);
+			let r = Math.atan2(dy,dx) + Math.PI;
+			let x = dx + dx*climbers[c].grapshot.deploy;
+			let y = dy + dy*climbers[c].grapshot.deploy;
+
+			climbers[c].grapshot.$el.css({
+				'left':climbers[c].grapshot.x*GRID-dx*(1-climbers[c].grapshot.deploy)+'px',
+				'top':-dy*(1-climbers[c].grapshot.deploy)+'px',
+				'transform':'rotate('+r+'rad)', 
+				'width':d*climbers[c].grapshot.deploy+'px'
+			});
+
+
+			
+			yMax = Math.max(yMax,climbers[c].y);
 		}
 
-		function kill(thing) {
-			thing.$el.remove();
-			if(thing.$barrel) thing.$barrel.remove();
-			thing.dead = true;
-			audio.play('pow',true);
-			audio.play('boom',true);
+		let iNewStage = Math.floor((data.length-yMax-1)/FLOORSPERSTAGE);
+		if(iNewStage != iStage){
+			iStage = iNewStage;
+			self.$el.find('battower').animate({'bottom':-iStage*FLOORSPERSTAGE*LEVEL+'px'});
 		}
+		
 
-		function die(){
-			audio.play('hit',true);
-			audio.play('boom',true);
-			self.turnOnOff(false);
-
-			$('<batoverlay>').appendTo($game);
-
-			setTimeout( respawn, 1500);
-
-		}
-
-		function getPtOnBezier(t, p0, p1, p2, p3){
-		  var cX = 3 * (p1.x - p0.x),
-		      bX = 3 * (p2.x - p1.x) - cX,
-		      aX = p3.x - p0.x - cX - bX;
-
-		  var cY = 3 * (p1.y - p0.y),
-		      bY = 3 * (p2.y - p1.y) - cY,
-		      aY = p3.y - p0.y - cY - bY;
-
-		  var x = (aX * Math.pow(t, 3)) + (bX * Math.pow(t, 2)) + (cX * t) + p0.x;
-		  var y = (aY * Math.pow(t, 3)) + (bY * Math.pow(t, 2)) + (cY * t) + p0.y;
-
-		  return {x: x, y: y};
-		};
-
-
-		function getGlobalGameXY(thing){
-			let x = thing.t * W + 0.5 * W - data[0][0].length*GRID/2 + thing.x * GRID;
-			let sy = data.length - parseInt(thing.y) - 1 - iStage*3;
-			let y = sy * LEVEL + 100;
-			return {x:x,y:y};
-		}
 
 
 		//JOKER LOGIC 
 		if(iStage == joker.iStage){
-			if( !joker.isPow && !isTransit && !joker.isThrowing){
+
+			let man = climbers[joker.iTarget%climbers.length];
+
+			if( !joker.isPow && !man.isTransit && !joker.isThrowing){
 				tx = man.x + (man.t-1) * 10;
 				let dxJoker = joker.x - tx;
 				let dJoker = dxJoker>0?-1:1;
@@ -873,10 +769,11 @@ BatClimbing = function(){
 
 			let timePerThrow = 4-joker.pow*0.5;
 
-			if(!joker.isThrowing && !joker.isPow && !isTransit && (joker.n - joker.nThrow) > fps*timePerThrow){
+			if(!joker.isThrowing && !joker.isPow && !man.isTransit && (joker.n - joker.nThrow) > fps*timePerThrow){
 				//THROW BARREL
 				joker.isThrowing = true;
 				joker.nThrow = joker.n;
+				joker.iTarget++;
 
 				let x = man.x;
 
@@ -951,33 +848,132 @@ BatClimbing = function(){
 
 			}
 		}
+	}
+
+	function collideWith(climber,thing,fn){
+		if( !climber.isTransit &&
+			climber.t == thing.t &&
+			climber.y == thing.y &&
+			Math.abs( climber.x - thing.x ) < 0.5 ){
+
+			if(fn){
+				fn(climber,thing);
+			} else {
+				die();
+			}
+		}
+	}
+
+	function fallDown(man){
+		man.isTransit = true;
+		man.y++;	
+		man.$el.appendTo(towers[man.t].$ls[man.y]);
+		man.$marker.appendTo(towers[man.t].$ls[man.y]);
+		man.oy = LEVEL;
+		$(man).animate({oy:0},{
+			easing:'linear',
+			duration:300,
+			complete:function(){ 
+				man.isTransit=false; 
+		}});
+	}
+
+	function grapple(man,trigger){
+		
+		man.isTransit = true;
+
+		let ptWas = getGlobalGameXY(man);
+
+		if(trigger.dir == '>') man.t = trigger.t+1;
+		if(trigger.dir == '<') man.t = trigger.t-1;
+		if(trigger.dir == '^') man.y = trigger.y-1;
+		if(trigger.dir == '^') man.oy = LEVEL;
+
+		man.x = getXForT(man.n,man.t);
+
+		let tx = trigger.x;
+		if(trigger.dir == '>') tx = 0.5;
+		if(trigger.dir == '<') tx = 8.5;
+
+		let ptNow = getGlobalGameXY(man);
+
+		man.ox = ptWas.x-ptNow.x;
+		man.oy = ptWas.y-ptNow.y;
+
+		towers[man.t].$ls[man.y].append(man.$el);
+		towers[man.t].$ls[man.y].append(man.$marker);
+
+		let dist = Math.abs(man.ox);
+		let extra = dist>1?500:0;
+
+		man.grapshot.x = tx;
+		man.grapshot.y = man.y;
+		man.grapshot.t = man.t;
+
+		man.grapshot.$el.appendTo(towers[man.grapshot.t].$ls[man.grapshot.y]);
+
+		man.$el.attr('pose','grapple');
+
+		man.grapshot.deploy = 0;
+		$(man.grapshot).animate({deploy:1},200);
+		audio.play('hook',true);
+
+		$(man).delay(300).animate({ox:0,oy:0},{
+			duration:500 + extra,
+			start:function(){
+				audio.play('winch',true);
+			},
+			complete:function(){ 
+				audio.stop('winch',true);
+				audio.play('arm',true);
+				man.$el.attr('pose','idle');
+				man.grapshot.$el.remove();
+				man.isTransit = false; 
+			}});
 
 		
-		man.$el.css({
-			left:(man.x*GRID+man.ox)+'px',
-			bottom:man.oy+'px',
-			'transform':'scaleX('+man.dir+')'
-		});
-		man.$marker.css({left:(man.x*GRID)+'px'});
+	}
 
-		
+	function kill(climber,thing) {
+		thing.$el.remove();
+		if(thing.$barrel) thing.$barrel.remove();
+		thing.dead = true;
+		audio.play('pow',true);
+		audio.play('boom',true);
+	}
 
-		let dx = (grapshot.x - man.x)*GRID - man.ox;
-		let dy = (grapshot.y - man.y)*GRID + man.oy - 150;
+	function die(){
+		audio.play('hit',true);
+		audio.play('boom',true);
+		self.turnOnOff(false);
 
-		
-		let d = Math.hypot(dx,dy);
-		let r = Math.atan2(dy,dx) + Math.PI;
+		$('<batoverlay>').appendTo($game);
 
-		let x = dx + dx*grapshot.deploy;
-		let y = dy + dy*grapshot.deploy;
+		setTimeout( respawn, 1500);
 
-		grapshot.$el.css({
-			'left':grapshot.x*GRID-dx*(1-grapshot.deploy)+'px',
-			'top':-dy*(1-grapshot.deploy)+'px',
-			'transform':'rotate('+r+'rad)', 
-			'width':d*grapshot.deploy+'px'
-		});
+	}
+
+	function getPtOnBezier(t, p0, p1, p2, p3){
+	  var cX = 3 * (p1.x - p0.x),
+	      bX = 3 * (p2.x - p1.x) - cX,
+	      aX = p3.x - p0.x - cX - bX;
+
+	  var cY = 3 * (p1.y - p0.y),
+	      bY = 3 * (p2.y - p1.y) - cY,
+	      aY = p3.y - p0.y - cY - bY;
+
+	  var x = (aX * Math.pow(t, 3)) + (bX * Math.pow(t, 2)) + (cX * t) + p0.x;
+	  var y = (aY * Math.pow(t, 3)) + (bY * Math.pow(t, 2)) + (cY * t) + p0.y;
+
+	  return {x: x, y: y};
+	};
+
+
+	function getGlobalGameXY(thing){
+		let x = thing.t * W + 0.5 * W - data[0][0].length*GRID/2 + thing.x * GRID;
+		let sy = data.length - parseInt(thing.y) - 1 - iStage*3;
+		let y = sy * LEVEL + 100;
+		return {x:x,y:y};
 	}
 
 	function doPow(){
@@ -1014,13 +1010,15 @@ BatClimbing = function(){
 		if(e.which == 39) isRight = false;
 	})
 	
-	let pxSideToSide = 50;
-	let pxFrontToBack = 50;
 	let dirtyTracking = false;
 
+	let players = [{pxSideToSide:0.5,pxFrontToBack:0.5},{pxSideToSide:0.5,pxFrontToBack:0.5}]
+
 	self.setPlayers = function(p){
-		pxSideToSide = p[0].px/100;
-		pxFrontToBack = p[0].pz/100;
+		for(var n in players){
+			players[n].pxSideToSide = p[n].px/100;
+			players[n].pxFrontToBack = p[n].pz/100;
+		}
 		dirtyTracking = true;
 	}
 
@@ -1042,9 +1040,8 @@ BatClimbing = function(){
 		boxes.length = 0;
 		throwers.length = 0;
 		barrels.length = 0;
-
-		isTransit = false;
-		man = undefined;
+		climbers.length = 0;
+		
 		
 
 		for(var l in data){
@@ -1076,16 +1073,31 @@ BatClimbing = function(){
 					}
 					
 
-					if(!man && type=='C' && iStage == iStageForLevel){
-						man = { dir:1, t:t, x:n+0.5, ox:0, y:l, 
-						$el:$('<batman>').appendTo($l),
-						$marker:$('<batmarker>').appendTo($l),
-					};
+					if(type=='C' && iStage == iStageForLevel){
+						climbers.push({ 
+							n:climbers.length,
+							dir:1, t:t, x:n+0.5, ox:0, y:l, 
+							$el:$('<batman>').appendTo($l),
+							$marker:$('<batmarker>').appendTo($l),
+							grapshot:{ $el:$('<grapshot>') },
+							dir:1,
+						});
 						self.$el.find('battower').css({'bottom':-iStage*FLOORSPERSTAGE*LEVEL+'px'});
 					}
 
 					if(type=='J'){
-						joker = { iStage:iStageForLevel, n:0, nThrow:0, pow:0, dir:1, t:t, x:n+0.5, ox:0, y:l, $el:$('<batjoker>').appendTo($l) };
+						joker = { 
+							iStage:iStageForLevel, 
+							iTarget:0,
+							n:0, 
+							nThrow:0, 
+							pow:0, 
+							dir:1,
+							t:t, 
+							x:n+0.5, 
+							ox:0, 
+							y:l,
+							$el:$('<batjoker>').appendTo($l) };
 						$('<batsign>').appendTo($l).html('<h1>ACE</h1><h2>CHEMICALS</h2>')
 					}
 					if(type=='}' || type=='{'){
