@@ -4,6 +4,9 @@ BatClimbing = function(){
 	let H = 1080;
 	let GRID = 150;
 	let LEVEL = 300;
+
+	const FPS = 50;
+	const BARRELSPEED = 3.75
 	
 	if(!BatClimbing.didInit){
 
@@ -290,6 +293,14 @@ BatClimbing = function(){
 				'background-image':'url(./proto/img/climb-avatar-grapple.png)',
 			},
 
+			'batman[n="1"]:after':{
+				'background-image':'url(./proto/img/climb-avatar-blue.png)',
+			},
+
+			'batman[n="1"][pose="grapple"]:after':{
+				'background-image':'url(./proto/img/climb-avatar-grapple-blue.png)',
+			},
+
 			'batcheckpoint:after':{
 				'content':'""',
 				'display':'block',
@@ -428,6 +439,10 @@ BatClimbing = function(){
 				  
 				 'border-top': '30px solid red',
 				 'z-index':'1',
+			},
+
+			'batmarker[n="1"]':{
+				'border-top': '30px solid blue',
 			},
 
 			'batskips:before':{
@@ -579,7 +594,7 @@ BatClimbing = function(){
 	let wWas;
 	let iDudeWas = -1;
 	let interval;
-	let fps = 50;
+
 	
 	function getXForT(n,t){
 		if(t==0) return -1 + players[n].pxFrontToBack*11;
@@ -600,9 +615,9 @@ BatClimbing = function(){
 
 		//ITERATE WINDOWS
 		for(var n in windows){
-			windows[n].tick = (windows[n].tick+1)%(fps*3);
-			if(windows[n].tick == fps) windows[n].$el.addClass('peak');
-			if(windows[n].tick == fps*2) windows[n].$el.addClass('attack');
+			windows[n].tick = (windows[n].tick+1)%(FPS*3);
+			if(windows[n].tick == FPS) windows[n].$el.addClass('peak');
+			if(windows[n].tick == FPS*2) windows[n].$el.addClass('attack');
 			if(windows[n].tick == 0) windows[n].$el.removeClass('peak attack');
 		}
 
@@ -611,15 +626,15 @@ BatClimbing = function(){
 
 			if(throwers[n].dead) continue;
 
-			throwers[n].tick = (throwers[n].tick+1)%(fps*4);
+			throwers[n].tick = (throwers[n].tick+1)%(FPS*4);
 
-			if(throwers[n].tick == fps){
+			if(throwers[n].tick == FPS){
 				throwers[n].$barrel = $('<batbarrel>').appendTo(towers[throwers[n].t].$ls[throwers[n].y]).css({
 					left:throwers[n].x * GRID + 'px',
 					bottom:'100px',
 				})
 			}
-			if(throwers[n].tick == fps*2){
+			if(throwers[n].tick == FPS*2){
 				barrels.push({ 
 					dir:throwers[n].dir, 
 					$el:throwers[n].$barrel.css('bottom',0), 
@@ -635,7 +650,7 @@ BatClimbing = function(){
 		// ITERATE BARRELS
 		for(var n in barrels){
 
-			barrels[n].x += 0.075*barrels[n].dir;
+			barrels[n].x += BARRELSPEED/FPS*barrels[n].dir;
 			barrels[n].$el.css({left:barrels[n].x*GRID+'px'});
 
 			for(var b in boxes){
@@ -700,7 +715,7 @@ BatClimbing = function(){
 			for(var n in grapnels) collideWith(climbers[c],grapnels[n],grapple);
 
 			// HIT WINDOWS
-			for(var n in windows) if( windows[n].tick > fps*2 ) collideWith(climbers[c],windows[n]);
+			for(var n in windows) if( windows[n].tick > FPS*2 ) collideWith(climbers[c],windows[n]);
 
 			// HIT THROWERS
 			for(var n in throwers) collideWith(climbers[c],throwers[n],kill);
@@ -771,9 +786,9 @@ BatClimbing = function(){
 
 			joker.n++;
 
-			let timePerThrow = 4-joker.pow*0.5;
+			let timePerThrow = 3-joker.pow*0.5;
 
-			if(!joker.isThrowing && !joker.isPow && !man.isTransit && (joker.n - joker.nThrow) > fps*timePerThrow){
+			if(!joker.isThrowing && !joker.isPow && !man.isTransit && (joker.n - joker.nThrow) > FPS*timePerThrow){
 				//THROW BARREL
 				joker.isThrowing = true;
 				joker.nThrow = joker.n;
@@ -1028,7 +1043,7 @@ BatClimbing = function(){
 
 	self.turnOnOff = function(b){
 		clearInterval(interval);
-		if(b) interval = setInterval(tick,1000/fps);
+		if(b) interval = setInterval(tick,1000/FPS);
 	}
 
 	function respawn(){
@@ -1081,8 +1096,8 @@ BatClimbing = function(){
 						climbers.push({ 
 							n:climbers.length,
 							dir:1, t:t, x:n+0.5, ox:0, y:l, 
-							$el:$('<batman>').appendTo($l),
-							$marker:$('<batmarker>').appendTo($l),
+							$el:$('<batman>').appendTo($l).attr('n',climbers.length),
+							$marker:$('<batmarker>').appendTo($l).attr('n',climbers.length),
 							grapshot:{ $el:$('<grapshot>') },
 							dir:1,
 						});
