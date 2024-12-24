@@ -917,6 +917,11 @@ BatClimbing = function(){
 		if(trigger.dir == '>') tx = 0.5;
 		if(trigger.dir == '<') tx = 8.5;
 
+
+
+		if(trigger.dir == '>' && man.iStage==joker.iStage) tx = 1.5;
+		if(trigger.dir == '<' && man.iStage==joker.iStage) tx = 7.5;
+
 		let ptNow = getGlobalGameXY(man);
 
 		man.ox = ptWas.x-ptNow.x;
