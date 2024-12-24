@@ -538,7 +538,7 @@ BatClimbing = function(){
 		['---------','-----W--^','---------'],
 		['---------','^--W---CC','---------'],
 
-		['---------','--------^','---------'],
+		['---------','-------^-','---------'],
 		['---------','--^------','---------'],
 		['---------','-CC---^--','---------'],
 	]
@@ -683,9 +683,11 @@ BatClimbing = function(){
 			if(barrels[n].x<0 || barrels[n].x>9) barrels[n].$el.remove();
 		}
 
-		let yMax = 0;
+		let iMinStage = 9999;
 		
 		for(var c in climbers){
+
+			
 
 			climbers[c].xWas = climbers[c].x;
 
@@ -705,23 +707,25 @@ BatClimbing = function(){
 			if(climbers[c].x<0.2) climbers[c].x = 0.2;
 			if(climbers[c].x>8.8) climbers[c].x = 8.8;
 
-			// FALL
-			if(!climbers[c].isTransit){
-				let ix = Math.floor(climbers[c].x);
-				if(fall[climbers[c].y] && fall[climbers[c].y][climbers[c].t][ix] == 'Y') fallDown(climbers[c]);
+			if(climbers[c].iStage == iStage){
+				// FALL
+				if(!climbers[c].isTransit){
+					let ix = Math.floor(climbers[c].x);
+					if(fall[climbers[c].y] && fall[climbers[c].y][climbers[c].t][ix] == 'Y') fallDown(climbers[c]);
+				}
+
+				// HIT GRAPPLES
+				for(var n in grapnels) collideWith(climbers[c],grapnels[n],grapple);
+
+				// HIT WINDOWS
+				for(var n in windows) if( windows[n].tick > FPS*2 ) collideWith(climbers[c],windows[n]);
+
+				// HIT THROWERS
+				for(var n in throwers) collideWith(climbers[c],throwers[n],kill);
+
+				// HIT BARRELS
+				for(var n in barrels) collideWith(climbers[c],barrels[n]);
 			}
-
-			// HIT GRAPPLES
-			for(var n in grapnels) collideWith(climbers[c],grapnels[n],grapple);
-
-			// HIT WINDOWS
-			for(var n in windows) if( windows[n].tick > FPS*2 ) collideWith(climbers[c],windows[n]);
-
-			// HIT THROWERS
-			for(var n in throwers) collideWith(climbers[c],throwers[n],kill);
-
-			// HIT BARRELS
-			for(var n in barrels) collideWith(climbers[c],barrels[n]);
 
 			if(climbers[c].xWas != climbers[c].x) climbers[c].dir = (climbers[c].xWas>climbers[c].x)?-1:1;
 
@@ -747,12 +751,11 @@ BatClimbing = function(){
 				'width':d*climbers[c].grapshot.deploy+'px'
 			});
 
-
-			
-			yMax = Math.max(yMax,climbers[c].y);
+			climbers[c].iStage = Math.floor((data.length-climbers[c].y-1)/FLOORSPERSTAGE);
+			iMinStage = Math.min(iMinStage,climbers[c].iStage);
 		}
 
-		let iNewStage = Math.floor((data.length-yMax-1)/FLOORSPERSTAGE);
+		let iNewStage = iMinStage;
 		if(iNewStage != iStage){
 			iStage = iNewStage;
 			self.$el.find('battower').animate({'bottom':-iStage*FLOORSPERSTAGE*LEVEL+'px'});
@@ -1100,6 +1103,7 @@ BatClimbing = function(){
 							$marker:$('<batmarker>').appendTo($l).attr('n',climbers.length),
 							grapshot:{ $el:$('<grapshot>') },
 							dir:1,
+							iStage:iStageForLevel, 
 						});
 						self.$el.find('battower').css({'bottom':-iStage*FLOORSPERSTAGE*LEVEL+'px'});
 					}

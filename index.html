@@ -124,9 +124,6 @@
 				}
 			}
 				
-			
-			
-			
 			$('[btn=move]').click(doRandomMove);
 
 			function doRandomMove(){
@@ -148,18 +145,10 @@
 
 			$('[btn=refresh]').click(function() {
 				window.location.assign(window.location.href);
-				//window.location = 'https://joshuakernich.github.io/igb/index.html?seed='+Math.random();
 			})
 
 			$('[btn=home]').click(function() {
 				window.location.assign(window.location.pathname);
-				/*if(liveModule && liveModule.turnOnOff) liveModule.turnOnOff(false);
-
-				$('mframe').addClass('active').empty();
-				$('iframe').removeClass('active').attr('src','');*/
-
-
-
 			})
 
 			let log = [];
