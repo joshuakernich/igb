@@ -306,6 +306,7 @@ Riddler = function(){
 		{type:'notnot',q:['3-A'],s:'AAABBBCCC'},
 		{type:'notnot',q:['3-NA'],s:'AAABBBCCC'},
 		{type:'notnot',q:['3-B','1-NB'],s:'AAABBBCCC'},
+		{type:'notnot',q:['2-NA','2-NB'],s:'AAABBBCCC'},
 		{type:'notnot',q:['2-B','2-NB','2-NA'],s:'AAABBBCCC'},
 		{type:'notnot',q:['5-*'],s:'AAABBBCCC'},
 		{type:'notnot',q:['1-?'],s:'AAABBBCCC'},
@@ -675,13 +676,15 @@ Riddler = function(){
 			
 			for(var i=0; i<q.length; i++){
 				let rule = q[i].split('-');
+				
 				let count = parseInt(rule[0]);
-				let shape = rule[1];
+				let nots = rule[1].substr(0,rule[1].length-1);
+				let shape = rule[1][rule[1].length-1];
 
-				rules[shape] = parseInt(count);
+				let isNot = (nots.length%2==1);
 
-				let not = (shape.length==2);
-				if(not) shape = shape[1];
+				if(isNot) rules['N'+shape] = parseInt(count);
+				else rules[shape] = parseInt(count);
 
 				let text = ''
 				if(shape=='R' || shape=='L'){
@@ -690,7 +693,11 @@ Riddler = function(){
 				}
 				else {
 					isTouchCorrect = false;
-					text = 'Touch '+count+' '+(not?'NOT ':'')+symbolsForQuestion[shape].name+(count>1?'s':'');
+
+					let strNots = '';
+					for(var n=0; n<nots.length; n++) strNots += 'NOT ';
+
+					text = 'Touch '+count+' '+strNots+symbolsForQuestion[shape].name+(count>1?'s':'');
 					total += count;
 				}
 
