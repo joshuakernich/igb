@@ -501,7 +501,7 @@ BatClimbing = function(){
 		['------>--','----J----','--<------'],
 		['----^----','  -----  ','----^----'],
 		['--^------','<--CC--->','------^--'],
-		
+
 		['-B-----{-','-^--}--B-','<--W-W---'],
 		['-------->','-------->','-----{--^'],
 		['-CC----^-','---------','---------'],
@@ -893,7 +893,8 @@ BatClimbing = function(){
 	}
 
 	function collideWith(climber,thing,fn){
-		if( !climber.isTransit &&
+		if( !thing.dead &&
+			!climber.isTransit &&
 			climber.t == thing.t &&
 			climber.y == thing.y &&
 			Math.abs( climber.x - thing.x ) < 0.5 ){
