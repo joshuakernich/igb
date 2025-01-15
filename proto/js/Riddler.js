@@ -134,7 +134,7 @@ let css = {
 
 	'riddlerscreen riddlertext':{
 		'font-size':'0.7vw',
-		'line-height':'1vw',
+		'line-height':'0.9vw',
 		'box-sizing':'border-box',
 		'font-weight':'100',
 		'letter-spacing':'0.1vw',
@@ -145,8 +145,8 @@ let css = {
 		'position':'absolute',
 		'display':'flex',
 		'top':'0px',
-		'left':'0.3vw',
-		'right':'0.3vw',
+		'left':'0.2vw',
+		'right':'0.2vw',
 		'bottom':'0px',
 
 		'text-align':'center',
@@ -162,30 +162,44 @@ let css = {
 
 	'riddlerhead':{
 		'background':'url(./bat/batman-red-fadeout.png)',
-		'background-position':'top center',
+		'background-position-x':'center',
+		'background-position-y':'-15%',
 		'width':'7vw',
 		'height':'3vw',
 		'position':'absolute',
 		'bottom':'0px',
 		'display':'block',
 		'background-size':'100%',
+		'background-repeat':'no-repeat',
 		'transform':'translateX(-50%)',
 		'opacity':'0.5',
 		'transform-origin':'bottom center',
+		'transition':'background-position-y 0.2s',
 	},
 
 	'riddlerbody':{
 		'background':'url(./bat/batman-red-fadeout.png)',
-		'background-position':'bottom center',
-		'width':'7vw',
-		'height':'6vw',
+		'background-position-x':'center',
+		'background-position-y':'95%',
+		'width':'7.2vw',
+		'height':'7.2vw',
 		'position':'absolute',
 		'top':'0px',
 		'display':'block',
 		'background-size':'100%',
 		'transform':'translateX(-50%)',
-		'transform-origin':'top center',
+		'transform-origin':'bottom center',
 		'opacity':'0.5',
+		'background-repeat':'no-repeat',
+		'transition':'background-position-y 0.2s',
+	},
+
+	'riddlerhead[squat="true"]':{
+		'background-position-y':'-100%',
+	},
+
+	'riddlerbody[squat="true"]':{
+		'background-position-y':'-10%',
 	},
 
 	'.riddler button':{
@@ -304,19 +318,34 @@ Riddler = function(){
 
 		//not not
 		{type:'notnot',q:['3-A'],s:'AAABBBCCC'},
-		{type:'notnot',q:['3-NA'],s:'AAABBBCCC'},
-		{type:'notnot',q:['3-B','1-NB'],s:'AAABBBCCC'},
-		{type:'notnot',q:['2-NA','2-NB'],s:'AAABBBCCC'},
-		{type:'notnot',q:['2-B','2-NB','2-NA'],s:'AAABBBCCC'},
-		{type:'notnot',q:['5-*'],s:'AAABBBCCC'},
-		{type:'notnot',q:['1-?'],s:'AAABBBCCC'},
-		{type:'notnot',q:['1-*','1-B','1-C','1-A','3-?'],s:'AAABBBCCC'},
+		{type:'notnot',q:['3-NA'],s:'AAABBBCCC'}, 						// introduce NOT
+		{type:'notnot',q:['3-B','1-NB'],s:'AAABBBCCCDDD'},
+		{type:'notnot',q:['2-NA','2-NB'],s:'AAABBBCCCDDD'},
+		{type:'notnot',q:['2-B','2-NB','2-NA'],s:'AAABBBCCCDDD'},
+		{type:'notnot',q:['2-NNA'],s:'AAABBBCCCDDD'},  					// introduce NOT NOT
+		{type:'notnot',q:['2-NNNB'],s:'AAABBBCCCDDD'},					// introduce NOT NOT NOT
+		{type:'notnot',q:['2-NA','1-NNB','1-NNNC'],s:'AAABBBCCCDDD'}, 	// COMBO of NOT NOTS
+		{type:'notnot',q:['5-*'],s:'AAABBBCCCDDD'}, 					// introduce nothings
+		{type:'notnot',q:['1-?'],s:'AAABBBCCCDDD'},						// introduce riddle screens
+		{type:'notnot',q:['1-*','1-B','1-C','1-A','3-?'],s:'AAABBBCCCDDD'},// COMBO (no NOTS)
 		
 		//movement
 		{type:'notnot',q:['1-R','2-?']},
 		{type:'notnot',q:['2-R']},
 		{type:'notnot',q:['1-R','1-L']},
-		{type:'notnot',q:['1-B','1-NB','2-?','2-*','1-R','1-L'],s:'AAABBBCCC'},
+		{type:'notnot',q:['2-S']},
+		{type:'notnot',q:['2-S','1-R','1-L']},
+
+		//two things
+		{type:'riddle',q:['It takes two words…','…when you don’t want to knock.'],rights:['🚪','🔔'],wrongs:['🍳','🍰','🛞','🪑','🙌','🧀','👞','👙','👜','🌝']},
+		{type:'riddle',q:['It takes two words…','…to get around with a broken leg.'],rights:['🛞','🪑'],wrongs:['🍳','🍰','🚪','🔔','🙌','🧀','👞','👙','👜','🌝']},
+		{type:'riddle',q:['It takes two words…','…to make a strange looking shark.'],rights:['🔨','👨‍🦲'],wrongs:['🚪','🔔','🙌','🧀','👞','👙','👜']},
+		{type:'riddle',q:['It takes two words…','…to make the flattest breakfast.'],rights:['🍳','🍰'],wrongs:['🙌','🧀','👞','👙','👜','🌝','🛞','🪑']},
+		{type:'riddle',q:['It takes two words…','…to flutter by.'],rights:['🧈','🪰'],wrongs:['🙌','🧀','👞','👙','👜','🌝','🛞','🪑']},
+		{type:'riddle',q:['It takes two words…','…to hide things in your car.'],rights:['🥊','📦'],wrongs:['🙌','🧀','👞','👙','👜','🌝','🛞','🪑']},
+
+		//big combo
+		{type:'notnot',q:['1-B','1-NB','2-?','2-*','1-R','1-L','1-S'],s:'AAABBBCCC'},
 
 		//final
 		{type:'final'},
@@ -327,6 +356,7 @@ Riddler = function(){
 	let MOVES = {
 		'L':'left',
 		'R':'right',
+		'S':'squat',
 	}
 
 	
@@ -420,7 +450,7 @@ Riddler = function(){
 			isTouchCorrect = true;
 
 			let combo = {
-				'A':0,'B':0,'C':0,
+				'A':0,'B':0,'C':0,'D':0,
 				'*':0,'?':0,
 			};
 
@@ -661,6 +691,7 @@ Riddler = function(){
 			'A':symbols[0],
 			'B':symbols[1],
 			'C':symbols[2],
+			'D':symbols[3],
 			'?':{name:'riddle screen'},
 			'*':{name:'nothing'},
 		}
@@ -687,7 +718,10 @@ Riddler = function(){
 				else rules[shape] = parseInt(count);
 
 				let text = ''
-				if(shape=='R' || shape=='L'){
+				if(shape == 'S'){
+					isPositionCorrect = false;
+					text = count+' player'+(count>1?'s':'')+' must squat';
+				} else if(shape=='R' || shape=='L'){
 					isPositionCorrect = false;
 					text = 'Move '+count+' player'+(count>1?'s':'')+' to the '+MOVES[shape];
 				}
@@ -821,10 +855,19 @@ Riddler = function(){
 
 	let heads = [];
 	let bodies = [];
+
+	let nData = 0;
+	let minPY = [30,30];
 	
 	self.setPlayers = function(p){
 
-		let counts = [0,0,0,0];
+		console.log(minPY);
+
+		let countsX = [0,0,0,0];
+		let countsY = [0,0];
+		
+		nData++;
+
 
 		players = p;
 		players.length = 2;
@@ -834,29 +877,45 @@ Riddler = function(){
 				heads[p] = $('<riddlerhead>');
 				bodies[p] = $('<riddlerbody>');
 			}
+
+
 			
 			let ix = Math.floor(players[p].px/25);
-			counts[ix]++;
+			countsX[ix]++;
+
+			if( players[p].py < minPY[p] && players[p].py > 50 ) minPY[p] = players[p].py;
+
+
+			let iy = ( players[p].py > (minPY[p] + 15) )?1:0;
+			countsY[iy]++;
 
 	
 			isPositionCorrect = true;
 
-			if(rules['L']) isPositionCorrect = isPositionCorrect && (rules['L'] == counts[0]);
-			if(rules['R']) isPositionCorrect = isPositionCorrect && (rules['R'] == counts[3]);
+			if(rules['L']) isPositionCorrect = isPositionCorrect && (rules['L'] == countsX[0]);
+			if(rules['R']) isPositionCorrect = isPositionCorrect && (rules['R'] == countsX[3]);
+			if(rules['S']) isPositionCorrect = isPositionCorrect && (rules['S'] == countsY[1]);
 
 			checkCorrect();
 
-			heads[p].appendTo(sides[1].find('riddlerscreen').eq(ix)).css('left',((players[p].px%25)/25)*100+'%');
-			bodies[p].appendTo(sides[1].find('riddlerscreen').eq(ix+4)).css('left',((players[p].px%25)/25)*100+'%');
+			let $elHead = sides[1].find('riddlerscreen').eq(ix);
+			let $elBody = sides[1].find('riddlerscreen').eq(ix+4);
+
+
+			if( !heads[p].parent().is($elHead) ) heads[p].appendTo($elHead);
+			heads[p].css('left',((players[p].px%25)/25)*100+'%');
+
+			if( !bodies[p].parent().is($elBody) ) bodies[p].appendTo($elBody);
+			bodies[p].css('left',((players[p].px%25)/25)*100+'%');
 
 			let scale = 0.5 + (players[p].pz/100)*0.5;
 			let o = {
 				'opacity':(players[p].pz/2)+'%',
-				'transform':'scale('+scale+') translateX(-50%)'
+				//'transform':'scale('+scale+') translateX(-50%)'
 			}
 
-			heads[p].css(o);
-			bodies[p].css(o);
+			heads[p].css(o).attr('squat',iy==1?true:false);
+			bodies[p].css(o).attr('squat',iy==1?true:false);
 		}
 	}
 
@@ -968,13 +1027,38 @@ Riddler = function(){
 		iQuestion = skipID-1;
 		nextQuestion();
 	} else {
-		doIntro();
+		//doIntro();
 	}
-	//
-	//
 
 	self.setPlayers([{px:15}]);
 
+	let bSpread = false;
+	$(document).on('mousedown',function(e){
+		bSpread = true;
+	})
 
+	$(document).on('mouseup',function(e){
+		bSpread = false;
+	})
+
+	$(document).on('mousemove',function(e){
+		
+		let oSide = sides[1].offset();
+		let oGame = self.$el.offset();
+		let w = self.$el.width()/3;
+		let h = self.$el.height();
+
+		let x = (e.pageX - oSide.left)/w;
+		let y = (e.pageY - oGame.top)/h;
+
+		let px = x*100;
+		let py = y*100;
+		let pz = 80;
+		
+		self.setPlayers([
+			{px:px-5*(bSpread?8:1),py:py,pz:pz},
+			{px:px+5*(bSpread?8:1),py:py,pz:pz}
+			])
+	})
 
 }
