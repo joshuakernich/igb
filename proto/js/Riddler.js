@@ -337,11 +337,12 @@ Riddler = function(){
 		{type:'notnot',q:['2-S','1-R','1-L']},
 
 		//two things
+		{type:'riddle',q:['It takes two words…','…to flutter by.'],rights:['🧈','🪰'],wrongs:['🙌','🧀','👞','👙','👜','🌝','🛞','🪑']},
 		{type:'riddle',q:['It takes two words…','…when you don’t want to knock.'],rights:['🚪','🔔'],wrongs:['🍳','🍰','🛞','🪑','🙌','🧀','👞','👙','👜','🌝']},
 		{type:'riddle',q:['It takes two words…','…to get around with a broken leg.'],rights:['🛞','🪑'],wrongs:['🍳','🍰','🚪','🔔','🙌','🧀','👞','👙','👜','🌝']},
 		{type:'riddle',q:['It takes two words…','…to make a strange looking shark.'],rights:['🔨','👨‍🦲'],wrongs:['🚪','🔔','🙌','🧀','👞','👙','👜']},
 		{type:'riddle',q:['It takes two words…','…to make the flattest breakfast.'],rights:['🍳','🍰'],wrongs:['🙌','🧀','👞','👙','👜','🌝','🛞','🪑']},
-		{type:'riddle',q:['It takes two words…','…to flutter by.'],rights:['🧈','🪰'],wrongs:['🙌','🧀','👞','👙','👜','🌝','🛞','🪑']},
+		{type:'riddle',q:['It takes two words…','…to bring a twinkle to the ocean.'],rights:['⭐','🐟'],wrongs:['🍳','🍰','🛞','🪑','🙌','🧀','👞','👙','👜','🌝']},
 		{type:'riddle',q:['It takes two words…','…to hide things in your car.'],rights:['🥊','📦'],wrongs:['🙌','🧀','👞','👙','👜','🌝','🛞','🪑']},
 
 		//big combo
