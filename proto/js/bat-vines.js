@@ -911,7 +911,7 @@ BatVinesKnot = function(left,right,slave){
             left.isCut = true;
             left = undefined;
         }
-        
+
         if(right){
              right.$el.hide();
             right.isCut = true;
@@ -1762,6 +1762,33 @@ BatVinesGame = function(){
             knots:[
                 {ropeLeft:0,ropeRight:-1,actor:0},
                 {ropeLeft:1,ropeRight:-1,actor:1},
+            ],
+        },
+         {
+            // cut at same time
+            ropes:[
+                {x:BatVines.ARENA.W*0,y:0,length:6},
+                {x:BatVines.ARENA.W*0.4,y:0,length:6},
+                {x:BatVines.ARENA.W*0.6,y:0,length:6},
+                {x:BatVines.ARENA.W,y:0,length:6},
+                {x:BatVines.ARENA.W*0.5,y:0,length:6},
+            ],
+            actors:[
+                 GOODY,
+                 {w:2,h:2,type:'fragment'},
+                {w:2,h:2,type:'fragment'},
+                 {x:BatVines.ARENA.W*0.2,y:BatVines.ARENA.H,w:3,h:3,type:'mouth'},
+                 {x:BatVines.ARENA.W*0.8,y:BatVines.ARENA.H,w:3,h:3,type:'mouth'},
+
+                
+
+
+            ],
+
+            knots:[
+                {ropeLeft:0,ropeRight:1,actor:1},
+                {ropeLeft:2,ropeRight:3,actor:2},
+                {ropeLeft:4,actor:0},
             ],
         },
         {
