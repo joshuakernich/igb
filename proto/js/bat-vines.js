@@ -595,6 +595,7 @@ BatVinesRope = function(x,y,length){
     self.y = y;
     self.length = length;
     self.cache = {};
+    self.thick = 1;
 
     self.targets = [];
 
@@ -637,10 +638,24 @@ BatVinesRope = function(x,y,length){
                 top:(gy-self.y)*BatVines.GRIDSIZE+'px',
             })
 
-            $path.css('stroke-width','0.15px');
+
+            //console.log('was',self.length);
+            self.length += 0.1;
+            self.thick = 0.8;
+           // console.log('now',self.length);
+           // self.knot.rehang();
+
+            $(self).animate({length:self.length+0.4, thick:0.5},{duration:500,
+            step:function(){
+
+                $path.css('stroke-width',0.3*self.thick+'px');
+                self.knot.rehang();
+
+            },complete:function(){
+                finaliseCut();
+            }})
 
             self.isDamaged = true;
-            setTimeout(finaliseCut,500);
         }
         
     }
@@ -847,32 +862,62 @@ GetHeightForEllipse = function (circumference, width) {
 
 BatVinesKnot = function(left,right,slave){
 
-    if(!right) right = left;
+    let self = this;
 
-    let length = left.length + right.length;
-    let width = right.x-left.x;
-    let hArc = GetHeightForEllipse(length*2,width);
+    let mx;
+    let my;
 
-    console.log('knot',length,width,hArc);
+    self.rehang = function(){
 
-    let mx = ((left.x + left.length) + (right.x - right.length))/2;
+        if(left && right){
 
+            let length = left.length + right.length;
+            let width = right.x-left.x;
 
-    // maxY should be calculated based on x offset
+            let hArc = GetHeightForEllipse(length*2,width);
 
-    let oxLeft = Math.abs(left.x-mx);
-    let oxRight = Math.abs(right.x-mx);
+            mx = ((left.x + left.length) + (right.x - right.length))/2;
 
-    let hangLeft = left.length - oxLeft;
-    let hangRight = right.length - oxRight;
+            let oxLeft = Math.abs(left.x-mx);
+            let oxRight = Math.abs(right.x-mx);
 
-    let my = Math.min( left.y + hangLeft, right.y + hangRight );
+            let hangLeft = left.length - oxLeft;
+            let hangRight = right.length - oxRight;
 
-    left.to(mx,my,hangLeft);
-    right.to(mx,my,hangRight);
-    slave.to(mx,my);
+            my = Math.min( left.y + hangLeft, right.y + hangRight );
+
+            left.to(mx,my,hangLeft);
+            right.to(mx,my,hangRight);
+            slave.to(mx,my);
+        } else {
+
+            let only = left?left:right;
+            mx = only.x;
+            my = only.y+only.length;
+            only.to(mx,my,my);
+            slave.to(mx,my);
+        }
+    }
+   
+    if(left) left.knot = self;
+    if(right) right.knot = self;
+
+    self.rehang();
 
     function drop(slave){
+
+        if(left){
+            left.$el.hide();
+            left.isCut = true;
+            left = undefined;
+        }
+        
+        if(right){
+             right.$el.hide();
+            right.isCut = true;
+            right = undefined;
+        }
+
         slave.gravity = true;
     }
 
@@ -888,18 +933,20 @@ BatVinesKnot = function(left,right,slave){
         }});
     }
 
-    if( left != right ) right.$target.click(function(){
+    if( right ) right.$target.click(function(){
+
         right.$el.hide();
         right = undefined;
-        if(left) dangle(left);
+        if(left && !left.isDamaged) dangle(left);
         else drop(slave);
     })
 
-    left.$target.click(function(){
+    if( left ) left.$target.click(function(){
+
         left.$el.hide();
         if(left==right) right = undefined;
         left = undefined;
-        if(right) dangle(right);
+        if(right && !right.isDamaged) dangle(right);
         else drop(slave);
     })
 }
@@ -1869,8 +1916,8 @@ BatVinesGame = function(){
             players[0].pz = (1 - y)*100;
         }
 
-        players[1].px = players[0].px + 6;
-        players[1].pz = players[0].pz + 6;
+        players[1].px = players[0].px + 10;
+        players[1].pz = players[0].pz;
 
         players[0].proximity = [0.9,0.9,0.9];
     })
