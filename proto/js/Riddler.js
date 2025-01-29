@@ -1023,7 +1023,6 @@ Riddler = function(){
 
 	let skipID = window.location.search.substr(1).split('&')[1];
 
-
 	if(skipID!=undefined){
 		iQuestion = skipID-1;
 		nextQuestion();

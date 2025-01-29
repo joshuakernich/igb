@@ -496,7 +496,7 @@ BatVinesArena = function(layout,puzzle) {
 
                 for(var t in ropes[r].targets){
                     let d = self.getDistance(pt,ropes[r].targets[t]);
-                    if(!ropes[r].isCut && d<min){
+                    if(!ropes[r].isDamaged && d<min){
                         min = d;
                         targeting = ropes[r];
                     }
@@ -552,7 +552,7 @@ BatVinesArena = function(layout,puzzle) {
                     players[n].reset();
 
                     if(isTargeting){
-                        if(isTargeting.doCut) isTargeting.doCut();
+                        if(isTargeting.doCut) isTargeting.doCut(gx,gy);
                         else isTargeting.hitWithBatarang();
                     }
                    
@@ -594,6 +594,7 @@ BatVinesRope = function(x,y,length){
     self.x = x;
     self.y = y;
     self.length = length;
+    self.cache = {};
 
     self.targets = [];
 
@@ -606,6 +607,8 @@ BatVinesRope = function(x,y,length){
     self.isCut = false;
 
     self.to = function(x2,y2,hang) {
+
+        self.cache = {x2:x2,y2:y2,hang:hang};
 
         x2 -= x;
         y2 -= y;
@@ -626,7 +629,23 @@ BatVinesRope = function(x,y,length){
         return {x:x,y:y};
     }
 
-    self.doCut = function(){
+    self.doCut = function(gx,gy){
+        
+        if(!self.isDamaged){
+            self.$cut = $('<batcut>').appendTo(self.$el).css({
+                left:(gx-self.x)*BatVines.GRIDSIZE+'px',
+                top:(gy-self.y)*BatVines.GRIDSIZE+'px',
+            })
+
+            $path.css('stroke-width','0.15px');
+
+            self.isDamaged = true;
+            setTimeout(finaliseCut,500);
+        }
+        
+    }
+
+    function finaliseCut(){
         self.isCut = true;
         self.$target.trigger('click');
     }
@@ -1405,6 +1424,16 @@ BatVinesGame = function(){
             background-size: 100%;
            }
 
+           batcut{
+             width: ${BatVines.GRIDSIZE*2}px;
+            height: ${BatVines.GRIDSIZE*2}px;
+            background: url(./proto/img/plant-cut.png);
+            background-size: 100%;
+            position: absolute;
+            display:block;
+            transform: translate(-50%, -50%);
+           }
+
         batvineswall[active='false'] batvinesgoggles{
             background: black;
            }
@@ -1757,8 +1786,6 @@ BatVinesGame = function(){
         }
     }
 
-    doNextLevel();
-
     let idActive = -1;
     let idLastActive = -1;
     let scale = 1;
@@ -1827,7 +1854,6 @@ BatVinesGame = function(){
         let x = (e.pageX/scale)/BatVines.W;
         let y = (e.pageY-oy)/scale/BatVines.H;
 
-
         if( x < 1 ){
             //left wall
             players[0].px = (y)*100;
@@ -1843,8 +1869,8 @@ BatVinesGame = function(){
             players[0].pz = (1 - y)*100;
         }
 
-        players[1].px = players[0].px + 5;
-        players[1].pz = players[0].pz + 5;
+        players[1].px = players[0].px + 6;
+        players[1].pz = players[0].pz + 6;
 
         players[0].proximity = [0.9,0.9,0.9];
     })
@@ -1852,6 +1878,14 @@ BatVinesGame = function(){
     $(document).on('click',function(e){
         audio.play('music');
     });
+
+    let skipID = window.location.search.substr(1).split('&')[1];
+
+    if(skipID!=undefined){
+        iLevel = skipID-1;
+    } 
+
+    doNextLevel();
 
 }
 

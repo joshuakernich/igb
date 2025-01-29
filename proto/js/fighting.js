@@ -1,6 +1,4 @@
-BatFighter = function(){
-
-
+BatFighter = function( fnHandball, fnComplete ){
 
 	let self = this;
 	self.$el = $('<fighter>');
@@ -110,8 +108,6 @@ BatFighter = function(){
 		let pt = getPt(iWall,iSide);
 		$(self.at).animate({x:pt.x},300);
 
-
-
 		audio.play('warning',true);
 		
 		setTimeout(function(){
@@ -129,7 +125,7 @@ BatFighter = function(){
 
 	let $projectile;
 
-	function doThrowLeft(){
+	function doThrow(){
 		
 		audio.play('throw',true);
 
@@ -157,7 +153,7 @@ BatFighter = function(){
 		},600);
 	}
 
-	function doThrowHitLeft(){
+	function doThrowHit(){
 		audio.stop('warning');
 		audio.play('boom',true);
 		audio.play('crash',true);
@@ -173,7 +169,7 @@ BatFighter = function(){
 		},800);
 	}
 
-	function doThrowMissLeft(){
+	function doThrowMiss(){
 		audio.stop('warning');
 		$panel.text('DODGED!');
 		audio.play('reverse',true);
@@ -209,7 +205,7 @@ BatFighter = function(){
 		},200);
 	}
 
-	function doHitLeft(){
+	function doHit(){
 		audio.stop('warning');
 		audio.play('boom',true);
 		audio.play('hit',true);
@@ -219,7 +215,6 @@ BatFighter = function(){
 
 		setTimeout(function(){
 			self.to = undefined;
-
 			resetFists();
 		},500);
 	}
@@ -312,9 +307,13 @@ BatFighter = function(){
 
 		if(!self.to){
 			iSequence++;
-			self.to = sequence[iSequence%sequence.length];
-
+			self.to = sequence[iSequence];
 			$panel.hide();
+
+			if(!self.to){
+				fnComplete();
+				return;
+			}
 
 			if(self.to.fn) self.to.fn();
 
@@ -504,14 +503,15 @@ BatFightGame = function(){
 	let $fg = $('<fightlayer>').appendTo($game);
 
 	
-	
+	function getPuncher(iWall){
+		return new BatFighter(doGoonHandball, doGoonComplete).spawn(iWall,-1,1).peak().sneak(iWall,1,1).peak().sneak(iWall,0,0).punch(iWall,-1,0).sneak(iWall,0,0).punch(iWall,1,0);
+	}
 
 
 	const LEVELS = 
 	[
-		[
-			new BatFighter().spawn(1,-1,1).peak().sneak(1,1,1).peak().sneak(1,0,0).punch(1,-1,0).sneak(1,0,0).punch(1,1,0),
-		]
+		[ getPuncher(1) ],
+		[ getPuncher(1), getPuncher(2) ],
 	]
 
 	let audio = new AudioContext();
@@ -523,6 +523,14 @@ BatFightGame = function(){
 		iLevel++;
 		for(var n in LEVELS[iLevel]) LEVELS[iLevel][n].$el.appendTo($game);
 		setInterval(tick,1000/FPS);
+	}
+
+	function doGoonHandball(){
+		
+	}
+
+	function doGoonComplete(){
+
 	}
 
 	doNextLevel();
