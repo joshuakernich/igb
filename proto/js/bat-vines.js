@@ -657,7 +657,6 @@ BatVinesRope = function(x,y,length){
 
             $(self).animate({length:self.length+0.4, thick:0.5},{duration:500,
             step:function(){
-              
                 $path.css('stroke-width',0.3*self.thick+'px');
                 self.knot.rehang();
 
@@ -944,6 +943,16 @@ BatVinesKnot = function(left,right,slave,isRespawn){
     self.rehang();
 
     function drop(){
+       
+        $(left).stop();
+        $(right).stop();
+
+        left.$el.hide();
+        right.$el.hide();
+
+        left.isCut = true;
+        right.isCut = true;
+
         slave.gravity = true;
     }
 
@@ -956,10 +965,8 @@ BatVinesKnot = function(left,right,slave,isRespawn){
     }
 
     function dangle(){
-
         let rope = left.isCut?right:left;
         
-
         let pos = {x:mx,y:my};
         $(pos).animate({x:rope.x,y:rope.y+rope.length},{duration:500,easing:'easeOutBack',step:function(value,prop){
            
@@ -975,6 +982,7 @@ BatVinesKnot = function(left,right,slave,isRespawn){
     
         let isBoth = (!left || left.isDamaged) && (!right || right.isDamaged);
         
+
         if(isBoth) drop();
         else if( isRespawn ) respawn();
         else dangle();
