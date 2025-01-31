@@ -703,8 +703,8 @@ BatVinesActor = function(x,y,w,h,type,dir){
         'goody':{w:1.5,h:1.5},
         'mouth':{w:2,h:2},
         'baddy':{w:3,h:3},
-        'spitter':{w:1.5,h:1.5},
-        'tentacle':{w:3.5,h:3.5},
+        'spitter':{w:2.5,h:2.5},
+        'tentacle':{w:2,h:2},
         'arrow':{w:1,h:0.5},
         'fragment':{w:1.5,h:1.5},
         'beam':{w:4,h:1},
@@ -717,7 +717,7 @@ BatVinesActor = function(x,y,w,h,type,dir){
 
     const STOMP = 0.03;
     const WALK = 0.05;
-    const SPIT = 0.5;
+    const SPIT = 1.2;
     const RUN = 0.07;
     const CHASE = 0.1;
 
@@ -784,9 +784,11 @@ BatVinesActor = function(x,y,w,h,type,dir){
             self.y = BatVines.ARENA.H-self.h/2;
             self.sy = 1;
             self.grounded ++;
+            
+            self.$el.attr('grounded','true');
 
             if(self.type=='goody'){
-                self.dir = (self.x<BatVines.ARENA.W/2)?-1:1;
+                //self.dir = (self.x<BatVines.ARENA.W/2)?-1:1;
                 self.x += RUN * self.dir;
                  if(self.x < 0 || self.x > BatVines.ARENA.W) self.complete = true;
             }
@@ -813,8 +815,8 @@ BatVinesActor = function(x,y,w,h,type,dir){
         }
 
         if(self.type=='spitter'){
-            self.state = (nFrame%BatVines.FPS*2 < BatVines.FPS*1)?'spit':'inhale';
-            if(nFrame%BatVines.FPS*2==0) self.spawning = new BatVinesActor( self.x, self.y, 2, 1, "arrow", self.dir);
+            //self.state = (nFrame%BatVines.FPS*2 < BatVines.FPS*1)?'spit':'inhale';
+            //if(nFrame%BatVines.FPS*2==0) self.spawning = new BatVinesActor( self.x, self.y, 2, 1, "arrow", self.dir);
         }
 
         // REDRAW
@@ -833,20 +835,39 @@ BatVinesActor = function(x,y,w,h,type,dir){
         let d = Math.hypot(dx,dy);
         let dir = dx>0?1:-1;
 
-        let shouldAttack = (self.type=='baddy' && other.type=='goody' && dir == self.dir);
+        let isOtherEnemy = (other.type=='baddy' || other.type=='spitter' || other.type=='mouth');
+        let isAttacker = (self.type=='baddy' || self.type=='spitter');
+        let shouldAttack = (isAttacker && other.type=='goody' && dir == self.dir);
 
         if(d<1.5){
             //BAD THING HIT OTHER THING
-            if(self.type=='mouth') other.dead = true;
-            if(self.type=='fragment' && !self.grounded) other.dead = true;
+            if(self.type=='arrow' && other.type=='goody'){
+                other.dead = true;
+                self.dead = true;
+            }
+            if(self.type=='mouth' && other.type=='goody') other.dead = true;
+            if(self.type=='fragment' && !self.grounded){
+                self.dead = true;
+                other.dead = true;
+            }
             if(shouldAttack) other.dead = true;
         }
 
-        if(shouldAttack && Math.abs(dy) < 1){
+        if(self.type=='spitter' && shouldAttack && Math.abs(dy) < 1 && self.state != 'spit'){
+
+            self.state = 'spit';
+            self.spawning = new BatVinesActor( self.x, self.y, 2, 1, "arrow", self.dir);
+        }
+
+        if(self.type=='baddy' && shouldAttack && Math.abs(dy) < 1){
             //CHASE THE HUMAN!
             self.isAttacking = true;
             self.dir = dx>0?1:-1;
             self.x += self.dir*CHASE;
+        }
+
+        if(self.type=='goody' && isOtherEnemy && Math.abs(dy) < 1){
+            self.dir = -dir;
         }
     }
 
@@ -890,6 +911,8 @@ GetHeightForEllipse = function (circumference, width) {
 
     return b * 2; // Return the full height
 }
+
+
 
 
 BatVinesKnot = function(left,right,slave,isRespawn){
@@ -944,14 +967,16 @@ BatVinesKnot = function(left,right,slave,isRespawn){
 
     function drop(){
        
-        $(left).stop();
-        $(right).stop();
-
-        left.$el.hide();
-        right.$el.hide();
-
-        left.isCut = true;
-        right.isCut = true;
+        if(left){
+            $(left).stop();
+            left.$el.hide();
+            left.isCut = true;
+        }
+        if(right){
+            $(right).stop();
+            right.$el.hide();
+            right.isCut = true;
+        }
 
         slave.gravity = true;
     }
@@ -1007,7 +1032,7 @@ BatVinesGame = function(){
     BatVines.W = 1600;
     BatVines.H = 1000;
     BatVines.GRIDSIZE = 50;
-    BatVines.GRAVITY = 0.03;
+    BatVines.GRAVITY = 0.015;
     BatVines.ARENA = {W:16,H:10};
 
     $("head").append(`
@@ -1407,20 +1432,18 @@ BatVinesGame = function(){
                 animation-fill-mode: forwards;
            }
 
-           batactor[type="spitter"]{
-                background-image: url(./proto/img/plant-spitter.png);
-                background-size: 400%;
+           
 
-                animation: sprite4;
-                animation-timing-function: steps(4);
-                animation-duration: 0.5s;
-                animation-fill-mode: forwards;
-           }
-
-            batactor[type="tentacle"]{
+            batactor[type="tentacle"]:after{
+                content:"";
+                display: block;
+                position: absolute;
+                top: -50%;
+                left: -50%;
+                width: 200%;
+                height: 200%;
                 background-image: url(./proto/img/plant-tentacle.png);
                 background-size: 600%;
-
                 animation: sprite6;
                 animation-timing-function: steps(6);
                 animation-duration: 0.5s;
@@ -1428,8 +1451,18 @@ BatVinesGame = function(){
                 animation-iteration-count: infinite;
            }
 
+           batactor[type="tentacle"][grounded]:after{
+                background-image: url(./proto/img/plant-tentacle-dead.png);
+                background-size: 100%;
+           }
+
+           batactor[type="spitter"]{
+                background-image: url(./proto/img/plant-spitter.png);
+                background-size: 100%;
+           }
+
            batactor[type="spitter"][state='spit']{
-                animation: none;
+                
            }
 
            batactor[type="arrow"]{
@@ -1466,7 +1499,15 @@ BatVinesGame = function(){
            }
 
             batactor[type="fragment"]{
-                 background-image: url(./proto/img/plant-fragment-vines.png);
+                 background-image: url(./proto/img/plant-fragment.png);
+           }
+
+            batactor[type="fragment"][grounded]{
+                background-image: url(./proto/img/plant-fragment-dead.png);
+           }
+
+            batactor[type="spitter"][grounded]{
+                background-image: url(./proto/img/plant-spitter-grounded.png);
            }
 
            svg{
@@ -1579,39 +1620,49 @@ BatVinesGame = function(){
     const MY = BatVines.H/2 - BatVines.ARENA.W/2*BatVines.GRIDSIZE/2;
     const S = 0.5;
 
-    const GOODY = {x:0,y:0,w:2,h:2,type:'goody'};
 
     const LEVELS = [
 
        
         [
-            //LEVEL 1
+            //LEVEL 0 //VINES
             {puzzle:0,wall:0,x:MX,y:MY,scale:S},
             {puzzle:1,wall:1,x:MX,y:MY,scale:S},
             {puzzle:2,wall:2,x:MX,y:MY,scale:S},
         ],
         [
-            //LEVEL 2
+            //LEVEL 1 //MOUTHS
             {puzzle:3,wall:0,x:MX,y:MY,scale:S},
             {puzzle:4,wall:1,x:MX,y:MY,scale:S},
             {puzzle:5,wall:2,x:MX,y:MY,scale:S},
         ],
         [
-            //LEVEL 3
+            //LEVEL 2 //FRAGMENTS
             {puzzle:6,wall:0,x:MX,y:MY,scale:S},
             {puzzle:7,wall:1,x:MX,y:MY,scale:S},
             {puzzle:8,wall:2,x:MX,y:MY,scale:S},
         ],
         [
-            //LEVEL 4
+            //LEVEL 3 //WALKERS
             {puzzle:9,wall:0,x:MX,y:MY,scale:S},
             {puzzle:10,wall:1,x:MX,y:MY,scale:S},
             {puzzle:11,wall:2,x:MX,y:MY,scale:S},
         ],
         [
-            //TESTING
+            //LEVEL 4 //SIMULTANEOUS
             {puzzle:12,wall:0,x:MX,y:MY,scale:S},
             {puzzle:13,wall:1,x:MX,y:MY,scale:S},
+            {puzzle:14,wall:2,x:MX,y:MY,scale:S},
+        ],
+        [
+            //LEVEL 5 //SPITTERS
+            {puzzle:15,wall:0,x:MX,y:MY,scale:S},
+            {puzzle:16,wall:1,x:MX,y:MY,scale:S},
+            {puzzle:17,wall:2,x:MX,y:MY,scale:S},
+        ],
+        [
+            //LEVEL 6 //TENTACLES
+            {puzzle:18,wall:0,x:MX,y:MY,scale:S},
         ]
     ]
 
@@ -1624,8 +1675,8 @@ BatVinesGame = function(){
                 {x:BatVines.ARENA.W*0.6,y:0,length:5} 
             ],
             actors:[ 
-                GOODY,
-                GOODY
+                {type:'goody'},
+                {type:'goody'}
             ],
             knots:[
                {ropeLeft:0,ropeRight:-1,actor:0},
@@ -1639,7 +1690,7 @@ BatVinesGame = function(){
                 {x:BatVines.ARENA.W*0.6,y:0,length:6} 
             ],
             actors:[ 
-               GOODY
+               {type:'goody'}
             ],
             knots:[
                {ropeLeft:0,ropeRight:1,actor:0},
@@ -1654,8 +1705,8 @@ BatVinesGame = function(){
                 {x:BatVines.ARENA.W*0.8,y:0,length:5}, 
             ],
             actors:[ 
-               GOODY,
-               GOODY
+               {type:'goody'},
+               {type:'goody'}
             ],
             knots:[
                {ropeLeft:0,ropeRight:2,actor:0},
@@ -1669,7 +1720,7 @@ BatVinesGame = function(){
                 {x:BatVines.ARENA.W*0.7,y:0,length:6} 
             ],
             actors:[ 
-                GOODY,
+                {type:'goody'},
                 {x:BatVines.ARENA.W*0.3,y:BatVines.ARENA.H,type:'mouth'},
             ],
             knots:[
@@ -1685,8 +1736,8 @@ BatVinesGame = function(){
                 {x:BatVines.ARENA.W*0.8,y:0,length:5}, 
             ],
             actors:[
-                GOODY,
-                GOODY,
+                {type:'goody'},
+                {type:'goody'},
                 {x:BatVines.ARENA.W*0.55,y:BatVines.ARENA.H,type:'mouth'},
             ],
             knots:[
@@ -1705,9 +1756,9 @@ BatVinesGame = function(){
                 {x:BatVines.ARENA.W*0.8,y:0,length:5}, 
             ],
             actors:[
-                GOODY,
-                GOODY,
-                GOODY,
+                {type:'goody'},
+                {type:'goody'},
+                {type:'goody'},
                 {x:BatVines.ARENA.W*0.55,y:BatVines.ARENA.H,type:'mouth'},
             ],
             knots:[
@@ -1723,7 +1774,7 @@ BatVinesGame = function(){
                 {x:BatVines.ARENA.W*0.7,y:0,length:3},
             ],
             actors:[
-                GOODY,
+                {type:'goody'},
                 {type:'fragment'},
                 {x:BatVines.ARENA.W*0.3,y:BatVines.ARENA.H,type:'mouth'},
                 {x:BatVines.ARENA.W*0.7,y:BatVines.ARENA.H,type:'mouth'},
@@ -1742,10 +1793,10 @@ BatVinesGame = function(){
                 {x:BatVines.ARENA.W*0.7,y:0,length:9},
             ],
             actors:[
-                GOODY,
+                {type:'goody'},
                 {type:'fragment'},
-                {x:BatVines.ARENA.W*0.3,y:BatVines.ARENA.H,w:3,h:3,type:'mouth'},
-                {x:BatVines.ARENA.W*0.7,y:BatVines.ARENA.H,w:3,h:3,type:'mouth'},
+                {x:BatVines.ARENA.W*0.3,y:BatVines.ARENA.H,type:'mouth'},
+                {x:BatVines.ARENA.W*0.7,y:BatVines.ARENA.H,type:'mouth'},
             ],
 
             knots:[
@@ -1764,11 +1815,11 @@ BatVinesGame = function(){
             ],
             actors:[
                 {type:'fragment'},
-                GOODY,
+                {type:'goody'},
                 {type:'fragment'},
-                {x:BatVines.ARENA.W*0.1,y:BatVines.ARENA.H,w:3,h:3,type:'mouth'},
-                {x:BatVines.ARENA.W*0.5,y:BatVines.ARENA.H,w:3,h:3,type:'mouth'},
-                {x:BatVines.ARENA.W*0.9,y:BatVines.ARENA.H,w:3,h:3,type:'mouth'},
+                {x:BatVines.ARENA.W*0.1,y:BatVines.ARENA.H,type:'mouth'},
+                {x:BatVines.ARENA.W*0.5,y:BatVines.ARENA.H,type:'mouth'},
+                {x:BatVines.ARENA.W*0.9,y:BatVines.ARENA.H,type:'mouth'},
             ],
 
             knots:[
@@ -1786,9 +1837,9 @@ BatVinesGame = function(){
                 {x:BatVines.ARENA.W*0.8,y:0,length:5},
             ],
             actors:[
-                GOODY,
-                GOODY,
-                {x:BatVines.ARENA.W*0.1,y:BatVines.ARENA.H,w:3,h:3,type:'baddy'},
+                {type:'goody'},
+                {type:'goody'},
+                {x:BatVines.ARENA.W*0.1,y:BatVines.ARENA.H,type:'baddy'},
             ],
 
             knots:[
@@ -1805,8 +1856,8 @@ BatVinesGame = function(){
                 {x:BatVines.ARENA.W*0.8,y:0,length:8},
             ],
             actors:[
-                GOODY,
-                GOODY,
+                {type:'goody'},
+                {type:'goody'},
                 {x:BatVines.ARENA.W*0.1,y:BatVines.ARENA.H,type:'baddy'},
             ],
 
@@ -1823,9 +1874,9 @@ BatVinesGame = function(){
             ],
             actors:[
                 {type:'fragment'},
-                GOODY,
-                {x:BatVines.ARENA.W*0.1,y:BatVines.ARENA.H,w:3,h:3,type:'baddy'},
-                {x:BatVines.ARENA.W*0.9,y:BatVines.ARENA.H,w:3,h:3,type:'baddy'},
+                {type:'goody'},
+                {x:BatVines.ARENA.W*0.1,y:BatVines.ARENA.H,type:'baddy'},
+                {x:BatVines.ARENA.W*0.9,y:BatVines.ARENA.H,type:'baddy'},
             ],
 
             knots:[
@@ -1833,7 +1884,7 @@ BatVinesGame = function(){
                 {ropeLeft:1,ropeRight:-1,actor:1},
             ],
         },
-         {
+        {
             // cut at same time
             ropes:[
                 {x:BatVines.ARENA.W*0.2,y:0,length:5},
@@ -1842,10 +1893,10 @@ BatVinesGame = function(){
                
             ],
             actors:[
-                 GOODY,
+                 {type:'goody'},
                  {type:'fragment'},
-                 {x:BatVines.ARENA.W*0.3,y:BatVines.ARENA.H,w:3,h:3,type:'mouth'},
-                 {x:BatVines.ARENA.W*0.9,y:BatVines.ARENA.H,w:3,h:3,type:'mouth'},
+                 {x:BatVines.ARENA.W*0.3,y:BatVines.ARENA.H,type:'mouth'},
+                 {x:BatVines.ARENA.W*0.9,y:BatVines.ARENA.H,type:'mouth'},
             ],
 
             knots:[
@@ -1853,15 +1904,148 @@ BatVinesGame = function(){
                 {ropeLeft:2,actor:0},
             ],
         },
+         {
+            // cut at same time
+            ropes:[
+                 {x:BatVines.ARENA.W*0.5,y:0,length:3},
+
+                {x:BatVines.ARENA.W*0.1,y:0,length:6},
+                {x:BatVines.ARENA.W*0.4,y:0,length:6},
+                {x:BatVines.ARENA.W*0.3,y:0,length:8},
+                {x:BatVines.ARENA.W*0.7,y:0,length:8},
+                {x:BatVines.ARENA.W*0.6,y:0,length:6},
+                {x:BatVines.ARENA.W*0.9,y:0,length:6},
+
+               
+               
+            ],
+            actors:[
+                {type:'goody'},
+
+                {type:'fragment'},
+                {type:'fragment'},
+                {type:'fragment'},
+                 
+                 {x:BatVines.ARENA.W*0.25,y:BatVines.ARENA.H,type:'mouth'},
+                 {x:BatVines.ARENA.W*0.5,y:BatVines.ARENA.H,type:'mouth'},
+                 {x:BatVines.ARENA.W*0.75,y:BatVines.ARENA.H,type:'mouth'},
+         
+            ],
+
+            knots:[
+                {ropeLeft:0,actor:0},
+                {ropeLeft:1,ropeRight:2,actor:1},
+                {ropeLeft:3,ropeRight:4,actor:2},
+                {ropeLeft:5,ropeRight:6,actor:3},
+
+            ],
+        },
         {
-            // spitters
+            // cut at same time
+            ropes:[
+                 {x:BatVines.ARENA.W*0.4,y:0,length:3},
+
+                {x:BatVines.ARENA.W*0,y:0,length:5},
+                {x:BatVines.ARENA.W*0.3,y:0,length:5},
+                {x:BatVines.ARENA.W*0.5,y:0,length:8},
+                {x:BatVines.ARENA.W*0.8,y:0,length:8},
+                {x:BatVines.ARENA.W*1,y:0,length:5},
+
+               
+               
+            ],
+            actors:[
+                {type:'goody'},
+
+                {type:'fragment'},
+                {type:'fragment'},
+                {type:'fragment'},
+                 
+                 {x:BatVines.ARENA.W*0.15,y:BatVines.ARENA.H,type:'mouth'},
+                 {x:BatVines.ARENA.W*0.5,y:BatVines.ARENA.H,type:'baddy'},
+                 {x:BatVines.ARENA.W*0.8,y:BatVines.ARENA.H,type:'mouth'},
+         
+            ],
+
+            knots:[
+                {ropeLeft:0,actor:0},
+                {ropeLeft:1,ropeRight:2,actor:1},
+                {ropeLeft:3,ropeRight:4,actor:2},
+                {ropeLeft:5,actor:3},
+
+            ],
+        },
+        {
+            // spitter
+            ropes:[
+                {x:BatVines.ARENA.W*0.2,y:0,length:8},
+                {x:BatVines.ARENA.W*0.6,y:0,length:8},
+                {x:BatVines.ARENA.W*0.4,y:0,length:4},
+                {x:BatVines.ARENA.W*0.7,y:0,length:5},
+            ],
+            actors:[
+                
+                {dir:1,type:'spitter'},
+                {type:'goody'},
+            ],
+
+            knots:[
+                {ropeLeft:0,ropeRight:1,actor:0},
+                {ropeLeft:2,ropeRight:3,actor:1},
+            ],
+        },
+        
+        {
+            // spitter
+            ropes:[
+                {x:BatVines.ARENA.W*0.2,y:0,length:3},
+                {x:BatVines.ARENA.W*0.7,y:0,length:7},
+                {x:BatVines.ARENA.W*1,y:0,length:8},
+                {x:BatVines.ARENA.W*0.5,y:0,length:7},
+            ],
+            actors:[
+                {type:'goody'},
+                {dir:-1,type:'spitter'},
+                {type:'fragment'},
+            ],
+
+            knots:[
+                {ropeLeft:0,ropeRight:-1,actor:0},
+                {ropeLeft:1,ropeRight:2,actor:1},
+                {ropeLeft:3,ropeRight:-1,actor:2},
+            ],
+        },
+        {
+            // spitter
+            ropes:[
+                {x:BatVines.ARENA.W*0.25,y:0,length:6},
+                {x:BatVines.ARENA.W*0.5,y:0,length:3},
+                {x:BatVines.ARENA.W*0.75,y:0,length:3},
+            ],
+            actors:[
+                 {dir:1,type:'spitter'},
+                 {type:'fragment'},
+                {type:'goody'},
+               
+            ],
+
+            knots:[
+                {ropeLeft:0,ropeRight:-1,actor:0},
+                {ropeLeft:1,ropeRight:-1,actor:1},
+                {ropeLeft:2,ropeRight:-1,actor:2},
+            ],
+        },
+
+         
+        {
+            // tentacle
             ropes:[
                 {x:BatVines.ARENA.W*0.1,y:0,length:4},
                 {x:BatVines.ARENA.W*0.4,y:0,length:8},
                 {x:BatVines.ARENA.W*0.7,y:0,length:8},
             ],
             actors:[
-                GOODY,
+                {type:'goody'},
                 {dir:-1,type:'tentacle'},
             ],
 
@@ -1869,7 +2053,8 @@ BatVinesGame = function(){
                 {ropeLeft:0,ropeRight:-1,actor:0},
                 {ropeLeft:1,ropeRight:2,actor:1,isRespawn:true},
             ],
-        }
+        },
+         
     ]
 
     let audio = new AudioContext();
