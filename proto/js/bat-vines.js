@@ -705,6 +705,7 @@ BatVinesActor = function(x,y,w,h,type,dir){
         'baddy':{w:3,h:3},
         'spitter':{w:2.5,h:2.5},
         'tentacle':{w:2,h:2},
+        'ivy':{w:2,h:2},
         'arrow':{w:1,h:0.5},
         'fragment':{w:1.5,h:1.5},
         'beam':{w:4,h:1},
@@ -1456,6 +1457,18 @@ BatVinesGame = function(){
                 background-size: 100%;
            }
 
+            batactor[type="ivy"]:after{
+                content:"";
+                display: block;
+                position: absolute;
+                top: -50%;
+                left: -50%;
+                width: 200%;
+                height: 200%;
+                background-image: url(./proto/img/plant-ivy.png);
+                background-size: 100%;
+           }
+
            batactor[type="spitter"]{
                 background-image: url(./proto/img/plant-spitter.png);
                 background-size: 100%;
@@ -2046,7 +2059,7 @@ BatVinesGame = function(){
             ],
             actors:[
                 {type:'goody'},
-                {dir:-1,type:'tentacle'},
+                {dir:-1,type:'ivy'},
             ],
 
             knots:[
