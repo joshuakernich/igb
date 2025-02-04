@@ -592,7 +592,7 @@ BatVinesArena = function(layout,puzzle) {
 
 }
 
-BatVinesRope = function(x,y,length){
+BatVinesRope = function(x,y,length,count=1){
     let self = this;
     let cache = {x:x,y:y,length:length};
 
@@ -608,8 +608,17 @@ BatVinesRope = function(x,y,length){
 
     self.$el = $('<batrope>').css({left:self.x*BatVines.GRIDSIZE+'px',top:self.y*BatVines.GRIDSIZE+'px'});
 
-    let $svg = $(`<svg viewBox='${-self.length} ${-self.length} ${self.length*2} ${self.length*2}' width=${self.length*2*BatVines.GRIDSIZE} height=${self.length*BatVines.GRIDSIZE*2}><path></path></svg>`).appendTo(self.$el);
+    let $svg = $(`<svg viewBox='${-self.length} ${-self.length} ${self.length*2} ${self.length*2}' width=${self.length*2*BatVines.GRIDSIZE} height=${self.length*BatVines.GRIDSIZE*2}>
+            <path></path>
+            <path></path>
+            <path></path>
+        </svg>`).appendTo(self.$el);
     let $path = $svg.find('path');
+
+    $path.each(function(n){
+
+        if(n>=count) $(this).hide();
+    })
 
     self.$target = $('<batvinestarget>');
     self.isCut = false;
@@ -624,12 +633,16 @@ BatVinesRope = function(x,y,length){
         cache.y2 = y2;
         cache.hang = hang;
 
-        $path.attr('d',`M0,0 C 0 ${hang}, ${x2} ${hang}, ${x2} ${y2}`);
+        $path.eq(0).attr('d',`M0,0 C 0 ${hang}, ${x2} ${hang}, ${x2} ${y2}`);
+        $path.eq(1).attr('d',`M-0.5,0 C 0 ${hang}, ${x2-0.5} ${hang}, ${x2-0.5} ${y2+0.5}`);
+        $path.eq(2).attr('d',`M0.5,0 C 0 ${hang}, ${x2+0.5} ${hang}, ${x2+0.5} ${y2-0.5}`);
 
         for(var i=0; i<5; i++){
             let pt = getPointOnBezier(0,0,0,hang,x2,hang,x2,y2,0.1*i);
             self.targets[i] = {x:self.x + pt.x, y:self.y+pt.y};
         }
+
+        $path.css('stroke-width',0.25*self.thick+'px');
     }
 
     self.to(self.x,self.y+length,length);
@@ -641,30 +654,38 @@ BatVinesRope = function(x,y,length){
     }
 
     self.doCut = function(gx,gy){
-        console.log('DO CUT');
+        
         if(!self.isDamaged){
             self.$cut = $('<batcut>').appendTo(self.$el).css({
                 left:(gx-self.x)*BatVines.GRIDSIZE+'px',
                 top:(gy-self.y)*BatVines.GRIDSIZE+'px',
             })
 
+            if(count==1){
+                self.length += 0.1;
+                self.thick = 0.8;
 
-            //console.log('was',self.length);
-            self.length += 0.1;
-            self.thick = 0.8;
-           // console.log('now',self.length);
-           // self.knot.rehang();
+                $(self).animate({length:self.length+0.4, thick:0.5},{duration:500,
+                step:function(){
+                    self.knot.rehang();
+                },done:function(){
+                    finaliseCut();
+                }})
 
-            $(self).animate({length:self.length+0.4, thick:0.5},{duration:500,
-            step:function(){
-                $path.css('stroke-width',0.3*self.thick+'px');
-                self.knot.rehang();
+                self.isDamaged = true;
+            } else{
+                count--;
+                
+                $(self).animate({length:self.length+0.05, thick:self.thick-0.1},{duration:200,
+                step:function(){
+                    self.knot.rehang();
+                },done:function(){
+                    $path.eq(count).hide();
+                    self.$cut.remove();
+                }})
+            }
 
-            },done:function(){
-                finaliseCut();
-            }})
-
-            self.isDamaged = true;
+            
         }
         
     }
