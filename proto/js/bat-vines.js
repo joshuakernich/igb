@@ -1856,6 +1856,17 @@ BatVinesGame = function(){
             transform: translate(-50%, -50%);
            }
 
+           batvineskip{
+            position:absolute;
+            bottom: 200px;
+            left: 0px;
+            right: 0px;
+            padding: 50px;
+            font-size: 50px;
+            color: white;
+            pointer-events: auto;
+           }
+
         batvineswall[active='false'] batvinesgoggles{
             background: black;
            }
@@ -2376,6 +2387,10 @@ BatVinesGame = function(){
     
     let $game = $('<batvinesgame>').appendTo(self.$el);
     let $bg = $('<batvinesbg>').appendTo($game);
+    let $skip = $('<batvineskip>SKIP</batvineskip>').appendTo($game).click(function(){
+         clearArenas();
+         doNextLevel();
+    })
 
     let $walls = [];
     for(var i=0; i<3; i++){
@@ -2397,6 +2412,8 @@ BatVinesGame = function(){
     let arenas = [];
     function doNextLevel(){
         iLevel++;
+
+        iLevel = iLevel%LEVELS.length;
 
         for(var m in LEVELS[iLevel]){
             let map = LEVELS[iLevel][m];
