@@ -409,7 +409,7 @@ BatVinesArena = function(layout,puzzle) {
         players = [];
 
         for(var r in puzzle.ropes){
-            ropes[r] = new BatVinesRope( puzzle.ropes[r].x, puzzle.ropes[r].y, puzzle.ropes[r].length );
+            ropes[r] = new BatVinesRope( puzzle.ropes[r].x, puzzle.ropes[r].y, puzzle.ropes[r].length, puzzle.ropes[r].count );
             ropes[r].$el.appendTo(self.$el);
         }
         for(var a in puzzle.actors){
@@ -437,6 +437,8 @@ BatVinesArena = function(layout,puzzle) {
 
     self.step = function() {
 
+       // $('targetmarker').remove();
+
        for(var a in actors) actors[a].step();
 
        for(var a=0; a<actors.length; a++){
@@ -454,6 +456,11 @@ BatVinesArena = function(layout,puzzle) {
                 actors.push(actors[a].spawning);
                 actors[a].spawning.$el.prependTo(self.$el);
                 actors[a].spawning = undefined;
+            }
+
+            if(actors[a].type=='ivy' && actors[a].isReadyToMove){
+                self.actorHandball = actors[a];
+                actors[a].isReadyToMove = false;
             }
         }
 
@@ -484,11 +491,21 @@ BatVinesArena = function(layout,puzzle) {
 
         for(var a in actors){
             let d = self.getDistance(pt,actors[a]);
-            let size = Math.min(actors[a].w,actors[a].h);
+            let size = 1;
             
             if(d<size){
                 min = d;
                 targeting = actors[a];
+            }
+
+            if(actors[a].subtargets){
+                for(var s in actors[a].subtargets){
+                    let d = self.getDistance(pt, actors[a].subtargets[s]);
+                    if(d<1){
+                         min = d;
+                         targeting = actors[a].subtargets[s];
+                    }
+                }
             }
         }
 
@@ -588,7 +605,17 @@ BatVinesArena = function(layout,puzzle) {
         }
     }
 
+    self.handballTo = function( actor, arena ){
+        console.log('handballTo',actor,arena);
+        let iActor = actors.indexOf(actor);
+        actors.splice(iActor,1);
+        arena.addActor(actor);
+    }
 
+    self.addActor = function( actor ){
+        actors.push(actor);
+        actor.$el.appendTo(self.$el);
+    }
 
 }
 
@@ -609,9 +636,9 @@ BatVinesRope = function(x,y,length,count=1){
     self.$el = $('<batrope>').css({left:self.x*BatVines.GRIDSIZE+'px',top:self.y*BatVines.GRIDSIZE+'px'});
 
     let $svg = $(`<svg viewBox='${-self.length} ${-self.length} ${self.length*2} ${self.length*2}' width=${self.length*2*BatVines.GRIDSIZE} height=${self.length*BatVines.GRIDSIZE*2}>
-            <path></path>
-            <path></path>
-            <path></path>
+            <path vector-effect='non-scaling-stroke'></path>
+            <path vector-effect='non-scaling-stroke'></path>
+            <path vector-effect='non-scaling-stroke'></path>
         </svg>`).appendTo(self.$el);
     let $path = $svg.find('path');
 
@@ -634,15 +661,15 @@ BatVinesRope = function(x,y,length,count=1){
         cache.hang = hang;
 
         $path.eq(0).attr('d',`M0,0 C 0 ${hang}, ${x2} ${hang}, ${x2} ${y2}`);
-        $path.eq(1).attr('d',`M-0.5,0 C 0 ${hang}, ${x2-0.5} ${hang}, ${x2-0.5} ${y2+0.5}`);
-        $path.eq(2).attr('d',`M0.5,0 C 0 ${hang}, ${x2+0.5} ${hang}, ${x2+0.5} ${y2-0.5}`);
+        $path.eq(1).attr('d',`M-0.5,0 C 0 ${hang}, ${x2-0.4} ${hang}, ${x2-0.4} ${y2+0.5}`);
+        $path.eq(2).attr('d',`M0.5,0 C 0 ${hang}, ${x2+0.4} ${hang}, ${x2+0.4} ${y2-0.5}`);
 
         for(var i=0; i<5; i++){
             let pt = getPointOnBezier(0,0,0,hang,x2,hang,x2,y2,0.1*i);
             self.targets[i] = {x:self.x + pt.x, y:self.y+pt.y};
         }
 
-        $path.css('stroke-width',0.25*self.thick+'px');
+        $path.css('stroke-width',2*self.thick*5+'px');
     }
 
     self.to(self.x,self.y+length,length);
@@ -707,7 +734,7 @@ BatVinesRope = function(x,y,length,count=1){
 
     self.doRespawnAnim = function(){
 
-        $path.css('stroke-width',0.3*self.thick+'px');
+        //$path.css('stroke-width',0.3*self.thick+'px');
         let anim = { x:cache.x2, y:cache.y2 };
 
         $(anim).animate({x:0,y:0},{duration:250, ease:'linear', step:redraw, complete:redraw });
@@ -718,6 +745,98 @@ BatVinesRope = function(x,y,length,count=1){
     }
 }
 
+BatVinesChomp = function( ivy, goody ){
+
+    const SEGMENTS = 30;
+    const WAVES = 3;
+    const AMPLITUDE = 30;
+
+    let dx =  goody.x-ivy.x;
+    let dy = goody.y-ivy.y;
+    let dist = Math.hypot(dx,dy);
+
+    let r = Math.atan2(dy,dx);
+
+    let self = this;
+    self.$el = $('<batchomp>');
+    self.$el.css('transform','rotate('+r+'rad)')
+    let $mouth = $('<batchompmouth>').appendTo(self.$el);
+
+    self.goody = goody;
+   let $svg = $(`<svg preserveAspectRatio='none' viewBox='0 -2 1 4' width=${dist*BatVines.GRIDSIZE} height=${AMPLITUDE*2}>
+            <path vector-effect='non-scaling-stroke' stroke='black' stroke-width='10px'></path>
+        </svg>`).appendTo(self.$el);
+    let $path = $svg.find('path');
+
+    self.progress = 0;
+    self.offset = 0;
+    self.targets = [];
+
+    function getXY(i,isGlobal){
+        let x = dist*(i/SEGMENTS);
+        let y = Math.sin(i/WAVES + self.offset)*AMPLITUDE/BatVines.GRIDSIZE;
+
+        if(isGlobal){
+            let r2 = Math.atan2(y,x);
+            let dist = Math.hypot(x,y);
+
+            return {
+                x:ivy.x - Math.sin(r-Math.PI/2)*dist,
+                y:ivy.y + Math.cos(r-Math.PI/2)*dist,
+            }
+        }
+
+        return {x:x,y:y};
+    }
+
+    self.redraw = function(){
+
+        self.targets = [];
+
+        let d = 'M 0,0'
+        let iMax = Math.floor(SEGMENTS*self.progress);
+
+        for(var i=0; i<iMax; i++){
+            d = d + ' L '+i/SEGMENTS+','+Math.sin(i/WAVES + self.offset);
+
+            self.targets[i] = getXY(i,true);
+            self.targets[i].doCut = self.doCut;
+        }
+        $path.attr('d',d);
+
+        let iPrev = iMax?iMax-1:0;
+        let x1 = dist*(iPrev/SEGMENTS)*BatVines.GRIDSIZE;
+        let y1 = Math.sin(iPrev/WAVES + self.offset)*AMPLITUDE;
+
+        let x = dist*(iMax/SEGMENTS)*BatVines.GRIDSIZE;
+        let y = Math.sin(iMax/WAVES + self.offset)*AMPLITUDE;
+
+        let r = Math.atan2(y-y1, x-x1);
+
+        $mouth.css({
+            left:x,
+            top:y,
+            transform:'rotate('+r+'rad)',
+        });
+
+
+    }
+
+    self.step = function(){
+        if(self.progress < 1) self.progress += 0.005;
+        else self.progress = 1;
+        self.offset += 0.03;
+        self.redraw();
+    }
+
+    self.doCut = function(){
+        self.$el.hide();
+        self.dead = true;
+    }
+
+    //$(self).animate({progress:1,offset:0},{duration:dist*700,step:self.redraw,ease:'linear'});
+}
+
 BatVinesActor = function(x,y,w,h,type,dir){
 
     const SIZE = {
@@ -726,7 +845,7 @@ BatVinesActor = function(x,y,w,h,type,dir){
         'baddy':{w:3,h:3},
         'spitter':{w:2.5,h:2.5},
         'tentacle':{w:2,h:2},
-        'ivy':{w:2,h:2},
+        'ivy':{w:0,h:4},
         'arrow':{w:1,h:0.5},
         'fragment':{w:1.5,h:1.5},
         'beam':{w:4,h:1},
@@ -777,6 +896,7 @@ BatVinesActor = function(x,y,w,h,type,dir){
             top:self.y*BatVines.GRIDSIZE+'px',
             transform:'translate(-50%, -50%) rotate('+rot+'deg) scaleX('+self.dir+')',
         }) .attr('state',self.state);
+
     }
 
     let nFrame = -1;
@@ -837,12 +957,51 @@ BatVinesActor = function(x,y,w,h,type,dir){
         }
 
         if(self.type=='spitter'){
+            // NOTE Spitter used to be a timed thing. Now he spits when he sees you.
             //self.state = (nFrame%BatVines.FPS*2 < BatVines.FPS*1)?'spit':'inhale';
             //if(nFrame%BatVines.FPS*2==0) self.spawning = new BatVinesActor( self.x, self.y, 2, 1, "arrow", self.dir);
         }
 
-        // REDRAW
+        if(self.type=='ivy'){
+            
+            self.subtargets = [];
+            self.gravity = true;
+            if(!self.targetX) self.targetX = 0.5 * BatVines.ARENA.W; 
 
+            let dx = self.targetX - self.x;
+            let dir = dx>0?1:-1;
+
+            if(Math.abs(dx) < 1){
+                
+                if(self.state=='transition'){
+                    //move on
+                    self.isReadyToMove = true;
+                    self.state = 'idle';
+                    self.x = 0;
+                    self.targetX = undefined;
+                    self.chomps = undefined;
+                } else if(self.state=='attack'){
+                    //check for chomp death
+                    let allChompsDead = true;
+                    for(var c in self.chomps) if(!self.chomps[c].dead) allChompsDead = false;
+
+                    if(allChompsDead){
+                        console.log('all chomps dead');
+                        //move to next arena
+                        self.targetX = BatVines.ARENA.W;
+                        self.state = 'transition';
+                    }
+                } else{
+                    //unleash the vines
+                    self.state = 'attack';
+                } 
+            } else {
+                //moving
+                self.x += dir * 0.1;
+            }
+        }
+
+        // REDRAW
         self.to(self.x,self.y);
     }
 
@@ -857,8 +1016,8 @@ BatVinesActor = function(x,y,w,h,type,dir){
         let d = Math.hypot(dx,dy);
         let dir = dx>0?1:-1;
 
-        let isOtherEnemy = (other.type=='baddy' || other.type=='spitter' || other.type=='mouth');
-        let isAttacker = (self.type=='baddy' || self.type=='spitter');
+        let isOtherEnemy = ( other.type=='baddy' || other.type=='spitter' || other.type=='mouth' );
+        let isAttacker = ( self.type=='baddy' || self.type=='spitter' || self.type=='ivy' );
         let shouldAttack = (isAttacker && other.type=='goody' && dir == self.dir);
 
         if(d<1.5){
@@ -890,6 +1049,26 @@ BatVinesActor = function(x,y,w,h,type,dir){
 
         if(self.type=='goody' && isOtherEnemy && Math.abs(dy) < 1){
             self.dir = -dir;
+        }
+
+        if(self.type=='ivy' && self.state=='attack' && other.type=='goody'){
+            
+            if( !self.chomps ) self.chomps = [];
+
+            //look for existing chomp
+            let chomp;
+            for(var c in self.chomps) if(self.chomps[c].goody == other) chomp = self.chomps[c];
+            
+            if(!chomp){
+                chomp = new BatVinesChomp( self, other );
+                chomp.$el.appendTo(self.$el);
+                self.chomps.push( chomp );
+            }
+
+            if(!chomp.dead){
+                chomp.step();
+                self.subtargets = self.subtargets.concat(chomp.targets);
+            }
         }
     }
 
@@ -1099,6 +1278,52 @@ BatVinesGame = function(){
                 100%{
                      background-position-x: -400%;
                 }
+            }
+
+            batchomp:before{
+                content:"";
+                display:block;
+                position: absolute;
+                width: 20px;
+                height: 20px;
+                background: red;
+                top: -10px;
+                left: -10px;
+                border-radius: 100px;
+            }
+
+            batchomp{
+                display: block;
+                position: absolute;
+                top: 50%;
+            }
+
+             batchompmouth{
+                display: block;
+                position: absolute;
+                top: 0px;
+                left: 0px;
+            }
+
+            batchompmouth:after{
+                content:" ";
+                display: block;
+                position: absolute;
+                width: ${BatVines.GRIDSIZE}px;
+                height: ${BatVines.GRIDSIZE}px;
+                background: url(./proto/img/plant-chomp.png);
+                background-size: 100%;
+                position: absolute;
+                top: 0px;
+                left: 0px;
+                transform: translate(-50%, -50%);
+            }
+
+            batchomp svg{
+                position: absolute;
+                top: 0px;
+                left: 0px;
+                transform: translateY(-50%);
             }
 
             batvinespop{
@@ -1478,17 +1703,26 @@ BatVinesGame = function(){
                 background-size: 100%;
            }
 
+            batactor[type="ivy"]{
+                transform: translate(0px,0px);
+            }
+
             batactor[type="ivy"]:after{
                 content:"";
                 display: block;
                 position: absolute;
-                top: -50%;
-                left: -50%;
-                width: 200%;
-                height: 200%;
                 background-image: url(./proto/img/plant-ivy.png);
                 background-size: 100%;
+                transform: translateX(-50%);
+                width: ${4*BatVines.GRIDSIZE}px;
+                height: ${4*BatVines.GRIDSIZE}px;
+                top: 0px;
+                left: 0px;
            }
+
+            batactor[type="ivy"][state="attack"]:after{
+                 background-image: url(./proto/img/plant-ivy-squat.png);
+            }
 
            batactor[type="spitter"]{
                 background-image: url(./proto/img/plant-spitter.png);
@@ -1544,13 +1778,11 @@ BatVinesGame = function(){
                 background-image: url(./proto/img/plant-spitter-grounded.png);
            }
 
-           svg{
+           batrope svg{
                transform: translate(-50%,-50%);
-               
            }
 
            path{
-                stroke-width: 0.3px;
                 stroke: black;
                 fill: none;
            }
@@ -1695,8 +1927,10 @@ BatVinesGame = function(){
             {puzzle:17,wall:2,x:MX,y:MY,scale:S},
         ],
         [
-            //LEVEL 6 //TENTACLES
+            //LEVEL 6 //IVY
             {puzzle:18,wall:0,x:MX,y:MY,scale:S},
+            {puzzle:19,wall:1,x:MX,y:MY,scale:S},
+            {puzzle:20,wall:2,x:MX,y:MY,scale:S},
         ]
     ]
 
@@ -2069,23 +2303,68 @@ BatVinesGame = function(){
                 {ropeLeft:2,ropeRight:-1,actor:2},
             ],
         },
-
-         
         {
             // tentacle
             ropes:[
-                {x:BatVines.ARENA.W*0.1,y:0,length:4},
-                {x:BatVines.ARENA.W*0.4,y:0,length:8},
-                {x:BatVines.ARENA.W*0.7,y:0,length:8},
+                {x:BatVines.ARENA.W*0.1,y:0,length:5, count:2},
+                {x:BatVines.ARENA.W*0.4,y:0,length:6, count:3},
+                {x:BatVines.ARENA.W*0.5,y:0,length:5, count:3},
+                {x:BatVines.ARENA.W*0.7,y:0,length:6, count:2},
+                {x:BatVines.ARENA.W*0.9,y:0,length:4, count:3},
             ],
             actors:[
                 {type:'goody'},
-                {dir:-1,type:'ivy'},
+                {type:'goody'},
+                {type:'goody'},
             ],
 
             knots:[
-                {ropeLeft:0,ropeRight:-1,actor:0},
-                {ropeLeft:1,ropeRight:2,actor:1,isRespawn:true},
+                {ropeLeft:0,ropeRight:1,actor:0},
+                {ropeLeft:2,actor:1},
+                {ropeLeft:3,ropeRight:4,actor:2},
+            ],
+        },
+        {
+            // tentacle
+            ropes:[
+                {x:BatVines.ARENA.W*0.1,y:0,length:5, count:2},
+                {x:BatVines.ARENA.W*0.4,y:0,length:6, count:3},
+                {x:BatVines.ARENA.W*1,y:0,length:5, count:3},
+                {x:BatVines.ARENA.W*0.6,y:0,length:6, count:2},
+                {x:BatVines.ARENA.W*0.9,y:0,length:4, count:3},
+            ],
+            actors:[
+                {type:'goody'},
+                {type:'goody'},
+                {type:'goody'},
+                {type:'ivy', x:0, y:BatVines.ARENA.H},
+            ],
+
+            knots:[
+                {ropeLeft:0,ropeRight:1,actor:0},
+                {ropeLeft:2,actor:1},
+                {ropeLeft:3,ropeRight:4,actor:2},
+            ],
+        },
+        {
+            // tentacle
+            ropes:[
+                {x:BatVines.ARENA.W*0.1,y:0,length:5, count:2},
+                {x:BatVines.ARENA.W*0.4,y:0,length:6, count:3},
+                {x:BatVines.ARENA.W*0.5,y:0,length:5, count:3},
+                {x:BatVines.ARENA.W*0.7,y:0,length:6, count:2},
+                {x:BatVines.ARENA.W*0.9,y:0,length:4, count:3},
+            ],
+            actors:[
+                {type:'goody'},
+                {type:'goody'},
+                {type:'goody'},
+            ],
+
+            knots:[
+                {ropeLeft:0,ropeRight:1,actor:0},
+                {ropeLeft:2,actor:1},
+                {ropeLeft:3,ropeRight:4,actor:2},
             ],
         },
          
@@ -2151,7 +2430,16 @@ BatVinesGame = function(){
         if( s!=scale ) $game.css('transform','scale('+s+')');
         scale = s;
 
-        for(var a in arenas) arenas[a].step();
+        for(var a=0; a<arenas.length; a++){
+            arenas[a].step();
+            
+            if(arenas[a].actorHandball){
+                let iNextArena = (a+1)%arenas.length; //make more random
+                arenas[a].handballTo( arenas[a].actorHandball, arenas[iNextArena] );
+                arenas[a].actorHandball = undefined;
+            }
+        }
+
         if(idActive>-1){
             arenas[idActive].setPlayerPositions(players);
             if(arenas[idActive].isCleared){

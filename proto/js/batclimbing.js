@@ -79,9 +79,6 @@ BatClimbing = function(){
 				
 			},
 
-
-			
-
 			'batgrid':{
 				'display':'inline-block',
 				'height':'100%',
