@@ -965,22 +965,14 @@ BatVinesActor = function(x,y,w,h,type,dir){
         if(self.type=='ivy'){
             
             self.subtargets = [];
-            self.gravity = true;
-            if(!self.targetX) self.targetX = 0.5 * BatVines.ARENA.W; 
+            
+            //if(!self.targetX) self.targetX = 0.5 * BatVines.ARENA.W; 
+            //let dx = self.targetX - self.x;
+            //let dir = dx>0?1:-1;
 
-            let dx = self.targetX - self.x;
-            let dir = dx>0?1:-1;
-
-            if(Math.abs(dx) < 1){
+            if(self.grounded && self.state != 'transition'){
                 
-                if(self.state=='transition'){
-                    //move on
-                    self.isReadyToMove = true;
-                    self.state = 'idle';
-                    self.x = 0;
-                    self.targetX = undefined;
-                    self.chomps = undefined;
-                } else if(self.state=='attack'){
+                if(self.state=='attack'){
                     //check for chomp death
                     let allChompsDead = true;
                     for(var c in self.chomps) if(!self.chomps[c].dead) allChompsDead = false;
@@ -990,14 +982,28 @@ BatVinesActor = function(x,y,w,h,type,dir){
                         //move to next arena
                         self.targetX = BatVines.ARENA.W;
                         self.state = 'transition';
+                        self.y = BatVines.ARENA.H - self.h/2;
+                        
+                        self.gravity = false;
+                        self.grounded = false;
+
+                        self.sy = -0.075;
                     }
                 } else{
                     //unleash the vines
                     self.state = 'attack';
                 } 
-            } else {
-                //moving
-                self.x += dir * 0.1;
+            } else if( self.state == 'transition' ){
+
+               if(self.y < -h/2 - 10){ // adding the 10 here creates a nice delay between appearances
+                    self.isReadyToMove = true;
+                    self.state = 'idle';
+                    self.y = -h/2;
+                    self.chomps = undefined;
+                }
+            } else if(self.state==undefined || self.state=='idle'){
+                //falling
+                self.gravity = true;
             }
         }
 
@@ -2317,9 +2323,9 @@ BatVinesGame = function(){
         {
             // tentacle
             ropes:[
-                {x:BatVines.ARENA.W*0.1,y:0,length:5, count:2},
-                {x:BatVines.ARENA.W*0.4,y:0,length:6, count:3},
-                {x:BatVines.ARENA.W*0.5,y:0,length:5, count:3},
+                {x:BatVines.ARENA.W*0.1,y:0,length:6, count:2},
+                {x:BatVines.ARENA.W*0.2,y:0,length:5, count:3},
+                
                 {x:BatVines.ARENA.W*0.7,y:0,length:6, count:2},
                 {x:BatVines.ARENA.W*0.9,y:0,length:4, count:3},
             ],
@@ -2330,9 +2336,9 @@ BatVinesGame = function(){
             ],
 
             knots:[
-                {ropeLeft:0,ropeRight:1,actor:0},
-                {ropeLeft:2,actor:1},
-                {ropeLeft:3,ropeRight:4,actor:2},
+                {ropeLeft:0,actor:0},
+                {ropeLeft:1,actor:1},
+                {ropeLeft:2,ropeRight:3,actor:2},
             ],
         },
         {
@@ -2348,7 +2354,7 @@ BatVinesGame = function(){
                 {type:'goody'},
                 {type:'goody'},
                 {type:'goody'},
-                {type:'ivy', x:0, y:BatVines.ARENA.H},
+                {type:'ivy', x:BatVines.ARENA.W*0.5, y:0},
             ],
 
             knots:[
@@ -2362,9 +2368,9 @@ BatVinesGame = function(){
             ropes:[
                 {x:BatVines.ARENA.W*0.1,y:0,length:5, count:2},
                 {x:BatVines.ARENA.W*0.4,y:0,length:6, count:3},
-                {x:BatVines.ARENA.W*0.5,y:0,length:5, count:3},
+                {x:BatVines.ARENA.W*0,y:0,length:5, count:3},
                 {x:BatVines.ARENA.W*0.7,y:0,length:6, count:2},
-                {x:BatVines.ARENA.W*0.9,y:0,length:4, count:3},
+                {x:BatVines.ARENA.W*1,y:0,length:4, count:3},
             ],
             actors:[
                 {type:'goody'},
