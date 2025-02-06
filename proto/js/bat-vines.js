@@ -1057,7 +1057,7 @@ BatVinesActor = function(x,y,w,h,type,dir){
             self.dir = -dir;
         }
 
-        if(self.type=='ivy' && self.state=='attack' && other.type=='goody'){
+        if(self.type=='ivy' && self.state=='attack' && other.type=='goody' && !other.complete ){
             
             if( !self.chomps ) self.chomps = [];
 
@@ -1384,6 +1384,7 @@ BatVinesGame = function(){
                 color: white;
 
                 transition: all 0.5s;
+
            }   
 
            batvinesreset{
