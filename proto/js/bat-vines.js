@@ -415,6 +415,7 @@ BatVinesArena = function(layout,puzzle) {
         for(var a in puzzle.actors){
             actors[a] = new BatVinesActor( puzzle.actors[a].x, puzzle.actors[a].y, puzzle.actors[a].w, puzzle.actors[a].h, puzzle.actors[a].type, puzzle.actors[a].dir );
             actors[a].$el.appendTo(self.$el);
+            actors[a].def = puzzle.actors[a];
         }
         for(var k in puzzle.knots){
             knots[k] = new BatVinesKnot(
@@ -606,15 +607,19 @@ BatVinesArena = function(layout,puzzle) {
     }
 
     self.handballTo = function( actor, arena ){
-        console.log('handballTo',actor,arena);
+        
         let iActor = actors.indexOf(actor);
         actors.splice(iActor,1);
         arena.addActor(actor);
+
+        puzzle.actors.splice( puzzle.actors.indexOf(actor.def), 1 );
     }
 
     self.addActor = function( actor ){
         actors.push(actor);
         actor.$el.appendTo(self.$el);
+
+        puzzle.actors.push( actor.def );
     }
 
 }
