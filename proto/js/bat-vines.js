@@ -745,6 +745,54 @@ BatVinesRope = function(x,y,length,count=1){
     }
 }
 
+BatSineVine = function(from, to){
+
+    const SEGMENTS = 30;
+    const WAVES = 3;
+    const AMPLITUDE = 60;
+
+    let self = this;
+    self.$el = $('<batsinevine>');
+
+    let dx =  to.x-from.x;
+    let dy = to.y-from.y;
+    let dist = Math.hypot(dx,dy);
+
+    let r = Math.atan2(dy,dx);
+     self.$el.css({
+        'top':from.y*BatVines.GRIDSIZE + 'px',
+        'left':from.x*BatVines.GRIDSIZE + 'px',
+        'transform':'rotate('+r+'rad)'
+    });
+
+    let $svg = $(`<svg preserveAspectRatio='none' viewBox='0 -2 1 4' width=${dist*BatVines.GRIDSIZE} height=${AMPLITUDE*2}>
+            <path vector-effect='non-scaling-stroke' stroke='black' stroke-width='10px'></path>
+        </svg>`).appendTo(self.$el);
+    let $path = $svg.find('path');
+
+    self.start = 0;
+    self.progress = 0;
+    self.offset = 0;
+
+    self.redraw = function(){
+        self.targets = [];
+
+        
+        let iMin = Math.round(SEGMENTS*self.start);
+        let iMax = Math.round(SEGMENTS*self.progress);
+
+        if(iMin<0) iMin = 0;
+        if(iMax>SEGMENTS-1) iMax = SEGMENTS-1;
+
+        let d = '';
+        for(var i=iMin; i<iMax; i++){
+            d = d + (i==iMin?' M ':' L ')+i/SEGMENTS+','+Math.sin(i/WAVES + self.offset);
+        }
+
+        $path.attr('d',d);
+    }
+}
+
 BatVinesChomp = function( ivy, goody ){
 
     const SEGMENTS = 30;
@@ -988,6 +1036,23 @@ BatVinesActor = function(x,y,w,h,type,dir){
                         self.grounded = false;
 
                         self.sy = -0.075;
+
+                        
+                        let from = { x:0.5*BatVines.ARENA.W, y:BatVines.ARENA.H };
+                        let to = { x:0.5*BatVines.ARENA.W, y:0 };
+                        for(var i=0; i<3; i++){
+
+                            let vine = new BatSineVine(from,{x:to.x-1+i,y:to.y});
+                            vine.$el.appendTo( self.$el.parent() );
+                            vine.offset = Math.PI*2/3*i;
+                            vine.progress = 0.1 + i*0.1;
+                            vine.start = -1 + 0.2 * i;
+                            $(vine).animate({progress:2,start:1},{duration:3500 + i*300,step:vine.redraw,complete:vine.$el.remove});
+                        }
+                        
+
+                       
+                        
                     }
                 } else{
                     //unleash the vines
@@ -1000,6 +1065,7 @@ BatVinesActor = function(x,y,w,h,type,dir){
                     self.state = 'idle';
                     self.y = -h/2;
                     self.chomps = undefined;
+
                 }
             } else if(self.state==undefined || self.state=='idle'){
                 //falling
@@ -1286,6 +1352,11 @@ BatVinesGame = function(){
                 }
             }
 
+            batsinevine{
+                display: block;
+                position: absolute;
+            }
+
             batchomp:before{
                 content:"";
                 display:block;
@@ -1325,7 +1396,7 @@ BatVinesGame = function(){
                 transform: translate(-50%, -50%);
             }
 
-            batchomp svg{
+            batsinevine svg, batchomp svg{
                 position: absolute;
                 top: 0px;
                 left: 0px;
