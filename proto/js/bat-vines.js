@@ -795,13 +795,14 @@ BatSineVine = function(from, to){
 
 BatVinesChomp = function( ivy, goody ){
 
-    const SEGMENTS = 30;
+    const SEGMENTS = 50;
     const WAVES = 3;
     const AMPLITUDE = 30;
 
     let dx =  goody.x-ivy.x;
     let dy = goody.y-ivy.y;
     let dist = Math.hypot(dx,dy);
+
 
     let r = Math.atan2(dy,dx);
 
@@ -871,7 +872,7 @@ BatVinesChomp = function( ivy, goody ){
     }
 
     self.step = function(){
-        if(self.progress < 1) self.progress += 0.005;
+        if(self.progress < 1) self.progress += 0.03/dist;
         else self.progress = 1;
         self.offset += 0.03;
         self.redraw();
@@ -1139,6 +1140,7 @@ BatVinesActor = function(x,y,w,h,type,dir){
 
             if(!chomp.dead){
                 chomp.step();
+                if(chomp.progress==1) chomp.goody.dead = true;
                 self.subtargets = self.subtargets.concat(chomp.targets);
             }
         }
@@ -2529,8 +2531,20 @@ BatVinesGame = function(){
             arenas[a].step();
             
             if(arenas[a].actorHandball){
-                let iNextArena = (a+1)%arenas.length; //make more random
-                arenas[a].handballTo( arenas[a].actorHandball, arenas[iNextArena] );
+               // let iNextArena = (a+1)%arenas.length; //make more random
+
+                let maybe = [];
+                for(var b=0; b<arenas.length; b++) if(a!=b && !arenas[b].isCleared) maybe.push(b);
+
+                console.log(maybe);
+
+                if(maybe.length){
+                    let iNextArena = maybe[ Math.floor( Math.random()*maybe.length )];
+                    arenas[a].handballTo( arenas[a].actorHandball, arenas[iNextArena] );
+                } else {
+                    //finished
+                }
+
                 arenas[a].actorHandball = undefined;
             }
         }
