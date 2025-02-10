@@ -896,12 +896,14 @@ BatVinesActor = function(x,y,w,h,type,dir){
     const SIZE = {
         'goody':{w:1.5,h:1.5},
         'mouth':{w:2,h:2},
+        'bigmouth':{w:4,h:4},
         'baddy':{w:3,h:3},
         'spitter':{w:2.5,h:2.5},
         'tentacle':{w:2,h:2},
         'ivy':{w:0,h:4},
         'arrow':{w:1,h:0.5},
         'fragment':{w:1.5,h:1.5},
+        'bomb':{w:2,h:2},
         'beam':{w:4,h:1},
     }
 
@@ -1840,8 +1842,8 @@ BatVinesGame = function(){
 
            
 
-           batactor[type="mouth"]{
-                background-image: url(./proto/img/plant-mouth.png);
+           batactor[type="mouth"], batactor[type="bigmouth"]{
+                background-image: url(./proto/img/plant-bigmouth.png);
                  background-size: 400%;
                 
                 animation: sprite4;
@@ -1849,6 +1851,12 @@ BatVinesGame = function(){
                 animation-timing-function: steps(4);
                 animation-duration: 0.7s;
                 animation-fill-mode: forwards;
+           }
+
+
+
+            batactor[type="bomb"]{
+                 background-image: url(./proto/img/plant-bomb.png);
            }
 
             batactor[type="fragment"]{
@@ -2027,6 +2035,10 @@ BatVinesGame = function(){
             {puzzle:18,wall:0,x:MX,y:MY,scale:S},
             {puzzle:19,wall:1,x:MX,y:MY,scale:S},
             {puzzle:20,wall:2,x:MX,y:MY,scale:S},
+        ],
+        [
+            //LEVEL 7 //BOMB
+            {puzzle:21,wall:1,x:MX,y:MY,scale:S},
         ]
     ]
 
@@ -2400,7 +2412,7 @@ BatVinesGame = function(){
             ],
         },
         {
-            // tentacle
+            // IVY
             ropes:[
                 {x:BatVines.ARENA.W*0.1,y:0,length:6, count:2},
                 {x:BatVines.ARENA.W*0.2,y:0,length:5, count:3},
@@ -2421,7 +2433,7 @@ BatVinesGame = function(){
             ],
         },
         {
-            // tentacle
+            // IVY
             ropes:[
                 {x:BatVines.ARENA.W*0.1,y:0,length:5, count:2},
                 {x:BatVines.ARENA.W*0.4,y:0,length:6, count:3},
@@ -2442,8 +2454,9 @@ BatVinesGame = function(){
                 {ropeLeft:3,ropeRight:4,actor:2},
             ],
         },
+
         {
-            // tentacle
+            // IVY
             ropes:[
                 {x:BatVines.ARENA.W*0.1,y:0,length:5, count:2},
                 {x:BatVines.ARENA.W*0.4,y:0,length:6, count:3},
@@ -2461,6 +2474,22 @@ BatVinesGame = function(){
                 {ropeLeft:0,ropeRight:1,actor:0},
                 {ropeLeft:2,actor:1},
                 {ropeLeft:3,ropeRight:4,actor:2},
+            ],
+        },
+        {
+            // bomb
+            ropes:[
+                {x:BatVines.ARENA.W*0.3,y:0,length:6, count:2},
+                {x:BatVines.ARENA.W*0.7,y:0,length:6, count:1},
+            ],
+            actors:[
+                {type:'bomb'},
+                {type:'goody'},
+                {type:'bigmouth', x:BatVines.ARENA.W/2, y:BatVines.ARENA.H},
+            ],
+
+            knots:[
+                {ropeLeft:0,ropeRight:1,actor:0},
             ],
         },
          
