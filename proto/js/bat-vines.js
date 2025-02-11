@@ -927,9 +927,10 @@ BatVinesActor = function(x,y,w,h,type,dir){
     self.type = type;
     self.grounded = 0;
     self.gravity = false;
+    self.active = true;
     self.dead = false;
     self.failState = undefined;
-    self.complete = (type !='goody');
+    self.complete = (type !='goody' && type!='bigmouth');
     self.isAttacking = false;
     self.dir = dir?dir:1;
     self.pause = 0;
@@ -939,6 +940,8 @@ BatVinesActor = function(x,y,w,h,type,dir){
         width:self.w*BatVines.GRIDSIZE+'px',
         height:self.h*BatVines.GRIDSIZE+'px',
     })
+
+     
 
     self.to = function(x,y){
 
@@ -959,6 +962,8 @@ BatVinesActor = function(x,y,w,h,type,dir){
 
     self.step = function(){
 
+        if(!self.active) return;
+
         nFrame ++;
 
 
@@ -967,7 +972,9 @@ BatVinesActor = function(x,y,w,h,type,dir){
            if(self.$el.attr('type')){
                 self.$el.removeAttr('type');
                 new BatVinesPop(0,0,self.w*BatVines.GRIDSIZE,self.h*BatVines.GRIDSIZE).$el.appendTo(self.$el);
+                
                 if(self.type=='goody') self.failState = 'You killed a goody!';
+                if(self.type=='bomb') self.failState = 'The bomb exploded!';
            }
         
             return;
@@ -982,6 +989,8 @@ BatVinesActor = function(x,y,w,h,type,dir){
             self.y = BatVines.ARENA.H-self.h/2;
             self.sy = 1;
             self.grounded ++;
+
+
             
             self.$el.attr('grounded','true');
 
@@ -990,6 +999,8 @@ BatVinesActor = function(x,y,w,h,type,dir){
                 self.x += RUN * self.dir;
                  if(self.x < 0 || self.x > BatVines.ARENA.W) self.complete = true;
             }
+
+            if(self.type=='bomb') self.dead = true;
         }
 
         //DO UNIQUE BEHAVIOURS
@@ -1112,6 +1123,20 @@ BatVinesActor = function(x,y,w,h,type,dir){
                 other.dead = true;
             }
             if(shouldAttack) other.dead = true;
+
+            if(self.type=='bigmouth' && other.type=='bomb'){
+                other.active = false;
+                other.$el.hide();
+                self.state = 'chew';
+
+                setTimeout(function(){
+                    self.dead = true;
+                },500);
+
+                setTimeout(function(){
+                    self.complete = true;
+                },1500);
+            }
         }
 
         if(self.type=='spitter' && shouldAttack && Math.abs(dy) < 1 && self.state != 'spit'){
@@ -1498,7 +1523,8 @@ BatVinesGame = function(){
            batvinesarena batvinesreticule,
            batvinesarena batvinestarget,
            batvinesarena batvinesbatarang,
-           batvinesarena batvineszone
+           batvinesarena batvineszone,
+           batvinesarena batvinesreset
            {
                 display: none;
            }
@@ -1506,7 +1532,8 @@ BatVinesGame = function(){
            batvinesarena[active='true'] batvinesreticule,
            batvinesarena[active='true'] batvinestarget,
            batvinesarena[active='true'] batvinesbatarang,
-           batvinesarena[active='true'] batvineszone
+           batvinesarena[active='true'] batvineszone,
+           batvinesarena[active='true'] batvinesreset
            {
                 display: block;
            }
@@ -1851,6 +1878,11 @@ BatVinesGame = function(){
                 animation-timing-function: steps(4);
                 animation-duration: 0.7s;
                 animation-fill-mode: forwards;
+           }
+
+           batactor[type="bigmouth"][state="chew"]{
+             background: url(./proto/img/plant-bigmouth-chew.png);
+             background-size: 100%;
            }
 
 
@@ -2484,7 +2516,6 @@ BatVinesGame = function(){
             ],
             actors:[
                 {type:'bomb'},
-                {type:'goody'},
                 {type:'bigmouth', x:BatVines.ARENA.W/2, y:BatVines.ARENA.H},
             ],
 
