@@ -1107,7 +1107,7 @@ BatVinesActor = function(x,y,w,h,type,dir){
         let d = Math.hypot(dx,dy);
         let dir = dx>0?1:-1;
 
-        let isOtherEnemy = ( other.type=='baddy' || other.type=='spitter' || other.type=='mouth' );
+        let isOtherEnemy = ( other.type=='baddy' || other.type=='spitter' || other.type=='mouth' || other.type=='bigmouth' );
         let isAttacker = ( self.type=='baddy' || self.type=='spitter' || self.type=='ivy' );
         let shouldAttack = (isAttacker && other.type=='goody' && dir == self.dir);
 
@@ -2511,16 +2511,23 @@ BatVinesGame = function(){
         {
             // bomb
             ropes:[
-                {x:BatVines.ARENA.W*0.3,y:0,length:6, count:2},
-                {x:BatVines.ARENA.W*0.7,y:0,length:6, count:1},
+                {x:BatVines.ARENA.W*0.5,y:0,length:6, count:2},
+                {x:BatVines.ARENA.W*0.9,y:0,length:6, count:1},
+                {x:BatVines.ARENA.W*0.1,y:0,length:5, count:1},
+                {x:BatVines.ARENA.W*0.2,y:0,length:3, count:1},
             ],
             actors:[
                 {type:'bomb'},
-                {type:'bigmouth', x:BatVines.ARENA.W/2, y:BatVines.ARENA.H},
+                {type:'bigmouth', x:BatVines.ARENA.W * 0.7, y:BatVines.ARENA.H},
+                {type:'goody'},
+                {type:'goody'},
+                {type:'ivy',x:BatVines.ARENA.W*0.5, y:0},
             ],
 
             knots:[
                 {ropeLeft:0,ropeRight:1,actor:0},
+                {ropeLeft:2,actor:2},
+                {ropeLeft:3,actor:3},
             ],
         },
          
