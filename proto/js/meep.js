@@ -20,6 +20,8 @@ Meep = function(color){
 		color:color?color:'red',
 		r:0,
 		zHand:100,
+		zHandLeft:0,
+		zHandRight:0,
 	}
 
 	self.c = c;
@@ -92,7 +94,6 @@ Meep = function(color){
 
 	self.redraw = function(){
 
-		
 		let wNeck = c.wBody/2;
 
 		let yEye = -c.h+c.hHead/2; // 1/2 mark
@@ -230,7 +231,7 @@ Meep = function(color){
 
 	//self.redraw();
 
-	let anim = 
+	self.anim = 
 	[
 		{yFootLeft:0,yFootRight:0,h:340,zHandLeft:50,zHandRight:-50},
 		{yFootLeft:0,yFootRight:-20,h:350,zHandLeft:0,zHandRight:0},
@@ -238,6 +239,8 @@ Meep = function(color){
 		{yFootLeft:-20,yFootRight:0,h:350,zHandLeft:0,zHandRight:0},
 		{yFootLeft:0,yFootRight:0,h:340,zHandLeft:50,zHandRight:-50},
 	];
+
+	self.anim = [];
 
 	let fps = 50;
 	let animTime = 0.5;
@@ -249,17 +252,16 @@ Meep = function(color){
 
 		let progressOverall = timeElapsed/animTime;
 
-		let iBefore = Math.floor((anim.length-1)*progressOverall);
-		let iAfter = Math.ceil((anim.length-1)*progressOverall);
+		let iBefore = Math.floor((self.anim.length-1)*progressOverall);
+		let iAfter = Math.ceil((self.anim.length-1)*progressOverall);
 		
-		let timePerStep = animTime / (anim.length-1);
+		let timePerStep = animTime / (self.anim.length-1);
 
 		let progress = (timeElapsed%timePerStep)/timePerStep;
 
-		
 
-		for(var p in anim[iBefore]){
-			c[p] = anim[iBefore][p] + (anim[iAfter][p] -  anim[iBefore][p])*progress;
+		for(var p in self.anim[iBefore]){
+			c[p] = self.anim[iBefore][p] + (self.anim[iAfter][p] -  self.anim[iBefore][p])*progress;
 		}
 
 		self.redraw();
