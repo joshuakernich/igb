@@ -365,7 +365,7 @@ window.MilkGame = function(){
 	let $game = $('<milkgame>').appendTo(self.$el);
 	let $bg = $('<milkbg>').appendTo($game);
 	let sea = new MilkSea();
-	sea.$el.appendTo($game);
+	
 
 	const COLORS = ['red','blue'];
 
@@ -383,6 +383,8 @@ window.MilkGame = function(){
 		udders[i].x = W*1.5;
 		udders[i].$el.appendTo($game).css({left:udders[i].x });
 	}
+
+	sea.$el.appendTo($game);
 
 	let scale = 1;
 	function step(){
