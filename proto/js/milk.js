@@ -150,7 +150,7 @@ window.MilkTeat = function(){
 		audio.setVolume('squirt',volume);
 		audio.setVolume('pour',volume);
 		
-		let size = (tugging>0)?(tugging+10):0;
+		let size = (tugging>0)?(30+tugging*2):0;
 		$milk.css({
 			'border-left-width': size+'px',
 			'border-right-width': size+'px',
@@ -354,7 +354,7 @@ window.MilkGame = function(){
 	}
 
 	let audio = new AudioContext();
-	audio.add('music','./proto/audio/milk-music.mp3',1,true,true);
+	audio.add('music','./proto/audio/milk-music.mp3',0.3,true,true);
 
 	const FPS = 50;
 	const GRAB = W/20;  //can grab a teat within 10% of screen width
@@ -475,6 +475,8 @@ window.MilkGame = function(){
 		let x = (e.pageX - o.left)/scale/W;
 		let wall = Math.floor(x);
 		meeps[0].wall = wall;
+
+		audio.play('music');
 	});
 
 	self.setPlayers = function(p){
