@@ -1,3 +1,36 @@
+window.MilkSea = function(){
+	let self = this;
+	self.$el = $(`
+		<milksea>
+			<svg viewBox='0 0 100 100' preserveAspectRatio="none">
+				<path fill='white' stroke='none'></path>
+			</svg>
+		</milksea>
+	`);
+
+	let $path = self.$el.find('path');
+
+	self.milk = 0;
+
+	const SEG = 100;
+	let n = 0;
+	self.redraw = function(){
+
+		let fill = self.milk/2000;
+		let wibble = 0.05;
+		n += wibble;
+		let d = `M 0,100 L 0,${100-fill}`;
+		for(var i=0; i<=SEG; i++){
+			let amt = (i/SEG);
+			d = d + ` L ${i/SEG*100},${100-fill + Math.sin(i+n)}`
+		}
+		d = d + ' L 100,100';
+		$path.attr('d',d);
+	}
+
+	self.redraw();
+}
+
 window.MilkMeep = function(){
 	let self = this;
 	self.$el = $(`
@@ -44,6 +77,13 @@ window.MilkTeat = function(){
 	self.ox = 10;
 	self.tug = 0;
 	self.$el = $('<milkteat>');
+
+	self.milking = 0;
+	
+
+	let $stream = $('<milkstream>').appendTo(self.$el);
+	let $milk = $('<milk>').appendTo($stream);
+
 	let $svg = $(`<svg preserveAspectRatio="none" viewBox='-50 0 100 110'><path fill='transparent' stroke='pink' stroke-width='20' stroke-linecap='round'></path></svg>`).appendTo(self.$el);
 	let $path = $svg.find('path');
 
@@ -51,19 +91,73 @@ window.MilkTeat = function(){
 
 	let n = Math.floor( Math.random()*SEG );
 
+	let audio = new AudioContext();
+	audio.add('squirt','./proto/audio/milk-squirt.mp3',1,true);
+	audio.add('pour','./proto/audio/milk-pour.mp3',0,true);
+
+	let tugWas = 0;
+	let tugging = 0;
 	self.redraw = function(){
 		let wibble = 0.05;
 		n += wibble;
 
 		let d = 'M 0,0 '
-
+		let px;
 		for(var i=0; i<SEG; i++){
 			let amt = (i/SEG);
-			d = d + ' L '+(Math.sin(i/2 + n)*2*amt +self.ox*amt)+','+amt*100+' ';
+			px = (Math.sin(i/2 + n)*2*amt +self.ox*amt);
+			d = d + ' L '+px+','+amt*100+' ';
 		}
 		$path.attr('d',d);
 		$path.attr('stroke-width',20-self.tug*0.01);
 		$svg.css({height:500 + self.tug+'px'});
+
+		$stream.css({
+			top:420 + self.tug+'px',
+			left:px*8,
+			transform:'rotate('+(-px*1.5)+'deg)',
+		})
+
+		
+
+		let tugDelta = Math.max(0,self.tug - tugWas); 
+		tugWas = self.tug;
+
+		if(!self.isHeld){
+			self.tug *= 0.95;
+			self.ox *= 0.95;
+			tugDelta = 0;
+		}
+
+		if(tugging <= 0 && tugDelta > 0){
+			audio.play('squirt',true);
+			audio.play('pour',true);
+		}
+
+		if(tugDelta>0){
+			tugging += tugDelta;
+		} else {
+			tugging -= 5;
+		}
+
+		if(tugging<0) tugging = 0;
+		if(tugging>100) tugging = 100;
+
+		let volume = tugging/100/3;
+		if(volume>1) volume = 1;
+		if(volume<0) volume = 0;
+
+		audio.setVolume('squirt',volume);
+		audio.setVolume('pour',volume);
+		
+		let size = (tugging>0)?(tugging+10):0;
+		$milk.css({
+			'border-left-width': size+'px',
+			'border-right-width': size+'px',
+			'left': -size+'px',
+		})
+
+		self.milking = tugging;
 	}
 
 	self.redraw();
@@ -87,6 +181,30 @@ window.MilkGame = function(){
 					width: ${MEEP}px;
 					height: ${H/2}px;
 					position: absolute;	
+				}
+
+				milkstream{
+					position: absolute;
+					display: block;
+					width: 0px;
+					height: 200px;
+					 background: white;
+					 top: 0px;
+					 left: 0px;
+				}
+
+			
+
+				milk{
+					display: block;
+				 	width: 0; 
+					  height: 0; 
+					  border-left: 20px solid transparent;
+					  border-right: 20px solid transparent;
+					  border-bottom: ${H}px solid white;
+					  position: absolute;
+					  left: -20px;
+					  top: 0px;
 				}
 
 				milkmeephand{
@@ -187,6 +305,20 @@ window.MilkGame = function(){
 					opacity: 0.5;
 				}
 
+				milksea{
+					display: block;
+					position: absolute;
+					top: 0px;
+					left: 0px;
+					bottom: 0px;
+					right: 0px;
+				}
+
+				milksea svg{
+					width: 100%;
+					height: 100%;
+				}
+
 				milkudder{
 					display: block;
 					position: absolute;
@@ -221,6 +353,9 @@ window.MilkGame = function(){
 		`);
 	}
 
+	let audio = new AudioContext();
+	audio.add('music','./proto/audio/milk-music.mp3',1,true,true);
+
 	const FPS = 50;
 	const GRAB = W/20;  //can grab a teat within 10% of screen width
 
@@ -229,6 +364,8 @@ window.MilkGame = function(){
 
 	let $game = $('<milkgame>').appendTo(self.$el);
 	let $bg = $('<milkbg>').appendTo($game);
+	let sea = new MilkSea();
+	sea.$el.appendTo($game);
 
 	const COLORS = ['red','blue'];
 
@@ -297,7 +434,7 @@ window.MilkGame = function(){
 
 
 				teatGrab.tug = (meeps[m].fy - meeps[m].teatGrabAtY) * H/2;
-				
+				teatGrab.isHeld = true;
 
 			} else {
 				//let go
@@ -310,14 +447,13 @@ window.MilkGame = function(){
 
 		for(var u in udders){
 			for(var t in udders[u].teats){
-				if(meeps[m].teatGrabAtY == undefined){
-					udders[u].teats[t].tug *= 0.95;
-					udders[u].teats[t].ox *= 0.95;
-				}
-				
 				udders[u].teats[t].redraw();
+				sea.milk += udders[u].teats[t].milking;
+				udders[u].teats[t].isHeld = false;
 			}	
 		}
+
+		sea.redraw();
 	}
 
 	setInterval(step,1000/FPS);

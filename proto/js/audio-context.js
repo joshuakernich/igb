@@ -13,6 +13,10 @@ AudioContext = function(){
         if(autoplay) audio[id].play();
     }
 
+    self.setVolume = function(id,volume){
+        audio[id].volume = volume;
+    }
+
     self.play = function(id,restart){
         audio[id].play();
         if(restart) audio[id].currentTime = 0;
