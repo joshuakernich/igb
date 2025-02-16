@@ -253,6 +253,14 @@ window.MilkGame = function(){
 					background: red;
 				}
 
+				milkmeep:last-of-type milkmeephat{
+					background: blue;
+				}
+
+				milkmeep:last-of-type milkmeephat:after{
+					background: blue;
+				}
+
 				milkmeepbody{
 					display: block;
 					height: 20%;
@@ -290,6 +298,16 @@ window.MilkGame = function(){
 					
 					background: #555577;
 					transform-origin: top left;
+				}
+
+				milkgame h1{
+					position: absolute;
+					top: 0px;
+					left: 0px;
+					right: 0px;
+					color: black;
+					font-size: 30px;
+					text-align: center;
 				}
 
 				milkbg{
@@ -378,13 +396,16 @@ window.MilkGame = function(){
 	}
 
 	let udders = [];
-	for(var i=0; i<1; i++){
+	for(var i=0; i<3; i++){
 		udders[i] = new MilkUdder();
-		udders[i].x = W*1.5;
+		udders[i].x = W*(i+.5);
 		udders[i].$el.appendTo($game).css({left:udders[i].x });
 	}
 
 	sea.$el.appendTo($game);
+
+	$('<h1>TAP A WALL<br>TO MILK OVER YONDER</h1>').appendTo($game);
+
 
 	let scale = 1;
 	function step(){
