@@ -2534,7 +2534,8 @@ BatVinesGame = function(){
     ]
 
     let audio = new AudioContext();
-    audio.add('music','./proto/audio/quirky-fun-comedy-250869.mp3',0.3,true,true);
+    audio.add('ambience','./proto/audio/plant-ambience.mp3',0.4,true,true);
+    audio.add('music','./proto/audio/plant-music.mp3',0.4,true,true);
     audio.add('zoom','./proto/audio/sfx-zoom.mp3',0.5);
     
     let $game = $('<batvinesgame>').appendTo(self.$el);
@@ -2700,6 +2701,7 @@ BatVinesGame = function(){
 
     $(document).on('click',function(e){
         audio.play('music');
+        audio.play('ambience');
     });
 
     let skipID = window.location.search.substr(1).split('&')[1];
