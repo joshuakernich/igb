@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Batman Score</title>
+	<script type="text/javascript" src="../shared/jq.js"></script>
+	<script type="text/javascript" src="./js/audio-context.js"></script>
+	<script type="text/javascript">
+		$(function(){
+
+			const SEGMENTS = 100;
+
+
+			let $arc = $('path').hide();
+
+			//let $icon = $('scorepic').hide();
+
+			let audio = new AudioContext();
+			audio.add('music','./audio/bat-score-victory.mp3',0.5,true,true);
+			audio.add('intro','./audio/bat-intro.mp3',1);
+			audio.add('intro-b','./audio/bat-intro-b.mp3',1);
+			audio.add('charge','./audio/bat-tone.mp3',0.3);
+			audio.add('tune','./audio/bat-tune-in.mp3',0.5);
+			audio.add('tune-out','./audio/bat-tune-out.mp3',0.5);
+			audio.add('lock','./audio/bat-score-lock.mp3',1);
+			audio.add('blip-short','./audio/bat-blip-short.mp3',1);
+			audio.add('blip-long','./audio/bat-blip-long.mp3',1);
+
+			let $screen = $('screen').hide();
+			let $bat = $('batman').hide();
+			let $score = $('score').hide();
+			let $stickScore = $score.find('scorestick').hide();
+			let $percentScore = $score.find('scorepercent').hide().text('');
+			let $award = $('scoreaward').hide();
+			let $stickAward = $award.find('scorestick').hide();
+			let $nameAward = $award.find('scorename').text('');
+			
+
+
+			function revealStick( $stick ){
+
+				let $span = $stick.find('span');
+				let $bar = $stick.find('scorebar');
+				let $angle = $stick.find('scoreangle');
+
+				$stick.show();
+
+				let text = $span.text();
+
+				$span.text('');
+
+				let nType = 0;
+				let iType = setInterval(function(){
+					nType++;
+					$span.text( text.substr(0,nType) );
+					
+					if( nType%2 ) audio.play('blip-short',true);
+
+					if(nType>text.length){
+						clearInterval(iType);
+						audio.play('blip-long',true);
+					}
+				},50)
+			}
+
+			function flash( $el ){
+				$el.animate({opacity:0.5},200)
+				.animate({opacity:1},200)
+				.animate({opacity:0.5},200)
+				.animate({opacity:1},200)
+				.animate({opacity:0.5},200)
+				.animate({opacity:1},200);
+			}
+
+			function flashOn( $el ){
+				audio.play('tune',true);
+				$el.show().css({opacity:0}).delay(500)
+				.animate({opacity:1},100)
+				.animate({opacity:0},100)
+				.animate({opacity:1},100);
+			}
+
+			function flashOff( $el ){
+				audio.play('tune-out',true);
+				$el.delay(500)
+				.animate({opacity:0},100)
+				.animate({opacity:1},100)
+				.animate({opacity:0},100);
+			}
+
+
+			$(document).click(function(){
+				audio.play('music',true);
+
+				let volume = {level:0};
+				let score = {level:0};
+
+				$(volume).animate({level:0.3},{duration:3000, step:function(){
+					audio.setVolume('music',volume.level);	
+				}})
+
+								
+				flashOn($screen);
+			
+
+				setTimeout(function(){ flashOn($bat); },1100);
+				setTimeout(function(){ audio.play('intro'); },2000);
+				setTimeout(function(){ audio.play('intro-b'); },7000);
+				setTimeout(function(){ flashOn($score); },9000);
+				setTimeout(function(){ revealStick($stickScore); },10000);
+
+				$(score).delay(11500).animate({level:0.82},{duration:5000, 
+				ease:'linear',
+				start:function(){
+					audio.play('charge');
+					$percentScore.show();
+				},complete:function(){
+					audio.stop('charge');
+					audio.play('lock',true);
+					flash($score);
+				},step:function(){
+					let d = ''
+					let amt = Math.floor(SEGMENTS*score.level);
+					for(var i=0; i<=amt; i++){
+						let p = Math.PI*2/SEGMENTS;
+						let r = -Math.PI/2 + i*p;
+						d = d + ` ${i==0?'M':'L'} ${Math.cos(r)*48} ${Math.sin(r)*48} `
+					}
+					$arc.show().attr('d',d);
+
+					let r = -Math.PI/2 + score.level * Math.PI*2;
+
+					if(score.level>=0.01){
+						$percentScore
+						.text(Math.floor(score.level*100) + '%')
+						.css({ top:100 + Math.sin(r)*130, left:100 + Math.cos(r)*130 });
+					}
+				}})
+
+
+				setTimeout(function(){ flashOff($bat); },18000);
+				setTimeout(function(){ flashOn($award); },19000);
+				setTimeout(function(){ revealStick($stickAward); },20000);
+				setTimeout(function(){ 
+					$nameAward.text('RED PLAYER');
+					$award.attr('red','red');
+					audio.play('lock',true);
+					flash($award);
+				 },22000);
+
+				setTimeout(function(){ flashOff($screen); },25000);
+			})
+		})
+	</script>
+	<style type="text/css">
+		@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap');
+
+		body{
+			width: 100vw;
+			height: 100vh;
+			padding: 0px;
+			margin: 0px;
+			background: black;
+
+			font-family: "Lexend", serif;
+			font-size: 12px;
+		}
+
+		screen{
+			width: 800px;
+			height: 500px;
+			background: url(./img/bat-computer-glass.png);
+			background-size: 100%;
+			display: block;
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			margin: auto;
+		}
+
+		scoreaward{
+			display: block;
+			width: 120px;
+			height: 120px;
+			position: absolute;
+			left: 0px;
+			right: -250px;
+			bottom: 0px;
+			top: -50px;
+			margin: auto;
+			background: url(./img/bat-award-leaf.png);
+			background-size: 100%;
+			text-shadow: 0px 0px 2px #ddffff;
+			color: white;
+			opacity: 0.2;
+		}
+
+		scoreaward[red]{
+			background-image: url(./img/bat-award-leaf-red.png);
+			color: red;
+			text-shadow: 0px 0px 2px red;
+			opacity: 1;
+		}
+
+		score{
+			display: block;
+			width: 200px;
+			height: 200px;
+			position: absolute;
+			left: -180px;
+			right: 0px;
+			bottom: 0px;
+			top: -50px;
+			margin: auto;
+			text-shadow: 0px 0px 2px #ddffff;
+			text-align: right;
+
+		}
+
+		scorepic{
+			position: absolute;
+			display: block;
+			width: 110%;
+			height: 110%;
+			background: url(./img/bat-car.png);
+			background-size: 100%;
+			top: -5%;
+			left: -5%;
+		}
+
+		svg{
+			width: 200px;
+			height: 200px;
+			
+		}
+
+		batman{
+			width: 350px;
+			height: 350px;
+			background: url(./img/bat-man-computer.png);
+			background-size: 100%;
+			background-position: center;
+			display: block;
+			position: absolute;
+			bottom: 50px;
+			right: 100px;
+		}
+
+		scorestick{
+			position: absolute;
+			top: 220px;
+			right: 120px;
+			text-align: right;
+			color: #ddffff;
+			display: inline-block;
+			white-space: nowrap;
+			padding-top: 5px;
+		}
+
+		scorebar, scoreangle{
+			display: block;
+			height: 3px;
+			background: #ddffff;
+			box-shadow: 0px 0px 1px #ddffff;
+
+			position: absolute;
+			right: 0px;
+			top: 0px;
+		}
+
+		scorebar{
+			width: 100%;
+
+		}
+
+		scoreangle{
+			position: absolute;
+			width: 25px;
+			transform: rotate(-45deg);
+			right: -25px;
+			top: 0px;
+			transform-origin: left center;
+		}
+
+		scoreaward scorestick{
+			right: auto;
+			left: 90px;
+			top: 140px;
+		}
+
+		scoreaward scoreangle{
+			transform-origin: right center;
+			left: auto;
+			right: 100%;
+			transform: rotate(45deg);
+		}
+
+		scorename{
+			display: block;
+			margin: 40px 35px;
+			
+			text-align: center;
+
+		}
+
+		scorepercent{
+			display: block;
+			width: 50px;
+			height: 50px;
+			color: white;
+			line-height: 50px;
+			transform: translate(-50%, -50%);
+			position: absolute;
+			font-size: 20px;
+			text-align: center;
+		}
+
+
+	</style>
+</head>
+<body>
+	<screen>
+		<score>
+			<svg viewBox="-50 -50 100 100">
+				<circle vector-effect='non-scaling-stroke' stroke='rgba(255,255,255,0.2)' fill='transparent' stroke-width='4' cx="0" cy="0" r="48" />
+				<path vector-effect='non-scaling-stroke' stroke='#ddffff' fill='transparent' stroke-width='4'/>
+			</svg>
+			<scorepic></scorepic>
+			<scorepercent>50%</scorepercent>
+			<scorestick>
+				<scorebar></scorebar>
+				<scoreangle></scoreangle>
+				<span>Team Driving Performance</span>
+			</scorestick>
+		</score>
+		<scoreaward>
+			<scorename>RED PLAYER</scorename>
+			<scorestick>
+				<scorebar></scorebar>
+				<scoreangle></scoreangle>
+				<span>Best Driver</span>
+			</scorestick>
+		</scoreaward>
+		<batman></batman>
+	</screen>
+</body>
+</html>
