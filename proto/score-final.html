@@ -9,10 +9,25 @@
 	<script type="text/javascript">
 		$(function(){
 
+			
+
 			const SEGMENTS = 100;
 			const W = 650;
 			const H = 400;
 			let scores = [0.8, 0.75, 0.65, 0.9, 0.25];
+
+			let audio = new AudioContext();
+			audio.add('music','./audio/bat-score-victory.mp3',0.5,true,true);
+			audio.add('intro','./audio/bat-intro.mp3',1);
+			audio.add('intro-b','./audio/bat-intro-b.mp3',1);
+			audio.add('charge','./audio/bat-tone.mp3',0.3);
+			audio.add('tune','./audio/bat-tune-in.mp3',0.5);
+			audio.add('tune-out','./audio/bat-tune-out.mp3',0.5);
+			audio.add('lock','./audio/bat-score-lock.mp3',1);
+			audio.add('blip-short','./audio/bat-blip-short.mp3',1);
+			audio.add('blip-long','./audio/bat-blip-long.mp3',1);
+			audio.add('reverb','./audio/bat-reverb.mp3',1);
+			audio.add('load','./audio/bat-load.mp3',1);
 
 			function paintArc( $scope, score ){
 
@@ -28,9 +43,38 @@
 				$arc.show().attr('d',d);
 			}
 
+			function flash( $el ){
+				$el.animate({opacity:0.5},200)
+				.animate({opacity:1},200)
+				.animate({opacity:0.5},200)
+				.animate({opacity:1},200)
+				.animate({opacity:0.5},200)
+				.animate({opacity:1},200);
+			}
 
+			function flashOn( $el ){
+				audio.play('tune',true);
+				$el.show().css({opacity:0}).delay(500)
+				.animate({opacity:1},100)
+				.animate({opacity:0},100)
+				.animate({opacity:1},100);
+			}
+
+			function flashOff( $el ){
+				audio.play('tune-out',true);
+				$el.delay(500)
+				.animate({opacity:0},100)
+				.animate({opacity:1},100)
+				.animate({opacity:0},100);
+			}
+
+
+			let $screen = $('screen').hide();
 			let $inner = $('inner');
 			let $scoreTemplate = $('score');
+			let $scoreGraph = $('scoregraph').hide();
+			let $scoreGraphFill = $('scoregraphfill').hide();
+			let $scorePercent = $('scorePercent').text('');
 
 			let $ss = [];
 			const COUNT = 5;
@@ -43,34 +87,83 @@
 
 				paintArc($s, scores[i]);
 
-				$ss[i] = $s;
+				$ss[i] = $s.css({opacity:0});
 			}
 
 			$scoreTemplate.hide();
 
-			let ring = { speed:0.05, radius:250, opacity:0 };
+			$(document).click(function(){
 
-			let n=0;
-			setInterval(function(){
-				n += ring.speed;
-				for(var i=0; i<$ss.length; i++){
-					$ss[i].css({
-						left: W/2 + Math.cos( i/COUNT * Math.PI*2 + n ) * ring.radius - 50,
-						top: H/2 + Math.sin( i/COUNT * Math.PI*2 + n ) * ring.radius - 50,
-						opacity: ring.opacity,
-					})
-				}
-			},10);
-
-			$(ring)
-			.animate({ speed:0.0015, radius:120, opacity:1 },{ duration:2000 })
-			.delay(2000)
-			.animate({ speed:0.05, radius:250, opacity:0 });
-
-			$('scoreheader').delay(4000).animate({top:-150},1000);
+				$(document).off();
+				$('h1').remove();
 
 
-			return;
+				audio.play('music',true);
+				audio.play('reverb',true);
+				audio.setVolume('reverb',0);
+				
+
+				flashOn($screen);
+
+				let volume = {level:0};
+				let score = {level:0};
+
+				$(volume).animate({level:0.3},{duration:3000, step:function(){
+					audio.setVolume('music',volume.level);	
+				}})
+
+				let ring = { speed:0.05, radius:250, opacity:0 };
+
+				let n=0;
+				setInterval(function(){
+					n += ring.speed;
+					for(var i=0; i<$ss.length; i++){
+						$ss[i].css({
+							left: W/2 + Math.cos( i/COUNT * Math.PI*2 + n ) * ring.radius - 50,
+							top: H/2 + Math.sin( i/COUNT * Math.PI*2 + n ) * ring.radius - 50,
+							opacity: ring.opacity,
+						})
+					}
+
+					audio.setVolume('reverb',ring.speed * 20 * ring.opacity );
+				},10);
+
+				$(ring)
+				.delay(2000)
+				.animate({ speed:0.0015, radius:120, opacity:1 },{ duration:2000 })
+				.delay(2000)
+				.animate({ speed:0.05, radius:250, opacity:0 }, 1000);
+
+				$('scoreheader').delay(6000).animate({top:-70},1000);
+
+				setTimeout(function(){ flashOn($scoreGraph) }, 6000);
+
+				$(score).delay(7000).animate({level:0.82},{duration:5000, 
+				ease:'linear',
+				start:function(){
+					audio.play('charge');
+					$scorePercent.show();
+					$scoreGraphFill.show();
+				},complete:function(){
+					audio.stop('charge');
+					audio.play('lock',true);
+					flash($scoreGraph);
+				},step:function(){
+					
+					$scoreGraphFill.css({ width:score.level*100 + '%'});
+
+					if(score.level>=0.01) $scorePercent.text(Math.floor(score.level*100) + '%');
+					
+				}})
+
+
+				setTimeout(function(){ flashOff($screen); },15000);
+
+			})
+
+			
+
+
 			/*const SEGMENTS = 100;
 
 
@@ -375,10 +468,10 @@
 			transform: translateY(-50%);
 			position: absolute;
 			font-size: 20px;
-			text-align: center;
+			text-align: left;
 			left: 100%;
 			top: 50%;
-			margin-left: 2px;
+			margin-left: 10px;
 		}
 
 		inner{
@@ -425,9 +518,10 @@
 			height: 30px;
 			background: rgba(255,255,255,0.2);
 
+			top: 50px;
 			left: 0px;
 			right: 0px;
-			bottom: 120px;
+			bottom: 0px;
 
 			margin: auto;
 			line-height: 0px;
@@ -443,6 +537,17 @@
 
 		}
 
+		scoregraphicon{
+			position: absolute;
+			width: 40px;
+			height: 100px;
+			top: -110px;
+			background: url(./img/bat-pleb.png);
+			background-size: contain;
+			background-position: bottom center;
+			background-repeat: no-repeat;
+		}
+
 		scoregraphlabel{
 			position: absolute;
 			width: 100px;
@@ -454,6 +559,16 @@
 			margin-top: 10px;
 		}
 
+		scoregraphicon:first-of-type{ 
+			width: 30px;
+			left:-15px; 
+		}
+		scoregraphicon:last-of-type{ 
+			right:-35px; 
+			width: 70px;
+			background-image: url(./img/bat-hero.png);
+		}
+
 		scoregraphlabel:first-of-type{
 			left: -50px;
 		}
@@ -462,9 +577,15 @@
 			right: -50px;
 		}
 
+		h1{
+			color: white;
+			text-align: center;
+		}
+
 	</style>
 </head>
 <body>
+	<h1>CLICK TO BEGIN</h1>
 	<screen>
 		<inner>
 			<scoreheader>
@@ -483,6 +604,8 @@
 				<scoregraphfill>
 					<scorepercent>50%</scorepercent>
 				</scoregraphfill>
+				<scoregraphicon></scoregraphicon>
+				<scoregraphicon></scoregraphicon>
 				<scoregraphlabel>Gotham City<br>NOBODY</scoregraphlabel>
 				<scoregraphlabel>Ultimate<br>DARK KNIGHT</scoregraphlabel>
 			</scoregraph>
