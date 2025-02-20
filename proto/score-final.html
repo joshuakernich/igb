@@ -28,6 +28,7 @@
 			audio.add('blip-long','./audio/bat-blip-long.mp3',1);
 			audio.add('reverb','./audio/bat-reverb.mp3',1);
 			audio.add('load','./audio/bat-load.mp3',1);
+			audio.add('whoosh','./audio/bat-whoosh.mp3',0.2);
 
 			function paintArc( $scope, score ){
 
@@ -99,8 +100,7 @@
 
 
 				audio.play('music',true);
-				audio.play('reverb',true);
-				audio.setVolume('reverb',0);
+				
 				
 
 				flashOn($screen);
@@ -115,6 +115,7 @@
 				let ring = { speed:0.05, radius:250, opacity:0 };
 
 				let n=0;
+				let nWas = n;
 				setInterval(function(){
 					n += ring.speed;
 					for(var i=0; i<$ss.length; i++){
@@ -125,7 +126,14 @@
 						})
 					}
 
-					audio.setVolume('reverb',ring.speed * 20 * ring.opacity );
+					if( n%0.5 < nWas%0.5 ){
+						audio.play('whoosh',true);
+						audio.setVolume('whoosh',ring.opacity * ring.speed * 20);
+					}
+
+					nWas = n;
+
+					
 				},10);
 
 				$(ring)
@@ -134,11 +142,11 @@
 				.delay(2000)
 				.animate({ speed:0.05, radius:250, opacity:0 }, 1000);
 
-				$('scoreheader').delay(6000).animate({top:-70},1000);
+				$('scoreheader').delay(7000).animate({top:-70},1000);
 
-				setTimeout(function(){ flashOn($scoreGraph) }, 6000);
+				setTimeout(function(){ flashOn($scoreGraph) }, 7500);
 
-				$(score).delay(7000).animate({level:0.82},{duration:5000, 
+				$(score).delay(9000).animate({level:0.82},{duration:5000, 
 				ease:'linear',
 				start:function(){
 					audio.play('charge');
@@ -157,7 +165,7 @@
 				}})
 
 
-				setTimeout(function(){ flashOff($screen); },15000);
+				setTimeout(function(){ flashOff($screen); },18000);
 
 			})
 
