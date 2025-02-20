@@ -10,6 +10,68 @@
 		$(function(){
 
 			const SEGMENTS = 100;
+			const W = 650;
+			const H = 400;
+			let scores = [0.8, 0.75, 0.65, 0.9, 0.25];
+
+			function paintArc( $scope, score ){
+
+				let $arc = $scope.find('path');
+
+				let d = ''
+				let amt = Math.floor(SEGMENTS*score);
+				for(var i=0; i<=amt; i++){
+					let p = Math.PI*2/SEGMENTS;
+					let r = -Math.PI/2 + i*p;
+					d = d + ` ${i==0?'M':'L'} ${Math.cos(r)*48} ${Math.sin(r)*48} `
+				}
+				$arc.show().attr('d',d);
+			}
+
+
+			let $inner = $('inner');
+			let $scoreTemplate = $('score');
+
+			let $ss = [];
+			const COUNT = 5;
+			for(var i=0; i<COUNT; i++){
+				let $s = $scoreTemplate.clone().appendTo($inner );
+				$s.css({
+					left: W/2 + Math.cos( i/COUNT * Math.PI*2 ) * 120 - 50,
+					top: H/2 + Math.sin( i/COUNT * Math.PI*2 ) * 120 - 50,
+				})
+
+				paintArc($s, scores[i]);
+
+				$ss[i] = $s;
+			}
+
+			$scoreTemplate.hide();
+
+			let ring = { speed:0.05, radius:250, opacity:0 };
+
+			let n=0;
+			setInterval(function(){
+				n += ring.speed;
+				for(var i=0; i<$ss.length; i++){
+					$ss[i].css({
+						left: W/2 + Math.cos( i/COUNT * Math.PI*2 + n ) * ring.radius - 50,
+						top: H/2 + Math.sin( i/COUNT * Math.PI*2 + n ) * ring.radius - 50,
+						opacity: ring.opacity,
+					})
+				}
+			},10);
+
+			$(ring)
+			.animate({ speed:0.0015, radius:120, opacity:1 },{ duration:2000 })
+			.delay(2000)
+			.animate({ speed:0.05, radius:250, opacity:0 });
+
+			$('scoreheader').delay(4000).animate({top:-150},1000);
+
+
+			return;
+			/*const SEGMENTS = 100;
 
 
 			let $arc = $('path').hide();
@@ -91,10 +153,6 @@
 
 
 			$(document).click(function(){
-
-				$(document).off();
-				$('h1').remove();
-
 				audio.play('music',true);
 
 				let volume = {level:0};
@@ -154,7 +212,7 @@
 				 },22000);
 
 				setTimeout(function(){ flashOff($screen); },25000);
-			})
+			})*/
 		})
 	</script>
 	<style type="text/css">
@@ -211,13 +269,11 @@
 
 		score{
 			display: block;
-			width: 200px;
-			height: 200px;
+			width: 100px;
+			height: 100px;
 			position: absolute;
-			left: -180px;
-			right: 0px;
-			bottom: 0px;
-			top: -50px;
+			
+
 			margin: auto;
 			text-shadow: 0px 0px 2px #ddffff;
 			text-align: right;
@@ -236,8 +292,8 @@
 		}
 
 		svg{
-			width: 200px;
-			height: 200px;
+			width: 100%;
+			height: 100%;
 			
 		}
 
@@ -316,45 +372,121 @@
 			height: 50px;
 			color: white;
 			line-height: 50px;
-			transform: translate(-50%, -50%);
+			transform: translateY(-50%);
 			position: absolute;
 			font-size: 20px;
 			text-align: center;
+			left: 100%;
+			top: 50%;
+			margin-left: 2px;
 		}
 
-		h1{
+		inner{
+			display: block;
+			position: absolute;
+			width: 650px;
+			height: 400px;
+			
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			margin: auto;
+			overflow: hidden;
+		}
+
+		scoreheader{
+			display: block;
+			position: absolute;
+			width: 150px;
+			height: 150px;
+			
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			margin: auto;
 			color: white;
 			text-align: center;
+			padding-top: 50px;
+			box-sizing: border-box;
+			text-shadow: 0px 0px 2px white;
 		}
 
+		scoreheader span:first-of-type{
+			font-size: 25px;
+		}
+
+		scoregraph{
+			display: block;
+			position: absolute;
+
+			width: 300px;
+			height: 30px;
+			background: rgba(255,255,255,0.2);
+
+			left: 0px;
+			right: 0px;
+			bottom: 120px;
+
+			margin: auto;
+			line-height: 0px;
+		}
+
+		scoregraphfill{
+
+			display: inline-block;
+			background: white;
+			height: 100%;
+			width: 50%;
+			position: relative;
+
+		}
+
+		scoregraphlabel{
+			position: absolute;
+			width: 100px;
+			
+			text-align: center;
+			color: white;
+			top: 100%;
+			line-height: 15px;
+			margin-top: 10px;
+		}
+
+		scoregraphlabel:first-of-type{
+			left: -50px;
+		}
+
+		scoregraphlabel:last-of-type{
+			right: -50px;
+		}
 
 	</style>
 </head>
 <body>
-	<h1>CLICK TO BEGIN</h1>
 	<screen>
-		<score>
-			<svg viewBox="-50 -50 100 100">
-				<circle vector-effect='non-scaling-stroke' stroke='rgba(255,255,255,0.2)' fill='transparent' stroke-width='4' cx="0" cy="0" r="48" />
-				<path vector-effect='non-scaling-stroke' stroke='#ddffff' fill='transparent' stroke-width='4'/>
-			</svg>
-			<scorepic></scorepic>
-			<scorepercent>50%</scorepercent>
-			<scorestick>
-				<scorebar></scorebar>
-				<scoreangle></scoreangle>
-				<span>Team Driving Performance</span>
-			</scorestick>
-		</score>
-		<scoreaward>
-			<scorename>RED PLAYER</scorename>
-			<scorestick>
-				<scorebar></scorebar>
-				<scoreangle></scoreangle>
-				<span>Best Driver</span>
-			</scorestick>
-		</scoreaward>
-		<batman></batman>
+		<inner>
+			<scoreheader>
+				<span>FINAL</span><br>
+				<span>TEAM SCORE</span>
+			</scoreheader>
+			<score>
+				<svg viewBox="-50 -50 100 100">
+					<circle vector-effect='non-scaling-stroke' stroke='rgba(255,255,255,0.2)' fill='transparent' stroke-width='4' cx="0" cy="0" r="48" />
+					<path vector-effect='non-scaling-stroke' stroke='#ddffff' fill='transparent' stroke-width='4'/>
+				</svg>
+				<scorepic></scorepic>
+			</score>
+
+			<scoregraph>
+				<scoregraphfill>
+					<scorepercent>50%</scorepercent>
+				</scoregraphfill>
+				<scoregraphlabel>Gotham City<br>NOBODY</scoregraphlabel>
+				<scoregraphlabel>Ultimate<br>DARK KNIGHT</scoregraphlabel>
+			</scoregraph>
+		</inner>
 	</screen>
 </body>
 </html>
