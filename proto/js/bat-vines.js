@@ -474,7 +474,7 @@ BatVinesArena = function(layout,puzzle) {
             self.isFailed = true;
             
             setTimeout(function(){
-                 audio.play('fail');
+                audio.play('fail');
                 self.$el.html(self.failState);
                 $('<batvinesreset>').appendTo(self.$el).click(self.reset);
             },500);
@@ -2031,10 +2031,12 @@ BatVinesGame = function(){
 
     const LEVELS = [
 
-       
         [
             //LEVEL 0 //VINES
-            {puzzle:0,wall:0,x:MX,y:MY,scale:S},
+            {puzzle:0,wall:1,x:MX,y:MY,scale:S},
+        ],
+        [
+            //LEVEL 0 //VINES
             {puzzle:1,wall:1,x:MX,y:MY,scale:S},
             {puzzle:2,wall:2,x:MX,y:MY,scale:S},
         ],
