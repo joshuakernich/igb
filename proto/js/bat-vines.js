@@ -2535,7 +2535,7 @@ BatVinesGame = function(){
 
     let audio = new AudioContext();
     audio.add('ambience','./proto/audio/plant-ambience.mp3',0.4,true,true);
-    audio.add('music','./proto/audio/plant-music.mp3',0.4,true,true);
+    audio.add('music','./proto/audio/plant-music-b.mp3',0.4,true,true);
     audio.add('zoom','./proto/audio/sfx-zoom.mp3',0.5);
     
     let $game = $('<batvinesgame>').appendTo(self.$el);
