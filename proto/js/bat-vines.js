@@ -375,6 +375,10 @@ BatVinesPlayer = function(n){
 
 BatVinesArena = function(layout,puzzle) {
 
+    let audio = new AudioContext();
+    audio.add('fail','./proto/audio/plant-fail.mp3',1);
+    audio.add('clear','./proto/audio/plant-clear.mp3',0.6);
+
     let self = this;
     self.failState = undefined;
     self.active = false;
@@ -466,15 +470,17 @@ BatVinesArena = function(layout,puzzle) {
         }
 
         if(self.failState && !self.isFailed){
-            
+           
             self.isFailed = true;
             
             setTimeout(function(){
+                 audio.play('fail');
                 self.$el.html(self.failState);
                 $('<batvinesreset>').appendTo(self.$el).click(self.reset);
             },500);
         }
-        if(complete){
+        if(complete && !self.isCleared){
+            audio.play('clear');
             self.$el.html('CLEAR!');
             self.isCleared = true;
             for(var p in players) players[p].isActive = false;
@@ -2534,7 +2540,7 @@ BatVinesGame = function(){
     ]
 
     let audio = new AudioContext();
-    audio.add('ambience','./proto/audio/plant-ambience.mp3',0.4,true,true);
+    audio.add('ambience','./proto/audio/plant-ambience.mp3',0.8,true,true);
     audio.add('music','./proto/audio/plant-music-b.mp3',0.4,true,true);
     audio.add('zoom','./proto/audio/sfx-zoom.mp3',0.5);
     
