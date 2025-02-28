@@ -182,7 +182,7 @@ window.MilkTeat = function(){
 		})
 
 		self.milking = tugging;
-		if(self.capacity<100) self.capacity += 0.07;
+		if(self.capacity<100) self.capacity += 0.05;
 	}
 
 	self.redraw();
