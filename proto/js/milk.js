@@ -79,12 +79,27 @@ window.MilkTeat = function(){
 	self.$el = $('<milkteat>');
 
 	self.milking = 0;
+	self.capacity = Math.random()*100;
 	
 
 	let $stream = $('<milkstream>').appendTo(self.$el);
 	let $milk = $('<milk>').appendTo($stream);
 
-	let $svg = $(`<svg preserveAspectRatio="none" viewBox='-50 0 100 110'><path fill='transparent' stroke='pink' stroke-width='20' stroke-linecap='round'></path></svg>`).appendTo(self.$el);
+	let $svg = $(`<svg preserveAspectRatio="none" viewBox='-50 0 100 110'>
+		<linearGradient id="nipfull" x1="0%" y1="0%" x2="0%" y2="100%">
+			<stop offset="0%" stop-color="pink"/>
+			<stop offset="100%" stop-color="red"/>
+		</linearGradient>
+		<linearGradient id="niphalf" x1="0%" y1="0%" x2="0%" y2="100%">
+			<stop offset="0%" stop-color="pink"/>
+			<stop offset="100%" stop-color="#ff5555"/>
+		</linearGradient>
+		<linearGradient id="nipempty" x1="0%" y1="0%" x2="0%" y2="100%">
+			<stop offset="0%" stop-color="pink"/>
+			<stop offset="100%" stop-color="pink"/>
+		</linearGradient>
+		<path fill='transparent' stroke='url(#nipfull)' stroke-width='20' stroke-linecap='round'></path>
+	</svg>`).appendTo(self.$el);
 	let $path = $svg.find('path');
 
 	let len = 100;
@@ -109,7 +124,12 @@ window.MilkTeat = function(){
 			d = d + ' L '+px+','+amt*100+' ';
 		}
 		$path.attr('d',d);
-		$path.attr('stroke-width',20-self.tug*0.01);
+		let swelling = self.capacity/100;
+		$path.attr('stroke-width',12 + swelling*10-self.tug*0.01);
+
+		let level = swelling > 0.7 ? 'full' : ( swelling < 0.4 ? 'empty' : 'half' );
+
+		$path.attr('stroke',`url(#nip${level})`);
 		$svg.css({height:500 + self.tug+'px'});
 
 		$stream.css({
@@ -117,8 +137,6 @@ window.MilkTeat = function(){
 			left:px*8,
 			transform:'rotate('+(-px*1.5)+'deg)',
 		})
-
-		
 
 		let tugDelta = Math.max(0,self.tug - tugWas); 
 		tugWas = self.tug;
@@ -143,6 +161,12 @@ window.MilkTeat = function(){
 		if(tugging<0) tugging = 0;
 		if(tugging>100) tugging = 100;
 
+		self.capacity -= tugging/100;
+
+		if(self.capacity<0) self.capacity = 0;
+		if(self.capacity<10) tugging = 0;
+
+
 		let volume = tugging/100/3;
 		if(volume>1) volume = 1;
 		if(volume<0) volume = 0;
@@ -158,6 +182,7 @@ window.MilkTeat = function(){
 		})
 
 		self.milking = tugging;
+		if(self.capacity<100) self.capacity += 0.07;
 	}
 
 	self.redraw();
