@@ -80,10 +80,12 @@ window.MilkTeat = function(){
 
 	self.milking = 0;
 	self.capacity = Math.random()*100;
+	self.throbbing = 0;
 	
 
 	let $stream = $('<milkstream>').appendTo(self.$el);
 	let $milk = $('<milk>').appendTo($stream);
+	
 
 	let $svg = $(`<svg preserveAspectRatio="none" viewBox='-50 0 100 110'>
 		<linearGradient id="nipfull" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -101,6 +103,8 @@ window.MilkTeat = function(){
 		<path fill='transparent' stroke='url(#nipfull)' stroke-width='20' stroke-linecap='round'></path>
 	</svg>`).appendTo(self.$el);
 	let $path = $svg.find('path');
+
+	let $alert = $('<milkalert>').appendTo(self.$el);
 
 	let len = 100;
 
@@ -182,7 +186,13 @@ window.MilkTeat = function(){
 		})
 
 		self.milking = tugging;
+
 		if(self.capacity<100) self.capacity += 0.05;
+
+		if(self.capacity>=100) self.throbbing ++;
+		else self.throbbing = 0;
+
+		$alert.attr('active',self.capacity>90?'true':'false');
 	}
 
 	self.redraw();
@@ -391,6 +401,57 @@ window.MilkGame = function(){
 					left: ${-TEAT/2}px;
 					width: ${TEAT}px;
 					height: ${TEAT}px;
+				}
+
+				milkalert{
+					
+					width: 0px;
+					height: 0px;
+					position: absolute;
+					top: 0px;
+					left: -40px;
+					
+					
+					z-index: 1;
+					
+
+
+					border-left: 40px solid transparent;
+					border-right: 40px solid transparent;
+					border-bottom: 80px solid red;
+					visibility:hidden;
+				}
+
+				milkalert[active='true']{
+					visibility:visible;
+
+					animation: wobble 0.2s infinite;
+				}
+
+				milkalert:before{
+					content:"!";
+					color: white;
+					position: absolute;
+					font-size: 70px;
+					left: -50px;
+					width: 100px;
+					text-align: center;
+					font-weight: bold;
+					top: 8px;
+				}
+
+				@keyframes wobble{
+					0%{
+						transform: rotate(-7deg);
+					}
+
+					50%{
+						transform: rotate(7deg);
+					}
+
+					100%{
+						transform: rotate(-7deg);
+					}
 				}
 			</style>
 		`);
