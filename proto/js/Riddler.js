@@ -273,10 +273,9 @@ Riddler = function(){
 		'shoe':'👞',
 		'bag':'👜',
 		'burger':'🍔',
-		'pizza':'🍕',
+		
 		'melon':'🍉',
 		'raindrop':'💧',
-		'snowman':'⛄',
 		'clock':'🕑',
 		'car':'🚗',
 		'helicopter':'🚁',
@@ -359,6 +358,93 @@ Riddler = function(){
 		'R':'right',
 		'S':'squat',
 	}
+
+	let symbols = SYMBOLS.concat();
+
+	function traceQuestions(){
+		let texts = [];
+		for(var iq in questions){
+
+			let question = questions[iq];
+
+
+			texts[iq] = [];
+
+			let things = [];
+
+			if(symbols.length<4) symbols = SYMBOLS.concat();
+
+			//shuffle(symbols);
+			
+
+
+			let symbolsForQuestion = {
+				'A':symbols.pop(),
+				'B':symbols.pop(),
+				'C':symbols.pop(),
+				'D':symbols.pop(),
+				'?':{name:'riddle screen'},
+				'*':{name:'nothing'},
+			}
+
+			console.log('QUESTION');
+
+			if(question.type=='notnot'){
+				
+				let q = question.q;
+				let total = 0;
+				
+				for(var i=0; i<q.length; i++){
+					let rule = q[i].split('-');
+					
+					let count = parseInt(rule[0]);
+					let nots = rule[1].substr(0,rule[1].length-1);
+					let shape = rule[1][rule[1].length-1];
+
+					let isNot = (nots.length%2==1);
+
+					//if(isNot) rules['N'+shape] = parseInt(count);
+					//else rules[shape] = parseInt(count);
+
+					let text = ''
+					if(shape == 'S'){
+						//isPositionCorrect = false;
+						text = count+' player'+(count>1?'s':'')+' must squat';
+					} else if(shape=='R' || shape=='L'){
+						
+						text = 'Move '+count+' player'+(count>1?'s':'')+' to the '+MOVES[shape];
+					}
+					else {
+						//isTouchCorrect = false;
+
+						let strNots = '';
+						for(var n=0; n<nots.length; n++) strNots += 'NOT ';
+
+						text = 'Touch '+count+' '+strNots+symbolsForQuestion[shape].name+(count>1?'s':'');
+						total += count;
+					}
+
+					if(i>0) text = '…and '+text;
+
+					if(i<q.length-1) text = text+'…';
+
+					things.push({s:'?',t:'<riddlertext>'+text+'</riddlertext>'});
+
+					texts[iq].push(text);
+				}
+			} else {
+				texts[iq] = question.q;
+				for( let j in question.q ) console.log(question.q[j]);
+			}
+			
+		}
+
+		console.log(texts);
+	}
+
+	traceQuestions();
+
+	
 
 	
 
@@ -741,6 +827,8 @@ Riddler = function(){
 				if(i<q.length-1) text = text+'…';
 
 				things.push({s:'?',t:'<riddlertext>'+text+'</riddlertext>'});
+
+				console.lot(text);
 			}
 
 
