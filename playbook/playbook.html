@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Immersive Gamebox Playbook</title>
+	<script type="text/javascript" src="./jq.js"></script>
+	<script type="text/javascript" src="./room.js"></script>
+	<script type="text/javascript">
+		$(function(){
+
+			function addButton( name, fn ){
+				$(`<button>${name}</button>`).appendTo('debug');
+			}
+
+
+			addButton('Strafe');
+			addButton('Touch');
+			addButton('Mousepad');
+			addButton('Squat');
+			addButton('Gaze');
+
+
+			let scene = new Scene3D();
+			scene.$el.appendTo('scene');
+		})
+	</script>
+	<style type="text/css">
+		button{
+			display: block;
+			width: 200px;
+			text-align: left;
+			padding: 10px;
+		}
+		body{
+			padding: 0px;
+			margin: 0px;
+			width: 100vw;
+			height: 100vh;
+		}
+
+		debug{
+			display: block;
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			margin: 10px;
+		}
+
+		scene{
+			width: 0px;
+			height: 0px;
+			display: block;
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			margin: auto;
+		}
+	</style>
+</head>
+<body>
+	<scene></scene>
+	<debug></debug>
+</body>
+</html>
