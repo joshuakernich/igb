@@ -127,6 +127,7 @@ Avatar3D = function (w,h,l) {
 
     let self = this;
     self.position = {x:0,y:0,z:0};
+    self.rotation = 0;
     self.$el = $(`
         <avatar3D>
             <avatarShadow></avatarShadow>
@@ -146,6 +147,10 @@ Avatar3D = function (w,h,l) {
         self.$el.css({
             left: self.position.x * w/2,
             top: self.position.z * l/2,
+        })
+
+        self.$el.find('avatar2D').css({
+            'transform': 'rotateX(-90deg) rotateY(-'+self.rotation+'deg)',
         })
     }
 
@@ -225,7 +230,10 @@ Scene3D = function(){
     setInterval(function(){
         r++;
         let offset = Math.sin(r*0.01) * 20;
-        $world.css('transform','rotateY('+(offset)+'deg)')
+        room.avatar.rotation = offset;
+
+        $world.css('transform','rotateY('+offset+'deg)');
+        room.avatar.redraw();
     },50)
 
 
