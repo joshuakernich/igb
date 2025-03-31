@@ -10,33 +10,57 @@
 		$(function(){
 
 			function addButton( name, fn ){
-				$(`<button>${name}</button>`).appendTo('debug');
+				$(`<button>${name}</button>`).appendTo('debug').click(fn);
 			}
-
-
-			addButton('Strafe');
-			addButton('Touch');
-			addButton('Mousepad');
-			addButton('Squat');
-			addButton('Gaze');
-
 
 			let scene = new Scene3D();
 			scene.$el.appendTo('scene');
+
+
+			addButton('Strafe', scene.doStrafe );
+			addButton('Dolly', scene.doDolly );
+			//addButton('Touch');
+			addButton('Mousepad', scene.doMousepad );
+			//addButton('Track');
+			//addButton('Squat');
+			//addButton('Gaze');
+
+
+			
 		})
 	</script>
 	<style type="text/css">
+		@import url('https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
+
 		button{
 			display: block;
-			width: 200px;
+			width: 150px;
 			text-align: left;
 			padding: 10px;
+			font: inherit;
+			background: none;
+			color: white;
+			border: none;
+			font-weight: 100;
 		}
+
+		button:after{
+			content: "→";
+			position: absolute;
+			right: 0px;
+		}
+
 		body{
 			padding: 0px;
 			margin: 0px;
 			width: 100vw;
 			height: 100vh;
+			background-color: #200033;
+			background-image: url(./igb-schematic.png);
+			background-size: 1000px;
+			background-repeat: no-repeat;
+			background-position: center;
+			 font-family: "Rubik", sans-serif;
 		}
 
 		debug{

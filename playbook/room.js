@@ -51,12 +51,26 @@ Avatar3D = function (w,h,l) {
                 line-height: 0px;
             }
 
+
+
             a2DHead{
                 display: inline-block;
                 width: 70%;
                 height: 30px;
                 background: white;
                 border-radius: 15px;
+                position: relative;
+            }
+
+            a2DHead:after{
+                content: "";
+                width: 100%;
+                height: 8px;
+                background: red;
+                position: absolute;
+                top: 6px;
+                left: 0px;
+                border-radius: 2px;
             }
 
             a2DBody{
@@ -64,43 +78,47 @@ Avatar3D = function (w,h,l) {
                 width: 20px;
                 height: 40px;
                 background: white;
-                border-radius: 10px 10px 5px 5px;
+                border-radius: 10px;
                 position: relative;
             }
 
-             a2DLegs{
+             a2DLeg{
                 display: inline-block;
-                width: 15px;
+                width: 4px;
                 height: 30px;
-                box-sizing: border-box;
-                border-left: 5px solid white;
-                border-right: 5px solid white;
+                background: white;
+                margin: 0px 2px;
+                border-radius: 0px 0px 2px 2px;
+
             }
+
+
 
             a2DArm{
                position: absolute;
                display: block;
-               width: 15px;
-               height: 35px;
-               top: 5px;
-               border-top: 5px solid white;
+               width: 10px;
+               height: 10px;
+               border-radius: 5px 5px 3px 3px;
+               background: white;
+               top: 25px;
+              
             }
 
              a2DArm:first-of-type{
-                left: 15px;
-               top: 5px;
+                left: 25px;
                
-               border-right: 5px solid white;
-               box-sizing: border-box;
-               border-top-right-radius: 10px;
+               
+               transform: rotate(-15deg);
+              
              }
 
              a2DArm:last-of-type{
              
-               left: -10px;
-               top: 5px;
-               border-left: 5px solid white;
-               border-top-left-radius: 10px;
+               left: -15px;
+
+
+               transform: rotate(15deg);
             }
         </style>
     `);
@@ -117,8 +135,8 @@ Avatar3D = function (w,h,l) {
                 <a2DBody>
                     <a2DArm></a2DArm>
                     <a2DArm></a2DArm>
-                </a2DBody>
-                <a2DLegs></a2DLegs>
+                </a2DBody><br>
+                <a2DLeg></a2DLeg><a2DLeg></a2DLeg>
             </avatar2D>
         </avatar3D>`
     );
@@ -218,27 +236,36 @@ Scene3D = function(){
     self.doStrafe = function(){
 
         $(room.avatar.position)
+        .stop( true )
+        .animate({ x:0, z:0 },{step:room.avatar.redraw, duration:500})
         .animate({ x:-0.7, z:0 },{step:room.avatar.redraw, duration:2000})
         .animate({ x:0.7, z:0 },{step:room.avatar.redraw, duration:2000})
+        .animate({ x:0, z:0 },{step:room.avatar.redraw, duration:1000});
     }
 
     self.doDolly = function(){
 
         $(room.avatar.position)
+        .stop( true )
+        .animate({ x:0, z:0 },{step:room.avatar.redraw, duration:500})
         .animate({ x:0, z:-0.7 },{step:room.avatar.redraw, duration:2000})
         .animate({ x:0, z:0.7 },{step:room.avatar.redraw, duration:2000})
+        .animate({ x:0, z:0 },{step:room.avatar.redraw, duration:1000})
     }
 
     self.doMousepad = function(){
 
         $(room.avatar.position)
+        .stop( true )
+        .animate({ x:0, z:0 },{step:room.avatar.redraw, duration:500})
         .animate({ x:-0.6, z:-0.6 },{step:room.avatar.redraw, duration:2000})
         .animate({ x:0.5, z:0.7 },{step:room.avatar.redraw, duration:2000})
         .animate({ x:-0.5, z:0.4 },{step:room.avatar.redraw, duration:2000})
         .animate({ x:0.6, z:-0.4 },{step:room.avatar.redraw, duration:2000})
+        .animate({ x:0, z:0 },{step:room.avatar.redraw, duration:1000})
     }
 
-    self.doDolly();
+    
 }
 
 /*
@@ -286,10 +313,10 @@ Room3D = function(w,l,h,color,walls){
                 display:block;
                 position:absolute;
                 transform: translate(-50%,-50%);
-                border: 4px solid #333;
+                border: 1px solid #7100b2;
                 background: url('./rainbow.gif');
-                background-size: cover;
-                opacity: 0.6;
+                background: rgb(32, 0, 51, 100);
+                opacity: 0.7;
             }
 
             .room3D-bottom room3Dsurface{
@@ -300,12 +327,12 @@ Room3D = function(w,l,h,color,walls){
                background: none;
             }
 
-            .room3D-top room3Dsurface:after{
+            .room3D-top room3Dsurface:after, .room3D-front room3Dsurface:after{
                display: none;
             }
 
             .room3D-front room3Dsurface{
-               background: rgba(100,100,255,0.4);
+               background: rgba(100,100,255,0.2);
             }
 
             room3Dsurface:after{
