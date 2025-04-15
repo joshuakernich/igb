@@ -268,6 +268,17 @@ Riddler = function(){
 
 	const COUNT = 20;
 
+	const LIBRARIES = {
+		'vehicle':['🚗','🛵','🚲','🚁','✈️'],
+		'food':['🍎','🍔','🧀','🍗','🥨'],
+		'drink':['🍺','🍷','🧃','☕️','🍹'],
+		'ball':['🏈','🎱','🏐','⚽️','🏀'],
+		'building':['🏛','🏠','🏭','🏰','🛖'],
+		'instrument':['🎸','🎻','🎺','🎷','🪇'],
+		'animal':['🦆','🐌','🐢','🦍','🐪'],
+		'face':['👦','👶','🧔‍♂️','👵','👨‍🦳'],
+	}
+
 	const DICTIONARY = {
 		'cheese':'🧀',
 		'shoe':'👞',
@@ -285,7 +296,8 @@ Riddler = function(){
 	}
 
 	const SYMBOLS = [];
-	for(var d in DICTIONARY) SYMBOLS.push({name:d,symbol:DICTIONARY[d]});
+	//for(var d in DICTIONARY) SYMBOLS.push({name:d,symbol:DICTIONARY[d]});
+	for(var d in LIBRARIES) SYMBOLS.push({name:d,symbol:LIBRARIES[d]});
 
 	const LIST = [
 		'riddler',
@@ -298,23 +310,22 @@ Riddler = function(){
 	
 		//riddles
 		{type:'riddle',q:['I have a face…','…and I have hands'],rights:['🕑'],wrongs:['🙌','🧀','👞','👙','👜','🌝']},
-		{type:'riddle',q:['I am not alive…','…but I grow…','…and water kills me'],rights:['🔥'],wrongs:['🍔','🍕','🍉','💧','⛄']},
-		{type:'riddle',q:['I’m full of holes…','…but I hold water'],rights:['🧽'],wrongs:['🍔','🍕','🚗','🎃','⛄']},
-		{type:'riddle',q:['I can fly…','…but I have no wings'],rights:['🎈'],wrongs:['🦋','🧀','👞','👙','🕷','🦆']},
-		{type:'riddle',q:['I’m tall when I’m young…','…but I’m short when I’m old'],rights:['🕯'],wrongs:['🦋','🧀','👞','👙','📺','🦆']},
-		{type:'riddle',q:['The more you use me…','…the smaller I get'],rights:['✏'],wrongs:['🦋','🎄','👞','👙','📺','🦆']},
-		{type:'riddle',q:['The more you take away…','…the bigger I get'],rights:['🕳'],wrongs:['🏦','🧀','💰','👙','📺','🦆']},
+		{type:'riddle',q:['I am not alive…','…but I grow…','…and water kills me'],rights:['🔥'],wrongs:['🌤️','🌳','🍉','💧','🦆','🐟']},
+		{type:'riddle',q:['I can fly…','…but I have no wings'],rights:['🎈'],wrongs:['🦋','🪰','👞','🐔','🕷','🦆','✈️','🐝']},
+		{type:'riddle',q:['I’m tall when I’m young…','…but I’m short when I’m old'],rights:['🕯'],wrongs:['🏛️','🔥','🦴','🦷','☂️','🎩','🍄']},
+		{type:'riddle',q:['The more you use me…','…the smaller I get'],rights:['✏'],wrongs:['🧠','🛌🏾','👞','👙','📺','☂️','🥄','🦴']},
+		{type:'riddle',q:['The more you take away…','…the bigger I get'],rights:['🕳'],wrongs:['🏦','🧀','💰','🍭','🎳','🎨','🎣','👙']},
 
 		//sides
-		{type:'riddle',q:['What has two sides?'],rights:['🪙'],wrongs:['🕑','♥','📽','⬜','♠','🔺','♦','💰','♣']},
+		{type:'riddle',q:['What has two sides?'],rights:['🪙'],wrongs:['🕑','♥','📽','⬜','♠',,'♦','💰','♣']},
 		{type:'riddle',q:['What does NOT have two sides?'],rights:['⬜','🔺','🔶','🔴','❌','🔻'],wrongs:[]},
 
 		//not right
-		{type:'riddle',q:['Something is not right'],rights:['⬅'],wrongs:['🍔','🍕','🍉','👞','⛄']},
-		{type:'riddle',q:['Some things are not right'],rights:['poker-mistake-3C','poker-mistake-5S'],wrongs:['poker-AS','poker-2S','poker-3S','poker-4C','poker-5S']},
+		{type:'riddle',q:['Something is not right'],rights:['⬅'],wrongs:['🔴','🍔','🍕','🍉','▶️','👉','❌','⬜']},
+		{type:'riddle',q:['Some things are not right'],rightxs:['poker-mistake-3C','poker-mistake-5S'],wrongs:['poker-AS','poker-2S','poker-3S','poker-4C','poker-5S']},
 		{type:'riddle',q:['Some things are not wrong'],rights:['poker-AS','poker-2S','poker-3S','poker-4C','poker-5S'],wrongs:['poker-mistake-3C','poker-mistake-5S']},
-		{type:'riddle',q:["What's left?"],rights:['⬅','👈','🖐'],wrongs:['↔','⬆','⬇','↘','🤚','👉','👆','👇']},
-
+		{type:'riddle',q:["What's left?"],rights:['⬅','👈','◀️'],wrongs:['🔺','🔻','🎲','🏋️','▶️','➗','⏺','♾','↔','⬆','⬇','↘','🤚','👉','👆','👇']},
+		
 		//not not
 		{type:'notnot',q:['3-A'],s:'AAABBBCCC'},
 		{type:'notnot',q:['3-NA'],s:'AAABBBCCC'}, 						// introduce NOT
@@ -336,13 +347,12 @@ Riddler = function(){
 		{type:'notnot',q:['2-S','1-R','1-L']},
 
 		//two things
-		{type:'riddle',q:['It takes two words…','…to flutter by.'],rights:['🧈','🪰'],wrongs:['🙌','🧀','👞','👙','👜','🌝','🛞','🪑']},
-		{type:'riddle',q:['It takes two words…','…when you don’t want to knock.'],rights:['🚪','🔔'],wrongs:['🍳','🍰','🛞','🪑','🙌','🧀','👞','👙','👜','🌝']},
-		{type:'riddle',q:['It takes two words…','…to get around with a broken leg.'],rights:['🛞','🪑'],wrongs:['🍳','🍰','🚪','🔔','🙌','🧀','👞','👙','👜','🌝']},
-		{type:'riddle',q:['It takes two words…','…to make a strange looking shark.'],rights:['🔨','👨‍🦲'],wrongs:['🚪','🔔','🙌','🧀','👞','👙','👜']},
-		{type:'riddle',q:['It takes two words…','…to make the flattest breakfast.'],rights:['🍳','🍰'],wrongs:['🙌','🧀','👞','👙','👜','🌝','🛞','🪑']},
-		{type:'riddle',q:['It takes two words…','…to bring a twinkle to the ocean.'],rights:['⭐','🐟'],wrongs:['🍳','🍰','🛞','🪑','🙌','🧀','👞','👙','👜','🌝']},
-		{type:'riddle',q:['It takes two words…','…to hide things in your car.'],rights:['🥊','📦'],wrongs:['🙌','🧀','👞','👙','👜','🌝','🛞','🪑']},
+		{type:'riddle',q:['It takes two words…','…to flutter by.'],rights:['🧈','🪰'],wrongs:['🙌','🔥','✈️','👙','🌤️','🦆','🛞','🪑']},
+		{type:'riddle',q:['It takes two words…','…when you don’t want to knock.'],rights:['🚪','🔔'],wrongs:['🎺','🎬','🪇','🛞','🪑','🙌','👞','🥜','👏','🪵']},
+		{type:'riddle',q:['It takes two words…','…to get around with a broken leg.'],rights:['🛞','🪑'],wrongs:['🤸‍♀️','🛼','🛹','🛷','🚁','👞','⛵️','🎈','📦','🛝']},
+		{type:'riddle',q:['It takes two words…','…to make a strange looking shark.'],rights:['🔨','👨'],wrongs:['🚪','🔔','🥄','🥨','👞','🐳','🪼','🦓','🪽']},
+		{type:'riddle',q:['It takes two words…','…to bring a twinkle to the ocean.'],rights:['⭐','🐟'],wrongs:['🙌','🔥','🐳','🪼','⚡️','👙','🌛','🌝','❄️','💦','🌪','🌈','🫧']},
+		{type:'riddle',q:['It takes two words…','…to hide things in your car.'],rights:['🥊','📦'],wrongs:['🥾','🕶','💼','🧶','🎩','🪵','🔑','🗄','🚪','✉️']},
 
 		//big combo
 		{type:'notnot',q:['1-B','1-NB','2-?','2-*','1-R','1-L','1-S'],s:'AAABBBCCC'},
@@ -387,6 +397,7 @@ Riddler = function(){
 				'*':{name:'nothing'},
 			}
 
+			
 			console.log('QUESTION');
 
 			if(question.type=='notnot'){
@@ -434,7 +445,7 @@ Riddler = function(){
 				}
 			} else {
 				texts[iq] = question.q;
-				for( let j in question.q ) console.log(question.q[j]);
+				//for( let j in question.q ) console.log(question.q[j]);
 			}
 			
 		}
@@ -442,7 +453,7 @@ Riddler = function(){
 		console.log(texts);
 	}
 
-	traceQuestions();
+	//traceQuestions();
 
 	
 
@@ -783,6 +794,19 @@ Riddler = function(){
 			'*':{name:'nothing'},
 		}
 
+		// clone arrays
+		symbolsForQuestion['A'].symbol = LIBRARIES[symbolsForQuestion['A'].name].concat();
+		symbolsForQuestion['B'].symbol = LIBRARIES[symbolsForQuestion['B'].name].concat();
+		symbolsForQuestion['C'].symbol = LIBRARIES[symbolsForQuestion['C'].name].concat();
+		symbolsForQuestion['D'].symbol = LIBRARIES[symbolsForQuestion['D'].name].concat();
+
+
+		console.log('CLONED');
+		console.log(symbolsForQuestion['A'].symbol);
+		console.log(symbolsForQuestion['B'].symbol);
+		console.log(symbolsForQuestion['C'].symbol);
+		console.log(symbolsForQuestion['D'].symbol);
+
 		isMistake = false;
 		isTouchCorrect = true;
 		isPositionCorrect = true;
@@ -828,7 +852,7 @@ Riddler = function(){
 
 				things.push({s:'?',t:'<riddlertext>'+text+'</riddlertext>'});
 
-				console.lot(text);
+				console.log(text);
 			}
 
 
@@ -836,7 +860,8 @@ Riddler = function(){
 			if(question.s){
 				for(var s=0; s<question.s.length; s++){
 					let shape = question.s[s];
-					things.push({s:shape,symbol:symbolsForQuestion[shape].symbol});
+					console.log(symbolsForQuestion[shape].symbol);
+					things.push({s:shape,symbol:symbolsForQuestion[shape].symbol.pop()});
 				}
 			}
 		}
@@ -950,7 +975,7 @@ Riddler = function(){
 	
 	self.setPlayers = function(p){
 
-		console.log(minPY);
+		//console.log(minPY);
 
 		let countsX = [0,0,0,0];
 		let countsY = [0,0];
