@@ -342,9 +342,10 @@ Riddler = function(){
 		//movement
 		{type:'notnot',q:['1-R','2-?']},
 		{type:'notnot',q:['2-R']},
-		{type:'notnot',q:['1-R','1-L']},
+		{type:'notnot',q:['1-NR','1-L']},
 		{type:'notnot',q:['2-S']},
-		{type:'notnot',q:['2-S','1-R','1-L']},
+		{type:'notnot',q:['1-S','1-NS','1-L','1-NL']},
+		{type:'notnot',q:['1-S','1-NNR','1-L','1-NNS']},
 
 		//two things
 		{type:'riddle',q:['It takes two words…','…to flutter by.'],rights:['🧈','🪰'],wrongs:['🙌','🔥','✈️','👙','🌤️','🦆','🛞','🪑']},
@@ -355,7 +356,7 @@ Riddler = function(){
 		{type:'riddle',q:['It takes two words…','…to hide things in your car.'],rights:['🥊','📦'],wrongs:['🥾','🕶','💼','🧶','🎩','🪵','🔑','🗄','🚪','✉️']},
 
 		//big combo
-		{type:'notnot',q:['1-B','1-NB','2-?','2-*','1-R','1-L','1-S'],s:'AAABBBCCC'},
+		{type:'notnot',q:['1-B','1-NB','2-?','2-*','1-NR','1-L','1-S','1-NS'],s:'AAABBBCCC'},
 
 		//final
 		{type:'final'},
@@ -371,89 +372,7 @@ Riddler = function(){
 
 	let symbols = SYMBOLS.concat();
 
-	function traceQuestions(){
-		let texts = [];
-		for(var iq in questions){
-
-			let question = questions[iq];
-
-
-			texts[iq] = [];
-
-			let things = [];
-
-			if(symbols.length<4) symbols = SYMBOLS.concat();
-
-			//shuffle(symbols);
-			
-
-
-			let symbolsForQuestion = {
-				'A':symbols.pop(),
-				'B':symbols.pop(),
-				'C':symbols.pop(),
-				'D':symbols.pop(),
-				'?':{name:'riddle screen'},
-				'*':{name:'nothing'},
-			}
-
-			
-			console.log('QUESTION');
-
-			if(question.type=='notnot'){
-				
-				let q = question.q;
-				let total = 0;
-				
-				for(var i=0; i<q.length; i++){
-					let rule = q[i].split('-');
-					
-					let count = parseInt(rule[0]);
-					let nots = rule[1].substr(0,rule[1].length-1);
-					let shape = rule[1][rule[1].length-1];
-
-					let isNot = (nots.length%2==1);
-
-					//if(isNot) rules['N'+shape] = parseInt(count);
-					//else rules[shape] = parseInt(count);
-
-					let text = ''
-					if(shape == 'S'){
-						//isPositionCorrect = false;
-						text = count+' player'+(count>1?'s':'')+' must squat';
-					} else if(shape=='R' || shape=='L'){
-						
-						text = 'Move '+count+' player'+(count>1?'s':'')+' to the '+MOVES[shape];
-					}
-					else {
-						//isTouchCorrect = false;
-
-						let strNots = '';
-						for(var n=0; n<nots.length; n++) strNots += 'NOT ';
-
-						text = 'Touch '+count+' '+strNots+symbolsForQuestion[shape].name+(count>1?'s':'');
-						total += count;
-					}
-
-					if(i>0) text = '…and '+text;
-
-					if(i<q.length-1) text = text+'…';
-
-					things.push({s:'?',t:'<riddlertext>'+text+'</riddlertext>'});
-
-					texts[iq].push(text);
-				}
-			} else {
-				texts[iq] = question.q;
-				//for( let j in question.q ) console.log(question.q[j]);
-			}
-			
-		}
-
-		console.log(texts);
-	}
-
-	//traceQuestions();
+	
 
 	
 
@@ -828,21 +747,20 @@ Riddler = function(){
 				if(isNot) rules['N'+shape] = parseInt(count);
 				else rules[shape] = parseInt(count);
 
+				let strNots = ' ';
+				for(var n=0; n<nots.length; n++) strNots += 'NOT ';
+
 				let text = ''
 				if(shape == 'S'){
 					isPositionCorrect = false;
-					text = count+' player'+(count>1?'s':'')+' must squat';
+					text = count+' player'+(count>1?'s':'')+' must'+strNots+'squat';
 				} else if(shape=='R' || shape=='L'){
 					isPositionCorrect = false;
-					text = 'Move '+count+' player'+(count>1?'s':'')+' to the '+MOVES[shape];
+					text = 'Move '+count+' player'+(count>1?'s':'')+strNots+' to the '+MOVES[shape];
 				}
 				else {
 					isTouchCorrect = false;
-
-					let strNots = '';
-					for(var n=0; n<nots.length; n++) strNots += 'NOT ';
-
-					text = 'Touch '+count+' '+strNots+symbolsForQuestion[shape].name+(count>1?'s':'');
+					text = 'Touch '+count+''+strNots+symbolsForQuestion[shape].name+(count>1?'s':'');
 					total += count;
 				}
 
@@ -852,10 +770,10 @@ Riddler = function(){
 
 				things.push({s:'?',t:'<riddlertext>'+text+'</riddlertext>'});
 
-				console.log(text);
+				
 			}
 
-
+			console.log(rules);
 
 			if(question.s){
 				for(var s=0; s<question.s.length; s++){
