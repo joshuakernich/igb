@@ -20,7 +20,6 @@
 	<script type="text/javascript" src="./proto/js/meep.js"></script>
 	<script type="text/javascript" src="./proto/js/audio-context.js"></script>
 
-	<script type="text/javascript" src="./proto/js/headers-game.js"></script>
 	<script type="text/javascript" src="./proto/js/invaders.js"></script>
 	<script type="text/javascript" src="./proto/js/pixelpaddle.js"></script>s
 	<script type="text/javascript" src="./proto/js/Riddler.js"></script>
@@ -34,10 +33,14 @@
 	<script type="text/javascript" src="./proto/js/volcano.js"></script>
 	<script type="text/javascript" src="./proto/js/adventure.js"></script>
 	<script type="text/javascript" src="./proto/js/driving.js"></script>
-	<script type="text/javascript" src="./proto/js/milk.js"></script>
-	<script type="text/javascript" src="./proto/js/box-party.js"></script>
-	
 	<script type="text/javascript" src="./proto/js/bat-vines.js"></script>
+
+	
+	<script type="text/javascript" src="./proto/js/box-party.js"></script>
+	<script type="text/javascript" src="./proto/js/milk.js"></script>
+	<script type="text/javascript" src="./proto/js/headers-game.js"></script>
+	<script type="text/javascript" src="./proto/js/soft-serve.js"></script>
+
 	
 	
 	<script type="text/javascript">
@@ -47,25 +50,28 @@
 
 			let liveModule;
 			const PROTO = {
-				//'SEQUENCER':window.Sequencer,
-				'PONG':window.PixelPaddle,
-				'TINY-TENNIS':window.TinyFootball,
-				'HEADERS':window.HeadersGame,
-				'GOALIE':window.GoalieGame,
-				//'BAT-HEIST':window.BatHeistGame,
-				//'VOLCANO':window.Volcano,
-				'ADVENTURE':window.Adventure,
-				'BAT-RIDDLER':window.Riddler,
-				//'BAT-ARANG':window.BatarangGame,
-				'BAT-GRAPPLE':window.BatClimbing,
-				'BAT-DRIVING':window.DrivingGame,
-				//'BAT-HEIST-3D':window.BatHeist3DGame,
-				'BAT-VINES':window.BatVinesGame,
-				//'BAT-FIGHT':window.BatFightGame,
-				//'RACER':'./javascript-racer-master/igb.html',
-				//'WEB-GL':'https://html-classic.itch.zone/html/1756009/WebGL/index.html',
-				'MILKER':window.MilkGame,
-				'BOX-PARTY':window.BoxPartyGame,
+
+				
+				'EXPERIMENTS':{
+					'ADVENTURE':window.Adventure,
+					'GOALIE':window.GoalieGame,
+					'PONG':window.PixelPaddle,
+					'TINY-TENNIS':window.TinyFootball,
+				},
+				'BATMAN':{
+					'BAT-RIDDLER':window.Riddler,
+					'BAT-GRAPPLE':window.BatClimbing,
+					'BAT-DRIVING':window.DrivingGame,
+					'BAT-VINES':window.BatVinesGame,
+				},
+				'BOX-PARTY':{
+					'BOX-PARTY':window.BoxPartyGame,
+					'MILKER':window.MilkGame,
+					'HEADERS':window.HeadersGame,
+					'SOFT-SERVE':window.SoftServeGame,
+				}
+				
+				
 			};
 
 			const ICONS = {
@@ -84,12 +90,16 @@
 				'RACER':'https://www.dizionariovideogiochi.it/lib/exe/fetch.php?media=archivio_dvg_13:outrun_-_ferrari.png',
 				'BAT-HEIST-3D':'./proto/img/bat-goggles.png',
 				'MILKER':'./proto/img/icon-milk.png',
+				'BOX-PARTY':'./proto/img/icon-box-party.png',
 			}
 
 			let gameID = window.location.search.substr(1).split('&')[0];
 
 			function launchProto(id){
-				let p = PROTO[id];
+
+				let p = undefined;
+				for(var f in PROTO) if(PROTO[f][id]) p = PROTO[f][id];
+				
 				
 				$('moduleframe').empty();
 
@@ -118,13 +128,19 @@
 
 
 			function launchMenu(){
-				for(var p in PROTO){
-					$(`
-						<protoapp>
-							<protoicon style='background-image:url(${ICONS[p]})'></protoicon>
-							<protolabel>${p}</protolabel>
-						</protoapp>
-					`).appendTo('protolist').attr('id',p).click(onProtoButton);
+				for(var f in PROTO){
+
+					let $folder = $(`<protofolder><h1>${f}</h1></protofolder>`).appendTo('protolist');
+
+					for(var p in PROTO[f]){
+						$(`
+							<protoapp>
+								<protoicon style='background-image:url(${ICONS[p]})'></protoicon>
+								<protolabel>${p}</protolabel>
+							</protoapp>
+						`).appendTo($folder).attr('id',p).click(onProtoButton);
+					}
+					
 				}
 			}
 				
@@ -387,17 +403,41 @@
 
 		protolist{
 			display: block;
-			padding: 2.6vw;
+			padding: 1.5vw;
 		}
 
 		protoapp{
 			display: inline-block;
 			width: 3vw;
 			height: 3.5vw;
-			margin: 0.5vw;
+			margin: 0.25vw;
 			text-align: center;
 			color: white;
 			vertical-align: middle;
+
+		}
+
+		protofolder{
+			background: linear-gradient( to bottom, rgba(0,0,0,0.5), transparent );
+			
+			border-radius: 0.5vw;
+			display: inline-block;
+			margin: 0.25vw;
+			padding: 0.25vw;
+			position: relative;
+			backdrop-filter: blur(10px);
+		}
+
+		protofolder h1{
+			color: white;
+			margin: 0px;
+			padding: 0px;
+			font-size: inherit;
+			font-weight: inherit;
+			font-size: 0.4vw;
+			margin: 0.25vw;
+			margin-bottom: 0px;
+			text-shadow: 0px 0.05vw 0px black;
 		}
 
 		protoicon{
@@ -406,7 +446,7 @@
 			height: 3vw;
 			background: white;
 			border-radius: 0.5vw;
-			box-shadow: 0px 0.05vw 0px black;
+			box-shadow: 0px 0.05vw 0px black, inset 0px 1px rgba(255,255,255,0.5);
 			background-size: cover;
 			background-position: center;
 		}
@@ -519,7 +559,7 @@
 			width: 33.3%;
 			position: relative;
 			vertical-align: top;
-			
+			box-sizing: border-box;
 		}
 
 		table{
@@ -670,12 +710,10 @@
 </head>
 <body>
 	<igb class='home'>
-		<igbside></igbside>
-		<igbside>
+		<igbside></igbside><igbside>
 			<protolist></protolist>
 			
-		</igbside>
-		<igbside>
+		</igbside><igbside>
 			
 		</igbside>
 		<igbmenu>
