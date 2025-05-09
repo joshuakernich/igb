@@ -11,6 +11,9 @@ window.SoftServeCone = function(nPlayer){
 			<svg n=${nPlayer} viewBox='0 0 100 100' preserveAspectRatio="none">
 				<path vector-effect="non-scaling-stroke" d=''></path>
 			</svg>
+			<svg viewBox='0 0 100 100' preserveAspectRatio="none">
+				<path style='opacity:0.2' stroke-width=30 vector-effect="non-scaling-stroke" d=''></path>
+			</svg>
 			<softhat></softhat>
 			<softhead></softhead><br>
 			<softbody></softbody>
@@ -55,6 +58,9 @@ window.SoftServeStream = function(nPlayer){
 		<softstream>
 			<svg n=${nPlayer} viewBox='0 0 100 100' preserveAspectRatio="none">
 				<path vector-effect="non-scaling-stroke" d=''></path>
+			</svg>
+			<svg viewBox='0 0 100 100' preserveAspectRatio="none">
+				<path style='opacity:0.2' stroke-width=30 vector-effect="non-scaling-stroke" d=''></path>
 			</svg>
 		</softstream>
 	`);
