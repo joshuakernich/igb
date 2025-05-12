@@ -11,9 +11,6 @@ window.SoftServeCone = function(nPlayer){
 			<svg n=${nPlayer} viewBox='0 0 100 100' preserveAspectRatio="none">
 				<path vector-effect="non-scaling-stroke" d=''></path>
 			</svg>
-			<svg viewBox='0 0 100 100' preserveAspectRatio="none">
-				<path style='opacity:0.2' stroke-width=30 vector-effect="non-scaling-stroke" d=''></path>
-			</svg>
 			<softhat></softhat>
 			<softhead></softhead><br>
 			<softbody></softbody>
@@ -58,9 +55,6 @@ window.SoftServeStream = function(nPlayer){
 		<softstream>
 			<svg n=${nPlayer} viewBox='0 0 100 100' preserveAspectRatio="none">
 				<path vector-effect="non-scaling-stroke" d=''></path>
-			</svg>
-			<svg viewBox='0 0 100 100' preserveAspectRatio="none">
-				<path style='opacity:0.2' stroke-width=30 vector-effect="non-scaling-stroke" d=''></path>
 			</svg>
 		</softstream>
 	`);
@@ -363,6 +357,14 @@ window.SoftServeGame = function(){
 		if(cones[1]) cones[1].px = cones[0].px + 0.2;
 		//cones[0].fx = cones[0].fx - 0.1;
 	})
+
+	self.setPlayers = function(p){
+		for(var m in cones){
+			cones[m].px = p[m].px/100;
+			cones[m].pz = p[m].pz/100;
+			cones[m].py = p[m].py/100;
+		}
+	}
 
 	setInterval(step,1000/FPS);
 }
