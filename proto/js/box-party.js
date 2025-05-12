@@ -1,3 +1,166 @@
+BoxPartyScene3D = function(doInBox){
+    
+	let audio = new AudioContext();
+    audio.add('rumble','./proto/audio/party/sfx-rumble.mp3',1);
+    audio.add('reverse','./proto/audio/fight-reverse.mp3',1);
+
+
+    const W = 1600*3;
+    const H = 1000;
+
+    if( !BoxPartyScene3D.isStyled) $("head").append(`
+        <style>
+            partyScene3D{
+                display:block;
+                width: ${W}px;
+                height: ${H}px;
+                
+                
+                transform-origin: top left;
+                overflow: hidden;
+            }
+
+            partyWorld3D{
+                display:block;
+                position: absolute;
+                left: ${W/2}px;
+                top: ${H/2}px;
+                perspective-origin: center;
+                perspective: ${W}px;
+            }
+
+            partyScene3D room3dSurface{
+            	box-shadow: inset 0px 0px 25px #ffdd00;
+            }
+
+            partyScene3D room3d[n='1'] room3dSurface{
+            	box-shadow: inset 0px 0px 25px hotpink;
+            }
+
+             partyScene3D room3d[n='2'] room3dSurface{
+            	box-shadow: inset 0px 0px 25px cyan;
+            }
+
+            partyWorldOverlay{
+            	background: white;
+            	position: absolute;
+            	top: 0px; 
+            	left: 0px;
+            	right: 0px;
+            	bottom: 0px;
+            	display: block;
+            	opacity: 0;
+            	pointer-events: none;
+            }
+
+            partyWorldOverlay igbside{
+            	background: rgba(0,0,0,0.1);
+            	box-shadow: inset 0px 0px 250px hotpink;
+            }
+
+            partyWorldOverlay:after{
+            	content: "";
+            	position: absolute;
+            	top: 0px; 
+            	left: 0px;
+            	right: 0px;
+            	bottom: 0px;
+            	display: block;
+            	background: url(./proto/img/party/in-cube-bubbles.gif);
+            	background-size: 33.3%;
+            	background-position: center;
+            	mix-blend-mode: overlay;
+            	opacity: 0.2;
+            }
+
+            partyWorldOverlay[n='0']{	background: #ffc43a;	}
+            partyWorldOverlay[n='0'] igbside{ box-shadow: inset 0px 0px 250px #ffc43a; }
+            partyWorldOverlay[n='1']{	background: #F672AF;	}
+            partyWorldOverlay[n='1'] igbside{ box-shadow: inset 0px 0px 250px #F672AF; }
+            partyWorldOverlay[n='2']{	background: #09B2F3;	}
+            partyWorldOverlay[n='2'] igbside{ box-shadow: inset 0px 0px 250px #09B2F3; }
+
+        </style>
+    `);
+
+    BoxPartyScene3D.isStyled = true;
+   
+	const ZMAX = 4500;
+	const ZFADE = 4300;
+	let isInBox = false;
+
+    let self = this;
+    self.$el = $(`
+        <partyScene3D>
+        </partyScene3D>`
+    );
+
+    let $world = $('<partyWorld3D>').appendTo(self.$el);
+    let $overlay = $('<partyWorldOverlay>').appendTo(self.$el);
+
+    for(var w=0; w<3; w++) $('<igbside>').appendTo($overlay);
+
+    let boxes = [];
+    for(var i=0; i<3; i++){
+    		let box = new Room3D(150,150,150,'rgba(0,0,0,0.5)');
+    		box.x = Math.cos( 0.5 + i/3*Math.PI*2 ) * 250;
+    		box.y = 0 + Math.sin( 0.5 + (i/3)*Math.PI*2 ) * 150;
+    		box.z = -i*1500;
+   			box.$el.appendTo($world);
+   			box.$el.attr('n',i);
+   			box.$el.click(doBox);
+   			box.isSpinning = true;
+   			box.ry = box.rz = 0;
+   			boxes[i] = box;
+    }
+
+    let n = 0;
+    function step(){
+    	n++;
+    	for(var b in boxes ){
+
+    		if( boxes[b].isSpinning ){
+    			let dir = b%2?1:-1;
+    			boxes[b].ry = n*dir;
+    			boxes[b].rz = n*0.5;
+    		} else {
+    			boxes[b].ry *= 0.9;
+    			boxes[b].rz *= 0.9;
+    			boxes[b].x *= 0.9;
+    			boxes[b].y *= 0.9;
+    			boxes[b].z += 100;
+
+    			if(boxes[b].z>ZFADE){
+    				let amt = (boxes[b].z - ZFADE)/(ZMAX-ZFADE);
+    				$overlay.css('opacity',amt);
+    			}	
+
+    			if(boxes[b].z>ZMAX && !isInBox){
+    				isInBox = true;
+    				boxes[b].z = ZMAX;
+    				audio.stop('rumble');
+    				audio.play('reverse');
+    				doInBox();
+    			}
+    		}
+
+    		boxes[b].$el.css({
+    			transform:'translateX('+boxes[b].x+'px) translateY('+boxes[b].y+'px) translateZ('+boxes[b].z+'px) rotateY('+boxes[b].ry+'deg) rotateZ('+boxes[b].rz+'deg)'
+    		});
+    	}
+    }
+
+    setInterval(step,1000/20);
+
+    function doBox(){
+    	let n = $(this).attr('n');
+    	boxes[n].isSpinning = false;
+    	boxes[n].$el.appendTo($world);
+    	$overlay.attr('n',n);
+    	audio.play('rumble');
+    }
+}
+
 BoxPartySpinner = function( player, fnComplete ){
 	const FPS = 50;
 
@@ -74,7 +237,7 @@ BoxPartyGame = function(){
 
 	const W = 16;
 	const H = 10;
-	const GRID = 50;
+	const GRID = 100;
 	let scale = 1;
 
 	$("head").append(`
@@ -84,8 +247,19 @@ BoxPartyGame = function(){
         		width: ${W*GRID*3}px;
         		height: ${H*GRID}px;
         		transform-origin: top left;
-        		background-image: url(./proto/img/party/bg.png);
+        		background-image: url(./proto/img/party/box-party-landscape.png);
         		background-size: 100%;
+        		background-position: 80% 0%;
+        	}
+
+        	boxpartyminigame{
+        		display: block;
+        		width: ${W*GRID*3}px;
+        		height: ${H*GRID}px;
+        		top: 0px;
+        		left: 0px;
+        		position: absolute;
+        		pointer-events: none;
         	}
 
         	partytrack{
@@ -351,11 +525,18 @@ BoxPartyGame = function(){
         	}
         <style`);
 
+ 	let audio = new AudioContext();
+    audio.add('music','./proto/audio/party/music-ethereal.mp3',0.5,true,true);
+   // audio.add('music','./proto/audio/party/sfx-rumble.mp3',1);
+
 	let self = this;
 	self.$el = $('<igb>');
 	let $game = $('<boxpartygame>').appendTo(self.$el);
+	let $minigame = $('<boxpartyminigame>').appendTo(self.$el);
+	let $track = $('<partytrack>')//.appendTo($game);
 
-	let $track = $('<partytrack>').appendTo($game);
+	let scene = new BoxPartyScene3D(doLaunchGame);
+	scene.$el.appendTo($game);
 
 	const STOPS = 20;
 	const ARMS = 5;
@@ -408,10 +589,10 @@ BoxPartyGame = function(){
 
 	function onSpinnerComplete( value ){
 		spinner.$el.remove();
-		setTimeout(initSpinner,500);
+		//setTimeout(initSpinner,500);
 	}
 
-	setTimeout(initSpinner,500);
+	//setTimeout(initSpinner,500);
 	
 
 	setInterval(function(){
@@ -426,6 +607,12 @@ BoxPartyGame = function(){
 			players[n].py = p[n].py;
 			players[n].pz = p[n].pz;
 		}
+	}
+
+	function doLaunchGame(){
+		let p = MilkGame;
+		let liveModule = new p();
+		liveModule.$el.appendTo($minigame);
 	}
 
 	$(document).on('mousemove',function(e){
@@ -453,5 +640,9 @@ BoxPartyGame = function(){
         players[1].pz = players[0].pz;
 
         players[0].proximity = [0.9,0.9,0.9];
+    })
+
+    $(document).click(function(){
+    	audio.play('music');
     })
 }

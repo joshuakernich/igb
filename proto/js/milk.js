@@ -261,31 +261,21 @@ window.MilkGame = function(){
 
 				milkmeephead{
 					display: block;
-					height: 30%;
+					height: 120px;
 					background: white;
 					border-radius: ${MEEP/2}px;
 					text-align: center;
 					position: relative;
 					left: ${-MEEP/2}px;
+					padding-top: 30px;
 				}
 
 				milkmeephat{
 					display: block;
-				
 					background: red;
-					height: 40%;
-					border-radius: ${MEEP/4}px ${MEEP/4}px 0px 0px;
-					position: relative;
-				}
-
-				milkmeephat:after{
-					content: " ";
-					position: absolute;
-					left: -30px;
-					right: -30px;
-					bottom: 0px;
-					height: 15px;
-					background: red;
+					height: 20px;
+					border-radius: 5px;
+					
 				}
 
 				milkmeep:last-of-type milkmeephat{
@@ -298,7 +288,7 @@ window.MilkGame = function(){
 
 				milkmeepbody{
 					display: block;
-					height: 20%;
+					height: 150px;
 					background: white;
 					margin: 0px 15px;
 					border-radius: ${MEEP/4}px;
@@ -312,7 +302,7 @@ window.MilkGame = function(){
 					box-sizing: border-box;
 					border-left: 15px solid white;
 					border-right: 15px solid white;
-					height: 50%;
+					height: calc( 100% - 270px );
 					left: ${-MEEP/2}px;
 					position: relative;
 				}
@@ -330,9 +320,8 @@ window.MilkGame = function(){
 					display: block;
 					width: ${W*3}px;
 					height: ${H}px;
-					
-					background: #555577;
 					transform-origin: top left;
+
 				}
 
 				milkgame h1{
@@ -355,7 +344,10 @@ window.MilkGame = function(){
 					background: url(./proto/img/milk/bg-farm.jpg);
 					background-size: 100%;
 					background-position: bottom center;
-					opacity: 0.5;
+					
+
+					background: url(./proto/img/party/bg-blue.jpg);
+					background-size: 33.3%;
 				}
 
 				milksea{
@@ -464,7 +456,7 @@ window.MilkGame = function(){
 	const GRAB = W/20;  //can grab a teat within 10% of screen width
 
 	let self = this;
-	self.$el = $('<igb>');
+	self.$el = $('<igb>').css('background','none');
 
 	let $game = $('<milkgame>').appendTo(self.$el);
 	let $bg = $('<milkbg>').appendTo($game);
