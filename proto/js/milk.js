@@ -1,3 +1,40 @@
+window.MilkPlayerHUD = function(meep){
+
+	console.log(meep);
+	let self = this;
+	self.$el = $(`
+		<milkplayerhud>
+			<milkmeephead>
+				<milkmeephat></milkmeephat>
+				<milkmeepeye></milkmeepeye>
+				<milkmeepeye></milkmeepeye>
+			</milkmeephead>
+			<h2>99</h2>
+		</milkplayerhud>`
+	);
+
+	self.redraw = function(){
+		self.$el.find('h2').text(Math.floor(meep.score));
+	}
+
+}
+
+window.MilkHUD = function(meeps){
+	let self = this;
+	self.$el = $('<milkhud>');
+
+	let huds = [];
+	for(var i=0; i<meeps.length; i++){
+		let hud = new MilkPlayerHUD(meeps[i]);
+		hud.$el.appendTo(self.$el);
+		huds[i] = hud;
+	}
+
+	self.redraw = function(){
+		for(var h in huds) huds[h].redraw();
+	}
+}
+
 window.MilkSea = function(){
 	let self = this;
 	self.$el = $(`
@@ -10,7 +47,7 @@ window.MilkSea = function(){
 
 	let $path = self.$el.find('path');
 
-	self.milk = 0;
+	self.milk = 100;
 
 	const SEG = 100;
 	let n = 0;
@@ -33,6 +70,7 @@ window.MilkSea = function(){
 
 window.MilkMeep = function(){
 	let self = this;
+	self.score = 0;
 	self.$el = $(`
 		<milkmeep>
 			<milkmeephead>
@@ -145,7 +183,7 @@ window.MilkTeat = function(){
 		let tugDelta = Math.max(0,self.tug - tugWas); 
 		tugWas = self.tug;
 
-		if(!self.isHeld){
+		if(!self.isHeldBy){
 			self.tug *= 0.95;
 			self.ox *= 0.95;
 			tugDelta = 0;
@@ -211,6 +249,69 @@ window.MilkGame = function(){
 
 		$("head").append(`
 			<style>
+				milkhud{
+					position: absolute;
+					bottom: 0px;
+					left: 0px;
+					right: 0px;
+					display: block;
+					z-index: 100;
+					text-align: center;
+				}
+
+				milkplayerhud{
+					width: 200px;
+					height: 150px;
+					background: rgba(255,0,0,0.5);
+					display: inline-block;
+					border-radius: 20px 20px 0px 0px;
+					margin: 0px 10%;
+					box-sizing: border-box;
+					
+					position: relative;
+					border: 10px solid red;
+					border-bottom: 0px;
+					backdrop-filter: blur(5px);
+					text-shadow: 0px -5px 0px red;
+				}
+
+				milkplayerhud:last-of-type{
+					background: rgba(0,0,255,0.5);
+					border-color: blue;
+					text-shadow: 0px -5px 0px blue;
+				}
+
+				milkplayerhud:last-of-type milkmeephat{
+					background: blue;
+				}
+
+				milkplayerhud h2{
+					display: block;
+					position: absolute;
+					color: white;
+					right: 0px;
+					left: 50px;
+					top: 0px;
+					line-height: 140px;
+					font-weight: bold;
+					font-size: 80px;
+					padding: 0px;
+					margin: 0px;
+					text-align: center;
+					
+					box-sizing: border-box;
+					
+				}
+
+				milkplayerhud milkmeephead{
+					top: 20px;
+					box-shadow: 2px 5px 20px rgba(255,0,0,0.5);
+				}
+
+
+
+
+
 				milkmeep{
 					display:block;
 					width: ${MEEP}px;
@@ -268,6 +369,7 @@ window.MilkGame = function(){
 					position: relative;
 					left: ${-MEEP/2}px;
 					padding-top: 30px;
+					width: 100px;
 				}
 
 				milkmeephat{
@@ -461,6 +563,8 @@ window.MilkGame = function(){
 	let $game = $('<milkgame>').appendTo(self.$el);
 	let $bg = $('<milkbg>').appendTo($game);
 	let sea = new MilkSea();
+
+	
 	
 
 	const COLORS = ['red','blue'];
@@ -473,6 +577,9 @@ window.MilkGame = function(){
 		meeps[i].wall = 1;
 	}
 
+	let hud = new MilkHUD(meeps);
+	hud.$el.appendTo($game)
+
 	let udders = [];
 	for(var i=0; i<3; i++){
 		udders[i] = new MilkUdder();
@@ -484,14 +591,11 @@ window.MilkGame = function(){
 
 	$('<h1>TAP A WALL<br>TO MILK OVER YONDER</h1>').appendTo($game);
 
-
 	let scale = 1;
 	function step(){
 		let w = $(document).innerWidth();
 		scale = w/(W*3);
 		$game.css('transform','scale('+scale+')');
-
-
 
 		for(var m in meeps ){
 
@@ -532,10 +636,10 @@ window.MilkGame = function(){
 				teatGrab.ox = (GRAB-minx)*dir*0.1;
 				meeps[m].$handLeft.css({left:teatGrab.ox, top:'35%'});
 				meeps[m].$handRight.css({left:teatGrab.ox + dir*90, top:'30%'});
-
-
 				teatGrab.tug = (meeps[m].fy - meeps[m].teatGrabAtY) * H/2;
-				teatGrab.isHeld = true;
+				teatGrab.isHeldBy = meeps[m];
+
+				
 
 			} else {
 				//let go
@@ -549,11 +653,16 @@ window.MilkGame = function(){
 		for(var u in udders){
 			for(var t in udders[u].teats){
 				udders[u].teats[t].redraw();
-				sea.milk += udders[u].teats[t].milking;
-				udders[u].teats[t].isHeld = false;
+				
+				if(udders[u].teats[t].isHeldBy){
+					sea.milk += udders[u].teats[t].milking;
+					udders[u].teats[t].isHeldBy.score += udders[u].teats[t].milking/1000;
+					udders[u].teats[t].isHeldBy = undefined;
+				}
 			}	
 		}
 
+		hud.redraw();
 		sea.redraw();
 	}
 
