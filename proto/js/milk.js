@@ -443,13 +443,24 @@ window.MilkGame = function(){
 					left: 0px;
 					bottom: 0px;
 					right: 0px;
-					background: url(./proto/img/milk/bg-farm.jpg);
-					background-size: 100%;
-					background-position: bottom center;
-					
-
-					background: url(./proto/img/party/bg-blue.jpg);
+					background-color: #30A6DC;
+					background-image: url(./proto/img/party/bg-farm.webp);
 					background-size: 33.3%;
+					background-position: center 100px;
+					background-repeat: repeat-x;
+
+					
+				}
+
+				milkbg:after{
+					content:"";
+					position: absolute;
+					top: 0px;
+					left: 0px;
+					bottom: 0px;
+					right: 0px;
+					background-color: #30A6DC;
+					opacity: 0.5;
 				}
 
 				milksea{
@@ -564,8 +575,8 @@ window.MilkGame = function(){
 	let $bg = $('<milkbg>').appendTo($game);
 	let sea = new MilkSea();
 
-	
-	
+
+
 
 	const COLORS = ['red','blue'];
 
