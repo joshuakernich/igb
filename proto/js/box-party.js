@@ -613,6 +613,7 @@ BoxPartyGame = function(){
 		let p = MilkGame;
 		let liveModule = new p();
 		liveModule.$el.appendTo($minigame);
+		audio.stop('music');
 	}
 
 	$(document).on('mousemove',function(e){
@@ -644,5 +645,6 @@ BoxPartyGame = function(){
 
     $(document).click(function(){
     	audio.play('music');
+    	$(document).off();
     })
 }
