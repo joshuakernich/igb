@@ -1,6 +1,5 @@
 window.MilkPlayerHUD = function(meep){
 
-	console.log(meep);
 	let self = this;
 	self.$el = $(`
 		<milkplayerhud>
@@ -9,7 +8,7 @@ window.MilkPlayerHUD = function(meep){
 				<milkmeepeye></milkmeepeye>
 				<milkmeepeye></milkmeepeye>
 			</milkmeephead>
-			<h2>99</h2>
+			<h2>0</h2>
 		</milkplayerhud>`
 	);
 
@@ -40,6 +39,7 @@ window.MilkSea = function(){
 	self.$el = $(`
 		<milksea>
 			<svg viewBox='0 0 100 100' preserveAspectRatio="none">
+				<path fill='rgba(0,0,0,0.5)' stroke='none'></path>
 				<path fill='white' stroke='none'></path>
 			</svg>
 		</milksea>
@@ -47,13 +47,14 @@ window.MilkSea = function(){
 
 	let $path = self.$el.find('path');
 
-	self.milk = 100;
+	self.milk = -2000;
 
 	const SEG = 100;
 	let n = 0;
 	self.redraw = function(){
 
 		let fill = self.milk/2000;
+		console.log(self.milk,fill);
 		let wibble = 0.05;
 		n += wibble;
 		let d = `M 0,100 L 0,${100-fill}`;
@@ -249,6 +250,23 @@ window.MilkGame = function(){
 
 		$("head").append(`
 			<style>
+				@import url('https://fonts.googleapis.com/css2?family=Playwrite+DK+Loopet:wght@100..400&display=swap');
+
+				milkheader{
+					 font-family: "Playwrite DK Loopet", cursive;
+					  font-optical-sizing: auto;
+					  font-weight: 900;
+					  font-style: normal;
+					  color: white;
+					  position: absolute;
+					  left: 50%;
+					  top: 30%;
+					  
+					  transform: translate(-50%, -50%);
+					  font-size: 5vw;
+					  text-shadow: 0px 5px 1px rgba(0,0,0,0.2);
+				}
+
 				milkhud{
 					position: absolute;
 					bottom: 0px;
@@ -483,13 +501,15 @@ window.MilkGame = function(){
 					top: 0px;
 				}
 
-				milkudder:after{
+
+
+				milkudder:before{
 					content: "";
 					display: block;
 					position: absolute;
-					top: 0px;
+					bottom: -50px;
 					width: 100%;
-					height: 100%;
+					height: 200%;
 					left: -50%;
 					background: pink;
 					border-radius: 0px 0px 100% 100%;
@@ -513,23 +533,15 @@ window.MilkGame = function(){
 					width: 0px;
 					height: 0px;
 					position: absolute;
-					top: 0px;
-					left: -40px;
-					
+					top: -50px;
+					left: 0px;
 					
 					z-index: 1;
-					
-
-
-					border-left: 40px solid transparent;
-					border-right: 40px solid transparent;
-					border-bottom: 80px solid red;
-					visibility:hidden;
+					visibility: hidden;
 				}
 
 				milkalert[active='true']{
 					visibility:visible;
-
 					animation: wobble 0.2s infinite;
 				}
 
@@ -537,12 +549,13 @@ window.MilkGame = function(){
 					content:"!";
 					color: white;
 					position: absolute;
-					font-size: 70px;
 					left: -50px;
+					top: -50px;
 					width: 100px;
-					text-align: center;
-					font-weight: bold;
-					top: 8px;
+					height: 100px;
+					display: block;
+					background: url(./proto/img/party/icon-alert.webp);
+					background-size: 100%;
 				}
 
 				@keyframes wobble{
@@ -575,8 +588,7 @@ window.MilkGame = function(){
 	let $bg = $('<milkbg>').appendTo($game);
 	let sea = new MilkSea();
 
-
-
+	let $header = $('<milkheader>').appendTo(self.$el).text('Milkers');
 
 	const COLORS = ['red','blue'];
 
@@ -600,13 +612,12 @@ window.MilkGame = function(){
 
 	sea.$el.appendTo($game);
 
-	$('<h1>TAP A WALL<br>TO MILK OVER YONDER</h1>').appendTo($game);
+	//$('<h1>TAP A WALL<br>TO MILK OVER YONDER</h1>').appendTo($game);
 
+	let isMilkingLive = false;
 	let scale = 1;
 	function step(){
-		let w = $(document).innerWidth();
-		scale = w/(W*3);
-		$game.css('transform','scale('+scale+')');
+		resize();
 
 		for(var m in meeps ){
 
@@ -633,7 +644,7 @@ window.MilkGame = function(){
 
 					let dx = (udders[u].x + teat.x) - meeps[m].x;
 
-					if(Math.abs(dx)<minx){
+					if(Math.abs(dx)<minx && isMilkingLive){
 						dir = dx>0?1:-1;
 						minx = Math.abs(dx);
 						teatGrab = teat;
@@ -677,7 +688,29 @@ window.MilkGame = function(){
 		sea.redraw();
 	}
 
-	setInterval(step,1000/FPS);
+	function resize(){
+		let w = $(document).innerWidth();
+		scale = w/(W*3);
+		$game.css('transform','scale('+scale+')');
+	}
+
+	function doIntro(){
+		resize();
+		for(var u in udders) udders[u].$el.css({'top':'-'+H+'px'}).delay(5000+i*100).animate({'top':'0px'},1000).animate({'top':'-20px'}).animate({'top':'0px'},1000);
+		$header.delay(4000).animate({top:'52%'}).animate({top:'-20%'});
+		hud.$el.css({bottom:'-200px'}).delay(5000).animate({bottom:'0px'});
+
+		
+		setInterval(step,1000/FPS);
+		setTimeout( begin, 6000 );
+
+	}
+
+	function begin(){
+		isMilkingLive = true;
+	}
+
+	doIntro();
 
 	$(document).on('mousemove',function(e){
 		let o = $game.offset();
