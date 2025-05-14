@@ -1,8 +1,8 @@
-window.MilkPlayerHUD = function(meep){
+window.MilkPlayerHUD = function(n,meep,type){
 
 	let self = this;
 	self.$el = $(`
-		<milkplayerhud>
+		<milkplayerhud n=${n} type=${type}>
 			<milkmeephead>
 				<milkmeephat></milkmeephat>
 				<milkmeepeye></milkmeepeye>
@@ -25,17 +25,25 @@ window.MilkHUD = function(meeps){
 	for(var i=0; i<3; i++) $('<milkhudframe>').appendTo(self.$el);
 
 	let $baseline = $('<milkhudbaseline>').appendTo(self.$el);
-
+	let $timer;
 	let huds = [];
+	let iTimer = Math.floor(meeps.length/2);
+	let type = 'before'
 	for(var i=0; i<meeps.length; i++){
-		let hud = new MilkPlayerHUD(meeps[i]);
+
+		if(i==iTimer){
+			$timer = $(`
+				<milkhudtimer>60</milkhudtimer>
+			`).appendTo($baseline);
+			type = 'after'
+		}
+
+		let hud = new MilkPlayerHUD(i,meeps[i],type);
 		hud.$el.appendTo($baseline);
 		huds[i] = hud;
-	}
 
-	let $timer = $(`
-		<milkhudtimer>60</milkhudtimer>
-	`).appendTo($baseline);
+		
+	}
 
 
 	self.redraw = function(sec){
@@ -78,11 +86,11 @@ window.MilkSea = function(){
 	self.redraw();
 }
 
-window.MilkMeep = function(){
+window.MilkMeep = function(n){
 	let self = this;
 	self.score = 0;
 	self.$el = $(`
-		<milkmeep>
+		<milkmeep n=${n}>
 			<milkmeephead>
 				<milkmeephat></milkmeephat>
 				<milkmeepeye></milkmeepeye>
@@ -339,7 +347,7 @@ window.MilkGame = function(){
 					background: red;
 					display: inline-block;
 					border-radius: 20px 20px 0px 0px;
-					margin: 0px 2%;
+					margin: 0px 1vw;
 					box-sizing: border-box;
 					position: relative;
 					color: white;
@@ -347,14 +355,7 @@ window.MilkGame = function(){
 
 				}
 
-				milkplayerhud:last-of-type{
-					background: blue;
-		
-				}
-
-				milkplayerhud:last-of-type milkmeephat{
-					background: blue;
-				}
+				
 
 				milkplayerhud milkscore{
 					display: block;
@@ -381,16 +382,15 @@ window.MilkGame = function(){
 					height: 100px;
 					background: #40B0ED;
 					color: #333;
-					display: block;
-					position: absolute;
-					left: 0px;
-					right: 0px;
-					bottom: 0px;
-					margin: auto;
+					display: inline-block;
+					
+					
+					margin: 0px 1vw;
 					font-size: 70px;
 					line-height: 100px;
 					border-radius: 20px 20px 0px 0px;
 					box-shadow: 0px 0px 20px rgba(0,0,0,0.2);
+					vertical-align: top;
 				}
 
 
@@ -402,12 +402,11 @@ window.MilkGame = function(){
 					transform: scale(0.6);
 				}
 
-				milkplayerhud:first-of-type milkscore{ left:50px; }
-				milkplayerhud:last-of-type milkscore{ right:50px; }
+				milkplayerhud[type='before'] milkscore{ left:50px; }
+				milkplayerhud[type='before'] milkmeephead{ left:-10px; }
 
-				milkplayerhud:first-of-type milkmeephead{ left:-10px; }
-				milkplayerhud:last-of-type milkmeephead{ right:-10px; }
-				
+				milkplayerhud[type='after'] milkscore{ right:50px; }
+				milkplayerhud[type='after'] milkmeephead{ right:-10px; }
 
 				
 
@@ -483,13 +482,7 @@ window.MilkGame = function(){
 					
 				}
 
-				milkmeep:last-of-type milkmeephat{
-					background: blue;
-				}
-
-				milkmeep:last-of-type milkmeephat:after{
-					background: blue;
-				}
+				
 
 				milkmeepbody{
 					display: block;
@@ -677,7 +670,20 @@ window.MilkGame = function(){
 					text-align: right;
 				}
 
+				milkmeep[n='1'] milkmeephat{ background: blue; }
+				milkmeep[n='1'] milkmeephat:after{ background: blue; }
+				milkplayerhud[n='1']{ background: blue; }
+				milkplayerhud[n='1'] milkmeephat{ background: blue; }
 
+				milkmeep[n='2'] milkmeephat{ background: limegreen; }
+				milkmeep[n='2'] milkmeephat:after{ background: limegreen; }
+				milkplayerhud[n='2']{ background: limegreen; }
+				milkplayerhud[n='2'] milkmeephat{ background: limegreen; }
+
+				milkmeep[n='3'] milkmeephat{ background: #dd00ff; }
+				milkmeep[n='3'] milkmeephat:after{ background: #dd00ff; }
+				milkplayerhud[n='3']{ background: #dd00ff; }
+				milkplayerhud[n='3'] milkmeephat{ background: #dd00ff; }
 
 				@keyframes wobble{
 					0%{
@@ -701,6 +707,7 @@ window.MilkGame = function(){
 
 	const FPS = 50;
 	const GRAB = W/20;  //can grab a teat within 10% of screen width
+	const PLAYERCOUNT = 4;
 
 	let self = this;
 	self.$el = $('<igb>').css('background','none');
@@ -710,11 +717,11 @@ window.MilkGame = function(){
 	let sea = new MilkSea();
 
 	let $header = $('<milkheader>').appendTo(self.$el).text('Milkers');
-	const COLORS = ['red','blue'];
+	const COLORS = ['red','blue','green','purple','orange','yellow'];
 
 	let meeps = [];
-	for(var i=0; i<2; i++){
-		meeps[i] = new MilkMeep(COLORS[i]);
+	for(var i=0; i<PLAYERCOUNT; i++){
+		meeps[i] = new MilkMeep(i,COLORS[i]);
 		meeps[i].$el.appendTo($game).css({bottom:'0px'});
 		meeps[i].fx = meeps[i].fy = meeps[i].fz = 0.5;
 		meeps[i].wall = 1;
@@ -838,7 +845,7 @@ window.MilkGame = function(){
 
 	}
 
-	const PLAYERCOLOR = ['red','blue'];
+
 	let isComplete = false;
 	function doOutro(){
 		isMilkingLive = false;
@@ -848,9 +855,17 @@ window.MilkGame = function(){
 		let $score = $('<milkscoreboard>').appendTo(self.$el).css({top:'120%'}).delay(3000).animate({top:'50%'});
 
 		for(var m in meeps){
+			meeps[m].betterThanX = 0;
+			for(var n in meeps){
+				if(meeps[m].score > meeps[n].score) meeps[m].betterThanX ++;
+			}
+		}
+
+		for(var m in meeps){
 			$(`<milkmeepscoreboard>
-					<milkscorename style='color:${PLAYERCOLOR[m]}'>${PLAYERCOLOR[m]} PLAYER</milkscorename>
+					<milkscorename style='color:${COLORS[m]}'>${COLORS[m]} PLAYER</milkscorename>
 					<milkscorescore>${Math.floor(meeps[m].score)}</milkscorescore>
+					<milkscorescore>+ ${(meeps[m].betterThanX+1)*10}</milkscorescore>
 				</milkmeepscoreboard>`).appendTo($score);
 		}
 	}
