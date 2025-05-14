@@ -643,6 +643,42 @@ window.MilkGame = function(){
 					background-size: 100%;
 				}
 
+				milkscoreboard{
+					display: block;
+					position: absolute;
+					left: 50%;
+					top: 50%;
+					transform: translate(-50%, -50%);
+					background: rgba(255,255,255,0.5);
+					padding: 1vw;
+					border: 0.3vw solid white;
+					border-radius: 1vw;
+					line-height: 1.5vw;
+					font-size: 1vw;
+					color: #333;
+					backdrop-filter: blur(5px);
+				}
+
+				milkmeepscoreboard{
+					display: block;
+					white-space: nowrap;
+				}
+
+				milkscorename{
+					display: inline-block;
+					width: 5vw;
+					text-align: left;
+					text-transform:uppercase;
+				}
+
+				milkscorescore{
+					display: inline-block;
+					width: 5vw;
+					text-align: right;
+				}
+
+
+
 				@keyframes wobble{
 					0%{
 						transform: rotate(-7deg);
@@ -802,11 +838,21 @@ window.MilkGame = function(){
 
 	}
 
+	const PLAYERCOLOR = ['red','blue'];
 	let isComplete = false;
 	function doOutro(){
 		isMilkingLive = false;
 		isComplete = true;
-		$header.text('Time Up!').animate({top:'30%'});
+		$header.text('Time Up!').animate({top:'30%'}).delay(2500).animate({top:'-30%'});
+
+		let $score = $('<milkscoreboard>').appendTo(self.$el).css({top:'120%'}).delay(3000).animate({top:'50%'});
+
+		for(var m in meeps){
+			$(`<milkmeepscoreboard>
+					<milkscorename style='color:${PLAYERCOLOR[m]}'>${PLAYERCOLOR[m]} PLAYER</milkscorename>
+					<milkscorescore>${Math.floor(meeps[m].score)}</milkscorescore>
+				</milkmeepscoreboard>`).appendTo($score);
+		}
 	}
 
 	let timeStart = 0;
@@ -816,6 +862,7 @@ window.MilkGame = function(){
 	}
 
 	doIntro();
+	
 
 	$(document).on('mousemove',function(e){
 		let o = $game.offset();
