@@ -8,12 +8,12 @@ window.MilkPlayerHUD = function(meep){
 				<milkmeepeye></milkmeepeye>
 				<milkmeepeye></milkmeepeye>
 			</milkmeephead>
-			<h2>0</h2>
+			<milkscore>0</milkscore>
 		</milkplayerhud>`
 	);
 
 	self.redraw = function(){
-		self.$el.find('h2').text(Math.floor(meep.score));
+		self.$el.find('milkscore').text(Math.floor(meep.score));
 	}
 
 }
@@ -32,6 +32,11 @@ window.MilkHUD = function(meeps){
 		hud.$el.appendTo($baseline);
 		huds[i] = hud;
 	}
+
+	let $timer = $(`
+		<milkhudtimer>60</milkhudtimer>
+	`).appendTo($baseline);
+
 
 	self.redraw = function(){
 		for(var h in huds) huds[h].redraw();
@@ -291,11 +296,13 @@ window.MilkGame = function(){
 
 				milkhudframe{
 					display: inline-block;
-					width: 33.3%;
+					width: 33.33%;
 					height: 100%;
 					position: relative;
 					overflow: hidden;
 				}
+
+
 
 				milkhudframe:before{
 					content: "";
@@ -325,52 +332,81 @@ window.MilkGame = function(){
 
 				milkplayerhud{
 					width: 200px;
-					height: 150px;
-					background: rgba(255,0,0,0.5);
+					height: 100px;
+					background: red;
 					display: inline-block;
 					border-radius: 20px 20px 0px 0px;
-					margin: 0px 10%;
+					margin: 0px 2%;
 					box-sizing: border-box;
-					
 					position: relative;
-					border: 10px solid red;
-					border-bottom: 0px;
-					backdrop-filter: blur(5px);
-					text-shadow: 0px -5px 0px red;
+					color: white;
+					
+
 				}
 
 				milkplayerhud:last-of-type{
-					background: rgba(0,0,255,0.5);
-					border-color: blue;
-					text-shadow: 0px -5px 0px blue;
+					background: blue;
+		
 				}
 
 				milkplayerhud:last-of-type milkmeephat{
 					background: blue;
 				}
 
-				milkplayerhud h2{
+				milkplayerhud milkscore{
 					display: block;
 					position: absolute;
 					color: white;
 					right: 0px;
-					left: 50px;
+					left: 0px;
 					top: 0px;
-					line-height: 140px;
+					
 					font-weight: bold;
-					font-size: 80px;
+					
+					
 					padding: 0px;
 					margin: 0px;
 					text-align: center;
 					
 					box-sizing: border-box;
-					
+					font-size: 70px;
+					line-height: 100px;
 				}
 
-				milkplayerhud milkmeephead{
-					top: 20px;
-					box-shadow: 2px 5px 20px rgba(255,0,0,0.5);
+				milkhudtimer{
+					width: 150px;
+					height: 100px;
+					background: #40B0ED;
+					color: #333;
+					display: block;
+					position: absolute;
+					left: 0px;
+					right: 0px;
+					bottom: 0px;
+					margin: auto;
+					font-size: 70px;
+					line-height: 100px;
+					border-radius: 20px 20px 0px 0px;
+					box-shadow: 0px 0px 20px rgba(0,0,0,0.2);
 				}
+
+
+				milkplayerhud milkmeephead{
+					position: absolute;
+					top: 15px;
+					left: auto;
+					box-shadow: 2px 5px 20px rgba(255,0,0,0.5);
+					transform: scale(0.6);
+				}
+
+				milkplayerhud:first-of-type milkscore{ left:50px; }
+				milkplayerhud:last-of-type milkscore{ right:50px; }
+
+				milkplayerhud:first-of-type milkmeephead{ left:-10px; }
+				milkplayerhud:last-of-type milkmeephead{ right:-10px; }
+				
+
+				
 
 
 
