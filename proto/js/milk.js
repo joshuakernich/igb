@@ -22,10 +22,14 @@ window.MilkHUD = function(meeps){
 	let self = this;
 	self.$el = $('<milkhud>');
 
+	for(var i=0; i<3; i++) $('<milkhudframe>').appendTo(self.$el);
+
+	let $baseline = $('<milkhudbaseline>').appendTo(self.$el);
+
 	let huds = [];
 	for(var i=0; i<meeps.length; i++){
 		let hud = new MilkPlayerHUD(meeps[i]);
-		hud.$el.appendTo(self.$el);
+		hud.$el.appendTo($baseline);
 		huds[i] = hud;
 	}
 
@@ -47,7 +51,7 @@ window.MilkSea = function(){
 
 	let $path = self.$el.find('path');
 
-	self.milk = -2000;
+	self.milk = 0;
 
 	const SEG = 100;
 	let n = 0;
@@ -269,12 +273,54 @@ window.MilkGame = function(){
 
 				milkhud{
 					position: absolute;
+					top: 0px;
 					bottom: 0px;
 					left: 0px;
 					right: 0px;
 					display: block;
 					z-index: 100;
 					text-align: center;
+				}
+
+				milkhudbaseline{
+					position: absolute;
+					bottom: 0px;
+					left: 0px;
+					right: 0px;
+				}
+
+				milkhudframe{
+					display: inline-block;
+					width: 33.3%;
+					height: 100%;
+					position: relative;
+					overflow: hidden;
+				}
+
+				milkhudframe:before{
+					content: "";
+					display: block;
+					position: absolute;
+					top: 0px;
+					left: 0px;
+					right: 0px;
+					bottom: 0px;
+					box-sizing: border-box;
+					border: 50px solid black;
+					filter: blur(20px);
+					opacity: 0.5;
+				}
+
+				milkhudframe:after{
+					content: "";
+					display: block;
+					position: absolute;
+					top: 0px;
+					left: 0px;
+					right: 0px;
+					bottom: 0px;
+					box-sizing: border-box;
+					border: 50px solid #40B0ED;
 				}
 
 				milkplayerhud{
@@ -698,7 +744,7 @@ window.MilkGame = function(){
 		resize();
 		for(var u in udders) udders[u].$el.css({'top':'-'+H+'px'}).delay(5000+i*100).animate({'top':'0px'},1000).animate({'top':'-20px'}).animate({'top':'0px'},1000);
 		$header.delay(4000).animate({top:'52%'}).animate({top:'-20%'});
-		hud.$el.css({bottom:'-200px'}).delay(5000).animate({bottom:'0px'});
+		//hud.$el.css({bottom:'-200px'}).delay(5000).animate({bottom:'0px'});
 
 		
 		setInterval(step,1000/FPS);
