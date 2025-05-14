@@ -38,7 +38,8 @@ window.MilkHUD = function(meeps){
 	`).appendTo($baseline);
 
 
-	self.redraw = function(){
+	self.redraw = function(sec){
+		 $timer.text(sec);
 		for(var h in huds) huds[h].redraw();
 	}
 }
@@ -63,7 +64,6 @@ window.MilkSea = function(){
 	self.redraw = function(){
 
 		let fill = self.milk/2000;
-		console.log(self.milk,fill);
 		let wibble = 0.05;
 		n += wibble;
 		let d = `M 0,100 L 0,${100-fill}`;
@@ -164,7 +164,7 @@ window.MilkTeat = function(){
 
 	let tugWas = 0;
 	let tugging = 0;
-	self.redraw = function(){
+	self.redraw = function(bGrowing){
 		let wibble = 0.05;
 		n += wibble;
 
@@ -235,7 +235,7 @@ window.MilkTeat = function(){
 
 		self.milking = tugging;
 
-		if(self.capacity<100) self.capacity += 0.05;
+		if(self.capacity<100 && bGrowing) self.capacity += 0.05;
 
 		if(self.capacity>=100) self.throbbing ++;
 		else self.throbbing = 0;
@@ -248,11 +248,14 @@ window.MilkTeat = function(){
 
 window.MilkGame = function(){
 
+	const SECONDS = 30;
 	const W = 1600;
 	const H = 1000;
 	const UDDER = 700;
 	const TEAT = 500;
 	const MEEP = 100;
+
+
 
 	if(!MilkGame.didInit){
 		MilkGame.didInit = true;
@@ -671,7 +674,6 @@ window.MilkGame = function(){
 	let sea = new MilkSea();
 
 	let $header = $('<milkheader>').appendTo(self.$el).text('Milkers');
-
 	const COLORS = ['red','blue'];
 
 	let meeps = [];
@@ -756,7 +758,7 @@ window.MilkGame = function(){
 
 		for(var u in udders){
 			for(var t in udders[u].teats){
-				udders[u].teats[t].redraw();
+				udders[u].teats[t].redraw(isMilkingLive);
 				
 				if(udders[u].teats[t].isHeldBy){
 					sea.milk += udders[u].teats[t].milking;
@@ -766,7 +768,19 @@ window.MilkGame = function(){
 			}	
 		}
 
-		hud.redraw();
+		
+
+		let timeNow = new Date().getTime();
+		let timeElapsed = timeNow-timeStart;
+		if(timeStart==0) timeElapsed = 0;
+		let sec = SECONDS - Math.floor(timeElapsed/1000);
+
+		if(sec<=0){
+			sec = 0;
+			if(!isComplete) doOutro();
+		}
+
+		hud.redraw(sec);
 		sea.redraw();
 	}
 
@@ -788,7 +802,16 @@ window.MilkGame = function(){
 
 	}
 
+	let isComplete = false;
+	function doOutro(){
+		isMilkingLive = false;
+		isComplete = true;
+		$header.text('Time Up!').animate({top:'30%'});
+	}
+
+	let timeStart = 0;
 	function begin(){
+		timeStart = new Date().getTime();
 		isMilkingLive = true;
 	}
 
