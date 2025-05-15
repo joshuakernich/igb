@@ -320,6 +320,8 @@ window.MilkGame = function(){
 					display: inline-block;
 					white-space: nowrap;
 					box-shadow: 0px 0px 20px rgba(0,0,0,0.5);
+					border-radius: 30px 30px 0px 0px;
+					overflow: hidden;
 				}
 
 				milkhudframe{
@@ -415,7 +417,7 @@ window.MilkGame = function(){
 					position: absolute;
 					top: 0px;
 					left: auto;
-					box-shadow: 2px 5px 20px rgba(255,0,0,0.5);
+					
 					transform: scale(0.6);
 
 				}
@@ -426,13 +428,7 @@ window.MilkGame = function(){
 				milkplayerhud[type='after'] milkscore{ padding-right:50px; }
 				milkplayerhud[type='after'] milkmeephead{ right:-10px; }
 
-				milkplayerhud:first-of-type{
-					border-top-left-radius: 20px;
-				}
-
-				milkplayerhud:last-of-type{
-					border-top-right-radius: 20px;
-				}
+				
 
 
 
@@ -692,6 +688,7 @@ window.MilkGame = function(){
 					display: inline-block;
 					width: 5vw;
 					text-align: right;
+					position: relative;
 				}
 
 				milkmeep[n='1'] milkmeephat{ background: blue; }
@@ -886,11 +883,13 @@ window.MilkGame = function(){
 		}
 
 		for(var m in meeps){
-			$(`<milkmeepscoreboard>
+			let $scoreline = $(`<milkmeepscoreboard>
 					<milkscorename style='color:${COLORS[m]}'>${COLORS[m]} PLAYER</milkscorename>
 					<milkscorescore>${Math.floor(meeps[m].score)}</milkscorescore>
 					<milkscorescore>+ ${(meeps[m].betterThanX+1)*10}</milkscorescore>
 				</milkmeepscoreboard>`).appendTo($score);
+
+			$scoreline.find('milkscorescore:last-of-type').css({opacity:0,left:-20}).delay(4000 + m*300).animate({opacity:1,left:10},300).animate({opacity:1,left:0},200);
 		}
 	}
 
