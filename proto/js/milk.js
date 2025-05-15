@@ -3,12 +3,13 @@ window.MilkPlayerHUD = function(n,meep,type){
 	let self = this;
 	self.$el = $(`
 		<milkplayerhud n=${n} type=${type}>
+		<milkscore>0</milkscore>
 			<milkmeephead>
 				<milkmeephat></milkmeephat>
 				<milkmeepeye></milkmeepeye>
 				<milkmeepeye></milkmeepeye>
 			</milkmeephead>
-			<milkscore>0</milkscore>
+			
 		</milkplayerhud>`
 	);
 
@@ -25,6 +26,7 @@ window.MilkHUD = function(meeps){
 	for(var i=0; i<3; i++) $('<milkhudframe>').appendTo(self.$el);
 
 	let $baseline = $('<milkhudbaseline>').appendTo(self.$el);
+	let $stream = $('<milkhudstream>').appendTo($baseline);
 	let $timer;
 	let huds = [];
 	let iTimer = Math.floor(meeps.length/2);
@@ -34,12 +36,12 @@ window.MilkHUD = function(meeps){
 		if(i==iTimer){
 			$timer = $(`
 				<milkhudtimer>60</milkhudtimer>
-			`).appendTo($baseline);
+			`).appendTo($stream);
 			type = 'after'
 		}
 
 		let hud = new MilkPlayerHUD(i,meeps[i],type);
-		hud.$el.appendTo($baseline);
+		hud.$el.appendTo($stream);
 		huds[i] = hud;
 
 		
@@ -299,10 +301,25 @@ window.MilkGame = function(){
 				}
 
 				milkhudbaseline{
-					position: absolute;
+					
+					
+					
+					display: block;
+					
 					bottom: 0px;
+					position: absolute;
 					left: 0px;
 					right: 0px;
+					text-align: center;
+
+
+					
+				}
+
+				milkhudstream{
+					display: inline-block;
+					white-space: nowrap;
+					box-shadow: 0px 0px 20px rgba(0,0,0,0.5);
 				}
 
 				milkhudframe{
@@ -344,15 +361,16 @@ window.MilkGame = function(){
 				milkplayerhud{
 					width: 200px;
 					height: 100px;
-					background: red;
+					
 					display: inline-block;
-					border-radius: 20px 20px 0px 0px;
-					margin: 0px 1vw;
+					
 					box-sizing: border-box;
 					position: relative;
 					color: white;
 					
-
+					background: #40B0ED;
+					border: 20px solid #40B0ED;
+					
 				}
 
 				
@@ -373,8 +391,10 @@ window.MilkGame = function(){
 					text-align: center;
 					
 					box-sizing: border-box;
-					font-size: 70px;
-					line-height: 100px;
+					font-size: 50px;
+					line-height: 60px;
+					background: red;
+					border-radius: 20px;
 				}
 
 				milkhudtimer{
@@ -384,11 +404,8 @@ window.MilkGame = function(){
 					color: #333;
 					display: inline-block;
 					
-					
-					margin: 0px 1vw;
 					font-size: 70px;
 					line-height: 100px;
-					border-radius: 20px 20px 0px 0px;
 					box-shadow: 0px 0px 20px rgba(0,0,0,0.2);
 					vertical-align: top;
 				}
@@ -396,19 +413,26 @@ window.MilkGame = function(){
 
 				milkplayerhud milkmeephead{
 					position: absolute;
-					top: 15px;
+					top: 0px;
 					left: auto;
 					box-shadow: 2px 5px 20px rgba(255,0,0,0.5);
 					transform: scale(0.6);
+
 				}
 
-				milkplayerhud[type='before'] milkscore{ left:50px; }
+				milkplayerhud[type='before'] milkscore{ padding-left:50px; }
 				milkplayerhud[type='before'] milkmeephead{ left:-10px; }
 
-				milkplayerhud[type='after'] milkscore{ right:50px; }
+				milkplayerhud[type='after'] milkscore{ padding-right:50px; }
 				milkplayerhud[type='after'] milkmeephead{ right:-10px; }
 
-				
+				milkplayerhud:first-of-type{
+					border-top-left-radius: 20px;
+				}
+
+				milkplayerhud:last-of-type{
+					border-top-right-radius: 20px;
+				}
 
 
 
@@ -672,17 +696,17 @@ window.MilkGame = function(){
 
 				milkmeep[n='1'] milkmeephat{ background: blue; }
 				milkmeep[n='1'] milkmeephat:after{ background: blue; }
-				milkplayerhud[n='1']{ background: blue; }
+				milkplayerhud[n='1'] milkscore{ background: blue; }
 				milkplayerhud[n='1'] milkmeephat{ background: blue; }
 
 				milkmeep[n='2'] milkmeephat{ background: limegreen; }
 				milkmeep[n='2'] milkmeephat:after{ background: limegreen; }
-				milkplayerhud[n='2']{ background: limegreen; }
+				milkplayerhud[n='2'] milkscore{ background: limegreen; }
 				milkplayerhud[n='2'] milkmeephat{ background: limegreen; }
 
 				milkmeep[n='3'] milkmeephat{ background: #dd00ff; }
 				milkmeep[n='3'] milkmeephat:after{ background: #dd00ff; }
-				milkplayerhud[n='3']{ background: #dd00ff; }
+				milkplayerhud[n='3'] milkscore{ background: #dd00ff; }
 				milkplayerhud[n='3'] milkmeephat{ background: #dd00ff; }
 
 				@keyframes wobble{
