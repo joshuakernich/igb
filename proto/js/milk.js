@@ -301,19 +301,12 @@ window.MilkGame = function(){
 				}
 
 				milkhudbaseline{
-					
-					
-					
 					display: block;
-					
 					bottom: 0px;
 					position: absolute;
 					left: 0px;
 					right: 0px;
 					text-align: center;
-
-
-					
 				}
 
 				milkhudstream{
@@ -331,8 +324,6 @@ window.MilkGame = function(){
 					position: relative;
 					overflow: hidden;
 				}
-
-
 
 				milkhudframe:before{
 					content: "";
@@ -429,10 +420,6 @@ window.MilkGame = function(){
 				milkplayerhud[type='after'] milkmeephead{ right:-10px; }
 
 				
-
-
-
-
 
 				milkmeep{
 					display:block;
@@ -598,8 +585,6 @@ window.MilkGame = function(){
 					position: absolute;
 					top: 0px;
 				}
-
-
 
 				milkudder:before{
 					content: "";
