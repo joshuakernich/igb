@@ -95,11 +95,20 @@ window.PartyMeep = function(n){
 
 				partymeepeye{
 					display: inline-block;
-					width: ${W/6}px;
-					height: ${W/6}px;
-					border-radius: 100%;
+					width: 12px;
+					height: 20px;
+					border-radius: 6px;
 					background: gray;
-					margin:15px 5px;
+					margin:25px 15px 0px;
+				}
+
+				partymeepmouth{
+					display: inline-block;
+					width: 20px;
+					height: 10px;
+					border-radius: 0px 0px 50% 50%;
+					background: gray;
+					margin-top: 5px;
 				}
 
 				partymeep[n='1'] partymeephat{ background: blue; }
@@ -138,7 +147,7 @@ window.PartyMeep = function(n){
 				<partymeephead>
 					<partymeephat></partymeephat>
 					<partymeepeye></partymeepeye>
-					<partymeepeye></partymeepeye>
+					<partymeepeye></partymeepeye><br>
 					<partymeepmouth></partymeepmouth>
 				</partymeephead>
 				<partymeepbody></partymeepbody>
@@ -167,7 +176,7 @@ window.PartyPlayerHUD = function(n,meep,type){
 			<partymeephead>
 				<partymeephat></partymeephat>
 				<partymeepeye></partymeepeye>
-				<partymeepeye></partymeepeye>
+				<partymeepeye></partymeepeye><br>
 				<partymeepmouth></partymeepmouth>
 			</partymeephead>
 			

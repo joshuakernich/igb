@@ -728,6 +728,8 @@ window.MilkGame = function(){
 	function doOutro(){
 		isMilkingLive = false;
 		isComplete = true;
+		for(var u in udders) udders[u].$el.animate({'top':'-'+H+'px'});
+		
 		$header.text('Time Up!').animate({top:'30%'}).delay(2500).animate({top:'-30%'});
 
 		let $score = $('<milkscoreboard>').appendTo(self.$el).css({top:'120%'}).delay(3000).animate({top:'50%'});
