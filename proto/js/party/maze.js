@@ -3,10 +3,10 @@ window.MazeGame = function(n){
 	const H = 1000;
 	const FPS = 20;
 	const PLAYER_COUNT = 6;
-	const BLOCK = 400;
+	const GRIDSIZE = 400;
 	const TRACKLENGTH = 200;
 
-	const GRID = {W:W/BLOCK,H:TRACKLENGTH};
+	const GRID = {W:W/GRIDSIZE,H:TRACKLENGTH};
 
 	if(!MazeGame.didInit){
 		MazeGame.didInit = true;
@@ -55,7 +55,7 @@ window.MazeGame = function(n){
 				mazeplatform{
 					display: block;
 					width: ${W}px;
-					height: ${TRACKLENGTH*BLOCK}px;
+					height: ${TRACKLENGTH*GRIDSIZE}px;
 					position: absolute;
 					left: 0px;
 					right: 0px;
@@ -65,12 +65,12 @@ window.MazeGame = function(n){
 
 				mazerow{
 					display: block;
-					height: ${BLOCK}px;
+					height: ${GRIDSIZE}px;
 				}
 
 				mazeblock{
-					width: ${BLOCK}px;
-					height: ${BLOCK}px;
+					width: ${GRIDSIZE}px;
+					height: ${GRIDSIZE}px;
 					background: rgba(150,105,50,1);
 					display: inline-block;
 					border-bottom: 150px solid rgba(100,55,0,1);
@@ -91,14 +91,20 @@ window.MazeGame = function(n){
 	let $world = $('<mazeworld>').appendTo($game);
 	let $platform = $('<mazeplatform>').appendTo($world);
 
+	let map = [];
+
 	for(var y=0; y<GRID.H; y++){
 		let $row = $('<mazerow>').prependTo($platform);
+		map[y] = [];
 		let iAbsent = Math.floor( Math.random() * GRID.W );
-		if(y<5 || y>(TRACKLENGTH-5) || y%4==0 ) iAbsent = -1;
+		if(y<10 || y>(TRACKLENGTH-5) || y%4==0 ) iAbsent = -1;
+
 		for(var x=0; x<GRID.W; x++){
 			$('<mazeblock>')
 			.appendTo($row)
 			.attr('absent',x==iAbsent?'true':'false');
+
+			map[y][x] = (x!=iAbsent);
 		}
 	}
 
@@ -121,6 +127,7 @@ window.MazeGame = function(n){
 	let hud = new PartyHUD(meeps);
 	hud.$el.appendTo($game);
 
+	let scale = 1;
 	function resize(){
 		let w = $(document).innerWidth();
 		scale = w/(W*3);
@@ -132,13 +139,24 @@ window.MazeGame = function(n){
 		resize();
 		speed += 0.0001;
 		yProgress += speed;
-		$platform.css({'bottom':-yProgress*BLOCK+'px'});
+		$platform.css({'bottom':-yProgress*GRIDSIZE+'px'});
 
 		for(var m in meeps){
+
+			if(meeps[m].dead) continue;
+
 			meeps[m].$el.css({
 				left:meeps[m].x + 'px',
 				top:meeps[m].y + 'px'
 			})
+
+			let gx = Math.floor(meeps[m].x/GRIDSIZE);
+			let gy = Math.floor((W-meeps[m].y)/GRIDSIZE+yProgress);
+
+			if(map[gy] && map[gy][gx]==false){
+				meeps[m].dead = true;
+				meeps[m].$el.remove();
+			}
 		}
 	}
 
