@@ -14,7 +14,22 @@ window.MazeGame = function(n){
 					width: ${W*3}px;
 					height: ${H}px;
 					transform-origin: top left;
+					background: green;
+					perspective: ${W}px;
+				}
+
+				mazeplatform{
+					display: block;
+					width: ${W}px;
+					height: ${W*10}px;
+					transform-origin: center bottom;
 					background: gray;
+					position: absolute;
+					left: 0px;
+					right: 0px;
+					bottom: 0px;
+					margin: auto;
+					transform: rotateX(60deg);
 				}
 			</style>`);
 	}
@@ -23,6 +38,7 @@ window.MazeGame = function(n){
 	self.$el = $('<igb>');
 
 	let $game = $('<mazegame>').appendTo(self.$el);
+	let $platform = $('<mazeplatform>').appendTo($game);
 
 	let meeps = [];
 	for(var i=0; i<PLAYERS; i++){

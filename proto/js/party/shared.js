@@ -116,6 +116,16 @@ window.PartyMeep = function(n){
 				partymeep[n='3'] partymeephat:after{ background: #dd00ff; }
 				partyplayerhud[n='3'] partyscore{ background: #dd00ff; }
 				partyplayerhud[n='3'] partymeephat{ background: #dd00ff; }
+
+				partymeep[n='4'] partymeephat{ background: #ff6600; }
+				partymeep[n='4'] partymeephat:after{ background: #ff6600; }
+				partyplayerhud[n='4'] partyscore{ background: #ff6600; }
+				partyplayerhud[n='4'] partymeephat{ background: #ff6600; }
+
+				partymeep[n='5'] partymeephat{ background: #ffbb00; }
+				partymeep[n='5'] partymeephat:after{ background: #ffbb00; }
+				partyplayerhud[n='5'] partyscore{ background: #ffbb00; }
+				partyplayerhud[n='5'] partymeephat{ background: #ffbb00; }
 			</style>`);
 	}
 
@@ -139,6 +149,13 @@ window.PartyMeep = function(n){
 		</partymeep>
 	`);
 
+	self.$handLeft = self.$el.find('partymeephand').first();
+	self.$handRight = self.$el.find('partymeephand').last();
+
+	self.setHeight = function(h){
+		self.$el.find('partymeepavatar').height(h);
+	}
+
 }
 
 window.PartyPlayerHUD = function(n,meep,type){
@@ -146,7 +163,7 @@ window.PartyPlayerHUD = function(n,meep,type){
 	let self = this;
 	self.$el = $(`
 		<partyplayerhud n=${n} type=${type}>
-		<partyplayerscore>0</partyplayerscore>
+		<partyscore>0</partyscore>
 			<partymeephead>
 				<partymeephat></partymeephat>
 				<partymeepeye></partymeepeye>
@@ -158,8 +175,10 @@ window.PartyPlayerHUD = function(n,meep,type){
 	);
 
 	self.redraw = function(){
-		self.$el.find('partyplayerscore').text(Math.floor(meep.score));
+		self.$el.find('partyscore').text(Math.floor(meep.score));
 	}
+
+
 }
 
 window.PartyHUD = function(meeps){
@@ -178,6 +197,7 @@ window.PartyHUD = function(meeps){
 					display: block;
 					z-index: 100;
 					text-align: center;
+					
 				}
 
 				partyhudbaseline{
@@ -195,6 +215,10 @@ window.PartyHUD = function(meeps){
 					box-shadow: 0px 0px 20px rgba(0,0,0,0.5);
 					border-radius: 30px 30px 0px 0px;
 					overflow: hidden;
+
+					background: #40B0ED;
+					padding: 15px 5px 0px 5px;
+
 				}
 
 				partyhudframe{
@@ -232,43 +256,30 @@ window.PartyHUD = function(meeps){
 				}
 
 				partyplayerhud{
-					width: 200px;
-					height: 100px;
+					width: 160px;
+					height: 90px;
 					display: inline-block;
 					box-sizing: border-box;
 					position: relative;
 					color: white;
 					background: #40B0ED;
-					border: 20px solid #40B0ED;
+					overflow: hidden;
+					vertical-align: top;
+
+					margin: 0px 10px;
 				}
 
-				partyplayerhud milkscore{
-					display: block;
-					position: absolute;
-					color: white;
-					right: 0px;
-					left: 0px;
-					top: 0px;
-					font-weight: bold;
-					padding: 0px;
-					margin: 0px;
-					text-align: center;
-					box-sizing: border-box;
-					font-size: 50px;
-					line-height: 60px;
-					background: red;
-					border-radius: 20px;
-				}
+				
 
 				partyhudtimer{
 					width: 150px;
-					height: 100px;
-					background: #40B0ED;
+					height: 90px;
+					
 					color: #333;
 					display: inline-block;
 					font-size: 70px;
-					line-height: 100px;
-					box-shadow: 0px 0px 20px rgba(0,0,0,0.2);
+					line-height: 60px;
+					
 					vertical-align: top;
 				}
 
@@ -278,6 +289,28 @@ window.PartyHUD = function(meeps){
 					top: 0px;
 					left: auto;
 					transform: scale(0.6);
+				}
+
+				partyscore{
+					display: block;
+					position: absolute;
+					color: white;
+					right: 0px;
+					left: 0px;
+					top: 0px;
+					
+					font-weight: bold;
+					
+					
+					padding: 0px;
+					margin: 0px;
+					text-align: center;
+					
+					box-sizing: border-box;
+					font-size: 50px;
+					line-height: 60px;
+					background: red;
+					border-radius: 20px;
 				}
 
 				partyplayerhud[type='before'] partyscore{ padding-left:50px; }
@@ -309,7 +342,7 @@ window.PartyHUD = function(meeps){
 			type = 'after'
 		}
 
-		let hud = new MilkPlayerHUD(i,meeps[i],type);
+		let hud = new PartyPlayerHUD(i,meeps[i],type);
 		hud.$el.appendTo($stream);
 		huds[i] = hud;
 	}
@@ -318,4 +351,6 @@ window.PartyHUD = function(meeps){
 		 $timer.text(sec);
 		for(var h in huds) huds[h].redraw();
 	}
+
+	self.redraw();
 }

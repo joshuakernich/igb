@@ -1,4 +1,4 @@
-window.MilkPlayerHUD = function(n,meep,type){
+/*window.MilkPlayerHUD = function(n,meep,type){
 
 	let self = this;
 	self.$el = $(`
@@ -52,7 +52,7 @@ window.MilkHUD = function(meeps){
 		 $timer.text(sec);
 		for(var h in huds) huds[h].redraw();
 	}
-}
+}*/
 
 window.MilkSea = function(){
 	let self = this;
@@ -113,6 +113,7 @@ window.MilkUdder = function(){
 	const H = 200;
 	const COUNT = 2;
 
+
 	let self = this;
 	self.$el = $('<milkudder>').css({
 		'width':W,
@@ -130,6 +131,7 @@ window.MilkUdder = function(){
 window.MilkTeat = function(){
 
 	const SEG = 20;
+
 
 	let self = this;
 	self.ox = 10;
@@ -265,7 +267,9 @@ window.MilkGame = function(){
 	const TEAT = 500;
 	const MEEP = 100;
 
-
+	const FPS = 50;
+	const GRAB = W/20;  //can grab a teat within 10% of screen width
+	const PLAYERCOUNT = 6;
 
 	if(!MilkGame.didInit){
 		MilkGame.didInit = true;
@@ -288,136 +292,6 @@ window.MilkGame = function(){
 					  font-size: 5vw;
 					  text-shadow: 0px 5px 1px rgba(0,0,0,0.2);
 				}
-
-				milkhud{
-					position: absolute;
-					top: 0px;
-					bottom: 0px;
-					left: 0px;
-					right: 0px;
-					display: block;
-					z-index: 100;
-					text-align: center;
-				}
-
-				milkhudbaseline{
-					display: block;
-					bottom: 0px;
-					position: absolute;
-					left: 0px;
-					right: 0px;
-					text-align: center;
-				}
-
-				milkhudstream{
-					display: inline-block;
-					white-space: nowrap;
-					box-shadow: 0px 0px 20px rgba(0,0,0,0.5);
-					border-radius: 30px 30px 0px 0px;
-					overflow: hidden;
-				}
-
-				milkhudframe{
-					display: inline-block;
-					width: 33.33%;
-					height: 100%;
-					position: relative;
-					overflow: hidden;
-				}
-
-				milkhudframe:before{
-					content: "";
-					display: block;
-					position: absolute;
-					top: 0px;
-					left: 0px;
-					right: 0px;
-					bottom: 0px;
-					box-sizing: border-box;
-					border: 50px solid black;
-					filter: blur(20px);
-					opacity: 0.5;
-				}
-
-				milkhudframe:after{
-					content: "";
-					display: block;
-					position: absolute;
-					top: 0px;
-					left: 0px;
-					right: 0px;
-					bottom: 0px;
-					box-sizing: border-box;
-					border: 50px solid #40B0ED;
-				}
-
-				milkplayerhud{
-					width: 200px;
-					height: 100px;
-					
-					display: inline-block;
-					
-					box-sizing: border-box;
-					position: relative;
-					color: white;
-					
-					background: #40B0ED;
-					border: 20px solid #40B0ED;
-					
-				}
-
-				
-
-				milkplayerhud milkscore{
-					display: block;
-					position: absolute;
-					color: white;
-					right: 0px;
-					left: 0px;
-					top: 0px;
-					
-					font-weight: bold;
-					
-					
-					padding: 0px;
-					margin: 0px;
-					text-align: center;
-					
-					box-sizing: border-box;
-					font-size: 50px;
-					line-height: 60px;
-					background: red;
-					border-radius: 20px;
-				}
-
-				milkhudtimer{
-					width: 150px;
-					height: 100px;
-					background: #40B0ED;
-					color: #333;
-					display: inline-block;
-					
-					font-size: 70px;
-					line-height: 100px;
-					box-shadow: 0px 0px 20px rgba(0,0,0,0.2);
-					vertical-align: top;
-				}
-
-
-				milkplayerhud milkmeephead{
-					position: absolute;
-					top: 0px;
-					left: auto;
-					
-					transform: scale(0.6);
-
-				}
-
-				milkplayerhud[type='before'] milkscore{ padding-left:50px; }
-				milkplayerhud[type='before'] milkmeephead{ left:-10px; }
-
-				milkplayerhud[type='after'] milkscore{ padding-right:50px; }
-				milkplayerhud[type='after'] milkmeephead{ right:-10px; }
 
 				
 
@@ -711,9 +585,7 @@ window.MilkGame = function(){
 	let audio = new AudioContext();
 	audio.add('music','./proto/audio/milk-music.mp3',0.3,true,true);
 
-	const FPS = 50;
-	const GRAB = W/20;  //can grab a teat within 10% of screen width
-	const PLAYERCOUNT = 4;
+	
 
 	let self = this;
 	self.$el = $('<igb>').css('background','none');
@@ -727,13 +599,13 @@ window.MilkGame = function(){
 
 	let meeps = [];
 	for(var i=0; i<PLAYERCOUNT; i++){
-		meeps[i] = new MilkMeep(i,COLORS[i]);
+		meeps[i] = new PartyMeep(i,COLORS[i]);
 		meeps[i].$el.appendTo($game).css({bottom:'0px'});
 		meeps[i].fx = meeps[i].fy = meeps[i].fz = 0.5;
 		meeps[i].wall = 1;
 	}
 
-	let hud = new MilkHUD(meeps);
+	let hud = new PartyHUD(meeps);
 	hud.$el.appendTo($game)
 
 	let udders = [];
@@ -758,10 +630,11 @@ window.MilkGame = function(){
 			if(meeps[m].wall == 1) meeps[m].x = W + W*meeps[m].fx;
 			if(meeps[m].wall == 2) meeps[m].x = W*3 - W*meeps[m].fz;
 
+			meeps[m].setHeight((1-meeps[m].fy)*H);
 			
 			meeps[m].$el.css({
 				left:meeps[m].x,
-				height:(1-meeps[m].fy)*H,
+				//height:(1-meeps[m].fy)*H,
 			});
 
 			//meeps[m].anim = [{h:(1-meeps[m].fy)*H, wBody:100, wHead:150, hHead:200, wLeg:15, wArm:0, hBody:150}];
@@ -774,10 +647,9 @@ window.MilkGame = function(){
 				for(var t in udders[u].teats){
 					let teat = udders[u].teats[t];
 					
-
 					let dx = (udders[u].x + teat.x) - meeps[m].x;
 
-					if(Math.abs(dx)<minx && isMilkingLive){
+					if(Math.abs(dx)<minx && isMilkingLive && !teat.isHeldBy){
 						dir = dx>0?1:-1;
 						minx = Math.abs(dx);
 						teatGrab = teat;
@@ -789,8 +661,8 @@ window.MilkGame = function(){
 				//grab on
 				if(meeps[m].teatGrabAtY == undefined) meeps[m].teatGrabAtY = meeps[m].fy;
 				teatGrab.ox = (GRAB-minx)*dir*0.1;
-				meeps[m].$handLeft.css({left:teatGrab.ox, top:'35%'});
-				meeps[m].$handRight.css({left:teatGrab.ox + dir*90, top:'30%'});
+				meeps[m].$handLeft.css({left:teatGrab.ox, top:'30%'});
+				meeps[m].$handRight.css({left:teatGrab.ox + dir*90, top:'25%'});
 				teatGrab.tug = (meeps[m].fy - meeps[m].teatGrabAtY) * H/2;
 				teatGrab.isHeldBy = meeps[m];
 
@@ -799,8 +671,8 @@ window.MilkGame = function(){
 			} else {
 				//let go
 				meeps[m].teatGrabAtY = undefined;
-				meeps[m].$handLeft.css({left:-90, top:'60%'});
-				meeps[m].$handRight.css({left:90, top:'60%'});
+				meeps[m].$handLeft.css({left:-90, top:'300px'});
+				meeps[m].$handRight.css({left:90, top:'300px'});
 			}
 
 		}
