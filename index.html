@@ -56,25 +56,25 @@
 			const PROTO = {
 
 				
-				'EXPERIMENTS':{
-					'ADVENTURE':window.Adventure,
-					'PONG':window.PixelPaddle,
-					'TINY-TENNIS':window.TinyFootball,
+				'Experiments':{
+					'Adventure':window.Adventure,
+					'Pong':window.PixelPaddle,
+					'Tiny Tennis':window.TinyFootball,
 				},
-				'BATMAN':{
-					'BAT-RIDDLER':window.Riddler,
-					'BAT-GRAPPLE':window.BatClimbing,
-					'BAT-DRIVING':window.DrivingGame,
-					'BAT-VINES':window.BatVinesGame,
+				'Batman':{
+					'Riddler':window.Riddler,
+					'Grappler':window.BatClimbing,
+					'Driving':window.DrivingGame,
+					'Batarang':window.BatVinesGame,
 				},
-				'BOX-PARTY':{
-					'BOX-PARTY':window.BoxPartyGame,
-					'MILKER':window.MilkGame,
-					'HEADERS':window.HeadersGame,
-					'GOALIE':window.GoalieGame,
-					'SOFT-SERVE':window.SoftServeGame,
-					'DEATH-MAZE':window.MazeGame,
-					'DEATH-PLATFORM':window.PlatformGame,
+				'Box Party':{
+					'Box Party':window.BoxPartyGame,
+					'Milker':window.MilkGame,
+					'Headers':window.HeadersGame,
+					'Goalie':window.GoalieGame,
+					'Soft Serve':window.SoftServeGame,
+					'Death Maze':window.MazeGame,
+					'Platform':window.PlatformGame,
 				}
 				
 				
@@ -83,25 +83,25 @@
 			const ICONS = {
 
 				//'SEQUENCER':'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRv98I4I2dS0_MpTEslbm0s9EYzedPtcvDLKg&s',
-				'PONG':'./proto/img/icon-pong.png',
-				'TINY-TENNIS':'./proto/img/icon-tennis.png',
-				'HEADERS':'./proto/img/icon-headers.png',
-				'GOALIE':'./proto/img/icon-goalie.png',
-				'BAT-RIDDLER':'./proto/img/icon-riddler.png',
-				'BAT-VINES':'./proto/img/icon-bat-vines.png',
-				'BAT-GRAPPLE':'./proto/img/icon-grapple.png',
-				'VOLCANO':'https://img.freepik.com/premium-photo/pixel-art-volcano-amidst-vibrant-purple-backdrop_811279-60506.jpg',
-				'ADVENTURE':'./proto/img/icon-adventure.png',
-				'BAT-DRIVING':'./proto/img/icon-driving.png',
-				'RACER':'https://www.dizionariovideogiochi.it/lib/exe/fetch.php?media=archivio_dvg_13:outrun_-_ferrari.png',
-				'BAT-HEIST-3D':'./proto/img/bat-goggles.png',
-				'MILKER':'./proto/img/icon-milk.png',
-				'BOX-PARTY':'./proto/img/icon-box-party.png',
-				'SOFT-SERVE':'./proto/img/party/icon-soft-serve.jpg',
-				'DEATH-MAZE':'./proto/img/party/icon-death-maze.png',
+				'Pong':'./proto/img/icon-pong.png',
+				'Tiny Tennis':'./proto/img/icon-tennis.png',
+				'Headers':'./proto/img/icon-headers.png',
+				'Goalie':'./proto/img/icon-goalie.png',
+				'Riddler':'./proto/img/icon-riddler.png',
+				'Batarang':'./proto/img/icon-bat-vines.png',
+				'Driving':'./proto/img/icon-driving.png',
+				'Grappler':'./proto/img/icon-grapple.png',
+				'Adventure':'./proto/img/icon-adventure.png',
+				
+
+				'Box Party':'./proto/img/icon-box-party.png',
+				'Milker':'./proto/img/icon-milk.png',
+				'Soft Serve':'./proto/img/party/icon-soft-serve.jpg',
+				'Death Maze':'./proto/img/party/icon-maze.webp',
+				'Platform':'./proto/img/party/icon-platform.jpeg',
 			}
 
-			let gameID = window.location.search.substr(1).split('&')[0];
+			let gameID = window.location.search.substr(1).split('&')[0].replace('%20',' ');
 
 			function launchProto(id){
 
@@ -416,24 +416,27 @@
 
 		protoapp{
 			display: inline-block;
-			width: 3vw;
-			height: 3.5vw;
-			margin: 0.25vw;
+			
+			
+			margin: 0.1vw;
 			text-align: center;
 			color: white;
 			vertical-align: middle;
-
+			
+			font-size: 0.3vw;
 		}
 
 		protofolder{
-			background: linear-gradient( to bottom, rgba(0,0,0,0.5), transparent );
+			background: rgba(0,0,0,0.3);
 			
-			border-radius: 0.5vw;
+			border-radius: 0.3vw;
 			display: inline-block;
-			margin: 0.25vw;
-			padding: 0.25vw;
+			margin: 0.1vw;
+			padding: 0.1vw;
 			position: relative;
 			backdrop-filter: blur(10px);
+
+			
 		}
 
 		protofolder h1{
@@ -442,27 +445,34 @@
 			padding: 0px;
 			font-size: inherit;
 			font-weight: inherit;
-			font-size: 0.4vw;
-			margin: 0.25vw;
-			margin-bottom: 0px;
-			text-shadow: 0px 0.05vw 0px black;
+			
+			margin: 0.2vw;
+			font-size: 0.3vw;
+			font-weight: normal;
 		}
 
 		protoicon{
 			display: block;
-			width: 3vw;
-			height: 3vw;
+			width: 2vw;
+			height: 2vw;
 			background: white;
-			border-radius: 0.5vw;
-			box-shadow: 0px 0.05vw 0px black, inset 0px 1px rgba(255,255,255,0.5);
+			border-radius: 0.3vw;
+			
 			background-size: cover;
 			background-position: center;
+			padding: 0px;
+			margin: 0px;
 		}
 
 		protolabel{
-			font-size: 0.4vw;
+			
+			padding: 0px;
+			margin: 0px;
+			overflow: hidden;
+			display: block;
 			margin-top: 0.2vw;
-			text-shadow: 0px 0.05vw 0px black;
+			font-weight: normal;
+			
 		}
 
 		igbmenu{

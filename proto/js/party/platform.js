@@ -41,8 +41,8 @@ window.PlatformGame = function(){
 
 			//console.log(self.x,self.y,self.px,self.py);
 
-			self.sx = (self.sx + dx*0.1)/2
-			self.sy = (self.sy + dy*0.1)/2;
+			self.sx = (self.sx + dx*0.05)/2
+			self.sy = (self.sy + dy*0.05)/2;
 
 			self.px += self.sx;
 			self.py += self.sy;

@@ -74,7 +74,7 @@ window.PartyMeep = function(n){
 
 				partymeepbody{
 					display: block;
-					height: 150px;
+					height: 100px;
 					background: white;
 					margin: 0px 15px;
 					border-radius: ${W/4}px;
@@ -88,7 +88,7 @@ window.PartyMeep = function(n){
 					box-sizing: border-box;
 					border-left: 15px solid white;
 					border-right: 15px solid white;
-					height: calc( 100% - 300px );
+					height: calc( 100% - 250px );
 					left: ${-W/2}px;
 					position: relative;
 				}
@@ -162,6 +162,7 @@ window.PartyMeep = function(n){
 	self.$handRight = self.$el.find('partymeephand').last();
 
 	self.setHeight = function(h){
+
 		self.$el.find('partymeepavatar').height(h);
 	}
 
