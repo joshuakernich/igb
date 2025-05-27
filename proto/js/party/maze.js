@@ -155,7 +155,13 @@ window.MazeGame = function(n){
 
 			if(map[gy] && map[gy][gx]==false){
 				meeps[m].dead = true;
-				meeps[m].$el.remove();
+				//meeps[m].$el.remove();
+
+
+				meeps[m].$el.css({
+					'transition':'1s all',
+					'transform':'translateZ(-1500px)'
+				})
 			}
 		}
 	}

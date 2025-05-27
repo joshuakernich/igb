@@ -51,7 +51,11 @@ window.PlatformGame = function(){
 
 			if(d > 800){
 				self.dead = true;
-				self.$el.hide();
+				$elTarget.hide();
+				$elAnchor.css({
+					'transition':'1s all',
+					'transform':'translateZ(-1500px)'
+				})
 			}
 		}
 
