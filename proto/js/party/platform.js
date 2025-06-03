@@ -114,8 +114,8 @@ window.PlatformGame = function(){
 
 				platformworld{
 					transform-origin: center bottom;
-					width: ${W}px;
-					height: ${W}px;
+					width: ${W-150}px;
+					height: ${W-150}px;
 					position: absolute;
 					left: 0px;
 					right: 0px;

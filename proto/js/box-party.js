@@ -14,8 +14,7 @@ BoxPartyScene3D = function(doInBox){
                 display:block;
                 width: ${W}px;
                 height: ${H}px;
-                
-                
+
                 transform-origin: top left;
                 overflow: hidden;
             }
