@@ -42,7 +42,7 @@ window.PartyMeep = function(n){
 					transform: translate(-50%, -50%);
 					background: white;
 					border-radius: ${W*0.25}px;
-					top: 300px;
+					top: 50%;
 					position: absolute;
 					left: ${-W}px;
 					z-index: 1;
