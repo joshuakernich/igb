@@ -169,7 +169,7 @@ window.PartyMeep = function(n){
 }
 
 window.PartyPlayerHUD = function(n,meep,type){
-
+ 
 	let self = this;
 	self.$el = $(`
 		<partyplayerhud n=${n} type=${type}>
