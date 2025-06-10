@@ -12,6 +12,7 @@ window.NameEntry = function(n){
 					font-size: 1.5vw;
 					text-align: center;
 					font-weight: 700;
+					background: #5F01FF;
 				}
 
 				.nameentry igbside{
