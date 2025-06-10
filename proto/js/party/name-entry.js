@@ -18,7 +18,7 @@ window.NameEntry = function(n){
 				.nameentry igbside{
 					padding: 1vw 3vw;
 					box-sizing: border-box;
-					border: 1px solid red;
+					
 				}
 
 				.nameentry h1{
@@ -38,8 +38,15 @@ window.NameEntry = function(n){
 					
 					font: inherit;
 					font-weight: inherit;
+					transition: all 1s;
 					
-					
+				}
+
+				nameentrybutton.tapped{
+					transition: none;
+					background: white;
+					color: #5F01FF;
+
 				}
 
 				nameentryinput{
@@ -72,20 +79,31 @@ window.NameEntry = function(n){
 
 	let text = '';
 	function onLetter(){
-		let letter = $(this).attr('letter');
+
+		let $letter = $(this);
+
+		let letter = $letter.attr('letter');
+
 		text = text + letter;
 		$input.text(text);
+
+
+		$letter.addClass('tapped');
+		setTimeout(function(){ $letter.removeClass('tapped'); });
 	}
 
 	function onBackspace(){
 		text = text.substr(0,text.length-1);
 		$input.text(text);
+
+		let $letter = $(this);
+		$letter.addClass('tapped');
+		setTimeout(function(){ $letter.removeClass('tapped'); });
 	}
 
 
 	for(var i=0; i<ALPHABET.length; i++){
 		$('<nameentrybutton>').appendTo( $sides[1] ).text(ALPHABET[i]).attr('letter',ALPHABET[i]).click(onLetter);
-
 	}
 
 	$('<nameentrybutton>').appendTo( $sides[1] ).text('←').click(onBackspace);
