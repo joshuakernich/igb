@@ -74,8 +74,6 @@ window.FollicleFace = function(GRIDSIZE,n,xAnchor,yAnchor){
 		if(r>45) r = 45;
 		if(r<-45) r = -45;
 
-
-
 		$hand.css({
 			left: (self.x - xAnchor) + 'px',
 			top: (self.y - yAnchor) + 'px',
@@ -356,7 +354,7 @@ window.FollicleFrenzyGame = function(){
 
 	setInterval(step,1000/FPS);
 
-	$(document).on('mousemove',function(e){
+	/*$(document).on('mousemove',function(e){
 		
 		let o = $game.offset();
 		let x = (e.pageX - o.left)/scale;
@@ -372,8 +370,7 @@ window.FollicleFrenzyGame = function(){
 		meeps[0].y = (y)*H;
 		meeps[0].z = (z%1)*W;
 
-
-	})
+	})*/
 
 	self.setPlayers = function(p){
 		for(var m in meeps){

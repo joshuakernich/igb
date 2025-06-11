@@ -117,7 +117,6 @@
 				let p = undefined;
 				for(var f in PROTO) if(PROTO[f][id]) p = PROTO[f][id];
 				
-				
 				$('moduleframe').empty();
 
 				if(typeof(p) == 'function'){
@@ -161,24 +160,69 @@
 				}
 			}
 				
-			$('[btn=move]').click(doRandomMove);
+			let players = [];
 
 			function doRandomMove(){
 				
-				for(var i=0; i<7; i++){
+				for(var i=0; i<6; i++){
 
 					let p = {
 						Id:i,
-						X:-1 + Math.random()*2,
-						Y:-1 + Math.random()*2,
-						Z:-1 + Math.random()*2,
+						X:-0.9 + Math.random()*1.8,
+						Z:-0.9 + Math.random()*1.8,
+						Y:-0.3 + Math.random()*0.6,
 					}
 
-		        	players[i] = p;
-				}
+					if(players[i] == undefined) players[i] = p;
 
-				onMessage(JSON.stringify(players)+'|Front,0,0,None');
+					$(players[i]).animate(p);
+		        	//players[i] = p;
+				}
 			}
+
+			let nDebugPlayer = 0;
+
+			$('gameboxside').eq(1).on('mousemove',function(e){
+
+				let x = e.offsetX/(160/2)-1;
+				let y = e.offsetY/(100/2)-1;
+
+				players[nDebugPlayer].X = x;
+				players[nDebugPlayer].Y = -y;
+				//players[0].Z = 0;
+			})
+
+			$('gameboxside').eq(0).on('mousemove',function(e){
+
+				let x = e.offsetX/(160/2)-1;
+				let y = e.offsetY/(100/2)-1;
+
+				//players[0].X = 0;
+				players[nDebugPlayer].Z = -x;
+				players[nDebugPlayer].Y = -y;
+			})
+
+			$('gameboxside').eq(2).on('mousemove',function(e){
+
+				let x = e.offsetX/(160/2)-1;
+				let y = e.offsetY/(100/2)-1;
+
+				//players[0].X = 0;
+				players[nDebugPlayer].Z = x;
+				players[nDebugPlayer].Y = -y;
+			})
+
+			$('gameboxside').eq(3).on('mousemove',function(e){
+
+				let x = e.offsetX/(160/2)-1;
+				let y = e.offsetY/(160/2)-1;
+
+				players[nDebugPlayer].X = x;
+				players[nDebugPlayer].Z = y;
+				//players[0].Y = 0;
+			})
+
+			$('[btn=move]').click(doRandomMove);
 
 			$('[btn=refresh]').click(function() {
 				window.location.assign(window.location.href);
@@ -189,54 +233,17 @@
 			})
 
 			let log = [];
-			let players = [];
-
-			let $reticule = $('<reticule>').appendTo('igb');
-
-
-			doLog('Vuplex is '+(window.vuplex?'ready':'not ready'));
-		
-			if (window.vuplex) {
-			    ready();
-			} else {
-			    window.addEventListener('vuplexready', ready);
-			}
-
-			function ready(){
-				$('[btn=move]').hide();
-				doLog("Let's go...");
-				window.vuplex.postMessage({ type: 'greeting', message: 'Hello from JavaScript!' });
-			  	window.vuplex.addEventListener('message', function(e) { onMessage(e.data) });
-			}
-
-			let timeLast = 0;
-			let debounce = 1000/50;
-			let history = [];
-			let stick = ['Front',[0,0],'None'];
 
 			function onMessage(str){
-				
+
 				let d = str.split('|');
-		    	players = JSON.parse(d[0]);
-		    	stick = d[1].split(',');
+		    	let playerData = JSON.parse(d[0]);
 
-		    	let sx = (parseFloat(stick[1])+1)/2*100;
-		    	let sy = 100 - (parseFloat(stick[2])+1)/2*100;
+		       for(var p=0; p<playerData.length; p++){
 
-		    	if(stick[0]=='Left') sx = sx/3;
-		    	if(stick[0]=='Front') sx = 100/3 + sx/3;
-		    	if(stick[0]=='Right') sx = 100/3*2 + sx/3;
-
-		    	let state = stick[3];
-		    	
-		    	$reticule.css({left:''+sx+'%', top: ''+sy+ '%', 'background':state=='Update'?'white':'transparent'});
-
-		       for(var p=0; p<players.length; p++){
-
-		       		if(!history[p]) history[p] = [];
-
-		       		history[p].push(players[p].X);
-		       		while(history[p].length>50) history[p].shift();
+		       		players[p].X = playerData[p].X;
+		       		players[p].Y = playerData[p].Y;
+		       		players[p].Z = playerData[p].Z;
 
 		        	players[p].px = (players[p].X+1)/2*100;
 		        	players[p].py = 100 - (players[p].Y+1)/2*100;
@@ -245,22 +252,15 @@
 		        	let size = (0.1+players[p].pz*0.1) + 'vw';
 		        	let scale = 0.6 + (players[p].Z + 1)/2 * 0.6;
 
-		        	let dx = players[p].X - history[p][0];
-
 		        	$('gbavatar').eq(p).css({left:players[p].px+'%',top:players[p].pz+'%'});
 		        	$('gbavatar').eq(p).find('gbhuman').css({height:100-players[p].py+'px'});
-	   
 		       }
-
 
 		       if( liveModule ){
 	        		if(liveModule.setPlayers) liveModule.setPlayers(players);
 	        	} else {
-	        		console.log('TRY!');
 	        		$('.loader')[0].contentWindow.postMessage(players,'*');
 	        	} 
-
-
 			}
 
 			window.forceMessage = onMessage;
@@ -277,17 +277,41 @@
 				});
 			})
 
-			doRandomMove();
-
-			$('.expando').click(function(){
-				$('menu').toggleClass('hidden');
+			$(document).on('keypress',function(e){
+				let nSwitchPlayer = e.which-49;
+				if(nSwitchPlayer<players.length) nDebugPlayer = nSwitchPlayer;
 			})
 
-			setInterval(function(){
-				let scale = $(document).innerWidth()/3000;
-				$('gameboxwrapper').css('transform','scale('+scale+')');
-			});
+			doRandomMove();
+
+			function stepDebug() {
+				for(var p in players){
+					players[p].X = Math.max(-0.8, Math.min(0.8, players[p].X))
+					players[p].Y = Math.max(-0.4, Math.min(0.5, players[p].Y))
+					players[p].Z = Math.max(-0.8, Math.min(0.8, players[p].Z))
+				}
+				onMessage(JSON.stringify(players)+'|Front,0,0,None');
+			}
 			
+			let intervalStep = setInterval(stepDebug,1000/20);
+
+			doLog('Vuplex is '+(window.vuplex?'ready':'not ready'));
+		
+			if (window.vuplex) {
+			    ready();
+			} else {
+			    window.addEventListener('vuplexready', ready);
+			}
+
+			function ready(){
+				$('[btn=move]').hide();
+				doLog("Let's go...");
+				window.vuplex.postMessage({ type: 'greeting', message: 'Hello from JavaScript!' });
+			  	window.vuplex.addEventListener('message', function(e) { onMessage(e.data) });
+			  	clearInterval(intervalStep);
+
+			  	$('gameboxwrapper').hide();
+			}
 			
 		})
 	</script>
@@ -327,6 +351,11 @@
 		  font-weight: 600;
 		  font-style: bold;
 		  font-size: 0.7vw;
+
+		  width: 100vw;
+		  height: 100vh;
+		  padding: 0px;
+		  margin: 0px;
 		}
 
 		.spotify{
@@ -615,29 +644,31 @@
 		gameboxwrapper{
 			display: block;
 			position: absolute;
-			bottom: 0px;
+			bottom: 80px;
+			left: 0px;
 			right: 0px;
-			transform-origin: bottom right;
+			
+			margin: auto;
 
 			width: 160px;
 			height: 100px;
 			z-index: 1;
+			
+			perspective: 400px;
 		}
 
 		gamebox{
 			display: block;
 			position: absolute;
-			bottom: 150px;
-			right: 100px;
+			
 			width: 160px;
 			height: 100px;
-  			perspective: 1500px;
+  			
   			transform-style: preserve-3d;
-  			pointer-events: none;
+  			
   			transform-origin: center;
   			z-index: 1;
-  			transform: rotateY(20deg) rotateX(-10deg);
-  			transform-origin: bottom right;
+  			transform: rotateX(-5deg);
 		}
 
 		gameboxside{
@@ -646,11 +677,12 @@
 			position: absolute;
 			top: 0px;
 			left: 0px;
-			background: rgba(255, 255, 255, 0.3);
+			background: radial-gradient(transparent, transparent, rgba(255,255,255,0.2));
 			display: inline-block;
 			box-sizing: border-box;
 			transform-style: preserve-3d;
-			border: 1px solid black;
+			border: 1px solid rgba(255,255,255,0.2);
+			
 		}
 
 		gameboxside:nth-of-type(1){
@@ -676,41 +708,59 @@
 
 		}
 
-		gbavatar{
+		gameboxside:hover{
+			background: rgba(255,255,255,0.2);
+		}
+
+		gbavatar:before{
+			content: "";
 			width: 20px;
 			height: 20px;
-			background: white;
-			border-radius: 10px;
-			transform: translate(-50%,-50%);
+			border: 2px solid;
+			border-color: gray;
+			border-radius: 100%;
+			left: -10px;
+			top: -10px;
 			display: block;
 			position: absolute;
-			 transform-style: preserve-3d;
-			  transform-origin: center;
+			box-sizing: border-box;
+		}
+
+		gbavatar{
+			transform-style: preserve-3d;
+			position: absolute;
+			display: block;
+			pointer-events: none;
 		}
 
 
 
 		gbhuman{
 			position: absolute;
-			left: 0px;
+			
 			bottom: 0px;
-			right: 0px;
+			left: -10px;
+			width: 20px;
 			height: 50px;
 			
-			background: white;
+			
 			 transform-style: preserve-3d;
 			 transform-origin: center bottom;
 			 transform: rotateX(90deg);
 			 border-radius: 10px 10px 0px 0px;
-			 opacity: 0.2;
+			 border: 1px solid;
+			 border-color: gray;
+			 box-sizing: border-box;
+			 border-bottom: none;
+			
 		}
 
-		gbavatar:nth-of-type(1) gbhuman,gbavatar:nth-of-type(1){ background:red }
-		gbavatar:nth-of-type(2) gbhuman,gbavatar:nth-of-type(2){ background:blue }
-		gbavatar:nth-of-type(3) gbhuman,gbavatar:nth-of-type(3){ background:green }
-		gbavatar:nth-of-type(4) gbhuman,gbavatar:nth-of-type(4){ background:purple }
-		gbavatar:nth-of-type(5) gbhuman,gbavatar:nth-of-type(5){ background:orange }
-		gbavatar:nth-of-type(6) gbhuman,gbavatar:nth-of-type(6){ background:yellow }
+		gbavatar:nth-of-type(1) gbhuman,gbavatar:nth-of-type(1):before{ border-color:red }
+		gbavatar:nth-of-type(2) gbhuman,gbavatar:nth-of-type(2):before{ border-color:blue }
+		gbavatar:nth-of-type(3) gbhuman,gbavatar:nth-of-type(3):before{ border-color:green }
+		gbavatar:nth-of-type(4) gbhuman,gbavatar:nth-of-type(4):before{ border-color:purple }
+		gbavatar:nth-of-type(5) gbhuman,gbavatar:nth-of-type(5):before{ border-color:orange }
+		gbavatar:nth-of-type(6) gbhuman,gbavatar:nth-of-type(6):before{ border-color:yellow }
 
 
 		igbcontrols{
@@ -732,6 +782,28 @@
 			box-shadow: 0px 1px 0px black;
 			text-shadow: 0px -1px black;
 		}
+
+		gameboxwrapper buttons{
+			position: absolute;
+			top: 0px;
+			left: 220px;
+			display: block;
+		}
+
+		gameboxwrapper button{
+			white-space: nowrap;
+			background: none;
+			border: none;
+			font: inherit;
+			color: white;
+
+			font-family: monospace;
+			font-weight: normal;
+		}
+
+		gameboxwrapper button:before{
+			content: "> ";
+		}
 		
 	</style>
 </head>
@@ -747,28 +819,29 @@
 			<igbcontrols>
 				<igbcontrol btn='home'><b>⌂</b></igbcontrol>
 				<igbcontrol btn='refresh'>↺</igbcontrol>
-				<igbcontrol btn='move'><small>M</small></igbcontrol>
 			<ibgcontrols>
 			
 		</igbmenu>
 		<logger>LOADING...</logger>
-		<gameboxwrapper>
-			<gamebox>
-				<gameboxside></gameboxside><gameboxside></gameboxside><gameboxside></gameboxside><gameboxside>
-					<gbavatar><gbhuman></gbhuman></gbavatar>
-					<gbavatar><gbhuman></gbhuman></gbavatar>
-					<gbavatar><gbhuman></gbhuman></gbavatar>
-					<gbavatar><gbhuman></gbhuman></gbavatar>
-					<gbavatar><gbhuman></gbhuman></gbavatar>
-					<gbavatar><gbhuman></gbhuman></gbavatar>
-					<gbavatar><gbhuman></gbhuman></gbavatar>
-				</gameboxside>
-			</gamebox>
-		</gameboxwrapper>
+		
 		<mframe></mframe>
 		<iframe class='loader' sandbox="allow-same-origin allow-scripts" src=""></iframe>
 		
 	</igb>
-	
+	<gameboxwrapper>
+		<gamebox>
+			<gameboxside></gameboxside><gameboxside></gameboxside><gameboxside></gameboxside><gameboxside>
+				<gbavatar><gbhuman></gbhuman></gbavatar>
+				<gbavatar><gbhuman></gbhuman></gbavatar>
+				<gbavatar><gbhuman></gbhuman></gbavatar>
+				<gbavatar><gbhuman></gbhuman></gbavatar>
+				<gbavatar><gbhuman></gbhuman></gbavatar>
+				<gbavatar><gbhuman></gbhuman></gbavatar>
+			</gameboxside>
+		</gamebox>
+		<buttons>
+			<button btn='move'>Random Move</button>
+		</buttons>
+	</gameboxwrapper>
 </body>
 </html>
