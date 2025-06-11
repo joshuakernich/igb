@@ -374,9 +374,9 @@ window.FollicleFrenzyGame = function(){
 
 	self.setPlayers = function(p){
 		for(var m in meeps){
-			meeps[m].x = (p[m].px/100)*W;
-			meeps[m].y = (p[m].py/100)*H;
-			meeps[m].z = (p[m].pz/100)*W;
+			meeps[m].x = p[m].px*W;
+			meeps[m].y = p[m].py*H;
+			meeps[m].z = p[m].pz*W;
 		}
 	}
 }

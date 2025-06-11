@@ -168,23 +168,10 @@ window.MazeGame = function(n){
 
 	setInterval(step,1000/FPS);
 
-	$(document).on('mousemove',function(e){
-		
-		let o = $game.offset();
-		let x = (e.pageX - o.left)/scale;
-		let y = (e.pageY - o.top)/scale;
-
-		x = (x%W)/W;
-		y = (y/H);
-		
-		meeps[0].x = W*x;
-		meeps[0].y = W*y;
-	})
-
 	self.setPlayers = function(p){
 		for(var m in meeps){
-			meeps[m].x = p[m].px/100*W;
-			meeps[m].y = (1-p[m].pz/100)*W;
+			meeps[m].x = p[m].px*W;
+			meeps[m].y = (1-p[m].pz)*W;
 		}
 	}
 }

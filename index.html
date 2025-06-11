@@ -17,43 +17,41 @@
 	<script type="text/javascript" src="./proto/lib/matter.min.js"></script>
 
 	<!-- utilities -->
-	<script type="text/javascript" src="./proto/js/meep.js"></script>
-	<script type="text/javascript" src="./proto/js/audio-context.js"></script>
+	<script type="text/javascript" src="./proto/js/shared/meep.js"></script>
+	<script type="text/javascript" src="./proto/js/shared/audio-context.js"></script>
 
-	<script type="text/javascript" src="./proto/js/invaders.js"></script>
-	<script type="text/javascript" src="./proto/js/pixelpaddle.js"></script>s
-	<script type="text/javascript" src="./proto/js/Riddler.js"></script>
-	<script type="text/javascript" src="./proto/js/tennis.js"></script>
-	<script type="text/javascript" src="./proto/js/goalie.js"></script>
-	<script type="text/javascript" src="./proto/js/horror-hands.js"></script>
-	<script type="text/javascript" src="./proto/js/tile-map.js"></script>
-	<script type="text/javascript" src="./proto/js/tiny-football.js"></script>
+	<!-- MUSIC -->
+	<script type="text/javascript" src="./proto/js/music/pixelpaddle.js"></script>
 
-	<script type="text/javascript" src="./proto/js/batclimbing.js"></script>
-	<script type="text/javascript" src="./proto/js/volcano.js"></script>
-	<script type="text/javascript" src="./proto/js/adventure.js"></script>
-	<script type="text/javascript" src="./proto/js/driving.js"></script>
-	<script type="text/javascript" src="./proto/js/bat-vines.js"></script>
+	<!-- EXPERIMENTS -->
+	<script type="text/javascript" src="./proto/js/experiments/adventure.js"></script>
 
+	<!-- SPORT -->
+	<script type="text/javascript" src="./proto/js/sport/tennis.js"></script>
+	<script type="text/javascript" src="./proto/js/sport/tiny-football.js"></script>
+
+	<!-- BATMAN -->
+	<script type="text/javascript" src="./proto/js/bat/riddler.js"></script>
+	<script type="text/javascript" src="./proto/js/bat/batclimbing.js"></script>
+	<script type="text/javascript" src="./proto/js/bat/volcano.js"></script>
+	<script type="text/javascript" src="./proto/js/bat/driving.js"></script>
+	<script type="text/javascript" src="./proto/js/bat/bat-vines.js"></script>
 	
-	<script type="text/javascript" src="./proto/js/box-party.js"></script>
-	<script type="text/javascript" src="./proto/js/milk.js"></script>
-	<script type="text/javascript" src="./proto/js/headers-game.js"></script>
-	<script type="text/javascript" src="./proto/js/soft-serve.js"></script>
-
+	<!-- PARTY -->
+	<script type="text/javascript" src="./proto/js/party/box-party.js"></script>
+	<script type="text/javascript" src="./proto/js/party/milk.js"></script>
+	<script type="text/javascript" src="./proto/js/party/headers-game.js"></script>
+	<script type="text/javascript" src="./proto/js/party/soft-serve.js"></script>
 	<script type="text/javascript" src="./proto/js/party/shared.js"></script>
 	<script type="text/javascript" src="./proto/js/party/maze.js"></script>
 	<script type="text/javascript" src="./proto/js/party/platform.js"></script>
 	<script type="text/javascript" src="./proto/js/party/cookie-cutter.js"></script>
 	<script type="text/javascript" src="./proto/js/party/follicle-frenzy.js"></script>
 	<script type="text/javascript" src="./proto/js/party/name-entry.js"></script>
+	<script type="text/javascript" src="./proto/js/party/goalie.js"></script>
 
-	
-	
 	<script type="text/javascript">
 		$(function () {
-
-			
 
 			let liveModule;
 			const PROTO = {
@@ -234,6 +232,23 @@
 
 			let log = [];
 
+			function makeMetrics(p){
+
+				p.x = p.X;
+				p.y = p.Y;
+				p.z = p.Z;
+
+				p.px = (p.X+1)/2;
+				p.py = 1-(p.Y+1)/2;
+				p.pz = (p.Z+1)/2;
+
+				p.walls = [
+					{x:p.z,y:p.t,z:p.x,px:p.pz,py:p.py,pz:p.px},
+					{x:p.x,y:p.y,z:p.z,px:p.px,py:p.py,pz:p.pz},
+					{x:-p.z,y:p.y,z:p.x,px:-p.pz,py:p.py,pz:p.px},
+				]
+			}
+
 			function onMessage(str){
 
 				let d = str.split('|');
@@ -245,15 +260,14 @@
 		       		players[p].Y = playerData[p].Y;
 		       		players[p].Z = playerData[p].Z;
 
-		        	players[p].px = (players[p].X+1)/2*100;
+		       		makeMetrics(players[p]);
+
+		        	/*players[p].px = (players[p].X+1)/2*100;
 		        	players[p].py = 100 - (players[p].Y+1)/2*100;
-		        	players[p].pz = (players[p].Z+1)/2*100;
+		        	players[p].pz = (players[p].Z+1)/2*100;*/
 
-		        	let size = (0.1+players[p].pz*0.1) + 'vw';
-		        	let scale = 0.6 + (players[p].Z + 1)/2 * 0.6;
-
-		        	$('gbavatar').eq(p).css({left:players[p].px+'%',top:players[p].pz+'%'});
-		        	$('gbavatar').eq(p).find('gbhuman').css({height:100-players[p].py+'px'});
+		        	$('gbavatar').eq(p).css({left:players[p].px*100+'%',top:players[p].pz*100+'%'});
+		        	$('gbavatar').eq(p).find('gbhuman').css({height:(1-players[p].py)*100+'px'});
 		       }
 
 		       if( liveModule ){
@@ -287,7 +301,7 @@
 			function stepDebug() {
 				for(var p in players){
 					players[p].X = Math.max(-0.8, Math.min(0.8, players[p].X))
-					players[p].Y = Math.max(-0.4, Math.min(0.5, players[p].Y))
+					players[p].Y = Math.max(-0.4, Math.min(0.6, players[p].Y))
 					players[p].Z = Math.max(-0.8, Math.min(0.8, players[p].Z))
 				}
 				onMessage(JSON.stringify(players)+'|Front,0,0,None');

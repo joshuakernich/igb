@@ -587,11 +587,6 @@ BatClimbing = function(){
 	let barrels = [];
 	let climbers = [];
 
-	let isLeft = false;
-	let isRight = false;
-
-	
-
 	let joker;
 
 	const FLOORSPERSTAGE = 3;
@@ -709,21 +704,8 @@ BatClimbing = function(){
 		let iMinStage = 9999;
 		
 		for(var c in climbers){
-
 			
-
 			climbers[c].xWas = climbers[c].x;
-
-			//KEYBOARD CONTROL
-			if(isLeft || isRight){
-				let dir = isLeft?-1:(isRight?1:-1);
-				if(climbers[c].t == 0) players[c].pxFrontToBack += dir*0.01;
-				if(climbers[c].t == 1) players[c].pxSideToSide += dir*0.01;
-				if(climbers[c].t == 2) players[c].pxFrontToBack -= dir*0.01;
-
-				players[c].pxFrontToBack = Math.min( 1, Math.max( 0, players[c].pxFrontToBack ))
-				players[c].pxSideToSide = Math.min( 1, Math.max( 0, players[c].pxSideToSide ))
-			}
 
 			// MOVE
 			climbers[c].x = getXForT(c,climbers[c].t);
@@ -1051,24 +1033,14 @@ BatClimbing = function(){
 	});
 
 
-	$(document).on('keydown',function(e){
-		if(e.which == 37) isLeft = true;
-		if(e.which == 39) isRight = true;
-	})
-
-	$(document).on('keyup',function(e){
-		if(e.which == 37) isLeft = false;
-		if(e.which == 39) isRight = false;
-	})
-	
 	let dirtyTracking = false;
 
 	let players = [{pxSideToSide:0.5,pxFrontToBack:0.5},{pxSideToSide:0.5,pxFrontToBack:0.5}]
 
 	self.setPlayers = function(p){
 		for(var n in players){
-			players[n].pxSideToSide = p[n].px/100;
-			players[n].pxFrontToBack = p[n].pz/100;
+			players[n].pxSideToSide = p[n].px;
+			players[n].pxFrontToBack = p[n].pz;
 		}
 		dirtyTracking = true;
 	}

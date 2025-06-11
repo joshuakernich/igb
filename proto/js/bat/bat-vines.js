@@ -541,14 +541,14 @@ BatVinesArena = function(layout,puzzle) {
             let ry = 0;
 
             if(layout.wall==0){
-                rx = (positions[n].pz/100);
-                ry = (positions[n].px/100);
+                rx = (positions[n].pz);
+                ry = (positions[n].px);
             } else if(layout.wall==1){
-                rx = positions[n].px/100;
-                ry = (1-positions[n].pz/100);
+                rx = positions[n].px;
+                ry = (1-positions[n].pz);
             } else if(layout.wall==2){
-                rx = (1-positions[n].pz/100);
-                ry = (1-positions[n].px/100);
+                rx = (1-positions[n].pz);
+                ry = (1-positions[n].px);
             }
 
             rx = rx*3 - 1;
@@ -2617,8 +2617,6 @@ BatVinesGame = function(){
                 let maybe = [];
                 for(var b=0; b<arenas.length; b++) if(a!=b && !arenas[b].isCleared) maybe.push(b);
 
-                console.log(maybe);
-
                 if(maybe.length){
                     let iNextArena = maybe[ Math.floor( Math.random()*maybe.length )];
                     arenas[a].handballTo( arenas[a].actorHandball, arenas[iNextArena] );
@@ -2679,33 +2677,6 @@ BatVinesGame = function(){
             players[i].proximity[2] = 1-players[i].X;
         }
     }
-
-    $(document).on('mousemove',function(e){
-
-        let oy = $game.offset().top;
-        let x = (e.pageX/scale)/BatVines.W;
-        let y = (e.pageY-oy)/scale/BatVines.H;
-
-        if( x < 1 ){
-            //left wall
-            players[0].px = (y)*100;
-            players[0].pz = (x)*100;
-        } else if( x > 2 ){
-            //right wall
-            players[0].px = (1 - y)*100;
-            players[0].pz = (3 - x)*100;
-        }
-        else{
-            //front wall
-            players[0].px = (x - 1)*100;
-            players[0].pz = (1 - y)*100;
-        }
-
-        players[1].px = players[0].px + 10;
-        players[1].pz = players[0].pz;
-
-        players[0].proximity = [0.9,0.9,0.9];
-    })
 
     $(document).on('click',function(e){
         audio.play('music');

@@ -912,7 +912,7 @@ Riddler = function(){
 
 
 			
-			let ix = Math.floor(players[p].px/25);
+			let ix = Math.floor(players[p].px*4);
 			countsX[ix]++;
 
 			if( players[p].py < minPY[p] && players[p].py > 50 ) minPY[p] = players[p].py;
@@ -933,16 +933,15 @@ Riddler = function(){
 			let $elHead = sides[1].find('riddlerscreen').eq(ix);
 			let $elBody = sides[1].find('riddlerscreen').eq(ix+4);
 
-
 			if( !heads[p].parent().is($elHead) ) heads[p].appendTo($elHead);
-			heads[p].css('left',((players[p].px%25)/25)*100+'%');
+			heads[p].css('left',((players[p].px%0.25)/0.25)*100+'%');
 
 			if( !bodies[p].parent().is($elBody) ) bodies[p].appendTo($elBody);
-			bodies[p].css('left',((players[p].px%25)/25)*100+'%');
+			bodies[p].css('left',((players[p].px%0.25)/0.25)*100+'%');
 
-			let scale = 0.5 + (players[p].pz/100)*0.5;
+			let scale = 0.5 + (players[p].pz)*0.5;
 			let o = {
-				'opacity':(players[p].pz/2)+'%',
+				'opacity':(players[p].pz/2)*100+'%',
 				//'transform':'scale('+scale+') translateX(-50%)'
 			}
 
@@ -1061,7 +1060,7 @@ Riddler = function(){
 		//doIntro();
 	}
 
-	self.setPlayers([{px:15}]);
+	self.setPlayers([{px:.15}]);
 
 	let bSpread = false;
 	$(document).on('mousedown',function(e){
@@ -1072,24 +1071,6 @@ Riddler = function(){
 		bSpread = false;
 	})
 
-	$(document).on('mousemove',function(e){
-		
-		let oSide = sides[1].offset();
-		let oGame = self.$el.offset();
-		let w = self.$el.width()/3;
-		let h = self.$el.height();
-
-		let x = (e.pageX - oSide.left)/w;
-		let y = (e.pageY - oGame.top)/h;
-
-		let px = x*100;
-		let py = y*100;
-		let pz = 80;
-		
-		self.setPlayers([
-			{px:px-5*(bSpread?8:1),py:py,pz:pz},
-			{px:px+5*(bSpread?8:1),py:py,pz:pz}
-			])
-	})
+	
 
 }

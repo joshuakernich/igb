@@ -280,27 +280,13 @@ window.CookieCutterGame = function(){
 
 	doUnstamp();
 	
-
 	setInterval(step,1000/FPS);
-
-	$(document).on('mousemove',function(e){
-		
-		let o = $game.offset();
-		let x = (e.pageX - o.left)/scale;
-		let y = (e.pageY - o.top)/scale;
-
-		x = (x%W)/W;
-		y = (y/H);
-		
-		meeps[0].x = (x*2-1)*(W/2);
-		meeps[0].y = (y*2-1)*(W/2);
-	})
 
 	self.setPlayers = function(p){
 		for(var m in meeps){
 
-			meeps[m].x = ((p[m].px/100)*2-1)*(W/2);
-			meeps[m].y = (((100-p[m].pz)/100)*2-1)*(W/2);
+			meeps[m].x = p[m].x*(W/2);
+			meeps[m].y = -p[m].z*(W/2);
 		
 		}
 	}

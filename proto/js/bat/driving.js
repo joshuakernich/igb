@@ -788,7 +788,7 @@ DrivingGame = function(){
 		let w = $(document).innerWidth()/3;
 		$game.css('transform','scale('+(w/W)+')');
 
-		let txRelative = (players[0].px/100*2-1);
+		let txRelative = players[0].x;
 
 	
 
@@ -964,17 +964,6 @@ DrivingGame = function(){
 	}
 
 	self.turnOnOff(true);
-
-	$(document).on('mousemove',function(e){
-
-		let w = $(document).innerWidth()/3;
-		let x = (e.pageX - w)/w*100;
-		if(x>100) x = 100;
-		if(x<0) x = 0;
-
-		players[0].px = x;
-		players[1].px = x;
-	});
 
 	$(document).click(function() {
 		sfx.music.play();

@@ -1480,7 +1480,6 @@ BatHeist3DGame = function(){
 		players[1].px = players[0].px;
 		players[1].pz = players[0].pz;
 
-		
 		players[0].proximity = [0.9,0.9,0.9];
 	})
 }
