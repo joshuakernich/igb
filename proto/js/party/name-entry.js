@@ -1,6 +1,6 @@
 window.NameEntryPlayer = function(nPlayer){
 
-	const ALPHABET = 'qwertyuiopasdfghjklzxcvbnm';
+	const ALPHABET = 'qwertyuiop|asdfghjkl|zxcvbnm';
 
 	let self = this;
 	self.$el = $('<nameentryplayer>').attr('n',nPlayer);
@@ -33,7 +33,8 @@ window.NameEntryPlayer = function(nPlayer){
 
 
 	for(var i=0; i<ALPHABET.length; i++){
-		$('<nameentrybutton>').appendTo( self.$el ).text(ALPHABET[i].toUpperCase()).attr('letter',ALPHABET[i].toUpperCase()).click(onLetter);
+		if(ALPHABET[i]=='|') $('<br>').appendTo(self.$el);
+		else $('<nameentrybutton>').appendTo( self.$el ).text(ALPHABET[i].toUpperCase()).attr('letter',ALPHABET[i].toUpperCase()).click(onLetter);
 	}
 
 	$('<nameentrybutton>').appendTo( self.$el ).text('←').click(onBackspace);
@@ -76,7 +77,7 @@ window.NameEntry = function(){
 					width: 100%;
 					height: 100%;
 					position:relative;
-					padding: 0.5vw 3vw;
+					padding: 0.5vw;
 					box-sizing: border-box;
 				}
 
@@ -94,12 +95,10 @@ window.NameEntry = function(){
 
 				.nameentry igbside:first-of-type nameentryplayer{
 					padding-left: 3.5vw;
-					padding-right: 1vw;
 				}
 
 				.nameentry igbside:last-of-type nameentryplayer{
 					padding-right: 3.5vw;
-					padding-left: 1vw;
 				}
 
 				nameentrybutton{
@@ -107,7 +106,7 @@ window.NameEntry = function(){
 					width: 2.5vw;
 					height: 2.5vw;
 					background: rgba(255,255,255,0.1);
-					margin: 0.4vw 0.2vw;
+					margin: 0.4vw 0.1vw;
 					
 					font: inherit;
 					font-weight: inherit;
