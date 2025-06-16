@@ -354,6 +354,15 @@ BoxPartyGame = function(){
 	const W = 16;
 	const H = 10;
 	const GRID = 100;
+
+	const GAMES = {
+		'Milkers':{color:'yellow',bg:''},
+	}
+
+	const QUEUE = [
+		[ GAMES.Milkers, GAMES.Milkers,],
+	]
+
 	let scale = 1;
 
 	$("head").append(`
