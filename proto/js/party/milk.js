@@ -705,7 +705,7 @@ window.MilkGame = function(){
 	doIntro();
 	
 
-	$(document).on('mousemove',function(e){
+	/*$(document).on('mousemove',function(e){
 		let o = $game.offset();
 		let x = (e.pageX - o.left)/scale/W;
 		let y = (e.pageY - o.top)/scale/H;
@@ -715,7 +715,7 @@ window.MilkGame = function(){
 		else meeps[0].fx = x%1;
 
 		meeps[0].fy = y;
-	})
+	})*/
 
 	$(document).on('click',function(e){
 		let o = $game.offset();
@@ -728,9 +728,9 @@ window.MilkGame = function(){
 
 	self.setPlayers = function(p){
 		for(var m in meeps){
-			meeps[m].fx = p[m].px/100;
-			meeps[m].fz = p[m].pz/100;
-			meeps[m].fy = p[m].py/100;
+			meeps[m].fx = p[m].px;
+			meeps[m].fz = p[m].pz;
+			meeps[m].fy = p[m].py;
 		}
 	}
 }
