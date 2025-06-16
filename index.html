@@ -163,7 +163,7 @@
 
 			function doRandomMove(){
 				
-				for(var i=0; i<6; i++){
+				for(var i=0; i<7; i++){
 
 					let p = {
 						Id:i,
@@ -188,7 +188,6 @@
 
 				players[nDebugPlayer].X = x;
 				players[nDebugPlayer].Y = -y;
-				//players[0].Z = 0;
 			})
 
 			$('gameboxside').eq(0).on('mousemove',function(e){
@@ -196,7 +195,6 @@
 				let x = e.offsetX/(160/2)-1;
 				let y = e.offsetY/(100/2)-1;
 
-				//players[0].X = 0;
 				players[nDebugPlayer].Z = -x;
 				players[nDebugPlayer].Y = -y;
 			})
@@ -206,7 +204,6 @@
 				let x = e.offsetX/(160/2)-1;
 				let y = e.offsetY/(100/2)-1;
 
-				//players[0].X = 0;
 				players[nDebugPlayer].Z = x;
 				players[nDebugPlayer].Y = -y;
 			})
@@ -218,7 +215,6 @@
 
 				players[nDebugPlayer].X = x;
 				players[nDebugPlayer].Z = y;
-				//players[0].Y = 0;
 			})
 
 			$('[btn=move]').click(doRandomMove);
@@ -847,6 +843,7 @@
 	<gameboxwrapper>
 		<gamebox>
 			<gameboxside></gameboxside><gameboxside></gameboxside><gameboxside></gameboxside><gameboxside>
+				<gbavatar><gbhuman></gbhuman></gbavatar>
 				<gbavatar><gbhuman></gbhuman></gbavatar>
 				<gbavatar><gbhuman></gbhuman></gbavatar>
 				<gbavatar><gbhuman></gbhuman></gbavatar>
