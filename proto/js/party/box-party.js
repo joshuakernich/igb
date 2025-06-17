@@ -446,16 +446,17 @@ BoxPartyScene3D = function(doInBox, queue){
 
 	function doMoveForward(){
 		iLevel++;
-		$plane.animate({bottom:-iLevel*(W)+'px'});
+		$plane.animate({bottom:-iLevel*(W)+'px'},1500);
 	}
 
 	self.doCompleteBox = function(){
+
 		$(boxes[nSelect].transform).animate({
     		rx:0,
     		ry:0,
     		rz:0,
     		x:0,
-    		y:0,
+    		y:iLevel*W,
     		altitude:H/2,
     		w:0,
     		h:0,
@@ -465,7 +466,7 @@ BoxPartyScene3D = function(doInBox, queue){
     		complete:function(){
     			boxes[nSelect].$el.remove();
     			nSelect = undefined;
-    			doMoveForward();
+    			setTimeout(doMoveForward,500);
     		}
     	})
 	}
@@ -540,6 +541,19 @@ BoxPartyGame = function(){
         		background-size: 100%;
         		background-position: 80% 0%;
         	}
+
+        	boxpartygame:after{
+        		content:"";
+        		width: ${W*GRID}px;
+        		height: ${H*GRID}px;
+        		border-left: 10px dashed black;
+        		border-right: 10px dashed black;
+        		box-sizing: border-box;
+        		position: absolute;
+        		top: 0px;
+        		left: ${W*GRID}px;
+        		pointer-events: none;
+        	}
         <style`);
 
  	let audio = new AudioContext();
@@ -583,8 +597,7 @@ BoxPartyGame = function(){
 	function doCompleteGame(){
 		scene.$el.show();
 		liveModule.$el.remove();
-		audio.stop('music');
-
+		audio.play('music');
 		scene.doCompleteBox();
 	}
 
@@ -593,6 +606,7 @@ BoxPartyGame = function(){
 		$(document).off('click',init);
 	}
 
+	audio.play('music');
     $(document).click(init);
 
     self.setPlayers = function(p){

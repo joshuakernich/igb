@@ -1,6 +1,9 @@
 window.PumpMeepSingle = function(n){
 	let self = this;
 
+	let audio = new AudioContext();
+    audio.add('pump','./proto/audio/party/pump-balloon.mp3',1);
+
 	self.py = self.pyWas = 0;
 	self.fill = 0;
 	self.$el = $('<pumpmeep>');
@@ -48,6 +51,8 @@ window.PumpMeepSingle = function(n){
 					self.isPopped = true;
 					$balloon.hide();
 				}
+
+				audio.play('pump');
 			}
 		}
 

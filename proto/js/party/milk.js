@@ -532,7 +532,7 @@ window.MilkGame = function(){
 	
 
 	let self = this;
-	self.$el = $('<igb>').css('background','none');
+	self.$el = $('<igb>');
 
 	let $game = $('<milkgame>').appendTo(self.$el);
 	let $bg = $('<milkbg>').appendTo($game);
@@ -695,6 +695,7 @@ window.MilkGame = function(){
 			$scoreline.find('milkscorescore:last-of-type').css({opacity:0,left:-20}).delay(4000 + m*300).animate({opacity:1,left:10},300).animate({opacity:1,left:0},200);
 		}
 
+		audio.stop('music');
 		setTimeout(window.doPartyGameComplete,6000);
 	}
 
