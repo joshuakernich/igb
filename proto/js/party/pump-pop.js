@@ -27,9 +27,9 @@ window.PumpMeepSingle = function(n){
 	let $balloon = $('<pumpballoon></pumpballoon>').appendTo($pump);
 
 	self.step = function(){
-		meep.setHeight(700-self.py*400);
+		meep.setHeight(900-self.py*800);
 		$handle.css({ 
-			bottom:(410-self.py*400) + 'px' 
+			bottom:(610-self.py*800) + 'px' 
 		})
 
 		if(self.pyWas != 0){
@@ -37,11 +37,11 @@ window.PumpMeepSingle = function(n){
 			if(dy>0){
 				self.fill += dy;
 				$balloon.css({
-					width: 100 + self.fill*20 + 'px',
-					height: 120 + self.fill*20 + 'px',
+					width: 100 + self.fill*50 + 'px',
+					height: 120 + self.fill*50 + 'px',
 				})
 
-				if(self.fill>20) $balloon.hide();
+				if(self.fill>10) $balloon.hide();
 			}
 		}
 
