@@ -36,12 +36,14 @@ PartyCube3D = function(w,d,h,color,surfaces){
                 transform-style: preserve-3d;
                 text-align:center;
                 transform-origin: center;
+
             }  
 
             partycube3Dsurface{
                 display:block;
                 position:absolute;
                 transform: translate(-50%,-50%);
+                border-radius: 20px;
             }
 
         </style>
@@ -98,23 +100,22 @@ PartyCube3D = function(w,d,h,color,surfaces){
     }
 }
 
-BoxPartyCube = function(w,h,d,game){
+BoxPartyCube = function(transform,game){
 
 	let self = this;
 	self.game = game;
+	self.transform = transform;
 	self.$el = $('<boxpartycube>');
 
 	let shadow = $('<boxpartyshadow>').appendTo(self.$el).css({
-		width: w + 'px',
-		height: d + 'px',
+		width: transform.w + 'px',
+		height: transform.d + 'px',
 	})
 
-	let z = h + Math.random()*h*2;
-	let rx = -10 + Math.random()*20;
-	
-	
+	//let z = h + Math.random()*h*2;
+	//let rx = -10 + Math.random()*20;
 
-	let box = new PartyCube3D(w,h,d,game.color,[
+	let box = new PartyCube3D(transform.w,transform.h,transform.d,game.color,[
 		game.bg,
 		game.bg,
 		game.bg,
@@ -127,7 +128,7 @@ BoxPartyCube = function(w,h,d,game){
 	box.$el.css({
 		'top':'0px',
 		'left':'0px',
-		'transform':'translateZ('+z+'px) rotateX('+rx+'deg) rotateX('+(-90)+'deg)'
+		'transform':'rotateX('+(-90)+'deg)'
 	});
 	box.$el.appendTo(self.$el);
 
@@ -138,6 +139,22 @@ BoxPartyCube = function(w,h,d,game){
 			<boxmouth></boxmouth>
 		</boxface>
 		`).appendTo(box.$el.find('.partycube3D-front partycube3Dsurface'));
+
+	self.redraw = function(){
+
+		self.$el.css({
+			transform:`
+			translateX(${transform.x}px) 
+			translateY(${-transform.y}px) 
+			translateZ(1px) 
+			rotateY(${transform.ry}deg)
+			rotateZ(${transform.rz}deg)`
+		});
+
+		box.$el.css({
+			'transform':'translateZ('+transform.altitude+'px) rotateX('+(-90)+'deg)'
+		});
+	}
 }
 
 BoxPartyScene3D = function(doInBox, queue){
@@ -297,12 +314,17 @@ BoxPartyScene3D = function(doInBox, queue){
 
     		for(var n=0; n<queue[i].length; n++){
 
-	    		let box = new BoxPartyCube(W/6,W/6,W/6,queue[i][n]);
-	    		box.x = -W/4 + n*W/2;
-	    		box.y = W/4 + i*(W*2);
-	    		box.z = 0;
-	    		box.ry = 0;
-	    		box.rz = -25 + n*50;
+    			let transform = {
+    				w:W/6,h:W/6,d:W/6,
+    				x:-W/4 + n*W/2,
+    				y:W/4 + i*(W*2),
+    				altitude:H/4 + Math.random()*H/2,
+    				rx:0,
+    				ry:0,
+    				rz:-25 + n*50,
+    			}
+
+	    		let box = new BoxPartyCube(transform,queue[i][n]);
 	   			box.$el.appendTo($plane);
 	   			
 	   			box.$el.click(doBox);
@@ -324,23 +346,23 @@ BoxPartyScene3D = function(doInBox, queue){
     			//boxes[b].ry = n*dir;
     			//boxes[b].rz = n*0.5;
     		} else {
-    			boxes[b].ry *= 0.9;
+    			/*boxes[b].ry *= 0.9;
     			boxes[b].rz *= 0.9;
     			boxes[b].x *= 0.9;
-    			boxes[b].y *= 0.9;
+    			boxes[b].y *= 0.9;*/
     		
-    			if(boxes[b].y < W*0.01 && !isInBox){
+    			/*if(boxes[b].y < W*0.01 && !isInBox){
     				isInBox = true;
 
     				audio.stop('rumble');
     				audio.play('reverse');
     				doInBox(boxes[b].game.game);
-    			}
+    			}*/
     		}
 
-    		boxes[b].$el.css({
-    			transform:'translateX('+boxes[b].x+'px) translateY('+(-boxes[b].y)+'px) translateZ('+boxes[b].z+'px) rotateY('+boxes[b].ry+'deg) rotateZ('+boxes[b].rz+'deg)'
-    		});
+    		
+
+    		boxes[b].redraw();
     	}
     }
 
@@ -350,6 +372,20 @@ BoxPartyScene3D = function(doInBox, queue){
     	let n = $(this).attr('n');
     	boxes[n].isSpinning = false;
     	//boxes[n].$el.appendTo($world);
+
+    	$(boxes[n].transform).animate({
+    		rx:0,
+    		ry:0,
+    		rz:0,
+    		x:0,
+    		y:0,
+    		altitude:H/2,
+    	},{
+    		duration:1000,
+    		complete:function(){
+    			doInBox(boxes[n].game.game);
+    		}
+    	})
     	
     	audio.play('rumble');
     }
@@ -373,12 +409,13 @@ BoxPartyGame = function(){
 	const GAMES = {
 		'Milkers':{
 			game:window.MilkGame,
-			color:'yellow',
-			bg:'url(./proto/img/party/bg-farm.webp) center / cover'},
+			color:'#40B0ED',
+			bg:'url(./proto/img/icon-milk.png) center / cover'},
 		'Cookie Cutter':{
 			game:window.CookieCutterGame,
-			color:'cyan',
-			bg:'brown'},
+			color:'orange',
+			bg:'url(./proto/img/party/icon-cookie-cutter.jpg) center / cover'
+		},
 		'Follicle Frenzy':{
 			game:window.FollicleFrenzyGame,
 			color:'brown',
@@ -389,11 +426,17 @@ BoxPartyGame = function(){
 			color:'white',
 			bg:'url(./proto/img/party/bg-stadium.jpg) center / cover'
 		},
+		'Death Maze':{
+			game:window.MazeGame,
+			color:'white',
+			bg:'url(./proto/img/party/bg-mountains.jpg) center / cover'
+		},
 	}
 
 	const QUEUE = [
 		[ GAMES['Milkers'], GAMES['Headers'] ],
 		[ GAMES['Follicle Frenzy'], GAMES['Cookie Cutter'] ],
+		[ GAMES['Death Maze'] ],
 	]
 
 	let scale = 1;
