@@ -429,10 +429,11 @@ BoxPartyGame = function(){
 		$game.css('transform','scale('+scale+')');
 	},50)
 
+	let liveModule = undefined;
 
 	function doLaunchGame(game){
 		let p = game;
-		let liveModule = new p();
+		liveModule = new p();
 		liveModule.$el.appendTo($minigame);
 		audio.stop('music');
 	}
@@ -441,4 +442,8 @@ BoxPartyGame = function(){
     	audio.play('music');
     	$(document).off();
     })
+
+    self.setPlayers = function(p){
+    	if(liveModule) liveModule.setPlayers(p);
+	}
 }
