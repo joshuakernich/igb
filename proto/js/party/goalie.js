@@ -336,15 +336,6 @@ GoalieGame = function () {
 	$('<goaliegamescore>').appendTo($game).text('0');
 	$('<goaliegamescore>').appendTo($game).text('0');
 
-	$game.on('mousemove',function(e){
-		self.setPlayers([
-			{px:e.offsetX/W*100,py:e.offsetY/H*100},
-			{},
-			{},{},{},{},
-			{px:e.offsetX/W*100 + 0,py:e.offsetY/W*100 - 5, rW:0,rX:-0.25,rY:0.5,rZ:0.5},
-			]);
-	})
-
 	let dudes = [];
 	for(var i=0; i<1; i++){
 		let dude = new GoalieDude(i,rDude);
@@ -420,13 +411,13 @@ GoalieGame = function () {
 		players.length = 1;
 		for(var p=0; p<players.length; p++){
 			
-			let pyHead = Math.min( 75, 40 + players[p].py );
+			let pyHead = Math.min( 0.75, 0.4 + players[p].py );
 			
-			players[p].py = players[p].py + 20;
+			players[p].py = players[p].py + 0.2;
 
-			dudes[p].setX(players[p].px/100*W);
-			dudes[p].setY(pyHead/100*H);
-			dudes[p].setHeight((1-pyHead/100)*H);
+			dudes[p].setX(players[p].px*W);
+			dudes[p].setY(pyHead*H);
+			dudes[p].setHeight((1-pyHead)*H);
 
 			let q = {W:players[p].rW, X:players[p].rX, Y:players[p].rY, Z:players[p].rZ};
 			players[p].yaw = getYaw(q);
@@ -434,9 +425,9 @@ GoalieGame = function () {
 			players[p].pitch = getPitch(q);
 
 			//dudes[p].$hands.css({ left:players[p].px/100*W + 'px', top:players[p].py/100*H + 'px', transform:'rotate('+players[p].yaw+'rad)'});
-			dudes[p].$hands.css({ left:players[p].px/100*W + 'px', top:players[p].py/100*H + 'px'});
+			dudes[p].$hands.css({ left:players[p].px*W + 'px', top:players[p].py*H + 'px'});
 
-			dudes[p].setReach((players[p].py-pyHead)/100*H);
+			dudes[p].setReach((players[p].py-pyHead)*H);
 		}
 
 
@@ -458,7 +449,7 @@ GoalieGame = function () {
 		//ball.x += ball.sx;
 		ball.r += ball.sx*0.5;
 
-		let scale = 0.2 + (100-ball.depth)/100*0.8;
+		let scale = 0.2 + (100-ball.depth)/100 *0.8;
 		//let o = ball.depth>0?1:1+ball.depth/10;
 		let o = ball.depth>0?1:0;
 
@@ -468,19 +459,20 @@ GoalieGame = function () {
 		let pHeight = p + pCurve;
 
 
-
 		if(ball.isActive){
 
 			if(ball.depth==0){
 				ball.isActive = false;
 
-				let dx = ball.x - players[0].px/100*W;
-				let dy = (H-ball.elevation) - players[0].py/100*H;
+				let dx = ball.x - players[0].px*W;
+				let dy = (H-ball.elevation) - players[0].py*H;
 
 				let d = Math.sqrt(dx*dx+dy*dy);
 				let isCaught = d<(rBall+rDude);
 
 				
+
+
 				$('<goaliepulse>').css({
 					left:ball.x+'px',
 					top:H-ball.elevation+'px',

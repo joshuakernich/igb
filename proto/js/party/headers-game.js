@@ -375,13 +375,6 @@ HeadersGame = function () {
 	$('<ballgamescore>').appendTo($center).text('0');
 	$('<ballgamescore>').appendTo($center).text('0');
 
-	$game.on('mousemove',function(e){
-		self.setPlayers([
-			{px:e.offsetX/W*100 - 10,py:e.offsetY/W*100},
-			{px:e.offsetX/W*100 + 10,py:e.offsetY/W*100},
-			]);
-	})
-
 	let dudes = [];
 	for(var i=0; i<2; i++){
 		let dude = new Dude(i,rDude);
@@ -413,7 +406,7 @@ HeadersGame = function () {
 		players = p;
 		players.length = 2;
 		for(var p=0; p<players.length; p++){
-			players[p].py = Math.min( 75, 35 + players[p].py );
+			players[p].py = Math.min( 0.75, 0.35 + players[p].py );
 
 
 			if(gameType == 'volleyball'){
@@ -421,9 +414,9 @@ HeadersGame = function () {
 				if(p==1) players[p].px = Math.max( 55, players[p].px );
 			}
 
-			dudes[p].setX(players[p].px/100*W);
-			dudes[p].setY(players[p].py/100*H);
-			dudes[p].setHeight((1-players[p].py/100)*H);
+			dudes[p].setX(players[p].px*W);
+			dudes[p].setY(players[p].py*H);
+			dudes[p].setHeight((1-players[p].py)*H);
 		}
 	}
 
@@ -682,8 +675,8 @@ HeadersGame = function () {
 
 		for(var p=0; p<players.length; p++){
 
-			let px = players[p].px/100*W;
-			let py = players[p].py/100*H;
+			let px = players[p].px*W;
+			let py = players[p].py*H;
 			let xDif = ball.x-px;
 			let yDif = ball.y-py;
 

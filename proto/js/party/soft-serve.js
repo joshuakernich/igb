@@ -343,26 +343,11 @@ window.SoftServeGame = function(){
 		for(var c in cones) cones[c].redraw();
 	}
 
-
-	$(document).on('mousemove',function(e){
-		let o = self.$el.offset();
-		let x = (e.pageX - o.left)/scale/W;
-		let y = (e.pageY - o.top)/scale/H;
-		
-		if(x<1) cones[0].pz = x;
-		else if(x>2) cones[0].pz = (1-x%1);
-		else cones[0].px = x%1 - 0.1;
-
-		cones[0].py = y;
-		if(cones[1]) cones[1].px = cones[0].px + 0.2;
-		//cones[0].fx = cones[0].fx - 0.1;
-	})
-
 	self.setPlayers = function(p){
 		for(var m in cones){
-			cones[m].px = p[m].px/100;
-			cones[m].pz = p[m].pz/100;
-			cones[m].py = p[m].py/100;
+			cones[m].px = p[m].px;
+			cones[m].pz = p[m].pz;
+			cones[m].py = p[m].py;
 		}
 	}
 
