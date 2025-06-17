@@ -26,7 +26,10 @@ window.PumpMeepSingle = function(n){
 	let $handle = $('<pumphandle></pumphandle>').appendTo($pump);
 	let $balloon = $('<pumpballoon></pumpballoon>').appendTo($pump);
 
+	self.isPopped = false;
+
 	self.step = function(){
+
 		meep.setHeight(900-self.py*800);
 		$handle.css({ 
 			bottom:(610-self.py*800) + 'px' 
@@ -34,14 +37,17 @@ window.PumpMeepSingle = function(n){
 
 		if(self.pyWas != 0){
 			let dy = self.py - self.pyWas;
-			if(dy>0){
+			if(dy>0 && !self.isPopped){
 				self.fill += dy;
 				$balloon.css({
 					width: 100 + self.fill*50 + 'px',
 					height: 120 + self.fill*50 + 'px',
 				})
 
-				if(self.fill>10) $balloon.hide();
+				if(self.fill>10){
+					self.isPopped = true;
+					$balloon.hide();
+				}
 			}
 		}
 
@@ -148,8 +154,17 @@ window.PumpPopGame = function(){
 
 	}
 
+	let isGameComplete = false;
+
 	function step(){
-		for(var p in pumps) pumps[p].step();
+		for(var p in pumps){
+			pumps[p].step();
+			if(pumps[p].isPopped && !isGameComplete){
+				isGameComplete = true;
+				clearInterval(interval);
+				setTimeout( window.doPartyGameComplete, 1000 );
+			}
+		}
 		resize();
 	}
 
@@ -160,7 +175,7 @@ window.PumpPopGame = function(){
 		self.$el.css('transform','scale('+scale+')');
 	}
 
-	setInterval(step,1000/FPS);
+	let interval = setInterval(step,1000/FPS);
 
 	self.setPlayers = function(p){
 		for(var m in p){

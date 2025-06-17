@@ -102,12 +102,12 @@ PartyCube3D = function(transform,color,surfaces){
 
 		//bottom
     	self.$el.find('.partycube3D-bottom').css({
-    		transform:`translateY(${transform.h/2}px rotateX(90deg)`
+    		transform:`translateY(${transform.h/2}px) rotateX(90deg)`
     	});
 
     	//top
     	self.$el.find('.partycube3D-top').css({
-    		transform:`translateY(${-transform.h/2}px rotateX(90deg)`
+    		transform:`translateY(${-transform.h/2}px) rotateX(90deg)`
     	});
 
     	//left
@@ -373,6 +373,7 @@ BoxPartyScene3D = function(doInBox, queue){
 	   		}
     }
 
+    let nSelect = undefined;
     let nStep = 0;
     function step(){
     	nStep++;
@@ -395,10 +396,13 @@ BoxPartyScene3D = function(doInBox, queue){
     setInterval(step,1000/20);
 
     function doBox(){
-    	let n = $(this).attr('n');
-    	boxes[n].isSpinning = false;
 
-    	$(boxes[n].transform).animate({
+    	if(nSelect != undefined) return;
+
+    	nSelect = $(this).attr('n');
+    	boxes[nSelect].isSpinning = false;
+
+    	$(boxes[nSelect].transform).animate({
     		rx:0,
     		ry:0,
     		rz:0,
@@ -413,11 +417,11 @@ BoxPartyScene3D = function(doInBox, queue){
     		complete:function(){
     			audio.stop('rumble');
     			audio.play('reverse');
-    			doInBox(boxes[n].game.game);
+    			doInBox(boxes[nSelect].game.game);
     		}
     	})
 
-    	boxes[n].$el.find('.partycube3D-front partycube3Dsurface').animate({
+    	boxes[nSelect].$el.find('.partycube3D-front partycube3Dsurface').animate({
     		opacity:0
     	},3000);
     	
@@ -429,6 +433,29 @@ BoxPartyScene3D = function(doInBox, queue){
 	function doMoveForward(){
 		iLevel++;
 		$plane.animate({bottom:-iLevel*(W*2)+'px'});
+	}
+
+	self.doCompleteBox = function(){
+		$(boxes[nSelect].transform).animate({
+    		rx:0,
+    		ry:0,
+    		rz:0,
+    		x:0,
+    		y:0,
+    		altitude:H/2,
+    		w:0,
+    		h:0,
+    		d:0,
+    	},{
+    		duration:1500,
+    		complete:function(){
+    			boxes[nSelect].$el.remove();
+    			nSelect = undefined;
+    			doMoveForward();
+    		}
+    	})
+
+    	
 	}
 	
 	//setInterval(doMoveForward,1000);
@@ -465,12 +492,17 @@ BoxPartyGame = function(){
 			color:'white',
 			bg:'url(./proto/img/party/bg-mountains.jpg) center / cover'
 		},
+		'Pump Pop':{
+			game:window.PumpPopGame,
+			color:'white',
+			bg:'url(./proto/img/party/bg-mountains.jpg) center / cover'
+		},
 	}
 
 	const QUEUE = [
-		[ GAMES['Milkers'], GAMES['Headers'] ],
+		[ GAMES['Milkers'], GAMES['Pump Pop'] ],
 		[ GAMES['Follicle Frenzy'], GAMES['Cookie Cutter'] ],
-		[ GAMES['Death Maze'] ],
+		[ GAMES['Death Maze'], GAMES['Headers'] ],
 	]
 
 	let scale = 1;
@@ -513,8 +545,17 @@ BoxPartyGame = function(){
 		liveModule = new p();
 		liveModule.$el.appendTo($minigame);
 		audio.stop('music');
-
 		scene.$el.hide();
+
+		window.doPartyGameComplete = doCompleteGame;
+	}
+
+	function doCompleteGame(){
+		scene.$el.show();
+		liveModule.$el.remove();
+		audio.stop('music');
+
+		scene.doCompleteBox();
 	}
 
 	function init() {

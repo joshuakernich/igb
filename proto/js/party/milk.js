@@ -694,6 +694,8 @@ window.MilkGame = function(){
 
 			$scoreline.find('milkscorescore:last-of-type').css({opacity:0,left:-20}).delay(4000 + m*300).animate({opacity:1,left:10},300).animate({opacity:1,left:0},200);
 		}
+
+		setTimeout(window.doPartyGameComplete,6000);
 	}
 
 	let timeStart = 0;
@@ -733,4 +735,6 @@ window.MilkGame = function(){
 			meeps[m].fy = p[m].py;
 		}
 	}
+
+	audio.play('music');
 }
