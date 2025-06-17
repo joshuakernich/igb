@@ -355,7 +355,7 @@ BoxPartyScene3D = function(doInBox, queue){
     			let transform = {
     				w:W/6,h:W/6,d:W/6,
     				x:-W/4 + n*W/2,
-    				y:W/4 + i*(W*2),
+    				y:W/2 + i*(W),
     				altitude:H/4 + Math.random()*H/2,
     				rx:0,
     				ry:0,
@@ -371,6 +371,20 @@ BoxPartyScene3D = function(doInBox, queue){
 	   			let nBox = boxes.push(box)-1;
 	   			box.$el.attr('n',nBox);
 	   		}
+    }
+
+
+    let meeps = [];
+
+    for(var i=0; i<6; i++){
+    	let meep = new PartyMeep(i);
+    	meep.setHeight(350);
+    	meep.$el.appendTo($plane);
+    	meep.$el.css({
+    		'transform':'rotateX(-90deg) scale(0.5)',
+    	});
+
+    	meeps[i] = meep;
     }
 
     let nSelect = undefined;
@@ -407,7 +421,7 @@ BoxPartyScene3D = function(doInBox, queue){
     		ry:0,
     		rz:0,
     		x:0,
-    		y:0,
+    		y:iLevel*W - W/2,
     		altitude:H/2,
     		w:W,
     		h:H,
@@ -432,7 +446,7 @@ BoxPartyScene3D = function(doInBox, queue){
 
 	function doMoveForward(){
 		iLevel++;
-		$plane.animate({bottom:-iLevel*(W*2)+'px'});
+		$plane.animate({bottom:-iLevel*(W)+'px'});
 	}
 
 	self.doCompleteBox = function(){
@@ -454,8 +468,16 @@ BoxPartyScene3D = function(doInBox, queue){
     			doMoveForward();
     		}
     	})
+	}
 
-    	
+	self.setPlayers = function(p){
+		for(var m in meeps ){
+
+			meeps[m].$el.css({
+				'bottom':`${ H/4 + iLevel*W + p[m].z*H/8 }px`,
+				'left':`${ p[m].x*W/8 }px`,
+			});
+		}
 	}
 	
 	//setInterval(doMoveForward,1000);
@@ -532,11 +554,19 @@ BoxPartyGame = function(){
 	let scene = new BoxPartyScene3D(doLaunchGame, QUEUE);
 	scene.$el.appendTo($game);
 
-	setInterval(function(){
+	function step(){
+
+		resize();
+	}
+
+	function resize(){
 		let w = $(document).innerWidth();
 		scale = w/(W*GRID*3);
 		$game.css('transform','scale('+scale+')');
-	},50)
+	}
+
+	const FPS = 20;
+	setInterval(step,1000/FPS);
 
 	let liveModule = undefined;
 
@@ -566,6 +596,7 @@ BoxPartyGame = function(){
     $(document).click(init);
 
     self.setPlayers = function(p){
+    	scene.setPlayers(p);
     	if(liveModule) liveModule.setPlayers(p);
 	}
 }

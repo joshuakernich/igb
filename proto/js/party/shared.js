@@ -17,10 +17,10 @@ window.PartyMeep = function(n){
 				partymeepshadow{
 					display:block;
 					position:absolute;
-					width: ${W}px;
-					height: ${W/4}px;
-					bottom: ${-W/8}px;
-					left: ${-W/2}px;
+					width: ${W*1.5}px;
+					height: ${W/3}px;
+					bottom: ${-W/6}px;
+					left: ${-W/2*1.5}px;
 					background: black;
 					border-radius: 50%;
 					opacity: 0.5;
