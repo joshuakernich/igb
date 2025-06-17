@@ -5,11 +5,7 @@
     color css wall color
     walls array toggling walls
 */
-PartyCube3D = function(w,d,h,color,surfaces){
-
-    if(!w) w = 100;
-    if(!d) d = 100;
-    if(!h) h = 100;
+PartyCube3D = function(transform,color,surfaces){
 
     // back right front left bottom top
     if(!surfaces) surfaces = ['black','black','black','black','black','black']
@@ -56,46 +52,90 @@ PartyCube3D = function(w,d,h,color,surfaces){
     self.$el = $(`
         <partycube3D>
             ${ surfaces[0]?`
-                <partycube3Dside class='partycube3D-back' style='transform:translateZ(${-d/2}px)'>
-                    <partycube3Dsurface style='background:${surfaces[0]};width:${w}px;height:${h}px;'></partycube3Dsurface>
+                <partycube3Dside class='partycube3D-back' style='transform:translateZ(${-transform.d/2}px)'>
+                    <partycube3Dsurface style='background:${surfaces[0]};width:${transform.w}px;height:${transform.h}px;'></partycube3Dsurface>
                 </partycube3Dside>`:'' } 
 
             ${ surfaces[1]?`
-                <partycube3Dside class='partycube3D-right' style='transform:translateX(${w/2}px) rotateY(90deg)'>
-                    <partycube3Dsurface style='background:${surfaces[1]};width:${d}px;height:${h}px;'></partycube3Dsurface>
+                <partycube3Dside class='partycube3D-right' style='transform:translateX(${transform.w/2}px) rotateY(90deg)'>
+                    <partycube3Dsurface style='background:${surfaces[1]};width:${transform.d}px;height:${transform.h}px;'></partycube3Dsurface>
                 </partycube3Dside>`:'' } 
 
             ${ surfaces[2]?`
-                <partycube3Dside class='partycube3D-front' style='transform:translateZ(${d/2}px)'>
-                    <partycube3Dsurface style='background:${surfaces[2]};width:${w}px;height:${h}px;'></partycube3Dsurface>
+                <partycube3Dside class='partycube3D-front' style='transform:translateZ(${transform.d/2}px)'>
+                    <partycube3Dsurface style='background:${surfaces[2]};width:${transform.w}px;height:${transform.h}px;'></partycube3Dsurface>
                 </partycube3Dside>`:'' } 
 
             ${ surfaces[3]?`
-                <partycube3Dside class='partycube3D-left' style='transform:translateX(${-w/2}px) rotateY(90deg)'>
-                    <partycube3Dsurface style='background:${surfaces[3]};width:${d}px;height:${h}px;'></partycube3Dsurface>
+                <partycube3Dside class='partycube3D-left' style='transform:translateX(${-transform.w/2}px) rotateY(90deg)'>
+                    <partycube3Dsurface style='background:${surfaces[3]};width:${transform.d}px;height:${transform.h}px;'></partycube3Dsurface>
                 </partycube3Dside>`:'' } 
 
-            ${ surfaces[4]?`<partycube3Dside class='partycube3D-bottom' style='transform:translateY(${h/2}px) rotateX(90deg);'>
-                <partycube3Dsurface style='background:${surfaces[4]};width:${w}px;height:${d}px;'></partycube3Dsurface>
+            ${ surfaces[4]?`<partycube3Dside class='partycube3D-bottom' style='transform:translateY(${transform.h/2}px) rotateX(90deg);'>
+                <partycube3Dsurface style='background:${surfaces[4]};width:${transform.w}px;height:${transform.d}px;'></partycube3Dsurface>
             </partycube3Dside>`:'' }
         
-            ${ surfaces[5]?`<partycube3Dside class='partycube3D-top' style='transform:translateY(${-h/2}px) rotateX(90deg);'>
-                <partycube3Dsurface style='background:${surfaces[5]};width:${w}px;height:${d}px;'></partycube3Dsurface>
+            ${ surfaces[5]?`<partycube3Dside class='partycube3D-top' style='transform:translateY(${-transform.h/2}px) rotateX(90deg);'>
+                <partycube3Dsurface style='background:${surfaces[5]};width:${transform.w}px;height:${transform.d}px;'></partycube3Dsurface>
             </partycube3Dside>`:''}            
         </partycube3D>
         `)
 
     self.$el.find('partycube3Dsurface').css({'border-color':color});
 
+
     self.redraw = function(){
 
+    	self.$el.css({
+			'transform':'translateZ('+transform.altitude+'px) rotateX('+(-90)+'deg)'
+		});
+
+    	// back
+		self.$el.find('.partycube3D-back').css({
+			'transform':`translateZ(${-transform.d/2}px)`
+		})
+
+		// front
+		self.$el.find('.partycube3D-front').css({
+			'transform':`translateZ(${transform.d/2}px)`
+		})
+
+		//bottom
     	self.$el.find('.partycube3D-bottom').css({
-    		transform:`translateY(${self.h/2}px`
+    		transform:`translateY(${transform.h/2}px rotateX(90deg)`
     	});
 
-    	self.$el.find('.partycube3D-bottom partycube3Dsurface').css({
-    		width:`${self.w}px`,
-    		height:`${self.h}px`
+    	//top
+    	self.$el.find('.partycube3D-top').css({
+    		transform:`translateY(${-transform.h/2}px rotateX(90deg)`
+    	});
+
+    	//left
+    	self.$el.find('.partycube3D-left').css({
+    		transform:`translateX(${-transform.w/2}px) rotateY(90deg)`
+    	});
+
+    	//right
+    	self.$el.find('.partycube3D-right').css({
+    		transform:`translateX(${transform.w/2}px) rotateY(90deg)`
+    	});
+
+    	// front back
+    	self.$el.find('.partycube3D-front partycube3Dsurface, .partycube3D-back partycube3Dsurface').css({
+			width:`${transform.w}px`,
+			height:`${transform.h}px`,
+		})
+
+    	// top bottom
+    	self.$el.find('.partycube3D-top partycube3Dsurface, .partycube3D-bottom partycube3Dsurface').css({
+    		width:`${transform.w}px`,
+    		height:`${transform.d}px`
+    	});
+
+    	// left right
+    	self.$el.find('.partycube3D-left partycube3Dsurface, .partycube3D-right partycube3Dsurface').css({
+    		width:`${transform.d}px`,
+    		height:`${transform.h}px`
     	});
     }
 }
@@ -115,7 +155,7 @@ BoxPartyCube = function(transform,game){
 	//let z = h + Math.random()*h*2;
 	//let rx = -10 + Math.random()*20;
 
-	let box = new PartyCube3D(transform.w,transform.h,transform.d,game.color,[
+	let box = new PartyCube3D(transform,game.color,[
 		game.bg,
 		game.bg,
 		game.bg,
@@ -151,9 +191,7 @@ BoxPartyCube = function(transform,game){
 			rotateZ(${transform.rz}deg)`
 		});
 
-		box.$el.css({
-			'transform':'translateZ('+transform.altitude+'px) rotateX('+(-90)+'deg)'
-		});
+		box.redraw(); 
 	}
 }
 
@@ -341,28 +379,16 @@ BoxPartyScene3D = function(doInBox, queue){
     	for(var b in boxes ){
 
     		if( boxes[b].isSpinning ){
-    			let dir = b%2?1:-1;
-    		
-    			//boxes[b].ry = n*dir;
-    			//boxes[b].rz = n*0.5;
+    			// bob up and down here
+    			
+    			
     		} else {
-    			/*boxes[b].ry *= 0.9;
-    			boxes[b].rz *= 0.9;
-    			boxes[b].x *= 0.9;
-    			boxes[b].y *= 0.9;*/
-    		
-    			/*if(boxes[b].y < W*0.01 && !isInBox){
-    				isInBox = true;
-
-    				audio.stop('rumble');
-    				audio.play('reverse');
-    				doInBox(boxes[b].game.game);
-    			}*/
+    			
     		}
 
     		
-
     		boxes[b].redraw();
+    		
     	}
     }
 
@@ -371,7 +397,6 @@ BoxPartyScene3D = function(doInBox, queue){
     function doBox(){
     	let n = $(this).attr('n');
     	boxes[n].isSpinning = false;
-    	//boxes[n].$el.appendTo($world);
 
     	$(boxes[n].transform).animate({
     		rx:0,
@@ -380,12 +405,21 @@ BoxPartyScene3D = function(doInBox, queue){
     		x:0,
     		y:0,
     		altitude:H/2,
+    		w:W,
+    		h:H,
+    		d:W,
     	},{
-    		duration:1000,
+    		duration:3000,
     		complete:function(){
+    			audio.stop('rumble');
+    			audio.play('reverse');
     			doInBox(boxes[n].game.game);
     		}
     	})
+
+    	boxes[n].$el.find('.partycube3D-front partycube3Dsurface').animate({
+    		opacity:0
+    	},3000);
     	
     	audio.play('rumble');
     }
@@ -479,12 +513,16 @@ BoxPartyGame = function(){
 		liveModule = new p();
 		liveModule.$el.appendTo($minigame);
 		audio.stop('music');
+
+		scene.$el.hide();
 	}
 
-    $(document).click(function(){
-    	audio.play('music');
-    	$(document).off();
-    })
+	function init() {
+		audio.play('music');
+		$(document).off('click',init);
+	}
+
+    $(document).click(init);
 
     self.setPlayers = function(p){
     	if(liveModule) liveModule.setPlayers(p);
