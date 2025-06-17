@@ -239,7 +239,7 @@ HeadersGame = function () {
 		},
 
 		'.ballgamewrapper':{
-			'background-image':'url(proto/img/20180220_021.jpg)',
+			'background-image':'url(./proto/img/party/bg-stadium.jpg)',
 			'background-size':'100%',
 			'background-position':'center bottom -70px',
 		},

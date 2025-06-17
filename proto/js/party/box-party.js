@@ -5,7 +5,7 @@
     color css wall color
     walls array toggling walls
 */
-PartyCube3D = function(w,d,h,surfaces){
+PartyCube3D = function(w,d,h,color,surfaces){
 
     if(!w) w = 100;
     if(!d) d = 100;
@@ -53,8 +53,6 @@ PartyCube3D = function(w,d,h,surfaces){
 
     self.$el = $(`
         <partycube3D>
-
-
             ${ surfaces[0]?`
                 <partycube3Dside class='partycube3D-back' style='transform:translateZ(${-d/2}px)'>
                     <partycube3Dsurface style='background:${surfaces[0]};width:${w}px;height:${h}px;'></partycube3Dsurface>
@@ -85,6 +83,8 @@ PartyCube3D = function(w,d,h,surfaces){
         </partycube3D>
         `)
 
+    self.$el.find('partycube3Dsurface').css({'border-color':color});
+
     self.redraw = function(){
 
     	self.$el.find('.partycube3D-bottom').css({
@@ -98,9 +98,10 @@ PartyCube3D = function(w,d,h,surfaces){
     }
 }
 
-BoxPartyCube = function(w,h,d){
+BoxPartyCube = function(w,h,d,game){
 
 	let self = this;
+	self.game = game;
 	self.$el = $('<boxpartycube>');
 
 	let shadow = $('<boxpartyshadow>').appendTo(self.$el).css({
@@ -113,18 +114,16 @@ BoxPartyCube = function(w,h,d){
 	
 	
 
-	let box = new PartyCube3D(w,h,d,[
-		'black url(./proto/img/party/bg-farm.webp) 100%',
-		'black url(./proto/img/party/bg-farm.webp) 100%',
-		'rgba(255,200,0,0.5)',
-		'black url(./proto/img/party/bg-farm.webp) 100%',
-		'#ffdd00',
-		'#ffdd00',
+	let box = new PartyCube3D(w,h,d,game.color,[
+		game.bg,
+		game.bg,
+		game.bg,
+		game.bg,
+		game.color,
+		game.color,
 	]);
 	box.$el.appendTo(self.$el);
-	box.$el.find('.partycube3D-front partycube3Dsurface').css({
-		'opacity':0.8,
-	})
+	
 	box.$el.css({
 		'top':'0px',
 		'left':'0px',
@@ -141,7 +140,7 @@ BoxPartyCube = function(w,h,d){
 		`).appendTo(box.$el.find('.partycube3D-front partycube3Dsurface'));
 }
 
-BoxPartyScene3D = function(doInBox){
+BoxPartyScene3D = function(doInBox, queue){
     
 	let audio = new AudioContext();
     audio.add('rumble','./proto/audio/party/sfx-rumble.mp3',1);
@@ -200,8 +199,19 @@ BoxPartyScene3D = function(doInBox){
 				transform-style:preserve-3d;
             }
            
-           partyScene3D .partycube3D-front partycube3DSurface{
-            	backdrop-filter: blur(10px);
+           partyScene3D partycube3DSurface:after{
+            	content: "";
+            	display: block;
+            	position: absolute;
+            	top: 0px;
+            	left: 0px;
+            	right: 0px;
+            	bottom: 0px;
+            	background: url(./proto/img/party/bg-cosmic-swirl.gif);
+            	background-size: cover;
+            	mix-blend-mode: overlay;
+            	opacity: 0.2;
+            	
             }
             
             partyScene3D partycube3DSurface{
@@ -283,24 +293,29 @@ BoxPartyScene3D = function(doInBox){
     let $plane = $('<partyPlane3D>').appendTo($world);
 
     let boxes = [];
-    for(var i=0; i<50; i++){
-    		let box = new BoxPartyCube(W/6,W/6,W/6);
-    		box.x = -W/4 + i%2*W/2;
-    		box.y = W/4 + Math.floor(i/2)*(W*2);
-    		box.z = 0;
-    		box.ry = 0;
-    		box.rz = -25 + i%2*50;
-   			box.$el.appendTo($plane);
-   			box.$el.attr('n',i);
-   			box.$el.click(doBox);
-   			box.isSpinning = true;
+    for(var i=0; i<queue.length; i++){
 
-   			boxes[i] = box;
+    		for(var n=0; n<queue[i].length; n++){
+
+	    		let box = new BoxPartyCube(W/6,W/6,W/6,queue[i][n]);
+	    		box.x = -W/4 + n*W/2;
+	    		box.y = W/4 + i*(W*2);
+	    		box.z = 0;
+	    		box.ry = 0;
+	    		box.rz = -25 + n*50;
+	   			box.$el.appendTo($plane);
+	   			
+	   			box.$el.click(doBox);
+	   			box.isSpinning = true;
+
+	   			let nBox = boxes.push(box)-1;
+	   			box.$el.attr('n',nBox);
+	   		}
     }
 
-    let n = 0;
+    let nStep = 0;
     function step(){
-    	n++;
+    	nStep++;
     	for(var b in boxes ){
 
     		if( boxes[b].isSpinning ){
@@ -319,7 +334,7 @@ BoxPartyScene3D = function(doInBox){
 
     				audio.stop('rumble');
     				audio.play('reverse');
-    				doInBox();
+    				doInBox(boxes[b].game.game);
     			}
     		}
 
@@ -356,11 +371,29 @@ BoxPartyGame = function(){
 	const GRID = 100;
 
 	const GAMES = {
-		'Milkers':{color:'yellow',bg:''},
+		'Milkers':{
+			game:window.MilkGame,
+			color:'yellow',
+			bg:'url(./proto/img/party/bg-farm.webp) center / cover'},
+		'Cookie Cutter':{
+			game:window.CookieCutterGame,
+			color:'cyan',
+			bg:'brown'},
+		'Follicle Frenzy':{
+			game:window.FollicleFrenzyGame,
+			color:'brown',
+			bg:'url(./proto/img/party/bg-barber.jpg) center / cover'
+		},
+		'Headers':{
+			game:window.HeadersGame,
+			color:'white',
+			bg:'url(./proto/img/party/bg-stadium.jpg) center / cover'
+		},
 	}
 
 	const QUEUE = [
-		[ GAMES.Milkers, GAMES.Milkers,],
+		[ GAMES['Milkers'], GAMES['Headers'] ],
+		[ GAMES['Follicle Frenzy'], GAMES['Cookie Cutter'] ],
 	]
 
 	let scale = 1;
@@ -387,7 +420,7 @@ BoxPartyGame = function(){
 	let $game = $('<boxpartygame>').appendTo(self.$el);
 	let $minigame = $('<boxpartyminigame>').appendTo(self.$el);
 
-	let scene = new BoxPartyScene3D(doLaunchGame);
+	let scene = new BoxPartyScene3D(doLaunchGame, QUEUE);
 	scene.$el.appendTo($game);
 
 	setInterval(function(){
@@ -397,8 +430,8 @@ BoxPartyGame = function(){
 	},50)
 
 
-	function doLaunchGame(){
-		let p = MilkGame;
+	function doLaunchGame(game){
+		let p = game;
 		let liveModule = new p();
 		liveModule.$el.appendTo($minigame);
 		audio.stop('music');
