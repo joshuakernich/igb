@@ -131,11 +131,12 @@ window.PumpPopGame = function(){
 					transform: translateX(-50%);
 					background: orange;
 					border-radius: 100%;
+					left: -120px;
 					box-shadow: inset 0px -20px 50px rgba(0,0,0,0.5), inset 0px 10px 10px rgba(255,255,255,0.5);
 				}
 
 				pumpstring{
-					width: 150px;
+					width: 120px;
 					height: 650px;
 					position: absolute;
 					bottom: 70px;	
@@ -143,9 +144,9 @@ window.PumpPopGame = function(){
 
 					border-bottom: 5px solid gray;
 					border-left: 5px solid gray;
-					border-radius: 100% 0px 0px 100%;
+					border-radius: 0px 0px 0px 50%;
 					transform-origin: bottom center;
-					transform: rotate(10deg);
+			
 				}
 
 				pump[n='0'] pumpbody, pump[n='0'] pumphandle, pump[n='0'] pumpballoon{ background:red; }
