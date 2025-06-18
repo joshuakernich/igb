@@ -22,6 +22,8 @@ window.PumpMeepSingle = function(n){
 		left:'60px',
 	});
 
+	let $string = $('<pumpstring>').appendTo(self.$el);
+
 	let $pump = $(`
 		<pump>
 			<pumpbody></pumpbody>
@@ -84,6 +86,8 @@ window.PumpPopGame = function(){
 					 transform-origin: top left;
 				}
 
+
+
 				pumpmeep{
 					position: absolute;
 					display: block;
@@ -128,6 +132,20 @@ window.PumpPopGame = function(){
 					background: orange;
 					border-radius: 100%;
 					box-shadow: inset 0px -20px 50px rgba(0,0,0,0.5), inset 0px 10px 10px rgba(255,255,255,0.5);
+				}
+
+				pumpstring{
+					width: 150px;
+					height: 650px;
+					position: absolute;
+					bottom: 70px;	
+					right: 0px;
+
+					border-bottom: 5px solid gray;
+					border-left: 5px solid gray;
+					border-radius: 100% 0px 0px 100%;
+					transform-origin: bottom center;
+					transform: rotate(10deg);
 				}
 
 				pump[n='0'] pumpbody, pump[n='0'] pumphandle, pump[n='0'] pumpballoon{ background:red; }
