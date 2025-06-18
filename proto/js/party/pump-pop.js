@@ -1,13 +1,14 @@
 window.PumpMeepSingle = function(n){
 	let self = this;
 
+	self.score = 0;
+
 	let audio = new AudioContext();
-    audio.add('pump','./proto/audio/party/pump-balloon.mp3',1);
+    audio.add('pump','./proto/audio/pump-balloon.mp3',1);
 
 	self.py = self.pyWas = 0;
 	self.fill = 0;
 	self.$el = $('<pumpmeep>');
-
 
 	let meep = new PartyMeep(n);
 	meep.$el.appendTo(self.$el);
@@ -75,7 +76,7 @@ window.PumpPopGame = function(){
 				pumpgame{
 					 width: ${W*3}px;
 					 height: ${H}px;
-					 background: linear-gradient(black, gray);
+					 background: linear-gradient(black, purple);
 					 position: absolute;
 					 left: 0px;
 					 top: 0px;
@@ -159,6 +160,9 @@ window.PumpPopGame = function(){
 
 	}
 
+	let hud = new PartyHUD(pumps);
+	hud.$el.appendTo(self.$el);
+
 	let isGameComplete = false;
 
 	function step(){
@@ -183,7 +187,7 @@ window.PumpPopGame = function(){
 	let interval = setInterval(step,1000/FPS);
 
 	self.setPlayers = function(p){
-		for(var m in p){
+		for(var m in pumps){
 			pumps[m].py = p[m].py;
 		}
 	}
