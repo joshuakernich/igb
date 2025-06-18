@@ -246,10 +246,10 @@ BoxPartyScene3D = function(doInBox, queue){
 
             partyPlane3D:before{
             	content: "";
-            	background: purple;
-            	width: ${W}px;
+            	background: linear-gradient( to top, rgba(255,255,255,0.2), transparent );
+            	width: ${W/4}px;
         	 	position: absolute;
-        	 	left: -${W/2}px;
+        	 	left: -${W/8}px;
         	 	height: ${TRACK}px;
                 bottom: 0px;
                 display: block;
@@ -554,7 +554,7 @@ BoxPartyGame = function(){
         		left: 0px;
         		right: 0px;
         		bottom: 0px;
-        		background: linear-gradient( to bottom, transparent, blue );
+        		background: linear-gradient( to bottom, black, transparent, blue, blue );
         	}
 
         	boxpartymountains{
@@ -571,7 +571,7 @@ BoxPartyGame = function(){
         	}
 
         	boxpartygame:after{
-        		/*content:"";
+        		content:"";
         		width: ${W*GRID}px;
         		height: ${H*GRID}px;
         		border-left: 10px dashed black;
@@ -580,7 +580,7 @@ BoxPartyGame = function(){
         		position: absolute;
         		top: 0px;
         		left: ${W*GRID}px;
-        		pointer-events: none;*/
+        		pointer-events: none;
         	}
         <style`);
 
