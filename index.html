@@ -290,7 +290,7 @@
 
 			$(document).on('keypress',function(e){
 				let nSwitchPlayer = e.which-49;
-				if(nSwitchPlayer<players.length) nDebugPlayer = nSwitchPlayer;
+				if(nSwitchPlayer>=0 && nSwitchPlayer<players.length-1) nDebugPlayer = nSwitchPlayer;
 			})
 
 			doRandomMove();

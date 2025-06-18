@@ -475,8 +475,8 @@ BoxPartyScene3D = function(doInBox, queue){
 	}
 
 	self.setPlayers = function(p){
+		
 		for(var m in meeps ){
-
 			meeps[m].$el.css({
 				'bottom':`${ H/4 + iLevel*W + p[m].z*H/8 }px`,
 				'left':`${ p[m].x*W/8 }px`,
