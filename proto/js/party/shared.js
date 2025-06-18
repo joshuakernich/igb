@@ -63,6 +63,7 @@ window.PartyMeep = function(n){
 					padding-top: 30px;
 					width: 100px;
 					box-sizing: border-box;
+					line-height: 0px;
 				}
 
 				partymeephat{
@@ -111,26 +112,32 @@ window.PartyMeep = function(n){
 					margin-top: 5px;
 				}
 
+				partymeephead[n='1'] partymeephat{ background: blue; }
 				partymeep[n='1'] partymeephat{ background: blue; }
 				partymeep[n='1'] partymeephat:after{ background: blue; }
 				partyplayerhud[n='1'] partyscore{ background: blue; }
 				partyplayerhud[n='1'] partymeephat{ background: blue; }
 
+
+				partymeephead[n='2'] partymeephat{ background: limegreen; }
 				partymeep[n='2'] partymeephat{ background: limegreen; }
 				partymeep[n='2'] partymeephat:after{ background: limegreen; }
 				partyplayerhud[n='2'] partyscore{ background: limegreen; }
 				partyplayerhud[n='2'] partymeephat{ background: limegreen; }
 
+				partymeephead[n='3'] partymeephat{ background: #dd00ff; }
 				partymeep[n='3'] partymeephat{ background: #dd00ff; }
 				partymeep[n='3'] partymeephat:after{ background: #dd00ff; }
 				partyplayerhud[n='3'] partyscore{ background: #dd00ff; }
 				partyplayerhud[n='3'] partymeephat{ background: #dd00ff; }
 
+				partymeephead[n='4'] partymeephat{ background: #ff6600; }
 				partymeep[n='4'] partymeephat{ background: #ff6600; }
 				partymeep[n='4'] partymeephat:after{ background: #ff6600; }
 				partyplayerhud[n='4'] partyscore{ background: #ff6600; }
 				partyplayerhud[n='4'] partymeephat{ background: #ff6600; }
 
+				partymeephead[n='5'] partymeephat{ background: #ffbb00; }
 				partymeep[n='5'] partymeephat{ background: #ffbb00; }
 				partymeep[n='5'] partymeephat:after{ background: #ffbb00; }
 				partyplayerhud[n='5'] partyscore{ background: #ffbb00; }
@@ -166,6 +173,149 @@ window.PartyMeep = function(n){
 		self.$el.find('partymeepavatar').height(h);
 	}
 
+}
+
+window.PartyScoreTable = function(){
+
+	if(!PartyScoreTable.didInit){
+
+		console.log('in here');
+		PartyScoreTable.didInit = true;
+
+		$("head").append(`
+			<style>
+				partyscoremodal{
+					display:block;
+					text-align: left;
+					position: absolute;
+					top: 0px;
+					left: 1600px;
+					width: 1600px;
+					height: 1000px;
+					padding: 100px;
+					pointer-events: none;
+				}
+
+				partyscoretable{
+					display: inline-block;
+					color: gray;
+					font-size: 40px;
+				}
+
+				partyscorerow{
+					display: block;
+					background: white;
+					padding: 10px 15px;
+					width: 330px;
+					
+					text-align: left;
+					
+					position: relative;
+					margin: 20px;
+					box-shadow: 0px 2px 20px black;
+				}
+
+				partypos{
+					display: inline-block;
+					width: 100px;
+					font: inherit;
+					margin-right: 100px;
+					vertical-align:middle;
+				}
+
+				partyscore{
+					display: inline-block;
+					width: 100px;
+					font: inherit;
+					color: #9B62E8;
+					vertical-align:middle;
+				}
+
+				partycoin{
+					width: 30px;
+					height: 40px;
+					background: #9B62E8;
+					display: inline-block;
+					border-radius: 100%;
+					border-right: 5px solid rgba(0,0,0,0.2);
+					box-sizing: border-box;
+					position: relative;
+					vertical-align: middle;
+					transform: rotate(20deg);
+					box-shadow: inset -2px 0px rgba(255,255,255,0.5);
+				}
+
+				partycoin:before{
+					content:"";
+					position: absolute;
+					top: 0px;
+					left: -1px;
+					right: 2px;
+					bottom: 0px;
+					margin: 5px;
+					border: 1px solid rgba(255,255,255,0.5);
+					border-radius: 100%;
+				}
+
+				partycoin:after{
+					content:"";
+					position: absolute;
+					top: 0px;
+					left: 0px;
+					right: 0px;
+					bottom: 0px;
+					margin: 5px;
+					border: 2px solid rgba(0,0,0,0.5);
+					border-radius: 100%;
+				}
+
+				partyscorerow partymeephead{
+					display: inline-block;
+					position: absolute;
+					left: 100px;
+					top: -40px;
+
+					transform: scale(0.5);
+					box-shadow: 0px 2px 10px black;
+				}
+			</style>
+		`)
+	}
+
+	let self = this;
+	self.$el = $(`<partyscoremodal>`);
+	let $table = $(`<partyscoretable>`).appendTo(self.$el);
+
+	let rows = [];
+	for(var i=0; i<6; i++){
+		rows[i] = new PartyScoreRow(i);
+		rows[i].$el.appendTo($table);
+	}
+
+	self.redraw = function(){
+		for(var r in rows) rows[r].redraw();
+	}
+}
+
+window.PartyScoreRow = function(n){
+	let self = this;
+	self.$el = $(`
+		<partyscorerow n=${n}>
+			<partypos>1st</partypos>
+			<partymeephead n=${n}>
+				<partymeephat></partymeephat>
+				<partymeepeye></partymeepeye>
+				<partymeepeye></partymeepeye><br>
+				<partymeepmouth></partymeepmouth>
+			</partymeephead>
+			<partycoin></partycoin>
+			<partyscore>20</partyscore>
+		</partyscorerow>`
+	);
+
+	self.redraw = function(){
+		self.$el.find('partyscore').text(Math.floor(meep.score));
+	}
 }
 
 window.PartyPlayerHUD = function(n,meep,type){
@@ -301,7 +451,7 @@ window.PartyHUD = function(meeps){
 					transform: scale(0.6);
 				}
 
-				partyscore{
+				partyplayerhud partyscore{
 					display: block;
 					position: absolute;
 					color: white;

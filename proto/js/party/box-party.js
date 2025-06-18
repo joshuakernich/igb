@@ -1,3 +1,5 @@
+
+
 /*
     w width
     l depth
@@ -217,6 +219,7 @@ BoxPartyScene3D = function(doInBox, queue){
                 position: absolute;
                 left: 0px;
                 top: 0px;
+               
             }
 
             partyWorld3D{
@@ -537,13 +540,38 @@ BoxPartyGame = function(){
         		width: ${W*GRID*3}px;
         		height: ${H*GRID}px;
         		transform-origin: top left;
-        		background: linear-gradient( to bottom, black, blue );
+        		background: url(./proto/img/party/bg-cosmos.jpg);
+                background-size: 100%;
+                background-position: center;
+                position: relative;
+        	}
+
+        	boxpartygame:before{
+        		content:"";
+        		box-sizing: border-box;
+        		position: absolute;
+        		top: 0px;
+        		left: 0px;
+        		right: 0px;
+        		bottom: 0px;
+        		background: linear-gradient( to bottom, transparent, blue );
+        	}
+
+        	boxpartymountains{
+        		content:"";
+        		box-sizing: border-box;
+        		position: absolute;
+        		top: 0px;
+        		left: 0px;
+        		right: 0px;
+        		bottom: 0px;
+        		background: url(./proto/img/party/bg-mountains.png);
         		background-size: 100%;
-        		background-position: 80% 0%;
+                background-position: center;
         	}
 
         	boxpartygame:after{
-        		content:"";
+        		/*content:"";
         		width: ${W*GRID}px;
         		height: ${H*GRID}px;
         		border-left: 10px dashed black;
@@ -552,7 +580,7 @@ BoxPartyGame = function(){
         		position: absolute;
         		top: 0px;
         		left: ${W*GRID}px;
-        		pointer-events: none;
+        		pointer-events: none;*/
         	}
         <style`);
 
@@ -562,11 +590,17 @@ BoxPartyGame = function(){
 
 	let self = this;
 	self.$el = $('<igb>');
+
 	let $game = $('<boxpartygame>').appendTo(self.$el);
+	$('<boxpartymountains>').appendTo($game);
+	
 	let $minigame = $('<boxpartyminigame>').appendTo(self.$el);
 
 	let scene = new BoxPartyScene3D(doLaunchGame, QUEUE);
 	scene.$el.appendTo($game);
+
+	let table = new PartyScoreTable();
+	table.$el.appendTo($game);
 
 	function step(){
 
