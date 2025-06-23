@@ -126,7 +126,6 @@ window.PumpPopGame = function(){
 					left: -75px;
 					bottom: 0px;
 					background: orange;
-
 				}
 
 				pumphandle{
@@ -173,6 +172,9 @@ window.PumpPopGame = function(){
 				pump[n='5'] pumpbody, pump[n='5'] pumphandle, pump[n='5'] pumpballoon{ background:#ffbb00; }
 			</style>`);
 	}
+
+	let audio = new AudioContext();
+    audio.add('music','./proto/audio/funny-kids_long-190860.mp3',1,true,true);
 
 	let self = this;
 	self.$el = $('<pumpgame>');
@@ -238,4 +240,17 @@ window.PumpPopGame = function(){
 			pumps[m].py = p[m].py;
 		}
 	}
+
+	function initMusic(){
+		try{ 
+			audio.play('music');
+			console.log('here');
+			$(document).off('click',initMusic);
+		} catch(e){
+			console.log(e);
+		}
+	}
+
+	$(document).click(initMusic);
+	setTimeout(initMusic);
 }
