@@ -175,16 +175,15 @@ window.PartyMeep = function(n){
 
 }
 
-window.PartyScoreTable = function(){
+window.PartyTally = function(players){
 
-	if(!PartyScoreTable.didInit){
+	if(!PartyTally.didInit){
 
-		console.log('in here');
-		PartyScoreTable.didInit = true;
+		PartyTally.didInit = true;
 
 		$("head").append(`
 			<style>
-				partyscoremodal{
+				partytallymodal{
 					display:block;
 					text-align: left;
 					position: absolute;
@@ -194,28 +193,27 @@ window.PartyScoreTable = function(){
 					height: 1000px;
 					padding: 100px;
 					pointer-events: none;
+					overflow: hidden;
 				}
 
-				partyscoretable{
+				partytallytable{
 					display: inline-block;
 					color: gray;
 					font-size: 40px;
 				}
 
-				partyscorerow{
+				partytallyrow{
 					display: block;
 					background: white;
 					padding: 10px 15px;
 					width: 330px;
-					
 					text-align: left;
-					
 					position: relative;
 					margin: 20px;
 					box-shadow: 0px 2px 20px black;
 				}
 
-				partypos{
+				partytallypos{
 					display: inline-block;
 					width: 100px;
 					font: inherit;
@@ -223,7 +221,7 @@ window.PartyScoreTable = function(){
 					vertical-align:middle;
 				}
 
-				partyscore{
+				partytallyscore{
 					display: inline-block;
 					width: 100px;
 					font: inherit;
@@ -231,7 +229,7 @@ window.PartyScoreTable = function(){
 					vertical-align:middle;
 				}
 
-				partycoin{
+				partytallycoin{
 					width: 30px;
 					height: 40px;
 					background: #9B62E8;
@@ -245,7 +243,7 @@ window.PartyScoreTable = function(){
 					box-shadow: inset -2px 0px rgba(255,255,255,0.5);
 				}
 
-				partycoin:before{
+				partytallycoin:before{
 					content:"";
 					position: absolute;
 					top: 0px;
@@ -257,7 +255,7 @@ window.PartyScoreTable = function(){
 					border-radius: 100%;
 				}
 
-				partycoin:after{
+				partytallycoin:after{
 					content:"";
 					position: absolute;
 					top: 0px;
@@ -269,7 +267,7 @@ window.PartyScoreTable = function(){
 					border-radius: 100%;
 				}
 
-				partyscorerow partymeephead{
+				partytallyrow partymeephead{
 					display: inline-block;
 					position: absolute;
 					left: 100px;
@@ -278,43 +276,100 @@ window.PartyScoreTable = function(){
 					transform: scale(0.5);
 					box-shadow: 0px 2px 10px black;
 				}
+
+				partytallyresultmask{
+					overflow: hidden;
+					position: absolute;
+					padding-left: 20px;
+					top: 0px;
+					bottom: 0px;
+					width: 200px;
+				}
+
+				partytallyresult{
+					position: relative;
+					background: #9B62E8; 
+					color: white;
+					height: 100%;
+					display: inline-block;
+					box-sizing: border-box;
+					padding: 5px 20px;
+					border: 5px solid white;
+
+					left: -150px;
+				}
 			</style>
 		`)
 	}
 
 	let self = this;
-	self.$el = $(`<partyscoremodal>`);
-	let $table = $(`<partyscoretable>`).appendTo(self.$el);
+	self.$el = $(`<partytallymodal>`);
+	let $table = $(`<partytallytable>`).appendTo(self.$el);
 
 	let rows = [];
-	for(var i=0; i<6; i++){
-		rows[i] = new PartyScoreRow(i);
+	for(var i=0; i<players.length; i++){
+		rows[i] = new PartyTallyRow(i,players[i]);
 		rows[i].$el.appendTo($table);
 	}
 
 	self.redraw = function(){
 		for(var r in rows) rows[r].redraw();
 	}
+
+	self.hideRows = function(){
+		for(var r in rows) rows[r].$el.delay(r*100).animate({left:-500});
+	}
+
+	self.showRows = function(){
+		for(var r in rows) rows[r].$el.delay(r*100).animate({left:0});
+	}
+
+	self.showResults = function(results){
+		for(var r in rows){
+			rows[r].showResult(results[r],r*100);
+		}
+	}
+
+	self.resolveResults = function(){
+		for(var r in rows) rows[r].resolveResult(r*100);
+	}
 }
 
-window.PartyScoreRow = function(n){
+window.PartyTallyRow = function(n,player){
 	let self = this;
 	self.$el = $(`
-		<partyscorerow n=${n}>
-			<partypos>1st</partypos>
+		<partytallyrow n=${n}>
+			<partytallypos>1st</partytallypos>
 			<partymeephead n=${n}>
 				<partymeephat></partymeephat>
 				<partymeepeye></partymeepeye>
 				<partymeepeye></partymeepeye><br>
 				<partymeepmouth></partymeepmouth>
 			</partymeephead>
-			<partycoin></partycoin>
-			<partyscore>20</partyscore>
-		</partyscorerow>`
+			<partytallycoin></partytallycoin>
+			<partytallyscore>${player.score}</partytallyscore>
+			<partytallyresultmask>
+				<partytallyresult>+10</partytallyresult>
+			</partytallyresultmask>
+		</partytallyrow>`
 	);
 
 	self.redraw = function(){
-		self.$el.find('partyscore').text(Math.floor(meep.score));
+		self.$el.find('partytallyscore').text(Math.floor(player.score));
+	}
+
+	self.showResult = function(result,delay=0){
+		self.$el.find('partytallyresult')
+		.text(result>=0?'+ '+result:'- '+(-result))
+		.show()
+		.css({left:-200})
+		.delay(delay)
+		.animate({left:0});
+	}
+
+	self.resolveResult = function(delay=0){
+		self.$el.find('partytallyresult').delay(delay).animate({left:-200});
+		setTimeout( self.redraw, delay );
 	}
 }
 
@@ -323,7 +378,7 @@ window.PartyPlayerHUD = function(n,meep,type){
 	let self = this;
 	self.$el = $(`
 		<partyplayerhud n=${n} type=${type}>
-		<partyscore>0</partyscore>
+		<partyscore>${Math.floor(meep.score)}</partyscore>
 			<partymeephead>
 				<partymeephat></partymeephat>
 				<partymeepeye></partymeepeye>

@@ -45,6 +45,7 @@ window.PumpMeepSingle = function(n){
 			let dy = self.py - self.pyWas;
 			if(dy>0 && !self.isPopped){
 				self.fill += dy;
+				self.score = Math.min( 100, self.fill * 10 );
 				$balloon.css({
 					width: 100 + self.fill*50 + 'px',
 					height: 120 + self.fill*50 + 'px',
@@ -142,8 +143,8 @@ window.PumpPopGame = function(){
 					bottom: 70px;	
 					right: 0px;
 
-					border-bottom: 5px solid gray;
-					border-left: 5px solid gray;
+					border-bottom: 15px solid gray;
+					border-left: 15px solid gray;
 					border-radius: 0px 0px 0px 50%;
 					transform-origin: bottom center;
 			
@@ -165,10 +166,8 @@ window.PumpPopGame = function(){
 
 	for(var i=0; i<6; i++){
 	
-
 		let pump = new PumpMeepSingle(i);
 		pump.$el.appendTo(self.$el);
-
 
 		pump.$el.css({
 			left: W/2 + Math.floor(i/2) * W - W/6 + (i%2)*W/3 + 'px',
@@ -187,13 +186,27 @@ window.PumpPopGame = function(){
 	function step(){
 		for(var p in pumps){
 			pumps[p].step();
-			if(pumps[p].isPopped && !isGameComplete){
-				isGameComplete = true;
-				clearInterval(interval);
-				setTimeout( window.doPartyGameComplete, 1000 );
-			}
+			if(pumps[p].isPopped && !isGameComplete) doGameComplete();
 		}
+		hud.redraw(0);
 		resize();
+	}
+
+	function doGameComplete(){
+		isGameComplete = true;
+		clearInterval(interval);
+		setTimeout( function(){
+
+			let scores = [];
+			for(var a in pumps){
+				scores[a] = 0;
+				for(var b in pumps){
+					if(a!=b && pumps[a].score>pumps[b].score) scores[a] += 10;
+				}
+			}
+
+			window.doPartyGameComplete(scores);
+		}, 1000 );
 	}
 
 	let scale = 1;
