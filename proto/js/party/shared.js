@@ -9,6 +9,22 @@ window.PartyMeep = function(n){
 
 		$("head").append(`
 			<style>
+				body{
+					--red: red;
+					--blue: blue;
+					--green: limegreen;
+					--pink: #dd00ff;
+					--orange: #ff6600;
+					--yellow: #ffbb00;
+
+					--n0: var(--red);
+					--n1: var(--blue);
+					--n2: var(--green);
+					--n3: var(--pink);
+					--n4: var(--orange);
+					--n5: var(--yellow);
+				}
+
 				partymeep{
 					display:block;
 					position: absolute;	
