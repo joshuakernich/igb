@@ -33,7 +33,7 @@ window.CoinChaosGame = function(){
 			self.$el.css({
 				left: self.x * scale,
 				top: self.y * scale,
-			})
+			}).attr('held',self.holder?'true':'false');
 		}
 	}
 
@@ -64,7 +64,20 @@ window.CoinChaosGame = function(){
 		self.grab = function(coin){
 			self.coin = coin;
 			coin.holder = self;
+
+			meep.$handLeft.css({left:-50,top:220});
+			meep.$handRight.css({left:50,top:220});
 		}
+
+		self.drop = function(){
+			self.coin.holder = undefined;
+			self.coin.redraw();
+			self.coin = undefined;
+
+			meep.$handLeft.css({left:'',top:''});
+			meep.$handRight.css({left:'',top:''});
+		}
+	
 	}
 
 
@@ -145,9 +158,7 @@ window.CoinChaosGame = function(){
 					transform: translate(-50%, -50%);
 					box-sizing: border-box;
 					transform-style: preserve-3d;
-
 				}
-
 
 				coinchaospile[n='0'] coincircle{ border-color:var(--n0); }
 				coinchaospile[n='1'] coincircle{ border-color:var(--n1); }
@@ -167,7 +178,6 @@ window.CoinChaosGame = function(){
 					position: absolute;
 					display: block;
 					transform-style: preserve-3d;
-
 					animation: spincoin 6s linear infinite;
 				}
 
@@ -185,6 +195,15 @@ window.CoinChaosGame = function(){
 					transform-origin: bottom center;
 					border-left: 10px solid white;
 					box-sizing: border-box;
+				}
+
+				coinchaoscoin[held='true']{
+					animation: none;
+				}
+
+				coinchaoscoin[held='true'] coinbody{
+					transform: translateZ(150px) translateY(${COIN}px);
+					
 				}
 
 				coinbody:after{
@@ -268,8 +287,7 @@ window.CoinChaosGame = function(){
 
 				if(d<0.14){
 					meeps[m].coin.nPile = m;
-					meeps[m].coin.holder = undefined;
-					meeps[m].coin = undefined;
+					meeps[m].drop();
 				}
 			}
 
