@@ -21,6 +21,7 @@ window.CoinChaosGame = function(){
 	let Coin = function(n,scale){
 		let self = this;
 		self.$el = $(`<coinchaoscoin n=${n}>`);
+		self.nPile = n;
 
 		self.$el.css({'animation-delay':(-Math.random()*6) + 's'})
 		$('<coinshadow>').appendTo(self.$el);
@@ -70,7 +71,7 @@ window.CoinChaosGame = function(){
 	const W = 1600;
 	const H = 1000;
 	const COIN = 100;
-	const PLAYERS = 6;
+	const PLAYERS = 2;
 
 	if(!CoinChaosGame.init){
 		CoinChaosGame.init = true;
@@ -243,7 +244,7 @@ window.CoinChaosGame = function(){
 				let nCoin = -1;
 				for(var c in coins){
 
-					if(!coins[c].holder){
+					if(!coins[c].holder && coins[c].nPile != m){
 						let dx = coins[c].x - meeps[m].x;
 						let dy = coins[c].y - meeps[m].y;
 
@@ -259,7 +260,17 @@ window.CoinChaosGame = function(){
 					meeps[m].grab(coins[nCoin]);
 				}
 			} else {
+				
+				// find distance to home pile
+				let dx = piles[m].x - meeps[m].x;
+				let dy = piles[m].y - meeps[m].y;
+				let d = Math.sqrt(dx*dx + dy*dy);
 
+				if(d<0.14){
+					meeps[m].coin.nPile = m;
+					meeps[m].coin.holder = undefined;
+					meeps[m].coin = undefined;
+				}
 			}
 
 			meeps[m].redraw();
