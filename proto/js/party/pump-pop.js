@@ -5,6 +5,7 @@ window.PumpMeepSingle = function(n){
 
 	let audio = new AudioContext();
     audio.add('pump','./proto/audio/pump-balloon.mp3',1);
+    audio.add('pop','./proto/audio/party/sfx-pop.mp3',1);
 
 	self.py = self.pyWas = 0;
 	self.fill = 0;
@@ -54,6 +55,7 @@ window.PumpMeepSingle = function(n){
 				if(self.fill>10){
 					self.isPopped = true;
 					$balloon.hide();
+					audio.play('pop');
 				}
 
 				audio.play('pump');
@@ -222,6 +224,7 @@ window.PumpPopGame = function(){
 				}
 			}
 
+			self.turnOnOff(false);
 			window.doPartyGameComplete(scores);
 		}, 1000 );
 	}
@@ -242,15 +245,14 @@ window.PumpPopGame = function(){
 	}
 
 	function initMusic(){
-		try{ 
-			audio.play('music');
-			console.log('here');
-			$(document).off('click',initMusic);
-		} catch(e){
-			console.log(e);
-		}
+		audio.play('music');
+		$(document).off('click',initMusic);
+	}
+
+	self.turnOnOff = function(b){
+		if(b) initMusic();
+		else audio.stop('music');
 	}
 
 	$(document).click(initMusic);
-	setTimeout(initMusic);
 }
