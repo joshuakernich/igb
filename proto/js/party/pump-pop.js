@@ -85,6 +85,21 @@ window.PumpPopGame = function(){
 					 top: 0px;
 					 display: block;
 					 transform-origin: top left;
+
+					 background: url(./proto/img/party/bg-carnival.webp);
+					 background-size: 100%;
+					 background-position: center 90%;
+				}
+
+				pumpgame:before{
+					content:"";
+					position: absolute;
+					display: block;
+					left: 0px;
+					top: 0px;
+					right: 0px;
+					bottom: 0px;
+					background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.7));
 				}
 
 
@@ -143,8 +158,8 @@ window.PumpPopGame = function(){
 					bottom: 70px;	
 					right: 0px;
 
-					border-bottom: 15px solid gray;
-					border-left: 15px solid gray;
+					border-bottom: 15px solid #999;
+					border-left: 15px solid #999;
 					border-radius: 0px 0px 0px 50%;
 					transform-origin: bottom center;
 			
