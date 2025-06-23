@@ -58,14 +58,14 @@ window.PartyMeep = function(n){
 					transform: translate(-50%, -50%);
 					background: white;
 					border-radius: ${W*0.25}px;
-					top: 50%;
+					top: 60%;
 					position: absolute;
-					left: ${-W}px;
+					left: ${-W*0.7}px;
 					z-index: 1;
 				}
 
 				partymeephand:last-of-type{
-					left: ${W}px;
+					left: ${W*0.7}px;
 				}
 
 				partymeephead{
