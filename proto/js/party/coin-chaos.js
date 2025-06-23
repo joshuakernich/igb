@@ -84,7 +84,7 @@ window.CoinChaosGame = function(){
 	const W = 1600;
 	const H = 1000;
 	const COIN = 100;
-	const PLAYERS = 4;
+	const PLAYERS = 6;
 
 	if(!CoinChaosGame.init){
 		CoinChaosGame.init = true;
