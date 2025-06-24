@@ -203,7 +203,6 @@ BoxPartyScene3D = function(queue, callbackEnterBox, callbackExitBox){
     audio.add('rumble','./proto/audio/party/sfx-rumble.mp3',1);
     audio.add('reverse','./proto/audio/fight-reverse.mp3',1);
 
-
     const W = 1600;
     const H = 1000;
     const TRACK = W*10;
@@ -413,7 +412,7 @@ BoxPartyScene3D = function(queue, callbackEnterBox, callbackExitBox){
     	}
     }
 
-    setInterval(step,1000/20);
+    setInterval(step,1000/30);
 
     function doBox(){
 
@@ -473,6 +472,8 @@ BoxPartyScene3D = function(queue, callbackEnterBox, callbackExitBox){
 			}
 		}
 	}
+
+	setTimeout(self.doMoveForward,3000);
 
 	self.doCompleteBox = function(){
 

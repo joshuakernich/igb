@@ -257,6 +257,9 @@ window.CoinChaosGame = function(){
 	let $platform = $('<coinchaosplatform>').appendTo($game);
 	let $center = $('<coinchaoscenter>').appendTo($platform);
 
+	let audio = new AudioContext();
+    audio.add('coin','./proto/audio/party/sfx-coin.mp3',1);
+    audio.add('pickup','./proto/audio/party/sfx-pickup.mp3',1);
 
 
 	function step(){
@@ -282,6 +285,7 @@ window.CoinChaosGame = function(){
 
 				if(nCoin>-1){
 					meeps[m].grab(coins[nCoin]);
+					audio.play('pickup',true);
 				}
 			} else {
 				
@@ -292,6 +296,7 @@ window.CoinChaosGame = function(){
 
 				if(d<0.14){
 					meeps[m].drop();
+					audio.play('coin',true);
 				}
 			}
 
