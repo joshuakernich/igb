@@ -495,6 +495,9 @@ window.PartyHUD = function(meeps){
 					top: 110%;
 					box-shadow: 0px 2px 20px black;
 					pointer-events: auto;
+					font-size: 100px;
+					color: white;
+					line-height: 150px;
 				}
 
 				partyplayerhud{
@@ -595,6 +598,31 @@ window.PartyHUD = function(meeps){
 		});
 	}
 
+	let interval;
+
+	self.initTimer = function(seconds,callback){
+		let timeStart = new Date().getTime();
+		interval = setInterval(function(){
+			let timeNow = new Date().getTime();
+			let timeElapsed = timeNow-timeStart;
+			let secondsRemaining = Math.ceil( seconds - (timeElapsed/1000) );
+			$timer.text(secondsRemaining);
+			if(secondsRemaining==0){
+				self.clearTimer();
+				callback();
+			}
+		},1000/50);
+	}
+
+	self.clearTimer = function(){
+		clearInterval(interval);
+	}
+
+	self.initBanner = function(msg){
+		setBanner(true);
+		$banner.text(msg);
+	}
+
 	for(var i=0; i<3; i++) $('<partyhudframe>').appendTo(self.$el);
 
 	let $baseline = $('<partyhudbaseline>').appendTo(self.$el);
@@ -623,7 +651,7 @@ window.PartyHUD = function(meeps){
 	if(meeps) self.setPlayers(meeps);
 	
 	self.redraw = function(sec=0){
-		 $timer.text(sec);
+		$timer.text(sec);
 		for(var h in huds) huds[h].redraw();
 	}
 

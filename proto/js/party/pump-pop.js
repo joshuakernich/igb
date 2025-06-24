@@ -81,7 +81,7 @@ window.PumpPopGame = function(){
 				@import url('https://fonts.googleapis.com/css2?family=Playwrite+DK+Loopet:wght@100..400&display=swap');
 
 				pumpgame{
-					
+
 					width: ${W*3}px;
 					height: ${H}px;
 					background: linear-gradient(black, purple);
@@ -186,21 +186,9 @@ window.PumpPopGame = function(){
 
 	let pumps = [];
 
-	for(var i=0; i<6; i++){
 	
-		let pump = new PumpMeepSingle(i);
-		pump.$el.appendTo(self.$el);
 
-		pump.$el.css({
-			left: W/2 + Math.floor(i/2) * W - W/6 + (i%2)*W/3 + 'px',
-			top: H*0.95 + 'px',
-		})
-
-		pumps[i] = pump;
-
-	}
-
-	let hud = new PartyHUD(pumps);
+	let hud = new PartyHUD();
 	hud.$el.appendTo(self.$el);
 
 	let isGameComplete = false;
@@ -210,11 +198,13 @@ window.PumpPopGame = function(){
 			pumps[p].step();
 			if(pumps[p].isPopped && !isGameComplete) doGameComplete();
 		}
-		hud.redraw(0);
 		resize();
 	}
 
 	function doGameComplete(){
+
+		hud.clearTimer();
+
 		isGameComplete = true;
 		clearInterval(interval);
 		setTimeout( function(){
@@ -249,7 +239,6 @@ window.PumpPopGame = function(){
 
 	function initMusic(){
 		audio.play('music');
-		$(document).off('click',initMusic);
 	}
 
 	self.turnOnOff = function(b){
@@ -257,5 +246,28 @@ window.PumpPopGame = function(){
 		else audio.stop('music');
 	}
 
-	$(document).click(initMusic);
+	hud.initPlayerCount(initGame);
+
+	function initGame(count){
+		initMusic();
+		for(var i=0; i<count; i++){
+		
+			let pump = new PumpMeepSingle(i);
+			pump.$el.appendTo(self.$el);
+
+			pump.$el.css({
+				left: W/2 + Math.floor(i/2) * W - W/6 + (i%2)*W/3 + 'px',
+				top: H*0.95 + 'px',
+			})
+
+			pumps[i] = pump;
+
+		}
+
+		hud.initTimer(60,finiGame);
+	}
+
+	function finiGame(){
+		doGameComplete();
+	}
 }

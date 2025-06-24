@@ -64,6 +64,7 @@ window.CoinChaosGame = function(){
 
 		self.grab = function(coin){
 			self.coin = coin;
+			self.coin.nPile = undefined;
 			coin.holder = self;
 
 			meep.$handLeft.css({left:-50,top:220});
@@ -72,6 +73,7 @@ window.CoinChaosGame = function(){
 
 		self.drop = function(){
 			self.coin.holder = undefined;
+			self.coin.nPile = n;
 			self.coin.redraw();
 			self.coin = undefined;
 
@@ -108,16 +110,16 @@ window.CoinChaosGame = function(){
 				}
 
 				coinchaosplatform{
-					width: ${W}px;
-					height: ${W}px;
+					width: ${W-100}px;
+					height: ${W-100}px;
 					background: gray;
 					transform-origin: bottom center;
 					border-radius: 100px;
 					transform: rotateX(60deg);
 					display: block;
 					position: absolute;
-					bottom: 50px;
-					left: 33.3%;
+					bottom: 100px;
+					left: calc( 33.3% + 50px );
 					transform-style: preserve-3d;
 
 					background: url(./proto/img/party/bg-floorboards.jpg);
@@ -289,7 +291,6 @@ window.CoinChaosGame = function(){
 				let d = Math.sqrt(dx*dx + dy*dy);
 
 				if(d<0.14){
-					meeps[m].coin.nPile = m;
 					meeps[m].drop();
 				}
 			}
@@ -319,7 +320,7 @@ window.CoinChaosGame = function(){
 			meeps[i].$el.appendTo($center);
 
 			piles[i] = new CoinPile(i,W/2);
-			let p = 1/PLAYERS*i*Math.PI*2;
+			let p = 1/PLAYERS*(i)*Math.PI*2;
 			let x = Math.cos(p) * 0.7;
 			let y = Math.sin(p) * 0.7;
 			piles[i].x = x;
@@ -336,6 +337,22 @@ window.CoinChaosGame = function(){
 				coins.push(coin);
 			}
 		}
+
+		hud.initTimer(60,finiGame);
+	}
+
+	function finiGame(){
+		clearInterval(interval);
+		hud.initBanner('Time Up!');
+		setTimeout(function(){
+
+			let scores = [];
+
+			for(var p in piles) scores[p] = -10;
+			for(var c in coins) if( coins[c].nPile != undefined ) scores[ coins[c].nPile ] ++;
+
+			window.doPartyGameComplete(scores);
+		},1000)
 	}
 
 	
@@ -348,5 +365,5 @@ window.CoinChaosGame = function(){
 	}
 
 	const FPS = 20;
-	setInterval(step,1000/FPS);
+	let interval = setInterval(step,1000/FPS);
 }

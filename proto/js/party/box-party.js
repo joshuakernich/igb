@@ -353,20 +353,25 @@ BoxPartyScene3D = function(queue, callbackEnterBox, callbackExitBox){
     let boxes = [];
     for(var i=0; i<queue.length; i++){
 
+    	let spacingX = (W/2)/(queue[i].length-1);
+    	let spacingRZ = 50/(queue[i].length-1);
+
 		for(var n=0; n<queue[i].length; n++){
 
 			let transform = {
 				w:W/6,h:W/6,d:W/6,
-				x:-W/4 + n*W/2,
-				y:W/2 + i*(W),
+				x:-W/4 + spacingX * n,
+				y:W/2 + i*(W*2),
 				altitude:H/4 + Math.random()*H/2,
 				rx:0,
 				ry:0,
-				rz:-25 + n*50,
+				rz:-25 + n*spacingRZ,
 			}
 
     		let box = new BoxPartyCube(transform,queue[i][n]);
    			box.$el.appendTo($plane);
+   			box.iLevel = i;
+   			box.nBox = n;
    			
    			box.$el.click(doBox);
    			box.isSpinning = true;
@@ -414,7 +419,11 @@ BoxPartyScene3D = function(queue, callbackEnterBox, callbackExitBox){
 
     	if(nSelect != undefined) return;
 
-    	nSelect = $(this).attr('n');
+    	let nTry = $(this).attr('n');
+
+    	if(boxes[nTry].iLevel > iLevel) return;
+
+    	nSelect = nTry;
     	boxes[nSelect].isSpinning = false;
 
     	$(boxes[nSelect].transform).animate({
@@ -422,7 +431,7 @@ BoxPartyScene3D = function(queue, callbackEnterBox, callbackExitBox){
     		ry:0,
     		rz:0,
     		x:0,
-    		y:iLevel*W - W/2,
+    		y:iLevel*(W*2) - W/2,
     		altitude:H/2,
     		w:W,
     		h:H,
@@ -447,7 +456,22 @@ BoxPartyScene3D = function(queue, callbackEnterBox, callbackExitBox){
 
 	self.doMoveForward = function(){
 		iLevel++;
-		$plane.animate({bottom:-iLevel*(W)+'px'},1500);
+		audio.play('rumble',true);
+		$plane.animate({bottom:-iLevel*(W*2)+'px'},{
+			duration:1500,
+			complete:function(){
+				audio.stop('rumble');
+			}
+		});
+
+		for(var b in boxes){
+			if(iLevel > boxes[b].iLevel){
+				$(boxes[b].transform).animate({
+					x: (boxes[b].nBox == 0?-W:W),
+					y:  (boxes[b].iLevel+1) * (W*2) + W/4 - ((boxes[b].nBox>1)?W/3:0),
+				},1500);
+			}
+		}
 	}
 
 	self.doCompleteBox = function(){
@@ -476,13 +500,11 @@ BoxPartyScene3D = function(queue, callbackEnterBox, callbackExitBox){
 
 		for(var m in meeps ){
 			meeps[m].$el.css({
-				'bottom':`${ H/4 + iLevel*W + p[m].z*H/8 }px`,
+				'bottom':`${ H/4 + iLevel*(W*2) + p[m].z*H/8 }px`,
 				'left':`${ p[m].x*W/8 }px`,
 			});
 		}
 	}
-	
-	//setInterval(doMoveForward,1000);
 }
 
 BoxPartyGame = function(){
@@ -521,11 +543,16 @@ BoxPartyGame = function(){
 			color:'white',
 			bg:'url(./proto/img/party/bg-mountains.jpg) center / cover'
 		},
+		'Coin Chaos':{
+			game:window.CoinChaosGame,
+			color:'white',
+			bg:'url(./proto/img/party/bg-mountains-white.jpg) center / cover'
+		},
 	}
 
 	const QUEUE = [
-		[ GAMES['Milkers'], GAMES['Pump Pop'] ],
-		[ GAMES['Follicle Frenzy'], GAMES['Cookie Cutter'] ],
+		[ GAMES['Coin Chaos'], GAMES['Pump Pop'] ],
+		[ GAMES['Milkers'], GAMES['Follicle Frenzy'], GAMES['Cookie Cutter'] ],
 		[ GAMES['Death Maze'], GAMES['Headers'] ],
 	]
 
