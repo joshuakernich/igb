@@ -42,6 +42,7 @@ window.CoinChaosGame = function(){
 		self.$el = $('<coinchaosmeep>');
 		self.coin = undefined;
 		self.x = self.y = 0;
+		self.score = 0;
 
 		let meep = new PartyMeep(n);
 		meep.setHeight(350);
@@ -98,11 +99,11 @@ window.CoinChaosGame = function(){
 
 				coinchaosgame{
 					display:block;
-					width: ${W}px;
+					width: ${W*3}px;
 					height: ${H}px;
 					position: absolute;
 					transform-origin: top left;
-					left: 33.3%;
+					left: 0px;
 					perspective: ${W}px;
 				}
 
@@ -116,12 +117,13 @@ window.CoinChaosGame = function(){
 					display: block;
 					position: absolute;
 					bottom: 50px;
-					left: 0px;
+					left: 33.3%;
 					transform-style: preserve-3d;
 
 					background: url(./proto/img/party/bg-floorboards.jpg);
 					background-size: 20%;
 					border-bottom: 50px solid rgba(0,0,0,0.3);
+
 				}
 
 				coinchaoscenter{
@@ -253,8 +255,9 @@ window.CoinChaosGame = function(){
 	let $platform = $('<coinchaosplatform>').appendTo($game);
 	let $center = $('<coinchaoscenter>').appendTo($platform);
 
-	function step(){
 
+
+	function step(){
 
 		for(var m in meeps){
 
@@ -302,31 +305,40 @@ window.CoinChaosGame = function(){
 		$game.css('transform','scale('+scale+')');
 	}
 
+	let hud = new PartyHUD();
+	hud.$el.appendTo($game);
+	hud.initPlayerCount(initGame);
+
 	let meeps = [];
 	let piles = [];
 	let coins = [];
-	for(var i=0; i<PLAYERS; i++){
-		meeps[i] = new Meep(i,W/2);
-		meeps[i].$el.appendTo($center);
 
-		piles[i] = new CoinPile(i,W/2);
-		let p = 1/PLAYERS*i*Math.PI*2;
-		let x = Math.cos(p) * 0.7;
-		let y = Math.sin(p) * 0.7;
-		piles[i].x = x;
-		piles[i].y = y;
-		piles[i].redraw();
-		piles[i].$el.appendTo($center);
+	function initGame(PLAYERS){
+		for(var i=0; i<PLAYERS; i++){
+			meeps[i] = new Meep(i,W/2);
+			meeps[i].$el.appendTo($center);
 
-		for(var c=0; c<10; c++){
-			let coin = new Coin(i,W/2);
-			coin.x = x + Math.cos(1/5*c*Math.PI*2) * (1+c) * 0.02;
-			coin.y = y + Math.sin(1/5*c*Math.PI*2) * (1+c) * 0.02;
-			coin.redraw();
-			coin.$el.appendTo($center);
-			coins.push(coin);
+			piles[i] = new CoinPile(i,W/2);
+			let p = 1/PLAYERS*i*Math.PI*2;
+			let x = Math.cos(p) * 0.7;
+			let y = Math.sin(p) * 0.7;
+			piles[i].x = x;
+			piles[i].y = y;
+			piles[i].redraw();
+			piles[i].$el.appendTo($center);
+
+			for(var c=0; c<10; c++){
+				let coin = new Coin(i,W/2);
+				coin.x = x + Math.cos(1/5*c*Math.PI*2) * (1+c) * 0.02;
+				coin.y = y + Math.sin(1/5*c*Math.PI*2) * (1+c) * 0.02;
+				coin.redraw();
+				coin.$el.appendTo($center);
+				coins.push(coin);
+			}
 		}
 	}
+
+	
 
 	self.setPlayers = function(p){
 		for(var m in meeps){

@@ -408,8 +408,6 @@ window.PartyPlayerHUD = function(n,meep,type){
 	self.redraw = function(){
 		self.$el.find('partyscore').text(Math.floor(meep.score));
 	}
-
-
 }
 
 window.PartyHUD = function(meeps){
@@ -428,6 +426,8 @@ window.PartyHUD = function(meeps){
 					display: block;
 					z-index: 100;
 					text-align: center;
+
+					pointer-events: none;
 					
 				}
 
@@ -484,6 +484,17 @@ window.PartyHUD = function(meeps){
 					bottom: 0px;
 					box-sizing: border-box;
 					border: 50px solid #40B0ED;
+				}
+
+				partyhudbanner{
+					background: #40B0ED;
+					position: absolute;
+					left: 0px;
+					right: 0px;
+					
+					top: 110%;
+					box-shadow: 0px 2px 20px black;
+					pointer-events: auto;
 				}
 
 				partyplayerhud{
@@ -549,6 +560,18 @@ window.PartyHUD = function(meeps){
 
 				partyplayerhud[type='after'] partyscore{ padding-right:50px; }
 				partyplayerhud[type='after'] partymeephead{ right:-10px; }
+
+				partyhud button{
+					font: inherit;
+					font-size: 100px;
+					background: rgba(0,0,0,0.1);
+					border: none;
+					padding: 10px 50px;
+					margin: 30px 10px;
+					color: white;
+					border-radius: 30px;
+					box-shadow: 0px 5px 5px black;
+				}
 			</style>
 			`);
 	}
@@ -556,29 +579,50 @@ window.PartyHUD = function(meeps){
 	let self = this;
 	self.$el = $('<partyhud>');
 
+	let $banner = $('<partyhudbanner>').appendTo(self.$el);
+
+	function setBanner(b){
+		if(b) $banner.css({top:'100%'}).animate({top:'25%'}).animate({top:'30%'});
+		else $banner.animate({top:'35%'}).animate({top:'-20%'});
+	}
+
+	self.initPlayerCount = function(callback){
+		setBanner(true);
+		for(var p=2; p<=6; p++) $('<button>').attr('count',p).appendTo($banner).text(p).click(function(){
+			let count = $(this).attr('count');
+			callback(count);
+			setBanner(false);
+		});
+	}
+
 	for(var i=0; i<3; i++) $('<partyhudframe>').appendTo(self.$el);
 
 	let $baseline = $('<partyhudbaseline>').appendTo(self.$el);
 	let $stream = $('<partyhudstream>').appendTo($baseline);
-	let $timer;
+	
 	let huds = [];
-	let iTimer = Math.floor(meeps.length/2);
+	
 	let type = 'before'
-	for(var i=0; i<meeps.length; i++){
 
-		if(i==iTimer){
-			$timer = $(`
-				<partyhudtimer>60</partyhudtimer>
-			`).appendTo($stream);
-			type = 'after'
+	let $left = $('<div style="display:inline-block;">').appendTo($stream);
+	let $timer = $(`<partyhudtimer>60</partyhudtimer>`).appendTo($stream);
+	let $right = $('<div style="display:inline-block;">').appendTo($stream);
+
+	self.setPlayers = function(meeps){
+
+		let iTimer = Math.floor(meeps.length/2);
+
+		for(var i=0; i<meeps.length; i++){
+			if(i==iTimer) type = 'after';
+			let hud = new PartyPlayerHUD(i,meeps[i],type);
+			hud.$el.appendTo((i<iTimer)?$left:$right);
+			huds[i] = hud;
 		}
-
-		let hud = new PartyPlayerHUD(i,meeps[i],type);
-		hud.$el.appendTo($stream);
-		huds[i] = hud;
 	}
 
-	self.redraw = function(sec){
+	if(meeps) self.setPlayers(meeps);
+	
+	self.redraw = function(sec=0){
 		 $timer.text(sec);
 		for(var h in huds) huds[h].redraw();
 	}

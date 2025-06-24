@@ -78,19 +78,22 @@ window.PumpPopGame = function(){
 
 		$("head").append(`
 			<style>
-				pumpgame{
-					 width: ${W*3}px;
-					 height: ${H}px;
-					 background: linear-gradient(black, purple);
-					 position: absolute;
-					 left: 0px;
-					 top: 0px;
-					 display: block;
-					 transform-origin: top left;
+				@import url('https://fonts.googleapis.com/css2?family=Playwrite+DK+Loopet:wght@100..400&display=swap');
 
-					 background: url(./proto/img/party/bg-carnival.webp);
-					 background-size: 100%;
-					 background-position: center 90%;
+				pumpgame{
+					
+					width: ${W*3}px;
+					height: ${H}px;
+					background: linear-gradient(black, purple);
+					position: absolute;
+					left: 0px;
+					top: 0px;
+					display: block;
+					transform-origin: top left;
+
+					background: url(./proto/img/party/bg-carnival.webp);
+					background-size: 100%;
+					background-position: center 90%;
 				}
 
 				pumpgame:before{
