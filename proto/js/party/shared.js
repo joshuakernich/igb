@@ -80,6 +80,7 @@ window.PartyMeep = function(n){
 					width: 100px;
 					box-sizing: border-box;
 					line-height: 0px;
+					transform-origin: bottom center;
 				}
 
 				partymeephat{
@@ -181,11 +182,14 @@ window.PartyMeep = function(n){
 		</partymeep>
 	`);
 
+	self.$head = self.$el.find('partymeephead');
 	self.$handLeft = self.$el.find('partymeephand').first();
 	self.$handRight = self.$el.find('partymeephand').last();
+	self.$shadow = self.$el.find('partymeepshadow');
+	self.$body = self.$el.find('partymeepbody');
+	self.$legs = self.$el.find('partymeeplegs');
 
 	self.setHeight = function(h){
-
 		self.$el.find('partymeepavatar').height(h);
 	}
 

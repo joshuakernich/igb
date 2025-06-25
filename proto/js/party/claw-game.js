@@ -34,13 +34,16 @@ window.ClawGame = function(){
 
 		self.grab = function(meep) {
 			self.meep = meep;
-			self.meep.grabbed = true;
+			meep.setClaw(true);
 		}
 	}
 
 	let Meep = function(n,sx,sy){
 		let self = this;
 		self.$el = $('<clawmeep>');
+
+		let isClaw = false;
+
 		let meep = new PartyMeep(n);
 		meep.setHeight(350);
 		meep.$el.appendTo(self.$el);
@@ -51,14 +54,38 @@ window.ClawGame = function(){
 		self.x = 0;
 		self.y = 0.5;
 
-		
-
 		self.redraw = function(){
 			self.$el.css({
 				top: self.y * sy + 'px',
 				left: self.x * sx + 'px',
 			})
+
+			if(!isClaw && self.r){
+
+				let yaw = getYaw(self.r);
+				meep.$head.css({
+					transform: `rotate(${yaw}deg)`
+				})
+			}
 		}
+
+		self.setClaw = function(b){
+
+			isClaw = b;
+
+			meep.$body.hide();
+			meep.$shadow.hide();
+			meep.$legs.hide();
+			meep.$handLeft.css({top:0.3*sy});
+			meep.$handRight.css({top:0.3*sy});
+		}
+
+		function getYaw(q)
+	    {
+	        let x2 = q.X * q.X;
+	        let y2 = q.Y * q.Y;
+	        return Math.atan2(2 * q.Y * q.W - 2 * q.Z * q.X, 1 - 2 * y2 - 2 * x2);
+	    }
 	}
 
 	const W = 1600;
@@ -192,34 +219,43 @@ window.ClawGame = function(){
 			meeps[i].redraw();
 		}
 
-		
 		claw.$el.appendTo($anchor);
 
 		initClaw();
 	}
 
+	let nClawPlayer = undefined;
+	let isPlayMode = false;
+
 	function initClaw(){
-		let nClaw = Math.floor( Math.random()*meeps.length );
-		nClaw = 0;
+		nClawPlayer = Math.floor( Math.random()*meeps.length );
+		nClawPlayer = 0;
 		$(claw).delay(200).animate({
-			x:meeps[nClaw].x,
+			x:meeps[nClawPlayer].x,
 		}).delay(200).animate({
 			h:1.25,
 		},{
 			duration: 800,
 			complete: function(){
-				claw.grab(meeps[nClaw]);
+				claw.grab(meeps[nClawPlayer]);
 			}
 		}).delay(200).animate({
 			h:0.2,
-		}).delay(200).animate({
-			x:0,
+		},{
+			complete:initPlay
 		})
+	}
+
+	function initPlay(){
+		isPlayMode = true;
 	}
 
 	initGame(6);
 
 	function step(){
+		if(isPlayMode){
+			claw.x = (claw.x * 10 + meeps[nClawPlayer].tx )/11;
+		}
 		claw.redraw();
 		resize();
 	}
@@ -233,4 +269,12 @@ window.ClawGame = function(){
 
 	const FPS = 20;
 	let interval = setInterval(step,1000/FPS);
+
+	self.setPlayers = function(p){
+		for(var m in meeps){
+			meeps[m].tx = p[m].x;
+			meeps[m].ty = p[m].y;
+			meeps[m].r =  {W:p[m].rW, X:p[m].rX, Y:p[m].rY, Z:p[m].rZ};
+		}
+	}
 }
