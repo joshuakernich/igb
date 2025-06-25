@@ -252,9 +252,14 @@ window.ClawGame = function(){
 
 	initGame(6);
 
+	const CLAWSPEED = 0.03;
 	function step(){
 		if(isPlayMode){
-			claw.x = (claw.x * 10 + meeps[nClawPlayer].tx )/11;
+			let dx = claw.x - meeps[nClawPlayer].tx;
+			if(Math.abs(dx)>0.04){
+				let dir = dx>0?-1:1;
+				claw.x += CLAWSPEED * dir;
+			}
 		}
 		claw.redraw();
 		resize();
