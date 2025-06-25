@@ -329,7 +329,7 @@ window.FollicleFrenzyGame = function(){
 		meeps[i].$el.appendTo( $walls[PLAYER[i].wall] );
 	}
 
-	let hud = new PartyHUD(meeps);
+	let hud = new PartyHUD();
 	hud.$el.appendTo($game);
 
 	let scale = 1;

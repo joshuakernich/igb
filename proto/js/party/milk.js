@@ -538,19 +538,15 @@ window.MilkGame = function(){
 	let $bg = $('<milkbg>').appendTo($game);
 	let sea = new MilkSea();
 
-	let $header = $('<milkheader>').appendTo(self.$el).text('Milkers');
+	//let $header = $('<milkheader>').appendTo(self.$el).text('Milkers');
 	const COLORS = ['red','blue','green','purple','orange','yellow'];
 
 	let meeps = [];
-	for(var i=0; i<PLAYERCOUNT; i++){
-		meeps[i] = new PartyMeep(i,COLORS[i]);
-		meeps[i].$el.appendTo($game).css({bottom:'0px'});
-		meeps[i].fx = meeps[i].fy = meeps[i].fz = 0.5;
-		meeps[i].wall = 1;
-	}
+	
 
-	let hud = new PartyHUD(meeps);
-	hud.$el.appendTo($game)
+	let hud = new PartyHUD();
+	hud.$el.appendTo($game);
+	hud.initPlayerCount(initGame);
 
 	let udders = [];
 	for(var i=0; i<3; i++){
@@ -630,23 +626,29 @@ window.MilkGame = function(){
 					udders[u].teats[t].isHeldBy.score += udders[u].teats[t].milking/1000;
 					udders[u].teats[t].isHeldBy = undefined;
 				}
+
+				//udders[u].$el.css({'top':'-'+H+'px'})
 			}	
 		}
 
-		
 
-		let timeNow = new Date().getTime();
-		let timeElapsed = timeNow-timeStart;
-		if(timeStart==0) timeElapsed = 0;
-		let sec = SECONDS - Math.floor(timeElapsed/1000);
+		sea.redraw();
+	}
 
-		if(sec<=0){
-			sec = 0;
-			if(!isComplete) doOutro();
+	function initGame(PLAYERCOUNT){
+		for(var i=0; i<PLAYERCOUNT; i++){
+			meeps[i] = new PartyMeep(i,COLORS[i]);
+			meeps[i].$el.appendTo($game).css({bottom:'0px'});
+			meeps[i].fx = meeps[i].fy = meeps[i].fz = 0.5;
+			meeps[i].wall = 1;
 		}
 
-		hud.redraw(sec);
-		sea.redraw();
+		hud.initTimer(60,finiGame);
+		isMilkingLive = true;
+	}
+
+	function finiGame() {
+		doOutro();
 	}
 
 	function resize(){
@@ -655,17 +657,6 @@ window.MilkGame = function(){
 		$game.css('transform','scale('+scale+')');
 	}
 
-	function doIntro(){
-		resize();
-		for(var u in udders) udders[u].$el.css({'top':'-'+H+'px'}).delay(5000+i*100).animate({'top':'0px'},1000).animate({'top':'-20px'}).animate({'top':'0px'},1000);
-		$header.delay(4000).animate({top:'52%'}).animate({top:'-20%'});
-		//hud.$el.css({bottom:'-200px'}).delay(5000).animate({bottom:'0px'});
-
-		
-		setInterval(step,1000/FPS);
-		setTimeout( begin, 6000 );
-
-	}
 
 
 	let isComplete = false;
@@ -674,6 +665,10 @@ window.MilkGame = function(){
 		isComplete = true;
 		for(var u in udders) udders[u].$el.animate({'top':'-'+H+'px'});
 		
+		setTimeout(doOutroComplete,1000);
+
+		return;
+		/*
 		$header.text('Time Up!').animate({top:'30%'}).delay(2500).animate({top:'-30%'});
 
 		let $score = $('<milkscoreboard>').appendTo(self.$el).css({top:'120%'}).delay(3000).animate({top:'50%'});
@@ -696,16 +691,13 @@ window.MilkGame = function(){
 		}
 
 		audio.stop('music');
-		setTimeout(window.doPartyGameComplete,6000);
+		setTimeout(window.doPartyGameComplete,6000);*/
 	}
 
-	let timeStart = 0;
-	function begin(){
-		timeStart = new Date().getTime();
-		isMilkingLive = true;
+	function doOutroComplete(){
+		audio.stop('music');
+		window.doPartyGameComplete();
 	}
-
-	doIntro();
 	
 
 	/*$(document).on('mousemove',function(e){
@@ -737,5 +729,6 @@ window.MilkGame = function(){
 		}
 	}
 
+	setInterval(step,1000/FPS);
 	audio.play('music');
 }

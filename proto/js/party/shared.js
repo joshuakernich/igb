@@ -2,7 +2,7 @@
 window.PartyMeep = function(n){
 
 	const W = 100;
-	const H = 500;
+	const H = 350;
 
 	if(!PartyMeep.didInit){
 		PartyMeep.didInit = true;
@@ -417,6 +417,9 @@ window.PartyHUD = function(meeps){
 
 		$("head").append(`
 			<style>
+
+				@import url('https://fonts.googleapis.com/css2?family=Paytone+One&display=swap');
+
 				partyhud{
 					position: absolute;
 					top: 0px;
@@ -429,6 +432,7 @@ window.PartyHUD = function(meeps){
 
 					pointer-events: none;
 					
+  					font-family: "Paytone One";
 				}
 
 				partyhudbaseline{
@@ -495,9 +499,21 @@ window.PartyHUD = function(meeps){
 					top: 110%;
 					box-shadow: 0px 2px 20px black;
 					pointer-events: auto;
-					font-size: 100px;
+					font-size: 60px;
 					color: white;
-					line-height: 150px;
+					line-height: 70px;
+					padding: 40px 0px;
+					text-shadow: 0px -3px black;
+				}
+
+				partyhudbanner spacer{
+					height: 40px;
+					display: block;
+				}
+
+				partyhudbanner p{
+					margin: 0px;
+					padding: 0px;
 				}
 
 				partyplayerhud{
@@ -513,8 +529,6 @@ window.PartyHUD = function(meeps){
 
 					margin: 0px 10px;
 				}
-
-				
 
 				partyhudtimer{
 					width: 150px;
@@ -568,12 +582,14 @@ window.PartyHUD = function(meeps){
 					font: inherit;
 					font-size: 100px;
 					background: rgba(0,0,0,0.1);
+					background: rgba(255,255,255,0.2);
 					border: none;
-					padding: 10px 50px;
-					margin: 30px 10px;
+					padding: 20px 50px 40px;
+					margin: 0px 10px;
 					color: white;
 					border-radius: 30px;
-					box-shadow: 0px 5px 5px black;
+					box-shadow: 0px 5px rgba(0,0,0,0.4);
+					text-shadow: 0px -3px black;
 				}
 			</style>
 			`);
@@ -586,13 +602,15 @@ window.PartyHUD = function(meeps){
 
 	function setBanner(b){
 		if(b) $banner.css({top:'100%'}).animate({top:'25%'}).animate({top:'30%'});
-		else $banner.animate({top:'35%'}).animate({top:'-20%'});
+		else $banner.animate({top:'35%'}).animate({top:'-40%'});
 	}
 
 	self.initPlayerCount = function(callback){
 		setBanner(true);
+		$('<p>').text('How big is your squad?').appendTo($banner);
+		$('<spacer>').appendTo($banner);
 		for(var p=2; p<=6; p++) $('<button>').attr('count',p).appendTo($banner).text(p).click(function(){
-			let count = $(this).attr('count');
+			let count = parseInt( $(this).attr('count') );
 			callback(count);
 			setBanner(false);
 		});
