@@ -84,9 +84,10 @@ window.ClawGame = function(){
 			}
 
 			if(isClaw){
-				self.history.push(self.ty);
+				self.ty = Math.max( -0.4, Math.min( self.ty, 0.6 )); // very reasonable upper and lower limits
+				self.history.push( self.ty );
 
-				while(self.history.length>20*5) self.history.shift();
+				while(self.history.length>20*10) self.history.shift();
 
 				let range = self.history.sort();
 
@@ -104,6 +105,13 @@ window.ClawGame = function(){
 				// add 1 here to max all values positive
 				self.max = max/count;
 				self.min = min/count;
+
+				let dif = self.max - self.min;
+				if(dif<0.05){
+					//force them apart slightly
+					self.min -= 0.03;
+					self.max += 0.03;
+				}
 			}
 		}
 
