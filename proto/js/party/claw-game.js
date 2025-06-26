@@ -39,6 +39,11 @@ window.ClawGame = function(){
 	}
 
 	let Meep = function(n,sx,sy){
+
+		// how many entries to track for min and max
+		// 20 is one seconds worth
+		const SAMPLING = 20;
+
 		let self = this;
 		self.$el = $('<clawmeep>');
 
@@ -51,22 +56,59 @@ window.ClawGame = function(){
 			bottom: '-350px',
 		})
 
+		//actual coords
 		self.x = 0;
 		self.y = 0.5;
 
+		// target coords
+		self.ty = 0;
+		self.tx = 0;
+
+		// history of y positions
+		self.history = [];
+		self.min = 0;
+		self.max = 0;
+
 		self.redraw = function(){
+
 			self.$el.css({
 				top: self.y * sy + 'px',
 				left: self.x * sx + 'px',
 			})
 
-			if(!isClaw && self.r){
-
+			if(self.r){
 				let yaw = getYaw(self.r);
 				meep.$head.css({
 					transform: `rotate(${yaw}deg)`
 				})
 			}
+
+			if(isClaw){
+				self.history.push(self.ty);
+
+				while(self.history.length>20*5) self.history.shift();
+
+				let range = self.history.sort();
+
+				let min = 0;
+				let max = 0;
+
+				let iEnd = self.history.length-1;
+				let count = Math.min(SAMPLING,self.history.length);
+
+				for(var i=0; i<count; i++){
+					min += self.history[i];
+					max += self.history[iEnd-i];
+				}
+
+				// add 1 here to max all values positive
+				self.max = max/count;
+				self.min = min/count;
+			}
+		}
+
+		self.getNormalisedY = function(){
+			return (self.ty - self.min) / (self.max - self.min);
 		}
 
 		self.setClaw = function(b){
@@ -260,6 +302,15 @@ window.ClawGame = function(){
 				let dir = dx>0?-1:1;
 				claw.x += CLAWSPEED * dir;
 			}
+
+			// 1- because we're going down. not up.
+			let yPos = 1-meeps[nClawPlayer].getNormalisedY();
+
+			
+			let hTarget = 0.2 + 0.7 * Math.max( 0, Math.min( yPos, 1 ));
+			
+			if(claw.h < (hTarget-0.06) ) claw.h += 0.025;
+			else if(claw.h > (hTarget+0.06) ) claw.h -= 0.025;
 		}
 		claw.redraw();
 		resize();
