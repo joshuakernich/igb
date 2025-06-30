@@ -52,11 +52,10 @@ window.MilkMeep = function(n){
 }
 
 
-window.MilkUdder = function(){
+window.MilkUdder = function(STAGE){
 	const W = 700;
 	const H = 200;
 	const COUNT = 2;
-
 
 	let self = this;
 	self.$el = $('<milkudder>').css({
@@ -69,6 +68,25 @@ window.MilkUdder = function(){
 		self.teats[i] = new MilkTeat();
 		self.teats[i].x = (-W/4) + (W/2)*(i/(COUNT-1));
 		self.teats[i].$el.appendTo(self.$el).css('left',self.teats[i].x);
+	}
+
+	self.xAnchor = 0;
+	self.xOffset = 0;
+
+	let isAnimating = false;
+
+	self.step = function(){
+
+		if(!isAnimating){
+			self.xOffset = -400 + Math.random() * 800;
+			$(self).animate({x:self.xAnchor + self.xOffset},{
+				duration:1500 + Math.random() * 1000,
+				complete:function(){ isAnimating=false; },
+			});
+			isAnimating = true;
+		}
+
+		self.$el.css({left:self.x+'px'});
 	}
 }
 
@@ -158,6 +176,9 @@ window.MilkTeat = function(){
 		if(tugging <= 0 && tugDelta > 0){
 			audio.play('squirt',true);
 			audio.play('pour',true);
+		} else if( self.purging ){
+			audio.play('squirt',true);
+			audio.play('pour',true);
 		}
 
 		if(tugDelta>0){
@@ -169,7 +190,13 @@ window.MilkTeat = function(){
 		if(tugging<0) tugging = 0;
 		if(tugging>100) tugging = 100;
 
+		if(!self.purging && self.throbbing > 0) self.purging = true;
+	
+		if(self.purging) tugging = 100;
+
 		self.capacity -= tugging/100;
+
+		if(self.purging && self.capacity<=0) self.purging = false;
 
 		if(self.capacity<0) self.capacity = 0;
 		if(self.capacity<10) tugging = 0;
@@ -191,10 +218,11 @@ window.MilkTeat = function(){
 
 		self.milking = tugging;
 
-		if(self.capacity<100 && bGrowing) self.capacity += 0.05;
+		if(self.capacity<100 && bGrowing) self.capacity += 0.1;
 
 		if(self.capacity>=100) self.throbbing ++;
 		else self.throbbing = 0;
+
 
 		$alert.attr('active',self.capacity>90?'true':'false');
 	}
@@ -551,7 +579,7 @@ window.MilkGame = function(){
 	let udders = [];
 	for(var i=0; i<3; i++){
 		udders[i] = new MilkUdder();
-		udders[i].x = W*(i+.5);
+		udders[i].x = udders[i].xAnchor = W*(i+.5);
 		udders[i].$el.appendTo($game).css({left:udders[i].x });
 	}
 
@@ -561,8 +589,11 @@ window.MilkGame = function(){
 
 	let isMilkingLive = false;
 	let scale = 1;
+	let nStep = 0;
 	function step(){
 		resize();
+
+		nStep++;
 
 		for(var m in meeps ){
 
@@ -627,7 +658,10 @@ window.MilkGame = function(){
 					udders[u].teats[t].isHeldBy = undefined;
 				}
 
+				udders[u].step();
+
 				//udders[u].$el.css({'top':'-'+H+'px'})
+				//udders[u].$el.css({'left':Math.cos(nStep*0.01)*W});
 			}	
 		}
 
@@ -666,58 +700,18 @@ window.MilkGame = function(){
 		for(var u in udders) udders[u].$el.animate({'top':'-'+H+'px'});
 		
 		setTimeout(doOutroComplete,1000);
-
-		return;
-		/*
-		$header.text('Time Up!').animate({top:'30%'}).delay(2500).animate({top:'-30%'});
-
-		let $score = $('<milkscoreboard>').appendTo(self.$el).css({top:'120%'}).delay(3000).animate({top:'50%'});
-
-		for(var m in meeps){
-			meeps[m].betterThanX = 0;
-			for(var n in meeps){
-				if(meeps[m].score > meeps[n].score) meeps[m].betterThanX ++;
-			}
-		}
-
-		for(var m in meeps){
-			let $scoreline = $(`<milkmeepscoreboard>
-					<milkscorename style='color:${COLORS[m]}'>${COLORS[m]} PLAYER</milkscorename>
-					<milkscorescore>${Math.floor(meeps[m].score)}</milkscorescore>
-					<milkscorescore>+ ${(meeps[m].betterThanX+1)*10}</milkscorescore>
-				</milkmeepscoreboard>`).appendTo($score);
-
-			$scoreline.find('milkscorescore:last-of-type').css({opacity:0,left:-20}).delay(4000 + m*300).animate({opacity:1,left:10},300).animate({opacity:1,left:0},200);
-		}
-
-		audio.stop('music');
-		setTimeout(window.doPartyGameComplete,6000);*/
 	}
 
 	function doOutroComplete(){
 		audio.stop('music');
 		window.doPartyGameComplete();
 	}
-	
-
-	/*$(document).on('mousemove',function(e){
-		let o = $game.offset();
-		let x = (e.pageX - o.left)/scale/W;
-		let y = (e.pageY - o.top)/scale/H;
-		
-		if(x<1) meeps[0].fz = x;
-		else if(x>2) meeps[0].fz = (1-x%1);
-		else meeps[0].fx = x%1;
-
-		meeps[0].fy = y;
-	})*/
 
 	$(document).on('click',function(e){
 		let o = $game.offset();
 		let x = (e.pageX - o.left)/scale/W;
 		let wall = Math.floor(x);
 		meeps[0].wall = wall;
-
 		audio.play('music');
 	});
 
@@ -726,6 +720,7 @@ window.MilkGame = function(){
 			meeps[m].fx = p[m].px;
 			meeps[m].fz = p[m].pz;
 			meeps[m].fy = p[m].py;
+			meeps[m].wall = p[m].wall;
 		}
 	}
 

@@ -183,6 +183,7 @@
 						X:-0.9 + Math.random()*1.8,
 						Z:-0.9 + Math.random()*1.8,
 						Y:-0.3 + Math.random()*0.6,
+						wall:1,
 					}
 
 					if(players[i] == undefined) players[i] = p;
@@ -228,6 +229,12 @@
 
 				players[nDebugPlayer].X = x;
 				players[nDebugPlayer].Z = y;
+			})
+
+			$('gameboxside').on('click',function(e){
+				let iWall = $('gameboxside').index(this);
+				console.log(iWall);
+				players[nDebugPlayer].wall = iWall;
 			})
 
 			$('[btn=move]').click(doRandomMove);
@@ -552,10 +559,6 @@
 			
 		}
 
-		
-
-		
-
 		player{
 			width: 0vw;
 			height: 0vw;
@@ -711,13 +714,13 @@
 		}
 
 		gameboxside:nth-of-type(1){
-			transform: rotateY(-90deg);
+			transform: rotateY(-180deg);
 			 transform-style: preserve-3d;
 			 transform-origin: left center;
 		}
 
 		gameboxside:nth-of-type(3){
-			transform: rotateY(90deg);
+			transform: rotateY(180deg);
 			 transform-style: preserve-3d;
 			 transform-origin: right center;
 
@@ -730,7 +733,6 @@
 			 height: 160px;
 			 top: auto;
 			 bottom: 0px;
-
 		}
 
 		gameboxside:hover{
