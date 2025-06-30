@@ -8,8 +8,6 @@ window.CoinChaosGame = function(){
 
 		self.x = self.y = 0;
 
-		
-		
 		self.redraw = function(){
 			self.$el.css({
 				left: self.x * scale,
@@ -343,7 +341,7 @@ window.CoinChaosGame = function(){
 			}
 		}
 
-		hud.initTimer(60,finiGame);
+		hud.initTimer(30,finiGame);
 	}
 
 	function finiGame(){

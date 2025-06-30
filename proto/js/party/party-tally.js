@@ -94,7 +94,7 @@ window.PartyTally = function(players){
 					display: inline-block;
 					position: absolute;
 					left: 100px;
-					top: -40px;
+					top: -80px;
 
 					transform: scale(0.5);
 					box-shadow: 0px 2px 10px black;

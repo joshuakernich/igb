@@ -145,9 +145,14 @@ PartyCube3D = function(transform,color,surfaces){
 BoxPartyCube = function(transform,game){
 
 	let self = this;
+
 	self.game = game;
 	self.transform = transform;
+	self.transformCache = {};
+	for(var t in self.transform) self.transformCache[t] = self.transform[t];
 	self.$el = $('<boxpartycube>');
+	self.openX = 0;
+	self.openY = 0;
 
 	let shadow = $('<boxpartyshadow>').appendTo(self.$el).css({
 		width: transform.w + 'px',
@@ -177,8 +182,9 @@ BoxPartyCube = function(transform,game){
 	let $face = $(`
 		<boxface>
 			<boxeye></boxeye>
-			<boxeye></boxeye><br>
+			<boxeye></boxeye>
 			<boxmouth></boxmouth>
+
 		</boxface>
 		`).appendTo(box.$el.find('.partycube3D-front partycube3Dsurface'));
 
@@ -193,11 +199,27 @@ BoxPartyCube = function(transform,game){
 			rotateZ(${transform.rz}deg)`
 		});
 
+		self.$el.find('boxmouth').css({
+			top: 100 - 100*self.openY + '%',
+			left: 50 - 50*self.openX + '%',
+			right: 50 - 50*self.openX + '%',
+		})
+
+		self.$el.find('boxeye').eq(0).css({
+			top: 40 - self.openY/2 * 40 + '%',
+			left: 20 - self.openX * 20 + '%',
+		})
+
+		self.$el.find('boxeye').eq(1).css({
+			top: 40 - self.openY/2 * 40 + '%',
+			right: 20 - self.openX * 20 + '%',
+		})
+
 		box.redraw(); 
 	}
 }
 
-BoxPartyScene3D = function(queue, callbackEnterBox, callbackExitBox){
+BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbackExitBox){
     
 	let audio = new AudioContext();
     audio.add('rumble','./proto/audio/party/sfx-rumble.mp3',1);
@@ -205,7 +227,9 @@ BoxPartyScene3D = function(queue, callbackEnterBox, callbackExitBox){
 
     const W = 1600;
     const H = 1000;
-    const TRACK = W*10;
+    const PERSTOP = W*2;
+    const TRACK = PERSTOP*queue.length;
+
     if( !BoxPartyScene3D.isStyled) $("head").append(`
         <style>
             partyScene3D{
@@ -240,6 +264,7 @@ BoxPartyScene3D = function(queue, callbackEnterBox, callbackExitBox){
             	bottom: 0px;
             	width: 0px;
             	left: 0px;
+
             	position: absolute;
             }
 
@@ -254,6 +279,7 @@ BoxPartyScene3D = function(queue, callbackEnterBox, callbackExitBox){
                 display: block;
 
 				transform-style:preserve-3d;
+				display: none;
             }
            
            partyScene3D partycube3DSurface:after{
@@ -306,32 +332,55 @@ BoxPartyScene3D = function(queue, callbackEnterBox, callbackExitBox){
             }
 
             boxeye{
-            	display: inline-block;
+            	display: block;
             	width: 15%;
             	height: 10%;
-            	margin: 40% 15% 10%;
+            	
             	background: white;
             	border-radius: 0px 0px 100% 100%;
             	box-shadow: 0px 0px 40px 5px black;
+
+            	position: absolute;
+            	top: 15%;
+
 
             }
 
             boxeye:first-of-type{
             	transform: rotate(15deg);
+            	left: 15%;
             }
 
             boxeye:last-of-type{
             	transform: rotate(-15deg);
+            	right: 15%;
             }
 
             boxmouth{
-            	display: inline-block;
-            	width: 20%;
-            	height: 10%;
+            	display: block;
             	background: white;
-            	display: none;
-            	border-radius: 0px 0px 100% 100%;
+            	position: absolute;
+            	left: 45%;
+            	right: 45%;
+            	top: 100%;
+            	bottom: 0px;
+            	box-shadow: 0px 0px 40px 10px white;
             }
+
+            partyPlane3D svg{
+            
+            	position: absolute;
+            	bottom: 0px;
+            	transform-origin: bottom center;
+            	opacity: 0.2;
+            	
+            }
+
+            partyPlane3D path{
+            	
+            }
+
+           
         </style>
     `);
 
@@ -348,23 +397,44 @@ BoxPartyScene3D = function(queue, callbackEnterBox, callbackExitBox){
 
     let $world = $('<partyWorld3D>').appendTo(self.$el);
     let $plane = $('<partyPlane3D>').appendTo($world);
+    let $trackSVG = $(`
+    	<svg vector-effect="non-scaling-stroke" preserveAspectRatio=none width=${W*4/queue.length}px height=${PERSTOP}px viewBox='${-W*2} 0 ${W*4} ${TRACK}'>
+    		<path stroke-linejoin="round" vector-effect="non-scaling-stroke" stroke='white' stroke-width=${W/30} fill='none' d='M${-W/2},0 L${W/2},${TRACK}'/>
+    	</svg>`).appendTo($plane).css({
+    		'transform':'translate(-50%) scale('+queue.length+')'
+    	})
 
+
+
+    let stops = [];
     let boxes = [];
+    let d = '';
     for(var i=0; i<queue.length; i++){
-
-    	let spacingX = (W/2)/(queue[i].length-1);
+    	let spacingX = W/4;
     	let spacingRZ = 50/(queue[i].length-1);
+
+    	let xOffset = (W/4 + Math.random()*W/4) * (i%2?1:-1);
+    	let yOffset = W/2 + i*PERSTOP;
+    	if(i==0){
+    		xOffset = 0;
+    		d = d + ' M'+xOffset + ',' + (TRACK);
+    	}
+    	d = d + ' L'+xOffset + ',' + (TRACK-yOffset+W/2);
+    	d = d + ' L'+xOffset + ',' + (TRACK-yOffset-W/2);
+
+    	stops[i] = {x:xOffset,y:yOffset};
 
 		for(var n=0; n<queue[i].length; n++){
 
 			let transform = {
 				w:W/6,h:W/6,d:W/6,
-				x:-W/4 + spacingX * n,
-				y:W/2 + i*(W*2),
-				altitude:H/4 + Math.random()*H/2,
+				x:xOffset - (spacingX * (queue[i].length-1)/2) + spacingX * n,
+				y:yOffset + (n%2)*spacingX,
+				altitude:H/5 + Math.random() * H/12,
 				rx:0,
 				ry:0,
 				rz:-25 + n*spacingRZ,
+				open: 0,
 			}
 
     		let box = new BoxPartyCube(transform,queue[i][n]);
@@ -379,6 +449,8 @@ BoxPartyScene3D = function(queue, callbackEnterBox, callbackExitBox){
    			box.$el.attr('n',nBox);
    		}
     }
+
+    $trackSVG.find('path').attr('d',d);
 
     let meeps = [];
     for(var i=0; i<6; i++){
@@ -408,6 +480,7 @@ BoxPartyScene3D = function(queue, callbackEnterBox, callbackExitBox){
 
     		
     		boxes[b].redraw();
+    		//$trackSVG.html( $trackSVG.html() );
     		
     	}
     }
@@ -425,7 +498,15 @@ BoxPartyScene3D = function(queue, callbackEnterBox, callbackExitBox){
     	nSelect = nTry;
     	boxes[nSelect].isSpinning = false;
 
-    	$(boxes[nSelect].transform).animate({
+    	$(boxes[nSelect]).animate({
+    		openX: 0.1,
+    		openY: 0.4,
+    	},500).animate({
+    		openX:1,
+    		openY:1,
+    	},2500)
+
+    	$(boxes[nSelect].transform).delay(500).animate({
     		rx:0,
     		ry:0,
     		rz:0,
@@ -444,9 +525,11 @@ BoxPartyScene3D = function(queue, callbackEnterBox, callbackExitBox){
     		}
     	})
 
-    	boxes[nSelect].$el.find('.partycube3D-front partycube3Dsurface').animate({
+    	setTimeout(callbackShowOverlay,2000);
+
+    	/*boxes[nSelect].$el.find('.partycube3D-front partycube3Dsurface').animate({
     		opacity:0
-    	},3000);
+    	},3000);*/
     	
     	audio.play('rumble');
     }
@@ -455,8 +538,14 @@ BoxPartyScene3D = function(queue, callbackEnterBox, callbackExitBox){
 
 	self.doMoveForward = function(){
 		iLevel++;
+
+		let stop = stops[iLevel];
+
 		audio.play('rumble',true);
-		$plane.animate({bottom:-iLevel*(W*2)+'px'},{
+		$plane.animate({
+			left: -stop.x + 'px',
+			bottom:-stop.y+W/2+'px',
+		},{
 			duration:1500,
 			complete:function(){
 				audio.stop('rumble');
@@ -473,21 +562,17 @@ BoxPartyScene3D = function(queue, callbackEnterBox, callbackExitBox){
 		}
 	}
 
-	setTimeout(self.doMoveForward,3000);
+	//setInterval(self.doMoveForward,3000);
 
 	self.doCompleteBox = function(){
 
-		$(boxes[nSelect].transform).animate({
-    		rx:0,
-    		ry:0,
-    		rz:0,
-    		x:0,
-    		y:iLevel*W,
-    		altitude:H/2,
-    		w:0,
-    		h:0,
-    		d:0,
-    	},{
+		boxes[nSelect].isComplete = true;
+
+		boxes[nSelect].transformCache.w = 0;
+		boxes[nSelect].transformCache.h = 0;
+		boxes[nSelect].transformCache.d = 0;
+
+		$(boxes[nSelect].transform).animate(boxes[nSelect].transformCache,{
     		duration:1500,
     		complete:function(){
     			boxes[nSelect].$el.remove();
@@ -501,10 +586,16 @@ BoxPartyScene3D = function(queue, callbackEnterBox, callbackExitBox){
 
 		for(var m in meeps ){
 			meeps[m].$el.css({
-				'bottom':`${ H/4 + iLevel*(W*2) + p[m].z*H/8 }px`,
-				'left':`${ p[m].x*W/8 }px`,
+				'left':`${ stops[iLevel].x + p[m].x*W/8 }px`,
+				'bottom':`${ stops[iLevel].y + p[m].z*H/8 - W/4 }px`,
 			});
 		}
+	}
+
+	self.getLevelComplete = function(){
+		let isLevelComplete = true;
+		for(let b in boxes[iLevel]) if(!boxes[iLevel].isComplete) isLevelComplete = false;
+		return isLevelComplete;
 	}
 }
 
@@ -554,6 +645,11 @@ BoxPartyGame = function(){
 	const QUEUE = [
 		[ GAMES['Coin Chaos'], GAMES['Pump Pop'] ],
 		[ GAMES['Milkers'], GAMES['Follicle Frenzy'], GAMES['Cookie Cutter'] ],
+		[ GAMES['Death Maze'], GAMES['Headers'] ],
+		[ GAMES['Death Maze'], GAMES['Headers'] ],
+		[ GAMES['Death Maze'], GAMES['Headers'] ],
+		[ GAMES['Death Maze'], GAMES['Headers'] ],
+		[ GAMES['Death Maze'], GAMES['Headers'] ],
 		[ GAMES['Death Maze'], GAMES['Headers'] ],
 	]
 
@@ -608,6 +704,15 @@ BoxPartyGame = function(){
         		left: ${W*GRID}px;
         		pointer-events: none;
         	}
+
+        	boxpartyoverlay{
+        		position: absolute;
+        		inset: 0px;
+        		background: white;
+        		display: block;
+        		opacity: 0;
+        		pointer-events: none;
+        	}
         <style`);
 
  	let audio = new AudioContext();
@@ -620,10 +725,13 @@ BoxPartyGame = function(){
 	let $game = $('<boxpartygame>').appendTo(self.$el);
 	$('<boxpartymountains>').appendTo($game);
 	
-	let $minigame = $('<boxpartyminigame>').appendTo(self.$el);
+	
 
-	let scene = new BoxPartyScene3D(QUEUE, doLaunchGame, doExitGame);
+	let scene = new BoxPartyScene3D(QUEUE, doShowOverlay, doLaunchGame, doExitGame);
 	scene.$el.appendTo($game);
+
+	let $minigame = $('<boxpartyminigame>').appendTo(self.$el);
+	let $overlay = $('<boxpartyoverlay>').appendTo(self.$el);
 
 	let players = [];
 	for(var i=0; i<6; i++) players[i] = {score:0};
@@ -646,6 +754,10 @@ BoxPartyGame = function(){
 
 	let liveModule = undefined;
 
+	function doShowOverlay(){
+		$overlay.animate({opacity:1},1000);
+	}
+
 	function doLaunchGame(game){
 		let p = game;
 		liveModule = new p();
@@ -654,6 +766,8 @@ BoxPartyGame = function(){
 		scene.$el.hide();
 
 		window.doPartyGameComplete = doCompleteGame;
+
+		$overlay.css({opacity:1}).animate({opacity:0});
 	}
 
 	let resultsPending;
@@ -670,7 +784,11 @@ BoxPartyGame = function(){
 		setTimeout(doPendingResults,2000);
 		setTimeout(doResolveResults,4000);
 		setTimeout(doHideTally,6000);
-		setTimeout(scene.doMoveForward,8000);
+
+
+		let isLevelComplete = scene.getLevelComplete();
+	
+		if(isLevelComplete) setTimeout(scene.doMoveForward,8000);
 	}
 
 	function doPendingResults(){
