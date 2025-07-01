@@ -707,13 +707,23 @@ window.MilkGame = function(){
 		window.doPartyGameComplete();
 	}
 
+	let bMusic = false;
+	function initMusic(){
+		bMusic = true;
+		audio.play('music');
+	}
+
 	$(document).on('click',function(e){
 		let o = $game.offset();
 		let x = (e.pageX - o.left)/scale/W;
 		let wall = Math.floor(x);
 		meeps[0].wall = wall;
-		audio.play('music');
+
+		if(!bMusic) initMusic();
 	});
+
+
+
 
 	self.setPlayers = function(p){
 		for(var m in meeps){

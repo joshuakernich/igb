@@ -34,6 +34,8 @@ window.PartyTally = function(players){
 					position: relative;
 					margin: 20px;
 					box-shadow: 0px 2px 20px black;
+
+					left: -550px;
 				}
 
 				partytallypos{
@@ -182,6 +184,7 @@ window.PartyTallyRow = function(n,player){
 	}
 
 	self.showResult = function(result,delay=0){
+		if(isNaN(result)) return;
 		self.$el.find('partytallyresult')
 		.text(result>=0?'+ '+result:'- '+(-result))
 		.show()

@@ -53,7 +53,15 @@ PartyCube3D = function(transform,color,surfaces){
 
     self.$el = $(`
         <partycube3D>
-            ${ surfaces[0]?`
+                       
+        </partycube3D>
+        `)
+
+   
+
+    self.reskin = function(color,surfaces){
+    	self.$el.html(`
+    		${ surfaces[0]?`
                 <partycube3Dside class='partycube3D-back' style='transform:translateZ(${-transform.d/2}px)'>
                     <partycube3Dsurface style='background:${surfaces[0]};width:${transform.w}px;height:${transform.h}px;'></partycube3Dsurface>
                 </partycube3Dside>`:'' } 
@@ -79,12 +87,12 @@ PartyCube3D = function(transform,color,surfaces){
         
             ${ surfaces[5]?`<partycube3Dside class='partycube3D-top' style='transform:translateY(${-transform.h/2}px) rotateX(90deg);'>
                 <partycube3Dsurface style='background:${surfaces[5]};width:${transform.w}px;height:${transform.d}px;'></partycube3Dsurface>
-            </partycube3Dside>`:''}            
-        </partycube3D>
-        `)
+            </partycube3Dside>`:''} 
+            `)
+    	self.$el.find('partycube3Dsurface').css({'border-color':color});
+    }
 
-    self.$el.find('partycube3Dsurface').css({'border-color':color});
-
+    self.reskin(color,surfaces);
 
     self.redraw = function(){
 
@@ -142,7 +150,7 @@ PartyCube3D = function(transform,color,surfaces){
     }
 }
 
-BoxPartyCube = function(transform,game){
+BoxPartyCube = function(nCube,transform,game){
 
 	let self = this;
 
@@ -162,13 +170,17 @@ BoxPartyCube = function(transform,game){
 	//let z = h + Math.random()*h*2;
 	//let rx = -10 + Math.random()*20;
 
-	let box = new PartyCube3D(transform,game.color,[
-		game.bg,
-		game.bg,
-		game.bg,
-		game.bg,
-		game.color,
-		game.color,
+	let palette = ['#37CCDA','#8DE968','#FEE955','#FEB850','#FD797B'];
+
+	let color = palette[nCube%palette.length];
+
+	let box = new PartyCube3D(transform,'white',[
+		color,
+		color,
+		color,
+		color,
+		color,
+		color,
 	]);
 	box.$el.appendTo(self.$el);
 	
@@ -195,6 +207,7 @@ BoxPartyCube = function(transform,game){
 			translateX(${transform.x}px) 
 			translateY(${-transform.y}px) 
 			translateZ(1px) 
+			rotateX(${transform.rx}deg)
 			rotateY(${transform.ry}deg)
 			rotateZ(${transform.rz}deg)`
 		});
@@ -216,6 +229,50 @@ BoxPartyCube = function(transform,game){
 		})
 
 		box.redraw(); 
+	}
+
+	self.showGameSkin = function(){
+		box.reskin(game.color,[
+			game.bg,
+			game.bg,
+			game.bg,
+			game.bg,
+			game.color,
+			game.color,
+		])
+		$face.appendTo(box.$el.find('.partycube3D-front partycube3Dsurface'));
+	}
+
+	let audio = new AudioContext();
+    audio.add('reveal','./proto/audio/riddler-perfect.mp3',1);
+    audio.add('rumble','./proto/audio/party/sfx-rumble.mp3',1,true);
+
+	self.revealGame = function( ){
+
+		audio.play('rumble',true);
+		$(self.transform).animate({
+			altitude: self.transform.altitude + 150,
+			w: 100,
+			h: 100, 
+			d: 100,
+			rz: 540,
+		},2500 + Math.random()*500).animate({
+			w: self.transform.w,
+			h: self.transform.h,
+			d: self.transform.d,
+			rz: 720 + self.transform.rz,
+		},{
+			duration: 500,
+			start:function(){
+				audio.stop('rumble');
+				audio.play('reveal',true);
+				self.showGameSkin();
+			},complete:function(){
+				self.transform.rz = self.transformCache.rz;
+			}
+		})
+
+		
 	}
 }
 
@@ -264,7 +321,6 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
             	bottom: 0px;
             	width: 0px;
             	left: 0px;
-
             	position: absolute;
             }
 
@@ -294,7 +350,7 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
             	background-size: cover;
             	mix-blend-mode: overlay;
             	opacity: 0.2;
-            	
+            	display: none;
             }
             
             partyScene3D partycube3DSurface{
@@ -404,21 +460,24 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
     		'transform':'translate(-50%) scale('+queue.length+')'
     	})
 
-
-
     let stops = [];
     let boxes = [];
+    let nCube = 0;
     let d = '';
     for(var i=0; i<queue.length; i++){
     	let spacingX = W/4;
     	let spacingRZ = 50/(queue[i].length-1);
+    	let size = W/6;
+
+    	if(queue[i].length==1) spacingRZ = 0;
 
     	let xOffset = (W/4 + Math.random()*W/4) * (i%2?1:-1);
-    	let yOffset = W/2 + i*PERSTOP;
+    	let yOffset = W*2 + i*PERSTOP;
     	if(i==0){
     		xOffset = 0;
     		d = d + ' M'+xOffset + ',' + (TRACK);
     	}
+
     	d = d + ' L'+xOffset + ',' + (TRACK-yOffset+W/2);
     	d = d + ' L'+xOffset + ',' + (TRACK-yOffset-W/2);
 
@@ -427,17 +486,24 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 		for(var n=0; n<queue[i].length; n++){
 
 			let transform = {
-				w:W/6,h:W/6,d:W/6,
+				w:size,h:size,d:size,
 				x:xOffset - (spacingX * (queue[i].length-1)/2) + spacingX * n,
 				y:yOffset + (n%2)*spacingX,
-				altitude:H/5 + Math.random() * H/12,
+				altitude:size/2 + 50 + Math.random() * H/12,
 				rx:0,
 				ry:0,
 				rz:-25 + n*spacingRZ,
 				open: 0,
 			}
 
-    		let box = new BoxPartyCube(transform,queue[i][n]);
+			if(i==queue.length-1){
+	    		transform.x = xOffset;
+	    		transform.w = transform.h = transform.d = W/2;
+	    		transform.altitude = H;
+	    		transform.rz = 10;
+	    	}
+
+    		let box = new BoxPartyCube(nCube++,transform,queue[i][n]);
    			box.$el.appendTo($plane);
    			box.iLevel = i;
    			box.nBox = n;
@@ -448,6 +514,25 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
    			let nBox = boxes.push(box)-1;
    			box.$el.attr('n',nBox);
    		}
+    }
+
+    boxes[boxes.length-1].showGameSkin();
+
+    for(var i=0; i<5; i++){
+    	let transform = {
+			w:W/6,h:W/6,d:W/6,
+			x: (W + Math.random() * W) * (i%2?-1:1),
+			y: (i+3) * W*2,
+			altitude: H/6 + Math.random() * H/2,
+			rx:0,
+			ry:0,
+			rz:(i%2?-1:1) * 30,
+			open: 0,
+		}
+
+		let box = new BoxPartyCube(nCube++,transform,undefined);
+   		box.$el.appendTo($plane);	
+   		box.redraw();
     }
 
     $trackSVG.find('path').attr('d',d);
@@ -510,8 +595,8 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
     		rx:0,
     		ry:0,
     		rz:0,
-    		x:0,
-    		y:iLevel*(W*2) - W/2,
+    		x:stops[iLevel].x,
+    		y:stops[iLevel].y,
     		altitude:H/2,
     		w:W,
     		h:H,
@@ -534,9 +619,9 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
     	audio.play('rumble');
     }
 
-    let iLevel = 0;
+    let iLevel = -1;
 
-	self.doMoveForward = function(){
+	/*self.doMoveForward = function(){
 		iLevel++;
 
 		let stop = stops[iLevel];
@@ -552,6 +637,7 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 			}
 		});
 
+		// arrange previous boxes
 		for(var b in boxes){
 			if(iLevel > boxes[b].iLevel){
 				$(boxes[b].transform).animate({
@@ -560,6 +646,81 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 				},1500);
 			}
 		}
+	}*/
+
+	self.doFlyover = function(){
+
+		audio.play('rumble',true);
+
+		let stopEnd = stops[stops.length-1];
+		let stopStart = stops[0];
+
+		$plane.css({
+			left: -stopEnd.x + 'px',
+			bottom:-stopEnd.y+W+'px',
+		}).animate({
+			left: -stopStart.x + 'px',
+			bottom:-stopStart.y+W+'px',
+		},{
+			duration:10000,
+			complete:function(){
+				audio.stop('rumble');
+			}
+		});
+	}
+
+	self.doWalkForward = function(){
+		iLevel++;
+		let stop = stops[iLevel];
+		$(self.anchorPlayer).animate({
+			x:stop.x,
+			y:stop.y - W * 0.2,
+		},2000);
+	}
+
+	self.doActivateStop = function(){
+		$plane.css({
+			'transition':'all 1s',
+			'transform':'translateZ('+0+'px)',
+		});
+
+		setTimeout(function(){
+			$plane.css({
+				'transform':'translateZ('+H/4+'px)',
+				left:-stops[iLevel].x+'px',
+				bottom:-stops[iLevel].y+'px',
+			})
+		},50);
+
+		setTimeout(function(){
+			$plane.css({
+			'transition':'none',
+		});
+		},1200)
+
+		setTimeout(function(){
+			for(var b in boxes) if(boxes[b].iLevel == iLevel) boxes[b].revealGame();
+		},1200)
+	}
+
+	self.doDeactivateStop = function(){
+		$plane.css({
+			'transition':'all 1s',
+		});
+
+		setTimeout(function(){
+			$plane.css({
+				'transform':'translateZ('+0+'px)',
+				left:-stops[iLevel].x+'px',
+				bottom:-stops[iLevel].y+W+'px',
+			})
+		},50);
+
+		setTimeout(function(){
+			$plane.css({
+			'transition':'none',
+		});
+		},1200)
 	}
 
 	//setInterval(self.doMoveForward,3000);
@@ -582,19 +743,24 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
     	})
 	}
 
+	self.anchorPlayer = {x:0,y:W};
+
 	self.setPlayers = function(p){
 
 		for(var m in meeps ){
 			meeps[m].$el.css({
-				'left':`${ stops[iLevel].x + p[m].x*W/8 }px`,
-				'bottom':`${ stops[iLevel].y + p[m].z*H/8 - W/4 }px`,
+				'left':`${ self.anchorPlayer.x + p[m].x*W/8 }px`,
+				'bottom':`${ self.anchorPlayer.y + p[m].z*W/8 }px`,
 			});
 		}
 	}
 
 	self.getLevelComplete = function(){
 		let isLevelComplete = true;
-		for(let b in boxes[iLevel]) if(!boxes[iLevel].isComplete) isLevelComplete = false;
+		for(let b in boxes){
+			if(boxes[b].iLevel == iLevel) console.log(b,boxes[b].isComplete);
+			if(boxes[b].iLevel == iLevel && !boxes[b].isComplete) isLevelComplete = false;
+		}
 		return isLevelComplete;
 	}
 }
@@ -640,6 +806,12 @@ BoxPartyGame = function(){
 			color:'white',
 			bg:'url(./proto/img/party/bg-mountains-white.jpg) center / cover'
 		},
+		'Final Frenzy':{
+			game:window.CoinChaosGame,
+			color:'white',
+			bg:'url(./proto/img/party/bg-cosmos.jpg) center / cover',
+			size: 'big',
+		},
 	}
 
 	const QUEUE = [
@@ -651,6 +823,7 @@ BoxPartyGame = function(){
 		[ GAMES['Death Maze'], GAMES['Headers'] ],
 		[ GAMES['Death Maze'], GAMES['Headers'] ],
 		[ GAMES['Death Maze'], GAMES['Headers'] ],
+		[ GAMES['Final Frenzy'] ],
 	]
 
 	let scale = 1;
@@ -785,10 +958,13 @@ BoxPartyGame = function(){
 		setTimeout(doResolveResults,4000);
 		setTimeout(doHideTally,6000);
 
-
 		let isLevelComplete = scene.getLevelComplete();
 	
-		if(isLevelComplete) setTimeout(scene.doMoveForward,8000);
+		if(isLevelComplete){
+			setTimeout(scene.doDeactivateStop,8000);
+			setTimeout(scene.doWalkForward,10000);
+			setTimeout(scene.doActivateStop,12000);
+		}
 	}
 
 	function doPendingResults(){
@@ -809,7 +985,12 @@ BoxPartyGame = function(){
 		tally.hideRows();
 	}
 
-	setTimeout(doHideTally,2000);
+	scene.doFlyover();
+	setTimeout(doShowTally,10000);
+	setTimeout(doHideTally,13000);
+	setTimeout(scene.doWalkForward,14000);
+	setTimeout(scene.doActivateStop,16000);
+	
 
 	function init() {
 		audio.play('music');
