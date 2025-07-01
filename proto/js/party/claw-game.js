@@ -380,8 +380,6 @@ window.ClawGame = function(){
 				isClawMoving = true;
 			} 
 
-		
-
 			if(isClawMoving) audio.play('machine');
 			else audio.stop('machine');
 		}

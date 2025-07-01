@@ -47,7 +47,6 @@ window.PartyMeep = function(n){
 					bottom: 0px;
 					width: ${W}px;
 					height: ${H}px;
-
 				}
 
 				partymeephand{

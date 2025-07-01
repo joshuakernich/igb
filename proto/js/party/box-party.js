@@ -167,6 +167,8 @@ BoxPartyCube = function(nCube,transform,game){
 		height: transform.d + 'px',
 	})
 
+	
+
 	//let z = h + Math.random()*h*2;
 	//let rx = -10 + Math.random()*20;
 
@@ -191,6 +193,8 @@ BoxPartyCube = function(nCube,transform,game){
 	});
 	box.$el.appendTo(self.$el);
 
+
+
 	let $face = $(`
 		<boxface>
 			<boxeye></boxeye>
@@ -199,6 +203,8 @@ BoxPartyCube = function(nCube,transform,game){
 
 		</boxface>
 		`).appendTo(box.$el.find('.partycube3D-front partycube3Dsurface'));
+
+	
 
 	self.redraw = function(){
 
@@ -241,6 +247,7 @@ BoxPartyCube = function(nCube,transform,game){
 			game.color,
 		])
 		$face.appendTo(box.$el.find('.partycube3D-front partycube3Dsurface'));
+		$('<boxheader>').appendTo(box.$el.find('.partycube3D-front partycube3Dsurface')).text(game.name);
 	}
 
 	let audio = new AudioContext();
@@ -267,6 +274,7 @@ BoxPartyCube = function(nCube,transform,game){
 				audio.stop('rumble');
 				audio.play('reveal',true);
 				self.showGameSkin();
+
 			},complete:function(){
 				self.transform.rz = self.transformCache.rz;
 			}
@@ -299,7 +307,6 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
                 position: absolute;
                 left: 0px;
                 top: 0px;
-               
             }
 
             partyWorld3D{
@@ -378,6 +385,16 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 				left: 0px;
             }
 
+            boxheader{
+            	position: absolute;
+            	left: -50px;
+            	right: -50px;
+            	bottom: 110%;
+            	font-size: 50px;
+            	color: white;
+            	
+            }
+
             boxface{
             	display: block;
             	position: absolute;
@@ -398,8 +415,6 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 
             	position: absolute;
             	top: 15%;
-
-
             }
 
             boxeye:first-of-type{
@@ -758,7 +773,6 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 	self.getLevelComplete = function(){
 		let isLevelComplete = true;
 		for(let b in boxes){
-			if(boxes[b].iLevel == iLevel) console.log(b,boxes[b].isComplete);
 			if(boxes[b].iLevel == iLevel && !boxes[b].isComplete) isLevelComplete = false;
 		}
 		return isLevelComplete;
@@ -814,6 +828,8 @@ BoxPartyGame = function(){
 		},
 	}
 
+	for(var g in GAMES) GAMES[g].name = g;
+
 	const QUEUE = [
 		[ GAMES['Coin Chaos'], GAMES['Pump Pop'] ],
 		[ GAMES['Milkers'], GAMES['Follicle Frenzy'], GAMES['Cookie Cutter'] ],
@@ -830,6 +846,8 @@ BoxPartyGame = function(){
 
 	$("head").append(`
         <style>
+        	@import url('https://fonts.googleapis.com/css2?family=Paytone+One&display=swap');
+
         	boxpartygame{
         		display: block;
         		width: ${W*GRID*3}px;
@@ -839,6 +857,8 @@ BoxPartyGame = function(){
                 background-size: 100%;
                 background-position: center;
                 position: relative;
+
+                font-family: "Paytone One";
         	}
 
         	boxpartygame:before{
@@ -960,6 +980,8 @@ BoxPartyGame = function(){
 
 		let isLevelComplete = scene.getLevelComplete();
 	
+		isLevelComplete = true;
+
 		if(isLevelComplete){
 			setTimeout(scene.doDeactivateStop,8000);
 			setTimeout(scene.doWalkForward,10000);
