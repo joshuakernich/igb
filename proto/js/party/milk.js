@@ -80,7 +80,7 @@ window.MilkUdder = function(STAGE){
 		if(!isAnimating){
 			self.xOffset = -400 + Math.random() * 800;
 			$(self).animate({x:self.xAnchor + self.xOffset},{
-				duration:1500 + Math.random() * 1000,
+				duration:2500 + Math.random() * 1000,
 				complete:function(){ isAnimating=false; },
 			});
 			isAnimating = true;
