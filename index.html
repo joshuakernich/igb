@@ -54,6 +54,7 @@
 	<script type="text/javascript" src="./proto/js/party/pump-pop.js"></script>
 	<script type="text/javascript" src="./proto/js/party/coin-chaos.js"></script>
 	<script type="text/javascript" src="./proto/js/party/claw-game.js"></script>
+	<script type="text/javascript" src="./proto/js/party/spot-the-meep.js"></script>
 
 	<script type="text/javascript">
 		$(function () {
@@ -91,10 +92,13 @@
 					'Pump Pop':window.PumpPopGame,
 					'Coin Chaos':window.CoinChaosGame,
 					'The Claw':window.ClawGame,
+					'Spot The Meep':window.SpotTheMeepGame,
 				}
 				
 				
 			};
+
+
 
 			const ICONS = {
 
@@ -123,7 +127,7 @@
 				'The Claw':'./proto/img/party/icon-claw.png',
 			}
 
-			let gameID = window.location.search.substr(1).split('&')[0].replace('%20',' ');
+			let gameID = window.location.search.substr(1).split('&')[0].replaceAll('%20',' ');
 
 			function launchProto(id){
 

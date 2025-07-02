@@ -1,5 +1,7 @@
 window.PartyMeep = function(n){
 
+
+
 	const W = 100;
 	const H = 350;
 
@@ -83,7 +85,7 @@ window.PartyMeep = function(n){
 
 				partymeephat{
 					display: block;
-					background: red;
+					background: gray;
 					height: 20px;
 					border-radius: 5px;
 				}
@@ -127,12 +129,17 @@ window.PartyMeep = function(n){
 					margin-top: 5px;
 				}
 
+				partymeephead[n='0'] partymeephat{ background: red; }
+				partymeep[n='0'] partymeephat{ background: red; }
+				partymeep[n='0'] partymeephat:after{ background: red; }
+				partyplayerhud[n='0'] partyscore{ background: red; }
+				partyplayerhud[n='0'] partymeephat{ background: red; }
+
 				partymeephead[n='1'] partymeephat{ background: blue; }
 				partymeep[n='1'] partymeephat{ background: blue; }
 				partymeep[n='1'] partymeephat:after{ background: blue; }
 				partyplayerhud[n='1'] partyscore{ background: blue; }
 				partyplayerhud[n='1'] partymeephat{ background: blue; }
-
 
 				partymeephead[n='2'] partymeephat{ background: limegreen; }
 				partymeep[n='2'] partymeephat{ background: limegreen; }
@@ -161,6 +168,7 @@ window.PartyMeep = function(n){
 	}
 
 	let self = this;
+	self.n = n;
 	self.score = 0;
 	self.$el = $(`
 		<partymeep n=${n}>

@@ -108,10 +108,10 @@ window.PartyHUD = function(meeps){
 					top: 110%;
 					box-shadow: 0px 2px 20px black;
 					pointer-events: auto;
-					font-size: 60px;
+					font-size: 80px;
 					color: white;
-					line-height: 70px;
-					padding: 40px 0px;
+					line-height: 80px;
+					padding: 40px 0px 50px;
 					text-shadow: 0px -3px black;
 				}
 
@@ -210,8 +210,8 @@ window.PartyHUD = function(meeps){
 	let $banner = $('<partyhudbanner>').appendTo(self.$el);
 
 	function setBanner(b){
-		if(b) $banner.css({top:'100%'}).animate({top:'25%'}).animate({top:'30%'});
-		else $banner.animate({top:'35%'}).animate({top:'-40%'});
+		if(b) $banner.css({top:'100%'}).animate({top:'10%'}).animate({top:'15%'});
+		else $banner.animate({top:'20%'}).animate({top:'-40%'});
 	}
 
 	self.initPlayerCount = function(callback){
@@ -248,6 +248,10 @@ window.PartyHUD = function(meeps){
 	self.initBanner = function(msg){
 		setBanner(true);
 		$banner.text(msg);
+	}
+
+	self.finiBanner = function(){
+		setBanner(false);
 	}
 
 	for(var i=0; i<3; i++) $('<partyhudframe>').appendTo(self.$el);
