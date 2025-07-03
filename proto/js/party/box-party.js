@@ -820,6 +820,11 @@ BoxPartyGame = function(){
 			color:'white',
 			bg:'url(./proto/img/party/bg-mountains-white.jpg) center / cover'
 		},
+		'Spot The Meep':{
+			game:window.SpotTheMeepGame,
+			color:'white',
+			bg:'url(./proto/img/party/icon-spot.png) center / cover'
+		},
 		'Final Frenzy':{
 			game:window.CoinChaosGame,
 			color:'white',
@@ -831,14 +836,11 @@ BoxPartyGame = function(){
 	for(var g in GAMES) GAMES[g].name = g;
 
 	const QUEUE = [
-		[ GAMES['Coin Chaos'], GAMES['Pump Pop'] ],
-		[ GAMES['Milkers'], GAMES['Follicle Frenzy'], GAMES['Cookie Cutter'] ],
-		[ GAMES['Death Maze'], GAMES['Headers'] ],
-		[ GAMES['Death Maze'], GAMES['Headers'] ],
-		[ GAMES['Death Maze'], GAMES['Headers'] ],
-		[ GAMES['Death Maze'], GAMES['Headers'] ],
-		[ GAMES['Death Maze'], GAMES['Headers'] ],
-		[ GAMES['Death Maze'], GAMES['Headers'] ],
+		[ GAMES['Spot The Meep'], GAMES['Pump Pop'] ],
+		[ GAMES['Headers'] ],
+		[ GAMES['Milkers'], GAMES['Follicle Frenzy']  ],
+		[ GAMES['Coin Chaos'] ],
+		[ GAMES['Death Maze'], GAMES['Cookie Cutter'] ],
 		[ GAMES['Final Frenzy'] ],
 	]
 

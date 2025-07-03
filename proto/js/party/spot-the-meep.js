@@ -1,7 +1,5 @@
 window.SpotTheMeepGame = function(){
 
-	console.log('here');
-
 	const W = 1600;
 	const H = 1000;
 
