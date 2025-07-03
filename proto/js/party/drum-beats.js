@@ -11,8 +11,8 @@ window.DrumBeatsGame = function(){
 		offset:0,
 		map:[
 			{ from:2, to:8, every:2 },
-			{ from:12, to:15, every:1 },
-			{ from:18, to:21, every:1 },
+			{ from:12, to:14, every:1 },
+			{ from:18, to:20, every:1 },
 			{ from:24, to:32, every:2 },
 
 			{ from:38, to:48, every:2 },
