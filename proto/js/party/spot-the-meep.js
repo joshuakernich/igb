@@ -124,7 +124,8 @@ window.SpotTheMeepGame = function(){
 	function finiRound(){
 		for(var m in meeps) meeps[m].$el.remove();
 		hud.finiBanner();
-		setTimeout( initRound, 2000 );
+		if( ROUNDS[nRound+1] ) setTimeout( initRound, 2000 );
+		else setTimeout( finiGame, 1000 );
 	}
 
 	function initRound(){
@@ -136,6 +137,13 @@ window.SpotTheMeepGame = function(){
 			hud.initBanner('Find your meep');
 			populateLevel();
 		},3000);
+	}
+
+	function finiGame() {
+		hud.initBanner('Finish!');
+		setTimeout(function(){
+			window.doPartyGameComplete([0]);
+		},2000);
 	}
 
 	function initGame(playerCount){
