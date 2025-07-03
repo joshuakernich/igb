@@ -55,6 +55,7 @@
 	<script type="text/javascript" src="./proto/js/party/coin-chaos.js"></script>
 	<script type="text/javascript" src="./proto/js/party/claw-game.js"></script>
 	<script type="text/javascript" src="./proto/js/party/spot-the-meep.js"></script>
+	<script type="text/javascript" src="./proto/js/party/drum-beats.js"></script>
 
 	<script type="text/javascript">
 		$(function () {
@@ -93,6 +94,7 @@
 					'Coin Chaos':window.CoinChaosGame,
 					'The Claw':window.ClawGame,
 					'Spot The Meep':window.SpotTheMeepGame,
+					'Drum Beats':window.DrumBeatsGame,
 				}
 				
 				
@@ -126,6 +128,7 @@
 				'Coin Chaos':'./proto/img/party/icon-coin-chaos.png',
 				'The Claw':'./proto/img/party/icon-claw.png',
 				'Spot The Meep':'./proto/img/party/icon-spot.png',
+				'Drum Beats':'',
 			}
 
 			let gameID = window.location.search.substr(1).split('&')[0].replaceAll('%20',' ');
