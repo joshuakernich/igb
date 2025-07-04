@@ -1016,7 +1016,7 @@ BoxPartyGame = function(){
 
 	let tally;
 	function initGame(count){
-		hud.$el.hide();
+		//hud.$el.hide();
 		audio.play('music');
 
 		for(var i=0; i<count; i++) players[i] = {score:0};
@@ -1033,7 +1033,7 @@ BoxPartyGame = function(){
 		setTimeout(scene.doActivateStop,16000);
 	}
 
-    let hud = new PartyHUD();
+    let hud = new PartyHUD('#5403DA',0);
     hud.$el.appendTo($game);
     hud.initPlayerCount(initGame)
 

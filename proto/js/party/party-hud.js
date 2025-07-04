@@ -19,7 +19,7 @@ window.PartyPlayerHUD = function(n,meep,type){
 	}
 }
 
-window.PartyHUD = function(meeps){
+window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 
 	if(!PartyHUD.didInit){
 		PartyHUD.didInit = true;
@@ -60,7 +60,7 @@ window.PartyHUD = function(meeps){
 					border-radius: 30px 30px 0px 0px;
 					overflow: hidden;
 
-					background: #40B0ED;
+					background: ${colour};
 					padding: 15px 5px 0px 5px;
 
 				}
@@ -82,7 +82,7 @@ window.PartyHUD = function(meeps){
 					right: 0px;
 					bottom: 0px;
 					box-sizing: border-box;
-					border: 50px solid black;
+					border: ${thicc}px solid black;
 					filter: blur(20px);
 					opacity: 0.5;
 				}
@@ -96,11 +96,11 @@ window.PartyHUD = function(meeps){
 					right: 0px;
 					bottom: 0px;
 					box-sizing: border-box;
-					border: 50px solid #40B0ED;
+					border: ${thicc}px solid ${colour};
 				}
 
 				partyhudbanner{
-					background: #40B0ED;
+					background: ${colour};
 					position: absolute;
 					left: 0px;
 					right: 0px;
@@ -132,7 +132,7 @@ window.PartyHUD = function(meeps){
 					box-sizing: border-box;
 					position: relative;
 					color: white;
-					background: #40B0ED;
+					background: ${colour};
 					overflow: hidden;
 					vertical-align: top;
 
@@ -278,8 +278,6 @@ window.PartyHUD = function(meeps){
 			huds[i] = hud;
 		}
 	}
-
-	if(meeps) self.setPlayers(meeps);
 	
 	self.redraw = function(sec=0){
 		$timer.text(sec);
