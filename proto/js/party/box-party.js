@@ -553,16 +553,19 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
     $trackSVG.find('path').attr('d',d);
 
     let meeps = [];
-    for(var i=0; i<6; i++){
-    	let meep = new PartyMeep(i);
-    	meep.setHeight(350);
-    	meep.$el.appendTo($plane);
-    	meep.$el.css({
-    		'transform':'rotateX(-90deg) scale(0.5)',
-    	});
+    self.initMeeps = function(count){
+    	for(var i=0; i<count; i++){
+	    	let meep = new PartyMeep(i);
+	    	meep.setHeight(350);
+	    	meep.$el.appendTo($plane);
+	    	meep.$el.css({
+	    		'transform':'rotateX(-90deg) scale(0.5)',
+	    	});
 
-    	meeps[i] = meep;
+	    	meeps[i] = meep;
+	    }
     }
+    
 
     let nSelect = undefined;
     let nStep = 0;
@@ -935,10 +938,6 @@ BoxPartyGame = function(){
 	let $overlay = $('<boxpartyoverlay>').appendTo(self.$el);
 
 	let players = [];
-	for(var i=0; i<6; i++) players[i] = {score:0};
-
-	let tally = new PartyTally(players);
-	tally.$el.appendTo($game);
 
 	function step(){
 		resize();
@@ -1015,20 +1014,28 @@ BoxPartyGame = function(){
 		tally.hideRows();
 	}
 
-	scene.doFlyover();
-	setTimeout(doShowTally,10000);
-	setTimeout(doHideTally,13000);
-	setTimeout(scene.doWalkForward,14000);
-	setTimeout(scene.doActivateStop,16000);
-	
-
-	function init() {
+	let tally;
+	function initGame(count){
+		hud.$el.hide();
 		audio.play('music');
-		$(document).off('click',init);
+
+		for(var i=0; i<count; i++) players[i] = {score:0};
+
+		tally = new PartyTally(players);
+		tally.$el.appendTo($game);
+
+		scene.initMeeps(count);
+
+		scene.doFlyover();
+		setTimeout(doShowTally,10000);
+		setTimeout(doHideTally,13000);
+		setTimeout(scene.doWalkForward,14000);
+		setTimeout(scene.doActivateStop,16000);
 	}
 
-	audio.play('music');
-    $(document).click(init);
+    let hud = new PartyHUD();
+    hud.$el.appendTo($game);
+    hud.initPlayerCount(initGame)
 
     self.setPlayers = function(p){
     	scene.setPlayers(p);
