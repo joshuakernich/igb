@@ -825,19 +825,25 @@ BoxPartyGame = function(){
 			color:'white',
 			bg:'url(./proto/img/party/icon-spot.png) center / cover'
 		},
+		'Drum Beats':{
+			game:window.DrumBeatsGame,
+			color:'white',
+			bg:'url(./proto/img/party/bg-cosmos.jpg) center / cover',
+		},
 		'Final Frenzy':{
 			game:window.CoinChaosGame,
 			color:'white',
 			bg:'url(./proto/img/party/bg-cosmos.jpg) center / cover',
 			size: 'big',
 		},
+		
 	}
 
 	for(var g in GAMES) GAMES[g].name = g;
 
 	const QUEUE = [
-		[ GAMES['Spot The Meep'], GAMES['Pump Pop'] ],
-		[ GAMES['Headers'] ],
+		[ GAMES['Spot The Meep'], GAMES['Drum Beats'] ],
+		[ GAMES['Headers'], GAMES['Pump Pop'] ],
 		[ GAMES['Milkers'], GAMES['Follicle Frenzy']  ],
 		[ GAMES['Coin Chaos'] ],
 		[ GAMES['Death Maze'], GAMES['Cookie Cutter'] ],
