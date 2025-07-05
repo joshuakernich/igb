@@ -1033,7 +1033,7 @@ BoxPartyGame = function(){
 		setTimeout(scene.doActivateStop,16000);
 	}
 
-    let hud = new PartyHUD('#5403DA',0);
+    let hud = new PartyHUD('#7538D4',0);
     hud.$el.appendTo($game);
     hud.initPlayerCount(initGame)
 

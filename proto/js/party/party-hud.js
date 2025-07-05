@@ -21,6 +21,9 @@ window.PartyPlayerHUD = function(n,meep,type){
 
 window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 
+	const COLOUR = 'gray';
+	const THICC = 50;
+
 	if(!PartyHUD.didInit){
 		PartyHUD.didInit = true;
 
@@ -51,6 +54,8 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 					left: 0px;
 					right: 0px;
 					text-align: center;
+
+					bottom: -150px;
 				}
 
 				partyhudstream{
@@ -60,9 +65,8 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 					border-radius: 30px 30px 0px 0px;
 					overflow: hidden;
 
-					background: ${colour};
+					background: ${COLOUR};
 					padding: 15px 5px 0px 5px;
-
 				}
 
 				partyhudframe{
@@ -73,34 +77,26 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 					overflow: hidden;
 				}
 
-				partyhudframe:before{
-					content: "";
+				partyhudborder:first-of-type{
 					display: block;
 					position: absolute;
-					top: 0px;
-					left: 0px;
-					right: 0px;
-					bottom: 0px;
+					inset: 0px;
 					box-sizing: border-box;
-					border: ${thicc}px solid black;
+					border: ${THICC}px solid black;
 					filter: blur(20px);
 					opacity: 0.5;
 				}
 
-				partyhudframe:after{
-					content: "";
+				partyhudborder:last-of-type{
 					display: block;
 					position: absolute;
-					top: 0px;
-					left: 0px;
-					right: 0px;
-					bottom: 0px;
+					inset: 0px;
 					box-sizing: border-box;
-					border: ${thicc}px solid ${colour};
+					border: ${THICC}px solid ${COLOUR};
 				}
 
 				partyhudbanner{
-					background: ${colour};
+					background: ${COLOUR};
 					position: absolute;
 					left: 0px;
 					right: 0px;
@@ -132,7 +128,7 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 					box-sizing: border-box;
 					position: relative;
 					color: white;
-					background: ${colour};
+					background: ${COLOUR};
 					overflow: hidden;
 					vertical-align: top;
 
@@ -207,7 +203,7 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 	let self = this;
 	self.$el = $('<partyhud>');
 
-	let $banner = $('<partyhudbanner>').appendTo(self.$el);
+	let $banner = $(`<partyhudbanner style="background:${colour};">`).appendTo(self.$el);
 
 	function setBanner(b){
 		if(b) $banner.css({top:'100%'}).animate({top:'10%'}).animate({top:'15%'});
@@ -228,6 +224,10 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 	let interval;
 
 	self.initTimer = function(seconds,callback){
+
+		$baseline.animate({bottom:0});
+		$timer.text(seconds);
+
 		let timeStart = new Date().getTime();
 		interval = setInterval(function(){
 			let timeNow = new Date().getTime();
@@ -254,10 +254,17 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 		setBanner(false);
 	}
 
-	for(var i=0; i<3; i++) $('<partyhudframe>').appendTo(self.$el);
+	for(var i=0; i<3; i++){
+		$(`
+		<partyhudframe>
+			<partyhudborder style='border-width:${thicc}px'></partyhudborder>
+			<partyhudborder style='border-color:${colour};border-width:${thicc}px'></partyhudborder>
+		<partyhudframe>
+		`).appendTo(self.$el);
+	}
 
 	let $baseline = $('<partyhudbaseline>').appendTo(self.$el);
-	let $stream = $('<partyhudstream>').appendTo($baseline);
+	let $stream = $(`<partyhudstream style='background:${colour};'>`).appendTo($baseline);
 	
 	let huds = [];
 	
