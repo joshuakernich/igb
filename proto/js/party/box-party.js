@@ -230,7 +230,7 @@ BoxPartyCube = function(nCube,transform,game){
 		box.redraw(); 
 	}
 
-	self.showGameSkin = function(){
+	self.showGameSkin = function(showFace=false){
 		box.reskin(game.color,[
 			game.bg,
 			game.bg,
@@ -241,6 +241,8 @@ BoxPartyCube = function(nCube,transform,game){
 		])
 		$face.appendTo(box.$el.find('.partycube3D-front partycube3Dsurface'));
 		$('<boxheader>').appendTo(box.$el.find('.partycube3D-front partycube3Dsurface')).text(game.name);
+
+		if(!showFace) $face.find('boxeye').hide();
 	}
 
 	let audio = new AudioContext();
@@ -524,7 +526,7 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
    		}
     }
 
-    boxes[boxes.length-1].showGameSkin();
+    boxes[boxes.length-1].showGameSkin(true);
 
     for(var i=0; i<5; i++){
     	let transform = {
