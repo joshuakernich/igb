@@ -167,11 +167,6 @@ BoxPartyCube = function(nCube,transform,game){
 		height: transform.d + 'px',
 	})
 
-	
-
-	//let z = h + Math.random()*h*2;
-	//let rx = -10 + Math.random()*20;
-
 	let palette = ['#37CCDA','#8DE968','#FEE955','#FEB850','#FD797B'];
 
 	let color = palette[nCube%palette.length];
@@ -192,8 +187,6 @@ BoxPartyCube = function(nCube,transform,game){
 		'transform':'rotateX('+(-90)+'deg)'
 	});
 	box.$el.appendTo(self.$el);
-
-
 
 	let $face = $(`
 		<boxface>

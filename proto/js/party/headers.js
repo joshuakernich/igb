@@ -40,6 +40,17 @@ window.HeadersGame = function(){
 	const FEET = 900;
 	const COLLIDE = HEADR+BALLR;
 
+	// match-up sequence for each player count
+	const MATCHUPS = [
+		undefined,
+		undefined,
+		['01'],
+		['01','12','02'],
+		['01','23'],
+		['01','23','41','12','34'],
+		['01','23','45'],
+	]
+
 	if( !HeadersGame.init ){
 		HeadersGame.init = true;
 
@@ -109,7 +120,7 @@ window.HeadersGame = function(){
 					opacity: 0.2;
 				}
 
-				headersscore:last-of-type{
+				headersscore[side='right']{
 					left: ${W*1.5}px;
 				}
 
@@ -128,13 +139,19 @@ window.HeadersGame = function(){
 	function step(){
 
 		for(var m=0; m<meeps.length; m++){
-			meeps[m].setHeight((H-meeps[m].py)+HEADR);
-
-			if(m==0 && meeps[m].px>(W/2-HEADR) ) meeps[m].px = W/2-HEADR;
-			if(m==1 && meeps[m].px<(W/2+HEADR) ) meeps[m].px = W/2+HEADR;
-
 			meeps[m].$el.css({
-				left:W + meeps[m].px + 'px',
+				left:meeps[m].px + 'px',
+			})
+		}
+
+		for(var m=0; m<meepsActive.length; m++){
+			meepsActive[m].setHeight((H-meepsActive[m].py)+HEADR);
+
+			if(m==0 && meepsActive[m].px>(W/2-HEADR) ) meepsActive[m].px = W/2-HEADR;
+			if(m==1 && meepsActive[m].px<(W/2+HEADR) ) meepsActive[m].px = W/2+HEADR;
+
+			meepsActive[m].$el.css({
+				left:W + meepsActive[m].px + 'px',
 			})
 		}
 
@@ -160,23 +177,23 @@ window.HeadersGame = function(){
 				ball.sx *= 0.5;
 				if(!ball.dead){
 					let nScore = (ball.px > W/2)?0:1;
-					meeps[nScore].score++;
-					meeps[nScore].$score.text(meeps[nScore].score);
-					iTimeout = setTimeout(finiRound,1000);
+					meepsActive[nScore].score++;
+					meepsActive[nScore].$score.text(meepsActive[nScore].score);
+					iTimeout = setTimeout(finiBall,1000);
 				}
 				ball.dead = true;
 			} else if( !ball.dead ){
-				for(var m in meeps){
-					let dx = (ball.px - meeps[m].px);
-					let dy = (ball.py - meeps[m].py);
+				for(var m in meepsActive){
+					let dx = (ball.px - meepsActive[m].px);
+					let dy = (ball.py - meepsActive[m].py);
 					let d = Math.sqrt(dx*dx + dy*dy);
 
 					if( d < COLLIDE ){
 
 						let r = Math.atan2(dy,dx);
 
-						ball.px = meeps[m].px + Math.cos(r) * COLLIDE;
-						ball.py = meeps[m].py + Math.sin(r) * COLLIDE;
+						ball.px = meepsActive[m].px + Math.cos(r) * COLLIDE;
+						ball.py = meepsActive[m].py + Math.sin(r) * COLLIDE;
 
 						ball.sx = Math.cos(r) * 20;
 						ball.sy = Math.sin(r) * 20 - 10;
@@ -192,22 +209,27 @@ window.HeadersGame = function(){
 	}
 
 	let ball;
-	function initRound(){
+	function initBall(){
 		if(ball) ball.$el.remove();
 		ball = new Ball(BALLR,W,H);
 		ball.$el.appendTo($game);
 	}
 
-	function finiRound(){
-		//ball.$el.remove();
-		iTimeout = setTimeout( initRound, 1000 );
+	let iTimeout;
+	function finiBall(){
+		iTimeout = setTimeout( initBall, 1000 );
 	}
 
+
 	let meeps = [];
-	function initGame(){
-		for(var i=0; i<2; i++){
+	let countPlayer = 2;
+	function initGame(COUNT){
+
+		countPlayer = COUNT;
+
+		for(var i=0; i<countPlayer; i++){
 			meeps[i] = new PartyMeep(i);
-			meeps[i].$score = $('<headersscore>').appendTo($game).text(0);
+			meeps[i].$score = $('<headersscore>').appendTo($game).text(0).hide();
 			meeps[i].$el.appendTo($game);
 			meeps[i].$el.css({
 				'top':FEET+'px',
@@ -215,14 +237,21 @@ window.HeadersGame = function(){
 			});
 		}
 
-		
-		
+		setTimeout( initNextMatchup, 1000 );
 	}
 
-	function finiGame() {
+	function finiMatchup(){
 		clearTimeout(iTimeout);
 		ball.dead = true;
 		hud.initBanner('Finish!');
+
+		setTimeout( hud.finiBanner, 2000 );
+		setTimeout( MATCHUPS[countPlayer][iMatchup+1]?initNextMatchup:finiGame, 4000 );
+
+	}
+
+	function finiGame() {
+		
 		setTimeout(function(){
 			let scores = [];
 			for(var m in meeps) scores[m] = meeps[m].score;
@@ -230,20 +259,38 @@ window.HeadersGame = function(){
 		})
 	}
 
+	let meepsActive = [];
+	let iMatchup = -1;
+	function initNextMatchup(){
+
+		for( var m in meepsActive ) meepsActive[m].$score.hide();
+
+		iMatchup++;
+		let matchup = MATCHUPS[countPlayer][iMatchup];
+		let iLeft = parseInt(matchup[0]);
+		let iRight = parseInt(matchup[1]);
+
+		meepsActive[0] = meeps[iLeft];
+		meepsActive[1] = meeps[iRight];
+
+		meepsActive[0].$score.show().attr('side','left');
+		meepsActive[1].$score.show().attr('side','right');
+
+		initIntro();
+	}
+
 	function initIntro(){
-		initGame();
 		hud.initBanner('Ready!');
 		setTimeout(hud.finiBanner,2000);
 		setTimeout(function(){
 			hud.initBanner('Go!');
-			hud.initTimer(30,finiGame);
-			
+			hud.initTimer(30,finiMatchup);
 		},3000);
 		setTimeout(hud.finiBanner,4000);
-		setTimeout(initRound,5000);
+		setTimeout(initBall,5000);
 	}
 
-	initIntro();
+	hud.initPlayerCount(initGame);
 
 	let scale = 1;
 	function resize(){
