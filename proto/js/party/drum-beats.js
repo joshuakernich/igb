@@ -68,11 +68,12 @@ window.DrumBeatsGame = function(){
 			top:400,
 		})
 
+		let $drums = [];
 		for(var i=0; i<DRUMS; i++){
 
 			let r = RADRANGE/DRUMS * (i-((DRUMS-1)/2)) - (Math.PI/2);
 
-			$('<drumdrum>').appendTo($ring).css({
+			$drums[i] = $('<drumdrum>').appendTo($ring).css({
 				transform:'rotate('+r+'rad)',
 				left: Math.cos(r) * RINGR + 'px',
 				top: Math.sin(r) * RINGR + 'px',
@@ -94,6 +95,20 @@ window.DrumBeatsGame = function(){
 				'top':'20px',
 				transform:'rotate('+self.ox*(RADRANGE/8)+'rad)',
 			})
+
+			for(var d=0; d<$drums.length; d++){
+				let r = RADRANGE/DRUMS * (d-((DRUMS-1)/2)) - (Math.PI/2);
+
+				let p = 1-(self.ox + 1)/2;
+				let pDrum = d * 1/($drums.length-1);
+				let pDist = pDrum-p;
+
+
+				$drums[d].css({
+					transform: 'rotate('+(r - pDist*0.8)+'rad)'
+				})
+			}
+			
 		}
 
 		self.doCorrect = function(b){
@@ -190,7 +205,7 @@ window.DrumBeatsGame = function(){
 					display:block;
 					position: absolute;
 					inset: 0px;
-					background: linear-gradient(to bottom, #276F7A, transparent);
+					background: linear-gradient(to bottom, #be8445, transparent);
 				}
 
 				drumscore{

@@ -826,7 +826,7 @@ BoxPartyGame = function(){
 		'Drum Beats':{
 			game:window.DrumBeatsGame,
 			color:'white',
-			bg:'url(./proto/img/party/bg-cosmos.jpg) center / cover',
+			bg:'url(./proto/img/party/icon-drum.png) center / cover',
 		},
 		'Final Frenzy':{
 			game:window.CoinChaosGame,
