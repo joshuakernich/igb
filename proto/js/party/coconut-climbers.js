@@ -6,22 +6,29 @@ window.CoconutClimbersGame = function(){
 	const DISTANCE = 5;
 	const TREE = H*DISTANCE + H/2;
 	const THICC = 70;
+	const COCONUT = 100;
 	
 	let CoconutPlayer = function(n,ax){
 
+		
+
 		const MIN = 0.4;
 		const MULT = 12; // essentially saying I only need 1/6th of the room width
+		const HMEEP = 350;
+		const PHMEEP = HMEEP/H;
 
 		let self = this;
 		self.$el = $('<coconutplayer>');
 
-
-
+		self.countSlipping = 0;
 		self.ax = ax;
 		self.px = ax;
 		self.ay = 0;
 		self.py = undefined;
 		self.pyWas = undefined;
+		self.ticksComplete = undefined;
+
+		let ticksElapsed = 0;
 
 		let meep = new PartyMeep(n);
 		meep.$el.appendTo(self.$el);
@@ -35,13 +42,51 @@ window.CoconutClimbersGame = function(){
 
 		let $tree = $('<coconuttree>').appendTo(self.$el);
 
+		$('<coconut>').appendTo($tree).css({ top:'60px', left:130 + 'px' });
+		$('<coconut>').appendTo($tree).css({ top:'80px', left:60 + 'px' });
+		$('<coconut>').appendTo($tree).css({ top:'100px', left:-100 + 'px' });
+
 		for(var i=0; i<5; i++){
 			let $frond = $('<coconutfrond>').appendTo($tree).css({
 				transform:'rotate('+(-180+(i*40))+'deg)',
 			})
 		}
 
-		self.update = function(){
+		let coconuts = [];
+		self.addCoconut = function(iSide){
+
+			if(self.ticksComplete != undefined) return;
+
+			coconuts.push({
+				iSide:iSide,
+				stepsRemaining:FPS*2, 
+				stepsTotal:FPS*2,
+				ay:Math.min( self.ay, DISTANCE ),
+				$el:$('<coconut>').appendTo(self.$el).css({ left:iSide*120 + 'px' }),
+			});
+		}
+
+		self.step = function(){
+
+			ticksElapsed++;
+
+			for(var c in coconuts){
+				if(!coconuts[c].hasHit){
+					coconuts[c].stepsRemaining--;
+					let progress = (coconuts[c].stepsRemaining/coconuts[c].stepsTotal);
+		
+					// dy allows the coconut to come closer because we are climbing toward us
+					// dividing by 3 means we can climb without having a profound impact on the height of the coconut
+					let dy = (coconuts[c].ay-self.ay)/3; 
+
+					coconuts[c].py = progress + dy;
+
+					coconuts[c].$el.css({
+						bottom: coconuts[c].py * H + 'px',
+					});
+				}
+			}
+
 			let ox = (self.px - self.ax) * MULT;
 			ox = Math.max( -1, Math.min(1, ox));
 
@@ -64,21 +109,57 @@ window.CoconutClimbersGame = function(){
 				bottom: (1-self.py) * H - 100 + 'px',
 			})
 
-			if(self.pyWas != undefined){
+			let oy = 0;
+			if(self.countSlipping <= 0 && self.pyWas != undefined){
 				self.dy = self.py - self.pyWas;
 				if(self.dy>0) self.ay += self.dy;
 
-				if(self.ay > DISTANCE) self.ay = DISTANCE;
+				if(self.ay > DISTANCE){
+					self.ticksComplete = ticksElapsed;
+					self.ay = DISTANCE;
+				}
 
-				let oy = (self.py * 2)-1;
+				oy = (self.py * 2)-1;
+			} else if(self.countSlipping>0){
+				self.countSlipping--;
+				self.ay -= 0.005;
+				if(self.ay<0) self.ay = 0;
+			}
 
-				meep.$el.css({
-					bottom: 100 + oy*100 + 'px',
-				})
+			let my = 0.1+oy*0.1;
+			meep.$el.css({
+				bottom: (my*H) + 'px',
+			})
 
-				$tree.css({
-					bottom: -self.ay * H + 'px',
-				})
+			$tree.css({
+				bottom: -self.ay * H + 'px',
+			})
+
+			for(var c in coconuts){
+
+				if(!coconuts[c].hasHit && self.ticksComplete == undefined){
+					let dy = coconuts[c].py - (my + PHMEEP);
+					if(dy<0 && dy>-0.2 && coconuts[c].iSide == dir){
+						coconuts[c].hasHit = true;
+
+						self.countSlipping = FPS/2;
+
+						coconuts[c].$el.css({
+							transform: 'rotate('+coconuts[c].iSide*60+'deg)',
+						}).animate({
+							left: coconuts[c].iSide * 200,
+							bottom: coconuts[c].py * H + 100 + 'px',
+						},{
+							duration: 200,
+							easing: 'linear',
+						}).animate({
+							left: coconuts[c].iSide * 300,
+							bottom: -100,
+						},{
+							duration: 500,
+						})
+					}
+				}
 			}
 
 			self.pyWas = self.py;
@@ -110,6 +191,26 @@ window.CoconutClimbersGame = function(){
 					margin: auto;
 					box-sizing: border-box;
 					background: linear-gradient(to top, #28A9E1, transparent);
+				}
+
+				coconut{
+					display: block;
+					position: absolute;
+				}
+
+				coconut:after{
+					content: "";
+					display: block;
+					position: absolute;
+					left: ${-COCONUT/2}px;
+					bottom: ${-COCONUT/2}px;
+					width: ${COCONUT}px;
+					height: ${COCONUT}px;
+					background: #D59563;
+					border-radius: 100% 0px ${COCONUT}px ${COCONUT}px;
+					box-shadow: inset 0px 0px 30px #a86939, 0px 10px 20px rgba(0,0,0,0.5);
+					transform: rotate(-45deg);
+
 				}
 
 				coconutplayer{
@@ -189,16 +290,24 @@ window.CoconutClimbersGame = function(){
 
 	let queue = [];
 	let nStep = 0;
+
 	function step(){
 		nStep++;
 
-		if(nStep%20){
+		let stepPerCoconut = FPS;
+
+		if(nStep%stepPerCoconut==9){
 			if(!queue.length){
 				while(queue.length<countMeeps) queue.push(queue.length);
+				shuffleArray(queue);
 			}
 			let iMeep = queue.pop();
+			meeps[iMeep].addCoconut( Math.random()>0.5?1:-1);
 		}
-		for(var m in meeps) meeps[m].update();
+
+		for(var m in meeps){
+			meeps[m].step();
+		}
 
 		resize();
 	}
