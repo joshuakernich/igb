@@ -32,7 +32,7 @@ window.DrumBeatsGame = function(){
 	let beats = [];
 	for(var m in SONG.map){
 		for(var i=SONG.map[m].from; i<=SONG.map[m].to; i+=SONG.map[m].every){
-			beats.push({beat:i, lerp:2});
+			beats.push({beat:i, lerp:2, nDrum:Math.floor( Math.random()*DRUMS )});
 		}
 	}
 
@@ -118,9 +118,10 @@ window.DrumBeatsGame = function(){
 		
 	}
 
-	let DrumBall = function(map,nDrum,meep){
+	let DrumBall = function(map,meep){
 
 		let self = this;
+		let nDrum = map.nDrum;
 		self.$el = $(`<drumball n=${nDrum}>`);
 
 		let audio = new AudioContext();
@@ -393,7 +394,7 @@ window.DrumBeatsGame = function(){
 
 
 		for(var b in beats){
-			balls[b] = new DrumBall(beats[b],b%DRUMS,meeps[b%meeps.length]);
+			balls[b] = new DrumBall(beats[b],meeps[b%meeps.length]);
 			balls[b].$el.css({left:'50%'});
 			balls[b].$el.appendTo($game);
 			balls[b].step(0);
