@@ -820,27 +820,27 @@ BoxPartyGame = function(){
 		'Follicle Frenzy':{
 			game:window.FollicleFrenzyGame,
 			color:'brown',
-			bg:'url(./proto/img/party/bg-barber.jpg) center / cover'
+			bg:'url(./proto/img/party/icon-follicle.png) center / cover'
 		},
 		'Headers':{
 			game:window.HeadersGame,
 			color:'white',
-			bg:'url(./proto/img/party/bg-stadium.jpg) center / cover'
+			bg:'url(./proto/img/party/icon-headers-lite.png) center / cover'
 		},
 		'Death Maze':{
 			game:window.MazeGame,
 			color:'white',
-			bg:'url(./proto/img/party/bg-mountains.jpg) center / cover'
+			bg:'url(./proto/img/party/icon-maze.png) center / cover'
 		},
 		'Pump Pop':{
 			game:window.PumpPopGame,
 			color:'white',
-			bg:'url(./proto/img/party/bg-mountains.jpg) center / cover'
+			bg:'url(./proto/img/party/icon-pump.png) center / cover'
 		},
 		'Coin Chaos':{
 			game:window.CoinChaosGame,
 			color:'white',
-			bg:'url(./proto/img/party/bg-mountains-white.jpg) center / cover'
+			bg:'url(./proto/img/party/icon-coin-chaos.png) center / cover'
 		},
 		'Spot The Meep':{
 			game:window.SpotTheMeepGame,
