@@ -17,6 +17,7 @@ window.PartyTally = function(players){
 					padding: 100px;
 					pointer-events: none;
 					overflow: hidden;
+					box-sizing: border-box;
 				}
 
 				partytallytable{

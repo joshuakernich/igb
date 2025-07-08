@@ -302,7 +302,29 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
                 position: absolute;
                 left: 0px;
                 top: 0px;
+
+    			background: url(./proto/img/party/bg-cosmos.jpg);
+                background-size: 100%;
+                background-position: center;
             }
+
+    		partyScene3D:before{
+        		content:"";
+        		box-sizing: border-box;
+        		position: absolute;
+        		inset: 0px;
+        		background: linear-gradient( to bottom, black, transparent, blue, blue );
+        	}
+
+    		boxpartymountains{
+        		content:"";
+        		box-sizing: border-box;
+        		position: absolute;
+        		inset: 0px;
+        		background: url(./proto/img/party/bg-mountains.png);
+        		background-size: 100%;
+                background-position: center;
+        	}
 
             partyWorld3D{
                 display:block;
@@ -344,10 +366,7 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
             	content: "";
             	display: block;
             	position: absolute;
-            	top: 0px;
-            	left: 0px;
-            	right: 0px;
-            	bottom: 0px;
+        		inset: 0px;
             	background: url(./proto/img/party/bg-cosmic-swirl.gif);
             	background-size: cover;
             	mix-blend-mode: overlay;
@@ -393,10 +412,7 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
             boxface{
             	display: block;
             	position: absolute;
-            	left: 0px;
-            	right: 0px;
-            	bottom: 0px;
-            	top: 0px;
+        		inset: 0px;
             }
 
             boxeye{
@@ -460,6 +476,8 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
         <partyScene3D>
         </partyScene3D>`
     );
+
+    $('<boxpartymountains>').appendTo(self.$el);
 
     let $world = $('<partyWorld3D>').appendTo(self.$el);
     let $plane = $('<partyPlane3D>').appendTo($world);
@@ -682,6 +700,12 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 		});
 	}
 
+	self.doNextLocation = function(){
+		iLevel++;
+		self.anchorPlayer.x = stops[iLevel].x;
+		self.anchorPlayer.y = stops[iLevel].y - W * 0.2;
+	}
+
 	self.doWalkForward = function(){
 		iLevel++;
 		let stop = stops[iLevel];
@@ -859,49 +883,9 @@ BoxPartyGame = function(){
         		width: ${W*GRID*3}px;
         		height: ${H*GRID}px;
         		transform-origin: top left;
-        		background: url(./proto/img/party/bg-cosmos.jpg);
-                background-size: 100%;
-                background-position: center;
+        		
                 position: relative;
-
                 font-family: "Paytone One";
-        	}
-
-        	boxpartygame:before{
-        		content:"";
-        		box-sizing: border-box;
-        		position: absolute;
-        		top: 0px;
-        		left: 0px;
-        		right: 0px;
-        		bottom: 0px;
-        		background: linear-gradient( to bottom, black, transparent, blue, blue );
-        	}
-
-        	boxpartymountains{
-        		content:"";
-        		box-sizing: border-box;
-        		position: absolute;
-        		top: 0px;
-        		left: 0px;
-        		right: 0px;
-        		bottom: 0px;
-        		background: url(./proto/img/party/bg-mountains.png);
-        		background-size: 100%;
-                background-position: center;
-        	}
-
-        	boxpartygame:after{
-        		content:"";
-        		width: ${W*GRID}px;
-        		height: ${H*GRID}px;
-        		border-left: 10px dashed black;
-        		border-right: 10px dashed black;
-        		box-sizing: border-box;
-        		position: absolute;
-        		top: 0px;
-        		left: ${W*GRID}px;
-        		pointer-events: none;
         	}
 
         	boxpartyoverlay{
@@ -912,6 +896,13 @@ BoxPartyGame = function(){
         		opacity: 0;
         		pointer-events: none;
         	}
+
+			boxpartyminigame{
+				display: block;
+				position: absolute;
+				inset: 0px;
+			}
+
         <style`);
 
  	let audio = new AudioContext();
@@ -921,15 +912,15 @@ BoxPartyGame = function(){
 	let self = this;
 	self.$el = $('<igb>');
 
-	let $game = $('<boxpartygame>').appendTo(self.$el);
-	$('<boxpartymountains>').appendTo($game);
-	
-	
+	let $minigame = $('<boxpartyminigame>').appendTo(self.$el);
 
+	let $game = $('<boxpartygame>').appendTo(self.$el);
+	
+	
 	let scene = new BoxPartyScene3D(QUEUE, doShowOverlay, doLaunchGame, doExitGame);
 	scene.$el.appendTo($game);
 
-	let $minigame = $('<boxpartyminigame>').appendTo(self.$el);
+	
 	let $overlay = $('<boxpartyoverlay>').appendTo(self.$el);
 
 	let players = [];
@@ -967,11 +958,15 @@ BoxPartyGame = function(){
 
 	let resultsPending;
 	function doCompleteGame(results){
+		
 		resultsPending = results;
 		scene.$el.show();
 		liveModule.$el.remove();
 		audio.play('music');
 		scene.doCompleteBox();
+
+		liveModule = undefined;
+		window.doPartyGameComplete = undefined;
 	}
 
 	function doExitGame(){
@@ -1028,9 +1023,21 @@ BoxPartyGame = function(){
 		setTimeout(scene.doActivateStop,16000);
 	}
 
+	function doSkipLocation() {
+		scene.doNextLocation();
+		scene.doActivateStop();
+	}
+
+	function doSkipMinigame() {
+		if(liveModule) doCompleteGame([]);
+	}
+
     let hud = new PartyHUD('#7538D4',0);
     hud.$el.appendTo($game);
-    hud.initPlayerCount(initGame)
+    hud.initPlayerCount(initGame);
+
+    hud.addDebug('SKIP LOCATION',doSkipLocation);
+    hud.addDebug('SKIP MINIGAME',doSkipMinigame);
 
     self.setPlayers = function(p){
     	scene.setPlayers(p);

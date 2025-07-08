@@ -103,7 +103,6 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 					
 					top: 110%;
 					box-shadow: 0px 2px 20px black;
-					pointer-events: auto;
 					font-size: 80px;
 					color: white;
 					line-height: 80px;
@@ -195,6 +194,22 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 					border-radius: 30px;
 					box-shadow: 0px 5px rgba(0,0,0,0.4);
 					text-shadow: 0px -3px black;
+
+					pointer-events: auto;
+				}
+
+				partydebug{
+					display: inline-block;
+					position: absolute;
+					top: 350px;
+					right: 80px;
+				}
+
+				partydebug button{
+					font-size: 30px;
+					display: block;
+					padding: 30px 30px 35px;
+					margin-bottom: 20px;
 				}
 			</style>
 			`);
@@ -204,6 +219,7 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 	self.$el = $('<partyhud>');
 
 	let $banner = $(`<partyhudbanner style="background:${colour};">`).appendTo(self.$el);
+	let $debugRight = $('<partydebug>').appendTo(self.$el);
 
 	function setBanner(b){
 		if(b) $banner.css({top:'100%'}).animate({top:'10%'}).animate({top:'15%'});
@@ -252,6 +268,13 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 
 	self.finiBanner = function(){
 		setBanner(false);
+	}
+
+	self.addDebug = function(name,fn){
+		$('<button>').text(name).appendTo($debugRight).click(function(){
+			console.log('yo',fn);
+			fn();
+		});
 	}
 
 	for(var i=0; i<3; i++){
