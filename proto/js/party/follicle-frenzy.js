@@ -4,7 +4,7 @@ window.FollicleFace = function(GRIDSIZE,n,xAnchor,yAnchor){
 
 
 
-	const MAP = [
+	/*const MAP = [
 		'  000000  ',
 		' 00000000 ',
 		' 0  000 0 ',
@@ -20,6 +20,39 @@ window.FollicleFace = function(GRIDSIZE,n,xAnchor,yAnchor){
 		' 0  00  0 ',
 		' 00000000 ',
 		'   0000   ',
+	]*/
+
+	const MAP = [
+	    "      00000000      ",
+	    "    000000000000    ",
+	    "  0000000000000000  ",
+	    "  0000000000000000  ",
+	    " 00     000000   00 ",
+	    "00       000      00",
+	    "00        00      00",
+	    "00          0     00",
+	    "00                00",
+	    "00                00",
+	    "00                00",
+	    "00                00",
+	    "00                00",
+	    "00                00",
+	    "00                00",
+	    "00                00",
+	    "00   0000000000   00",
+	    "00 00000000000000 00",
+	    "0000            0000",
+	    "000              000",
+	    "00                00",
+	    "00                00",
+	    "00                00",
+	    "00                00",
+	    "00       00       00",
+	    " 00     0000     00 ",
+	    "  00000000000000000 ",
+	    "  0000000000000000  ",
+	    "    000000000000    ",
+	    "       000000       "
 	]
 
 	let xCenter = GRIDSIZE * MAP[0].length/2;
@@ -63,19 +96,23 @@ window.FollicleFace = function(GRIDSIZE,n,xAnchor,yAnchor){
 	`).appendTo(self.$el);
 
 	self.redraw = function(){
+
+		let px = self.x;
+		if(self.wall==0) px = self.z;
+		if(self.wall==2) px = 1600-self.z;
 		
-		let ox = (self.x - xAnchor - xCenter);
+		let ox = (px - xAnchor - xCenter);
 		let oy = (self.y - yAnchor - yArm);
 
-		let gx = Math.floor( (self.x - xAnchor)/GRIDSIZE );
-		let gy = Math.floor( (self.y - yAnchor)/GRIDSIZE );
+		let gx = (px - xAnchor)/GRIDSIZE;
+		let gy = (self.y - yAnchor)/GRIDSIZE;
 
 		let r = (-ox*0.3);
 		if(r>45) r = 45;
 		if(r<-45) r = -45;
 
 		$hand.css({
-			left: (self.x - xAnchor) + 'px',
+			left: (px - xAnchor) + 'px',
 			top: (self.y - yAnchor) + 'px',
 			transform: 'rotate('+r+'deg)',
 			'z-index':100-gy-1, 
@@ -90,10 +127,24 @@ window.FollicleFace = function(GRIDSIZE,n,xAnchor,yAnchor){
 			'transform':'scale('+(ox>0?1:-1)+','+(oy>0?1:-1)+')',
 		})
 
-		//if(n==0) console.log(ox,rx);
+		for(var y=0; y<MAP.length; y++){
+			for(var x=0; x<MAP[y].length; x++){
+				let dx = gx-x;
+				let dy = gy-y;
+				let d = Math.sqrt(dx*dx + dy*dy);
+				if(d<1.5){
+					let $hair = self.$el.find('folliclehair[x='+x+'][y='+y+']');
+					if(!$hair.hasClass('dead')){
+						let rx = - 100 + Math.random()*200;
+						$hair.addClass('dead');
+						$hair.css({'z-index':1000}).animate({ top:-50, left:rx*0.1 },200).animate({top:1000,left:rx },1000);
+					}
+				}
+			}
+		}
 
 		
-		if( MAP[gy] && MAP[gy][gx] == 0 ){
+		/*if( MAP[gy] && MAP[gy][gx] == 0 ){
 
 			let $hair = self.$el.find('folliclehair[x='+gx+'][y='+gy+']');
 
@@ -105,7 +156,7 @@ window.FollicleFace = function(GRIDSIZE,n,xAnchor,yAnchor){
 				$hair.css({'z-index':1000}).animate({ top:-50, left:rx*0.1 },200).animate({top:1000,left:rx },1000);
 			}
 			
-		}
+		}*/
 	}
 
 }
@@ -114,9 +165,9 @@ window.FollicleFrenzyGame = function(){
 
 	const W = 1600;
 	const H = 1000;
-	const FPS = 20;
+	const FPS = 50;
 	const PLAYER_COUNT = 6;
-	const GRIDSIZE = 30;
+	const GRIDSIZE = 15;
 
 	if(!FollicleFrenzyGame.didInit){
 		FollicleFrenzyGame.didInit = true;
@@ -187,8 +238,8 @@ window.FollicleFrenzyGame = function(){
 					display: inline-block;
 					width: ${GRIDSIZE}px;
 					height: ${GRIDSIZE}px;
-					
 				}
+
 
 				folliclewall{
 					width: 33.333%;
@@ -233,14 +284,13 @@ window.FollicleFrenzyGame = function(){
 				folliclehair:after{
 					content:"";
 					width: 160%;
-					height: 200%;
+					height: 300%;
 					background: red;
 					display:block;
 					position: absolute;
 					top: -20%;
 					left: -30%;
 					border-radius: 100% 100% 100% 0px;
-					border: 5px solid rgba(0,0,0,0.1);
 					box-sizing: border-box;
 				}
 
@@ -375,7 +425,7 @@ window.FollicleFrenzyGame = function(){
 	self.setPlayers = function(p){
 		for(var m in meeps){
 			meeps[m].x = p[m].px*W;
-			meeps[m].y = p[m].py*H;
+			meeps[m].y = (p[m].py-0.2)*H*3;
 			meeps[m].z = p[m].pz*W;
 		}
 	}

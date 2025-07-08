@@ -856,7 +856,6 @@ BoxPartyGame = function(){
 			game:window.CoinChaosGame,
 			color:'white',
 			bg:'url(./proto/img/party/bg-cosmos.jpg) center / cover',
-			size: 'big',
 		},
 		
 	}

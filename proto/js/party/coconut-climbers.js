@@ -236,7 +236,7 @@ window.CoconutClimbersGame = function(){
 					left: ${-THICC/2}px;
 					bottom: 0px;
 					background: repeating-linear-gradient(
-					  #a86939, #D59563 100px
+					  #a86939, #D59563 300px
 					);
 					box-shadow: 2px 0px 20px black;
 				}
