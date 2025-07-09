@@ -71,6 +71,7 @@ window.PopcornGame = function(){
 		}
 
 		self.redraw = function(){
+
 			let px = self.px;
 			self.$el.css({
 				left: self.wall*W + px * W + 'px',
@@ -137,6 +138,10 @@ window.PopcornGame = function(){
 		let $pan = $('<popcornpan>').appendTo(self.$el);
 
 		self.step = function(){
+
+			if(self.wall==0) self.px = self.pz;
+			if(self.wall==2) self.px = 1-self.pz;
+
 			let px = self.px;
 			self.$el.css({
 				left: self.wall*W + px * W + 'px',
@@ -151,6 +156,7 @@ window.PopcornGame = function(){
 			})
 
 			for(var k in self.kernels){
+				self.kernels[k].wall = self.wall;
 				self.kernels[k].px = self.px + self.kernels[k].panx;
 				self.kernels[k].py = self.py;
 			}
@@ -164,6 +170,7 @@ window.PopcornGame = function(){
 
 		self.stepHeat = function(){
 			for(var k=0; k<self.kernels.length; k++){
+				
 				self.kernels[k].heat ++;
 				if( self.kernels[k].heat > FPPOP && !self.kernels[k].isPopped ){
 					self.kernels[k].pop();
@@ -339,7 +346,7 @@ window.PopcornGame = function(){
 
 	function spawnKernels(){
 
-		let wall = 1;
+		let wall = Math.floor( Math.random()*3 );
 		let ax = 0.2 + Math.random() * 0.6;
 	
 		for(var i=0; i<5; i++){
@@ -407,6 +414,7 @@ window.PopcornGame = function(){
 	self.setPlayers = function(p){
 		for(var m in meeps){
 			meeps[m].px = p[m].px;
+			meeps[m].pz = p[m].pz;
 			//meeps[m].py = p[m].py;
 			meeps[m].wall = p[m].wall;
 			meeps[m].r =  {W:p[m].rW, X:p[m].rX, Y:p[m].rY, Z:p[m].rZ};
