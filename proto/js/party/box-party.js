@@ -397,6 +397,7 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 				position: absolute;
 				width: 0px;
 				left: 0px;
+				pointer-events: auto;
             }
 
             boxheader{
@@ -885,6 +886,7 @@ BoxPartyGame = function(){
         		
                 position: relative;
                 font-family: "Paytone One";
+				pointer-events: none;
         	}
 
         	boxpartyoverlay{
