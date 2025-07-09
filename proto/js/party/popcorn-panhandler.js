@@ -7,9 +7,11 @@ window.PopcornGame = function(){
 	const PANPX = 0.1;
 	const PAN = W*PANPX;
 	const KERNEL = 20;
+	const POPPED = 40;
 	const FLOOR = 120;
 
 	const GRAVITY = 0.02/FPS;
+	const FPPOP = FPS*2;
 
 	const PopcornKernel = function(){
 		let self = this;
@@ -24,32 +26,48 @@ window.PopcornGame = function(){
 		self.offsetY = -10 + Math.random() * 20;
 		self.inPan = false;
 		self.isDead = false;
+		self.isPopped = false;
+		self.heat = 0;
+		self.bounce = 0;
 
 		let $sprite = $('<popcornkernelsprite>').appendTo(self.$el);
 
 		let nStep = 0;
 		self.step = function(){
 
-			if(self.inPan) return;
+			if(self.inPan){
+				//handled by the meep
+			} else {
+				self.delay--;
 
-			self.delay--;
+				if(self.delay<=0){
 
-			if(self.delay<=0){
+					self.sy += GRAVITY;
+					self.px += self.sx;
+					self.py += self.sy;
 
-				self.sy += GRAVITY;
-				self.px += self.sx;
-				self.py += self.sy;
+					self.r += self.sx;
 
-				self.r += self.sx;
+					if(self.py>1){
+						self.py = 1;
+						self.sy = -Math.abs(self.sy) * 0.2;
+						self.sx = self.sx * 0.5;
 
-				if(self.py>1){
-					self.py = 1;
-					self.sy = -Math.abs(self.sy) * 0.2;
-					self.sx = self.sx * 0.5;
-
-					if(self.sy>-0.00005) self.isDead = true;
+						self.bounce++;
+						if(self.bounce>5) self.isDead = true;
+					}
 				}
 			}
+		}
+
+		self.pop = function(){
+			self.isPopped = true;
+			self.inPan = false;
+			self.sy = -0.025 + Math.random() * 0.01;
+			self.sx = -0.005 + Math.random() * 0.01;
+			$sprite.addClass('popped').css({
+				'background':'',
+			})
 		}
 
 		self.redraw = function(){
@@ -59,6 +77,13 @@ window.PopcornGame = function(){
 				bottom: self.offsetY + FLOOR + H - self.py*H + 'px',
 				transform: 'rotate('+(self.r*100)+'rad)',
 			});
+
+			if(!self.isPopped){
+				let hot = self.heat/FPPOP;
+				$sprite.css({
+					'background':`linear-gradient(to bottom, white, rgb(${255},${255*(1-hot)},${0}))`
+				})
+			}
 		}
 	}
 
@@ -135,6 +160,17 @@ window.PopcornGame = function(){
 			kernel.inPan = true;
 			self.kernels.push(kernel);
 			kernel.panx = -PANPX*0.4 + Math.random()*PANPX*0.8;
+		}
+
+		self.stepHeat = function(){
+			for(var k=0; k<self.kernels.length; k++){
+				self.kernels[k].heat ++;
+				if( self.kernels[k].heat > FPPOP && !self.kernels[k].isPopped ){
+					self.kernels[k].pop();
+					self.kernels.splice(k,1);
+					k--;
+				}
+			}
 		}
 
 	}
@@ -251,6 +287,15 @@ window.PopcornGame = function(){
 					top: ${-KERNEL/2}px;
 					background: linear-gradient(to bottom, white, orange);
 				}
+
+				popcornkernelsprite.popped{
+					width: ${POPPED}px;
+					height: ${POPPED}px;
+					left: ${-POPPED/2}px;
+					top: ${-POPPED/2}px;
+					background: white;
+					border-radius: 100%;
+				}
 			</style>
 		`)
 	}
@@ -320,12 +365,21 @@ window.PopcornGame = function(){
 			meeps[m].step();
 
 			for(var k in kernels){
-
-				if(!kernels[k].inPan){
+				if(!kernels[k].inPan && kernels[k].wall == meeps[m].wall && kernels[k].sy>0){
 					let dx = Math.abs( kernels[k].px - meeps[m].px );
 					let dy = Math.abs( kernels[k].py - meeps[m].py );
 					if(dy<0.05 && dx<PANPX/2) meeps[m].add( kernels[k] );
 				}
+			}
+
+			for(var f in fires){
+				if(fires[f].wall == meeps[m].wall){
+					let dx = Math.abs( fires[f].px - meeps[m].px );
+					if(dx<PANPX/2){
+						meeps[m].stepHeat();
+					}
+				}
+				
 			}
 		}
 
