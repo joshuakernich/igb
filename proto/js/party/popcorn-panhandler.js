@@ -64,7 +64,7 @@ window.PopcornGame = function(){
 			self.isPopped = true;
 			self.inPan = false;
 			self.sy = -0.025 + Math.random() * 0.01;
-			self.sx = -0.005 + Math.random() * 0.01;
+			self.sx = -0.002 + Math.random() * 0.004;
 			$sprite.addClass('popped').css({
 				'background':'',
 			})
@@ -301,7 +301,8 @@ window.PopcornGame = function(){
 					left: ${-POPPED/2}px;
 					top: ${-POPPED/2}px;
 					background: white;
-					border-radius: 100%;
+					border-radius: ${POPPED/2}px ${POPPED/2}px ${POPPED/2}px 0px;
+					background: radial-gradient( white, white, gray);
 				}
 			</style>
 		`)
@@ -311,6 +312,10 @@ window.PopcornGame = function(){
 	self.$el = $('<igb>');
 
 	let $game = $('<popcorngame>').appendTo(self.$el);
+
+	$game.click(function(e){
+		meeps[0].wall = Math.floor(e.offsetX/W);
+	});
 
 	let hud = new PartyHUD('#C48264');
 	hud.$el.appendTo($game);
@@ -416,7 +421,10 @@ window.PopcornGame = function(){
 			meeps[m].px = p[m].px;
 			meeps[m].pz = p[m].pz;
 			//meeps[m].py = p[m].py;
-			meeps[m].wall = p[m].wall;
+			if( p[m].wall != undefined ){
+				meeps[m].wall = p[m].wall;
+				p[m].wall = undefined;
+			} 
 			meeps[m].r =  {W:p[m].rW, X:p[m].rX, Y:p[m].rY, Z:p[m].rZ};
 		}
 	}
