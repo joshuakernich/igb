@@ -334,9 +334,11 @@ window.PopcornGame = function(){
 			fires[i].wall = i;
 			fires[i].$el.appendTo($game);
 		}
+
+		setInterval(spawnKernels,5000);
 	}
 
-	initGame(2);
+	hud.initPlayerCount(initGame);
 
 	function spawnKernel(wall,px,delay) {
 		
@@ -361,7 +363,7 @@ window.PopcornGame = function(){
 	}
 
 
-	setInterval(spawnKernels,5000);
+	
 
 	function step(){
 
