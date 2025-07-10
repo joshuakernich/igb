@@ -4,6 +4,8 @@ window.PartyMeep = function(n){
 
 	const W = 100;
 	const H = 350;
+	const HEAD = {w:W,h:150};
+	const BODY = {w:W*0.6,h:100};
 
 	if(!PartyMeep.didInit){
 		PartyMeep.didInit = true;
@@ -53,8 +55,8 @@ window.PartyMeep = function(n){
 
 				partymeephand{
 					display:block;
-					width: ${W*0.5}px;
-					height: ${W*0.5}px;
+					width: ${W*0.4}px;
+					height: ${W*0.4}px;
 					transform: translate(-50%, -50%);
 					background: white;
 					border-radius: ${W*0.25}px;
@@ -70,17 +72,22 @@ window.PartyMeep = function(n){
 
 				partymeephead{
 					display: block;
-					height: 150px;
+					height: ${HEAD.h}px;
 					background: white;
 					border-radius: ${W/2}px;
 					text-align: center;
 					position: relative;
 					left: ${-W/2}px;
 					padding-top: 30px;
-					width: 100px;
+					width: ${HEAD.w}px;
 					box-sizing: border-box;
 					line-height: 0px;
 					transform-origin: bottom center;
+
+					position: absolute;
+					top: 0px;
+
+					box-shadow: 0px 10px 10px rgba(0,0,0,0.2);
 				}
 
 				partymeephat{
@@ -90,25 +97,36 @@ window.PartyMeep = function(n){
 					border-radius: 5px;
 				}
 
+				partymeepbody:before{
+					content:"";
+					position: absolute;
+					display: block;
+					left: 30%;
+					top: -10px;
+					height: 20px;
+					background: white;
+					width: 40%;
+				}
+
 				partymeepbody{
 					display: block;
-					height: 100px;
+					position: absolute;
 					background: white;
-					margin: 0px 15px;
-					border-radius: ${W/4}px;
-					left: ${-W/2}px;
-					position: relative;
+					height: ${BODY.h}px;
+					width: ${BODY.w}px;
+					left: ${-BODY.w/2}px;
+					top: ${HEAD.h}px;
+					border-radius: ${BODY.w/2}px;
 				}
 
 				partymeeplegs{
 					display:block;
-					
+					position: absolute;
 					box-sizing: border-box;
-					
-					height: calc( 100% - 250px );
-					left: ${-W/2}px;
-					position: relative;
-					margin: auto;
+					height: calc( 100% - ${HEAD.h+BODY.h}px );
+					top: ${HEAD.h+BODY.h}px;
+					transform: translate(-50%);
+					transform-origin: top center;
 				}	
 
 				partymeepleg{
@@ -144,14 +162,17 @@ window.PartyMeep = function(n){
 					position: absolute;
 					background: white;
 					border-radius: 100% 100% 0px 0px;
+
 				}
 
 				partymeepfoot:first-of-type{
 					left: 0px;
+					transform-origin: bottom right;
 				}
 
 				partymeepfoot:last-of-type{	
 					right: 0px;
+					transform-origin: bottom left;
 				}
 
 				partymeepeye{
@@ -218,13 +239,14 @@ window.PartyMeep = function(n){
 
 			<partymeepshadow></partymeepshadow>
 			<partymeepavatar>
+				<partymeepbody></partymeepbody>
 				<partymeephead>
 					<partymeephat></partymeephat>
 					<partymeepeye></partymeepeye>
 					<partymeepeye></partymeepeye><br>
 					<partymeepmouth></partymeepmouth>
 				</partymeephead>
-				<partymeepbody></partymeepbody>
+				
 				<partymeeplegs>
 					<partymeepleg></partymeepleg>
 					<partymeepleg></partymeepleg>
@@ -246,18 +268,82 @@ window.PartyMeep = function(n){
 	self.$legs = self.$el.find('partymeeplegs');
 	self.$legLeft = self.$el.find('partymeepleg').first();
 	self.$legRight = self.$el.find('partymeepleg').last();
+	self.$footLeft = self.$el.find('partymeepfoot').first();
+	self.$footRight = self.$el.find('partymeepfoot').last();
 
 	self.setHeight = function(h){
 		self.$el.find('partymeepavatar').height(h);
+
 		let scale = Math.max(0,Math.min(1,H/h));
-
-		
 		self.$legs.css({width:30 + (70*scale) + '%'})
-
 		let round = 50 * scale + '%';
 		self.$legLeft.css({'border-radius':`${round} 0px 0px ${round}`});
 		self.$legRight.css({'border-radius':`0px ${round} ${round} 0px`});
-		
+	}
+
+	self.setHeight(H);
+
+	self.toSkydiver = function(){
+		self.$head.css({
+			'transform':'rotate(-10deg) translate(20px)',
+		})
+
+		self.$body.css({
+			top:'80px',
+			'transform':'rotate(15deg) translate(10px)',
+		})
+
+		self.$legs.css({
+			top: '180px',
+			height: '50px',
+			'transform':'translate(-55%) rotate(15deg)',
+		})
+
+		self.$footLeft.css({
+			'transform':'rotate(-25deg)',
+		})
+
+		self.$footRight.css({
+			'transform':'rotate(25deg)',
+		})
+
+		self.$handLeft.css({
+			'left':'-100px',
+			'top':'150px',
+		})
+
+		self.$handRight.css({
+			'left':'100px',
+			'top':'150px',
+		})
+	}
+
+	self.toFlyer = function(){
+		self.$handLeft.css({
+			'left':'-20px',
+			'top':'-20px',
+		})
+
+		self.$handRight.css({
+			'left':'90px',
+			'top':'170px',
+		})
+
+		self.$head.css({
+			'transform':'rotate(10deg) translate(20px)',
+		})
+
+		self.$body.css({
+			height:'80px',
+			top: '130px',
+		})
+
+		self.$legs.css({
+			top:'215px',
+			height: '50px',
+			'transform':'translate(-40%) rotate(-15deg)',
+		})
+
 	}
 
 }
