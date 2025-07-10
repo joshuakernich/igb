@@ -102,13 +102,56 @@ window.PartyMeep = function(n){
 
 				partymeeplegs{
 					display:block;
-					margin: 0px 25px;
+					
 					box-sizing: border-box;
-					border-left: 15px solid white;
-					border-right: 15px solid white;
+					
 					height: calc( 100% - 250px );
 					left: ${-W/2}px;
 					position: relative;
+					margin: auto;
+				}	
+
+				partymeepleg{
+					
+					position: absolute;
+					
+					width: 100%;
+					top: -20px;
+					bottom: -20px;
+					border-radius: 100%;
+
+					border: 15px solid white;
+					box-sizing: border-box;
+				}
+
+				partymeepleg:first-of-type{
+					right: 0px;
+					clip-path: inset(0px 20px 20px 0px);
+					border-radius: 50% 0px 0px 50%;
+				}
+
+				partymeepleg:last-of-type{
+					left: 0px;
+					clip-path: inset(0px 0px 20px 20px);
+					border-radius: 0px 50% 50% 0px;
+				}
+
+				partymeepfoot{
+					width: 20px;
+					height: 10px;
+					bottom: 0px;
+					display: block;
+					position: absolute;
+					background: white;
+					border-radius: 100% 100% 0px 0px;
+				}
+
+				partymeepfoot:first-of-type{
+					left: 0px;
+				}
+
+				partymeepfoot:last-of-type{	
+					right: 0px;
 				}
 
 				partymeepeye{
@@ -172,6 +215,7 @@ window.PartyMeep = function(n){
 	self.score = 0;
 	self.$el = $(`
 		<partymeep n=${n}>
+
 			<partymeepshadow></partymeepshadow>
 			<partymeepavatar>
 				<partymeephead>
@@ -181,7 +225,13 @@ window.PartyMeep = function(n){
 					<partymeepmouth></partymeepmouth>
 				</partymeephead>
 				<partymeepbody></partymeepbody>
-				<partymeeplegs></partymeeplegs>
+				<partymeeplegs>
+					<partymeepleg></partymeepleg>
+					<partymeepleg></partymeepleg>
+
+					<partymeepfoot></partymeepfoot>
+					<partymeepfoot></partymeepfoot>
+				</partymeeplegs>
 				<partymeephand></partymeephand>
 				<partymeephand></partymeephand>
 			</partymeepavatar>
@@ -194,9 +244,20 @@ window.PartyMeep = function(n){
 	self.$shadow = self.$el.find('partymeepshadow');
 	self.$body = self.$el.find('partymeepbody');
 	self.$legs = self.$el.find('partymeeplegs');
+	self.$legLeft = self.$el.find('partymeepleg').first();
+	self.$legRight = self.$el.find('partymeepleg').last();
 
 	self.setHeight = function(h){
 		self.$el.find('partymeepavatar').height(h);
+		let scale = Math.max(0,Math.min(1,H/h));
+
+		
+		self.$legs.css({width:30 + (70*scale) + '%'})
+
+		let round = 50 * scale + '%';
+		self.$legLeft.css({'border-radius':`${round} 0px 0px ${round}`});
+		self.$legRight.css({'border-radius':`0px ${round} ${round} 0px`});
+		
 	}
 
 }
