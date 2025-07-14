@@ -439,7 +439,9 @@ window.FinalFrenzyGame = function(){
 				let wStripe = 5 + h*1;
 				let xOffset = (palette.length-1)/2*wStripe;
 
-				d = d + (h==0?' M':' L')+(history[h].x*W+wStripe*i-xOffset)+' '+(history[h].y+h*0.02)*H;
+				let x = ( history[0].x + history[h].x )/2;
+
+				d = d + (h==0?' M':' L')+(x*W+wStripe*i-xOffset)+' '+(history[h].y+h*0.02)*H;
 			}
 
 			for(var h=history.length-1; h>=0; h--){
@@ -447,7 +449,9 @@ window.FinalFrenzyGame = function(){
 				let wStripe = 5 + h*1;
 				let xOffset = (palette.length-1)/2*wStripe;
 
-				d = d + ' L'+(history[h].x*W+wStripe*(i+1)-xOffset)+' '+(history[h].y+h*0.02)*H;
+				let x = ( history[0].x + history[h].x )/2;
+
+				d = d + ' L'+(x*W+wStripe*(i+1)-xOffset)+' '+(history[h].y+h*0.02)*H;
 			}
 
 			$svg.find('path').eq(i).attr('d',d);
