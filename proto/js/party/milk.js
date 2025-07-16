@@ -32,25 +32,6 @@ window.MilkSea = function(){
 	self.redraw();
 }
 
-window.MilkMeep = function(n){
-	let self = this;
-	self.score = 0;
-	self.$el = $(`
-		<milkmeep n=${n}>
-			<milkmeephead>
-				<milkmeephat></milkmeephat>
-				<milkmeepeye></milkmeepeye>
-				<milkmeepeye></milkmeepeye>
-			</milkmeephead>
-			<milkmeepbody></milkmeepbody>
-			<milkmeeplegs></milkmeeplegs>
-		</milkmeep>
-	`);
-
-	self.$handLeft = $('<milkmeephand>').appendTo(self.$el);
-	self.$handRight = $('<milkmeephand>').appendTo(self.$el);
-}
-
 
 window.MilkUdder = function(STAGE){
 	const W = 700;
@@ -672,13 +653,20 @@ window.MilkGame = function(){
 	function initGame(PLAYERCOUNT){
 		for(var i=0; i<PLAYERCOUNT; i++){
 			meeps[i] = new PartyMeep(i,COLORS[i]);
-			meeps[i].$el.appendTo($game).css({bottom:'0px'});
+			meeps[i].$shadow.hide();
+			meeps[i].$el.appendTo($game).css({bottom:'50px'});
 			meeps[i].fx = meeps[i].fy = meeps[i].fz = 0.5;
-			meeps[i].wall = 1;
+			meeps[i].wall = 0;
 		}
 
 		hud.initTimer(60,finiGame);
 		isMilkingLive = true;
+
+		setTimeout(summonNextPlayer,1000);
+	}
+
+	function summonNextPlayer(){
+		hud.summonPlayers([0,1]);
 	}
 
 	function finiGame() {

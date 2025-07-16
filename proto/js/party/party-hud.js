@@ -211,6 +211,23 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 					padding: 30px 30px 35px;
 					margin-bottom: 20px;
 				}
+
+				hudsummonlist{
+					display: block;
+				}
+
+				hudsummonplayer{
+					display: inline-block;
+					position: relative;
+					
+				}
+
+				hudsummonplayer partymeephead{
+					position: relative;
+					left: auto;
+				}
+
+
 			</style>
 			`);
 	}
@@ -307,6 +324,26 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 			hud.$el.appendTo((i<iTimer)?$left:$right);
 			huds[i] = hud;
 		}
+	}
+
+	self.summonPlayers = function( arr ){
+		setBanner(true);
+
+		let $list = $('<hudsummonlist>');
+		for(var a in arr) $(`
+			<hudsummonplayer>
+				<partymeephead n=${a}>
+					<partymeephat></partymeephat>
+					<partymeepeye></partymeepeye>
+					<partymeepeye></partymeepeye><br>
+					<partymeepmouth></partymeepmouth>
+				</partymeephead>
+			</hudsummonplayer>
+		`).attr('n',a).appendTo($list);
+
+
+		$banner.html($list);
+		$('<h1>').text('STEP FORWARD').appendTo($banner);
 	}
 	
 	self.redraw = function(sec=0){

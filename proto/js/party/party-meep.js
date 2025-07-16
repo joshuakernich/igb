@@ -86,7 +86,7 @@ window.PartyMeep = function(n){
 
 					position: absolute;
 					top: 0px;
-
+					font-size: 50px;
 					box-shadow: 0px 10px 10px rgba(0,0,0,0.2);
 				}
 

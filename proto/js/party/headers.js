@@ -11,9 +11,9 @@ window.HeadersGame = function(){
 		let $ball = $('<headersballball>').appendTo(self.$el);
 
 		self.px = W/2;
-		self.py = H*0.25;
-		self.sx = -15 + Math.random() * 30;
-		self.sy = -25;
+		self.py = H*0.4;
+		self.sx = -10 + Math.random() * 20;
+		self.sy = -20;
 
 		self.step = function(){
 			self.sy += GRAVITY;
@@ -37,8 +37,10 @@ window.HeadersGame = function(){
 	const H = 1000;
 	const BALLR = 60;
 	const HEADR = 50;
-	const FEET = 900;
+
+	const NET = 350;
 	const COLLIDE = HEADR+BALLR;
+
 
 	// match-up sequence for each player count
 	const MATCHUPS = [
@@ -74,7 +76,7 @@ window.HeadersGame = function(){
 				headersball{
 					display: block;
 					position: absolute;
-					top: ${FEET}px;
+					top: ${H}px;
 				}
 
 				headersballshadow{
@@ -107,6 +109,39 @@ window.HeadersGame = function(){
 					transform: translateX(-50%);
 					background: linear-gradient(to top, white, transparent);
 					bottom: 0px;
+					display: none;
+				}
+
+				headersnet{
+					display: block;
+					position: absolute;
+					bottom: 0px;
+					left: 50%;
+				}
+
+				headersnet:before{
+					content:"";
+					width: 100px;
+					height: 20px;
+					background: black;
+					border-radius: 100%;
+					position: absolute;
+					bottom: -10px;
+					left: -30px;
+					opacity: 0.5;
+					display: block;
+				}
+
+				headersnet:after{
+					content:"";
+					width: 20px;
+					height: ${NET}px;
+					background: white;
+					left: -10px;
+					bottom: 0px;
+					display: block;
+					position: absolute;
+					border-radius: 5px;
 				}
 
 				headersscore{
@@ -124,6 +159,15 @@ window.HeadersGame = function(){
 					left: ${W*1.5}px;
 				}
 
+				headersfield{
+					display: block;
+					position: absolute;
+					bottom: 100px;
+					left: 0px;
+					height: ${H}px;
+					width: 100%;
+				}
+
 			</style>`);
 	}
 
@@ -132,7 +176,9 @@ window.HeadersGame = function(){
 
 	self.$el = $('<igb>');
 	let $game = $('<headersgame>').appendTo(self.$el);
+	let $field = $('<headersfield>').appendTo($game);
 	let $line = $('<headersline>').appendTo($game);
+	let $net = $('<headersnet>').appendTo($field);
 	let hud = new PartyHUD();
 	hud.$el.appendTo($game);
 
@@ -170,6 +216,27 @@ window.HeadersGame = function(){
 				ball.sx = -Math.abs(ball.sx);
 			}
 
+			// net
+			let dxNet = (ball.px) - (W/2);
+			let isNearNet = Math.abs(dxNet) < BALLR;
+			if(isNearNet && !ball.dead){
+
+				let isHitting = ball.sy > 0 && ball.py > (H-NET-BALLR);
+
+				if(isHitting){
+					if(Math.abs(dxNet) < BALLR/2 ){
+						ball.py = (H-NET-BALLR);
+						ball.sy = -25;
+						ball.sx = dxNet * 0.2;
+					} else {
+						let sidedness = dxNet>0?1:-1;
+						ball.px = W/2 + sidedness * BALLR;
+
+					}
+					
+				}
+			}
+
 			//ground
 			if(ball.py > H-BALLR){
 				ball.py = H-BALLR;
@@ -195,8 +262,8 @@ window.HeadersGame = function(){
 						ball.px = meepsActive[m].px + Math.cos(r) * COLLIDE;
 						ball.py = meepsActive[m].py + Math.sin(r) * COLLIDE;
 
-						ball.sx = Math.cos(r) * 20;
-						ball.sy = Math.sin(r) * 20 - 10;
+						ball.sx = Math.cos(r) * 15;
+						ball.sy = Math.sin(r) * 15 - 10;
 					}
 				}
 			}
@@ -212,7 +279,7 @@ window.HeadersGame = function(){
 	function initBall(){
 		if(ball) ball.$el.remove();
 		ball = new Ball(BALLR,W,H);
-		ball.$el.appendTo($game);
+		ball.$el.appendTo($field);
 	}
 
 	let iTimeout;
@@ -230,9 +297,9 @@ window.HeadersGame = function(){
 		for(var i=0; i<countPlayer; i++){
 			meeps[i] = new PartyMeep(i);
 			meeps[i].$score = $('<headersscore>').appendTo($game).text(0).hide();
-			meeps[i].$el.appendTo($game);
+			meeps[i].$el.appendTo($field);
 			meeps[i].$el.css({
-				'top':FEET+'px',
+				'bottom':0+'px',
 				'left':40+i*20+'%',
 			});
 		}
@@ -305,7 +372,7 @@ window.HeadersGame = function(){
 	self.setPlayers = function(p){
 		for(var m in meeps){
 			meeps[m].px = p[m].px * W;
-			meeps[m].py = p[m].py * H;
+			meeps[m].py = Math.min( 0.75, (p[m].py+0.1)) * H;
 			meeps[m].r =  {W:p[m].rW, X:p[m].rX, Y:p[m].rY, Z:p[m].rZ};
 		}
 	}
