@@ -76,9 +76,20 @@ window.SpotTheMeepGame = function(){
 			meep.$el.appendTo($game);
 			meep.$el.attr('i',i);
 			meep.$el.css({
-				'bottom':20 + (nMeep%2)*5+'%',
+				'bottom':'100%',
 				'left':(nWall + 0.5)*W + (-(countPerWall-1)/2 + nMeep)*spacing+'px',
-			})
+			}).delay(Math.random()*1000).animate({
+				'bottom':20 + (nMeep%2)*5+'%',
+			},{
+				duration: 300,
+				easing: 'linear',
+				complete:function(){
+					meep.setHeight(300);
+					setTimeout(function(){
+						meep.setHeight(350);
+					},200);
+				}
+			});
 
 			meep.$el.click(onMeep);
 
