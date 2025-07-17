@@ -72,6 +72,7 @@ window.SpotTheMeepGame = function(){
 			let nMeep = (i%countPerWall);
 
 			let meep = new PartyMeep(order[i]);
+			meep.$shadow.hide();
 			meep.setHeight(350);
 			meep.$el.appendTo($game);
 			meep.$el.attr('i',i);
@@ -84,6 +85,7 @@ window.SpotTheMeepGame = function(){
 				duration: 300,
 				easing: 'linear',
 				complete:function(){
+					meep.$shadow.show();
 					meep.setHeight(300);
 					setTimeout(function(){
 						meep.setHeight(350);
