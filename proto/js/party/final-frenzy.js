@@ -8,6 +8,7 @@ window.FinalFrenzyGame = function(){
 	const EXPLOSION = 250;
 	const THICC = 50;
 	const BORDER = 10;
+	const CLAWCOLOUR = '#b24ab2';
 
 	const FrenzyClaw = function(nWall,x,y){
 		let self = this;
@@ -21,14 +22,16 @@ window.FinalFrenzyGame = function(){
 		
 		if(nWall==2) self.$el.css('transform','scaleX(-1)');
 
+		self.x = x;
+		self.y = y;
 		self.extension = 0.1;
 
 		function onClaw(){
 			$claw.addClass('open');
 			$(self)
-			.animate({extension:1})
+			.animate({extension:1.3})
 			.delay(200)
-			.animate({extension:1},{
+			.animate({extension:1.3},{
 				start:function(){
 					$claw.removeClass('open');
 				}}).animate({extension:0.1});
@@ -376,9 +379,9 @@ window.FinalFrenzyGame = function(){
 					content: "";
 					width: 200px;
 					height: 100px;
-					border-top: ${THICC}px solid white;
-					border-left: ${THICC}px solid white;
-					border-right: ${THICC}px solid white;
+					border-top: ${THICC}px solid ${CLAWCOLOUR};
+					border-left: ${THICC}px solid ${CLAWCOLOUR};
+					border-right: ${THICC}px solid ${CLAWCOLOUR};
 					display: block;
 					position: absolute;
 					bottom: 0px;
@@ -387,17 +390,16 @@ window.FinalFrenzyGame = function(){
 					border-radius: 100px 100px 0px 0px;
 					transform-origin: bottom left; 
 					transition: 0.2s all;
-					transform: rotate(0deg);
-					box-shadow: inset 0px 0px 10px black;
+					transform: rotate(-1deg);
 				}
 
 				frenzyclawclaw:after{
 					content: "";
 					width: 200px;
 					height: 100px;
-					border-bottom: ${THICC}px solid white;
-					border-left: ${THICC}px solid white;
-					border-right: ${THICC}px solid white;
+					border-bottom: ${THICC}px solid ${CLAWCOLOUR};
+					border-left: ${THICC}px solid ${CLAWCOLOUR};
+					border-right: ${THICC}px solid ${CLAWCOLOUR};
 					display: block;
 					position: absolute;
 					top: 0px;
@@ -406,8 +408,7 @@ window.FinalFrenzyGame = function(){
 					border-radius: 0px 0px 100px 100px;
 					transform-origin: top left;
 					transition: 0.2s all;
-					transform: rotate(0deg);
-					box-shadow: inset 0px 0px 10px black;
+					transform: rotate(1deg);
 				}
 
 				frenzyclawclaw.open:before{
@@ -423,42 +424,49 @@ window.FinalFrenzyGame = function(){
 					position: absolute;
 					width: 200px;
 					height: 200px;
-					background: #800080;
+					background: ${CLAWCOLOUR};
 					left: -100px;
 					top: -100px;
-					border: ${BORDER}px solid white;
 					box-sizing: border-box;
 					border-radius: 50px;
+					box-shadow: 0px 2px 20px black;
+				}
+
+				frenzyclawbutton:after{
+					content: "";
+					display: block;
+					position: absolute;
+					inset: ${THICC/2}px;
+					border-radius: ${THICC/2}px;
+					background: white;
+					opacity: 0.3;
+					border-bottom: 5px solid black;
 				}
 
 				frenzyclawarm{
 					position: absolute;
 					left: 0px;
 					top: ${-THICC/2}px;
-					background: #800080;
+					background: ${CLAWCOLOUR};
 					width: 100px;
 					height: ${THICC}px;
-					border-top: ${BORDER}px solid white;
-					border-bottom: ${BORDER}px solid white;
 					box-sizing: border-box;
 				}
 
-				frenzyclawarm:before{
+				frenzyclawarm:after{
 					content:"";
-					width: ${THICC*2}px;
-					height: ${THICC*2}px;
-					border-radius: 100%;
+					width: ${THICC*1.5}px;
+					height: ${THICC}px;
+					border-radius: 20px;
 					background: white;
 					right: ${-THICC*1.2}px;
-					top: ${-THICC/4*3}px;
+					top: 0px;
 					display: block;
 					position: absolute;
-					background: #800080;
-					border: ${BORDER}px solid white;
+					background: ${CLAWCOLOUR};
 					box-sizing: border-box;
+					box-shadow: 0px 2px 20px black;
 				}
-
-				
 
 				@keyframes spin{
 					0%{
