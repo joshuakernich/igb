@@ -6,6 +6,65 @@ window.FinalFrenzyGame = function(){
 	const UPPERPY = 0;
 	const BOMB = 60;
 	const EXPLOSION = 250;
+	const THICC = 50;
+	const BORDER = 10;
+
+	const FrenzyClaw = function(nWall,x,y){
+		let self = this;
+		self.$el = $('<frenzyclaw>');
+
+		
+		
+		let $claw = $('<frenzyclawclaw>').appendTo(self.$el);
+		let $arm = $('<frenzyclawarm>').appendTo(self.$el);
+		let $btn = $('<frenzyclawbutton>').appendTo(self.$el).click(onClaw);
+		
+		if(nWall==2) self.$el.css('transform','scaleX(-1)');
+
+		self.extension = 0.1;
+
+		function onClaw(){
+			$claw.addClass('open');
+			$(self)
+			.animate({extension:1})
+			.delay(200)
+			.animate({extension:1},{
+				start:function(){
+					$claw.removeClass('open');
+				}}).animate({extension:0.1});
+		}
+
+		self.redraw = function(){
+			self.$el.css({
+				left: nWall*W + x*W + 'px',
+				top: y*H + 'px',
+			});
+
+			$claw.css({
+				left: self.extension * W + 'px',
+			});
+
+			$arm.css({
+				width: self.extension * W + 'px',
+			});
+
+		}
+		
+	}
+
+	const FrenzyCoin = function(x,y){
+		let self = this;
+		let nWall = 1;
+
+		self.$el = $('<frenzycoin>').appendTo(self.$el);
+
+		self.redraw = function(){
+			self.$el.css({
+				left: nWall*W + x*W + 'px',
+				top: y*H + 'px',
+			})
+		}
+	}
 
 	const FrenzyBomb = function(n,x,y){
 		let self = this;
@@ -303,6 +362,104 @@ window.FinalFrenzyGame = function(){
 					opacity: 0.8;
 				}
 
+				frenzyclaw{
+					display: block;
+					position: absolute;
+				}
+
+				frenzyclawclaw{
+					display: block;
+					position: absolute;
+				}
+
+				frenzyclawclaw:before{
+					content: "";
+					width: 200px;
+					height: 100px;
+					border-top: ${THICC}px solid white;
+					border-left: ${THICC}px solid white;
+					border-right: ${THICC}px solid white;
+					display: block;
+					position: absolute;
+					bottom: 0px;
+					left: 0px;
+					box-sizing: border-box;
+					border-radius: 100px 100px 0px 0px;
+					transform-origin: bottom left; 
+					transition: 0.2s all;
+					transform: rotate(0deg);
+					box-shadow: inset 0px 0px 10px black;
+				}
+
+				frenzyclawclaw:after{
+					content: "";
+					width: 200px;
+					height: 100px;
+					border-bottom: ${THICC}px solid white;
+					border-left: ${THICC}px solid white;
+					border-right: ${THICC}px solid white;
+					display: block;
+					position: absolute;
+					top: 0px;
+					left: 0px;
+					box-sizing: border-box;
+					border-radius: 0px 0px 100px 100px;
+					transform-origin: top left;
+					transition: 0.2s all;
+					transform: rotate(0deg);
+					box-shadow: inset 0px 0px 10px black;
+				}
+
+				frenzyclawclaw.open:before{
+					transform: rotate(-45deg);
+				}
+
+				frenzyclawclaw.open:after{
+					transform: rotate(45deg);
+				}
+
+				frenzyclawbutton{
+					display: block;
+					position: absolute;
+					width: 200px;
+					height: 200px;
+					background: #800080;
+					left: -100px;
+					top: -100px;
+					border: ${BORDER}px solid white;
+					box-sizing: border-box;
+					border-radius: 50px;
+				}
+
+				frenzyclawarm{
+					position: absolute;
+					left: 0px;
+					top: ${-THICC/2}px;
+					background: #800080;
+					width: 100px;
+					height: ${THICC}px;
+					border-top: ${BORDER}px solid white;
+					border-bottom: ${BORDER}px solid white;
+					box-sizing: border-box;
+				}
+
+				frenzyclawarm:before{
+					content:"";
+					width: ${THICC*2}px;
+					height: ${THICC*2}px;
+					border-radius: 100%;
+					background: white;
+					right: ${-THICC*1.2}px;
+					top: ${-THICC/4*3}px;
+					display: block;
+					position: absolute;
+					background: #800080;
+					border: ${BORDER}px solid white;
+					box-sizing: border-box;
+				}
+
+				
+
 				@keyframes spin{
 					0%{
 						transform: rotate(0deg);
@@ -347,6 +504,7 @@ window.FinalFrenzyGame = function(){
 
 	let history = [];
 	let meeps = [];
+	let claws = [];
 	let nFlyer = undefined;
 	function initGame(count){
 		for(var i=0; i<count; i++){
@@ -354,6 +512,13 @@ window.FinalFrenzyGame = function(){
 			meeps[i].$el.appendTo($game);
 			meeps[i].wall = 0;
 			meeps[i].setFlyer(false);
+		}
+
+		for(var i=0; i<2; i++){
+			let claw = new FrenzyClaw(i*2,0.5,0.5);
+			claw.$el.appendTo($game);
+			claw.redraw();
+			claws[i] = claw;
 		}
 
 		audio.play('music');
@@ -426,6 +591,7 @@ window.FinalFrenzyGame = function(){
 
 		for(var m in meeps) meeps[m].redraw();
 		for(var b in bombs) bombs[b].redraw();
+		for(var c in claws) claws[c].redraw();
 
 		if(nFlyer != undefined) history.unshift({x:meeps[nFlyer].px + meeps[nFlyer].ox, y:meeps[nFlyer].y});
 
