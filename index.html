@@ -250,6 +250,7 @@
 			$('gameboxside').on('click',function(e){
 				let iWall = $('gameboxside').index(this);
 				players[nDebugPlayer].wall = iWall;
+				players[nDebugPlayer].wallChange = iWall;
 			})
 
 			$('[btn=move]').click(doRandomMove);
@@ -275,9 +276,9 @@
 				p.pz = (p.Z+1)/2;
 
 				p.walls = [
-					{x:p.z,y:p.t,z:p.x,px:p.pz,py:p.py,pz:p.px},
-					{x:p.x,y:p.y,z:p.z,px:p.px,py:p.py,pz:p.pz},
-					{x:-p.z,y:p.y,z:p.x,px:-p.pz,py:p.py,pz:p.px},
+					{x:p.z,y:p.t,z:p.x,px:p.pz,py:p.py,pz:p.px,dist:p.px},
+					{x:p.x,y:p.y,z:p.z,px:p.px,py:p.py,pz:p.pz,dist:1-p.pz},
+					{x:-p.z,y:p.y,z:p.x,px:-p.pz,py:p.py,pz:p.px,dist:1-p.px},
 				]
 			}
 
@@ -293,10 +294,6 @@
 		       		players[p].Z = playerData[p].Z;
 
 		       		makeMetrics(players[p]);
-
-		        	/*players[p].px = (players[p].X+1)/2*100;
-		        	players[p].py = 100 - (players[p].Y+1)/2*100;
-		        	players[p].pz = (players[p].Z+1)/2*100;*/
 
 		        	$('gbavatar').eq(p).css({left:players[p].px*100+'%',top:players[p].pz*100+'%'});
 		        	$('gbavatar').eq(p).find('gbhuman').css({height:(1-players[p].py)*100+'px'});

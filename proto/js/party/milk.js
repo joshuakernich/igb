@@ -656,17 +656,17 @@ window.MilkGame = function(){
 			meeps[i].$shadow.hide();
 			meeps[i].$el.appendTo($game).css({bottom:'50px'});
 			meeps[i].fx = meeps[i].fy = meeps[i].fz = 0.5;
-			meeps[i].wall = 0;
+			meeps[i].wall = 1;
 		}
 
 		hud.initTimer(60,finiGame);
 		isMilkingLive = true;
 
-		setTimeout(summonNextPlayer,1000);
+		//setTimeout(summonNextPlayer,1000);
 	}
 
 	function summonNextPlayer(){
-		hud.summonPlayers([0,1]);
+		hud.summonPlayers([0,1],[2,3]);
 	}
 
 	function finiGame() {
@@ -705,7 +705,17 @@ window.MilkGame = function(){
 		let o = $game.offset();
 		let x = (e.pageX - o.left)/scale/W;
 		let wall = Math.floor(x);
-		meeps[0].wall = wall;
+
+		let min = 1;
+		let nMeep = 0;
+		for(var m in meeps){
+			if(meeps[m].walls && meeps[m].walls[wall].dist < min){
+				min = meeps[m].walls[wall].dist;
+				nMeep = m;
+			}
+		}
+
+		meeps[nMeep].wall = wall;
 
 		if(!bMusic) initMusic();
 	});
@@ -718,7 +728,11 @@ window.MilkGame = function(){
 			meeps[m].fx = p[m].px;
 			meeps[m].fz = p[m].pz;
 			meeps[m].fy = p[m].py;
-			meeps[m].wall = p[m].wall;
+			if( p[m].wallChange ){
+				meeps[m].wallChange = p[m].wallChange;
+				p[m].wallChange = undefined;
+			}
+			meeps[m].walls = p[m].walls;
 		}
 	}
 

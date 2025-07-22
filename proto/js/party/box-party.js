@@ -528,7 +528,7 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 			if(i==queue.length-1){
 	    		transform.x = xOffset;
 	    		transform.w = transform.h = transform.d = W/2;
-	    		transform.altitude = H;
+	    		transform.altitude = W/2;
 	    		transform.rz = 10;
 	    	}
 
@@ -545,7 +545,7 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
    		}
     }
 
-    boxes[boxes.length-1].showGameSkin(true);
+   	boxes[boxes.length-1].showGameSkin(true);
 
     for(var i=0; i<5; i++){
     	let transform = {
