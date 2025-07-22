@@ -8,6 +8,7 @@ window.FinalFrenzyGame = function(){
 	const EXPLOSION = 250;
 	const THICC = 50;
 	const BORDER = 10;
+	const COIN = 70;
 	const CLAWCOLOUR = '#b24ab2';
 
 	const FrenzyClaw = function(nWall,x,y){
@@ -22,19 +23,32 @@ window.FinalFrenzyGame = function(){
 		
 		if(nWall==2) self.$el.css('transform','scaleX(-1)');
 
+		self.pxClaw = 0;
 		self.x = x;
 		self.y = y;
 		self.extension = 0.1;
+		self.dir = (nWall==2)?-1:1;
+		self.hasHit = false;
 
 		function onClaw(){
 			$claw.addClass('open');
 			$(self)
-			.animate({extension:1.3})
+			.animate({extension:1})
 			.delay(200)
-			.animate({extension:1.3},{
+			.animate({extension:1},{
 				start:function(){
 					$claw.removeClass('open');
-				}}).animate({extension:0.1});
+				}}).animate({extension:0.1},{
+					duration: 500,
+					complete:function(){
+						self.hasHit = false;
+					}
+				});
+		}
+
+		self.step = function(){
+			self.pxClaw = (nWall-1) + self.x + (self.extension * self.dir);
+			
 		}
 
 		self.redraw = function(){
@@ -51,6 +65,30 @@ window.FinalFrenzyGame = function(){
 				width: self.extension * W + 'px',
 			});
 
+			if(self.meep){
+				self.y = self.meep.y;
+				self.$el.css({
+					left: self.meep.wall*W + self.meep.wallx*W + 'px',
+					top: self.meep.py*H + 'px',
+				})
+			}
+
+		}
+
+		self.bindToMeep = function(meep){
+			meep.wall = nWall;
+			self.meep = meep;
+		}
+
+		self.clamp = function(){
+			self.hasHit = true;
+			$claw.removeClass('open');
+			/*$(self).stop(true,false).animate({extension:0.1},{
+					duration: 500,
+					complete:function(){
+						self.hasHit = false;
+					}
+				});*/
 		}
 		
 	}
@@ -59,12 +97,19 @@ window.FinalFrenzyGame = function(){
 		let self = this;
 		let nWall = 1;
 
-		self.$el = $('<frenzycoin>').appendTo(self.$el);
+		self.$el = $('<frenzycoin>');
+
+		self.px = x;
+		self.py = y;
+
+		self.step = function(){
+			self.py += 0.01;
+		}
 
 		self.redraw = function(){
 			self.$el.css({
-				left: nWall*W + x*W + 'px',
-				top: y*H + 'px',
+				left: nWall*W + self.px*W + 'px',
+				top: self.py*H + 'px',
 			})
 		}
 	}
@@ -142,6 +187,8 @@ window.FinalFrenzyGame = function(){
 		self.wall = 1;
 		self.y = 0;
 		self.ox = 0;
+		self.wallx = 0;
+		self.my = 1;
 
 		self.countdownBomb = undefined;
 
@@ -172,17 +219,20 @@ window.FinalFrenzyGame = function(){
 					meep.$handLeft.animate({top:'200px'},200);
 				}
 			}
+
+			self.wallx = self.px;
+			if(self.wall==0) self.wallx = self.pz;
+			if(self.wall==2) self.wallx = 1-self.pz;
 		}
 
 		self.redraw = function(){
-			self.y = self.ay+(self.py*0.5);
+			self.y = self.ay+(self.py*self.my);
 			self.$el.css({
 				top: self.y * H + 'px',
-				left: self.wall*W + self.px * W + self.ox*W + 'px',
+				left: self.wall*W + self.wallx * W + self.ox*W + 'px',
 			})
 
-
-			let dx = self.px - wasPX;
+			let dx = self.wallx - wasPX;
 			if(self.ox != 0) dx = self.ox * 0.3;
 			let rNew = dx*20;
 
@@ -192,13 +242,14 @@ window.FinalFrenzyGame = function(){
 				transform: 'rotate('+r+'rad)',
 			})
 
-			wasPX = self.px;
+			wasPX = self.wallx;
 		}
 
 		self.setFlyer = function(b){
 			if(b) meep.toFlyer();
 			else meep.toSkydiver();
 
+			self.my = 0.5;
 			self.ay = b?LOWERPY:UPPERPY;
 		}
 
@@ -208,6 +259,11 @@ window.FinalFrenzyGame = function(){
 
 			$bomb.css({top:'-20px'}).animate({top:'-100px'},250).animate({top:'-60px'},150);
 			meep.$handLeft.css({top:'150px'}).animate({top:'90px'},250);
+		}
+
+		self.bindToClaw = function(){
+			self.ay = UPPERPY-0.11;
+			self.my = 1;
 		}
 	}
 
@@ -478,6 +534,80 @@ window.FinalFrenzyGame = function(){
 					}
 				}
 
+				frenzycoin{
+					position: absolute;
+					display: block;
+
+					animation: rotate;
+					animation-iteration-count: infinite;
+					animation-duration: 2s;
+
+					animation-timing-function: linear;
+				}
+
+				frenzycoin:before{
+					content:"";
+					position: absolute;
+					display: block;
+					width: ${COIN}px;
+					height: ${COIN}px;
+					background: #B149B2;
+					border-radius: 100%;
+					box-sizing: border-box;
+					left: ${-COIN/2-3}px;
+					top: ${-COIN/2}px;
+
+					animation: spin;
+					animation-iteration-count: infinite;
+					animation-duration: 1s;
+
+					animation-timing-function: linear;
+
+					box-shadow: inset 0px 0px 5px white;
+
+				}
+
+				frenzycoin:after{
+					content:"";
+					position: absolute;
+					display: block;
+					width: ${COIN}px;
+					height: ${COIN}px;
+					background: purple;
+					border-radius: 100%;
+					box-sizing: border-box;
+					left: ${-COIN/2+3}px;
+					top: ${-COIN/2}px;
+
+					animation: spin;
+					animation-iteration-count: infinite;
+					animation-duration: 1s;
+
+					animation-timing-function: linear;
+
+					box-shadow: inset 0px 0px 5px white;
+				}
+
+				@keyframes rotate{
+					0%{
+						transform: rotate(0deg);
+					}
+
+					100%{
+						transform: rotate(360deg);
+					}
+				}
+
+				@keyframes spin{
+					0%{
+						transform: scaleX(-1);
+					}
+
+					100%{
+						transform: scaleX(1);
+					}
+				}
+
 			</style>
 		`)
 	}
@@ -486,11 +616,12 @@ window.FinalFrenzyGame = function(){
 	self.$el = $('<igb>');
 
 	let audio = new AudioContext();
-	audio.add('music','./proto/audio/party/music-cosmic-frenzy.mp3',1,true);
-	audio.add('reload','./proto/audio/sfx-reload.mp3',1);
-	audio.add('throw','./proto/audio/sfx-throw.mp3',1);
-	audio.add('boom','./proto/audio/riddler-boom.mp3',1);
-	audio.add('explode','./proto/audio/riddler-explosion.mp3',1);
+	audio.add('music','./proto/audio/party/music-cosmic-frenzy.mp3',0.3,true);
+	audio.add('reload','./proto/audio/sfx-reload.mp3',0.1);
+	audio.add('throw','./proto/audio/sfx-throw.mp3',0.1);
+	audio.add('boom','./proto/audio/riddler-boom.mp3',0.1);
+	audio.add('explode','./proto/audio/riddler-explosion.mp3',0.1);
+	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.2);
 
 	const palette = ['#37CCDA','#8DE968','#FEE955','#FEB850','#FD797B'];
 
@@ -513,6 +644,7 @@ window.FinalFrenzyGame = function(){
 	let history = [];
 	let meeps = [];
 	let claws = [];
+	let coins = [];
 	let nFlyer = undefined;
 	function initGame(count){
 		for(var i=0; i<count; i++){
@@ -531,7 +663,16 @@ window.FinalFrenzyGame = function(){
 
 		audio.play('music');
 		initFlyer(0);
-		initAttacher(1);
+		//initAttacher(1);
+		initClawOperator(1,0);
+		initClawOperator(2,1);
+	}
+
+	function initClawOperator(n,nClaw){
+		//meeps[n].setClaw(nClaw);
+
+		meeps[n].bindToClaw(claws[nClaw]);
+		claws[nClaw].bindToMeep(meeps[n]);
 	}
 
 	function initFlyer(n){
@@ -558,6 +699,12 @@ window.FinalFrenzyGame = function(){
 		bombs.push(bomb);
 	}
 
+	function spawnCoin(x,y){
+		let coin = new FrenzyCoin(x,y);
+		coin.$el.appendTo($game);
+		coins.push(coin);
+	}
+
 	hud.initPlayerCount(initGame);
 
 	let nStep = 0;
@@ -571,12 +718,45 @@ window.FinalFrenzyGame = function(){
 			'background-position-y':nStep*10+'px',
 		})
 
+		if(nFlyer != undefined && nStep%FPS==0){
+			spawnCoin(0.2 + Math.random()*0.6,0);
+		}
+
+		for(var c in claws) claws[c].step();
+		for(var c in coins) coins[c].step();
+
 		for(var m in meeps){
 			meeps[m].step();
 			if(meeps[m].spawnBomb){
 				audio.play('throw',true);
 				spawnBomb(m,meeps[m].px-0.05,meeps[m].y);
 				meeps[m].spawnBomb = false;
+			}
+		}
+
+		for(var c in coins){
+			let dx = coins[c].px*W - meeps[nFlyer].px*W;
+			let dy = coins[c].py*H - meeps[nFlyer].y*H;
+			let d = Math.sqrt(dx*dx+dy*dy);
+			if(d<COIN && !coins[c].collected){
+				coins[c].collected = true;
+				coins[c].$el.hide();
+				audio.play('coin',true);
+			}
+		}
+
+		for(var c in claws){
+			let dx = (claws[c].pxClaw - meeps[nFlyer].px)*W;
+			let dy = (claws[c].y - meeps[nFlyer].y)*H;
+			let d = Math.sqrt(dx*dx+dy*dy);
+
+
+
+			if(d<150 && !claws[c].hasHit){
+				claws[c].clamp();
+				//claws[c].hasHit = true;
+				meeps[nFlyer].doHit(claws[c].dir);
+				audio.play('explode',true);
 			}
 		}
 
@@ -600,6 +780,7 @@ window.FinalFrenzyGame = function(){
 		for(var m in meeps) meeps[m].redraw();
 		for(var b in bombs) bombs[b].redraw();
 		for(var c in claws) claws[c].redraw();
+		for(var c in coins) coins[c].redraw();
 
 		if(nFlyer != undefined) history.unshift({x:meeps[nFlyer].px + meeps[nFlyer].ox, y:meeps[nFlyer].y});
 
