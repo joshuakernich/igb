@@ -179,6 +179,12 @@ window.HeadersGame = function(){
 	let $field = $('<headersfield>').appendTo($game);
 	let $line = $('<headersline>').appendTo($game);
 	let $net = $('<headersnet>').appendTo($field);
+
+	let audio = new AudioContext();
+	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
+	audio.add('bounce','./proto/audio/party/sfx-bounce.mp3',0.3);
+	audio.add('cheer','./proto/audio/party/sfx-cheer.mp3',0.6);
+
 	let hud = new PartyHUD();
 	hud.$el.appendTo($game);
 
@@ -208,12 +214,14 @@ window.HeadersGame = function(){
 			if(ball.px<BALLR){
 				ball.px = BALLR;
 				ball.sx = Math.abs(ball.sx);
+				audio.play('bounce',true);
 			}
 
 			// wall right
 			if(ball.px > W-BALLR){
 				ball.px = W-BALLR;
 				ball.sx = -Math.abs(ball.sx);
+				audio.play('bounce',true);
 			}
 
 			// net
@@ -231,9 +239,8 @@ window.HeadersGame = function(){
 					} else {
 						let sidedness = dxNet>0?1:-1;
 						ball.px = W/2 + sidedness * BALLR;
-
 					}
-					
+					audio.play('bounce',true);
 				}
 			}
 
@@ -242,10 +249,13 @@ window.HeadersGame = function(){
 				ball.py = H-BALLR;
 				ball.sy = -Math.abs(ball.sy)/2;
 				ball.sx *= 0.5;
+				
 				if(!ball.dead){
+					audio.play('bounce',true);
 					let nScore = (ball.px > W/2)?0:1;
 					meepsActive[nScore].score++;
 					meepsActive[nScore].$score.text(meepsActive[nScore].score);
+					audio.play('cheer',true);
 					iTimeout = setTimeout(finiBall,1000);
 				}
 				ball.dead = true;
@@ -256,12 +266,10 @@ window.HeadersGame = function(){
 					let d = Math.sqrt(dx*dx + dy*dy);
 
 					if( d < COLLIDE ){
-
+						audio.play('bounce',true);
 						let r = Math.atan2(dy,dx);
-
 						ball.px = meepsActive[m].px + Math.cos(r) * COLLIDE;
 						ball.py = meepsActive[m].py + Math.sin(r) * COLLIDE;
-
 						ball.sx = Math.cos(r) * 15;
 						ball.sy = Math.sin(r) * 15 - 10;
 					}
@@ -291,6 +299,8 @@ window.HeadersGame = function(){
 	let meeps = [];
 	let countPlayer = 2;
 	function initGame(COUNT){
+
+		audio.play('music');
 
 		countPlayer = COUNT;
 
@@ -375,5 +385,11 @@ window.HeadersGame = function(){
 			meeps[m].py = Math.min( 0.75, (p[m].py+0.1)) * H;
 			meeps[m].r =  {W:p[m].rW, X:p[m].rX, Y:p[m].rY, Z:p[m].rZ};
 		}
+	}
+
+	self.fini = function(){
+		audio.stop('music');
+		clearInterval(interval);
+		hud.fini();
 	}
 }

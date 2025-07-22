@@ -380,4 +380,8 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 	}
 
 	self.redraw();
+
+	self.fini = function(){
+		self.clearTimer();
+	}
 }

@@ -741,6 +741,7 @@ window.MilkGame = function(){
 	}
 	
 	self.fini = function(){
+		hud.fini();
 		clearInterval(interval);
 		audio.stop('music');
 	}
