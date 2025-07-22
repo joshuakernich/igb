@@ -854,7 +854,7 @@ BoxPartyGame = function(){
 			bg:'url(./proto/img/party/icon-drum.png) center / cover',
 		},
 		'Final Frenzy':{
-			game:window.CoinChaosGame,
+			game:window.FinalFrenzyGame,
 			color:'white',
 			bg:'url(./proto/img/party/bg-cosmos.jpg) center / cover',
 		},
