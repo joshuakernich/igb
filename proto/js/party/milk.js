@@ -651,6 +651,8 @@ window.MilkGame = function(){
 	}
 
 	function initGame(PLAYERCOUNT){
+		audio.play('music');
+
 		for(var i=0; i<PLAYERCOUNT; i++){
 			meeps[i] = new PartyMeep(i,COLORS[i]);
 			meeps[i].$shadow.hide();
@@ -661,12 +663,12 @@ window.MilkGame = function(){
 
 		hud.initTimer(60,finiGame);
 		isMilkingLive = true;
-
 		//setTimeout(summonNextPlayer,1000);
 	}
 
+	let nPlayer = 0;
 	function summonNextPlayer(){
-		hud.summonPlayers([0,1],[2,3]);
+		//hud.addPlayer(nPlayer);
 	}
 
 	function finiGame() {
@@ -691,7 +693,7 @@ window.MilkGame = function(){
 	}
 
 	function doOutroComplete(){
-		audio.stop('music');
+		self.fini();
 		window.doPartyGameComplete();
 	}
 
@@ -701,7 +703,7 @@ window.MilkGame = function(){
 		audio.play('music');
 	}
 
-	$(document).on('click',function(e){
+	$game.on('click',function(e){
 		let o = $game.offset();
 		let x = (e.pageX - o.left)/scale/W;
 		let wall = Math.floor(x);
@@ -720,9 +722,6 @@ window.MilkGame = function(){
 		if(!bMusic) initMusic();
 	});
 
-
-
-
 	self.setPlayers = function(p){
 		for(var m in meeps){
 			meeps[m].fx = p[m].px;
@@ -736,6 +735,15 @@ window.MilkGame = function(){
 		}
 	}
 
-	setInterval(step,1000/FPS);
-	audio.play('music');
+	let interval;
+	self.init = function(){
+		interval = setInterval(step,1000/FPS);
+	}
+	
+	self.fini = function(){
+		clearInterval(interval);
+		audio.stop('music');
+	}
+	
+	self.init();
 }

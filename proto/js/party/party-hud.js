@@ -373,7 +373,7 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 		$banner.append($listIn);
 		$banner.append($listOut);
 	}
-	
+
 	self.redraw = function(sec=0){
 		$timer.text(sec);
 		for(var h in huds) huds[h].redraw();

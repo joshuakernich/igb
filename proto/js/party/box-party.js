@@ -960,6 +960,8 @@ BoxPartyGame = function(){
 	let resultsPending;
 	function doCompleteGame(results){
 		
+		if(liveModule.fini) liveModule.fini();
+
 		resultsPending = results;
 		scene.$el.show();
 		liveModule.$el.remove();
