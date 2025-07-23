@@ -726,7 +726,7 @@ window.MilkGame = function(){
 		for(var m in meeps){
 			meeps[m].fx = p[m].px;
 			meeps[m].fz = p[m].pz;
-			meeps[m].fy = p[m].py;
+			meeps[m].fy = Math.min(0.75, p[m].py + 0.2);
 			if( p[m].wallChange ){
 				meeps[m].wallChange = p[m].wallChange;
 				p[m].wallChange = undefined;
