@@ -328,4 +328,8 @@ window.CoconutClimbersGame = function(){
 	}
 
 	let interval = setInterval(step,1000/FPS);
+
+	self.fini = function(){
+		
+	}
 }

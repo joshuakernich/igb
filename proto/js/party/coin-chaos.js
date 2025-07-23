@@ -406,6 +406,7 @@ window.CoinChaosGame = function(){
 	let interval = setInterval(step,1000/FPS);
 
 	self.fini = function(){
+		audio.stop('music');
 		hud.fini();
 		clearInterval(interval);
 	}
