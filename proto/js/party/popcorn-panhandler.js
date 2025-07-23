@@ -13,6 +13,11 @@ window.PopcornGame = function(){
 	const GRAVITY = 0.02/FPS;
 	const FPPOP = FPS*2;
 
+	let audio = new AudioContext();
+	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
+    audio.add('pop','./proto/audio/party/sfx-popcorn.mp3',0.5);
+    audio.add('kernel','./proto/audio/party/sfx-kernel.mp3',0.3);
+
 	const PopcornKernel = function(){
 		let self = this;
 		self.$el = $('<popcornkernel>');
@@ -68,6 +73,8 @@ window.PopcornGame = function(){
 			$sprite.addClass('popped').css({
 				'background':'',
 			})
+
+			audio.play('pop',true);
 		}
 
 		self.redraw = function(){
@@ -166,6 +173,8 @@ window.PopcornGame = function(){
 			kernel.inPan = true;
 			self.kernels.push(kernel);
 			kernel.panx = -PANPX*0.4 + Math.random()*PANPX*0.8;
+
+			audio.play('kernel',true);
 		}
 
 		self.stepHeat = function(){
@@ -179,7 +188,6 @@ window.PopcornGame = function(){
 				}
 			}
 		}
-
 	}
 
 	if( !PopcornGame.init ){
@@ -335,6 +343,8 @@ window.PopcornGame = function(){
 			fires[i].$el.appendTo($game);
 		}
 
+		audio.play('music');
+
 		setInterval(spawnKernels,5000);
 	}
 
@@ -432,4 +442,8 @@ window.PopcornGame = function(){
 	}
 
 	let interval = setInterval(step,1000/FPS);
+
+	self.fini = function(){
+
+	}
 }
