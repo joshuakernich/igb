@@ -4,8 +4,8 @@ window.PumpMeepSingle = function(n){
 	self.score = 0;
 
 	let audio = new AudioContext();
-    audio.add('pump','./proto/audio/pump-balloon.mp3',1);
-    audio.add('pop','./proto/audio/party/sfx-pop.mp3',1);
+    audio.add('pump','./proto/audio/pump-balloon.mp3',0.3);
+    audio.add('pop','./proto/audio/party/sfx-pop.mp3',0.3);
 
 	self.py = self.pyWas = 0;
 	self.fill = 0;
@@ -34,6 +34,7 @@ window.PumpMeepSingle = function(n){
 	let $balloon = $('<pumpballoon></pumpballoon>').appendTo($pump);
 
 	self.isPopped = false;
+	self.isActive = false;
 
 	self.step = function(){
 
@@ -44,7 +45,7 @@ window.PumpMeepSingle = function(n){
 
 		if(self.pyWas != 0){
 			let dy = self.py - self.pyWas;
-			if(dy>0 && !self.isPopped){
+			if(self.isActive && dy>0 && !self.isPopped){
 				self.fill += dy;
 				self.score = Math.min( 100, self.fill * 10 );
 				$balloon.css({
@@ -179,14 +180,14 @@ window.PumpPopGame = function(){
 	}
 
 	let audio = new AudioContext();
-    audio.add('music','./proto/audio/funny-kids_long-190860.mp3',1,true,true);
+    audio.add('music','./proto/audio/party/music-cartoon.mp3',0.3,true);
 
 	let self = this;
 	self.$el = $('<pumpgame>');
 
-	let pumps = [];
+	let isGameGo = false;
 
-	
+	let pumps = [];
 
 	let hud = new PartyHUD();
 	hud.$el.appendTo(self.$el);
@@ -213,11 +214,11 @@ window.PumpPopGame = function(){
 			for(var a in pumps){
 				scores[a] = 0;
 				for(var b in pumps){
-					if(a!=b && pumps[a].score>pumps[b].score) scores[a] += 10;
+					if(a!=b && pumps[a].score>pumps[b].score) scores[a] += 5;
 				}
 			}
 
-			self.turnOnOff(false);
+			self.fini();
 			window.doPartyGameComplete(scores);
 		}, 1000 );
 	}
@@ -237,19 +238,10 @@ window.PumpPopGame = function(){
 		}
 	}
 
-	function initMusic(){
-		audio.play('music');
-	}
-
-	self.turnOnOff = function(b){
-		if(b) initMusic();
-		else audio.stop('music');
-	}
-
 	hud.initPlayerCount(initGame);
 
 	function initGame(count){
-		initMusic();
+		
 		for(var i=0; i<count; i++){
 		
 			let pump = new PumpMeepSingle(i);
@@ -261,13 +253,37 @@ window.PumpPopGame = function(){
 			})
 
 			pumps[i] = pump;
-
 		}
 
-		hud.initTimer(60,finiGame);
+		setTimeout(function(){
+			hud.initBanner('Ready...');
+			audio.play('music');
+		},1000);
+
+		setTimeout(function(){
+			hud.finiBanner();
+		},2500);
+
+		setTimeout(function(){
+			
+			for(var p in pumps) pumps[p].isActive = true;
+
+			hud.initBanner('Go!');
+			hud.initTimer(60,finiGame);
+		},4000);
+
+		setTimeout(function(){
+			hud.finiBanner();
+		},5500);
 	}
 
 	function finiGame(){
 		doGameComplete();
+	}
+
+	self.fini = function(){
+		audio.stop('music');
+		hud.fini();
+		clearInterval(interval);
 	}
 }

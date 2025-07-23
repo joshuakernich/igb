@@ -866,7 +866,7 @@ BoxPartyGame = function(){
 	const QUEUE = [
 		[ GAMES['Spot The Meep'], GAMES['Drum Beats'] ],
 		[ GAMES['Headers'], GAMES['Pump Pop'] ],
-		[ GAMES['Milkers'], GAMES['Follicle Frenzy']  ],
+		[ GAMES['Milkers']/*, GAMES['Follicle Frenzy']*/  ],
 		[ GAMES['Coin Chaos'] ],
 		[ GAMES['Death Maze'], GAMES['Cookie Cutter'] ],
 		[ GAMES['Final Frenzy'] ],
