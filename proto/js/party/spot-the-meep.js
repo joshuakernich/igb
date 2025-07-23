@@ -21,6 +21,11 @@ window.SpotTheMeepGame = function(){
 			</style>`);
 	}
 
+	let audio = new AudioContext();
+	audio.add('music','./proto/audio/party/music-creeping.mp3',0.3,true);
+	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
+	audio.add('complete','./proto/audio/party/sfx-correct-echo.mp3',0.3);
+
 	let self = this;
 	self.$el = $('<igb>');
 	let $game = $('<spotgame>').appendTo(self.$el);
@@ -28,6 +33,9 @@ window.SpotTheMeepGame = function(){
 	let hud = new PartyHUD();
 	hud.$el.appendTo($game);
 	//hud.initBanner('Find your Meep');
+
+	self.players = [];
+	self.scores = [];
 
 	function step(){
 		resize();
@@ -72,6 +80,7 @@ window.SpotTheMeepGame = function(){
 			let nMeep = (i%countPerWall);
 
 			let meep = new PartyMeep(order[i]);
+			meep.wall = nWall;
 			meep.$shadow.hide();
 			meep.setHeight(350);
 			meep.$el.appendTo($game);
@@ -107,12 +116,30 @@ window.SpotTheMeepGame = function(){
 		if(n == -1){
 
 		} else {
+
+			audio.play('correct',true);
+
 			meeps[i].$handLeft.animate({top:'40%'},200);
 			meeps[i].$handRight.animate({top:'40%'},200);
 			meeps[i].$el.off();
 
+			let nPlayer = -1;
+			let nWall = meeps[i].wall
+			let min = 1;
+			for(var p=0; p<self.playerCount; p++){
+				if( self.players[p].walls[nWall].dist < min ){
+					min = self.players[p].walls[nWall].dist;
+					nPlayer = p;
+				}
+			}
+
+			self.scores[nPlayer]++;
+
 			cntCorrect++;
-			if(cntCorrect==self.playerCount) setTimeout( finiRound, 1000 );
+			if(cntCorrect==self.playerCount){
+				audio.play('complete',true);
+				setTimeout( finiRound, 1000 );
+			}
 		}
 	}
 
@@ -137,11 +164,16 @@ window.SpotTheMeepGame = function(){
 	function finiGame() {
 		hud.initBanner('Finish!');
 		setTimeout(function(){
-			window.doPartyGameComplete([0]);
+			self.fini();
+			window.doPartyGameComplete(self.scores);
 		},2000);
 	}
 
 	function initGame(playerCount){
+		audio.play('music');
+
+		while(self.scores.length<playerCount) self.scores.push(0);
+
 		self.playerCount = playerCount;
 		setTimeout(initRound,1000);
 	}
@@ -150,4 +182,13 @@ window.SpotTheMeepGame = function(){
 
 	const FPS = 20;
 	let interval = setInterval(step,1000/FPS);
+
+	self.setPlayers = function(p){
+		self.players = p;
+	}
+
+	self.fini = function(){
+		clearInterval(interval);
+		audio.stop('music');
+	}
 }

@@ -93,9 +93,11 @@ window.CoinChaosGame = function(){
 		$("head").append(`
 			<style>
 				.coinchaoswrapper{
-					background: url(./proto/img/party/bg-mountains-white.jpg);
-					background-size: 33.3% 100%;
+					/*background: url(./proto/img/party/bg-mountains-clouds.png);
+					background-size: 100%;*/
 				}
+
+
 
 				coinchaosgame{
 					display:block;
@@ -105,6 +107,18 @@ window.CoinChaosGame = function(){
 					transform-origin: top left;
 					left: 0px;
 					perspective: ${W}px;
+
+					background: url(./proto/img/party/bg-mountains-clouds.png);
+					background-size: 100%;
+				}
+
+				coinchaosgame:before{
+					content: "";
+					display: block;
+					position: absolute;
+					inset: 0px;
+
+					background: linear-gradient(to top, #86C0D4, transparent);
 				}
 
 				coinchaosplatform{
@@ -256,9 +270,12 @@ window.CoinChaosGame = function(){
 	let $center = $('<coinchaoscenter>').appendTo($platform);
 
 	let audio = new AudioContext();
-    audio.add('coin','./proto/audio/party/sfx-coin.mp3',1);
-    audio.add('pickup','./proto/audio/party/sfx-pickup.mp3',1);
+	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
+    audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
+    audio.add('pickup','./proto/audio/party/sfx-pickup.mp3',0.3);
 
+
+    let isGameAlive = false;
 
 	function step(){
 
@@ -269,7 +286,7 @@ window.CoinChaosGame = function(){
 				let nCoin = -1;
 				for(var c in coins){
 
-					if(!coins[c].holder && coins[c].nPile != m){
+					if(!coins[c].holder && coins[c].nPile != m && isGameAlive){
 						let dx = coins[c].x - meeps[m].x;
 						let dy = coins[c].y - meeps[m].y;
 
@@ -341,7 +358,25 @@ window.CoinChaosGame = function(){
 			}
 		}
 
-		hud.initTimer(30,finiGame);
+		audio.play('music');
+
+		setTimeout(function(){
+			hud.initBanner('Ready...');
+		},1500);
+
+		setTimeout(function(){
+			hud.finiBanner();
+		},3000);
+
+		setTimeout(function(){
+			hud.initBanner('Go!');
+			hud.initTimer(30,finiGame);
+			isGameAlive = true;
+		},4500);
+
+		setTimeout(function(){
+			hud.finiBanner();
+		},6000);
 	}
 
 	function finiGame(){
@@ -354,11 +389,11 @@ window.CoinChaosGame = function(){
 			for(var p in piles) scores[p] = -10;
 			for(var c in coins) if( coins[c].nPile != undefined ) scores[ coins[c].nPile ] ++;
 
+			self.fini();
+
 			window.doPartyGameComplete(scores);
 		},1000)
 	}
-
-	
 
 	self.setPlayers = function(p){
 		for(var m in meeps){
@@ -369,4 +404,9 @@ window.CoinChaosGame = function(){
 
 	const FPS = 20;
 	let interval = setInterval(step,1000/FPS);
+
+	self.fini = function(){
+		hud.fini();
+		clearInterval(interval);
+	}
 }
