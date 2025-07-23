@@ -536,7 +536,7 @@ window.MilkGame = function(){
 	}
 
 	let audio = new AudioContext();
-	audio.add('music','./proto/audio/milk-music.mp3',0.3,true,true);
+	audio.add('music','./proto/audio/milk-music.mp3',0.3,true);
 
 	
 

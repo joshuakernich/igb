@@ -551,12 +551,9 @@ GoalieGame = function () {
 
 		if(!hasActiveBall) spawnBall();
 
-
 		$('ballgamescore').eq(1).text(scoreLeft);
 		$('ballgamescore').eq(0).text(scoreRight);
 	}
-
-	
 
 	let interval;
 	
@@ -565,7 +562,5 @@ GoalieGame = function () {
 		if(b) interval = setInterval(tick,1000/fps);
 	}
 
-
 	self.turnOnOff(true);
-
 }

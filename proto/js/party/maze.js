@@ -2,7 +2,8 @@ window.MazeGame = function(n){
 	const W = 1600;
 	const H = 1000;
 	const FPS = 20;
-	const PLAYER_COUNT = 6;
+	let PLAYER_COUNT = 6;
+	let SCORE_MAX = 15;
 	const GRIDSIZE = 400;
 	const TRACKLENGTH = 200;
 
@@ -18,11 +19,17 @@ window.MazeGame = function(n){
 					width: ${W*3}px;
 					height: ${H}px;
 					transform-origin: top left;
-					background: url(./proto/img/party/bg-mountains.jpg);
+					background: url(./proto/img/party/bg-mountains-clouds.png);
 					background-size: 100%;
-					background-position: center -250px;
 					perspective: ${W}px;
+				}
 
+				mazegame:before{
+					content: "";
+					position: absolute;
+					display: block;
+					inset: 0px;
+					background: linear-gradient(to top, #86C0D4, transparent);
 				}
 
 				mazeworld{
@@ -83,9 +90,14 @@ window.MazeGame = function(n){
 	}
 
 	let yProgress = 0;
+	let isGoTime = false;
 
 	let self = this;
 	self.$el = $('<igb>');
+
+	let audio = new AudioContext();
+	audio.add('music','./proto/audio/party/music-creeping.mp3',0.3,true);
+	audio.add('fall','./proto/audio/party/sfx-fall.mp3',0.3);
 
 	let $game = $('<mazegame>').appendTo(self.$el);
 	let $world = $('<mazeworld>').appendTo($game);
@@ -109,23 +121,52 @@ window.MazeGame = function(n){
 	}
 
 	let meeps = [];
-	for(var i=0; i<PLAYER_COUNT; i++){
+	function initGame(count){
+		
+		PLAYER_COUNT = count;
 
-		meeps[i] = new PartyMeep(i);
-		meeps[i].$el.appendTo($world);
-		meeps[i].setHeight(370);
-		meeps[i].$el.css({
+		scoreMult = Math.floor( SCORE_MAX / count );
 
-			top:'200px',
-			left:(40+i*10)+'%',
-			'transform-style':'preserve-3d',
-			transform: 'rotateX(-60deg) scale(0.8)',
-			
-		});
+		for(var i=0; i<PLAYER_COUNT; i++){
+
+			meeps[i] = new PartyMeep(i);
+			meeps[i].$el.appendTo($world);
+			meeps[i].setHeight(370);
+			meeps[i].$el.css({
+
+				top:'200px',
+				left:(40+i*10)+'%',
+				'transform-style':'preserve-3d',
+				transform: 'rotateX(-60deg) scale(0.8)',
+				
+			});
+		}
+
+		audio.play('music');
+		//isGoTime = true;
+
+		setTimeout(function(){
+			hud.initBanner('Ready?');
+		},2000);
+
+		setTimeout(function(){
+			hud.finiBanner();
+		},4000);
+
+		setTimeout(function(){
+			hud.initBanner('Go!');
+			isGoTime = true;
+		},6000);
+
+		setTimeout(function(){
+			hud.finiBanner();
+		},8000);
 	}
-
-	let hud = new PartyHUD(meeps);
+	
+	let hud = new PartyHUD('#4C7B93');
 	hud.$el.appendTo($game);
+
+	hud.initPlayerCount(initGame);
 
 	let scale = 1;
 	function resize(){
@@ -134,11 +175,17 @@ window.MazeGame = function(n){
 		$game.css('transform','scale('+scale+')');
 	}
 
+	let scoreMult = 1;
+	let countDead = 0;
 	let speed = 0.05;
 	function step(){
 		resize();
-		speed += 0.0001;
-		yProgress += speed;
+		
+		if(isGoTime){
+			speed += 0.0001;
+			yProgress += speed;
+		}
+		
 		$platform.css({'bottom':-yProgress*GRIDSIZE+'px'});
 
 		for(var m in meeps){
@@ -155,8 +202,14 @@ window.MazeGame = function(n){
 
 			if(map[gy] && map[gy][gx]==false){
 				meeps[m].dead = true;
+				
+				countDead++;
+				
+				meeps[m].score = countDead * scoreMult;
+
 				//meeps[m].$el.remove();
 
+				audio.play('fall',true);
 
 				meeps[m].$el.css({
 					'transition':'1s all',
@@ -164,14 +217,39 @@ window.MazeGame = function(n){
 				})
 			}
 		}
+
+		let count = 0;
+		for(var m in meeps) if(!meeps[m].dead) count++;
+
+		if(count == 1 && isGoTime){
+
+			for(var m in meeps) if(!meeps[m].dead) meeps[m].score = SCORE_MAX;
+
+			isGoTime = false;
+			clearInterval(interval);
+			hud.initBanner('Winner!');
+			setTimeout(function(){
+
+				let scores = [];
+				for(var m in meeps) scores[m] = meeps[m].score;
+
+				self.fini();
+				window.doPartyGameComplete(scores);
+			},3000);
+		}
 	}
 
-	setInterval(step,1000/FPS);
+	let interval = setInterval(step,1000/FPS);
 
 	self.setPlayers = function(p){
 		for(var m in meeps){
 			meeps[m].x = p[m].px*W;
 			meeps[m].y = (1-p[m].pz)*W;
 		}
+	}
+
+	self.fini = function(){
+		audio.stop('music');
+		clearInterval(interval);
 	}
 }

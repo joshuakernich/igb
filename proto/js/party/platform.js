@@ -105,7 +105,7 @@ window.PlatformGame = function(){
 					width: ${W*3}px;
 					height: ${H}px;
 					transform-origin: top left;
-					background: url(./proto/img/party/bg-mountains.jpg);
+					background: url(./proto/img/party/bg-mountains-clouds.png);
 					background-size: 100%;
 					background-position: center -250px;
 					perspective: ${W}px;
