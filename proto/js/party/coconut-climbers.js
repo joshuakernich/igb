@@ -322,7 +322,7 @@ window.CoconutClimbersGame = function(){
 	self.setPlayers = function(p){
 		for(var m in meeps){
 			meeps[m].px = p[m].px;
-			meeps[m].py = p[m].py;
+			meeps[m].py = Math.min( 0.75, p[m].py + 0.3);
 			meeps[m].r =  {W:p[m].rW, X:p[m].rX, Y:p[m].rY, Z:p[m].rZ};
 		}
 	}
