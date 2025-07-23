@@ -382,7 +382,7 @@ window.HeadersGame = function(){
 	self.setPlayers = function(p){
 		for(var m in meeps){
 			meeps[m].px = p[m].px * W;
-			meeps[m].py = Math.min( 0.75, (p[m].py+0.1)) * H;
+			meeps[m].py = Math.min( 0.75, (p[m].py+0.3)) * H;
 			meeps[m].r =  {W:p[m].rW, X:p[m].rX, Y:p[m].rY, Z:p[m].rZ};
 		}
 	}
