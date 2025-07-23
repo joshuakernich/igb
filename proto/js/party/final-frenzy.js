@@ -16,7 +16,6 @@ window.FinalFrenzyGame = function(){
 		self.$el = $('<frenzyclaw>');
 
 		
-		
 		let $claw = $('<frenzyclawclaw>').appendTo(self.$el);
 		let $arm = $('<frenzyclawarm>').appendTo(self.$el);
 		let $btn = $('<frenzyclawbutton>').appendTo(self.$el).click(onClaw);
@@ -665,7 +664,7 @@ window.FinalFrenzyGame = function(){
 		initFlyer(0);
 		//initAttacher(1);
 		initClawOperator(1,0);
-		initClawOperator(2,1);
+		if(count>2) initClawOperator(2,1);
 	}
 
 	function initClawOperator(n,nClaw){
