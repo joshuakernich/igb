@@ -13,10 +13,13 @@ window.PopcornGame = function(){
 	const GRAVITY = 0.02/FPS;
 	const FPPOP = FPS*2;
 
+	const TIME = 120;
+
 	let audio = new AudioContext();
 	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
     audio.add('pop','./proto/audio/party/sfx-popcorn.mp3',0.5);
     audio.add('kernel','./proto/audio/party/sfx-kernel.mp3',0.3);
+    audio.add('score','./proto/audio/party/sfx-pickup.mp3',0.1);
 
 	const PopcornKernel = function(){
 		let self = this;
@@ -132,6 +135,7 @@ window.PopcornGame = function(){
 		self.py = 0.9;
 		self.wall = 0;
 		self.kernels = [];
+		self.score = 0;
 
 		let meep = new PartyMeep(n);
 		meep.$el.appendTo(self.$el);
@@ -143,6 +147,8 @@ window.PopcornGame = function(){
 		meep.$handRight.css({top:'190px'});
 
 		let $pan = $('<popcornpan>').appendTo(self.$el);
+
+		let $score = $('<popcornscore>').appendTo(self.$el).text(0);
 
 		self.step = function(){
 
@@ -170,11 +176,18 @@ window.PopcornGame = function(){
 		}
 
 		self.add = function(kernel){
+
 			kernel.inPan = true;
 			self.kernels.push(kernel);
 			kernel.panx = -PANPX*0.4 + Math.random()*PANPX*0.8;
 
-			audio.play('kernel',true);
+			if(kernel.isPopped){
+				self.score++;
+				$score.text(self.score);
+				audio.play('score',true);
+			} else {
+				audio.play('kernel',true);
+			}
 		}
 
 		self.stepHeat = function(){
@@ -187,6 +200,18 @@ window.PopcornGame = function(){
 					k--;
 				}
 			}
+		}
+
+		self.hide = function(){
+			self.isActive = false;
+			self.$el.hide();
+			for(var k in self.kernels) self.kernels[k].$el.hide();
+		}
+
+		self.show = function(){
+			self.isActive = true;
+			self.$el.show();
+			for(var k in self.kernels) self.kernels[k].$el.show();
 		}
 	}
 
@@ -312,6 +337,21 @@ window.PopcornGame = function(){
 					border-radius: ${POPPED/2}px ${POPPED/2}px ${POPPED/2}px 0px;
 					background: radial-gradient( white, white, gray);
 				}
+
+				popcornscore{
+					display: block;
+					position: absolute;
+
+					bottom: ${380}px;
+					width: ${400}px;
+					left: ${-200 + 125}px;
+					font-size: ${100}px;
+					text-align: center;
+					opacity: 0.2;
+					color: white;
+					text-align: center;
+					
+				}
 			</style>
 		`)
 	}
@@ -322,19 +362,38 @@ window.PopcornGame = function(){
 	let $game = $('<popcorngame>').appendTo(self.$el);
 
 	$game.click(function(e){
-		meeps[0].wall = Math.floor(e.offsetX/W);
+
+		let p = e.pageX/$(document).innerWidth();
+		let wall = Math.floor(p*3);
+		let meepSwap;
+		let min = 1;
+
+		for(var m in meeps){
+			if( meeps[m].isActive && meeps[m].walls && meeps[m].walls[wall].dist < min ){
+				min = meeps[m].walls[wall].dist;
+				meepSwap = meeps[m];
+			}
+		}
+		if(meepSwap) meepSwap.wall = Math.floor(e.offsetX/W);
 	});
 
 	let hud = new PartyHUD('#C48264');
 	hud.$el.appendTo($game);
 
+	let timeQueue = undefined;
+	let intervalQueue = undefined;
+
 	let meeps = [];
 	let fires = [];
 	let kernels = [];
 	function initGame(count){
+
+		timeQueue = TIME/count;
+
 		for(var i=0; i<count; i++){
 			meeps[i] = new PopcornMeep(i);
 			meeps[i].$el.appendTo($game);
+			meeps[i].hide();
 		}
 
 		for(var i=0; i<3; i++){
@@ -344,8 +403,33 @@ window.PopcornGame = function(){
 		}
 
 		audio.play('music');
+		
 
-		setInterval(spawnKernels,5000);
+		//setInterval(spawnKernels,5000);
+
+		initNextPlayer();
+
+		intervalQueue = setInterval(doNextRound,timeQueue*1000);
+
+		hud.initTimer(TIME,finiGame);
+
+		doNextRound();
+	}
+
+	function doNextRound(){
+		initNextPlayer();
+		setTimeout(spawnKernels,timeQueue/5*1*1000);
+		setTimeout(spawnKernels,timeQueue/5*2*1000);
+		setTimeout(spawnKernels,timeQueue/5*3*1000);
+	}
+
+	let nPlayer = -1;
+	function initNextPlayer(){
+		nPlayer++;
+		meeps[(nPlayer-2+meeps.length)%meeps.length].hide();
+		meeps[nPlayer%meeps.length].show();
+
+		if(nPlayer>=meeps.length) clearInterval(intervalQueue);
 	}
 
 	hud.initPlayerCount(initGame);
@@ -372,9 +456,6 @@ window.PopcornGame = function(){
 		}
 	}
 
-
-	
-
 	function step(){
 
 		for(var f in fires){
@@ -388,22 +469,25 @@ window.PopcornGame = function(){
 		for(var m in meeps){
 			meeps[m].step();
 
-			for(var k in kernels){
-				if(!kernels[k].inPan && kernels[k].wall == meeps[m].wall && kernels[k].sy>0){
-					let dx = Math.abs( kernels[k].px - meeps[m].px );
-					let dy = Math.abs( kernels[k].py - meeps[m].py );
-					if(dy<0.05 && dx<PANPX/2) meeps[m].add( kernels[k] );
-				}
-			}
+			if(meeps[m].isActive){
 
-			for(var f in fires){
-				if(fires[f].wall == meeps[m].wall){
-					let dx = Math.abs( fires[f].px - meeps[m].px );
-					if(dx<PANPX/2){
-						meeps[m].stepHeat();
+				for(var k in kernels){
+					if(!kernels[k].inPan && kernels[k].wall == meeps[m].wall && kernels[k].sy>0){
+						let dx = Math.abs( kernels[k].px - meeps[m].px );
+						let dy = Math.abs( kernels[k].py - meeps[m].py );
+						if(dy<0.05 && dx<PANPX/2) meeps[m].add( kernels[k] );
 					}
 				}
-				
+
+				for(var f in fires){
+					if(fires[f].wall == meeps[m].wall){
+						let dx = Math.abs( fires[f].px - meeps[m].px );
+						if(dx<PANPX/2){
+							meeps[m].stepHeat();
+						}
+					}
+					
+				}
 			}
 		}
 
@@ -432,6 +516,8 @@ window.PopcornGame = function(){
 		for(var m in meeps){
 			meeps[m].px = p[m].px;
 			meeps[m].pz = p[m].pz;
+			meeps[m].walls = p[m].walls;
+
 			//meeps[m].py = p[m].py;
 			if( p[m].wall != undefined ){
 				meeps[m].wall = p[m].wall;
@@ -443,7 +529,25 @@ window.PopcornGame = function(){
 
 	let interval = setInterval(step,1000/FPS);
 
-	self.fini = function(){
+	function finiGame(){
 
+		for(var m in meeps) meeps[m].show();
+
+		clearInterval(interval);
+		hud.initBanner('Finish!');
+		
+		setTimeout(function(){
+			let scores = [];
+			for(var m in meeps) scores[m] = meeps[m].score;
+			window.doPartyGameComplete(scores);
+			self.fini();
+		},3000)
+
+		
+	}
+
+	self.fini = function(){
+		audio.stop('music');
+		clearInterval(interval);
 	}
 }
