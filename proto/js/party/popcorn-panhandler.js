@@ -183,7 +183,7 @@ window.PopcornGame = function(){
 
 			if(kernel.isPopped){
 				self.score++;
-				$score.text(self.score);
+				$score.text(self.score).stop(true,false).animate({opacity:1,bottom:450},100).animate({opacity:0.5,bottom:380},100);
 				audio.play('score',true);
 			} else {
 				audio.play('kernel',true);
@@ -383,7 +383,7 @@ window.PopcornGame = function(){
 					left: ${-200 + 125}px;
 					font-size: ${100}px;
 					text-align: center;
-					opacity: 0.2;
+					opacity: 0.5;
 					color: white;
 					text-align: center;
 					
