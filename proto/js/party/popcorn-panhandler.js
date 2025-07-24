@@ -228,26 +228,32 @@ window.PopcornGame = function(){
 			}
 		}
 
-		self.show = function(){
+		self.show = function( instant=false ){
 			//self.isActive = true;
 			self.$el.show();
 			for(var k in self.kernels) self.kernels[k].$el.show();
 
-			self.$el
-			.stop(true,false)
-			.css({ opacity:0 })
-			.animate({ opacity:0.5 },100)
-			.animate({ opacity:0.2 },100)
-			.animate({ opacity:0.5 },100)
-			.animate({ opacity:0.2 },100)
-			.animate({ opacity:0.5 },100)
-			.animate({ opacity:0.2 },100)
-			.animate({ opacity:1 },{
-				duration:500,
-				complete:function(){
-					self.isActive = true;
-				}
-			});
+			if(instant){
+				self.isActive = true;
+			} else {
+				self.$el
+				.stop(true,false)
+				.css({ opacity:0 })
+				.animate({ opacity:0.5 },100)
+				.animate({ opacity:0.2 },100)
+				.animate({ opacity:0.5 },100)
+				.animate({ opacity:0.2 },100)
+				.animate({ opacity:0.5 },100)
+				.animate({ opacity:0.2 },100)
+				.animate({ opacity:1 },{
+					duration:500,
+					complete:function(){
+						self.isActive = true;
+					}
+				});
+			}
+
+			
 		}
 	}
 
@@ -567,7 +573,11 @@ window.PopcornGame = function(){
 
 	function finiGame(){
 
-		for(var m in meeps) meeps[m].show();
+		for(var m in meeps){
+			meeps[m].show(true);
+			meeps[m].wall = 1;
+			meeps[m].redraw();
+		}
 
 		clearInterval(interval);
 		hud.initBanner('Finish!');
