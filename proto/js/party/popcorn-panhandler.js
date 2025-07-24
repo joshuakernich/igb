@@ -202,16 +202,52 @@ window.PopcornGame = function(){
 			}
 		}
 
-		self.hide = function(){
-			self.isActive = false;
-			self.$el.hide();
-			for(var k in self.kernels) self.kernels[k].$el.hide();
+		self.hide = function( instant=false ){
+
+			if(instant){
+				self.$el.hide();
+				self.isActive = false;
+				for(var k in self.kernels) self.kernels[k].$el.hide();
+			} else {
+				self.$el
+				.stop(true,false)
+				.animate({ opacity:0.7 },100)
+				.animate({ opacity:1 },100)
+				.animate({ opacity:0.7 },100)
+				.animate({ opacity:1 },100)
+				.animate({ opacity:0.7 },100)
+				.animate({ opacity:1 },100)
+				.animate({ opacity:0 },{
+					duration:500,
+					complete:function(){
+						self.$el.hide();
+						self.isActive = false;
+						for(var k in self.kernels) self.kernels[k].$el.hide();
+					}
+				});
+			}
 		}
 
 		self.show = function(){
-			self.isActive = true;
+			//self.isActive = true;
 			self.$el.show();
 			for(var k in self.kernels) self.kernels[k].$el.show();
+
+			self.$el
+			.stop(true,false)
+			.css({ opacity:0 })
+			.animate({ opacity:0.5 },100)
+			.animate({ opacity:0.2 },100)
+			.animate({ opacity:0.5 },100)
+			.animate({ opacity:0.2 },100)
+			.animate({ opacity:0.5 },100)
+			.animate({ opacity:0.2 },100)
+			.animate({ opacity:1 },{
+				duration:500,
+				complete:function(){
+					self.isActive = true;
+				}
+			});
 		}
 	}
 
@@ -393,7 +429,7 @@ window.PopcornGame = function(){
 		for(var i=0; i<count; i++){
 			meeps[i] = new PopcornMeep(i);
 			meeps[i].$el.appendTo($game);
-			meeps[i].hide();
+			meeps[i].hide(true);
 		}
 
 		for(var i=0; i<3; i++){
