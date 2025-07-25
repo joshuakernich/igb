@@ -232,6 +232,10 @@ window.CardboardCutoutGame = function(){
 					box-sizing: border-box;
 					border: 10px solid red;
 					background: #C69A64;
+
+					animation: throb;
+					animation-iteration-count: infinite;
+					animation-duration: 0.5s;
 				}
 
 				cutoutspace[n='0'] cutoutstart{ border-color:var(--n0); }
@@ -265,6 +269,20 @@ window.CardboardCutoutGame = function(){
 					font-size: 50px;
 					line-height: 100px;
 					text-align: center;
+				}
+
+				@keyframes throb{
+					0%{
+						transform: translate(-50%,-50%) scale(1);
+					}
+
+					50%{
+						transform: translate(-50%,-50%) scale(0.5);
+					}
+
+					100%{
+						transform: translate(-50%,-50%) scale(1);
+					}
 				}
 
 			</style>
@@ -384,6 +402,7 @@ window.CardboardCutoutGame = function(){
 
 		let pattern = SHAPES['star'];
 		let isCutActive = false;
+		let isComplete = false;
 
 		let d = '';
 		for(var p in pattern) d = d + (p==0?' M':' L')+(pattern[p].x)+','+(pattern[p].y);
@@ -395,7 +414,7 @@ window.CardboardCutoutGame = function(){
 				<cutoutbox>
 					<svg viewBox='-1 -1 2 2'>
 						<path stroke-dasharray="20 20" vector-effect='non-scaling-stroke' d='${d}'></path>
-						<path vector-effect='non-scaling-stroke' d='M-1,-1 L1,1'></path>
+						<path vector-effect='non-scaling-stroke' d=''></path>
 					</svg>
 					<cutoutwall></cutoutwall>
 					<cutoutwall></cutoutwall>
@@ -455,14 +474,15 @@ window.CardboardCutoutGame = function(){
 
 					let accuracy = ((1-distMax)*100).toFixed(1);
 
-					$scoreHeader.text('Accuracy');
 					$score.text(accuracy + '%');
 
 					if(d<35 && history.length>500){
 						isCutActive = false;
+						isComplete = true;
+						$scoreHeader.text('Finish!');
 					}
 
-				} else {
+				} else if(!isComplete){
 					let dx = ox - pattern[0].x * BOX/2;
 					let dy = oy - pattern[0].y * BOX/2;
 					let d = Math.sqrt(dx*dx+dy*dy);
@@ -470,7 +490,8 @@ window.CardboardCutoutGame = function(){
 					if(d<35){
 						$start.hide();
 						isCutActive = true;
-
+						$scoreHeader.text('Accuracy');
+						$score.text('%');
 					}
 				}
 			}
