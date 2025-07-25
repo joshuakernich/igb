@@ -476,7 +476,7 @@ window.CardboardCutoutGame = function(){
 
 					$score.text(accuracy + '%');
 
-					if(d<35 && history.length>500){
+					if(d<35 && history.length>300){
 						isCutActive = false;
 						isComplete = true;
 						$scoreHeader.text('Finish!');
