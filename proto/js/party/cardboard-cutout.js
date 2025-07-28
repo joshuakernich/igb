@@ -222,6 +222,10 @@ window.CardboardCutoutGame = function(){
 					stroke-width: 5;
 				}
 
+				cutoutbox path.done{
+					fill: rgba(0,0,0,0.7);
+				}
+
 				cutoutstart{
 					position: absolute;
 					display: block;
@@ -337,7 +341,12 @@ window.CardboardCutoutGame = function(){
 	  ]
 	};
 
-	const SCALING = 0.9;
+	const SCALING = 0.8;
+	const COLLECTION = [];
+	for(var s in SHAPES){
+		for(var p in SHAPES[s]) SHAPES[s][p] = {x:SHAPES[s][p].x*SCALING,y:SHAPES[s][p].y*SCALING};
+		COLLECTION.push(s);
+	}
 
 	// Calculate squared distance from point to segment
 	function pointToSegmentDistanceSquared(px, py, x1, y1, x2, y2) {
@@ -396,11 +405,17 @@ window.CardboardCutoutGame = function(){
 		self.n = n;
 	}
 
+	let queue = [];
 	const CutoutBox = function(n,x,y){
 
 		let self = this;
 
-		let pattern = SHAPES['star'];
+		if(!queue.length){
+			queue = COLLECTION.concat();
+			shuffleArray(queue);
+		}
+
+		let pattern = SHAPES[queue.pop()];
 		let isCutActive = false;
 		let isComplete = false;
 
@@ -476,10 +491,13 @@ window.CardboardCutoutGame = function(){
 
 					$score.text(accuracy + '%');
 
-					if(d<35 && history.length>300){
+					if(d<35 && history.length>100){
 						isCutActive = false;
 						isComplete = true;
 						$scoreHeader.text('Finish!');
+
+						$cut.attr('d',draw + 'Z');
+						$cut.addClass('done');
 					}
 
 				} else if(!isComplete){
