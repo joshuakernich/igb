@@ -21,9 +21,16 @@ window.CardboardCutoutGame = function(){
 					transform-origin: top left;
 					background-image: url(./proto/img/party/bg-box-factory.png);
 					background-size: 100%;
-					background-position: bottom center;
+					background-position: bottom 120px center;
 
-					perspective: ${W}px;
+					perspective: ${W*3}px;
+				}
+
+				cutoutcanvas{
+					display:block;
+					position: absolute;
+					inset: 0px;
+					transform-style: preserve-3d;
 				}
 
 				cutoutgame:before{
@@ -62,7 +69,7 @@ window.CardboardCutoutGame = function(){
 					display:block;
 					position: absolute;
 					width: ${BOX}px;
-					height: ${BOX/2}px;
+					height: ${BOX/3}px;
 					background: url(./proto/img/party/texture-cardboard.avif);
 					background-size: cover;
 					transform: rotateX(-90deg);
@@ -76,7 +83,7 @@ window.CardboardCutoutGame = function(){
 					display:block;
 					position: absolute;
 					width: ${BOX}px;
-					height: ${BOX/2}px;
+					height: ${BOX/3}px;
 					background: url(./proto/img/party/texture-cardboard.avif);
 					background-size: cover;
 					transform: rotateZ(90deg) rotateX(-90deg);
@@ -89,7 +96,7 @@ window.CardboardCutoutGame = function(){
 				cutoutwall:nth-of-type(3){
 					display:block;
 					position: absolute;
-					width: ${BOX/2}px;
+					width: ${BOX/3}px;
 					height: ${BOX}px;
 					background: url(./proto/img/party/texture-cardboard.avif);
 					background-size: cover;
@@ -114,7 +121,8 @@ window.CardboardCutoutGame = function(){
 					position: absolute;
 
 					transform-origin: bottom right;
-					transform: rotate(10deg);
+					transform: rotateX(-90deg);
+					transform-style: preserve-3d;
 				}
 
 				cutterframe{
@@ -275,6 +283,11 @@ window.CardboardCutoutGame = function(){
 					text-align: center;
 				}
 
+				cutoutsurface{
+					display: block;
+					transform-style: preserve-3d;
+				}
+
 				@keyframes throb{
 					0%{
 						transform: translate(-50%,-50%) scale(1);
@@ -406,9 +419,15 @@ window.CardboardCutoutGame = function(){
 	}
 
 	let queue = [];
-	const CutoutBox = function(n,x,y){
+	const CutoutBox = function(n){
 
 		let self = this;
+		self.isForeground = false;
+		self.y = 0.5;
+		self.x = 0.5;
+		self.scale = 0.5;
+		self.spin = 80;
+		self.twist = 0;
 
 		if(!queue.length){
 			queue = COLLECTION.concat();
@@ -417,7 +436,7 @@ window.CardboardCutoutGame = function(){
 
 		let pattern = SHAPES[queue.pop()];
 		let isCutActive = false;
-		let isComplete = false;
+		self.isComplete = false;
 
 		let d = '';
 		for(var p in pattern) d = d + (p==0?' M':' L')+(pattern[p].x)+','+(pattern[p].y);
@@ -436,10 +455,7 @@ window.CardboardCutoutGame = function(){
 					<cutoutwall></cutoutwall>
 				</cutoutbox>
 			</cutoutspace>
-			`).css({
-			left: W + x*W + 'px',
-			top: y*H + 'px',
-		});
+			`);
 
 		let $start = $('<cutoutstart>').appendTo(self.$el).css({
 			left: pattern[0].x * BOX/2,
@@ -461,9 +477,9 @@ window.CardboardCutoutGame = function(){
 		let history = [];
 
 		self.step = function(){
-			if(self.meep){
-				let ox = self.meep.px - x*W;
-				let oy = self.meep.py - y*H;
+			if(self.meep && self.isForeground){
+				let ox = self.meep.px - self.x*W;
+				let oy = self.meep.py - self.y*H;
 
 				self.meep.$el.css({
 					left: ox + 'px',
@@ -493,14 +509,14 @@ window.CardboardCutoutGame = function(){
 
 					if(d<35 && history.length>100){
 						isCutActive = false;
-						isComplete = true;
+						self.isComplete = true;
 						$scoreHeader.text('Finish!');
 
 						$cut.attr('d',draw + 'Z');
 						$cut.addClass('done');
 					}
 
-				} else if(!isComplete){
+				} else if(!self.isComplete){
 					let dx = ox - pattern[0].x * BOX/2;
 					let dy = oy - pattern[0].y * BOX/2;
 					let d = Math.sqrt(dx*dx+dy*dy);
@@ -514,12 +530,25 @@ window.CardboardCutoutGame = function(){
 				}
 			}
 		}
+
+		self.redraw = function(){
+			self.$el.css({
+				left: self.x*W + 'px',
+				top: self.y*H + 'px',
+				transform: 'scale('+self.scale+') rotateX('+self.spin+'deg) rotateY('+self.twist+'deg)',
+			});
+
+			self.meep.$el.css({
+				transform: 'rotateX('+(-self.spin)+'deg)',
+			})
+		}
 	}
 
 	let self = this;
 	self.$el = $('<igb>');
 
 	let $game = $('<cutoutgame>').appendTo(self.$el);
+	let $canvas = $('<cutoutcanvas>').appendTo($game);
 
 	let hud = new PartyHUD('#C09363');
 	hud.$el.appendTo($game);
@@ -529,34 +558,99 @@ window.CardboardCutoutGame = function(){
 	let boxes = [];
 	let meeps = [];
 
+	let nPlayer = 0;
+	let foregrounds = [];
+	let completes = [];
+	let isPlayActive = false;
+
+	const FOREGROUND = 2;
+
 	function initGame(count){
 
 		for(var m=0; m<count; m++){
 			meeps[m] = new CutterMeep(m);
-			meeps[m].$el.appendTo($game);
+		
+			let box = new CutoutBox(m);
+			box.$el.appendTo($canvas);
+			box.bindMeep(meeps[m]);
+			box.x = 0.75 + m%2 * 0.02;
+			box.y = 0.78 - 0.09*(count-m-1);
+			box.redraw();
+			boxes[m] = box;
 		}
 
-		initBox();
-		initBox();
+		//initBox();
+		//initBox();
+
+		isPlayActive = false;
+		setTimeout(doNextSet,1000);
 	}
 
-	let nNextPlayer = -1;
+	function doNextSet(){
+		isPlayActive = true;
 
-	function initBox(){
+		foregrounds.length = 0;
 
-		let nBox = 0;
-		if( boxes[0] ) nBox = 1;
+		for(var i=0; i<FOREGROUND; i++){
+			if(boxes[nPlayer]){
+				foregrounds.push(boxes[nPlayer]);
+				nPlayer++;
+			}
+		}
 
-		let box = new CutoutBox(0,(nBox==0?0.3:0.7),0.5);
-		box.$el.appendTo($game);
-		boxes[nBox] = box;
+		let spacing = 1/(foregrounds.length + 1);
+	
+		for(let f=0; f<foregrounds.length; f++){
+			$(foregrounds[f])
+			.delay(f*200)
+			.animate({
+				x:2 - (f+1) * spacing,
+				y:0.5,
+				scale:1,
+				spin:20,
+				twist:-5
+			},{
+				duration:500,
+				complete:function(){
+					foregrounds[f].isForeground = true;
+				}
+			});
 
-		nNextPlayer++;
-		boxes[nBox].bindMeep(meeps[nNextPlayer]);
+
+		}
 	}
 
 	self.step = function(){
 		for(var b in boxes) boxes[b].step();
+		for(var b in boxes) boxes[b].redraw();
+
+		let isComplete = isPlayActive;
+		for(var f in foregrounds ) if( !foregrounds[f].isComplete ) isComplete = false;
+
+
+		if(isComplete){
+			isPlayActive = false;
+
+			for(var f in foregrounds){
+				foregrounds[f].isForeground = false;
+				completes.push(foregrounds[f]);
+			}
+
+			for(var c=0; c<completes.length; c++){
+				$(completes[c])
+				.delay(c*100)
+				.animate({
+					x:2.25,
+					y:0.78 - 0.09*(c),
+					scale:0.5,
+					spin:80,
+					twist:0
+				});
+			}
+
+			setTimeout(doNextSet,1000);
+		}
+
 		resize();
 	}
 
@@ -576,7 +670,7 @@ window.CardboardCutoutGame = function(){
 
 	self.setPlayers = function(p){
 		for(var m in meeps){
-			meeps[m].px = p[m].px * W;
+			meeps[m].px = (1 + p[m].px) * W;
 			meeps[m].py = (1-p[m].pz) * H;
 		}
 	}
