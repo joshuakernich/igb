@@ -257,29 +257,36 @@ window.CardboardCutoutGame = function(){
 				cutoutspace[n='4'] cutoutstart{ border-color:var(--n4); }
 				cutoutspace[n='5'] cutoutstart{ border-color:var(--n5); }
 
+				cutoutspace[n='0'] cutoutscore{ color:var(--n0); }
+				cutoutspace[n='1'] cutoutscore{ color:var(--n1); }
+				cutoutspace[n='2'] cutoutscore{ color:var(--n2); }
+				cutoutspace[n='3'] cutoutscore{ color:var(--n3); }
+				cutoutspace[n='4'] cutoutscore{ color:var(--n4); }
+				cutoutspace[n='5'] cutoutscore{ color:var(--n5); }
+
 				cutoutscore{
 					display: block;
 					position: absolute;
-					bottom: ${BOX/2+20}px;
+					top: ${-BOX/3}px;
 					left: ${-BOX/2}px;
 					width: ${BOX}px;
 
 					color: white;
 					font-size: 80px;
-					line-height: 100px;
+					line-height: ${BOX/3}px;
 					text-align: center;
 				}
 
 				cutoutheader{
 					display: block;
 					position: absolute;
-					bottom: ${BOX/2 + 100}px;
+					top: ${-BOX/2 - BOX/3 - 30}px;
 					left: ${-BOX/2}px;
 					width: ${BOX}px;
 
 					color: white;
 					font-size: 50px;
-					line-height: 100px;
+					line-height: 50px;
 					text-align: center;
 				}
 
@@ -463,7 +470,7 @@ window.CardboardCutoutGame = function(){
 		})
 
 		let $scoreHeader = $('<cutoutheader>').appendTo(self.$el);
-		let $score = $('<cutoutscore>').appendTo(self.$el).text('Ready...');
+		let $score = $('<cutoutscore>').appendTo(self.$el).text('');
 
 		let $surface = $('<cutoutsurface>').appendTo(self.$el);
 		let $cut = self.$el.find('path').last();
@@ -510,6 +517,7 @@ window.CardboardCutoutGame = function(){
 					if(d<35 && history.length>100){
 						isCutActive = false;
 						self.isComplete = true;
+						self.score = accuracy;
 						$scoreHeader.text('Finish!');
 
 						$cut.attr('d',draw + 'Z');
@@ -541,6 +549,35 @@ window.CardboardCutoutGame = function(){
 			self.meep.$el.css({
 				transform: 'rotateX('+(-self.spin)+'deg)',
 			})
+		}
+
+		self.setForeground = function(b){
+			self.isForeground = b;
+			
+			if(b){
+				self.meep.$el.show();
+
+				$scoreHeader.text('Accuracy');
+				$score.text('0%');
+
+				$score.css({
+					'top': -BOX/2 - BOX/3 + 'px',
+					'transform':'rotateX(0deg)',
+					'transform-origin':'top center',
+				});
+			} else { 
+				self.meep.$el.hide();
+
+				$scoreHeader.text('');
+				
+				$score.css({
+					'top': BOX/2 + 'px',
+					'transform':'rotateX(-90deg)',
+					'transform-origin':'top center',
+				});
+			}
+
+			
 		}
 	}
 
@@ -577,6 +614,8 @@ window.CardboardCutoutGame = function(){
 			box.y = 0.78 - 0.09*(count-m-1);
 			box.redraw();
 			boxes[m] = box;
+
+			box.setForeground(false);
 		}
 
 		//initBox();
@@ -587,7 +626,7 @@ window.CardboardCutoutGame = function(){
 	}
 
 	function doNextSet(){
-		isPlayActive = true;
+		
 
 		foregrounds.length = 0;
 
@@ -598,7 +637,7 @@ window.CardboardCutoutGame = function(){
 			}
 		}
 
-		let spacing = 1/(foregrounds.length + 1);
+		let spacing = 1/(foregrounds.length+1);
 	
 		for(let f=0; f<foregrounds.length; f++){
 			$(foregrounds[f])
@@ -608,16 +647,71 @@ window.CardboardCutoutGame = function(){
 				y:0.5,
 				scale:1,
 				spin:20,
-				twist:-5
+				twist:5 - f*10,
 			},{
 				duration:500,
 				complete:function(){
-					foregrounds[f].isForeground = true;
+					foregrounds[f].setForeground( true );
 				}
 			});
-
-
 		}
+
+
+		if(foregrounds.length==0){
+			isPlayActive = false;
+			doFiniGame();
+		} else {
+			isPlayActive = true;
+		}
+	}
+
+	function doFiniGame(){
+		for(var c=0; c<completes.length; c++){
+			$(completes[c])
+			.delay(completes.length-c*100)
+			.animate({
+				x:1.25 + (c%3)*0.25,
+				y:0.3 + Math.floor(c/3)*0.4,
+				scale:0.6,
+				spin:20,
+				twist:0
+			});
+		}
+
+		setTimeout(function(){
+			
+			let scores = [];
+			for(var a in boxes){
+				scores[a] = 0;
+				for(var b in boxes){
+					if(boxes[a].score > boxes[b].score) scores[a]++;
+				}
+			}
+
+			window.doPartyGameComplete(scores);
+
+		},2000)
+	}
+
+	function doPutAway(){
+		for(var f in foregrounds){
+			foregrounds[f].setForeground( false );
+			completes.push(foregrounds[f]);
+		}
+
+		for(var c=0; c<completes.length; c++){
+			$(completes[c])
+			.delay(c*100)
+			.animate({
+				x:2.25,
+				y:0.78 - 0.09*(c),
+				scale:0.5,
+				spin:80,
+				twist:0
+			});
+		}
+
+		setTimeout(doNextSet,2000);
 	}
 
 	self.step = function(){
@@ -630,25 +724,7 @@ window.CardboardCutoutGame = function(){
 
 		if(isComplete){
 			isPlayActive = false;
-
-			for(var f in foregrounds){
-				foregrounds[f].isForeground = false;
-				completes.push(foregrounds[f]);
-			}
-
-			for(var c=0; c<completes.length; c++){
-				$(completes[c])
-				.delay(c*100)
-				.animate({
-					x:2.25,
-					y:0.78 - 0.09*(c),
-					scale:0.5,
-					spin:80,
-					twist:0
-				});
-			}
-
-			setTimeout(doNextSet,1000);
+			setTimeout(doPutAway,1000);
 		}
 
 		resize();
