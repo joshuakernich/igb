@@ -17,9 +17,20 @@ $("head").append(`
 		}
 	<style>`);
 
+window.PartyMeepHead = function(n) {
+	let self = this;
+	self.n = n;
+	self.$el = $(`
+		<partymeephead n=${n}>
+			<partymeephat></partymeephat>
+			<partymeepeye></partymeepeye>
+			<partymeepeye></partymeepeye><br>
+			<partymeepmouth></partymeepmouth>
+		</partymeephead>
+	`);
+}
+
 window.PartyMeep = function(n){
-
-
 
 	const W = 100;
 	const H = 350;

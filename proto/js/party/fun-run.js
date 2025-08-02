@@ -7,6 +7,7 @@ window.FunRunGame = function(){
 	const QUESTIONS = [
 		{
 			q:"What was the second meep carrying?",
+			type:'item',
 			parade:[
 				{m:0,i:0},
 				{m:1,i:1},
@@ -16,6 +17,23 @@ window.FunRunGame = function(){
 				{i:0},
 				{i:1},
 				{i:2,isCorrect:true},
+				{i:3},
+			]
+		},
+
+		{
+			q:"What colour was the third meep?",
+			type:'meep',
+			parade:[
+				{m:1,i:2},
+				{m:2,i:1},
+				{m:0,i:2},
+				{m:3,i:1},
+			],
+			options:[
+				{i:0,isCorrect:true},
+				{i:1},
+				{i:2},
 				{i:3},
 			]
 		},
@@ -50,16 +68,27 @@ window.FunRunGame = function(){
 		setTimeout( callback, 6000 + (i-1)*700 );
 	}
 
-	const FunRunOptions = function(options){
+	const FunRunOptions = function(type,options){
 		let self = this;
 		self.$el = $('<funrunoptions>');
 
 		let $options = [];
 		for(var o in options){
 			$options[o] = $('<funrunoption>').appendTo(self.$el);
-			$('<funrunitem>').appendTo($options[o]).css({
-				'background-position-x':-options[o].i*100+'%',
-			})
+
+			if(type=='meep'){
+				new PartyMeepHead(options[o].i).$el.appendTo($options[o]).css({
+					'left':'50%',
+					'top':'50%',
+					'transform':'translateX(-50%) scale(2)',
+				})
+			} else {
+				$('<funrunitem>').appendTo($options[o]).css({
+					'background-position-x':-options[o].i*100+'%',
+				})
+			}
+
+			
 		}
 
 		self.showCorrect = function(){
@@ -370,7 +399,7 @@ window.FunRunGame = function(){
 					inset: 50px;
 					border-radius: 20px;
 	
-					border-top: 20px solid rgba(0,0,0,0.5);
+					border-top: 10px solid rgba(0,0,0,0.5);
 				}
 
 				funrunoption.correct:before{
@@ -381,12 +410,18 @@ window.FunRunGame = function(){
 					position: absolute;
 					display: block;
 					background: var(--green);
+					background: none;
 					width: 100px;
 					height: 100px;
 					border-radius: 100%;
 
 					bottom: 400px;
 					left: -50px;
+
+					color: white;
+					line-height: 100px;
+					font-size: 100px;
+					text-align: center;
 				}
 
 				funruntick:before{
@@ -401,6 +436,8 @@ window.FunRunGame = function(){
 					transform: rotate(45deg);
 					margin: auto;
 					inset: 0px;
+
+					display: none;
 				}
 
 
@@ -461,9 +498,9 @@ window.FunRunGame = function(){
 		vignette.$el.appendTo($screen);
 		$curtain.appendTo($screen);
 
-		options = new FunRunOptions(question.options);
+		options = new FunRunOptions(question.type,question.options);
 		options.$el.appendTo($floor);
-		options.$el.hide();
+		//options.$el.hide();
 
 		setTimeout(function(){
 			$curtain.addClass('open');
@@ -490,7 +527,7 @@ window.FunRunGame = function(){
 				meeps[m].score++;
 				options.showCorrect();
 
-				$('<funruntick>').appendTo(meeps[m].$el);
+				$('<funruntick>').appendTo(meeps[m].$el).text('+'+meeps[m].score);
 			}
 		}
 
@@ -503,6 +540,8 @@ window.FunRunGame = function(){
 
 		options.$el.remove();
 		vignette.$el.remove();
+
+		for(var m in meeps) meeps[m].isFrozen = false;
 
 		initNextQuestion();
 	}
