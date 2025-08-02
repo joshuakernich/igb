@@ -4,8 +4,89 @@ window.FunRunGame = function(){
 	const H = 1000;
 	const FPS = 50;
 
+	const QUESTIONS = [
+		{
+			q:"What was the second meep carrying?",
+			parade:[
+				{m:0,i:0},
+				{m:1,i:1},
+				{m:2,i:2},
+			],
+			options:[
+				{i:0},
+				{i:1},
+				{i:2,isCorrect:true},
+				{i:3},
+			]
+		},
+
+	]
+
+	
+
 	let audio = new AudioContext();
 	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
+
+	const FunRunVignette = function(parade,callback){
+		let self = this;
+		self.$el = $('<funrunvignette>');
+
+		for(var i=0; i<parade.length; i++){
+			let carrier = new FunRunCarrier( parade[i].m, parade[i].i );
+			carrier.$el.appendTo(self.$el);
+			carrier.$el.css({
+				left: '150%',
+				bottom: '50px',
+			})
+			.delay(i*700)
+			.animate({
+				left: '-50%',
+			},{
+				duration:6000,
+				easing:'linear',
+			})
+		}
+
+		setTimeout( callback, 6000 + (i-1)*700 );
+	}
+
+	const FunRunOptions = function(options){
+		let self = this;
+		self.$el = $('<funrunoptions>');
+
+		let $options = [];
+		for(var o in options){
+			$options[o] = $('<funrunoption>').appendTo(self.$el);
+			$('<funrunitem>').appendTo($options[o]).css({
+				'background-position-x':-options[o].i*100+'%',
+			})
+		}
+
+		self.showCorrect = function(){
+			for(var o in $options){
+				if( options[o].isCorrect ) $options[o].addClass('correct');
+			}
+		}
+	}
+
+	const FunRunCarrier = function( nMeep, nItem ){
+		let self = this;
+		self.$el = $('<funruncarrier>');
+
+		let meep = new PartyMeep(nMeep);
+		meep.$el.appendTo(self.$el).css({
+			bottom: '0px',
+			left: '0px',
+		});
+
+		meep.$handLeft.css({left:'-120px',top:'50%'});
+		meep.$handRight.css({left:'-30px',top:'65%'});
+
+		let item = $('<funrunitem>').css({
+			'background-position-x':-nItem*100+'%',
+		})
+		item.appendTo(self.$el);
+	}
 
 	if( !FunRunGame.init ){
 		FunRunGame.init = true;
@@ -20,6 +101,87 @@ window.FunRunGame = function(){
 					background: gray;
 					background-position: bottom 120px center;
 					perspective: ${W*3}px;
+
+
+					transition: background-size 1s;
+				}
+
+				funruncarrier{
+					display: block;
+					position: absolute;
+				}
+
+				funrunitem{
+					display: block;
+					position: absolute;
+					
+					background: url(./proto/img/party/actor-farm-items.png);
+					background-size: 1200%;	
+					
+				}
+
+				funruncarrier funrunitem{
+					width: 300px;
+					height: 300px;
+					bottom: 50px;
+					left: -250px;
+				}
+
+				funrunoption funrunitem{
+					inset: 150px;
+				}
+
+				funrunbg.floorview:before{
+					bottom: ${H-150}px;
+				}
+
+				funrunbg.floorview:after{
+					height: ${H-150}px;
+				}
+
+				funrunbg{
+					display: block;
+					position: absolute;
+					inset: 0px;
+
+					background: #FAB14B;
+				}
+
+				funrunbg:before{
+					content:"";
+					display: block;
+					position: absolute;
+					
+					background: url(./proto/img/party/bg-farm.png);
+					background-size: 100% 100%;
+					background-position: bottom center;
+
+					width: 100%;
+					height: 100%;
+					bottom: 200px;
+					left: 0px;
+
+					box-shadow: inset 0px -20px 50px #879B60;
+
+					transition: bottom 1s;
+					opacity: 0.8;
+				}
+
+				funrunbg:after{
+					content:"";
+					display: block;
+					position: absolute;
+					
+					bottom: 0px;
+					left: 0px;
+					right: 0px;
+
+					height: 200px;
+					background: linear-gradient(to bottom, #FAB14B, #F27E43);
+					background-image: linear-gradient(to bottom, #FAB14B, transparent), url(./proto/img/party/texture-grass.jpg);
+					background-size: 100%, 40% 20%;
+
+					transition: height 1s;
 				}
 
 				funrunworld{
@@ -46,14 +208,19 @@ window.FunRunGame = function(){
 					transform-origin: bottom center;
 
 					background: radial-gradient(#999, #aaa);
+
+					background: url(./proto/img/party/texture-wood.png);
+					background-size: 20%;
+
+					box-shadow: 0px 50px #432D22;
 				}
 
 				funrunwall{
 					position: absolute;
 					display: block;
-					width: ${W*0.7}px;
+					width: ${W}px;
 					height: ${H}px;
-					left: ${-W*0.7/2}px;
+					left: ${-W/2}px;
 					bottom: ${0}px;
 
 					box-sizing: border-box;
@@ -61,12 +228,13 @@ window.FunRunGame = function(){
 					transform-style: preserve-3d;
 					transform-origin: bottom center;
 
-					border-radius: 100px 100px 0px 0px;
-
 					
 
 					background: #875333;
 					box-shadow: inset 0px 5px 10px orange;
+
+					background: url(./proto/img/party/texture-wood.png);
+					background-size: 20%;
 				}
 
 				funrunscreen{
@@ -74,21 +242,35 @@ window.FunRunGame = function(){
 					display: block;
 					inset: 50px 50px 250px 50px;
 					background: black;
-					border-radius: 50px;
+					
 					background: url(./proto/img/party/bg-cityscape.png);
 					background-size: 300% 95%;
 					overflow: hidden;
 
 					box-shadow: inset 0px 0px 40px rgba(0,0,0,0.5);
+
+					background: url(./proto/img/party/texture-wood.png);
+					background-size: 20%;
 				}
 
 				funrunscreen:before{
 					content: "";
 					position: absolute;
-					inset:0px;
-					background: url(./proto/img/party/actor-screen.gif);
-					background-size: 100% 100%;
-					display: none;
+					inset: 0px;
+					background: black;
+					opacity: 0.3;
+				}
+
+				funrunplatform{
+					content: "";
+					position: absolute;
+					bottom: 0px;
+					left: 0px; 
+					right: 0px;
+					height: 15%;
+					background: #6C4732;
+					background-size: 20% 50%;
+					box-shadow: inset 0px 0px 50px rgba(0,0,0,0.5);
 				}
 
 				funrundial{
@@ -120,6 +302,107 @@ window.FunRunGame = function(){
 						  );
 				}
 
+				funruncurtain{
+					display: block;
+					position: absolute;
+					inset: 0px;
+
+				}
+
+				funruncurtain:before{
+					content:"";
+					display: block;
+					position: absolute;
+					top: 0px;
+					left: 0px;
+					width: 50%;
+					height: 100%;
+					background: url(./proto/img/party/texture-curtain.avif);
+					background-size: 100% 100%;
+					z-index: 1;
+					transition: width 1s;
+				}
+
+				funruncurtain:after{
+					content:"";
+					display: block;
+					position: absolute;
+					top: 0px;
+					right: 0px;
+					width: 50%;
+					height: 100%;
+					background: url(./proto/img/party/texture-curtain.avif);
+					background-size: 100% 100%;
+					z-index: 1;
+					transition: width 1s;
+				}
+
+				funruncurtain.open:before, funruncurtain.open:after{
+					width: 5%;
+					transition: width 1s;
+				}
+
+				funrunvignette{
+					display: block;
+					position: absolute;
+					inset: 0px;
+				}
+
+				funrunoptions{
+					display: block;
+					position: absolute;
+					inset: 0px;
+					white-space: normal;
+				}
+
+				funrunoption{
+					display: inline-block;
+					width: 50%;
+					height: 50%;
+					position: relative;
+				}
+
+				funrunoption:before{
+					content:"";
+					background: rgba(0,0,0,0.1);
+					display: block;
+					position: absolute;
+					inset: 50px;
+					border-radius: 20px;
+	
+					border-top: 20px solid rgba(0,0,0,0.5);
+				}
+
+				funrunoption.correct:before{
+					background: radial-gradient( transparent, var(--green) );
+				}
+
+				funruntick{
+					position: absolute;
+					display: block;
+					background: var(--green);
+					width: 100px;
+					height: 100px;
+					border-radius: 100%;
+
+					bottom: 400px;
+					left: -50px;
+				}
+
+				funruntick:before{
+					content:"";
+					position: absolute;
+					display: block;
+					width: 30px;
+					height: 50px;
+					box-sizing: border-box;
+					border-right: 10px solid white;
+					border-bottom: 10px solid white;
+					transform: rotate(45deg);
+					margin: auto;
+					inset: 0px;
+				}
+
 
 			</style>
 		`);
@@ -129,13 +412,16 @@ window.FunRunGame = function(){
 	self.$el = $('<igb>');
 
 	let $game = $('<funrungame>').appendTo(self.$el);
+	let $bg = $('<funrunbg>').appendTo($game);
 	let $world = $('<funrunworld>').appendTo($game);
 
 	let $floor = $('<funrunfloor>').appendTo($world);
 	let $wall = $('<funrunwall>').appendTo($world);
 	let $screen = $('<funrunscreen>').appendTo($wall);
-	let $dial = $('<funrundial>').appendTo($wall);
-	let $speaker = $('<funrunspeaker>').appendTo($wall);
+	let $platform = $('<funrunplatform>').appendTo($screen);
+	let $curtain = $('<funruncurtain>').appendTo($screen);
+	//let $dial = $('<funrundial>').appendTo($wall);
+	//let $speaker = $('<funrunspeaker>').appendTo($wall);
 
 	let hud = new PartyHUD();
 	hud.$el.appendTo($game);
@@ -149,6 +435,76 @@ window.FunRunGame = function(){
 				'transform':'rotateX(-90deg)',
 			})
 		}
+
+		setTimeout( initNextQuestion, 1000 );
+	}
+
+	let nQuestion = -1;
+
+	function initNextQuestion(){
+		nQuestion++;
+		toWall();
+		hud.initBanner('Round '+(nQuestion+1));
+		setTimeout(initVignette,2000);
+	}
+
+	let vignette;
+	let question;
+	let options;
+	
+	function initVignette(){
+		hud.finiBanner();
+
+		question = QUESTIONS[nQuestion];
+
+		vignette = new FunRunVignette(question.parade,finiVignette);
+		vignette.$el.appendTo($screen);
+		$curtain.appendTo($screen);
+
+		options = new FunRunOptions(question.options);
+		options.$el.appendTo($floor);
+		options.$el.hide();
+
+		setTimeout(function(){
+			$curtain.addClass('open');
+		},500);
+	}
+
+	function finiVignette(){
+		$curtain.addClass('close');
+		setTimeout(function(){
+			toFloor();
+			hud.initBanner(question.q,'small');
+			hud.initTimer(10,initSolution);
+			options.$el.show();
+		},1000);
+	}
+
+	function initSolution(){
+
+		for(let m in meeps){
+			meeps[m].isFrozen = true;
+			meeps[m].iVote = Math.round(meeps[m].px) + Math.round(meeps[m].py)*2;
+
+			if( question.options[meeps[m].iVote].isCorrect ){
+				meeps[m].score++;
+				options.showCorrect();
+
+				$('<funruntick>').appendTo(meeps[m].$el);
+			}
+		}
+
+		setTimeout(finiQuestion,2000);
+	}
+
+	function finiQuestion(){
+
+		self.$el.find('funruntick').remove();
+
+		options.$el.remove();
+		vignette.$el.remove();
+
+		initNextQuestion();
 	}
 
 	initGame(6);
@@ -157,22 +513,29 @@ window.FunRunGame = function(){
 		$world.css({
 			transform: 'rotateX(-2deg) scale(1) translateY(-0px)',
 		})
+
+		$bg.removeClass('floorview');
+		
 	}
 
 	function toFloor(){
 		$world.css({
-			transform: 'rotateX(-30deg) scale(0.85) translateY(-150px)',
+			transform: 'rotateX(-20deg) scale(0.85) translateY(-120px)',
 		})
+
+		$bg.addClass('floorview');
+		$curtain.removeClass('open');
 	}
 
-	toWall();
+	toFloor();
+
 
 	self.step = function(){
 	
 		for(var m in meeps){
-			meeps[m].$el.css({
-				left: meeps[m].px + 'px',
-				top: meeps[m].py + 'px',
+			if(!meeps[m].isFrozen) meeps[m].$el.css({
+				left: meeps[m].px*W + 'px',
+				top: meeps[m].py*W + 'px',
 			})
 		}
 
@@ -195,8 +558,8 @@ window.FunRunGame = function(){
 
 	self.setPlayers = function(p){
 		for(var m in meeps){
-			meeps[m].px = (p[m].px) * W;
-			meeps[m].py = (1-p[m].pz) * W;
+			meeps[m].px = (p[m].px);
+			meeps[m].py = (1-p[m].pz);
 		}
 	}
 }

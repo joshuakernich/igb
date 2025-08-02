@@ -463,6 +463,21 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
             	
             }
 
+    		boxpartypop{
+    			display: block;
+				position: absolute;
+    			
+    		}
+
+    		boxpartysmoke{
+    			display: block;
+				position: absolute;
+				background: white;
+				border-radius: 100%;
+				transform: translate(-50%, -50%);
+    		}
+    		
+
            
         </style>
     `);
@@ -776,9 +791,35 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
     		complete:function(){
     			boxes[nSelect].$el.remove();
     			nSelect = undefined;
+    			pop();
     			setTimeout(callbackExitBox,500);
     		}
     	})
+	}
+
+	function pop(){
+		let $pop = $('<boxpartypop>')
+		for(var i=0; i<6; i++){
+			let size = 20 + Math.random() * 20;
+			let r = Math.random() * Math.PI*2;
+			$('<boxpartysmoke>').appendTo($pop).css({
+				width: size + 'px',
+				height: size + 'px',
+				left: Math.cos(r) * EXPLOSION/2 * Math.random(),
+				top: Math.sin(r) * EXPLOSION/2 * Math.random(),
+			}).animate({
+				left: Math.cos(r) * (EXPLOSION*1.5)/2,
+				top: Math.sin(r) * (EXPLOSION*1.5)/2,
+				width: (size*2) + 'px',
+				height: (size*2) + 'px',
+			},200 + Math.random()*100).animate({
+				left: Math.cos(r) * (EXPLOSION*2)/2,
+				top: Math.sin(r) * (EXPLOSION*2)/2,
+				width: (size) + 'px',
+				height: (size) + 'px',
+				opacity: 0,
+			},1000)
+		}
 	}
 
 	self.anchorPlayer = {x:0,y:W};
@@ -903,6 +944,8 @@ BoxPartyGame = function(){
 				position: absolute;
 				inset: 0px;
 			}
+
+
 
         <style`);
 

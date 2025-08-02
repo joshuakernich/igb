@@ -251,7 +251,7 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 	let $debugRight = $('<partydebug>').appendTo(self.$el);
 
 	function setBanner(b){
-		if(b) $banner.css({top:'100%'}).animate({top:'10%'}).animate({top:'15%'});
+		if(b) $banner.css({top:'100%'}).animate({top:'5%'}).animate({top:'10%'});
 		else $banner.animate({top:'20%'}).animate({top:'-40%'});
 	}
 
@@ -290,9 +290,9 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 		clearInterval(interval);
 	}
 
-	self.initBanner = function(msg){
+	self.initBanner = function(msg,size='p'){
 		setBanner(true);
-		$banner.text(msg);
+		$banner.html(`<${size}>${msg}</${size}>`);
 	}
 
 	self.finiBanner = function(){
