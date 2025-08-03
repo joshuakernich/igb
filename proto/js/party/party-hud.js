@@ -286,6 +286,10 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 		},1000/50);
 	}
 
+	self.finiTimer = function(){
+		$baseline.animate({bottom:-150});
+	}
+
 	self.clearTimer = function(){
 		clearInterval(interval);
 	}

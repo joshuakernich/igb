@@ -38,6 +38,24 @@ window.FunRunGame = function(){
 			]
 		},
 
+		{
+			q:"What was was the fourth meep carrying?",
+			type:'item',
+			parade:[
+				{m:1,i:2},
+				{m:2,i:1},
+				{m:0,i:2},
+				{m:3,i:1},
+				{m:2,i:2},
+			],
+			options:[
+				{i:0},
+				{i:1,isCorrect:true},
+				{i:2},
+				{i:3},
+			]
+		},
+
 	]
 
 	
@@ -53,12 +71,12 @@ window.FunRunGame = function(){
 			let carrier = new FunRunCarrier( parade[i].m, parade[i].i );
 			carrier.$el.appendTo(self.$el);
 			carrier.$el.css({
-				left: '150%',
+				left: (parade[i].dir==-1?'-50%':'150%'),
 				bottom: '50px',
 			})
-			.delay(i*700)
+			.delay(i*1000)
 			.animate({
-				left: '-50%',
+				left: (parade[i].dir==-1?'150%':'-50%'),
 			},{
 				duration:6000,
 				easing:'linear',
@@ -87,8 +105,6 @@ window.FunRunGame = function(){
 					'background-position-x':-options[o].i*100+'%',
 				})
 			}
-
-			
 		}
 
 		self.showCorrect = function(){
@@ -500,7 +516,7 @@ window.FunRunGame = function(){
 
 		options = new FunRunOptions(question.type,question.options);
 		options.$el.appendTo($floor);
-		//options.$el.hide();
+		options.$el.hide();
 
 		setTimeout(function(){
 			$curtain.addClass('open');
@@ -527,7 +543,11 @@ window.FunRunGame = function(){
 				meeps[m].score++;
 				options.showCorrect();
 
-				$('<funruntick>').appendTo(meeps[m].$el).text('+'+meeps[m].score);
+				$('<funruntick>').appendTo(meeps[m].$el).text('+'+meeps[m].score).animate({
+					bottom: 450
+				},200).animate({
+					bottom: 400
+				},200)
 			}
 		}
 
@@ -536,6 +556,8 @@ window.FunRunGame = function(){
 
 	function finiQuestion(){
 
+		hud.finiTimer();
+
 		self.$el.find('funruntick').remove();
 
 		options.$el.remove();
@@ -543,7 +565,20 @@ window.FunRunGame = function(){
 
 		for(var m in meeps) meeps[m].isFrozen = false;
 
-		initNextQuestion();
+		if( QUESTIONS[nQuestion+1] ) initNextQuestion();
+		else initFinale();
+	}
+
+	function initFinale(){
+		hud.initBanner('Finish!');
+		toWall();
+		for( var m in meeps ) $('<funruntick>').appendTo(meeps[m].$el).text(meeps[m].score);
+
+		setTimeout(function(){
+			let scores = [];
+			for(var m in meeps) scores[m] = meeps[m].score;
+			window.doPartyGameComplete(scores);
+		},2000)
 	}
 
 	initGame(6);
@@ -567,7 +602,6 @@ window.FunRunGame = function(){
 	}
 
 	toFloor();
-
 
 	self.step = function(){
 	
