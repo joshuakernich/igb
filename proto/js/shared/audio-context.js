@@ -26,6 +26,11 @@ AudioContext = function(){
         if(restart) audio[id].currentTime = 0;
     }
 
+     self.playAtTime = function(id,timeFrom){
+        audio[id].play();
+        audio[id].currentTime = timeFrom;
+    }
+
     self.stop = function(id){
         audio[id].pause();
     }
