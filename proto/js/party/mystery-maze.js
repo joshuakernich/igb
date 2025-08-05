@@ -288,7 +288,7 @@ window.MysteryMazeGame = function(){
 					self.isComplete = true;
 					audio.play('correct',true);
 
-					self.score = Math.max(1,10-countDeath);
+					self.score = Math.max(1,10-countDead);
 					$('<mysterscore>').appendTo(meep.$el).text('+'+self.score);
 				}
 
