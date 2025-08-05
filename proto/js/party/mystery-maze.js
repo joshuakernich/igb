@@ -389,6 +389,7 @@ window.MysteryMazeGame = function(){
 
 		if(!mazes[nPlayer]){
 			checkForGameComplete();
+			return;
 		}
 
 		let nSlot = 0;
