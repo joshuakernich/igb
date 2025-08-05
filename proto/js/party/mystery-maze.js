@@ -254,7 +254,7 @@ window.MysteryMazeGame = function(){
 
 					meep.$el.css({
 						'transition':'transform 1s',
-						'transform':'rotateX(-50deg) scale(0.6) translateY(1200px)'
+						'transform':'rotateX(-50deg) scale(0.6) translateY(2000px)'
 					});
 
 					audio.play('fall',true);
