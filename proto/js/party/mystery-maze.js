@@ -4,6 +4,7 @@ window.MysteryMazeGame = function(){
 	const H = 1000;
 	const FPS = 50;
 	const TRACK = {W:W/4,L:W,C:4,R:6,PADY:2};
+	TRACK.PW = TRACK.W/W;
 
 	let audio = new AudioContext();
 	audio.add('fall','./proto/audio/party/sfx-fall.mp3',0.3);
@@ -114,6 +115,8 @@ window.MysteryMazeGame = function(){
 		let isActive = false;
 		let isReady = false;
 		let isDead = false;
+
+		self.isComplete = false;
 		
 		self.ax = 0;
 
@@ -258,7 +261,7 @@ window.MysteryMazeGame = function(){
 					});
 
 					audio.play('fall',true);
-					setTimeout(reset,3000);
+					setTimeout(reset,2000);
 
 				} else if(gy<0){
 					isDead = true;
@@ -267,6 +270,7 @@ window.MysteryMazeGame = function(){
 						ty: 0.1,
 					});
 
+					self.isComplete = true;
 					audio.play('correct',true);
 				}
 
@@ -321,7 +325,7 @@ window.MysteryMazeGame = function(){
 				'transform':'rotateX(-50deg) scale(0.6)',
 			});
 
-			self.showPathPreview();
+			setTimeout( self.showPathPreview, 1000 );
 		}
 	}
 
@@ -335,18 +339,20 @@ window.MysteryMazeGame = function(){
 	let hud = new PartyHUD('#aa6ec1');
 	hud.$el.appendTo($game);
 
+	let slots = [];
+	for(var i=0; i<3; i++) slots[i] = {ax:0.07 + i*0.3, occupant:-1};
+
 	function initGame(count) {
 		audio.play('music');
-		count = 3;
+
 		for(var i=0; i<count; i++){
 			mazes[i] = new MysteryMaze(i);
-			mazes[i].ax = 0.075 + i * 0.3;
-			mazes[i].$el.appendTo($game).css({
-				left:W + mazes[i].ax * W + 'px',
-			})
-
-			setTimeout(mazes[i].showPathPreview,4000);
+			mazes[i].$el.appendTo($game).hide();
 		}
+
+		initNextPlayer();
+		setTimeout( initNextPlayer, 200 );
+		setTimeout( initNextPlayer, 400 );
 
 		setTimeout(function(){
 			hud.initBanner('Watch Closely','small');
@@ -355,18 +361,75 @@ window.MysteryMazeGame = function(){
 		setTimeout(function(){
 			hud.finiBanner();
 		},10000);
-
 	}
 
 	hud.initPlayerCount(initGame);
 
-	function initRound(){
+	let nPlayer = -1;
+	function initNextPlayer(){
+		nPlayer++;
 
+		if(!mazes[nPlayer]){
+			checkForGameComplete();
+		}
+
+		let nSlot = 0;
+		while(slots[nSlot].occupant>-1) nSlot++;
+
+		slots[nSlot].occupant = nPlayer;
+		mazes[nPlayer].ax = slots[nSlot].ax;
+		mazes[nPlayer].$el.show().css({
+			bottom: -H,
+			left:W + mazes[nPlayer].ax * W + 'px',
+		}).animate({
+			bottom: 150
+		}).animate({
+			bottom: 100
+		})
+
+		setTimeout( mazes[nPlayer].showPathPreview, 4000 );
+	}
+
+	function checkForGameComplete(){
+		let isComplete = true;
+		for(var i=0; i<mazes.length; i++) if(!mazes[i].isComplete) isComplete = false;
+		if(isComplete){
+			hud.initBanner("Finish");
+			setTimeout(function(){
+				let scores = [];
+				for(var i=0; i<mazes.length; i++){
+					let meep = new PartyMeep(i);
+					meep.$el.appendTo($game).css({
+						'bottom':'-350px',
+						'left':W + (0.3 + 1/(mazes.length-1)*0.4 * i)*W + 'px',
+					}).animate({
+						'bottom':'0px'
+					})
+				}
+			},2000);
+		}
 	}
 
 	self.step = function(){
 	
-		for(var m in mazes) mazes[m].step();
+		let isComplete = true;
+		for(var m in mazes){
+			mazes[m].step();
+			if(!mazes[m].isComplete){
+				isComplete = false;
+			} else {
+				for(var s in slots){
+					if( slots[s].occupant == m ){
+						slots[s].occupant = -1;
+						mazes[m].$el.delay(1000).animate({
+							bottom: W + 'px',
+						})
+
+						setTimeout( initNextPlayer, 2000 );
+					}
+				}
+			}
+		}
 		for(var m in mazes) mazes[m].redraw();
 
 		resize();
