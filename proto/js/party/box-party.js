@@ -791,7 +791,7 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
     		complete:function(){
     			boxes[nSelect].$el.remove();
     			nSelect = undefined;
-    			pop();
+    			//pop();
     			setTimeout(callbackExitBox,500);
     		}
     	})
