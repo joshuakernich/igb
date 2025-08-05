@@ -102,6 +102,17 @@ window.MysteryMazeGame = function(){
 				mysterymaze[n='4'] mysterytarget{ border-color:var(--n4); }
 				mysterymaze[n='5'] mysterytarget{ border-color:var(--n5); }
 
+				mysteryscore{
+					display: block;
+					position: absolute;
+					bottom: 400px;
+					left: -100px;
+					right: -100px;
+					color: white;
+					text-align: center;
+					font-size: 100px;
+				}
+
 			<style>
 		`)
 	}
@@ -129,9 +140,12 @@ window.MysteryMazeGame = function(){
 		self.tx = 0;
 		self.ty = 0;
 
+		self.score = 0;
+
 		
 		let path = [];
 		let nPath = 0;
+		let countDead = 0;
 
 		let $reticule = $('<mysteryreticule>').appendTo(self.$el);
 		let $target = $('<mysterytarget>').appendTo(self.$el);
@@ -250,6 +264,7 @@ window.MysteryMazeGame = function(){
 
 				if(!isOnPath){
 					isDead = true;
+					countDead ++;
 
 					if( $cells[gy] && $cells[gy][gx] ){
 						$cells[gy][gx].css('opacity',0);
@@ -272,6 +287,9 @@ window.MysteryMazeGame = function(){
 
 					self.isComplete = true;
 					audio.play('correct',true);
+
+					self.score = Math.max(1,10-countDeath);
+					$('<mysterscore>').appendTo(meep.$el).text('+'+self.score);
 				}
 
 			} else if(!isDead){
@@ -395,18 +413,25 @@ window.MysteryMazeGame = function(){
 		for(var i=0; i<mazes.length; i++) if(!mazes[i].isComplete) isComplete = false;
 		if(isComplete){
 			hud.initBanner("Finish");
+
 			setTimeout(function(){
-				let scores = [];
 				for(var i=0; i<mazes.length; i++){
 					let meep = new PartyMeep(i);
+					$('<mysterscore>').appendTo(meep.$el).text(mazes[i].score);
 					meep.$el.appendTo($game).css({
 						'bottom':'-350px',
-						'left':W + (0.3 + 1/(mazes.length-1)*0.4 * i)*W + 'px',
+						'left':W + (0.25 + 1/(mazes.length-1)*0.5 * i)*W + 'px',
 					}).animate({
 						'bottom':'0px'
 					})
 				}
 			},2000);
+
+			let scores = [];
+			for(var i=0; i<mazes.length; i++) scores[i] = mazes[i].score;
+			setTimeout( function(){
+				window.doPartyGameComplete(scores);
+			},4000);
 		}
 	}
 
