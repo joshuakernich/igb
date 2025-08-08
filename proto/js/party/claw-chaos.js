@@ -53,7 +53,28 @@ window.ClawChaosGame = function(){
 				clawmeep[n='4'] clawcoin { background: var(--n4); }
 				clawmeep[n='5'] clawcoin { background: var(--n5); }
 
+				clawstring{
+					position: absolute;
+					display: block;
+					width: 20px;
+					height: ${H}px;
+					background: #ddd;
+					left: -10px;
+					bottom: 260px;
+				}
 
+				clawstring:after{
+					content: "";
+					display: block;
+					position: absolute;
+					bottom: 0px;
+					width: 80px;
+					height: 50px;
+					left: -30px;
+					border-radius: 50px 50px 0px 0px;
+					background: #ddd;
+					box-shadow: 0px 2px 5px black;
+				}
 
 		`)
 	}
@@ -76,6 +97,11 @@ window.ClawChaosGame = function(){
 		self.y = H*0.9;
 		self.coins = 5 + Math.floor( Math.random() * 10 );
 		self.speed = 20/self.coins * (Math.round( Math.random() ) * 2 - 1);
+		self.mode = 'runner';
+
+		
+		
+
 
 		let meep = new PartyMeep(i);
 		meep.$head.css({
@@ -94,6 +120,8 @@ window.ClawChaosGame = function(){
 			'top':'230px',
 		})
 
+		let $string = $('<clawstring>').appendTo(self.$el).hide();
+
 		let $pile = $('<clawcoinpile>').appendTo(self.$el);
 		for(var i=0; i<self.coins; i++){
 			$('<clawcoin>').appendTo($pile).css({
@@ -102,10 +130,16 @@ window.ClawChaosGame = function(){
 		}
 
 		self.step = function(){
-			self.x += self.speed;
 
-			if(self.x>(W-100)) self.speed = -self.speed;
-			if(self.x<(100)) self.speed = -self.speed;
+			if(self.mode=='runner'){
+				self.x += self.speed;
+				if(self.x>(W-100)) self.speed = -self.speed;
+				if(self.x<(100)) self.speed = -self.speed;
+			}
+			
+			if(self.mode=='claw'){
+				self.x = self.px * W;
+			}
 
 
 
@@ -114,11 +148,40 @@ window.ClawChaosGame = function(){
 		}
 
 		self.redraw = function(){
+
 			self.$el.css({
 				left: W + self.x + 'px',
 				top: self.y + 'px',
-				'transform':`scaleX(${0.8*(self.speed>0?1:-1)}) scaleY(0.8) rotate(${Math.cos(self.x*0.2)*3}deg)`,
+				'transform':`scale(0.8)`,
 			})
+
+			if(self.mode=='runner'){
+				self.$el.css({
+					'transform':`scaleX(${0.8*(self.speed>0?1:-1)}) scaleY(0.8) rotate(${Math.cos(self.x*0.2)*3}deg)`,
+				})
+			}
+		}
+
+		self.toClawMode = function(){
+			
+			//self.y = H * 0.5;
+			self.mode = 'claw';
+			
+			$string.show().css({
+				'bottom':H+'px',
+			}).animate({
+				'bottom':'260px',
+			},{
+				complete:function(){
+					$pile.hide();
+					meep.toSkydiver();
+					meep.$shadow.hide();
+				}
+			});
+
+			$(self).delay(500).animate({
+				y:H*0.5
+			},)
 		}
 	}
 
@@ -128,6 +191,15 @@ window.ClawChaosGame = function(){
 			meeps[i] = new ClawMeep(i);
 			meeps[i].$el.appendTo($game);
 		}
+
+		initNextClaw();
+	}
+
+
+	let nPlayerClaw = -1;
+	function initNextClaw(){
+		nPlayerClaw++;
+		meeps[nPlayerClaw].toClawMode();
 	}
 
 	initGame(6);
