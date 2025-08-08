@@ -297,6 +297,16 @@ window.PartyMeep = function(n){
 
 	self.setHeight(H);
 
+	self.toIdle = function(){
+		self.$head.css({'transform':''});
+		self.$body.css({'top':'','transform':''});
+		self.$legs.css({'top':'','transform':'','height':''});
+		self.$footLeft.css({'transform':''});
+		self.$footRight.css({'transform':''});
+		self.$handLeft.css({'left':'','top':''});
+		self.$handRight.css({'left':'','top':''});
+	}
+
 	self.toSkydiver = function(){
 		self.$head.css({
 			'transform':'rotate(-10deg) translate(20px)',

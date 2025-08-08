@@ -98,27 +98,11 @@ window.ClawChaosGame = function(){
 		self.coins = 5 + Math.floor( Math.random() * 10 );
 		self.speed = 20/self.coins * (Math.round( Math.random() ) * 2 - 1);
 		self.mode = 'runner';
-
-		
-		
-
+		self.isGrab = false;
+		self.isGrabComplete = false;
 
 		let meep = new PartyMeep(i);
-		meep.$head.css({
-			'left':'-45px',
-			'transform':'rotate(-10deg)',
-		});
-		meep.$el.appendTo(self.$el).css({
-			'transform':'scale(0.8)',
-		});
-		meep.$handLeft.css({
-			'left':'10px',
-			'top':'280px',
-		});
-		meep.$handRight.css({
-			'left':'105px',
-			'top':'230px',
-		})
+		meep.$el.appendTo(self.$el);
 
 		let $string = $('<clawstring>').appendTo(self.$el).hide();
 
@@ -162,7 +146,32 @@ window.ClawChaosGame = function(){
 			}
 		}
 
-		self.toClawMode = function(){
+		self.initRunner = function(){
+			self.mode = 'runner';
+			meep.toIdle();
+			meep.$shadow.show();
+
+			meep.$head.css({
+				'left':'-45px',
+				'transform':'rotate(-10deg)',
+			});
+
+			meep.$el.css({
+				'transform':'scale(0.8)',
+			});
+			meep.$handLeft.css({
+				'left':'10px',
+				'top':'280px',
+			});
+			meep.$handRight.css({
+				'left':'105px',
+				'top':'230px',
+			});
+
+			$pile.show();
+		}
+
+		self.initClaw = function(){
 			
 			//self.y = H * 0.5;
 			self.mode = 'claw';
@@ -181,9 +190,103 @@ window.ClawChaosGame = function(){
 
 			$(self).delay(500).animate({
 				y:H*0.5
-			},)
+			});
 		}
+
+		self.finiClaw = function(){
+			$string.animate({
+				'bottom':H+'px',
+			},{
+				complete:function(){
+					$string.hide();
+				}
+			});
+
+			$(self).animate({
+				y:H*0.9,
+			},{
+				complete:function(){
+					self.initRunner();
+				}
+			});
+
+			if(self.grabbed){
+				self.grabbed.finiGrabbed();
+				self.grabbed = undefined;
+			}
+		}
+
+		self.dropClaw = function(){
+			self.mode = 'drop';
+
+			$(self).animate({
+				y:H*0.8
+			},{
+				complete:function(){
+					self.isGrab = true;
+				}
+			});
+
+			meep.$handLeft.delay(200).animate({
+				'top':"200px",
+				'left':'-30px',
+			});
+			meep.$handRight.delay(200).animate({
+				'top':"200px",
+				'left':'30px',
+			});
+
+			timeout = setTimeout(self.finiGrab,1000);
+		}
+
+		self.finiGrab = function(){
+			self.isGrab = false;
+			$(self).delay(100).animate({
+				y:H*0.5
+			});
+
+			self.isGrabComplete = true;
+		}
+
+		self.initGrab = function(other){
+
+			clearTimeout(timeout);
+
+			$(self).stop(false,false);
+			self.isGrab = false;
+			self.grabbed = other;
+			self.grabbed.initGrabbed();
+
+			$(self).delay(100).animate({
+				y:H*0.5
+			});
+
+			$(self.grabbed).delay(100).animate({
+				y:H*0.55
+			});
+		}
+
+		self.initGrabbed = function(){
+			self.mode = 'grabbed';
+			meep.$shadow.hide();
+		}
+
+		self.finiGrabbed = function(){
+			
+
+			$(self).animate({
+				y:H*0.9,
+			},{
+				complete:function(){
+					self.initRunner();
+				}
+			});
+		}
+
+		self.initRunner();
 	}
+
+	
 
 	let meeps = [];
 	function initGame(count){
@@ -199,7 +302,21 @@ window.ClawChaosGame = function(){
 	let nPlayerClaw = -1;
 	function initNextClaw(){
 		nPlayerClaw++;
-		meeps[nPlayerClaw].toClawMode();
+		meeps[nPlayerClaw].initClaw();
+
+		setTimeout(function(){
+			hud.initTimer(5,initDropClaw);
+		},1000);
+	}
+
+	function initDropClaw() {
+		meeps[nPlayerClaw].dropClaw();
+	}
+
+	function finiClaw() {
+		meeps[nPlayerClaw].finiClaw();
+
+		setTimeout(initNextClaw,2000);
 	}
 
 	initGame(6);
@@ -207,6 +324,21 @@ window.ClawChaosGame = function(){
 	self.step = function(){
 
 		for(var m in meeps) meeps[m].step();
+		for(var m in meeps){
+			if( meeps[m].isGrab ){
+				for(var n in meeps){
+					if(m != n && meeps[m].isGrab ){
+						let dx = Math.abs( meeps[n].x - meeps[m].x );
+						if(dx<50){
+							meeps[m].initGrab( meeps[n] );
+							setTimeout(finiClaw,2000);
+						}
+					}
+				}
+			} else if(meeps[m].isGrabComplete){
+				setTimeout(finiClaw,1000);
+			}
+		}
 		for(var m in meeps) meeps[m].redraw();
 
 		resize();
