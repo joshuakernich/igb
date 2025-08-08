@@ -286,8 +286,6 @@ window.ClawChaosGame = function(){
 		self.initRunner();
 	}
 
-	
-
 	let meeps = [];
 	function initGame(count){
 		for(var i=0; i<count; i++){
@@ -295,7 +293,18 @@ window.ClawChaosGame = function(){
 			meeps[i].$el.appendTo($game);
 		}
 
-		initNextClaw();
+		setTimeout(function(){
+			hud.initBanner('Grab a meep to steal half of their coins','small');
+		},2000);
+
+		setTimeout(function(){
+			hud.finiBanner();
+		},5000);
+
+		setTimeout(function(){
+			initNextClaw();
+		},6000);
+		
 	}
 
 	hud.initPlayerCount(initGame);
@@ -309,9 +318,13 @@ window.ClawChaosGame = function(){
 		nPlayerClaw++;
 		meeps[nPlayerClaw].initClaw();
 
+		if(nPlayerClaw==0) hud.initBanner('Position yourself','small');
+
 		setTimeout(function(){
 			hud.initTimer(5,initDropClaw);
-		},1000);
+			if(nPlayerClaw==0) hud.finiBanner();
+			
+		},nPlayerClaw==0?2000:1000);
 	}
 
 	function initDropClaw() {
@@ -334,7 +347,7 @@ window.ClawChaosGame = function(){
 					if(m != n && meeps[m].isGrab ){
 						let dx = Math.abs( meeps[n].x - meeps[m].x );
 						if(dx<50){
-							meeps[m].initGrab( meeps[n] );
+							meeps[m].initGrab( meeps[n], Math.floor(meeps[n].coins/2) );
 							setTimeout(finiClaw,2000);
 						}
 					}
