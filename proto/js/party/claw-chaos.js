@@ -105,7 +105,7 @@ window.ClawChaosGame = function(){
 		meep.$el.appendTo(self.$el);
 
 		let $string = $('<clawstring>').appendTo(self.$el).hide();
-
+		let $pile;
 		
 
 		self.step = function(){
@@ -165,7 +165,7 @@ window.ClawChaosGame = function(){
 
 			if($pile) $pile.remove();
 
-			let $pile = $('<clawcoinpile>').appendTo(self.$el);
+			$pile = $('<clawcoinpile>').appendTo(self.$el);
 			for(var i=0; i<self.coins; i++){
 				$('<clawcoin>').appendTo($pile).css({
 					bottom:11*i+'px',
