@@ -229,24 +229,7 @@ window.MilkGame = function(){
 
 		$("head").append(`
 			<style>
-				@import url('https://fonts.googleapis.com/css2?family=Playwrite+DK+Loopet:wght@100..400&display=swap');
-
-				milkheader{
-					 font-family: "Playwrite DK Loopet", cursive;
-					  font-optical-sizing: auto;
-					  font-weight: 900;
-					  font-style: normal;
-					  color: white;
-					  position: absolute;
-					  left: 50%;
-					  top: 30%;
-					  
-					  transform: translate(-50%, -50%);
-					  font-size: 5vw;
-					  text-shadow: 0px 5px 1px rgba(0,0,0,0.2);
-				}
-
-				
+			
 
 				milkmeep{
 					display:block;
@@ -374,10 +357,8 @@ window.MilkGame = function(){
 					bottom: 0px;
 					right: 0px;
 					background-color: #30A6DC;
-					background-image: url(./proto/img/party/bg-farm.webp);
-					background-size: 33.3%;
-					background-position: center 100px;
-					background-repeat: repeat-x;
+					background: url(./proto/img/party/bg-farm.png);
+					background-size: 100%;
 
 					
 				}
@@ -389,7 +370,7 @@ window.MilkGame = function(){
 					left: 0px;
 					bottom: 0px;
 					right: 0px;
-					background-color: #30A6DC;
+					background: linear-gradient( to top, #30A6DC, transparent );
 					opacity: 0.5;
 				}
 

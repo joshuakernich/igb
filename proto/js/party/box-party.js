@@ -289,6 +289,7 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
     const H = 1000;
     const PERSTOP = W*2;
     const TRACK = PERSTOP*queue.length;
+    const BOXSIZE = W/6;
 
     if( !BoxPartyScene3D.isStyled) $("head").append(`
         <style>
@@ -511,7 +512,7 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
     for(var i=0; i<queue.length; i++){
     	let spacingX = W/4;
     	let spacingRZ = 50/(queue[i].length-1);
-    	let size = W/6;
+    	let size = BOXSIZE;
 
     	if(queue[i].length==1) spacingRZ = 0;
 
@@ -564,7 +565,7 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 
     for(var i=0; i<5; i++){
     	let transform = {
-			w:W/6,h:W/6,d:W/6,
+			w:BOXSIZE,h:BOXSIZE,d:BOXSIZE,
 			x: (W + Math.random() * W) * (i%2?-1:1),
 			y: (i+3) * W*2,
 			altitude: H/6 + Math.random() * H/2,
@@ -791,12 +792,13 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
     		complete:function(){
     			boxes[nSelect].$el.remove();
     			nSelect = undefined;
-    			//pop();
+    			pop();
     			setTimeout(callbackExitBox,500);
     		}
     	})
 	}
 
+	const EXPLOSION = 200;
 	function pop(){
 		let $pop = $('<boxpartypop>')
 		for(var i=0; i<6; i++){

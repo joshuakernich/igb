@@ -188,8 +188,6 @@ window.MelodyMatchGame = function(){
 					background: gray;
 					background-position: bottom 120px center;
 					perspective: ${W*3}px;
-
-
 					background: url(./proto/img/party/bg-village.png);
 					background-size: 33.3% 100%;
 				}
