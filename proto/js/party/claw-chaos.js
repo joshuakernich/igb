@@ -298,6 +298,11 @@ window.ClawChaosGame = function(){
 		initNextClaw();
 	}
 
+	hud.initPlayerCount(initGame);
+
+	function finiGame(){
+		self.fini();
+	}
 
 	let nPlayerClaw = -1;
 	function initNextClaw(){
@@ -316,10 +321,9 @@ window.ClawChaosGame = function(){
 	function finiClaw() {
 		meeps[nPlayerClaw].finiClaw();
 
-		setTimeout(initNextClaw,2000);
+		if(meeps[nPlayerClaw+1]) setTimeout(initNextClaw,2000);
+		else finiGame();
 	}
-
-	initGame(6);
 
 	self.step = function(){
 
