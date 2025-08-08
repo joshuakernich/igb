@@ -150,11 +150,12 @@ window.ClawGame = function(){
 
 			isClaw = b;
 
-			meep.$body.hide();
+			/*meep.$body.hide();
 			meep.$shadow.hide();
 			meep.$legs.hide();
 			meep.$handLeft.css({top:0.15*sy});
-			meep.$handRight.css({top:0.15*sy});
+			meep.$handRight.css({top:0.15*sy});*/
+			meep.toSkydiver();
 		}
 
 		function getYaw(q)
@@ -181,28 +182,18 @@ window.ClawGame = function(){
 					width: ${W*3}px;
 					height: ${H}px;
 					transform-origin: top left;
-					background: url(./proto/img/party/bg-toys.png);
-					background-size: 33.3%;
+					background: url(./proto/img/party/bg-village.png);
+					background-size: 33.3% 100%;
 
 					--shadow: 0px 5px 10px black;
 				}
 
-				clawgame:before{
-					content:"";
-					position: absolute;
-					display: block;
-					left: 0px;
-					top: 0px;
-					right: 0px;
-					bottom: 0px;
-					background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.7));
-				}
-
+				
 				clawbar{
 					width: 100%;
 					height: 30px;
 					position: absolute;
-					top: 12.5%;
+					top: 8%;
 					background: white;
 					box-shadow: var(--shadow);
 					transform: translateY(-50%);

@@ -331,7 +331,7 @@ window.RouletteRunnerGame = function(){
 			}
 		}
 
-		if(!isSpinFreeze && rSpinSpeed < 0.015){
+		if(!isSpinFreeze && rSpinSpeed < 0.01){
 			hud.initBanner('Freeze');
 			isSpinFreeze = true;
 		}
