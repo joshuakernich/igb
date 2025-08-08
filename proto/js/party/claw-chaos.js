@@ -106,12 +106,7 @@ window.ClawChaosGame = function(){
 
 		let $string = $('<clawstring>').appendTo(self.$el).hide();
 
-		let $pile = $('<clawcoinpile>').appendTo(self.$el);
-		for(var i=0; i<self.coins; i++){
-			$('<clawcoin>').appendTo($pile).css({
-				bottom:11*i+'px',
-			})
-		}
+		
 
 		self.step = function(){
 
@@ -168,7 +163,14 @@ window.ClawChaosGame = function(){
 				'top':'230px',
 			});
 
-			$pile.show();
+			if($pile) $pile.remove();
+
+			let $pile = $('<clawcoinpile>').appendTo(self.$el);
+			for(var i=0; i<self.coins; i++){
+				$('<clawcoin>').appendTo($pile).css({
+					bottom:11*i+'px',
+				})
+			}
 		}
 
 		self.initClaw = function(){
@@ -248,9 +250,12 @@ window.ClawChaosGame = function(){
 			self.isGrabComplete = true;
 		}
 
-		self.initGrab = function(other){
+		self.initGrab = function(other,coinsSteal){
 
 			clearTimeout(timeout);
+
+			self.coins += coinsSteal;
+			other.coins -= coinsSteal;
 
 			$(self).stop(false,false);
 			self.isGrab = false;
