@@ -1,9 +1,15 @@
-window.ClawChaosGame = function(){
+window.ClawChaosGame = function(countInit){
 	
 	const W = 1600;
 	const H = 1000;
 	const FPS = 50;
 	const COIN = 80;
+
+	let audio = new AudioContext();
+	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
+	audio.add('fall','./proto/audio/party/sfx-fall.mp3',0.3);
+	audio.add('music','./proto/audio/party/music-creeping.mp3',0.3,true);
+	audio.add('machine','./proto/audio/party/sfx-machine.mp3',0.3,true);
 
 	if( !ClawChaosGame.init ){
 		ClawChaosGame.init = true;
@@ -76,6 +82,15 @@ window.ClawChaosGame = function(){
 					box-shadow: 0px 2px 5px black;
 				}
 
+				clawscore{
+					position: absolute;
+					left: 100px;
+					bottom: 0px;
+					font-size: 100px;
+					line-height: 350px;
+					color: white;
+				}
+
 		`)
 	}
 
@@ -95,7 +110,7 @@ window.ClawChaosGame = function(){
 		self.py = 0;
 		self.x = (0.2 + 0.1*i) * W;
 		self.y = H*0.9;
-		self.coins = 5 + Math.floor( Math.random() * 10 );
+		self.coins = self.coinsStart = 5 + Math.floor( Math.random() * 10 );
 		self.speed = 20/self.coins * (Math.round( Math.random() ) * 2 - 1);
 		self.mode = 'runner';
 		self.isGrab = false;
@@ -105,6 +120,7 @@ window.ClawChaosGame = function(){
 		meep.$el.appendTo(self.$el);
 
 		let $string = $('<clawstring>').appendTo(self.$el).hide();
+		let $score = $('<clawscore>').appendTo(self.$el).text('');
 		let $pile;
 		
 
@@ -171,10 +187,14 @@ window.ClawChaosGame = function(){
 					bottom:11*i+'px',
 				})
 			}
+
+			self.speed = 20/self.coins * (Math.round( Math.random() ) * 2 - 1);
 		}
 
 		self.initClaw = function(){
 			
+			audio.play('machine');
+
 			//self.y = H * 0.5;
 			self.mode = 'claw';
 			
@@ -187,6 +207,7 @@ window.ClawChaosGame = function(){
 					$pile.hide();
 					meep.toSkydiver();
 					meep.$shadow.hide();
+					audio.stop('machine');
 				}
 			});
 
@@ -196,6 +217,12 @@ window.ClawChaosGame = function(){
 		}
 
 		self.finiClaw = function(){
+
+			audio.play('fall');
+			$score.css({opacity:0});
+
+			self.isGrabComplete = false;
+
 			$string.animate({
 				'bottom':H+'px',
 			},{
@@ -219,6 +246,8 @@ window.ClawChaosGame = function(){
 		}
 
 		self.dropClaw = function(){
+			audio.play('machine');
+			
 			self.mode = 'drop';
 
 			$(self).animate({
@@ -226,6 +255,7 @@ window.ClawChaosGame = function(){
 			},{
 				complete:function(){
 					self.isGrab = true;
+					audio.stop('machine');
 				}
 			});
 
@@ -242,6 +272,9 @@ window.ClawChaosGame = function(){
 		}
 
 		self.finiGrab = function(){
+
+			
+
 			self.isGrab = false;
 			$(self).delay(100).animate({
 				y:H*0.5
@@ -269,6 +302,18 @@ window.ClawChaosGame = function(){
 			$(self.grabbed).delay(100).animate({
 				y:H*0.55
 			});
+
+			$score.css({opacity:0});
+
+			for(let i=0; i<coinsSteal; i++){
+				setTimeout(function(){
+					audio.play('coin',true);
+					$score.text('+'+(i+1)).animate({opacity:1},100).animate({opacity:0.5},100);
+
+				},500+250*i);
+			}
+
+			
 		}
 
 		self.initGrabbed = function(){
@@ -277,7 +322,6 @@ window.ClawChaosGame = function(){
 		}
 
 		self.finiGrabbed = function(){
-			
 
 			$(self).animate({
 				y:H*0.9,
@@ -310,12 +354,17 @@ window.ClawChaosGame = function(){
 			initNextClaw();
 		},6000);
 		
+		audio.play('music');
 	}
 
-	hud.initPlayerCount(initGame);
+	if( countInit == undefined ) hud.initPlayerCount(initGame);
 
 	function finiGame(){
 		self.fini();
+
+		let scores = [];
+		for(var m in meeps) scores[m] = meeps[m].coins - meeps[m].coinsStart;
+		window.doPartyGameComplete(scores);
 	}
 
 	let nPlayerClaw = -1;
@@ -333,6 +382,7 @@ window.ClawChaosGame = function(){
 	}
 
 	function initDropClaw() {
+		hud.finiTimer();
 		meeps[nPlayerClaw].dropClaw();
 	}
 
@@ -340,7 +390,7 @@ window.ClawChaosGame = function(){
 		meeps[nPlayerClaw].finiClaw();
 
 		if(meeps[nPlayerClaw+1]) setTimeout(initNextClaw,2000);
-		else finiGame();
+		else setTimeout( finiGame, 2000 );
 	}
 
 	self.step = function(){
@@ -352,13 +402,15 @@ window.ClawChaosGame = function(){
 					if(m != n && meeps[m].isGrab ){
 						let dx = Math.abs( meeps[n].x - meeps[m].x );
 						if(dx<50){
-							meeps[m].initGrab( meeps[n], Math.floor(meeps[n].coins/2) );
-							setTimeout(finiClaw,2000);
+							let coinsSteal = Math.floor(meeps[n].coins/2);
+							meeps[m].initGrab( meeps[n], coinsSteal );
+							setTimeout(finiClaw, 1000 + coinsSteal*250 );
 						}
 					}
 				}
 			} else if(meeps[m].isGrabComplete){
-				setTimeout(finiClaw,1000);
+				meeps[m].isGrabComplete = false;
+				setTimeout( finiClaw, 1000 );
 			}
 		}
 		for(var m in meeps) meeps[m].redraw();
