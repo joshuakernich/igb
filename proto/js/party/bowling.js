@@ -401,11 +401,11 @@ window.BowlingGame = function(){
 			hud.summonPlayers(inMeep,outMeep);
 		},1500);
 
-		/*setTimeout(function(){
+		setTimeout(function(){
 			hud.finiBanner();
 		},4000)
 
-		setTimeout( initRound, 6000 );*/
+		setTimeout( initRound, 6000 );
 	}
 
 	let $pins = [];
