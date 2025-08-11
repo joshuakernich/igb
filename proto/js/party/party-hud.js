@@ -24,6 +24,10 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 	const COLOUR = 'gray';
 	const THICC = 50;
 
+	let audio = new AudioContext();
+	audio.add('tick','./proto/audio/party/sfx-tick.mp3',0.3);
+	audio.add('tock','./proto/audio/party/sfx-tock.mp3',0.3);
+
 	if(!PartyHUD.didInit){
 		PartyHUD.didInit = true;
 
@@ -239,7 +243,26 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 					margin-top: 20px;
 				}
 
+				partyhudpips{
+					display: block;
+				}
 
+				partyhudpip{
+					display: inline-block;
+					width: 40px;
+					height: 40px;
+					background: white;
+					border-radius: 100%;
+					margin: 0px 15px;
+					box-shadow: 0px -5px rgba(0,0,0,0.5);
+					opacity: 0.5;
+					transform: scale(0.5);
+				}
+
+				partyhudpip[fill='true']{
+					opacity: 1;
+					transform: scale(1);
+				}
 			</style>
 			`);
 	}
@@ -274,11 +297,19 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 		$timer.text(seconds);
 
 		let timeStart = new Date().getTime();
+		let secondsWas = seconds+1;
 		interval = setInterval(function(){
 			let timeNow = new Date().getTime();
 			let timeElapsed = timeNow-timeStart;
 			let secondsRemaining = Math.ceil( seconds - (timeElapsed/1000) );
 			$timer.text(secondsRemaining);
+
+			if(secondsRemaining<secondsWas && secondsRemaining<=5){
+				secondsWas = secondsRemaining;
+				if(secondsRemaining==0) audio.play('tock',true);
+				else audio.play('tick',true);
+			}
+
 			if(secondsRemaining==0){
 				self.clearTimer();
 				callback();
@@ -292,6 +323,15 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 
 	self.clearTimer = function(){
 		clearInterval(interval);
+	}
+
+	self.initRound = function(msg,n,max){
+		
+		self.initBanner(msg);
+		let $pips = $('<partyhudpips>').appendTo($banner);
+		for(var i=0; i<max; i++){
+			$('<partyhudpip>').appendTo($pips).attr('fill',(i<=n));
+		}
 	}
 
 	self.initBanner = function(msg,size='p'){
