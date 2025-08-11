@@ -361,9 +361,7 @@ window.BowlingGame = function(){
 	let meeps = [];
 	let pins = [];
 	
-
 	function initGame(count){
-
 		audio.play('music');
 
 		for(var i=0; i<count; i++){
@@ -389,18 +387,25 @@ window.BowlingGame = function(){
 		for(var p=0; p<PINS.length; p++){
 			pins[p] = new BowlingPin(PINS[p].x,PINS[p].y);
 			pins[p].$el.appendTo($scroll);
-			
 		}
 
 		setTimeout( function(){
-			hud.initBanner('Step Forward Player '+(nPlayer+1));
+			//hud.initBanner('Step Forward Player '+(nPlayer+1));
+
+			let inMeep = [];
+			let outMeep = [];
+			for(var m in meeps){
+				if(m==nPlayer) inMeep.push(m);
+				else outMeep.push(m);
+			}
+			hud.summonPlayers(inMeep,outMeep);
 		},1500);
 
-		setTimeout(function(){
+		/*setTimeout(function(){
 			hud.finiBanner();
 		},4000)
 
-		setTimeout( initRound, 6000 );
+		setTimeout( initRound, 6000 );*/
 	}
 
 	let $pins = [];

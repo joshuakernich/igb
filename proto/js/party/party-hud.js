@@ -10,7 +10,6 @@ window.PartyPlayerHUD = function(n,meep,type){
 				<partymeepeye></partymeepeye><br>
 				<partymeepmouth></partymeepmouth>
 			</partymeephead>
-			
 		</partyplayerhud>`
 	);
 
@@ -218,8 +217,10 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 
 				hudsummonlist{
 					display: inline-block;
-					width: 10%;
 					line-height: 80px;
+
+					text-align: center;
+					margin: 0px 40px;
 				}
 
 				hudsummonplayer{
@@ -228,9 +229,11 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 					margin: 0px 20px;
 				}
 
-				hudsummonplayer partymeephead{
+				hudsummonlist partymeephead{
 					position: relative;
 					left: auto;
+					display: inline-block;
+					margin: 0px 20px;
 				}
 
 				hudsummonlist h2{
@@ -326,7 +329,6 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 	}
 
 	self.initRound = function(msg,n,max){
-		
 		self.initBanner(msg);
 		let $pips = $('<partyhudpips>').appendTo($banner);
 		for(var i=0; i<max; i++){
@@ -385,32 +387,14 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 	self.summonPlayers = function( arrIn, arrOut ){
 		setBanner(true);
 
-		let $listIn = $('<hudsummonlist>');
-		for(var a in arrIn) $(`
-			<hudsummonplayer>
-				<partymeephead n=${arrIn[a]}>
-					<partymeephat></partymeephat>
-					<partymeepeye></partymeepeye>
-					<partymeepeye></partymeepeye><br>
-					<partymeepmouth></partymeepmouth>
-				</partymeephead>
-			</hudsummonplayer>
-		`).attr('n',a).appendTo($listIn);
+		new PartyMeep(0);
 
+		let $listIn = $('<hudsummonlist>');
 		let $listOut = $('<hudsummonlist>');
-		for(var a in arrOut) $(`
-			<hudsummonplayer>
-				<partymeephead n=${arrOut[a]}>
-					<partymeephat></partymeephat>
-					<partymeepeye></partymeepeye>
-					<partymeepeye></partymeepeye><br>
-					<partymeepmouth></partymeepmouth>
-				</partymeephead>
-			</hudsummonplayer>
-		`).attr('n',a).appendTo($listOut);
+		for(var a in arrIn) new PartyMeepHead(arrIn[a]).$el.appendTo($listIn);
+		for(var a in arrOut) new PartyMeepHead(arrOut[a]).$el.appendTo($listOut);
 
 		$('<h2>').text('STEP FORWARD').appendTo($listIn);
-
 		$('<h2>').text('STEP BACK').appendTo($listOut);
 
 		$banner.empty();

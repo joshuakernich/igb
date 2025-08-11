@@ -40,6 +40,8 @@ window.PartyMeep = function(n){
 	if(!PartyMeep.didInit){
 		PartyMeep.didInit = true;
 
+		console.log('init party meep');
+
 		$("head").append(`
 			<style>
 				partymeep{
@@ -97,7 +99,6 @@ window.PartyMeep = function(n){
 					box-sizing: border-box;
 					line-height: 0px;
 					transform-origin: bottom center;
-
 					position: absolute;
 					top: 0px;
 					font-size: 50px;
