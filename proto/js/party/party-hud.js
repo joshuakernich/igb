@@ -236,6 +236,15 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 					margin: 0px 20px;
 				}
 
+				hudsummonlist.in partymeephead{
+
+				}
+
+				hudsummonlist.out partymeephead{
+					margin: 0px -5px;
+					transform: scale(0.6);
+				}
+
 				hudsummonlist h2{
 					display: block;
 					line-height: 50px;
@@ -389,8 +398,8 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 
 		new PartyMeep(0);
 
-		let $listIn = $('<hudsummonlist>');
-		let $listOut = $('<hudsummonlist>');
+		let $listIn = $('<hudsummonlist class="in">');
+		let $listOut = $('<hudsummonlist class="out">');
 		for(var a in arrIn) new PartyMeepHead(arrIn[a]).$el.appendTo($listIn);
 		for(var a in arrOut) new PartyMeepHead(arrOut[a]).$el.appendTo($listOut);
 
