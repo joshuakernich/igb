@@ -273,6 +273,9 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 
 				partyhudpip[fill='true']{
 					opacity: 1;
+				}
+
+				partyhudpip[highlight='true']{
 					transform: scale(1);
 				}
 			</style>
@@ -341,7 +344,7 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 		self.initBanner(msg);
 		let $pips = $('<partyhudpips>').appendTo($banner);
 		for(var i=0; i<max; i++){
-			$('<partyhudpip>').appendTo($pips).attr('fill',(i<=n));
+			$('<partyhudpip>').appendTo($pips).attr('fill',(i<=n)).attr('highlight',(i==n));
 		}
 	}
 

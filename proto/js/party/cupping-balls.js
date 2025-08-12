@@ -6,6 +6,11 @@ window.CuppingBallsGame = function () {
 	const BALL = 200;
 	const CUP = 250;
 
+	const POS = [
+		0.35,0.75,
+		1.3,1.7,
+		2.25,2.65
+	];
 
 	let audio = new AudioContext();
 	audio.add('music','./proto/audio/party/music-sport.mp3',0.2,true);
@@ -109,8 +114,8 @@ window.CuppingBallsGame = function () {
 					bottom: ${BALL}px;
 					left: -200px;
 					right: -200px;
-					line-height: 200px;
-					font-size: 200px;
+					line-height: 150px;
+					font-size: 100px;
 					color: white;
 					text-align: center;
 				}
@@ -212,25 +217,29 @@ window.CuppingBallsGame = function () {
 			</cuppingcupcontainer>
 		`);
 
-		self.px = 0.4 + i * 0.3;
-		self.py = 0.8;
+		self.px = 0;
+		self.py = 0;
 		self.altitude = 0;
+		self.iPos = -1;
 
 		self.redraw = function(){
 
 			self.$el.css({
 				left: self.px * W + 'px',
-				top: self.py * H + 'px'
+				top: self.py * H + 'px',
 			});
 
 			self.$el.find('cuppingcup').css({
 				'bottom':self.altitude*H + 'px',
+				'transform':'rotate('+(-self.altitude * 90)+'deg)',
 			});
 
 			self.$el.find('cuppingcupshadow').css({
-				'opacity':(1-self.altitude),
+				'opacity':0,
 			})
 		}
+
+		
 	}
 
 	const CuppingMeep = function(i){
@@ -240,23 +249,30 @@ window.CuppingBallsGame = function () {
 		let $shadow = $('<cuppingballshadow>').appendTo(self.$el);
 		let $ball = $('<cuppingball>').appendTo(self.$el);
 		let $inner = $('<cuppingballinner>').appendTo($ball);
-		let $score = $('<cuppingscore>').appendTo($ball).text('');
+		let $score = $('<cuppingscore>').appendTo(self.$el).text('');
 
-		self.px = 0.4 + i * 0.3;
+		let cup = new CuppingCup(i);
+		cup.$el.appendTo(self.$el);
+		cup.altitude = 1;
+
+
+		self.px = 0;
 		self.py = 0.8;
-		
 		self.score = 0;
 
 		self.redraw = function(){
 
 			self.$el.css({
 				left: self.px * W + 'px',
-				top: self.py * H + 'px'
-			})
+				top: self.py * H + 'px',
+				'z-index':Math.round(self.py * 20),
+			});
 
 			$inner.css({
-				'transform':'rotate('+self.px*180+'deg)',
-			})
+				'transform':'rotate('+self.px*540+'deg)',
+			});
+
+			cup.redraw();
 		}
 
 		self.addScore = function(){
@@ -267,34 +283,194 @@ window.CuppingBallsGame = function () {
 		self.showScore = function(){
 			$score.text(self.score).stop(false,false).css({opacity:1});
 		}
+
+		self.toCupped = function(){
+			$score.hide();
+			$(cup).animate({altitude:0});
+		}
+
+		self.toUncupped = function(){
+			$(cup).animate({altitude:0.4});
+		}
+
+		self.addPoint = function() {
+			self.score++;
+			$score.text(self.score);
+			$score.show();
+		}
+
+		self.toPos = function(iPos,dirForward,duration=500) {
+			self.iPos = iPos;
+			let pxTarget = POS[iPos];
+
+			$(self).animate({
+				px:(pxTarget + self.px)/2,
+				py:0.8 + dirForward*0.05,
+			},{duration:duration/2,easing:'linear'}).animate({
+				px:pxTarget,
+				py:0.8,
+			},{duration:duration/2,easing:'linear'});
+		}
 	}
 
-	let pos = [];
-	for(var i=0; i<6; i++){
-		pos[i] = Math.floor(i/2) + 0.333 + 0.333*(i%2);
-	}
+	const ROUNDS = [
+		[
+			[0,1],[2,3],[4,5],
+		],
+		[
+			[0,1],[1,2],[2,3],[3,4],[4,5],
+		],
+		[
+			[0,1],[4,5],[1,2],[3,4],[2,3],
+		],
+		[
+			[2,3],[3,4],[1,2],[0,1],[1,2],[5,4],[4,3]
+		],
+	]
+
+	let iRound = -1;
 
 	function initGame(count){
-		for(var i=0; i<count; i++){
+		for(let i=0; i<count; i++){
 			meeps[i] = new CuppingMeep(i);
-			meeps[i].px = pos[i];
+			meeps[i].iPos = i;
+			meeps[i].px = -0.1;
 			meeps[i].$el.appendTo($game);
+			meeps[i].$el.data('i',i).click(onMeep);
 
-			cups[i] = new CuppingCup(i);
-			cups[i].px = pos[i];
-			cups[i].altitude = 1;
-			cups[i].$el.appendTo($game);
-
-			$(cups[i]).delay(i*100).animate({altitude:0});
+			$(meeps[i])
+			.delay((count-i)*500)
+			.animate(
+				{
+					px:POS[i]
+				},{
+					duration:500 + i*1000,
+					complete:meeps[i].toCupped
+				}
+			);
 		}
+
+		setTimeout(function(){
+			for(var m in meeps) meeps[m].toUncupped();
+		},count*1000 + 1000);
+
+		setTimeout(initNextRound,count*1000 + 2500);
 	}
 
 	initGame(6);
 
+	function onMeep() {
+		let iSelect = $(this).data('i');
+		let iWall = Math.floor( meeps[iSelect].px );
+
+		let min = 1;
+		let iMin = -1;
+		for(var m in meeps){
+
+			if( !meeps[m].hasSelected && meeps[m].walls[iWall].dist < min ){
+				min = meeps[m].walls[iWall];
+				iMin = m;
+			}
+		}
+
+
+		if(iMin>-1){
+			meeps[iMin].hasSelected = true;
+			meeps[iSelect].hasSelected = true;
+			meeps[iSelect].toUncupped();
+			meeps[iSelect].addPoint();
+
+			let hasAllSelected = true;
+			for(var m in meeps) if( !meeps[m].hasSelected ) hasAllSelected = false;
+			if(hasAllSelected){
+				hud.finiBanner();
+				for(var m in meeps) meeps[m].toUncupped();
+				setTimeout(finiRound, 2000);
+			}
+		}
+	}
+
+	function doSwap(aPos,bPos){
+
+		let a = 0;
+		let b = 0;
+
+		for(var m=0; m<meeps.length; m++) if(meeps[m].iPos==aPos) a = m;
+		for(var m=0; m<meeps.length; m++) if(meeps[m].iPos==bPos) b = m;
+
+		let ia = meeps[a].iPos;
+		let ib = meeps[b].iPos;
+
+		meeps[a].toPos(ib,-1);
+		meeps[b].toPos(ia,1);
+	}
+
+	function initNextRound(){
+
+		iRound++;
+
+		hud.initRound('Round '+(iRound+1),iRound,ROUNDS.length);
+
+		setTimeout(function(){
+			hud.finiBanner();
+			for(var m in meeps) meeps[m].toCupped();
+		},2000);
+
+
+		if(iRound==0){
+			setTimeout(function(){
+				hud.initBanner('Watch Carefully');
+			},3000);
+
+			setTimeout(function(){
+				hud.finiBanner();
+			},5000);
+		}
+		
+
+		setTimeout(function(){
+			initMix();
+		},(iRound==0)?6000:3000);
+	}
+
+	function finiRound(){
+
+		if( ROUNDS[iRound+1]){
+			setTimeout(initNextRound,2000);
+		} else {
+			setTimeout(finiGame,2000);
+		}
+	}
+
+	function finiGame(){
+		hud.initBanner('Finish');
+		setTimeout(function () {
+			let scores = [];
+			for(var m in meeps) scores[m] = meeps[m].score;
+			window.doPartyGameComplete(scores);
+		},2000)
+	}
+
+	function initMix() {
+
+		var round = ROUNDS[iRound];
+
+		for(let r=0; r<round.length; r++){
+			setTimeout( function(){
+				doSwap(round[r][0],round[r][1])
+			}, r*1000 );
+		}
+
+		setTimeout( function(){
+			hud.initBanner('Find your meep');
+			for(var m in meeps) meeps[m].hasSelected = false;
+		}, round.length*1000 );
+	}
+
 	self.step = function(){
 
 		for(var m in meeps) meeps[m].redraw();
-		for(var c in cups) cups[c].redraw();
+		//for(var c in cups) cups[c].redraw();
 
 		resize();
 	}
@@ -312,7 +488,9 @@ window.CuppingBallsGame = function () {
 	}
 
 	self.setPlayers = function(p){
+
 		for(var m in meeps){
+			meeps[m].walls = p[m].walls;
 			//meeps[m].px = (p[m].px);
 			//meeps[m].py = (1-p[m].pz);
 		}
