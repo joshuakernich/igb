@@ -4,6 +4,7 @@ window.PainterPanicGame = function(){
 	const H = 1000;
 	const FPS = 50;
 	const BOX = 500;
+	const THICC = BOX/6;
 	const BRUSH = {W:50,H:200};
 
 	let audio = new AudioContext();
@@ -69,7 +70,7 @@ window.PainterPanicGame = function(){
 					display:block;
 					position: absolute;
 					width: ${BOX}px;
-					height: ${BOX/6}px;
+					height: ${THICC}px;
 					background: url(./proto/img/party/texture-canvas.jpg);
 					background-size: cover;
 					transform: rotateX(-90deg);
@@ -83,7 +84,7 @@ window.PainterPanicGame = function(){
 					display:block;
 					position: absolute;
 					width: ${BOX}px;
-					height: ${BOX/6}px;
+					height: ${THICC}px;
 					background: url(./proto/img/party/texture-canvas.jpg);
 					background-size: cover;
 					transform: rotateZ(90deg) rotateX(-90deg);
@@ -96,7 +97,7 @@ window.PainterPanicGame = function(){
 				painterwall:nth-of-type(3){
 					display:block;
 					position: absolute;
-					width: ${BOX/6}px;
+					width: ${THICC}px;
 					height: ${BOX}px;
 					background: url(./proto/img/party/texture-canvas.jpg);
 					background-size: cover;
@@ -142,7 +143,7 @@ window.PainterPanicGame = function(){
 					display: block;
 					position: absolute;
 					width: ${BRUSH.W}px;
-					height: ${BRUSH.W}px;
+					height: ${BRUSH.W+10}px;
 					left: ${-BRUSH.W/2}px;
 					bottom: 0px;
 					box-sizing: border-box;
@@ -150,7 +151,61 @@ window.PainterPanicGame = function(){
 					border-radius: 20px 20px 0px ${BRUSH.W*0.5}px;
 					box-sizing: border-box;
 					background: #e8ceb2;
-					box-shadow: inset 0px -25px 5px red, inset 0px 0px 5px black;
+					box-shadow: inset 0px -25px 5px red;
+					border: 2px solid black;
+				}
+
+				painterhead{
+					display: block;
+					position: absolute;
+					top: 0px;
+					left: 0px;
+					right: 0px;
+				}
+
+				painterhead:before{
+					content:"";
+					display: block;
+					position: absolute;
+					top: 30px;
+					left: 0px;
+					right: 0px;
+					border-top: 7px solid red;
+					border-radius: 40px 40px 0px 0px;
+				}
+
+				painterhead:after{
+					content:"..";
+					display: block;
+					position: absolute;
+					top: 30px;
+					left: 0px;
+					right: 0px;
+					color: black;
+					font-size: 40px;
+					line-height: 0px;
+					transform: scaleY(2);
+					font-family: serif;
+					opacity: 0.7;
+					text-align: center;
+				}
+
+				painterstick:after{
+					content:"";
+					display: block;
+					position: absolute;
+					width: ${BRUSH.W*0.8}px;
+					height: 30px;
+					left: 0px;
+					right: 0px;
+					bottom: 0px;
+					background: #ffbb55;
+					box-sizing: border-box;
+					border-radius: 0px 0px 10px 10px;
+
+					box-shadow: inset 0px 0px 10px black;
+
+					display: none;
 				}
 
 				painterstick{
@@ -162,8 +217,12 @@ window.PainterPanicGame = function(){
 					left: ${-BRUSH.W*0.4}px;
 					background: white;
 
-					border-radius: 100% 100% ${BRUSH.W/2}px ${BRUSH.W/2}px;
+					border-radius: 50% 50% ${BRUSH.W/2}px ${BRUSH.W/2}px;
+					transform-origin: bottom center;
+					transform: rotate(-5deg);
+					overflow: hidden;
 
+					box-shadow: inset 0px 0px 5px black;
 				}
 
 				
@@ -180,20 +239,19 @@ window.PainterPanicGame = function(){
 					background: linear-gradient(to top, rgba(0,0,0,0.3), transparent);
 				}
 
+				paintermeep[n='0'] painterhead:before{ border-color: var(--n0); }
+				paintermeep[n='1'] painterhead:before{ border-color: var(--n1); }
+				paintermeep[n='2'] painterhead:before{ border-color: var(--n2); }
+				paintermeep[n='3'] painterhead:before{ border-color: var(--n3); }
+				paintermeep[n='4'] painterhead:before{ border-color: var(--n4); }
+				paintermeep[n='5'] painterhead:before{ border-color: var(--n5s); }
 
-				paintermeep[n='0'] painterframe{ border-color:var(--n0); }
-				paintermeep[n='1'] painterframe{ border-color:var(--n1); }
-				paintermeep[n='2'] painterframe{ border-color:var(--n2); }
-				paintermeep[n='3'] painterframe{ border-color:var(--n3); }
-				paintermeep[n='4'] painterframe{ border-color:var(--n4); }
-				paintermeep[n='5'] painterframe{ border-color:var(--n5); }
-
-				paintermeep[n='0'] painterhead:before{ background:var(--n0); }
-				paintermeep[n='1'] painterhead:before{ background:var(--n1); }
-				paintermeep[n='2'] painterhead:before{ background:var(--n2); }
-				paintermeep[n='3'] painterhead:before{ background:var(--n3); }
-				paintermeep[n='4'] painterhead:before{ background:var(--n4); }
-				paintermeep[n='5'] painterhead:before{ background:var(--n5); }
+				paintermeep[n='0'] painterbrush{ box-shadow: inset 0px -25px 5px var(--n0); }
+				paintermeep[n='1'] painterbrush{ box-shadow: inset 0px -25px 5px var(--n1); }
+				paintermeep[n='2'] painterbrush{ box-shadow: inset 0px -25px 5px var(--n2); }
+				paintermeep[n='3'] painterbrush{ box-shadow: inset 0px -25px 5px var(--n3); }
+				paintermeep[n='4'] painterbrush{ box-shadow: inset 0px -25px 5px var(--n4); }
+				paintermeep[n='5'] painterbrush{ box-shadow: inset 0px -25px 5px var(--n5); }
 
 				painterspace[n='0'] path{ stroke:var(--n0); }
 				painterspace[n='1'] path{ stroke:var(--n1); }
@@ -254,11 +312,10 @@ window.PainterPanicGame = function(){
 					font-size: 80px;
 					line-height:${BOX/3}px;
 					text-align: center;
+					text-shadow: 0px 0px 20px rgba(255,255,255,0.3);
 
-					background: radial-gradient( white, transparent, transparent );
+					background: radial-gradient( #153A65, transparent, transparent );
 				}
-
-
 
 				painterheader{
 					display: block;
@@ -271,6 +328,8 @@ window.PainterPanicGame = function(){
 					font-size: 50px;
 					line-height: 50px;
 					text-align: center;
+
+					background: radial-gradient( #153A65, transparent, transparent );
 				}
 
 				paintersurface{
@@ -318,7 +377,9 @@ window.PainterPanicGame = function(){
 			<paintermeep n=${n}>
 				<paintershadow></paintershadow>
 				<painterbrush></painterbrush>
-				<painterstick></painterstick>
+				<painterstick>
+					<painterhead></painterhead>
+				</painterstick>
 			</paintermeep>
 		`);
 
@@ -396,6 +457,8 @@ window.PainterPanicGame = function(){
 				let ox = self.meep.px - self.x*W;
 				let oy = self.meep.py - self.y*H;
 
+				if(n==0) console.log(ox,oy);
+
 				self.meep.$el.css({
 					left: ox + 'px',
 					top: oy + 'px',
@@ -407,9 +470,7 @@ window.PainterPanicGame = function(){
 						y:oy + (BOX/2),
 					});
 
-
 					ctx.globalCompositeOperation = 'source-out';
-
 					ctx.clearRect(0,0,BOX,BOX);
 
 					ctx.beginPath();
@@ -451,6 +512,7 @@ window.PainterPanicGame = function(){
 		}
 
 		self.redraw = function(){
+
 			self.$el.css({
 				left: self.x*W + 'px',
 				top: self.y*H + 'px',
@@ -475,6 +537,9 @@ window.PainterPanicGame = function(){
 					'top': -BOX/2 - BOX/3 + 'px',
 					'transform':'rotateX(0deg)',
 					'transform-origin':'top center',
+					'background':'',
+					'height':'',
+					'line-height':'',
 				});
 			} else { 
 				self.meep.$el.hide();
@@ -485,6 +550,9 @@ window.PainterPanicGame = function(){
 					'top': BOX/2 + 'px',
 					'transform':'rotateX(-90deg)',
 					'transform-origin':'top center',
+					'background':'none',
+					'height':THICC + 'px',
+					'line-height':THICC + 'px'
 				});
 			}
 
@@ -512,6 +580,7 @@ window.PainterPanicGame = function(){
 	let isPlayActive = false;
 
 	const FOREGROUND = 2;
+	const STACK = 0.06;
 
 	function initGame(count){
 
@@ -522,7 +591,7 @@ window.PainterPanicGame = function(){
 			box.$el.appendTo($canvas);
 			box.bindMeep(meeps[m]);
 			box.x = 0.75 + m%2 * 0.02;
-			box.y = 0.78 - 0.09*(count-m-1);
+			box.y = 0.78 - STACK*(count-m-1);
 			box.redraw();
 			boxes[m] = box;
 
@@ -538,7 +607,6 @@ window.PainterPanicGame = function(){
 
 	function doNextSet(){
 		
-
 		foregrounds.length = 0;
 
 		for(var i=0; i<FOREGROUND; i++){
@@ -567,16 +635,23 @@ window.PainterPanicGame = function(){
 			});
 		}
 
-
 		if(foregrounds.length==0){
 			isPlayActive = false;
-			doFiniGame();
+			finiGame();
 		} else {
 			isPlayActive = true;
+			hud.initTimer(30,finiSet);
 		}
 	}
 
-	function doFiniGame(){
+	function finiSet(){
+
+		isPlayActive = false;
+		setTimeout(doPutAway,1000);
+	}
+
+	function finiGame(){
+		hud.finiTimer();
 		for(var c=0; c<completes.length; c++){
 			$(completes[c])
 			.delay(completes.length-c*100)
@@ -615,7 +690,7 @@ window.PainterPanicGame = function(){
 			.delay(c*100)
 			.animate({
 				x:2.25,
-				y:0.78 - 0.09*(c),
+				y:0.78 - STACK*(c),
 				scale:0.5,
 				spin:80,
 				twist:0
@@ -632,10 +707,8 @@ window.PainterPanicGame = function(){
 		let isComplete = isPlayActive;
 		for(var f in foregrounds ) if( !foregrounds[f].isComplete ) isComplete = false;
 
-
-		if(isComplete){
-			isPlayActive = false;
-			setTimeout(doPutAway,1000);
+		if(isComplete && isPlayActive){
+			finiSet();
 		}
 
 		resize();
