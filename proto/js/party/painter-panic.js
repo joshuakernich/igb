@@ -388,6 +388,7 @@ window.PainterPanicGame = function(){
 		self.n = n;
 	}
 
+	const MAXPIXELS = (BOX*BOX);
 	let queue = [];
 	const PainterBox = function(n){
 
@@ -450,14 +451,12 @@ window.PainterPanicGame = function(){
 
 		let history = [];
 
-		const MAX = (BOX*BOX)/10*2;
+		
 
 		self.step = function(){
 			if(self.meep && self.isForeground){
 				let ox = self.meep.px - self.x*W;
 				let oy = self.meep.py - self.y*H;
-
-				if(n==0) console.log(ox,oy);
 
 				self.meep.$el.css({
 					left: ox + 'px',
@@ -485,14 +484,14 @@ window.PainterPanicGame = function(){
 
 					let data = ctx2.getImageData(0, 0, BOX, BOX);
 					let cnt = 0;
-					for(var i=0; i<data.data.length; i+=10) if(data.data[i]!=0) cnt++;
-					let amt = Math.round(cnt/MAX*100);
+					for(var i=0; i<data.data.length; i+=4) if(data.data[i+3]!=0) cnt++; //just check the alpha channel
+					let amt = Math.round(cnt/MAXPIXELS*100);
 					$score.text(amt+'%');
+
+					self.amt = amt;
 
 					ctx.globalCompositeOperation = 'source-in';
 					ctx.drawImage(img, 0, 0, BOX, BOX);
-
-
 
 					/*let draw = '';
 					for(var h in history) draw = draw + (h==0?'M':'L') + history[h].x + ',' +history[h].y;
@@ -557,6 +556,18 @@ window.PainterPanicGame = function(){
 			}
 
 			
+		}
+
+		self.setFinalScore = function(){
+			$score.css({
+				'top': '0px',
+				'transform':'rotateX(0deg)',
+				'transform-origin':'top center',
+				'background':'',
+				'height':'',
+				'color':'white',
+				'line-height':BOX+'px',
+			});
 		}
 	}
 
@@ -653,6 +664,7 @@ window.PainterPanicGame = function(){
 	function finiGame(){
 		hud.finiTimer();
 		for(var c=0; c<completes.length; c++){
+			completes[c].setFinalScore();
 			$(completes[c])
 			.delay(completes.length-c*100)
 			.animate({
@@ -666,14 +678,15 @@ window.PainterPanicGame = function(){
 
 		setTimeout(function(){
 			
-			let scores = [];
+			let ranks = [];
 			for(var a in boxes){
-				scores[a] = 0;
+				ranks[a] = 0;
 				for(var b in boxes){
-					if(boxes[a].score > boxes[b].score) scores[a]++;
+					if(boxes[a].amt >= boxes[b].amt) ranks[a]++;
 				}
 			}
-
+			let scores = [];
+			for(var r in ranks) scores[r] = Math.floor( (10/ranks.length) * (ranks[r]) );
 			window.doPartyGameComplete(scores);
 
 		},2000)
