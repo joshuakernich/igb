@@ -373,7 +373,6 @@ window.CuppingBallsGame = function () {
 			}
 		}
 
-
 		if(iMin>-1){
 			meeps[iMin].hasSelected = true;
 			meeps[iSelect].hasSelected = true;

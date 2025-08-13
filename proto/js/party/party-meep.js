@@ -1,3 +1,7 @@
+const PLAYER_COLORS = [
+	'red','blue','limegreen','#dd00ff','#ff6600','#ffbb00',
+]
+
 $("head").append(`
 	<style>
 		body{
@@ -28,6 +32,8 @@ window.PartyMeepHead = function(n) {
 			<partymeepmouth></partymeepmouth>
 		</partymeephead>
 	`);
+
+	if(!PartyMeep.didInit) new PartyMeep();
 }
 
 window.PartyMeep = function(n){
