@@ -1,165 +1,6 @@
 
 
-window.FollicleFace = function(GRIDSIZE,n,xAnchor,yAnchor){
 
-
-
-	/*const MAP = [
-		'  000000  ',
-		' 00000000 ',
-		' 0  000 0 ',
-		'0    00  0',
-		'0        0',
-		'0        0',
-		'0        0',
-		'0        0',
-		'0 000000 0',
-		'00      00',
-		'0        0',
-		'0        0',
-		' 0  00  0 ',
-		' 00000000 ',
-		'   0000   ',
-	]*/
-
-	const MAP = [
-	    "      00000000      ",
-	    "    000000000000    ",
-	    "  0000000000000000  ",
-	    "  0000000000000000  ",
-	    " 00     000000   00 ",
-	    "00       000      00",
-	    "00        00      00",
-	    "00          0     00",
-	    "00                00",
-	    "00                00",
-	    "00                00",
-	    "00                00",
-	    "00                00",
-	    "00                00",
-	    "00                00",
-	    "00                00",
-	    "00   0000000000   00",
-	    "00 00000000000000 00",
-	    "0000            0000",
-	    "000              000",
-	    "00                00",
-	    "00                00",
-	    "00                00",
-	    "00                00",
-	    "00       00       00",
-	    " 00     0000     00 ",
-	    "  00000000000000000 ",
-	    "  0000000000000000  ",
-	    "    000000000000    ",
-	    "       000000       "
-	]
-
-	let xCenter = GRIDSIZE * MAP[0].length/2;
-	let yArm = ( GRIDSIZE + 8 ) * MAP.length;
-
-	let self = this;
-	self.score = 0;
-	self.n = n;
-	self.$el = $('<folliclehead>').attr('n',n).css({
-		left: xAnchor + 'px',
-		top: yAnchor + 'px',
-	});
-
-	$('<folliclebody>').appendTo(self.$el);
-	let $face = $('<follicleface>').appendTo(self.$el);
-	
-	$('<follicleeye>').appendTo($face);
-	$('<follicleeye>').appendTo($face);
-	$('<folliclemouth>').appendTo($face);
-
-	for(var y in MAP){
-		let $row = $('<folliclerow>').appendTo($face);
-		for(var x in MAP[y]){
-			let $cell = $('<folliclecell>').appendTo($row);
-			if(MAP[y][x]=='0') $('<folliclehair>').appendTo($cell).attr('dir',(x>=MAP[y].length/2)?1:-1).attr('x',x).attr('y',y).css('z-index',100-y);
-		}
-	}
-
-	let $arm = $('<folliclearm>').appendTo(self.$el).css({
-		'left':xCenter,
-		'top':yArm,
-		'width':'200px',
-		'height':'200px',
-	})
-
-	let $hand = $(`
-		<folliclehand>
-			<follicleshaver></follicleshaver>
-			<folliclefist></folliclefist>
-		</folliclehand>
-	`).appendTo(self.$el);
-
-	self.redraw = function(){
-
-		let px = self.x;
-		if(self.wall==0) px = self.z;
-		if(self.wall==2) px = 1600-self.z;
-		
-		let ox = (px - xAnchor - xCenter);
-		let oy = (self.y - yAnchor - yArm);
-
-		let gx = (px - xAnchor)/GRIDSIZE;
-		let gy = (self.y - yAnchor)/GRIDSIZE;
-
-		let r = (-ox*0.3);
-		if(r>45) r = 45;
-		if(r<-45) r = -45;
-
-		$hand.css({
-			left: (px - xAnchor) + 'px',
-			top: (self.y - yAnchor) + 'px',
-			transform: 'rotate('+r+'deg)',
-			'z-index':100-gy-1, 
-		});
-
-		let rx = 100;
-		let ry = -100;
-
-		$arm.css({
-			width: Math.abs(ox) + rx + 'px',
-			height: Math.abs(oy) + ry + 'px',
-			'transform':'scale('+(ox>0?1:-1)+','+(oy>0?1:-1)+')',
-		})
-
-		for(var y=0; y<MAP.length; y++){
-			for(var x=0; x<MAP[y].length; x++){
-				let dx = gx-x;
-				let dy = gy-y;
-				let d = Math.sqrt(dx*dx + dy*dy);
-				if(d<1.5){
-					let $hair = self.$el.find('folliclehair[x='+x+'][y='+y+']');
-					if(!$hair.hasClass('dead')){
-						let rx = - 100 + Math.random()*200;
-						$hair.addClass('dead');
-						$hair.css({'z-index':1000}).animate({ top:-50, left:rx*0.1 },200).animate({top:1000,left:rx },1000);
-					}
-				}
-			}
-		}
-
-		
-		/*if( MAP[gy] && MAP[gy][gx] == 0 ){
-
-			let $hair = self.$el.find('folliclehair[x='+gx+'][y='+gy+']');
-
-			if(!$hair.hasClass('dead')){
-
-				let rx = - 100 + Math.random()*200;
-
-				$hair.addClass('dead');
-				$hair.css({'z-index':1000}).animate({ top:-50, left:rx*0.1 },200).animate({top:1000,left:rx },1000);
-			}
-			
-		}*/
-	}
-
-}
 
 window.FollicleFrenzyGame = function(){
 
@@ -168,6 +9,39 @@ window.FollicleFrenzyGame = function(){
 	const FPS = 50;
 	const PLAYER_COUNT = 6;
 	const GRIDSIZE = 15;
+
+	const MAP = [
+		    "      00000000      ",
+		    "    000000000000    ",
+		    "  0000000000000000  ",
+		    "  0000000000000000  ",
+		    " 00     000000   00 ",
+		    "00       000      00",
+		    "00        00      00",
+		    "00          0     00",
+		    "00                00",
+		    "00                00",
+		    "00                00",
+		    "00                00",
+		    "00                00",
+		    "00                00",
+		    "00                00",
+		    "00                00",
+		    "00   0000000000   00",
+		    "00 00000000000000 00",
+		    "0000            0000",
+		    "000              000",
+		    "00                00",
+		    "00                00",
+		    "00                00",
+		    "00                00",
+		    "00       00       00",
+		    " 00     0000     00 ",
+		    "  00000000000000000 ",
+		    "  0000000000000000  ",
+		    "    000000000000    ",
+		    "       000000       "
+		]
 
 	if(!FollicleFrenzyGame.didInit){
 		FollicleFrenzyGame.didInit = true;
@@ -180,9 +54,10 @@ window.FollicleFrenzyGame = function(){
 					height: ${H}px;
 					transform-origin: top left;
 					
-					background: url(./proto/img/party/bg-barber.jpg);
-					background-size: 100%;
+					background: url(./proto/img/party/bg-village.png);
+					background-size: 33.3% 100%;
 					background-position: center;
+					perspective: ${W*3}px;
 				}
 
 				folliclearm{
@@ -190,7 +65,6 @@ window.FollicleFrenzyGame = function(){
 					position: absolute;
 					top: 0px;
 					left: 0px;	
-					z-index: 1;
 					border-top: 30px solid white;
 					border-right: 30px solid white;
 					box-sizing: border-box;
@@ -240,7 +114,6 @@ window.FollicleFrenzyGame = function(){
 					height: ${GRIDSIZE}px;
 				}
 
-
 				folliclewall{
 					width: 33.333%;
 					display: inline-block;
@@ -250,10 +123,11 @@ window.FollicleFrenzyGame = function(){
 					position: relative;
 				}
 
-				folliclehead{
+				folliclemeep{
 					display: block;
-					
 					position: absolute;
+					transform: rotateX(30deg);
+					transform-origin: top center;
 				}
 
 				folliclebody{
@@ -264,7 +138,8 @@ window.FollicleFrenzyGame = function(){
 					width: 60%;
 					height: 300px;
 					top: 100%;	
-					left: 20%;			
+					left: 20%;	
+						
 				}
 
 				follicleface{
@@ -285,7 +160,7 @@ window.FollicleFrenzyGame = function(){
 					content:"";
 					width: 160%;
 					height: 300%;
-					background: red;
+					background: gray;
 					display:block;
 					position: absolute;
 					top: -20%;
@@ -320,64 +195,186 @@ window.FollicleFrenzyGame = function(){
 
 
 				follicleeye{
-					width: 40px;
+					width: 30px;
 					height: 55px;
 					background:#687078;
 					position: absolute;
-					left: 25%;
-					top: 40%;
+					left: 28%;
+					top: 38%;
 					display: block;
-					border-radius: 20px;
+					border-radius: 100%;
 				}
 
 				follicleeye:last-of-type{
 					left: auto;
-					right: 25%;
+					right: 28%;
 				}
 
-				folliclehead[n='0'] folliclehair:after { background:red; }
-				folliclehead[n='1'] folliclehair:after { background:blue; }
-				folliclehead[n='2'] folliclehair:after { background:#33CD32; }
-				folliclehead[n='3'] folliclehair:after { background:#DD00FF; }
-				folliclehead[n='4'] folliclehair:after { background:#FF6600; }
-				folliclehead[n='5'] folliclehair:after { background:#FFBB00; }
+				folliclemeep[n='0'] folliclehair:after { background:red; }
+				folliclemeep[n='1'] folliclehair:after { background:blue; }
+				folliclemeep[n='2'] folliclehair:after { background:#33CD32; }
+				folliclemeep[n='3'] folliclehair:after { background:#DD00FF; }
+				folliclemeep[n='4'] folliclehair:after { background:#FF6600; }
+				folliclemeep[n='5'] folliclehair:after { background:#FFBB00; }
 
-				folliclehead[n='0'] follicleshaver { background:red; }
-				folliclehead[n='1'] follicleshaver { background:blue; }
-				folliclehead[n='2'] follicleshaver { background:#33CD32; }
-				folliclehead[n='3'] follicleshaver { background:#DD00FF; }
-				folliclehead[n='4'] follicleshaver { background:#FF6600; }
-				folliclehead[n='5'] follicleshaver { background:#FFBB00; }
+				folliclemeep[n='0'] follicleshaver { background:red; }
+				folliclemeep[n='1'] follicleshaver { background:blue; }
+				folliclemeep[n='2'] follicleshaver { background:#33CD32; }
+				folliclemeep[n='3'] follicleshaver { background:#DD00FF; }
+				folliclemeep[n='4'] follicleshaver { background:#FF6600; }
+				folliclemeep[n='5'] follicleshaver { background:#FFBB00; }
+
+				follicleguide{
+					width: 300px;
+					height: 300px;
+					position: absolute;
+					top: 30%;
+					left: 50%;
+					transform: translate(-50%, -50%) rotate(-5deg);
+					background: white;
+					box-shadow: 0px 5px 20px black;
+					background: #ddd;
+
+					border: 20px solid white;
+				}
+
+				follicleguide follicleface{
+					left: 50%;
+					top: 50%;
+					transform: translate(-50%, -50%) scale(0.5);
+
+				}
 
 
 			</style>`);
+	}
+
+	const FollicleGuide = function() {
+		let self = this;
+		self.$el = $('<follicleguide>');
+
+		new FollicleFace().$el.appendTo(self.$el);
+	}
+
+	const FollicleFace = function() {
+
+		let self = this;
+		self.pw = (GRIDSIZE * MAP[0].length)/W;
+		self.$el = $('<follicleface>');
+
+		$('<follicleeye>').appendTo(self.$el);
+		$('<follicleeye>').appendTo(self.$el);
+		$('<folliclemouth>').appendTo(self.$el);
+
+		for(var y in MAP){
+			let $row = $('<folliclerow>').appendTo(self.$el);
+			for(var x in MAP[y]){
+				let $cell = $('<folliclecell>').appendTo($row);
+				if(MAP[y][x]=='0') $('<folliclehair>').appendTo($cell).attr('dir',(x>=MAP[y].length/2)?1:-1).attr('x',x).attr('y',y);
+			}
+		}
+
+		self.shaveAt = function(ox,oy){
+			let gx = (ox*W)/GRIDSIZE;
+			let gy = (oy*H)/GRIDSIZE;
+
+			for(var y=0; y<MAP.length; y++){
+				for(var x=0; x<MAP[y].length; x++){
+					let dx = gx-x;
+					let dy = gy-y;
+					let d = Math.sqrt(dx*dx + dy*dy);
+					if(d<3){
+						let $hair = self.$el.find('folliclehair[x='+x+'][y='+y+']');
+						if(!$hair.hasClass('dead')){
+							let rx = - 100 + Math.random()*200;
+							$hair.addClass('dead');
+							$hair.animate({ top:-50, left:rx*0.1 },200).animate({top:1000,left:rx },1000);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	const FollicleMeep = function(n){
+
+		let self = this;
+		self.score = 0;
+		self.n = n;
+		self.ax = 0.5;
+		self.ay = 0.5;
+		self.px = 0.5;
+		self.py = 0.5;
+
+		self.$el = $('<folliclemeep>').attr('n',n);
+
+		$('<folliclebody>').appendTo(self.$el);
+
+		let face = new FollicleFace();
+		face.$el.appendTo(self.$el);
+
+		let $hand = $(`
+			<folliclehand>
+				<follicleshaver></follicleshaver>
+				<folliclefist></folliclefist>
+			</folliclehand>
+		`).appendTo(self.$el);
+
+		self.redraw = function(){
+
+			self.$el.css({
+				left: W*self.wall + self.ax*W + 'px',
+				top: self.ay*H + 'px',
+			});
+
+			if(self.wall==1){
+				let ox = self.px - self.ax;
+				let oy = self.py - self.ay;
+
+				let r = ox>face.pw/2?-30:30;
+
+				$hand.css({
+					left: ox*W + 'px',
+					top: oy*H + 'px',
+					transform: 'rotate('+r+'deg)',
+				});
+
+				face.shaveAt(ox,oy);
+			}
+		}
 	}
 
 	let self = this;
 	self.$el = $('<igb>');
 
 	let $game = $('<folliclegame>').appendTo(self.$el);
-	
-	const PLAYER = [
-		{wall:1,x:W*1/3},
-		{wall:1,x:W*2/3},
-		{wall:0,x:W*2/3},
-		{wall:2,x:W*1/3},
-		{wall:0,x:W*1/3},
-		{wall:2,x:W*2/3},
-	]
-
-	let $walls = [];
-	for(var i=0; i<3; i++){
-		$walls[i] = $('<folliclewall>').appendTo($game);
-	}
 
 	let meeps = [];
-	for(var i=0; i<PLAYER_COUNT; i++){
-		meeps[i] = new FollicleFace(GRIDSIZE,i,PLAYER[i].x - GRIDSIZE * 5, H/4);
-		meeps[i].wall = PLAYER[i].wall;
-		meeps[i].$el.appendTo( $walls[PLAYER[i].wall] );
+	function initGame(count){
+		for(var i=0; i<count; i++){
+			meeps[i] = new FollicleMeep(i);
+			meeps[i].wall = 0;
+			meeps[i].$el.appendTo( $game );
+		}
+
+		initNextRound();
 	}
+
+	let iRound = -1;
+	function initNextRound(){
+		iRound++;
+		for(var i=0; i<2; i++){
+			meeps[iRound+i].wall = 1;
+			meeps[iRound+i].ax = 0.25 + 0.5*i - 0.1;
+			meeps[iRound+i].ay = 0.3;
+		}
+
+		let guide = new FollicleGuide();
+		guide.$el.appendTo($game);
+	}
+
+	initGame(6);
+	
 
 	let hud = new PartyHUD();
 	hud.$el.appendTo($game);
@@ -402,6 +399,7 @@ window.FollicleFrenzyGame = function(){
 	}
 	
 
+
 	setInterval(step,1000/FPS);
 
 	/*$(document).on('mousemove',function(e){
@@ -424,9 +422,9 @@ window.FollicleFrenzyGame = function(){
 
 	self.setPlayers = function(p){
 		for(var m in meeps){
-			meeps[m].x = p[m].px*W;
-			meeps[m].y = (p[m].py-0.2)*H*3;
-			meeps[m].z = p[m].pz*W;
+			meeps[m].px = p[m].px;
+			meeps[m].py = (1-p[m].pz);
+			//meeps[m].z = p[m].pz*W;
 		}
 	}
 }
