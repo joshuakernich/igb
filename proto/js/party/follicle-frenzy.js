@@ -43,6 +43,20 @@ window.FollicleFrenzyGame = function(){
 		    "       000000       "
 		]
 
+	let goal = [];
+
+	for(var y in MAP){
+		goal[y] = [];
+		for(var x in MAP[y]){
+			goal[y][x] = MAP[y][x];
+
+			if(y>20 || (y>6 && x>17) || (y>6 && x<2)) goal[y][x] = ' ';
+		}
+	}
+
+	let audio = new AudioContext();
+	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
+
 	if(!FollicleFrenzyGame.didInit){
 		FollicleFrenzyGame.didInit = true;
 
@@ -126,8 +140,13 @@ window.FollicleFrenzyGame = function(){
 				folliclemeep{
 					display: block;
 					position: absolute;
-					transform: rotateX(30deg);
+					transform: scale(0.7) rotateX(0deg);
 					transform-origin: top center;
+					transition: all 1s;
+				}
+
+				folliclemeep.foreground{
+					transform: scale(1) rotateX(30deg);
 				}
 
 				folliclebody{
@@ -139,7 +158,6 @@ window.FollicleFrenzyGame = function(){
 					height: 300px;
 					top: 100%;	
 					left: 20%;	
-						
 				}
 
 				follicleface{
@@ -245,7 +263,18 @@ window.FollicleFrenzyGame = function(){
 
 				}
 
-
+				folliclescore{
+					display: block;
+					position: absolute;
+					top: -200px;
+					font-size: 100px;
+					line-height: 200px;
+					color: white;
+					text-align: center;
+					left: -50px;
+					right: -50px;
+					text-shadow: 0px 0px 50px #00050C;
+				}
 			</style>`);
 	}
 
@@ -253,24 +282,29 @@ window.FollicleFrenzyGame = function(){
 		let self = this;
 		self.$el = $('<follicleguide>');
 
-		new FollicleFace().$el.appendTo(self.$el);
+		new FollicleFace(goal).$el.appendTo(self.$el);
 	}
 
-	const FollicleFace = function() {
+	const FollicleFace = function(MAP) {
 
 		let self = this;
 		self.pw = (GRIDSIZE * MAP[0].length)/W;
 		self.$el = $('<follicleface>');
 
+		let state = [];
+
 		$('<follicleeye>').appendTo(self.$el);
 		$('<follicleeye>').appendTo(self.$el);
 		$('<folliclemouth>').appendTo(self.$el);
 
-		for(var y in MAP){
+		for(var y=0; y<MAP.length; y++){
 			let $row = $('<folliclerow>').appendTo(self.$el);
-			for(var x in MAP[y]){
+			state[y] = [];
+			for(var x=0; x<MAP[y].length; x++){
 				let $cell = $('<folliclecell>').appendTo($row);
-				if(MAP[y][x]=='0') $('<folliclehair>').appendTo($cell).attr('dir',(x>=MAP[y].length/2)?1:-1).attr('x',x).attr('y',y);
+				if(MAP[y][x]=='0') $('<folliclehair>').appendTo($cell).attr('dir',(x>=MAP[y].length/2)?1:-1).attr('x',x).attr('y',y).css({'z-index':10+y});
+
+				state[y][x] = MAP[y][x];
 			}
 		}
 
@@ -280,10 +314,11 @@ window.FollicleFrenzyGame = function(){
 
 			for(var y=0; y<MAP.length; y++){
 				for(var x=0; x<MAP[y].length; x++){
-					let dx = gx-x;
-					let dy = gy-y;
+					let dx = Math.abs(gx-x);
+					let dy = Math.abs(gy-y);
 					let d = Math.sqrt(dx*dx + dy*dy);
-					if(d<3){
+					if(d<2.5){
+						state[y][x] = ' ';
 						let $hair = self.$el.find('folliclehair[x='+x+'][y='+y+']');
 						if(!$hair.hasClass('dead')){
 							let rx = - 100 + Math.random()*200;
@@ -293,6 +328,26 @@ window.FollicleFrenzyGame = function(){
 					}
 				}
 			}
+		}
+
+		self.compareState = function(goal){
+
+
+			let cntCorrect = 0;
+			let cntIncorrect = 0;
+
+			for(var y in goal){
+				for(var x in goal[y]){
+					if(goal[y][x] != MAP[y][x] || state[y][x] != MAP[y][x]){
+						//state is (or should be) different
+						if(goal[y][x] == state[y][x]) cntCorrect++;
+						else cntIncorrect++;
+					}
+				}
+			}
+
+			return Math.floor( cntCorrect/(cntCorrect+cntIncorrect) * 100 );
+
 		}
 	}
 
@@ -305,12 +360,14 @@ window.FollicleFrenzyGame = function(){
 		self.ay = 0.5;
 		self.px = 0.5;
 		self.py = 0.5;
+		self.isEnabled = false;
 
 		self.$el = $('<folliclemeep>').attr('n',n);
 
 		$('<folliclebody>').appendTo(self.$el);
+		let $score = $('<folliclescore>').appendTo(self.$el);
 
-		let face = new FollicleFace();
+		let face = new FollicleFace(MAP);
 		face.$el.appendTo(self.$el);
 
 		let $hand = $(`
@@ -318,7 +375,7 @@ window.FollicleFrenzyGame = function(){
 				<follicleshaver></follicleshaver>
 				<folliclefist></folliclefist>
 			</folliclehand>
-		`).appendTo(self.$el);
+		`).appendTo(self.$el).hide();
 
 		self.redraw = function(){
 
@@ -327,20 +384,47 @@ window.FollicleFrenzyGame = function(){
 				top: self.ay*H + 'px',
 			});
 
-			if(self.wall==1){
+			if(self.wall==1 && self.isEnabled){
 				let ox = self.px - self.ax;
 				let oy = self.py - self.ay;
 
-				let r = ox>face.pw/2?-30:30;
+				let r = ox>face.pw/2?-15:15;
 
 				$hand.css({
 					left: ox*W + 'px',
 					top: oy*H + 'px',
+					'z-index':20 + Math.floor(oy/GRIDSIZE),
 					transform: 'rotate('+r+'deg)',
 				});
 
 				face.shaveAt(ox,oy);
 			}
+		}
+
+		self.toForeground = function(b) {
+			if(b){
+				self.$el.addClass('foreground');
+				$hand.show();
+				self.setEnabled(true);
+			} else {
+				self.$el.removeClass('foreground');
+				$hand.hide();
+				self.setEnabled(false);
+			}
+		}
+
+		self.evaluate = function(goal){
+			self.amt = face.compareState(goal);
+
+			$({amt:0}).animate({amt:self.amt},{duration:1000,step:function(a){
+				$score.text(Math.floor(a)+'%');
+			}});
+		}
+
+		self.setEnabled = function(b) {
+			self.isEnabled = b;
+			if(b) $hand.show();
+			else $hand.hide();
 		}
 	}
 
@@ -351,33 +435,118 @@ window.FollicleFrenzyGame = function(){
 
 	let meeps = [];
 	function initGame(count){
-		for(var i=0; i<count; i++){
+
+		audio.play('music');
+
+		for(let i=0; i<count; i++){
 			meeps[i] = new FollicleMeep(i);
+			meeps[i].ax = -0.2;
 			meeps[i].wall = 0;
 			meeps[i].$el.appendTo( $game );
+
+			setTimeout(function(){
+				meeps[i].ax = 0.5 + (meeps.length/2-i)*0.15 - 0.17;
+				meeps[i].ay = 0.5 + i%2*0.05; 
+			},200 + i*100);
 		}
 
-		initNextRound();
+		setTimeout( initGuide, 2000);
+		setTimeout( initNextRound, 2000);
 	}
 
+	const COUNT = 2;
 	let iRound = -1;
+	let rangeRound = 0;
+	let guide;
+
+	function initGuide(){
+		guide = new FollicleGuide();
+		guide.$el.appendTo($game).css({
+			top: '-25%',
+		}).animate({
+			top:'30%'
+		});
+	}
+
 	function initNextRound(){
 		iRound++;
-		for(var i=0; i<2; i++){
-			meeps[iRound+i].wall = 1;
-			meeps[iRound+i].ax = 0.25 + 0.5*i - 0.1;
-			meeps[iRound+i].ay = 0.3;
+		rangeRound = Math.min( 2, meeps.length - iRound*COUNT );
+
+		for(var i=0; i<rangeRound; i++){
+			let n = iRound*COUNT+i;
+			meeps[n].wall = 1;
+			meeps[n].ax = 0.75 - 0.5*i - 0.1;
+			meeps[n].ay = 0.3;
+			meeps[n].toForeground(true);
 		}
 
-		let guide = new FollicleGuide();
-		guide.$el.appendTo($game);
+
+		setTimeout(function(){
+			hud.initTimer(20,finiRound);
+		},2000);
 	}
 
-	initGame(6);
-	
+	function finiRound(){
+
+		hud.finiTimer();
+
+		for(var i=0; i<rangeRound; i++){
+			let n = iRound*2+i;
+			meeps[n].evaluate(goal);
+			meeps[n].setEnabled(false);
+		}
+
+		setTimeout(function(){
+			for(var i=0; i<rangeRound; i++){
+				let n = iRound*COUNT+i;
+				meeps[n].wall = 2;
+				meeps[n].ax = 0.5 + (meeps.length/2-n)*0.15 - 0.17;
+				meeps[n].ay = 0.5 + n%2*0.05; 
+				meeps[n].toForeground(false);
+			}
+		},3000);
+
+
+		if( (iRound+1)*COUNT < meeps.length ) setTimeout(initNextRound,5000);
+		else setTimeout(finiGame,5000);
+	}
+
+	function finiGame(){
+
+		hud.initBanner('Finish');
+
+		guide.$el.animate({top:'-25%'});
+
+		for(let i=0; i<meeps.length; i++){
+			meeps[i].wall = 1;
+			meeps[i].ax = 0.5 + (meeps.length/2-i)*0.15 - 0.17;
+			meeps[i].ay = 0.5 + i%2*0.05; 
+		}
+
+		setTimeout(function(){
+			self.fini();
+			let scores = getFinalScores();
+			window.doPartyGameComplete(scores);
+		},4000);
+	}
+
+	function getFinalScores(){
+		let ranks = [];
+		for(var a in meeps){
+			ranks[a] = 0;
+			for(var b in meeps){
+				if(meeps[a].amt >= meeps[b].amt) ranks[a]++;
+			}
+		}
+		let scores = [];
+		for(var r in ranks) scores[r] = Math.floor( (10/ranks.length) * (ranks[r]) );
+
+		return scores;
+	}
 
 	let hud = new PartyHUD();
 	hud.$el.appendTo($game);
+	hud.initPlayerCount(initGame);
 
 	let scale = 1;
 	function resize(){
@@ -397,28 +566,8 @@ window.FollicleFrenzyGame = function(){
 			})*/
 		}
 	}
-	
-
 
 	setInterval(step,1000/FPS);
-
-	/*$(document).on('mousemove',function(e){
-		
-		let o = $game.offset();
-		let x = (e.pageX - o.left)/scale;
-		let y = (e.pageY - o.top)/scale;
-
-		x = x/W;
-		y = y/H;
-		z = x;
-
-		//meeps[0].wall = Math.floor(x);
-
-		meeps[0].x = (x%1)*W;
-		meeps[0].y = (y)*H;
-		meeps[0].z = (z%1)*W;
-
-	})*/
 
 	self.setPlayers = function(p){
 		for(var m in meeps){
@@ -426,5 +575,9 @@ window.FollicleFrenzyGame = function(){
 			meeps[m].py = (1-p[m].pz);
 			//meeps[m].z = p[m].pz*W;
 		}
+	}
+
+	self.fini = function(){
+		audio.stop('music');
 	}
 }
