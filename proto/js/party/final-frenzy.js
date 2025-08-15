@@ -5,7 +5,7 @@ window.FinalFrenzyGame = function(){
 	const LOWERPY = 0.5;
 	const UPPERPY = 0;
 	const BOMB = 70;
-	const EXPLOSION = 250;
+
 	const THICC = 50;
 	const BORDER = 10;
 	const COIN = 70;
@@ -20,14 +20,14 @@ window.FinalFrenzyGame = function(){
 	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.2);
 	audio.add('thud','./proto/audio/party/sfx-thud-small.mp3',0.3);
 
-	const FrenzyItem = function(x,y,type='coin'){
+	const FrenzyItem = function(x,y,type='coin',n){
 		let self = this;
 		let nWall = 1;
 		let skin = undefined;
 
 		self.$el = $('<frenzyitem>');
 
-		if(type=='coin') skin = new FrenzyCoin();
+		if(type=='coin') skin = new FrenzyCoin(n);
 		if(type=='bomb') skin = new FrenzyBomb();
 		if(type=='animal') skin = new FrenzyAnimal();
 
@@ -53,18 +53,61 @@ window.FinalFrenzyGame = function(){
 
 		self.collect = function(){
 			self.isCollected = true;
-			skin.collect();
+			return skin.collect();
 		}
 	}
 
-	const FrenzyCoin = function(){
+	const FrenzyExplosion = function(size,color){
+
 		let self = this;
-		self.$el = $('<frenzycoin>');
+		self.$el = $('<frenzyexplosioncontainer>');
+
+		$('<frenzyexplosion>').appendTo(self.$el).css({
+			width: size +'px',
+			height: size +'px',
+			background: color,
+		}).animate({
+			width: (size * 1.5) + 'px',
+			height: (size * 1.5) + 'px',
+		},200).delay(200).animate({
+			width: '0px',
+			height: '0px',
+			opacity: 0,
+		},1000);
+
+		for(var i=0; i<6; i++){
+			let sizeSmoke = 20 + Math.random() * 20;
+			let r = Math.random() * Math.PI*2;
+			$('<frenzysmoke>').appendTo(self.$el).css({
+				width: sizeSmoke + 'px',
+				height: sizeSmoke + 'px',
+				left: Math.cos(r) * size/2 * Math.random(),
+				top: Math.sin(r) * size/2 * Math.random(),
+			}).animate({
+				left: Math.cos(r) * (size*1.5)/2,
+				top: Math.sin(r) * (size*1.5)/2,
+				width: (sizeSmoke*2) + 'px',
+				height: (sizeSmoke*2) + 'px',
+			},200 + Math.random()*100).animate({
+				left: Math.cos(r) * (size*2)/2,
+				top: Math.sin(r) * (size*2)/2,
+				width: (sizeSmoke) + 'px',
+				height: (sizeSmoke) + 'px',
+				opacity: 0,
+			},1000)
+		}
+	}
+
+	const FrenzyCoin = function(n){
+		let self = this;
+		self.$el = $(`<frenzycoin n=${n}>`);
 		self.size = COIN;
 
 		self.collect = function (argument) {
 			self.$el.hide();
 			audio.play('coin',true);
+
+			return 1;
 		}
 	}
 
@@ -83,10 +126,10 @@ window.FinalFrenzyGame = function(){
 		self.collect = function (argument) {
 			audio.play('thud',true);
 			self.$el.css({ animation: 'none' });
-			$skin.css({'transform':'scale(0.5)'}).animate({
-				top: -150,
-				left:50,
-			},{ duration:100 });
+			$skin.hide();
+			new FrenzyExplosion(100,'gray').$el.appendTo(self.$el);
+
+			return -2;
 		}
 	}
 
@@ -115,42 +158,31 @@ window.FinalFrenzyGame = function(){
 			self.isExploded = true;
 			$wick.hide();
 			self.$el.addClass('exploded');
-			$('<frenzyexplosion>').appendTo(self.$el).animate({
-				width: (EXPLOSION * 1.5) + 'px',
-				height: (EXPLOSION * 1.5) + 'px',
-			},200).delay(200).animate({
-				width: '0px',
-				height: '0px',
-				opacity: 0,
-			},1000);
+			new FrenzyExplosion(250,'red').$el.appendTo(self.$el);
 
-			for(var i=0; i<6; i++){
-				let size = 20 + Math.random() * 20;
-				let r = Math.random() * Math.PI*2;
-				$('<frenzysmoke>').appendTo(self.$el).css({
-					width: size + 'px',
-					height: size + 'px',
-					left: Math.cos(r) * EXPLOSION/2 * Math.random(),
-					top: Math.sin(r) * EXPLOSION/2 * Math.random(),
-				}).animate({
-					left: Math.cos(r) * (EXPLOSION*1.5)/2,
-					top: Math.sin(r) * (EXPLOSION*1.5)/2,
-					width: (size*2) + 'px',
-					height: (size*2) + 'px',
-				},200 + Math.random()*100).animate({
-					left: Math.cos(r) * (EXPLOSION*2)/2,
-					top: Math.sin(r) * (EXPLOSION*2)/2,
-					width: (size) + 'px',
-					height: (size) + 'px',
-					opacity: 0,
-				},1000)
-			}
+			return -5;
 		}
 	}
 
 	const FrenzyMeep = function(n){
 		let self = this;
-		self.$el = $('<frenzymeep>');
+		self.$el = $('<frenzymeepcontainer>');
+
+		let history = [];
+
+		let $svg = $(`
+		<svg width=${W} height=${H}>
+		<svg>`).appendTo(self.$el);
+
+		for(var p in palette){
+			$('<path>').appendTo($svg).attr('fill',palette[p]);
+		}
+
+		$svg.html( $svg.html() );
+
+		let $meep = $('<frenzymeep>').appendTo(self.$el);
+
+		let $score = $('<frenzyscore>').appendTo($meep).text('');
 
 		let wasPX = 0;
 		let r = 0;
@@ -163,12 +195,13 @@ window.FinalFrenzyGame = function(){
 		self.ox = 0;
 		self.wallx = 0;
 		self.my = 1;
+		self.score = 0;
 
 		self.countdownBomb = undefined;
 
 		let meep = new PartyMeep(n);
 		meep.$shadow.hide();
-		meep.$el.appendTo(self.$el);
+		meep.$el.appendTo($meep);
 		meep.$el.css({
 			bottom: '-150px',
 			left: '0px',
@@ -192,13 +225,13 @@ window.FinalFrenzyGame = function(){
 			}
 
 			self.wallx = self.px;
-			if(self.wall==0) self.wallx = self.pz;
-			if(self.wall==2) self.wallx = 1-self.pz;
+			//if(self.wall==0) self.wallx = self.pz;
+			//if(self.wall==2) self.wallx = 1-self.pz;
 		}
 
 		self.redraw = function(){
 			self.y = 1-self.pz;//self.ay+(self.py*self.my);
-			self.$el.css({
+			$meep.css({
 				top: self.y * H + 'px',
 				left: self.wall*W + self.wallx * W + 'px',
 			})
@@ -209,11 +242,47 @@ window.FinalFrenzyGame = function(){
 
 			r = (r*5 + rNew)/6;
 
-			self.$el.css({
+			$meep.css({
 				transform: 'rotate('+r+'rad)',
 			})
 
 			wasPX = self.wallx;
+
+			if(self.wall==1){
+				history.unshift({x:self.px + self.ox, y:self.y});
+				
+				if(history.length>FPS/2){
+					history.length = FPS/2;
+
+					for(var i=0; i<palette.length; i++){
+						let d = '';
+
+						for(var h=0; h<history.length; h++){
+
+							let wStripe = 5 + h*1;
+							let xOffset = (palette.length-1)/2*wStripe;
+
+							let x = ( history[0].x + history[h].x )/2;
+
+							d = d + (h==0?' M':' L')+(x*W+wStripe*i-xOffset)+' '+(history[h].y+h*0.04)*H;
+						}
+
+						for(var h=history.length-1; h>=0; h--){
+
+							let wStripe = 5 + h*1;
+							let xOffset = (palette.length-1)/2*wStripe;
+
+							let x = ( history[0].x + history[h].x )/2;
+
+							d = d + ' L'+(x*W+wStripe*(i+1)-xOffset)+' '+(history[h].y+h*0.04)*H;
+						}
+
+						$svg.find('path').eq(i).attr('d',d);
+					}
+				}
+			} else {
+				$svg.find('path').attr('d','');
+			}
 		}
 
 		self.setFlyer = function(b){
@@ -236,6 +305,15 @@ window.FinalFrenzyGame = function(){
 			self.ay = UPPERPY-0.11;
 			self.my = 1;
 		}
+
+		self.scoreChange = function(change){
+			self.score += change;
+			$score.text(self.score).stop(false,false).css({opacity:1}).delay(200).animate({opacity:0});
+		}
+
+		self.showScore = function(){
+			$score.stop(false,false).css({opacity:1});
+		}
 	}
 
 	if( !FinalFrenzyGame.init ){
@@ -252,6 +330,25 @@ window.FinalFrenzyGame = function(){
 					background-size: 33.3%;
 					background-position: center bottom;
 					background-position-y: 0px;
+					perspective: ${W*3}px;
+				}
+
+				frenzystream{
+					display:block;
+					position: absolute;
+					inset: 0px;
+					transform: rotateX(60deg) scaleY(1.6);
+					transform-origin: top center;
+					transform-style: preserve-3d;
+
+					top: 60px;
+
+				}
+
+				frenzymeepcontainer{
+					display: block;
+					position: absolute;
+					inset: 0px;
 				}
 
 				frenzystars{
@@ -342,6 +439,13 @@ window.FinalFrenzyGame = function(){
 				frenzybomb[n='4'] frenzyexplosion:after,frenzybomb[n='4']:before,frenzybomb[n='4']:after{ background: var(--n4); }
 				frenzybomb[n='5'] frenzyexplosion:after,frenzybomb[n='5']:before,frenzybomb[n='5']:after{ background: var(--n5); }
 
+				frenzycoin[n='0']:after{ background:var(--n0); }
+				frenzycoin[n='1']:after{ background:var(--n1); }
+				frenzycoin[n='2']:after{ background:var(--n2); }
+				frenzycoin[n='3']:after{ background:var(--n3); }
+				frenzycoin[n='4']:after{ background:var(--n4); }
+				frenzycoin[n='5']:after{ background:var(--n5); }
+
 
 				frenzywick{
 					display: block;
@@ -374,28 +478,20 @@ window.FinalFrenzyGame = function(){
 					transform: translate(-50%, -50%);
 				}
 
+				frenzyexplosioncontainer{
+					display: block;
+					position: absolute;
+				}
+
 				frenzyexplosion{
 					display: block;
 					position: absolute;
-
-					width: ${EXPLOSION}px;
-					height: ${EXPLOSION}px;
-
 					overflow: visible;
 					transform: translate(-50%, -50%);
-				}
-
-				frenzyexplosion:after{
-					content:"";
-					display: block;
-					position: absolute;
-					width: 100%;
-					height: 100%;
-					
-					background: red;
 					border-radius: 100%;
 					opacity: 0.8;
 				}
+
 
 				@keyframes spin{
 					0%{
@@ -410,6 +506,7 @@ window.FinalFrenzyGame = function(){
 				frenzyitem{
 					position: absolute;
 					display: block;
+					transform: rotateX(-30deg)
 				}
 
 				frenzyanimal{
@@ -456,7 +553,7 @@ window.FinalFrenzyGame = function(){
 					display: block;
 					width: ${COIN}px;
 					height: ${COIN}px;
-					background: #B149B2;
+					background: white;
 					border-radius: 100%;
 					box-sizing: border-box;
 					left: ${-COIN/2-3}px;
@@ -496,6 +593,18 @@ window.FinalFrenzyGame = function(){
 					border: 1px solid white;
 				}
 
+				frenzyscore{
+					display: block;
+					position: absolute;
+					bottom: 150px;
+					left: -100px;
+					right: -100px;
+					color: white;
+					font-size: 100px;
+					line-height: 100px;
+					text-align: center;
+				}
+
 				@keyframes rotate{
 					0%{
 						transform: rotate(0deg);
@@ -526,52 +635,92 @@ window.FinalFrenzyGame = function(){
 	const palette = ['#37CCDA','#8DE968','#FEE955','#FEB850','#FD797B'];
 
 	let $game = $('<finalfrenzygame>').appendTo(self.$el);
-	let $stars = $('<frenzystars>').appendTo($game);
 
-	let $svg = $(`
-		<svg width=${W} height=${H}>
-		<svg>`).appendTo($game);
+	let $stream = $('<frenzystream>').appendTo($game);
+	let $stars = $('<frenzystars>').appendTo($stream);
 
-	for(var p in palette){
-		$('<path>').appendTo($svg).attr('fill',palette[p]);
-	}
-
-	$svg.html( $svg.html() );
-
-	let hud = new PartyHUD('purple');
+	let hud = new PartyHUD('#37CCDA');
 	hud.$el.appendTo($game);
 
 	let meeps = [];
 	let items = [];
+	let isLive = false;
 
 	function initGame(count){
 		for(var i=0; i<count; i++){
 			meeps[i] = new FrenzyMeep(i);
-			meeps[i].$el.appendTo($game);
+			meeps[i].$el.appendTo($stream);
 			meeps[i].wall = 0;
 			meeps[i].setFlyer(false);
 		}
 
 		audio.play('music');
-		initFlyer(0,0);
-		initFlyer(1,1);
+		
+		setTimeout(initStart,2000);
+	}
+
+	function initStart(){
+		isLive = true;
+		initNextPlayer();
+		initNextPlayer();
+		hud.initTimer(20,initPlayerSwap);
+	}
+
+	let nPlayer = -1;
+	function initNextPlayer(){
+		nPlayer++;
+		initFlyer(nPlayer%meeps.length);
+	}
+
+	function initPlayerSwap(){
+		initNextPlayer();
+		finiFlyer((nPlayer-2+meeps.length)%meeps.length);
+		
+		if(nPlayer<meeps.length) hud.initTimer(20,initPlayerSwap);
+		else hud.initTimer(20,finiGame);
+	}
+
+	function finiGame() {
+
+		while(items.length) items.pop().$el.remove();
+		isLive = false;
+
+		hud.finiTimer();
+		hud.initBanner('Finish');
+		for(var m in meeps){
+			meeps[m].setFlyer(true);
+			meeps[m].showScore();
+			$(meeps[m]).animate({wall:1});
+		}
+
+		setTimeout(function(){
+			let scores = [];
+			for(var m in meeps) scores[m] = meeps[m].score;
+			window.doPartyGameComplete(scores);
+			self.fini();
+		},4000);
 	}
 
 	function initFlyer(n){
 		meeps[n].setFlyer(true);
-		meeps[n].wall = 1;
+		$(meeps[n]).animate({wall:1});
+	}
+
+	function finiFlyer(n){
+		meeps[n].setFlyer(false);
+		$(meeps[n]).animate({wall:2});
 	}
 
 	let bombs = [];
 	function spawnBomb(n,x,y){
 		let bomb = new FrenzyBomb(n,x,y);
-		bomb.$el.appendTo($game);
+		bomb.$el.appendTo($stream);
 		bombs.push(bomb);
 	}
 
-	function spawnItem(x,y,type){
-		let item = new FrenzyItem(x,y,type);
-		item.$el.appendTo($game);
+	function spawnItem(x,y,type,n){
+		let item = new FrenzyItem(x,y,type,n);
+		item.$el.appendTo($stream);
 		items.push(item);
 	}
 
@@ -591,7 +740,7 @@ window.FinalFrenzyGame = function(){
 			'background-position-y':nStep*10+'px',
 		})
 
-		if(nStep%FPS==0){
+		if(isLive && nStep%FPS==0){
 			if(!queue.length) for(var i in ITEMS){
 				queue[i] = ITEMS[i];
 				shuffleArray(queue);
@@ -612,7 +761,21 @@ window.FinalFrenzyGame = function(){
 					let dy = items[i].py*H - meeps[m].y*H;
 					let d = Math.sqrt(dx*dx+dy*dy);
 					if(d<items[i].size && !items[i].isCollected){
-						items[i].collect();
+						let coinChange = items[i].collect();
+
+						meeps[m].scoreChange(coinChange);
+
+						for(var c=0; c<(-coinChange); c++){
+			
+							let r = Math.random() * Math.PI;
+
+							spawnItem(
+								items[i].px + Math.cos(r)*0.1,
+								items[i].py + Math.sin(r)*0.1 + Math.random() * 0.05,
+								'coin',
+								m
+							)
+						}
 					}
 				}
 			}
@@ -621,38 +784,12 @@ window.FinalFrenzyGame = function(){
 		for(var m in meeps) meeps[m].redraw();
 		for(var i in items) items[i].redraw();
 
-			/*
-		if(nFlyer != undefined) history.unshift({x:meeps[nFlyer].px + meeps[nFlyer].ox, y:meeps[nFlyer].y});
-
-		if(history.length>FPS) history.length = FPS;
-
-		for(var i=0; i<palette.length; i++){
-			let d = '';
-
-			for(var h=0; h<history.length; h++){
-
-				let wStripe = 5 + h*1;
-				let xOffset = (palette.length-1)/2*wStripe;
-
-				let x = ( history[0].x + history[h].x )/2;
-
-				d = d + (h==0?' M':' L')+(x*W+wStripe*i-xOffset)+' '+(history[h].y+h*0.02)*H;
-			}
-
-			for(var h=history.length-1; h>=0; h--){
-
-				let wStripe = 5 + h*1;
-				let xOffset = (palette.length-1)/2*wStripe;
-
-				let x = ( history[0].x + history[h].x )/2;
-
-				d = d + ' L'+(x*W+wStripe*(i+1)-xOffset)+' '+(history[h].y+h*0.02)*H;
-			}
-
-			$svg.find('path').eq(i).attr('d',d);
-		}*/
-
 		resize();
+	}
+
+	self.fini = function(){
+		audio.stop('music');
+		clearInterval(interval);
 	}
 
 	let scale = 1;
