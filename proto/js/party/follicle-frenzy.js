@@ -56,6 +56,9 @@ window.FollicleFrenzyGame = function(){
 
 	let audio = new AudioContext();
 	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
+	audio.add('shaver','./proto/audio/party/sfx-shaver.mp3',0,true);
+	audio.add('sequence','./proto/audio/party/sfx-sequence.mp3',0.3);
+	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
 
 	if(!FollicleFrenzyGame.didInit){
 		FollicleFrenzyGame.didInit = true;
@@ -86,11 +89,15 @@ window.FollicleFrenzyGame = function(){
 					transform-origin: top left;
 				}
 
+
+
 				folliclehand{
 					display: block;
 					position: absolute;
 					top: 0px;
 					left: 0px;
+					width: 0px;
+					height: 0px;
 				}
 
 				folliclefist{
@@ -285,6 +292,8 @@ window.FollicleFrenzyGame = function(){
 		new FollicleFace(goal).$el.appendTo(self.$el);
 	}
 
+	let cntShaver = 0;
+
 	const FollicleFace = function(MAP) {
 
 		let self = this;
@@ -310,7 +319,7 @@ window.FollicleFrenzyGame = function(){
 
 		self.shaveAt = function(ox,oy){
 			let gx = (ox*W)/GRIDSIZE;
-			let gy = (oy*H)/GRIDSIZE;
+			let gy = (oy*H)/GRIDSIZE - 3;
 
 			for(var y=0; y<MAP.length; y++){
 				for(var x=0; x<MAP[y].length; x++){
@@ -318,12 +327,13 @@ window.FollicleFrenzyGame = function(){
 					let dy = Math.abs(gy-y);
 					let d = Math.sqrt(dx*dx + dy*dy);
 					if(d<2.5){
-						state[y][x] = ' ';
-						let $hair = self.$el.find('folliclehair[x='+x+'][y='+y+']');
-						if(!$hair.hasClass('dead')){
+						if(state[y][x] == '0'){
+							state[y][x] = ' ';
 							let rx = - 100 + Math.random()*200;
+							let $hair = self.$el.find('folliclehair[x='+x+'][y='+y+']');
 							$hair.addClass('dead');
 							$hair.animate({ top:-50, left:rx*0.1 },200).animate({top:1000,left:rx },1000);
+							cntShaver = FPS/2;
 						}
 					}
 				}
@@ -437,6 +447,7 @@ window.FollicleFrenzyGame = function(){
 	function initGame(count){
 
 		audio.play('music');
+		audio.play('shaver');
 
 		for(let i=0; i<count; i++){
 			meeps[i] = new FollicleMeep(i);
@@ -480,7 +491,6 @@ window.FollicleFrenzyGame = function(){
 			meeps[n].toForeground(true);
 		}
 
-
 		setTimeout(function(){
 			hud.initTimer(20,finiRound);
 		},2000);
@@ -490,11 +500,17 @@ window.FollicleFrenzyGame = function(){
 
 		hud.finiTimer();
 
+		audio.play('sequence',true);
+
 		for(var i=0; i<rangeRound; i++){
 			let n = iRound*2+i;
 			meeps[n].evaluate(goal);
 			meeps[n].setEnabled(false);
 		}
+
+		setTimeout(function(){
+			audio.play('correct',true);
+		},1000);
 
 		setTimeout(function(){
 			for(var i=0; i<rangeRound; i++){
@@ -558,6 +574,8 @@ window.FollicleFrenzyGame = function(){
 	let speed = 0.05;
 	function step(){
 		resize();
+		cntShaver--;
+		if(cntShaver<0) cntShaver = 0;
 		for(var m in meeps){
 			meeps[m].redraw();
 
@@ -565,6 +583,8 @@ window.FollicleFrenzyGame = function(){
 				left: meeps[m].wall*W + meeps[m].x + 'px',
 			})*/
 		}
+
+		audio.setVolume('shaver',cntShaver/FPS);
 	}
 
 	setInterval(step,1000/FPS);
