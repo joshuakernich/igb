@@ -4,6 +4,7 @@ window.BoomChainGame = function(){
 	const H = 1000;
 	const FPS = 50;
 	const BALL = 100;
+	const ASPLODE = 500;
 
 	let audio = new AudioContext();
 	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
@@ -29,7 +30,7 @@ window.BoomChainGame = function(){
 					display: block;
 					inset: 0px;
 					bottom: 100px;
-					background: #0F677B;
+					background: rgba(15, 103, 123, 0.2);
 					transform-origin: bottom center;
 					transform: rotateX(50deg);
 					transform-style: preserve-3d;
@@ -43,8 +44,7 @@ window.BoomChainGame = function(){
 					transform-style: preserve-3d;
 				}
 
-				boomballcontainer:before{
-					content:"";
+				boomshadow{
 					position: absolute;
 					display: block;
 					width: ${BALL}px;
@@ -86,6 +86,23 @@ window.BoomChainGame = function(){
 					border: 20px solid rgba(0,0,0,0.2);
 					top: 20%;
 				}
+
+				boomlayer{
+					display: block;	
+					position: absolute;
+					background: radial-gradient(transparent, red);
+
+					transform: translate(-50%, -50%);
+					border-radius: 100%;
+					transform-style: preserve-3d;
+
+					pointer-events: none;
+				}
+
+				boomlayer:first-of-type{
+					box-sizing: border-box;
+					border: 20px solid red;
+				}
 		</style>`)
 	}
 
@@ -93,9 +110,11 @@ window.BoomChainGame = function(){
 		let self = this;
 		self.$el = $('<boomballcontainer>');
 
+		let $shadow = $('<boomshadow>').appendTo(self.$el);
 		let $ball = $('<boomball>').appendTo(self.$el);
 		let $inner = $('<boomballinner>').appendTo($ball);
 
+		self.asploded = false;
 		self.px = 1.5;
 		self.py = 0.5;
 
@@ -116,8 +135,38 @@ window.BoomChainGame = function(){
 			})
 
 			$inner.css({		
-				transform: 'rotate('+self.px*W+'deg)',
+				transform: 'rotate('+(self.px*W*2)+'deg)',
 			})
+		}
+
+		const LAYERS = 1;
+		const BOOM = 200;
+		self.boom = function(doSpreadCallback){
+
+			self.asploded = true;
+			self.sx = 0;
+			self.sy = 0;
+
+			self.$el.empty().off();
+
+			for(var i=0; i<LAYERS; i++){
+				let $boom = $('<boomlayer>').appendTo(self.$el);
+				let y =  Math.sin(i/LAYERS * Math.PI/2);
+				let size = Math.sin(Math.PI/2 + i/LAYERS * Math.PI/2);
+				$boom.css({
+					width: 0,
+					height: 0,
+					'transform':'translate(-50%, -50%) translateZ('+y*ASPLODE/2+'px)',
+				}).animate({
+					width: size*ASPLODE + 'px',
+					height: size*ASPLODE + 'px',
+				},{
+					duration:200,
+					complete:function(){doSpreadCallback(self)},
+				}).delay(200).animate({
+					opacity: 0,
+				})
+			}
 		}
 	}
 
@@ -142,16 +191,30 @@ window.BoomChainGame = function(){
 			balls[i].px = 0.1 + Math.random() * 2.8;
 			balls[i].py =  0.1 + Math.random() * 0.8;
 			balls[i].$el.appendTo($stage);
+			balls[i].$el.click(onBall).attr('n',i);
 		}
 
-		balls[0].px = 1.4;
-		balls[1].px = 1.6;
-		balls[0].py = 0.48
-		balls[1].py = 0.52;
+		hud.initBanner('Tap one ball');
+	}
 
-		balls[0].sx = balls[0].speed;
-		balls[1].sx = -balls[1].speed;
-		balls[0].sy = balls[1].sy = 0;
+	function onBall(){
+		hud.finiBanner();
+		let n = parseInt( $(this).attr('n') );
+		balls[n].boom(doSpread);
+	}
+
+	function doSpread(from){
+		for(var b in balls){
+			if(balls[b] != from && !balls[b].asploded){
+				let dx = (from.px - balls[b].px)*W;
+				let dy = (from.py - balls[b].py)*H;
+				let d = Math.sqrt(dx*dx+dy*dy);
+				if(d < (ASPLODE/2 + BALL/2)){
+					balls[b].boom(doSpread);
+				}
+			}
+		}
+		
 	}
 
 	initGame(6);
@@ -169,7 +232,7 @@ window.BoomChainGame = function(){
 
 			for(var b in balls){
 
-				if(b != a){
+				if(b != a && !balls[a].asploded && !balls[b].asploded){
 					let dx = (balls[a].px - balls[b].px)*W;
 					let dy = (balls[a].py - balls[b].py)*H;
 					let d = Math.sqrt(dx*dx+dy*dy);
