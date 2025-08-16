@@ -212,6 +212,7 @@ window.BowlingGame = function(){
 					transform: rotateX(-85deg);	
 					width: 0px;
 					height: 0px;
+					transform-style: preserve-3d;
 				}
 
 				bowlingballinner{
