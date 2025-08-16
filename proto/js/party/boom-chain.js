@@ -30,11 +30,10 @@ window.BoomChainGame = function(){
 					display: block;
 					inset: 0px;
 					bottom: 100px;
-					background: rgba(15, 103, 123, 0.2);
+					background: rgba(0,0,0,0.2);
 					transform-origin: bottom center;
 					transform: rotateX(50deg);
 					transform-style: preserve-3d;
-
 					box-shadow: inset 0px 30px rgba(0,0,0,0.5), inset -20px 0px rgba(0,0,0,0.5), inset 20px 0px rgba(0,0,0,0.5);
 				}
 
@@ -102,6 +101,26 @@ window.BoomChainGame = function(){
 				boomlayer:first-of-type{
 					box-sizing: border-box;
 					border: 20px solid red;
+				}
+
+				boomscores{
+					position: absolute;
+					display: block;
+					text-align: center;
+					inset: 0px;
+					line-height: ${H}px;
+					opacity: 0.2;
+				}
+
+				boomscore{
+					display: inline-block;
+					width: ${W/7}px;
+					color: white;
+					font-size: 150px;
+				}
+
+				boomscore.active{
+					font-size: ${H}px;
 				}
 		</style>`)
 	}
@@ -175,6 +194,10 @@ window.BoomChainGame = function(){
 
 	let $game = $('<boomchaingame>').appendTo(self.$el);
 	let $stage = $('<boomstage>').appendTo($game);
+	let $scoreContainer = $('<boomscores>').appendTo($stage);
+	let scores = [];
+	let $scores = [];
+	
 
 	let hud = new PartyHUD('#F49B29');
 	hud.$el.appendTo($game);
@@ -186,6 +209,25 @@ window.BoomChainGame = function(){
 	let balls = [];
 	function initGame(count) {
 		countPlayers = count;
+		
+		for(var i=0; i<count; i++){
+			scores[i] = 0;
+			$scores[i] = $('<boomscore>').appendTo($scoreContainer).text(VOLUME).hide();
+		}
+
+		initNextPlayer();
+	}
+
+	let nPlayer = -1;
+	function initNextPlayer(){
+		nPlayer++;
+
+		$stage.empty();
+		for(var s in $scores) $scores[s].hide().removeClass('active');
+
+		$scores[nPlayer].show().addClass('active').text("0");
+		$scoreContainer.appendTo($stage);
+
 		for(var i=0; i<VOLUME; i++){
 			balls[i] = new BoomBall();
 			balls[i].px = 0.1 + Math.random() * 2.8;
@@ -197,24 +239,46 @@ window.BoomChainGame = function(){
 		hud.initBanner('Tap one ball');
 	}
 
+	let timeout;
 	function onBall(){
 		hud.finiBanner();
 		let n = parseInt( $(this).attr('n') );
-		balls[n].boom(doSpread);
+		for(var b in balls) balls[b].$el.off();
+		initBoom(n);
 	}
 
 	function doSpread(from){
+
 		for(var b in balls){
 			if(balls[b] != from && !balls[b].asploded){
 				let dx = (from.px - balls[b].px)*W;
 				let dy = (from.py - balls[b].py)*H;
 				let d = Math.sqrt(dx*dx+dy*dy);
-				if(d < (ASPLODE/2 + BALL/2)){
-					balls[b].boom(doSpread);
-				}
+
+				if(d < (ASPLODE/2 + BALL/2)) initBoom(b);
 			}
 		}
-		
+	}
+
+	function initBoom(b){
+		balls[b].boom(doSpread);
+		scores[nPlayer]++;
+		$scores[nPlayer].text(scores[nPlayer]);
+
+		clearTimeout(timeout);
+		timeout = setTimeout(finiBoom,2000);
+	}
+
+	function finiBoom(){
+		hud.initBanner('Nice!');
+
+		setTimeout(function(){
+			hud.finiBanner();
+		},2000);
+
+		setTimeout(function(){
+			initNextPlayer();
+		},4000);
 	}
 
 	initGame(6);
