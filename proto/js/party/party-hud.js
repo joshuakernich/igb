@@ -234,6 +234,7 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 					left: auto;
 					display: inline-block;
 					margin: 0px 20px;
+
 				}
 
 				hudsummonlist.in partymeephead{
@@ -401,17 +402,21 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 
 		new PartyMeep(0);
 
-		let $listIn = $('<hudsummonlist class="in">');
-		let $listOut = $('<hudsummonlist class="out">');
-		for(var a in arrIn) new PartyMeepHead(arrIn[a]).$el.appendTo($listIn);
-		for(var a in arrOut) new PartyMeepHead(arrOut[a]).$el.appendTo($listOut);
-
-		$('<h2>').text('STEP FORWARD').appendTo($listIn);
-		$('<h2>').text('STEP BACK').appendTo($listOut);
-
 		$banner.empty();
-		$banner.append($listIn);
-		$banner.append($listOut);
+
+		if(arrIn && arrIn.length){
+			let $listIn = $('<hudsummonlist class="in">');
+			for(var a in arrIn) new PartyMeepHead(arrIn[a]).$el.appendTo($listIn);
+			$('<h2>').text('STEP FORWARD').appendTo($listIn);
+			$banner.append($listIn);
+		}
+
+		if(arrOut && arrOut.length){
+			let $listOut = $('<hudsummonlist class="out">');
+			for(var a in arrOut) new PartyMeepHead(arrOut[a]).$el.appendTo($listOut);
+			$('<h2>').text('STEP BACK').appendTo($listOut);
+			$banner.append($listOut);
+		}
 	}
 
 	self.redraw = function(sec=0){

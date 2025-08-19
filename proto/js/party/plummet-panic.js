@@ -5,6 +5,9 @@ window.PlummetPanicGame = function() {
 	const FPS = 50;
 	const MAXCOIN = 15;
 
+	const PLAYERS_PER_ROUND = 3;
+	const STOMPS_PER_SWAP = 5;
+
 
 	const LEVEL = {
 		SEG:8,
@@ -340,6 +343,7 @@ window.PlummetPanicGame = function() {
 	let scrollSpeed = 0;
 	let scroll = 0;
 	let isGoTime = false;
+	let iStomp = -1;
 
 	function screenshake(){
 
@@ -365,6 +369,8 @@ window.PlummetPanicGame = function() {
 		for(var m=0; m<count; m++){
 			meeps[m] = new PlummetMeep(m);
 			tower.add(meeps[m],-1);
+
+			if(m >= PLAYERS_PER_ROUND)  meeps[m].$el.hide();
 		}
 
 		setTimeout( initIntro, 2000 );
@@ -399,7 +405,7 @@ window.PlummetPanicGame = function() {
 		setTimeout(stomp,5000);
 	}
 
-	let iStomp = -1;
+	
 	function stomp(){
 		scrollSpeed = 0;
 		iStomp++;
@@ -420,10 +426,55 @@ window.PlummetPanicGame = function() {
 		},{
 			duration: 500,
 			start:function(){
-				if(iStomp==0) initReady();
+				if(iStomp%STOMPS_PER_SWAP==0) initPlayerSwap();
 				else initScroll();
 			},
 		})
+	}
+
+	let iPlayerSwap = -1;
+	iPlayerSwap = 3;
+	function initPlayerSwap(){
+
+		if(meeps.length <= PLAYERS_PER_ROUND && iStomp != 0){
+			initScroll();
+		} else {
+			iPlayerSwap++;
+
+			for(var m in meeps){
+				meeps[m].$el.hide();
+				meeps[m].isLive = false;
+			}
+
+			let meepsIn = [];
+			let meepsOut = [];
+			for(var i=0; i<meeps.length; i++){
+				let n = (iPlayerSwap + i)%meeps.length;
+
+				let a = (iPlayerSwap%meeps.length);
+				let b = (iPlayerSwap + PLAYERS_PER_ROUND)%meeps.length;
+
+				let min = Math.min(a,b);
+				let max = Math.max(a,b);
+
+				if(n>=min && n<max)
+				{
+					meeps[n].$el.show();
+					meeps[n].isLive = true;
+					meeps[n].diedAtLevel = -1;
+					if( meeps[n].level.iLevel < iStomp ) tower.add(meeps[n], iStomp);
+					meepsIn.push(n);
+				} else {
+					meepsOut.push(n);
+				}
+			}
+
+
+			hud.summonPlayers(meepsIn,meepsOut);
+
+			setTimeout(hud.finiBanner, 3000);
+			setTimeout(initScroll, 5000);
+		}
 	}
 
 	function initReady(){
@@ -474,7 +525,7 @@ window.PlummetPanicGame = function() {
 		for(var m in meeps) meeps[m].step();
 		for(var m in meeps){
 			// test for plummet
-			if( meeps[m].diedAtLevel==-1 && meeps[m].altitude == 0 && meeps[m].level ){
+			if( meeps[m].isLive && meeps[m].diedAtLevel==-1 && meeps[m].altitude == 0 && meeps[m].level ){
 
 				let isSegSolid = meeps[m].level.isSegSolid( meeps[m].iSeg );
 				if(!isSegSolid){
