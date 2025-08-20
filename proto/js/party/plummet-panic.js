@@ -339,6 +339,7 @@ window.PlummetPanicGame = function() {
 
 	hud.initPlayerCount(initGame);
 
+
 	let meeps = [];
 	let scrollSpeed = 0;
 	let scroll = 0;
@@ -433,13 +434,16 @@ window.PlummetPanicGame = function() {
 	}
 
 	let iPlayerSwap = -1;
-	iPlayerSwap = 3;
+
 	function initPlayerSwap(){
 
 		if(meeps.length <= PLAYERS_PER_ROUND && iStomp != 0){
 			initScroll();
 		} else {
 			iPlayerSwap++;
+
+			let a = (iPlayerSwap%meeps.length);
+			let b = (iPlayerSwap + PLAYERS_PER_ROUND-1);
 
 			for(var m in meeps){
 				meeps[m].$el.hide();
@@ -448,29 +452,23 @@ window.PlummetPanicGame = function() {
 
 			let meepsIn = [];
 			let meepsOut = [];
-			for(var i=0; i<meeps.length; i++){
-				let n = (iPlayerSwap + i)%meeps.length;
+			for(var i=a; i<=b; i++){
 
-				let a = (iPlayerSwap%meeps.length);
-				let b = (iPlayerSwap + PLAYERS_PER_ROUND)%meeps.length;
+				let n = i%meeps.length;
 
-				let min = Math.min(a,b);
-				let max = Math.max(a,b);
+				meeps[n].$el.show();
+				meeps[n].isLive = true;
+				meeps[n].diedAtLevel = -1;
 
-				if(n>=min && n<max)
-				{
-					meeps[n].$el.show();
-					meeps[n].isLive = true;
-					meeps[n].diedAtLevel = -1;
-					if( meeps[n].level.iLevel < iStomp ) tower.add(meeps[n], iStomp);
-					meepsIn.push(n);
-				} else {
-					meepsOut.push(n);
-				}
+				if( meeps[n].level.iLevel < iStomp ) tower.add(meeps[n], iStomp);
+				meepsIn.push(n);
 			}
 
+			for(var i=0; i<meeps.length; i++) if(meepsIn.indexOf(i) == -1) meepsOut.push(i);
 
-			hud.summonPlayers(meepsIn,meepsOut);
+
+			if (iPlayerSwap == 0 ) hud.summonPlayers(meepsIn,meepsOut);
+			else hud.swapPlayers( (iPlayerSwap-1)%meeps.length, (iPlayerSwap+PLAYERS_PER_ROUND-1)%meeps.length );
 
 			setTimeout(hud.finiBanner, 3000);
 			setTimeout(initScroll, 5000);

@@ -27,6 +27,8 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 	audio.add('tick','./proto/audio/party/sfx-tick.mp3',0.3);
 	audio.add('tock','./proto/audio/party/sfx-tock.mp3',0.3);
 
+	new PartyMeep(0);
+
 	if(!PartyHUD.didInit){
 		PartyHUD.didInit = true;
 
@@ -137,6 +139,8 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 					margin: 0px 10px;
 				}
 
+				
+
 				partyhudtimer{
 					width: 150px;
 					height: 90px;
@@ -223,6 +227,29 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 					margin: 0px 40px;
 				}
 
+				hudswaplist{
+					display: inline-block;
+					line-height: 80px;
+					position: absolute;
+					top: 50%;
+					left: 50%;
+				}
+
+				hudswaplist h1{
+					position: absolute;
+					left: -100px;
+					right: -100px;
+					top: 50px;
+					font-size: 50px;
+				}
+
+				hudswaplist partymeephead{
+					position: absolute;
+					left: auto;
+					display: inline-block;
+					transform: translate(-50%,-50%);
+				}
+
 				hudsummonplayer{
 					display: inline-block;
 					position: relative;
@@ -289,9 +316,21 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 	let $banner = $(`<partyhudbanner style="background:${colour};">`).appendTo(self.$el);
 	let $debugRight = $('<partydebug>').appendTo(self.$el);
 
-	function setBanner(b){
-		if(b) $banner.css({top:'100%'}).animate({top:'5%'}).animate({top:'10%'});
-		else $banner.animate({top:'20%'}).animate({top:'-40%'});
+	function setBanner(b,isTransparent){
+
+		let location = isTransparent?200:175;
+
+		if(b){
+			$banner.css({top:'100%'}).animate({top:location-50+'px'}).animate({location:100+'px'});
+		} else {
+			let isAtPos = $banner.css('top');
+			$banner.animate({top:isAtPos+50+'px'}).animate({top:'-40%'});
+		}
+
+		if( b ) $banner.css({
+			'background':isTransparent?'transparent':colour,
+			'box-shadow':isTransparent?'none':''
+		});
 	}
 
 	self.initPlayerCount = function(callback){
@@ -400,8 +439,6 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 	self.summonPlayers = function( arrIn, arrOut ){
 		setBanner(true);
 
-		new PartyMeep(0);
-
 		$banner.empty();
 
 		if(arrIn && arrIn.length){
@@ -417,6 +454,43 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 			$('<h2>').text('STEP BACK').appendTo($listOut);
 			$banner.append($listOut);
 		}
+	}
+
+	const RADIUS = 60;
+	self.swapPlayers = function(nIn,nOut){
+
+		setBanner(true,true);
+
+		$banner.empty();
+		let $swap = $('<hudswaplist>').appendTo($banner);
+		let $in = new PartyMeepHead(nIn).$el.appendTo($swap);
+		let $out = new PartyMeepHead(nOut).$el.appendTo($swap);
+		$('<h1>').appendTo($swap).text('SWAP');
+
+		let anim = {r:0,p:0};
+
+		function redraw(){
+			$out.css({
+				left:Math.cos(anim.r) * RADIUS,
+				top:Math.sin(anim.r) * RADIUS,
+				'transform':'translate(-50%, -50%) scale('+(0.5 + anim.p*0.5)+')',
+			});
+			$in.css({
+				left:Math.cos(anim.r) * -RADIUS,
+				top:Math.sin(anim.r) * -RADIUS,
+				'transform':'translate(-50%, -50%) scale('+(1 - anim.p*0.5)+')',
+			})
+		}
+
+		redraw();
+
+		$(anim).delay(1000).animate({ r:Math.PI, p:1 },{
+			duration: 1000,
+			step:redraw		
+		})
+
+		//$in.css({top:0,left:100}).delay(1000).animate({left:-100,top:0});
+		//$out.css({top:0,left:-100}).delay(1000).animate({left:100,top:0});
 	}
 
 	self.redraw = function(sec=0){
