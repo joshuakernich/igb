@@ -8,12 +8,41 @@ window.PlummetPanicGame = function() {
 	const PLAYERS_PER_ROUND = 3;
 	const STOMPS_PER_SWAP = 5;
 
+	const STRUCTURE = [
+		undefined,
+		undefined,
+		[
+			{players:[0,1],levels:10},
+			{players:[0,1],levels:30}
+		],
+		[
+			{players:[0,1,2],levels:10},
+			{players:[0,1,2],levels:30}
+		],
+		[
+			{players:[0,1,2,3],levels:10},
+			{players:[0,1,2,3],levels:30}
+		],
+		[
+			{players:[0,1,2],levels:10},
+			{players:[3,4,0],levels:10},
+			{players:[1,2,3],levels:10},
+			{players:[4,0,1],levels:10},
+			{players:[2,3,4],levels:10},
+		],
+		[
+			{players:[0,1,2],levels:10},
+			{players:[3,4,5],levels:10},
+			{players:[0,2,4],levels:20},
+			{players:[1,3,5],levels:20},
+		],
+
+	]
 
 	const LEVEL = {
 		SEG:8,
 		W:W*0.7,
 		H:H*0.18,
-		COUNT:30,
 	};
 
 	if( !PlummetPanicGame.init ){
@@ -65,7 +94,7 @@ window.PlummetPanicGame = function() {
 				plummetseg{
 					display: inline-block;
 					width: ${LEVEL.W/LEVEL.SEG}px;
-					height: 50px;
+					height: 30px;
 					background: #CB9247;
 					box-shadow: 0px 2px 5px black;
 					position: relative;
@@ -155,6 +184,18 @@ window.PlummetPanicGame = function() {
 					border-top: 2px solid #DFBD69;
 				}
 
+				plummetscore{
+					display: block;
+					position: absolute;
+					left: -100px;
+					right: -100px;
+					bottom: 115px;
+					line-height: 60px;
+					font-size: 60px;
+					color: white;
+					z-index: 1;
+				}
+
 			</style>
 		`)
 	}
@@ -162,8 +203,6 @@ window.PlummetPanicGame = function() {
 	let audio = new AudioContext();
 	audio.add('music','./proto/audio/party/music-creeping.mp3',0.3,true);
 	audio.add('crush','./proto/audio/party/sfx-crush.mp3',0.3);
-
-	
 
 	const PlummetLevel = function(nLevel,isFloor){
 
@@ -180,6 +219,10 @@ window.PlummetPanicGame = function() {
 		let nGapB = nGapA + 1 + Math.floor( Math.random() * (LEVEL.SEG-nGapA-1) );
 
 		if(isFloor) nGapA = nGapB = -1;
+		if(Math.random()>0.5){
+			if(Math.random()>0.5) nGapB = -1;
+			else nGapA = -1;
+		}
 
 		for(var i=0; i<LEVEL.SEG; i++){
 
@@ -230,7 +273,7 @@ window.PlummetPanicGame = function() {
 		}
 	}
 
-	const PlummetTower = function(){
+	const PlummetTower = function( countLevel ){
 		let self = this;
 		self.$el = $('<plummettower>');
 
@@ -239,8 +282,8 @@ window.PlummetPanicGame = function() {
 		let levels = [];
 		let iPummel = -1;
 
-		for(var i=0; i<LEVEL.COUNT; i++){
-			let level = new PlummetLevel(i,i==LEVEL.COUNT-1);
+		for(var i=0; i<countLevel; i++){
+			let level = new PlummetLevel(i,i==countLevel-1);
 			level.$el.appendTo(self.$el);
 			levels[i] = level;
 		}
@@ -274,8 +317,11 @@ window.PlummetPanicGame = function() {
 		meep.$el.css({
 			left: '0px',
 			bottom: '0px',
-			transform: 'scale(0.35)',
+			transform: 'scale(0.32)',
 		})
+
+		let $score = $('<plummetscore>').appendTo(self.$el).text('');
+
 
 		meep.$shadow.hide();
 
@@ -284,9 +330,11 @@ window.PlummetPanicGame = function() {
 		self.altitude = LEVEL.H;
 		self.iSeg = 0;
 
-		self.isLive = true;
+		self.isLive = false;
 		self.diedAtLevel = -1;
 		self.pxRigged = 0;
+
+		self.score = 0;
 
 		self.step = function () {
 			if( self.altitude>0 ){
@@ -321,6 +369,20 @@ window.PlummetPanicGame = function() {
 			self.redraw();
 		}
 
+		self.doScoreUp = function(){
+			self.score++;
+			$score.text(self.score).css({
+				opacity:1,
+			}).delay(500).animate({
+				opacity:0,
+			})
+		}
+
+		self.showScore = function(b){
+			if(b) $score.text(self.score).css({opacity:1});
+			else $score.hide();
+		}
+
 		self.redraw();
 	}
 
@@ -329,16 +391,13 @@ window.PlummetPanicGame = function() {
 
 	let $game = $('<plummetpanicgame>').appendTo(self.$el);
 
-	let tower = new PlummetTower();
-	tower.$el.appendTo($game);
+	let tower;
 
 	let $foot = $('<plummetfoot>').appendTo($game);
 
 	let hud = new PartyHUD('#7399C5');
 	hud.$el.appendTo($game);
-
 	hud.initPlayerCount(initGame);
-
 
 	let meeps = [];
 	let scrollSpeed = 0;
@@ -369,18 +428,74 @@ window.PlummetPanicGame = function() {
 
 		for(var m=0; m<count; m++){
 			meeps[m] = new PlummetMeep(m);
-			tower.add(meeps[m],-1);
-
-			if(m >= PLAYERS_PER_ROUND)  meeps[m].$el.hide();
 		}
 
-		setTimeout( initIntro, 2000 );
+		setTimeout( initNextRound, 2000 );
+	}
+
+	let iRound = -1;
+
+	function initNextRound(){
+
+		if(tower) tower.$el.remove();
+
+		scroll = 0;
+		iStomp = -1;
+
+		iRound++;
+
+		let round = STRUCTURE[meeps.length][iRound];
+
+		tower = new PlummetTower(round.levels);
+
+		for(var p in round.players){
+			let m = round.players[p];
+			meeps[m].isLive = true;
+			meeps[m].diedAtLevel=-1;
+			meeps[m].altitude = 0;
+			tower.add(meeps[m], -1);
+		}
+
+		tower.$el.appendTo($game).css({
+			top: '100%',
+		}).animate({
+			top: '0px',
+		})
+
+		let meepsOut = [];
+		for(var i=0; i<meeps.length; i++){
+			if(round.players.indexOf(i)==-1) meepsOut.push(i);
+		}
+
+		setTimeout(function(){
+			hud.initRound('Round '+(iRound+1), iRound, STRUCTURE[meeps.length].length );
+		},1000);
+
+		setTimeout(function(){
+			hud.finiBanner();
+		},3000);
+
+		setTimeout(function(){
+			hud.summonPlayers(round.players,meepsOut);
+		},5000);
+
+		setTimeout(function(){
+			hud.finiBanner();
+		},7000);
+
+		setTimeout(function(){
+			initIntro();
+		},9000);
 	}
 
 	function initIntro() {
-		for(let m in meeps){
+		for(var p in STRUCTURE[meeps.length][iRound].players){
+
+			let m = STRUCTURE[meeps.length][iRound].players[p];
+
 			meeps[m].isLive = false;
 			meeps[m].pxRigged = meeps[m].px;
+			
 
 			let dx = Math.abs(meeps[m].pxRigged - 0.8);
 
@@ -427,15 +542,14 @@ window.PlummetPanicGame = function() {
 		},{
 			duration: 500,
 			start:function(){
-				if(iStomp%STOMPS_PER_SWAP==0) initPlayerSwap();
-				else initScroll();
+				initScroll();
 			},
 		})
 	}
 
 	let iPlayerSwap = -1;
 
-	function initPlayerSwap(){
+	/*function initPlayerSwap(){
 
 		if(meeps.length <= PLAYERS_PER_ROUND && iStomp != 0){
 			initScroll();
@@ -466,14 +580,13 @@ window.PlummetPanicGame = function() {
 
 			for(var i=0; i<meeps.length; i++) if(meepsIn.indexOf(i) == -1) meepsOut.push(i);
 
-
 			if (iPlayerSwap == 0 ) hud.summonPlayers(meepsIn,meepsOut);
 			else hud.swapPlayers( (iPlayerSwap-1)%meeps.length, (iPlayerSwap+PLAYERS_PER_ROUND-1)%meeps.length );
 
 			setTimeout(hud.finiBanner, 3000);
 			setTimeout(initScroll, 5000);
 		}
-	}
+	}*/
 
 	function initReady(){
 		hud.initBanner('Ready...');
@@ -502,18 +615,19 @@ window.PlummetPanicGame = function() {
 	self.step = function(){
 		resize();
 
+		if(!tower) return;
+
 		if(scrollSpeed){
 			scroll += scrollSpeed;
 			let iScroll = Math.floor( scroll/LEVEL.H );
-			if(iScroll>=LEVEL.COUNT){
-				initFinale('Finish!');
-				
+			if(iScroll>=STRUCTURE[meeps.length][iRound].levels){
+				initFinale('Finish!');	
 			} else if(iScroll>iStomp){
 				stomp();
 			}
 		}
 
-		let scrollTarget = Math.min( scroll, LEVEL.H*(LEVEL.COUNT-3));
+		let scrollTarget = Math.min( scroll, LEVEL.H*(STRUCTURE[meeps.length][iRound].levels-3));
 		scrollDiff = scroll - scrollTarget;
 
 		tower.$el.css({
@@ -529,6 +643,7 @@ window.PlummetPanicGame = function() {
 				if(!isSegSolid){
 					let iLevel = meeps[m].level.iLevel; 
 					tower.add(meeps[m], iLevel+1);
+					meeps[m].doScoreUp();
 				} else {
 					meeps[m].sy = 0;
 				}
@@ -553,31 +668,44 @@ window.PlummetPanicGame = function() {
 		scrollSpeed = 0;
 		hud.initBanner(message);
 
-		setTimeout(function(){
+		if(STRUCTURE[meeps.length][iRound+1]){
+			setTimeout( hud.finiBanner, 2000 );
+			setTimeout( initNextRound, 4000 );
+		} else {
+			setTimeout( doScores, 2000 );
+		}
 
-			let map = [];
-			for(var m in meeps){
-				map[m] = { n:parseInt(m), progress:meeps[m].diedAtLevel==-1?LEVEL.COUNT:meeps[m].diedAtLevel };
-			}
+	}
 
-			map.sort(function(a,b){
-				return b.progress-a.progress;
-			});
 
-			let pos = 0;
-			for(var m=0; m<map.length; m++){
-				if(m>0 && map[m].progress < map[m-1].progress) pos++;
-				map[m].pos = pos;
-			}
+	function doScores(){
 
-			let scores = [];
-			for(var i=0; i<map.length; i++){
-				scores[map[i].n] = MAXCOIN - Math.ceil(map[i].pos/map.length*MAXCOIN);
-			}
+		let map = [];
+		for(var m in meeps){
+			map[m] = { 
+				n:parseInt(m), 
+				score:meeps[m].score,
+			};
+		}
 
-			self.fini();
-			window.doPartyGameComplete(scores);
-		},2000);
+		map.sort(function(a,b){
+			return b.score-a.score;
+		});
+
+		let pos = 0;
+		for(var m=0; m<map.length; m++){
+			if(m>0 && map[m].score < map[m-1].score) pos++;
+			map[m].pos = pos;
+		}
+
+		let scores = [];
+		for(var i=0; i<map.length; i++){
+			scores[map[i].n] = MAXCOIN - Math.ceil(map[i].pos/map.length*MAXCOIN);
+		}
+
+		self.fini();
+		window.doPartyGameComplete(scores);
+		
 	}
 
 	let scale = 1;
