@@ -411,8 +411,8 @@ window.PlummetPanicGame = function() {
 
 	let hud = new PartyHUD('#7399C5');
 	hud.$el.appendTo($game);
-	//hud.initPlayerCount(initGame);
-	hud.showFinalScores([1,2,3,4,5,6],[10,5,3,2,1,0])
+	hud.initPlayerCount(initGame);
+	//hud.showFinalScores([1,2,3,4,5,6],[10,5,3,2,1,0])
 
 	let meeps = [];
 	let scrollSpeed = 0;
@@ -690,25 +690,25 @@ window.PlummetPanicGame = function() {
 			meeps[m].showScore(true);
 		}
 
-		/*if(STRUCTURE[meeps.length][iRound+1]){
+		if(STRUCTURE[meeps.length][iRound+1]){
 			setTimeout( hud.finiBanner, 2000 );
 			setTimeout( initNextRound, 4000 );
 		} else {
 			setTimeout( doFinalScores, 2000 );
-		}*/
-
-		setTimeout( doFinalScores, 2000 );
+		}
 	}
 
 
 	function doFinalScores(){
 
+		let scores = [];
 		let map = [];
 		for(var m in meeps){
 			map[m] = { 
 				n:parseInt(m), 
 				score:meeps[m].score,
 			};
+			scores[m] = meeps[m].score;
 		}
 
 		map.sort(function(a,b){
@@ -721,9 +721,9 @@ window.PlummetPanicGame = function() {
 			map[m].pos = pos;
 		}
 
-		let scores = [];
+		let rewards = [];
 		for(var i=0; i<map.length; i++){
-			scores[map[i].n] = MAXCOIN - Math.ceil(map[i].pos/map.length*MAXCOIN);
+			rewards[map[i].n] = MAXCOIN - Math.ceil(map[i].pos/map.length*MAXCOIN);
 		}
 
 		tower.$el.hide();
@@ -743,7 +743,7 @@ window.PlummetPanicGame = function() {
 
 		setTimeout(function () {
 			self.fini();
-			window.doPartyGameComplete(scores);
+			window.doPartyGameComplete(rewards);
 		},3000)
 		
 		

@@ -26,6 +26,7 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 	let audio = new AudioContext();
 	audio.add('tick','./proto/audio/party/sfx-tick.mp3',0.3);
 	audio.add('tock','./proto/audio/party/sfx-tock.mp3',0.3);
+	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
 
 	new PartyMeep(0);
 
@@ -331,16 +332,18 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 					display: block;
 					position: absolute; 
 					bottom: 100px;
-					left: -60px;
-					right: -60px;
+					left: -80px;
+					right: -80px;
 					text-align: center;
 					color: white;
 					
-					font-size: 40px;
+					font-size: 60px;
 					border: 5px solid white;
 					background: #9B62E8; 
-					padding: 5px;
+					padding: 15px 0px 30px;
 					border-radius: 10px;
+					transform: rotate(-2deg);
+					line-height: 60px;
 				}
 			</style>
 			`);
@@ -447,7 +450,7 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 			meep.$el.css({
 				left: 100/3 + (100/3)*p + '%',
 				bottom: '-400px',
-			}).delay(s*100).animate({
+			}).delay(s*200).animate({
 				bottom: '150px',
 			},300).animate({
 				bottom: '50px',
@@ -459,12 +462,21 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 
 				setTimeout(function(){
 					$score.hide();
-				},1000);
+				},2000);
 
 				setTimeout(function(){
-					$reward.show().animate({bottom:'+=20px'},100).animate({bottom:'-=20px'},100)
-				},1000);
+					$reward.show().animate({bottom:'+=260px'},300).animate({bottom:'-=20px'},100);
+					audio.play('coin',true);
+				},2000);
 			}})
+
+			meep.$handLeft.delay(s*200 + 2500).animate({
+				top: '-10px',
+			},300).animate({top:'5px'},100);
+
+			meep.$handRight.delay(s*200 + 2500).animate({
+				top: '-10px',
+			},300).animate({top:'0px'},100);
 
 			meep.$shadow.hide();
 		}
