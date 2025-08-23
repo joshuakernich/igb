@@ -83,6 +83,20 @@ window.PlummetPanicGame = function() {
 					border-right: 50px solid #CB9247;
 				}
 
+				plummetlevel:last-of-type:before{
+					content:"";
+					display:block;
+					position:absolute;
+					right: 100px;
+					width: 100px;
+					bottom: 0px;
+					height: ${LEVEL.H*0.6}px;
+					background: rgba(0,0,0,0.3);
+					border: 10px solid #CB9247;
+					box-shadow: inset 0px 0px 5px black, 0px 0px 5px black;
+					border-bottom: none;
+				}
+
 				plummettower{
 					display: inline-block;
 					margin-top: ${LEVEL.H*2}px;
@@ -371,7 +385,7 @@ window.PlummetPanicGame = function() {
 
 		self.doScoreUp = function(){
 			self.score++;
-			$score.text(self.score).css({
+			$score.show().text(self.score).css({
 				opacity:1,
 			}).delay(500).animate({
 				opacity:0,
@@ -379,7 +393,7 @@ window.PlummetPanicGame = function() {
 		}
 
 		self.showScore = function(b){
-			if(b) $score.text(self.score).css({opacity:1});
+			if(b) $score.show().text(self.score).css({opacity:1});
 			else $score.hide();
 		}
 
@@ -397,7 +411,8 @@ window.PlummetPanicGame = function() {
 
 	let hud = new PartyHUD('#7399C5');
 	hud.$el.appendTo($game);
-	hud.initPlayerCount(initGame);
+	//hud.initPlayerCount(initGame);
+	hud.showFinalScores([1,2,3,4,5,6],[10,5,3,2,1,0])
 
 	let meeps = [];
 	let scrollSpeed = 0;
@@ -451,8 +466,10 @@ window.PlummetPanicGame = function() {
 		for(var p in round.players){
 			let m = round.players[p];
 			meeps[m].isLive = true;
-			meeps[m].diedAtLevel=-1;
+			meeps[m].diedAtLevel = -1;
 			meeps[m].altitude = 0;
+			meeps[m].level = undefined;
+			meeps[m].showScore(false);
 			tower.add(meeps[m], -1);
 		}
 
@@ -668,17 +685,23 @@ window.PlummetPanicGame = function() {
 		scrollSpeed = 0;
 		hud.initBanner(message);
 
-		if(STRUCTURE[meeps.length][iRound+1]){
+		for(var p in STRUCTURE[meeps.length][iRound].players){
+			let m = STRUCTURE[meeps.length][iRound].players[p];
+			meeps[m].showScore(true);
+		}
+
+		/*if(STRUCTURE[meeps.length][iRound+1]){
 			setTimeout( hud.finiBanner, 2000 );
 			setTimeout( initNextRound, 4000 );
 		} else {
-			setTimeout( doScores, 2000 );
-		}
+			setTimeout( doFinalScores, 2000 );
+		}*/
 
+		setTimeout( doFinalScores, 2000 );
 	}
 
 
-	function doScores(){
+	function doFinalScores(){
 
 		let map = [];
 		for(var m in meeps){
@@ -703,8 +726,26 @@ window.PlummetPanicGame = function() {
 			scores[map[i].n] = MAXCOIN - Math.ceil(map[i].pos/map.length*MAXCOIN);
 		}
 
-		self.fini();
-		window.doPartyGameComplete(scores);
+		tower.$el.hide();
+
+		/*clearInterval(interval);
+		for(var m=0; m<meeps.length; m++){
+			meeps[m].isLive = false;
+			meeps[m].$el.appendTo($game);
+			meeps[m].$el.css({
+				'left':W*1.5 + (-(meeps.length-1)/2 + m) * 150 + 'px',
+				'bottom':'0px',
+			})
+		}*/
+
+		hud.showFinalScores(scores,rewards);
+
+
+		setTimeout(function () {
+			self.fini();
+			window.doPartyGameComplete(scores);
+		},3000)
+		
 		
 	}
 

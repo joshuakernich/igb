@@ -306,6 +306,42 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 				partyhudpip[highlight='true']{
 					transform: scale(1);
 				}
+
+				partyhudlayer{
+					display: block;
+					position: absolute; 
+					inset: 0px;
+				}
+
+				hudmeepscore{
+					display: block;
+					position: absolute; 
+					bottom: 350px;
+					left: -100px;
+					right: -100px;
+					text-align: center;
+					color: white;
+					line-height: 150px;
+					font-size: 75px;
+				}
+
+
+
+				hudmeepreward{
+					display: block;
+					position: absolute; 
+					bottom: 100px;
+					left: -60px;
+					right: -60px;
+					text-align: center;
+					color: white;
+					
+					font-size: 40px;
+					border: 5px solid white;
+					background: #9B62E8; 
+					padding: 5px;
+					border-radius: 10px;
+				}
 			</style>
 			`);
 	}
@@ -315,6 +351,7 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 
 	let $banner = $(`<partyhudbanner style="background:${colour};">`).appendTo(self.$el);
 	let $debugRight = $('<partydebug>').appendTo(self.$el);
+	let $mg = $('<partyhudlayer>').appendTo(self.$el);
 
 	function setBanner(b,isTransparent){
 
@@ -397,9 +434,44 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 		setBanner(false);
 	}
 
+	self.showFinalScores = function(scores,rewards){
+		for(var s=0; s<scores.length; s++){
+			let meep = new PartyMeep(s);
+			meep.$el.appendTo($mg);
+			let p = 0.15 + 0.7/(scores.length-1) * s;
+			let pos = (100/3) + (100/3)*p;
+			
+			let $score = $('<hudmeepscore>').appendTo(meep.$el).text(scores[s]);
+			let $reward = $('<hudmeepreward>').appendTo(meep.$el).text('+ '+rewards[s]).hide();
+
+			meep.$el.css({
+				left: 100/3 + (100/3)*p + '%',
+				bottom: '-400px',
+			}).delay(s*100).animate({
+				bottom: '150px',
+			},300).animate({
+				bottom: '50px',
+			},{duration:200,complete:function(){
+				meep.setHeight(300);
+				setTimeout(function(){
+					meep.setHeight(350);
+				},200);
+
+				setTimeout(function(){
+					$score.hide();
+				},1000);
+
+				setTimeout(function(){
+					$reward.show().animate({bottom:'+=20px'},100).animate({bottom:'-=20px'},100)
+				},1000);
+			}})
+
+			meep.$shadow.hide();
+		}
+	}
+
 	self.addDebug = function(name,fn){
 		$('<button>').text(name).appendTo($debugRight).click(function(){
-			console.log('yo',fn);
 			fn();
 		});
 	}
