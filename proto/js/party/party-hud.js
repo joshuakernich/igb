@@ -420,7 +420,8 @@ window.PartyHUD = function( colour='#40B0ED', thicc=50 ){
 		clearInterval(interval);
 	}
 
-	self.initRound = function(msg,n,max){
+	self.initRound = function(n,max,msg=undefined){
+		if(msg==undefined) msg = 'Round '+(n+1);
 		self.initBanner(msg);
 		let $pips = $('<partyhudpips>').appendTo($banner);
 		for(var i=0; i<max; i++){

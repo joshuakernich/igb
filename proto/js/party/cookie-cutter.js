@@ -9,20 +9,21 @@ window.CookieCutterGame = function(){
 
 	const GRID = {W:W/GRIDSIZE,H:TRACKLENGTH};
 
+
 	const STRUCTURE = [
 		undefined,
 		undefined,
 		[
-			{players:[0,1],levels:10},
-			{players:[0,1],levels:30}
+			{players:[0,1],levels:5},
+			{players:[0,1],levels:10}
 		],
 		[
-			{players:[0,1,2],levels:10},
-			{players:[0,1,2],levels:30}
+			{players:[0,1,2],levels:5},
+			{players:[0,1,2],levels:10}
 		],
 		[
-			{players:[0,1,2,3],levels:10},
-			{players:[0,1,2,3],levels:30}
+			{players:[0,1,2,3],levels:5},
+			{players:[0,1,2,3],levels:10}
 		],
 		[
 			{players:[0,1,2],levels:10},
@@ -32,10 +33,10 @@ window.CookieCutterGame = function(){
 			{players:[2,3,4],levels:10},
 		],
 		[
-			{players:[0,1,2],levels:10},
-			{players:[3,4,5],levels:10},
-			{players:[0,2,4],levels:20},
-			{players:[1,3,5],levels:20},
+			{players:[0,1,2],levels:5},
+			{players:[3,4,5],levels:5},
+			{players:[0,2,4],levels:10},
+			{players:[1,3,5],levels:10},
 		],
 
 	]
@@ -286,7 +287,7 @@ window.CookieCutterGame = function(){
 		}
 
 		setTimeout(function(){
-			hud.initRound('Round '+(iRound+1), iRound, STRUCTURE[meeps.length].length);
+			hud.initRound(iRound, STRUCTURE[meeps.length].length);
 		},2000);
 
 		setTimeout(function(){

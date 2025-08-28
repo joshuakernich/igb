@@ -254,7 +254,7 @@ window.HeadersGame = function(){
 					audio.play('bounce',true);
 					let nScore = (ball.px > W/2)?0:1;
 					meepsActive[nScore].score++;
-					meepsActive[nScore].$score.text(meepsActive[nScore].score);
+					meepsActive[nScore].$score.text(meepsActive[nScore].score).css({top:'7%',opacity:1}).delay(200).animate({top:'10%',opacity:0.2});
 					audio.play('cheer',true);
 					iTimeout = setTimeout(finiBall,1000);
 				}
@@ -357,14 +357,14 @@ window.HeadersGame = function(){
 	}
 
 	function initIntro(){
-		hud.initBanner('Ready!');
-		setTimeout(hud.finiBanner,2000);
+		hud.summonPlayers(MATCHUPS[countPlayer][iMatchup]);
+		setTimeout(hud.finiBanner,3000);
 		setTimeout(function(){
 			hud.initBanner('Go!');
 			hud.initTimer(30,finiMatchup);
-		},3000);
-		setTimeout(hud.finiBanner,4000);
-		setTimeout(initBall,5000);
+		},4000);
+		setTimeout(hud.finiBanner,6000);
+		setTimeout(initBall,7000);
 	}
 
 	hud.initPlayerCount(initGame);

@@ -408,7 +408,7 @@ window.CuppingBallsGame = function () {
 
 		iRound++;
 
-		hud.initRound('Round '+(iRound+1),iRound,ROUNDS.length);
+		hud.initRound(iRound,ROUNDS.length);
 
 		setTimeout(function(){
 			hud.finiBanner();

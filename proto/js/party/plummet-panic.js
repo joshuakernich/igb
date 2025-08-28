@@ -485,7 +485,7 @@ window.PlummetPanicGame = function() {
 		}
 
 		setTimeout(function(){
-			hud.initRound('Round '+(iRound+1), iRound, STRUCTURE[meeps.length].length );
+			hud.initRound(iRound, STRUCTURE[meeps.length].length );
 		},1000);
 
 		setTimeout(function(){

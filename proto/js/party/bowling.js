@@ -417,7 +417,7 @@ window.BowlingGame = function(){
 		meeps[nPlayer].ay = 0;
 		meeps[nPlayer].$el.show();
 
-		hud.initRound('Ball '+(nRound+1),nRound,2);
+		hud.initRound(nRound,2,'Ball '+(nRound+1));
 
 		setTimeout(function(){
 			hud.finiBanner();

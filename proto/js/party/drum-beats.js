@@ -10,6 +10,16 @@ window.DrumBeatsGame = function(){
 	const DRUMW = 150;
 	const BOUNCE = 0.7;
 
+	const STRUCTURE = [
+		undefined,
+		undefined,
+		[[0,1]],
+		[[0,1,2]],
+		[[0,1],[2,3]],
+		[[0,1,2],[3,4]],
+		[[0,1,2],[3,4,5]],
+	]
+
 	const SONG = {
 		track:'./proto/audio/party/music-beats.mp3',
 		bpm:90,
@@ -19,7 +29,6 @@ window.DrumBeatsGame = function(){
 			{ from:12, to:14, every:1 },
 			{ from:18, to:20, every:1 },
 			{ from:24, to:32, every:2 },
-
 			{ from:38, to:48, every:2 },
 			{ from:50, to:62, every:1 },
 			{ from:66, to:68, every:2 },
@@ -28,7 +37,7 @@ window.DrumBeatsGame = function(){
 	}
 
 	let bps = SONG.bpm / 60;
-
+ 
 	let beats = [];
 	for(var m in SONG.map){
 		for(var i=SONG.map[m].from; i<=SONG.map[m].to; i+=SONG.map[m].every){
@@ -51,13 +60,15 @@ window.DrumBeatsGame = function(){
 
 		let $ring = $('<drumring>').appendTo(self.$el);
 
-		let $armRight = $('<drumarm>').appendTo($ring).css({
+		let $arms =  $('<drumarms>').appendTo($ring);
+
+		/*let $armRight = $('<drumarm>').appendTo($ring).css({
 			transform: 'rotate('+(-Math.PI/2 + RADRANGE/2 - 0.1)+'rad)'
 		})
 
 		let $armLeft = $('<drumarm>').appendTo($ring).css({
 			transform: 'rotate('+(-Math.PI/2 - RADRANGE/2 + 0.1)+'rad)'
-		})
+		})*/
 
 		let meep = new PartyMeep(n);
 		meep.setHeight(350);
@@ -254,6 +265,20 @@ window.DrumBeatsGame = function(){
 
 				drumball[n='0'] drumsphere{ background:#333; }
 				drumball[n='1'] drumsphere{ background:#eee; }
+
+				drumarms{
+					display: block;
+					position: absolute;
+					width: ${RINGR}px;
+					height: ${RINGR}px;
+					left: ${-RINGR/2}px;
+					bottom: -30px;
+					
+					border-radius: 0px 0px 100% 100%;
+					border: 20px solid white;
+					border-top: none;
+					box-sizing: border-box;
+				}
 
 				drumarm{
 					display: block;
