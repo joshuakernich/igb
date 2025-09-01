@@ -10,46 +10,71 @@ window.DrumBeatsGame = function(){
 	const DRUMW = 150;
 	const BOUNCE = 0.7;
 
-	const STRUCTURE = [
-		undefined,
-		undefined,
-		[[0,1]],
-		[[0,1,2]],
-		[[0,1],[2,3]],
-		[[0,1,2],[3,4]],
-		[[0,1,2],[3,4,5]],
+	
+
+	const SONGS = [
+		{
+			track:'./proto/audio/party/music-beats-90.mp3',
+			bpm:90,
+			offset:0,
+			seconds:50,
+			map:[
+				{ from:2, to:8, every:2 },
+				{ from:12, to:14, every:1 },
+				{ from:18, to:20, every:1 },
+				{ from:24, to:32, every:2 },
+				{ from:38, to:48, every:2 },
+				{ from:50, to:62, every:1 },
+				{ from:66, to:68, every:2 },
+				{ from:72, to:72, every:1 },
+			]
+		},{
+			track:'./proto/audio/party/music-beats-120.mp3',
+			bpm:120,
+			offset:0,
+			seconds:73,
+			map:[
+				{ from:2, to:14, every:4 },
+				{ from:15, to:18, every:1 },
+				{ from:22, to:26, every:1 },
+				{ from:30, to:32, every:1 },
+				{ from:36, to:64, every:1 },
+				{ from:68, to:72, every:1 },
+				{ from:76, to:80, every:1 },
+				{ from:84, to:100, every:4 },
+				{ from:101, to:124, every:1 },
+				{ from:127, to:132, every:1 },
+				{ from:135, to:140, every:1 },
+			]
+		}
 	]
 
-	const SONG = {
-		track:'./proto/audio/party/music-beats.mp3',
-		bpm:90,
-		offset:0,
-		map:[
-			{ from:2, to:8, every:2 },
-			{ from:12, to:14, every:1 },
-			{ from:18, to:20, every:1 },
-			{ from:24, to:32, every:2 },
-			{ from:38, to:48, every:2 },
-			{ from:50, to:62, every:1 },
-			{ from:66, to:68, every:2 },
-			{ from:72, to:72, every:1 },
-		]
-	}
 
-	let bps = SONG.bpm / 60;
+	for(var s in SONGS){
+		SONGS[s].bps = SONGS[s].bpm / 60;
  
-	let beats = [];
-	for(var m in SONG.map){
-		for(var i=SONG.map[m].from; i<=SONG.map[m].to; i+=SONG.map[m].every){
-			beats.push({beat:i, lerp:2, nDrum:Math.floor( Math.random()*DRUMS )});
+		SONGS[s].beats = [];
+		for(var m in SONGS[s].map){
+			for(var i=SONGS[s].map[m].from; i<=SONGS[s].map[m].to; i+=SONGS[s].map[m].every){
+				SONGS[s].beats.push({beat:i, lerp:2, nDrum:Math.floor( Math.random()*DRUMS )});
+			}
 		}
 	}
 
+	const STRUCTURE = [
+		undefined,
+		undefined,
+		[{players:[0,1], song:SONGS[0]},{players:[0,1], song:SONGS[1]}],
+		[{players:[0,1,2], song:SONGS[0]},{players:[0,1,2], song:SONGS[1]}],
+		[{players:[0,1], song:SONGS[0]},{players:[2,3], song:SONGS[0]},{players:[0,1], song:SONGS[1]},{players:[2,3], song:SONGS[1]}],
+		[{players:[0,1,2], song:SONGS[0]},{players:[3,4], song:SONGS[0]},{players:[0,1,2], song:SONGS[1]},{players:[3,4], song:SONGS[1]}],
+		[{players:[0,1,2], song:SONGS[0]},{players:[3,4,5], song:SONGS[0]},{players:[0,1,2], song:SONGS[1]},{players:[3,4,5], song:SONGS[1]}],
+	]
+
+
 	let DrumMeep = function(n,ax){
 		let self = this;
-		self.$el = $('<drummeep>').css({
-			left: W + ax * W + 'px',
-		})
+		self.$el = $('<drummeep>');
 
 		self.score = 0;
 		self.ax = ax;
@@ -119,6 +144,11 @@ window.DrumBeatsGame = function(){
 					transform: 'rotate('+(r - pDist*0.8)+'rad)'
 				})
 			}
+
+			self.$el.css({
+				left: W + self.ax * W + 'px',
+			})
+
 			
 		}
 
@@ -398,37 +428,78 @@ window.DrumBeatsGame = function(){
 	hud.$el.appendTo($game);
 
 	let audio = new AudioContext()
-	audio.add('track',SONG.track,1);
 
 	function step(){
 
 		for(var m in meeps) meeps[m].update();
 
-		let timeCurrent = audio.getTime('track');
-		let beat = (timeCurrent-SONG.offset) * bps;
-		for(var b in balls) balls[b].step(beat);
-		for(var b in balls) balls[b].update();
+		if(round){
+
+			let timeCurrent = audio.getTime( round.song.track );
+			let beat = (timeCurrent-round.song.offset) * round.song.bps;
+			for(var b in balls) balls[b].step(beat);
+			for(var b in balls) balls[b].update();
+		}
+
+		hud.updatePlayers(meeps);
 
 		resize();
 	}
 
+	let nRound = -1;
+	let round;
+	function initNextRound(){
+		nRound++;
+		round = STRUCTURE[meeps.length][nRound];
+
+		audio.add(
+			round.song.track,
+			round.song.track,
+			1);
+
+		for(var p=0; p<round.players.length; p++){
+			let m = round.players[p];
+			meeps[m].ax = 0.22 + (1/(round.players.length-1) * p) * 0.56;
+			meeps[m].$el.animate({top:'65%'}).animate({top:'70%'});
+		}
+
+		hud.summonPlayers(round.players);
+		
+
+		setTimeout(function(argument) {
+			hud.finiBanner();
+		},2000);
+
+		setTimeout(function(argument) {
+			hud.initRound(nRound,STRUCTURE[meeps.length].length);
+		},3000);
+
+		setTimeout(function(argument) {
+			hud.finiBanner();
+			initRound();
+		},5000);
+	}
+
 	let balls = [];
 	function initRound(){
-		audio.play('track');
+		audio.play(round.song.track);
 
+		for(var b in round.song.beats){
 
+			let m =  round.players[b%round.players.length];
 
-		for(var b in beats){
-			balls[b] = new DrumBall(beats[b],meeps[b%meeps.length]);
+			balls[b] = new DrumBall(
+				round.song.beats[b],
+				meeps[m]
+			);
+
 			balls[b].$el.css({left:'50%'});
 			balls[b].$el.appendTo($game);
 			balls[b].step(0);
 			balls[b].update();
 		}
 
-
-
-		hud.initTimer(50,finiGame);
+		hud.initTimer(round.song.seconds,finiRound);
 	}
 
 	function finiRound(){
@@ -439,33 +510,60 @@ window.DrumBeatsGame = function(){
 	let meeps = [];
 	function initGame(COUNT=3){
 		for(var i=0; i<COUNT; i++){
-			meeps[i] = new DrumMeep(i,1/(COUNT+1) * (i+1));
+			meeps[i] = new DrumMeep(i);
 			meeps[i].$el.appendTo($game);
 			meeps[i].$el.css({
-				'top':'70%',
-			});
+				'top':'110%',
+			})
+		}
+
+		hud.initPlayers(meeps);
+
+		setTimeout( initNextRound, 2000 );
+	}
+
+	function finiRound() {
+		
+		for(var m in meeps) meeps[m].$el.animate({top:'65%'}).animate({top:'110%'});
+			
+		setTimeout(function(){
+			hud.finiBanner();
+		},2000);
+
+		if( STRUCTURE[meeps.length][nRound+1] ){
+			hud.initBanner('Nice one!');
+			setTimeout(initNextRound,3000);
+		} else {
+			hud.initBanner('Finish!');
+			setTimeout(initFinalScores,2000);
 		}
 	}
 
-	function finiGame() {
-		hud.initBanner('Finish!');
+	function initFinalScores(){
+		let scores = [];
+		for(var m in meeps) scores[m] = meeps[m].score;
+
+		let rewards = window.scoresToRewards(scores);
+		hud.showFinalScores(scores,rewards);
+
 		setTimeout(function(){
-			let scores = [];
-			for(var m in meeps) scores[m] = meeps[m].score;
-			window.doPartyGameComplete(scores);
-		},2000);
+			window.doPartyGameComplete(rewards);
+			self.fini;
+		});
+
+		//
 	}
 
-	function initIntro(COUNT){
-		initGame(COUNT);
+	/*function initIntro(COUNT){
+		
 		setTimeout(function(){
 			hud.initBanner('Ready!');
 		},2000);
 		setTimeout(hud.finiBanner,4000);
 		setTimeout(initRound,6000);
-	}
+	}*/
 
-	hud.initPlayerCount(initIntro);
+	hud.initPlayerCount(initGame);
 
 	let scale = 1;
 	function resize(){

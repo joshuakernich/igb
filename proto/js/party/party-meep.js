@@ -217,37 +217,31 @@ window.PartyMeep = function(n){
 				partymeephead[n='0'] partymeephat{ background: red; }
 				partymeep[n='0'] partymeephat{ background: red; }
 				partymeep[n='0'] partymeephat:after{ background: red; }
-				partyplayerhud[n='0'] partyscore{ background: red; }
 				partyplayerhud[n='0'] partymeephat{ background: red; }
 
 				partymeephead[n='1'] partymeephat{ background: blue; }
 				partymeep[n='1'] partymeephat{ background: blue; }
 				partymeep[n='1'] partymeephat:after{ background: blue; }
-				partyplayerhud[n='1'] partyscore{ background: blue; }
 				partyplayerhud[n='1'] partymeephat{ background: blue; }
 
 				partymeephead[n='2'] partymeephat{ background: limegreen; }
 				partymeep[n='2'] partymeephat{ background: limegreen; }
 				partymeep[n='2'] partymeephat:after{ background: limegreen; }
-				partyplayerhud[n='2'] partyscore{ background: limegreen; }
 				partyplayerhud[n='2'] partymeephat{ background: limegreen; }
 
 				partymeephead[n='3'] partymeephat{ background: #dd00ff; }
 				partymeep[n='3'] partymeephat{ background: #dd00ff; }
 				partymeep[n='3'] partymeephat:after{ background: #dd00ff; }
-				partyplayerhud[n='3'] partyscore{ background: #dd00ff; }
 				partyplayerhud[n='3'] partymeephat{ background: #dd00ff; }
 
 				partymeephead[n='4'] partymeephat{ background: #ff6600; }
 				partymeep[n='4'] partymeephat{ background: #ff6600; }
 				partymeep[n='4'] partymeephat:after{ background: #ff6600; }
-				partyplayerhud[n='4'] partyscore{ background: #ff6600; }
 				partyplayerhud[n='4'] partymeephat{ background: #ff6600; }
 
 				partymeephead[n='5'] partymeephat{ background: #ffbb00; }
 				partymeep[n='5'] partymeephat{ background: #ffbb00; }
 				partymeep[n='5'] partymeephat:after{ background: #ffbb00; }
-				partyplayerhud[n='5'] partyscore{ background: #ffbb00; }
 				partyplayerhud[n='5'] partymeephat{ background: #ffbb00; }
 			</style>`);
 	}
