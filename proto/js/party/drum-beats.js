@@ -560,7 +560,7 @@ window.DrumBeatsGame = function(){
 			hud.finiBanner();
 		},2000);
 
-		if( STRUCTURE[meeps.length][nRound+1] ){
+		if( STRUCTURE[meeps.length][nRound][nCohort+1] || STRUCTURE[meeps.length][nRound+1] ){
 			hud.initBanner('Nice one!');
 			setTimeout(initNextRound,3000);
 		} else {

@@ -84,6 +84,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					height: ${THICC*2}px;
 					position: relative;
 					margin: 0px 30px;
+					vertical-align: top;
 				}
 
 				partyhudtopline partyhudstream{
@@ -423,6 +424,13 @@ window.PartyHUD = function( colour='#40B0ED' ){
 		$baseline.animate({bottom:0});
 		$timer.text(seconds);
 
+		$streamTimer.show();
+		
+		$streamTop.css({left:'100px'}).animate({left:'0px'});
+
+		$streamTimer.animate({top:'10px'},400).animate({top:'0px'},100);
+		
+
 		let timeStart = new Date().getTime();
 		let secondsWas = seconds+1;
 		interval = setInterval(function(){
@@ -445,7 +453,10 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	}
 
 	self.finiTimer = function(){
-		$baseline.animate({bottom:-150});
+		$baseline.animate({bottom:-150},{duration:500,complete:function(){
+			$streamTimer.hide();
+			$streamTop.css({left:'-100px'}).animate({left:'0px'});
+		}});
 	}
 
 	self.clearTimer = function(){
@@ -532,7 +543,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 				},2000);
 
 				setTimeout(function(){
-					$reward.show().animate({bottom:'+=260px'},300).animate({bottom:'-=20px'},100);
+					$reward.show().animate({bottom:'+='+(s%2?230:260)+'px'},300).animate({bottom:'-=20px'},100);
 					audio.play('coin',true);
 				},2000);
 			}})
@@ -623,15 +634,12 @@ window.PartyHUD = function( colour='#40B0ED' ){
 				<path d='M0,40 L20,0 L20,80 L0,80' fill='rgba(0,0,0,0.2)'/>
 			</svg>
 		</partyhudstream>
-	`).appendTo($topline);
+	`).appendTo($topline).css({top:'-200px'}).hide();
+
 	
 	let huds = [];
 	
-	let type = 'before'
-
-	let $left = $('<div style="display:inline-block;">').appendTo($stream);
-	let $timer = $(`<partyhudtimer>60</partyhudtimer>`).appendTo($stream);
-	let $right = $('<div style="display:inline-block;">').appendTo($stream);
+	let $timer = $(`<partyhudtimer>60</partyhudtimer>`).appendTo($streamTimer);
 
 	self.initPlayers = function(meeps){
 		let iTimer = Math.floor(meeps.length/2);
@@ -639,26 +647,26 @@ window.PartyHUD = function( colour='#40B0ED' ){
 			let hud = new PartyPlayerHUD(i,meeps[i]);
 			hud.$el.appendTo($streamTop);
 			huds[i] = hud;
-
-
 		}
 
-		
-
 		$topline.animate({top:0});
-
-		
-		$timer.appendTo($streamTimer);
 	}
 
 	self.updatePlayers = function(meeps) {
 		for(var i=0; i<meeps.length; i++) huds[i].redraw(meeps[i].score);
 	}
 
-	self.summonPlayers = function( arrIn, arrOut ){
+	self.summonPlayers = function( arrIn ){
 		setBanner(true);
 
 		$banner.empty();
+
+		let arrOut = [];
+		for(var h=0; h<huds.length; h++){
+			if(arrIn.indexOf(h)==-1){
+				arrOut.push(h);
+			}
+		} 
 
 		if(arrIn && arrIn.length){
 			let $listIn = $('<hudsummonlist class="in">');
@@ -672,6 +680,8 @@ window.PartyHUD = function( colour='#40B0ED' ){
 			for(var a in arrOut) new PartyMeepHead(arrOut[a]).$el.appendTo($listOut);
 			$('<h2>').text('STEP BACK').appendTo($listOut);
 			$banner.append($listOut);
+
+
 		}
 	}
 
