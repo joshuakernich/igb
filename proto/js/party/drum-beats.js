@@ -64,11 +64,26 @@ window.DrumBeatsGame = function(){
 	const STRUCTURE = [
 		undefined,
 		undefined,
-		[{players:[0,1], song:SONGS[0]},{players:[0,1], song:SONGS[1]}],
-		[{players:[0,1,2], song:SONGS[0]},{players:[0,1,2], song:SONGS[1]}],
-		[{players:[0,1], song:SONGS[0]},{players:[2,3], song:SONGS[0]},{players:[0,1], song:SONGS[1]},{players:[2,3], song:SONGS[1]}],
-		[{players:[0,1,2], song:SONGS[0]},{players:[3,4], song:SONGS[0]},{players:[0,1,2], song:SONGS[1]},{players:[3,4], song:SONGS[1]}],
-		[{players:[0,1,2], song:SONGS[0]},{players:[3,4,5], song:SONGS[0]},{players:[0,1,2], song:SONGS[1]},{players:[3,4,5], song:SONGS[1]}],
+		[
+			[{players:[0,1], song:SONGS[0]}],
+			[{players:[0,1], song:SONGS[1]}],
+		],
+		[
+			[{players:[0,1,2], song:SONGS[0]}],
+			[{players:[0,1,2], song:SONGS[1]}],
+		],
+		[
+			[{players:[0,1], song:SONGS[0]},{players:[2,3], song:SONGS[0]}],
+			[{players:[0,1], song:SONGS[1]},{players:[2,3], song:SONGS[1]}],
+		],
+		[
+			[{players:[0,1,2], song:SONGS[0]},{players:[3,4], song:SONGS[0]}],
+			[{players:[0,1,2], song:SONGS[1]},{players:[3,4], song:SONGS[1]}],
+		],
+		[
+			[{players:[0,1,2], song:SONGS[0]},{players:[3,4,5], song:SONGS[0]}],
+			[{players:[0,1,2], song:SONGS[1]},{players:[3,4,5], song:SONGS[1]}],
+		],
 	]
 
 
@@ -154,7 +169,7 @@ window.DrumBeatsGame = function(){
 
 		self.doCorrect = function(b){
 			if(b) self.score ++;
-			$score.text(b?'+'+self.score:'Oops!').css({opacity:0.5}).delay(100).animate({opacity:0});
+			$score.text(b?'+1':'Oops!').css({opacity:0.5}).delay(100).animate({opacity:0});
 		}
 		
 	}
@@ -446,11 +461,22 @@ window.DrumBeatsGame = function(){
 		resize();
 	}
 
+	let nCohort = -1;
 	let nRound = -1;
 	let round;
+
 	function initNextRound(){
-		nRound++;
-		round = STRUCTURE[meeps.length][nRound];
+
+		let isNewRound = false;
+		nCohort++;
+
+		if( !STRUCTURE[meeps.length][nRound] || !STRUCTURE[meeps.length][nRound][nCohort] ){
+			nCohort = 0;
+			nRound++;
+			isNewRound = true;
+		}
+
+		round = STRUCTURE[meeps.length][nRound][nCohort];
 
 		audio.add(
 			round.song.track,
@@ -465,19 +491,22 @@ window.DrumBeatsGame = function(){
 
 		hud.summonPlayers(round.players);
 		
-
 		setTimeout(function(argument) {
 			hud.finiBanner();
 		},2000);
 
-		setTimeout(function(argument) {
-			hud.initRound(nRound,STRUCTURE[meeps.length].length);
-		},3000);
+		if(isNewRound){
+			setTimeout(function(argument) {
+				hud.initRound(nRound,STRUCTURE[meeps.length].length);
+			},3000);
 
-		setTimeout(function(argument) {
-			hud.finiBanner();
-			initRound();
-		},5000);
+			setTimeout(function(argument) {
+				hud.finiBanner();
+				initRound();
+			},5000);
+		} else {
+			setTimeout(initRound, 3000);
+		}
 	}
 
 	let balls = [];
@@ -509,6 +538,7 @@ window.DrumBeatsGame = function(){
 
 	let meeps = [];
 	function initGame(COUNT=3){
+
 		for(var i=0; i<COUNT; i++){
 			meeps[i] = new DrumMeep(i);
 			meeps[i].$el.appendTo($game);
@@ -525,7 +555,7 @@ window.DrumBeatsGame = function(){
 	function finiRound() {
 		
 		for(var m in meeps) meeps[m].$el.animate({top:'65%'}).animate({top:'110%'});
-			
+
 		setTimeout(function(){
 			hud.finiBanner();
 		},2000);
@@ -564,6 +594,7 @@ window.DrumBeatsGame = function(){
 	}*/
 
 	hud.initPlayerCount(initGame);
+
 
 	let scale = 1;
 	function resize(){

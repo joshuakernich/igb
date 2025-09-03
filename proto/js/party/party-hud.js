@@ -13,6 +13,8 @@ window.PartyPlayerHUD = function(n,meep,type){
 	self.redraw = function(score){
 		self.$el.find('partyscore').text(Math.floor(score));
 	}
+
+
 }
 
 window.PartyHUD = function( colour='#40B0ED' ){
@@ -34,6 +36,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 			<style>
 
 				@import url('https://fonts.googleapis.com/css2?family=Paytone+One&display=swap');
+				@import url('https://fonts.googleapis.com/css2?family=Knewave&display=swap');
 
 				partyhud{
 					position: absolute;
@@ -80,6 +83,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					background: ${COLOUR};
 					height: ${THICC*2}px;
 					position: relative;
+					margin: 0px 30px;
 				}
 
 				partyhudtopline partyhudstream{
@@ -150,7 +154,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 				}
 
 				partyplayerhud{
-					width: 200px;
+					width: 190px;
 					height: ${THICC*2}px;
 					display: inline-block;
 					box-sizing: border-box;
@@ -167,6 +171,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					font-size: 50px;
 					line-height: ${THICC*2}px;
 					vertical-align: top;
+					background: white;
 				}
 
 				partyplayerhud partymeephead{
@@ -178,10 +183,10 @@ window.PartyHUD = function( colour='#40B0ED' ){
 				}
 
 				partyplayerhud partyscore{
-					display: block;
+					display: inline-block;
 					position: absolute;
 					color: white;
-					right: 0px;
+					
 					left: 115px;
 					top: 0px;
 					
@@ -192,8 +197,9 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					text-align: left;
 					
 					box-sizing: border-box;
-					font-size: 50px;
+					font-size: ${THICC}px;
 					line-height: ${THICC*2}px;
+					font-weight: 100;
 
 				}
 
@@ -307,10 +313,14 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					height: 40px;
 					background: white;
 					border-radius: 100%;
-					margin: 0px 15px;
-					box-shadow: 0px -5px rgba(0,0,0,0.5);
-					opacity: 0.5;
+					margin: 0px 10px;
+					
+					
 					transform: scale(0.5);
+
+					border: 5px solid #444; 
+
+					box-shadow: 5px 10px 0px #444;
 				}
 
 				partyhudpip[fill='true']{
@@ -339,8 +349,6 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					font-size: 75px;
 				}
 
-
-
 				hudmeepreward{
 					display: block;
 					position: absolute; 
@@ -358,6 +366,17 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					transform: rotate(-2deg);
 					line-height: 60px;
 				}
+
+				hudround{
+					font-family: "Knewave", system-ui;
+					font-weight: 400;
+					font-style: normal;
+					font-size: 200px;
+					transform: rotate(-5deg);
+					display: block;
+
+					text-shadow: 5px 5px 0px #444, 5px -5px 0px #444, -5px -5px 0px #444, -5px 5px 0px #444, 0px 20px 0px #444;
+				}
 			</style>
 			`);
 	}
@@ -371,7 +390,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 	function setBanner(b,isTransparent){
 
-		let location = isTransparent?200:175;
+		let location = isTransparent?300:175;
 
 		if(b){
 			$banner.css({top:'100%'}).animate({top:location-50+'px'}).animate({location:100+'px'});
@@ -438,8 +457,39 @@ window.PartyHUD = function( colour='#40B0ED' ){
 			msg = 'Round '+(n+1);
 			if(n==(max-1)) msg = 'Final Round';
 		}
-		self.initBanner(msg);
-		let $pips = $('<partyhudpips>').appendTo($banner);
+
+		setBanner(true,true);
+
+		$banner.empty();
+		let $round = $('<hudround>').appendTo($banner);
+
+		for(var m=0; m<msg.length; m++){
+			let $char = $('<span>').appendTo($round).text(msg[m]);
+			$char.css({
+				'position':'relative',
+				'left':'500px',
+				'opacity':0,
+			}).delay(m*100).animate({
+				'left':'-30px',
+				'opacity':1,
+			},300).animate({
+				'left':'0px',
+			},200).delay(1500-m*50).animate({
+				'top':'20px'
+			},300).animate({
+				'top':'-500px',
+				'opacity':0,
+			},300)
+		}
+
+		//self.initBanner(msg);
+		let $pips = $('<partyhudpips>').appendTo($banner).css({
+			position: 'relative',
+			top:'100px',
+		}).delay(2500).animate({
+			top:'-500px',
+			opacity:0,
+		})
 		for(var i=0; i<max; i++){
 			$('<partyhudpip>').appendTo($pips).attr('fill',(i<=n)).attr('highlight',(i==n));
 		}
@@ -468,9 +518,9 @@ window.PartyHUD = function( colour='#40B0ED' ){
 				left: 100/3 + (100/3)*p + '%',
 				bottom: '-400px',
 			}).delay(s*200).animate({
-				bottom: '150px',
+				bottom: (THICC+100)+'px',
 			},300).animate({
-				bottom: '50px',
+				bottom: THICC+'px',
 			},{duration:200,complete:function(){
 				meep.setHeight(300);
 				setTimeout(function(){
@@ -548,10 +598,22 @@ window.PartyHUD = function( colour='#40B0ED' ){
 				<path d='M0,40 L20,0 L20,80 L0,80' fill='rgba(0,0,0,0.2)'/>
 			</svg>
 		</partyhudstream>
-	`).appendTo($baseline);
+	`)//.appendTo($baseline);
 
 	let $topline = $('<partyhudtopline>').appendTo(self.$el);
 	let $streamTop = $(`<partyhudstream style='background:${colour};'>
+			<svg width='20px' height='80px' style='transform:scaleY(-1);position:absolute;left:-20px;top:0px;'>
+				<path d='M0,40 L20,0 L20,80 L0,80' fill='${colour}'/>
+				<path d='M0,40 L20,0 L20,80 L0,80' fill='rgba(0,0,0,0.2)'/>
+			</svg>
+			<svg width='20px' height='80px' style='transform:scale(-1);position:absolute;right:-20px;top:0px;'>
+				<path d='M0,40 L20,0 L20,80 L0,80' fill='${colour}'/>
+				<path d='M0,40 L20,0 L20,80 L0,80' fill='rgba(0,0,0,0.2)'/>
+			</svg>
+		</partyhudstream>
+	`).appendTo($topline);
+
+	let $streamTimer = $(`<partyhudstream style='background:${colour};'>
 			<svg width='20px' height='80px' style='transform:scaleY(-1);position:absolute;left:-20px;top:0px;'>
 				<path d='M0,40 L20,0 L20,80 L0,80' fill='${colour}'/>
 				<path d='M0,40 L20,0 L20,80 L0,80' fill='rgba(0,0,0,0.2)'/>
@@ -577,9 +639,16 @@ window.PartyHUD = function( colour='#40B0ED' ){
 			let hud = new PartyPlayerHUD(i,meeps[i]);
 			hud.$el.appendTo($streamTop);
 			huds[i] = hud;
+
+
 		}
 
+		
+
 		$topline.animate({top:0});
+
+		
+		$timer.appendTo($streamTimer);
 	}
 
 	self.updatePlayers = function(meeps) {
