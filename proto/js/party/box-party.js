@@ -952,7 +952,7 @@ BoxPartyGame = function(){
         <style`);
 
  	let audio = new AudioContext();
-    audio.add('music','./proto/audio/party/music-ethereal.mp3',0.5,true,true);
+    audio.add('music','./proto/audio/party/music-adventure.mp3',0.5,true,true);
    // audio.add('music','./proto/audio/party/sfx-rumble.mp3',1);
 
 	let self = this;
@@ -1054,7 +1054,6 @@ BoxPartyGame = function(){
 
 	let tally;
 	function initGame(count){
-		//hud.$el.hide();
 		audio.play('music');
 
 		for(var i=0; i<count; i++) players[i] = {score:0};
@@ -1081,6 +1080,7 @@ BoxPartyGame = function(){
 	}
 
     let hud = new PartyHUD('#7538D4',0);
+	hud.$el.find('partyhudframe').hide();
     hud.$el.appendTo($game);
     hud.initPlayerCount(initGame);
 

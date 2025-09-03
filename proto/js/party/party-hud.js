@@ -543,7 +543,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 				},2000);
 
 				setTimeout(function(){
-					$reward.show().animate({bottom:'+='+(s%2?230:260)+'px'},300).animate({bottom:'-=20px'},100);
+					$reward.show().animate({bottom:'+='+((s%2==0)?240:260)+'px'},300).animate({bottom:'-=20px'},100);
 					audio.play('coin',true);
 				},2000);
 			}})
