@@ -450,17 +450,25 @@ window.DrumBeatsGame = function(){
 
 	let audio = new AudioContext()
 
+
 	function step(){
 
 		for(var m in meeps) meeps[m].update();
 
+		let beat = 0;
+
 		if(round){
 			let timeCurrent = audio.getTime( round.song.track );
-			let beat = (timeCurrent-round.song.offset) * round.song.bps;
-			for(var b in balls) balls[b].step(beat);
-			for(var b in balls) balls[b].update();
+			beat = (timeCurrent-round.song.offset) * round.song.bps;
+		} else if( isTutorial ){
+			let time = new Date().getTime();
+			let timeElapsed = time - timeStartTutorial;
+			beat = timeElapsed/1000;
 		}
-
+			
+		for(var b in balls) balls[b].step(beat);
+		for(var b in balls) balls[b].update();
+		
 		hud.updatePlayers(meeps);
 
 		resize();
@@ -530,7 +538,7 @@ window.DrumBeatsGame = function(){
 				meeps[m]
 			);
 
-			balls[b].$el.css({left:'50%'});
+			//balls[b].$el.css({left:'50%'});
 			balls[b].$el.appendTo($game);
 			balls[b].step(0);
 			balls[b].update();
@@ -558,7 +566,12 @@ window.DrumBeatsGame = function(){
 		initTutorial();
 	}
 
+	let isTutorial = false;
 	function initTutorial(){
+
+		isTutorial = true;
+		timeStartTutorial = new Date().getTime();
+
 		hud.initTutorial(
 			'Bongo Bounce',
 			{x:1.22, y:0.55, msg:'Align yourself<br>with your Avatar', icon:'align'},
@@ -570,16 +583,36 @@ window.DrumBeatsGame = function(){
 			meeps[m].$el.css({'transform':'scale(0.5)'}).animate({top:'70%'});
 		}
 
-		hud.initTimer(20,finiTutorial);
+		for(var i=0; i<20; i++){
+			balls[i] = new DrumBall(
+				{beat:10+i, lerp:2, nDrum:Math.floor( Math.random()*DRUMS )},
+				meeps[i%meeps.length]
+			);
+
+			balls[i].$el.appendTo($game);
+			balls[i].step(0);
+			balls[i].update();
+		}
+		
+
+			//balls[b].$el.css({left:'50%'});
+			
+			
+
+		hud.initTimer(30,finiTutorial);
 	}
 
 	function finiTutorial() {
+		isTutorial = false;
 		hud.finiTimer();
 		hud.finiTutorial();
 
 		$tutorial.animate({opacity:0});
 
-		for(var m in meeps ) meeps[m].$el.animate({opacity:0});
+		for(var m in meeps ){
+			meeps[m].$el.animate({opacity:0});
+			meeps[m].score = 0;
+		}
 
 		setTimeout(initPlay,2000);
 	}
