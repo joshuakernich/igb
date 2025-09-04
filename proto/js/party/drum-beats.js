@@ -574,7 +574,7 @@ window.DrumBeatsGame = function(){
 
 		hud.initTutorial(
 			'Bongo Bounce',
-			{x:1.22, y:0.55, msg:'Align yourself<br>with your Avatar', icon:'align'},
+			{x:1.22, y:0.5, msg:'Align yourself<br>with your Avatar', icon:'align'},
 			{x:1.7, y:0.5, msg:'Move side-to-side to bounce<br>the black and white balls', icon:'side-to-side'},
 		);
 
