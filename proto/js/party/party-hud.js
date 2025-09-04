@@ -23,6 +23,7 @@ window.PartyPlayerHUD = function(n,meep,type){
 window.PartyHUD = function( colour='#40B0ED' ){
 
 	const COLOUR = 'gray';
+	const GRAY = '#333';
 	const THICC = 40;
 
 	let audio = new AudioContext();
@@ -161,6 +162,11 @@ window.PartyHUD = function( colour='#40B0ED' ){
 				partyhudbanner p{
 					margin: 0px;
 					padding: 0px;
+
+					color: ${GRAY};
+					font-family: "Knewave", system-ui;
+					text-shadow: 0px 2px white;
+					font-weight: 100;
 				}
 
 				partyplayerhud{
@@ -176,7 +182,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 				partyhudtimer{
 					width: 150px;
-					color: #222;
+					color: ${GRAY};
 					display: inline-block;
 					font-size:  ${THICC*2}px;
 					line-height: ${THICC*2.2}px;
@@ -306,10 +312,15 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					display: block;
 					line-height: 50px;
 					font-size: 50px;
-					color: white;
+					
 					margin: 0px;
 					padding: 0px;
 					margin-top: 20px;
+
+					color: ${GRAY};
+					font-family: "Knewave", system-ui;
+					text-shadow: 0px 2px white;
+					font-weight: 100;
 				}
 
 				partyhudpips{
@@ -327,9 +338,9 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					
 					transform: scale(0.5);
 
-					border: 5px solid #444; 
+					border: 5px solid ${GRAY};
 
-					box-shadow: 5px 10px 0px #444;
+					box-shadow: 5px 10px 0px ${GRAY};
 				}
 
 				partyhudpip[fill='true']{
@@ -425,7 +436,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					font-size: 200px;
 					transform: rotate(-5deg);
 					display: block;
-					text-shadow: 5px 5px 0px #444, 5px -5px 0px #444, -5px -5px 0px #444, -5px 5px 0px #444, 0px 20px 0px #444;
+					text-shadow: 5px 5px 0px ${GRAY}, 5px -5px 0px ${GRAY}, -5px -5px 0px ${GRAY}, -5px 5px 0px ${GRAY}, 0px 20px 0px ${GRAY};
 				}
 
 				hudtutorial{
@@ -535,8 +546,8 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 	self.finiTimer = function(){
 		isTimerRevealled = false;
-		
-		$baseline.animate({bottom:-150},{duration:500,complete:function(){
+
+		$streamTimer.animate({top:-150},{duration:500,complete:function(){
 			$streamTimer.hide();
 			$streamTop.css({left:'-100px'}).animate({left:'0px'});
 		}});
@@ -784,14 +795,14 @@ window.PartyHUD = function( colour='#40B0ED' ){
 		if(arrIn && arrIn.length){
 			let $listIn = $('<hudsummonlist class="in">');
 			for(var a in arrIn) new PartyMeepHead(arrIn[a]).$el.appendTo($listIn);
-			$('<h2>').text('STEP FORWARD').appendTo($listIn);
+			$('<h2>').text('Step Forward').appendTo($listIn);
 			$banner.append($listIn);
 		}
 
 		if(arrOut && arrOut.length){
 			let $listOut = $('<hudsummonlist class="out">');
 			for(var a in arrOut) new PartyMeepHead(arrOut[a]).$el.appendTo($listOut);
-			$('<h2>').text('STEP BACK').appendTo($listOut);
+			$('<h2>').text('Step Back').appendTo($listOut);
 			$banner.append($listOut);
 		}
 

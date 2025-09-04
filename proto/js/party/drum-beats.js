@@ -10,8 +10,6 @@ window.DrumBeatsGame = function(){
 	const DRUMW = 150;
 	const BOUNCE = 0.7;
 
-	
-
 	const SONGS = [
 		{
 			track:'./proto/audio/party/music-beats-90.mp3',
@@ -102,13 +100,6 @@ window.DrumBeatsGame = function(){
 
 		let $arms =  $('<drumarms>').appendTo($ring);
 
-		/*let $armRight = $('<drumarm>').appendTo($ring).css({
-			transform: 'rotate('+(-Math.PI/2 + RADRANGE/2 - 0.1)+'rad)'
-		})
-
-		let $armLeft = $('<drumarm>').appendTo($ring).css({
-			transform: 'rotate('+(-Math.PI/2 - RADRANGE/2 + 0.1)+'rad)'
-		})*/
 
 		let meep = new PartyMeep(n);
 		meep.setHeight(350);
@@ -591,7 +582,7 @@ window.DrumBeatsGame = function(){
 
 		for(var m=0; m<meeps.length; m++){
 			meeps[m].ax = 0.22 + (1/(meeps.length-1) * m) * 0.56;
-			meeps[m].$el.css({'transform':'scale(0.5)'}).animate({top:'70%'});
+			meeps[m].$el.css({'transform':'scale(0.5)', top:'70%'});
 		}
 
 		for(var i=0; i<20; i++){
