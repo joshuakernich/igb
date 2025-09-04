@@ -366,7 +366,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					text-align: center;
 					color: white;
 					line-height: 150px;
-					font-size: 75px;
+					font-size: 50px;
 				}
 
 				hudmeepreward{
@@ -630,13 +630,18 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 		for(var h in huds) huds[h].setActive(true);
 
+		let max = 0;
+		for(var r in rewards) max = Math.max(max, rewards[r]);
+
 		for(let s=0; s<scores.length; s++){
 			let meep = new PartyMeep(s);
 			meep.$el.appendTo($mg);
 			let p = 0.15 + 0.7/(scores.length-1) * s;
 			let pos = (100/3) + (100/3)*p;
 			
-			let $score = $('<hudmeepscore>')//.appendTo(meep.$el).text(scores[s]);
+			let text = (rewards[s] == max )?'Winner!':'';
+
+			let $score = $('<hudmeepscore>').appendTo(meep.$el).text(text);
 			let $reward = $('<hudmeepreward>').appendTo(meep.$el).text('+'+rewards[s]).hide();
 			let $coin = $('<hudmeeprewardcoin>').appendTo($reward);
 

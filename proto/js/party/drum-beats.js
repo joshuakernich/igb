@@ -494,6 +494,7 @@ window.DrumBeatsGame = function(){
 			meeps[m].$el.css({
 				opacity:1,
 				transform: 'scale(1)',
+				top:'110%',
 			}).animate({top:'65%'}).animate({top:'70%'});
 		}
 
@@ -629,7 +630,10 @@ window.DrumBeatsGame = function(){
 
 		hud.finiTimer();
 		
-		for(var m in meeps) meeps[m].$el.animate({top:'65%'}).animate({top:'110%'});
+		for(var p=0; p<round.players.length; p++){
+			let m = round.players[p];
+			meeps[m].$el.animate({top:'65%'}).animate({top:'110%'});
+		}
 
 		setTimeout(function(){
 			hud.finiBanner();
