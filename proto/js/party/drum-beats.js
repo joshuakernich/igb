@@ -86,7 +86,6 @@ window.DrumBeatsGame = function(){
 		],
 	]
 
-
 	let DrumMeep = function(n,ax){
 		let self = this;
 		self.$el = $('<drummeep>');
@@ -163,8 +162,6 @@ window.DrumBeatsGame = function(){
 			self.$el.css({
 				left: W + self.ax * W + 'px',
 			})
-
-			
 		}
 
 		self.doCorrect = function(b){
@@ -430,6 +427,14 @@ window.DrumBeatsGame = function(){
 					display: none;
 				}
 
+				drumgametutorial{
+					display: block;
+					position: absolute;
+					inset: 0px;
+					background: rgba(150,150,150,0.2);
+					backdrop-filter: blur(20px);
+				}
+
 			</style>`);
 	}
 
@@ -438,6 +443,7 @@ window.DrumBeatsGame = function(){
 
 	self.$el = $('<igb>');
 	let $game = $('<drumgame>').appendTo(self.$el);
+	let $tutorial = $('<drumgametutorial>').appendTo($game);
 
 	let hud = new PartyHUD();
 	hud.$el.appendTo($game);
@@ -449,7 +455,6 @@ window.DrumBeatsGame = function(){
 		for(var m in meeps) meeps[m].update();
 
 		if(round){
-
 			let timeCurrent = audio.getTime( round.song.track );
 			let beat = (timeCurrent-round.song.offset) * round.song.bps;
 			for(var b in balls) balls[b].step(beat);
@@ -486,7 +491,10 @@ window.DrumBeatsGame = function(){
 		for(var p=0; p<round.players.length; p++){
 			let m = round.players[p];
 			meeps[m].ax = 0.22 + (1/(round.players.length-1) * p) * 0.56;
-			meeps[m].$el.animate({top:'65%'}).animate({top:'70%'});
+			meeps[m].$el.css({
+				opacity:1,
+				transform: 'scale(1)',
+			}).animate({top:'65%'}).animate({top:'70%'});
 		}
 
 		hud.summonPlayers(round.players);
@@ -547,9 +555,39 @@ window.DrumBeatsGame = function(){
 			})
 		}
 
+		initTutorial();
+	}
+
+	function initTutorial(){
+		hud.initTutorial(
+			'Bongo Bounce',
+			{x:1.22, y:0.55, msg:'Align yourself<br>with your Avatar', icon:'align'},
+			{x:1.7, y:0.5, msg:'Move side-to-side to bounce<br>the black and white balls', icon:'side-to-side'},
+		);
+
+		for(var m=0; m<meeps.length; m++){
+			meeps[m].ax = 0.22 + (1/(meeps.length-1) * m) * 0.56;
+			meeps[m].$el.css({'transform':'scale(0.5)'}).animate({top:'70%'});
+		}
+
+		hud.initTimer(20,finiTutorial);
+	}
+
+	function finiTutorial() {
+		hud.finiTimer();
+		hud.finiTutorial();
+
+		$tutorial.animate({opacity:0});
+
+		for(var m in meeps ) meeps[m].$el.animate({opacity:0});
+
+		setTimeout(initPlay,2000);
+	}
+
+	function initPlay(){
 		hud.initPlayers(meeps);
 
-		setTimeout( initNextRound, 2000 );
+		initNextRound();
 	}
 
 	function finiRound() {

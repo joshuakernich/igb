@@ -14,6 +14,9 @@ window.PartyPlayerHUD = function(n,meep,type){
 		self.$el.find('partyscore').text(Math.floor(score));
 	}
 
+	self.setActive = function(b){
+		self.$el.css({opacity:b?1:0.5});
+	}
 
 }
 
@@ -26,6 +29,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	audio.add('tick','./proto/audio/party/sfx-tick.mp3',0.3);
 	audio.add('tock','./proto/audio/party/sfx-tock.mp3',0.3);
 	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
+	audio.add('music','./proto/audio/party/music-tutorial.mp3',0.3);
 
 	new PartyMeep(0);
 
@@ -67,7 +71,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 				partyhudtopline{
 					display: inline-block;
 					position: absolute;
-					top: ${-THICC*2}px;
+					top: 0px;
 					left: 0px;
 					right: 0px;
 					text-align: center;
@@ -85,6 +89,11 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					position: relative;
 					margin: 0px 30px;
 					vertical-align: top;
+				}
+
+				partyhudstream.large{
+					height: ${THICC*2.5}px;
+					background: white !important;
 				}
 
 				partyhudtopline partyhudstream{
@@ -169,10 +178,9 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					width: 150px;
 					color: #222;
 					display: inline-block;
-					font-size: 50px;
-					line-height: ${THICC*2}px;
+					font-size:  ${THICC*2}px;
+					line-height: ${THICC*2.2}px;
 					vertical-align: top;
-					background: white;
 				}
 
 				partyplayerhud partymeephead{
@@ -375,9 +383,33 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					font-size: 200px;
 					transform: rotate(-5deg);
 					display: block;
-
 					text-shadow: 5px 5px 0px #444, 5px -5px 0px #444, -5px -5px 0px #444, -5px 5px 0px #444, 0px 20px 0px #444;
 				}
+
+				hudtutorial{
+					display: block;
+					inset: 0px;
+					position: absolute;
+				}
+
+				hudmessage{
+					display: block;
+					position: absolute;
+					color: white;
+					font-size: 30px;
+					
+					white-space: normal;
+					text-align: center;
+					font-weight: 100;
+
+					transform: translate(-50%, -50%);
+				}
+
+				hudmessage img{
+					margin-top: 20px;
+				}
+
+				
 			</style>
 			`);
 	}
@@ -385,6 +417,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	let self = this;
 	self.$el = $('<partyhud>');
 
+	let $tutorial = $(`<hudtutorial>`).appendTo(self.$el);
 	let $banner = $(`<partyhudbanner style="background:${colour};">`).appendTo(self.$el);
 	let $debugRight = $('<partydebug>').appendTo(self.$el);
 	let $mg = $('<partyhudlayer>').appendTo(self.$el);
@@ -463,19 +496,14 @@ window.PartyHUD = function( colour='#40B0ED' ){
 		clearInterval(interval);
 	}
 
-	self.initRound = function(n,max,msg=undefined){
-		if(msg==undefined){
-			msg = 'Round '+(n+1);
-			if(n==(max-1)) msg = 'Final Round';
-		}
+	let FancyHeader = function(msg,size=200){
+		let self = this;
+		self.$el = $('<hudround>').css({'font-size':size+'px'})
 
-		setBanner(true,true);
-
-		$banner.empty();
-		let $round = $('<hudround>').appendTo($banner);
+		let $chars = [];
 
 		for(var m=0; m<msg.length; m++){
-			let $char = $('<span>').appendTo($round).text(msg[m]);
+			let $char = $('<span>').appendTo(self.$el).text(msg[m]);
 			$char.css({
 				'position':'relative',
 				'left':'500px',
@@ -485,15 +513,37 @@ window.PartyHUD = function( colour='#40B0ED' ){
 				'opacity':1,
 			},300).animate({
 				'left':'0px',
-			},200).delay(1500-m*50).animate({
-				'top':'20px'
-			},300).animate({
-				'top':'-500px',
-				'opacity':0,
-			},300)
+			},200);
+
+			$chars[m] = $char;
 		}
 
-		//self.initBanner(msg);
+		self.fini = function(){
+			for(var c=0; c<$chars.lenth; c++){
+				$chars[c].delay(($chars.lenth-c)*50).animate({
+					'top':'20px'
+				},300).animate({
+					'top':'-500px',
+					'opacity':0,
+				},300)
+			}
+			
+		}
+	}
+
+	self.initRound = function(n,max,msg=undefined){
+		if(msg==undefined){
+			msg = 'Round '+(n+1);
+			if(n==(max-1)) msg = 'Final Round';
+		}
+
+		setBanner(true,true);
+
+		$banner.empty();
+		let header = new FancyHeader(msg);
+		header.$el.appendTo($banner);
+		setTimeout( header.fini, 1000 );
+		
 		let $pips = $('<partyhudpips>').appendTo($banner).css({
 			position: 'relative',
 			top:'100px',
@@ -622,16 +672,18 @@ window.PartyHUD = function( colour='#40B0ED' ){
 				<path d='M0,40 L20,0 L20,80 L0,80' fill='rgba(0,0,0,0.2)'/>
 			</svg>
 		</partyhudstream>
-	`).appendTo($topline);
+	`).appendTo($topline).css({top:'-200px'}).hide();
 
-	let $streamTimer = $(`<partyhudstream style='background:${colour};'>
-			<svg width='20px' height='80px' style='transform:scaleY(-1);position:absolute;left:-20px;top:0px;'>
-				<path d='M0,40 L20,0 L20,80 L0,80' fill='${colour}'/>
-				<path d='M0,40 L20,0 L20,80 L0,80' fill='rgba(0,0,0,0.2)'/>
+	let hBorder = THICC;
+	let h = THICC*2.5;
+	let $streamTimer = $(`<partyhudstream class='large' style='background:${colour};'>
+			<svg width='20px' height='${h}px' style='position:absolute;left:-20px;top:0px;'>
+				<path d='M0,0 L20,0 L20,${h} L0,${hBorder}' fill='${colour}'/>
+				<path d='M0,0 L20,0 L20,${h} L0,${hBorder}' fill='rgba(0,0,0,0.2)'/>
 			</svg>
-			<svg width='20px' height='80px' style='transform:scale(-1);position:absolute;right:-20px;top:0px;'>
-				<path d='M0,40 L20,0 L20,80 L0,80' fill='${colour}'/>
-				<path d='M0,40 L20,0 L20,80 L0,80' fill='rgba(0,0,0,0.2)'/>
+			<svg width='20px' height='${h}px' style='position:absolute;right:-20px;top:0px;'>
+				<path d='M0,0 L20,0 L20,${hBorder} L0,${h}' fill='${colour}'/>
+				<path d='M0,0 L20,0 L20,${hBorder} L0,${h}' fill='rgba(0,0,0,0.2)'/>
 			</svg>
 		</partyhudstream>
 	`).appendTo($topline).css({top:'-200px'}).hide();
@@ -649,11 +701,11 @@ window.PartyHUD = function( colour='#40B0ED' ){
 			huds[i] = hud;
 		}
 
-		$topline.animate({top:0});
+		$streamTop.show().animate({top:'0px'});
 	}
 
 	self.updatePlayers = function(meeps) {
-		for(var i=0; i<meeps.length; i++) huds[i].redraw(meeps[i].score);
+		if(huds.length) for(var i=0; i<meeps.length; i++) huds[i].redraw(meeps[i].score);
 	}
 
 	self.summonPlayers = function( arrIn ){
@@ -663,9 +715,12 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 		let arrOut = [];
 		for(var h=0; h<huds.length; h++){
+
 			if(arrIn.indexOf(h)==-1){
 				arrOut.push(h);
 			}
+
+			huds[h].setActive(arrIn.indexOf(h)>-1);
 		} 
 
 		if(arrIn && arrIn.length){
@@ -680,9 +735,9 @@ window.PartyHUD = function( colour='#40B0ED' ){
 			for(var a in arrOut) new PartyMeepHead(arrOut[a]).$el.appendTo($listOut);
 			$('<h2>').text('STEP BACK').appendTo($listOut);
 			$banner.append($listOut);
-
-
 		}
+
+
 	}
 
 	const RADIUS = 60;
@@ -720,6 +775,48 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 		//$in.css({top:0,left:100}).delay(1000).animate({left:-100,top:0});
 		//$out.css({top:0,left:-100}).delay(1000).animate({left:100,top:0});
+	}
+
+	let TutorialMessage = function(bean) {
+		let self = this;
+		self.$el = $('<hudmessage>').css({
+			left:bean.x * 100/3 + '%',
+			top:bean.y * 100 + '%',
+		}).html(bean.msg);
+
+		if(bean.icon){
+			self.$el.append('<br>');
+			$(`<img width=400 src="./proto/img/party/tutorial-${bean.icon}.png">`).appendTo(self.$el);
+		}
+	}
+
+	let headerTutorial;
+
+	self.initTutorial = function(name, ...tutor){
+
+		audio.play('music');
+
+		headerTutorial = new FancyHeader(name,100);
+		headerTutorial.$el.appendTo($tutorial).css({
+			position:'absolute',
+			left:'0px',
+			right:'0px',
+			top:'15%',
+		});
+
+		for(var t in tutor){
+			let msg = new TutorialMessage(tutor[t]);
+			msg.$el.appendTo($tutorial).css({
+				opacity:0,
+			}).delay(1500 + t*500).animate({
+				opacity:1,
+			})
+		}
+	}
+
+	self.finiTutorial = function (argument) {
+		audio.stop('music');
+		$tutorial.animate({opacity:0});
 	}
 
 	self.redraw = function(sec=0){
