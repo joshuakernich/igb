@@ -49,7 +49,6 @@ window.DrumBeatsGame = function(){
 		}
 	]
 
-
 	for(var s in SONGS){
 		SONGS[s].bps = SONGS[s].bpm / 60;
  
@@ -60,6 +59,8 @@ window.DrumBeatsGame = function(){
 			}
 		}
 	}
+
+	console.log(SONGS);
 
 	const STRUCTURE = [
 		undefined,
@@ -505,23 +506,33 @@ window.DrumBeatsGame = function(){
 			}).animate({top:'65%'}).animate({top:'70%'});
 		}
 
-		hud.summonPlayers(round.players);
+		setTimeout(function(){
+			hud.summonPlayers(round.players);
+		},1000);
+		
 		
 		setTimeout(function(argument) {
 			hud.finiBanner();
-		},2000);
+		},3000);
 
 		if(isNewRound){
 			setTimeout(function(argument) {
 				hud.initRound(nRound,STRUCTURE[meeps.length].length);
-			},3000);
+				hud.revealTimer(round.song.seconds);
+			},4000);
 
 			setTimeout(function(argument) {
 				hud.finiBanner();
+			},6000);
+
+			setTimeout(function(argument) {
 				initRound();
-			},5000);
+			},7000);
 		} else {
-			setTimeout(initRound, 3000);
+			setTimeout(function(argument) {
+				hud.revealTimer(round.song.seconds);
+			},3000);
+			setTimeout(initRound, 4000);
 		}
 	}
 
@@ -620,10 +631,12 @@ window.DrumBeatsGame = function(){
 	function initPlay(){
 		hud.initPlayers(meeps);
 
-		initNextRound();
+		setTimeout(initNextRound,1000);
 	}
 
 	function finiRound() {
+
+		hud.finiTimer();
 		
 		for(var m in meeps) meeps[m].$el.animate({top:'65%'}).animate({top:'110%'});
 
@@ -641,6 +654,9 @@ window.DrumBeatsGame = function(){
 	}
 
 	function initFinalScores(){
+
+		$tutorial.animate({opacity:1});
+
 		let scores = [];
 		for(var m in meeps) scores[m] = meeps[m].score;
 
@@ -649,23 +665,11 @@ window.DrumBeatsGame = function(){
 
 		setTimeout(function(){
 			window.doPartyGameComplete(rewards);
-			self.fini;
-		});
-
-		//
+			self.fini();
+		},3000);
 	}
 
-	/*function initIntro(COUNT){
-		
-		setTimeout(function(){
-			hud.initBanner('Ready!');
-		},2000);
-		setTimeout(hud.finiBanner,4000);
-		setTimeout(initRound,6000);
-	}*/
-
 	hud.initPlayerCount(initGame);
-
 
 	let scale = 1;
 	function resize(){

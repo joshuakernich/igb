@@ -362,18 +362,60 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					display: block;
 					position: absolute; 
 					bottom: 100px;
-					left: -80px;
-					right: -80px;
+					left: -90px;
+					right: -90px;
 					text-align: center;
 					color: white;
 					
-					font-size: 60px;
+					font-size: 50px;
 					border: 5px solid white;
 					background: #9B62E8; 
-					padding: 15px 0px 30px;
+					padding: 10px 0px 20px;
 					border-radius: 10px;
 					transform: rotate(-2deg);
 					line-height: 60px;
+					padding-right: 20px;
+					box-sizing: border-box;
+
+				}
+
+				hudmeeprewardcoin{
+
+					display: inline-block;
+					width: 50px;
+					height: 50px;
+					background: #9B62E8;
+					border-radius: 100%;
+				
+					border-bottom: 5px solid rgba(255,255,255,0.6);
+					box-shadow: 0px 2px 10px black;
+					position: absolute;
+					right: -20px;
+					top: -20px;
+
+				}
+
+				hudmeeprewardcoin:before{
+					content:"";
+					display: block;
+					inset: 8px;
+
+					position: absolute;
+					box-sizing: border-box;
+					border: 2px solid black;
+					border-radius: 100%;
+					top: 6px;
+					bottom: 10px;
+				}
+
+				hudmeeprewardcoin:after{
+					content:"";
+					display: block;
+					inset: 8px;
+					position: absolute;
+					box-sizing: border-box;
+					border: 2px solid #D8C0F7;
+					border-radius: 100%;
 				}
 
 				hudround{
@@ -452,17 +494,23 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 	let interval;
 
-	self.initTimer = function(seconds,callback){
+	let isTimerRevealled = false;
 
-		$baseline.animate({bottom:0});
+	self.revealTimer = function(seconds){
+
 		$timer.text(seconds);
 
-		$streamTimer.show();
-		
-		$streamTop.css({left:'100px'}).animate({left:'0px'});
+		if(isTimerRevealled) return;
 
+		isTimerRevealled = true;
+		$streamTimer.show();
+		$streamTop.css({left:'100px'}).animate({left:'0px'});
 		$streamTimer.animate({top:'10px'},400).animate({top:'0px'},100);
-		
+	}
+
+	self.initTimer = function(seconds,callback){
+
+		self.revealTimer(seconds);
 
 		let timeStart = new Date().getTime();
 		let secondsWas = seconds+1;
@@ -486,6 +534,8 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	}
 
 	self.finiTimer = function(){
+		isTimerRevealled = false;
+		
 		$baseline.animate({bottom:-150},{duration:500,complete:function(){
 			$streamTimer.hide();
 			$streamTop.css({left:'-100px'}).animate({left:'0px'});
@@ -566,14 +616,21 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	}
 
 	self.showFinalScores = function(scores,rewards){
-		for(var s=0; s<scores.length; s++){
+
+		for(var h in huds) huds[h].setActive(true);
+
+		for(let s=0; s<scores.length; s++){
 			let meep = new PartyMeep(s);
 			meep.$el.appendTo($mg);
 			let p = 0.15 + 0.7/(scores.length-1) * s;
 			let pos = (100/3) + (100/3)*p;
 			
-			let $score = $('<hudmeepscore>').appendTo(meep.$el).text(scores[s]);
-			let $reward = $('<hudmeepreward>').appendTo(meep.$el).text('+ '+rewards[s]).hide();
+			let $score = $('<hudmeepscore>')//.appendTo(meep.$el).text(scores[s]);
+			let $reward = $('<hudmeepreward>').appendTo(meep.$el).text('+'+rewards[s]).hide();
+			let $coin = $('<hudmeeprewardcoin>').appendTo($reward);
+
+			let ySign = [340,360][s%2];
+			let yHand = [0,-20][s%2];
 
 			meep.$el.css({
 				left: 100/3 + (100/3)*p + '%',
@@ -593,18 +650,19 @@ window.PartyHUD = function( colour='#40B0ED' ){
 				},2000);
 
 				setTimeout(function(){
-					$reward.show().animate({bottom:'+='+((s%2==0)?240:260)+'px'},300).animate({bottom:'-=20px'},100);
+					
+					$reward.show().animate({bottom:(ySign+30)+'px'},300).animate({bottom:ySign+'px'},100);
 					audio.play('coin',true);
 				},2000);
 			}})
 
 			meep.$handLeft.delay(s*200 + 2500).animate({
-				top: '-10px',
-			},300).animate({top:'5px'},100);
+				top: (yHand-30)+'px',
+			},300).animate({top:(yHand)+'px'},100);
 
 			meep.$handRight.delay(s*200 + 2500).animate({
-				top: '-10px',
-			},300).animate({top:'0px'},100);
+				top: (yHand-30)+'px',
+			},300).animate({top:(yHand)+'px'},100);
 
 			meep.$shadow.hide();
 		}
