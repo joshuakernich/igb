@@ -153,10 +153,11 @@ window.HeadersGame = function(){
 				headersscore{
 					display: block;
 					position: absolute;
-					top: 10%;
+					bottom: 350px;
 					width: ${W/2}px;
-					left: ${W}px;
-					font-size: 150px;
+					left: ${-W/4}px;
+					font-size: 100px;
+					line-height: 150px;
 					text-align: center;
 					opacity: 0.2;
 				}
@@ -212,7 +213,9 @@ window.HeadersGame = function(){
 		}
 
 		for(var m=0; m<meepsActive.length; m++){
-			meepsActive[m].setHeight((H-meepsActive[m].py)+HEADR);
+			let h = (H-meepsActive[m].py)+HEADR;
+			meepsActive[m].setHeight(h);
+			meepsActive[m].$score.css({bottom:h});
 
 
 			if(meepsActive[m].range){
@@ -275,7 +278,7 @@ window.HeadersGame = function(){
 					audio.play('bounce',true);
 					let nScore = (ball.px > W/2)?0:1;
 					meepsActive[nScore].score++;
-					meepsActive[nScore].$score.text(meepsActive[nScore].score).css({top:'7%',opacity:1}).delay(200).animate({top:'10%',opacity:0.2});
+					meepsActive[nScore].$score.text('+1').css({opacity:1}).delay(500).animate({opacity:0});
 					audio.play('cheer',true);
 					iTimeout = setTimeout(finiBall,1000);
 
@@ -329,7 +332,7 @@ window.HeadersGame = function(){
 
 		for(var i=0; i<countPlayer; i++){
 			meeps[i] = new PartyMeep(i);
-			meeps[i].$score = $('<headersscore>').appendTo($game).text(0).hide();
+			meeps[i].$score = $('<headersscore>').appendTo(meeps[i].$el).css({opacity:0});
 			meeps[i].$el.appendTo($field);
 			meeps[i].$el.css({
 				'bottom':0+'px',
@@ -401,8 +404,6 @@ window.HeadersGame = function(){
 	let rangeRight = {min:W/2+HEADR*2,max:W};
 	function initNextMatchup(){
 
-		for( var m in meepsActive ) meepsActive[m].$score.hide();
-
 		iMatchup++;
 		let matchup = MATCHUPS[countPlayer][iMatchup];
 		let iLeft = parseInt(matchup[0]);
@@ -413,9 +414,6 @@ window.HeadersGame = function(){
 
 		meepsActive[0].range = rangeLeft;
 		meepsActive[1].range = rangeRight;
-
-		meepsActive[0].$score.show().attr('side','left');
-		meepsActive[1].$score.show().attr('side','right');
 
 		for( var m in meepsActive ) meepsActive[m].$el.show();
 
