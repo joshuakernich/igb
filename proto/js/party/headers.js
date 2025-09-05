@@ -1,8 +1,16 @@
 window.HeadersFootballGame = function(){
+	let self = this;
+
+	let game = new window.HeadersGame('football');
+	self.$el = game.$el;
+
+	self.setPlayers = game.setPlayers;
+	self.fini = game.fini;
+
 
 }
 
-window.HeadersGame = function(){
+window.HeadersGame = function( typeGame='volley' ){
 
 	let Ball = function(RADIUS,W,H){
 
@@ -18,6 +26,8 @@ window.HeadersGame = function(){
 		self.py = H*0.4;
 		self.sx = -10 + Math.random() * 20;
 		self.sy = -20;
+
+		self.floor = H-BALLR;
 
 		self.step = function(){
 			self.sy += GRAVITY;
@@ -183,6 +193,27 @@ window.HeadersGame = function(){
 					background: rgba(150,150,150,0.2);
 				}
 
+				headersgoal{
+					display: block;
+					position: absolute;
+					width: ${W*0.8}px;
+					height: ${H}px;
+					
+					background-image: url(./proto/img/goal.png);
+					background-size: 100%;
+					background-position: bottom center;
+					background-repeat: no-repeat;
+					right: ${W*0.26}px;
+					bottom: -20px;
+				}
+
+				headersgoal:first-of-type{
+					right: auto;
+					left: ${W*0.26}px;
+					transform: scaleX(-1);
+				}
+
+
 			</style>`);
 	}
 
@@ -193,9 +224,15 @@ window.HeadersGame = function(){
 	let $game = $('<headersgame>').appendTo(self.$el);
 	let $tutoral = $('<headerstutorial>').appendTo($game);
 	let $field = $('<headersfield>').appendTo($game);
-	let $line = $('<headersline>').appendTo($game);
-	let $net = $('<headersnet>').appendTo($field);
+	
 
+	if(typeGame=='football'){
+		$('<headersgoal>').appendTo($field);
+		$('<headersgoal>').appendTo($field);
+	} else {
+		let $net = $('<headersnet>').appendTo($field);
+	}
+	
 	let audio = new AudioContext();
 	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
 	audio.add('bounce','./proto/audio/party/sfx-bounce.mp3',0.3);
@@ -203,6 +240,15 @@ window.HeadersGame = function(){
 
 	let hud = new PartyHUD();
 	hud.$el.appendTo($game);
+
+	function doScore(nScore){
+		//audio.play('bounce',true);
+		meepsActive[nScore].score++;
+		meepsActive[nScore].$score.text('+1').css({opacity:1}).delay(500).animate({opacity:0});
+		audio.play('cheer',true);
+		iTimeout = setTimeout(finiBall,1000);
+		hud.updatePlayers(meeps);
+	}
 
 	function step(){
 
@@ -223,9 +269,6 @@ window.HeadersGame = function(){
 				if(meepsActive[m].px > meepsActive[m].range.max) meepsActive[m].px = meepsActive[m].range.max;
 			}
 
-			//if(m==0 && meepsActive[m].px>(W/2-HEADR) ) meepsActive[m].px = W/2-HEADR;
-			//if(m==1 && meepsActive[m].px<(W/2+HEADR) ) meepsActive[m].px = W/2+HEADR;
-
 			meepsActive[m].$el.css({
 				left:W + meepsActive[m].px + 'px',
 			})
@@ -234,57 +277,88 @@ window.HeadersGame = function(){
 		if(ball){
 			ball.step();
 
-			// wall left
-			if(ball.px<BALLR){
-				ball.px = BALLR;
-				ball.sx = Math.abs(ball.sx);
-				audio.play('bounce',true);
-			}
+			if(typeGame=='volley'){
 
-			// wall right
-			if(ball.px > W-BALLR){
-				ball.px = W-BALLR;
-				ball.sx = -Math.abs(ball.sx);
-				audio.play('bounce',true);
-			}
-
-			// net
-			let dxNet = (ball.px) - (W/2);
-			let isNearNet = Math.abs(dxNet) < BALLR;
-			if(isNearNet && !ball.dead){
-
-				let isHitting = ball.sy > 0 && ball.py > (H-NET-BALLR);
-
-				if(isHitting){
-					if(Math.abs(dxNet) < BALLR/2 ){
-						ball.py = (H-NET-BALLR);
-						ball.sy = -25;
-						ball.sx = dxNet * 0.2;
-					} else {
-						let sidedness = dxNet>0?1:-1;
-						ball.px = W/2 + sidedness * BALLR;
-					}
+				// wall left
+				if(ball.px<BALLR){
+					ball.px = BALLR;
+					ball.sx = Math.abs(ball.sx);
 					audio.play('bounce',true);
 				}
+
+				// wall right
+				if(ball.px > W-BALLR){
+					ball.px = W-BALLR;
+					ball.sx = -Math.abs(ball.sx);
+					audio.play('bounce',true);
+				}
+
+				// net
+				let dxNet = (ball.px) - (W/2);
+				let isNearNet = Math.abs(dxNet) < BALLR;
+				if(isNearNet && !ball.dead){
+
+					let isHitting = ball.sy > 0 && ball.py > (H-NET-BALLR);
+
+					if(isHitting){
+						if(Math.abs(dxNet) < BALLR/2 ){
+							ball.py = (H-NET-BALLR);
+							ball.sy = -25;
+							ball.sx = dxNet * 0.2;
+						} else {
+							let sidedness = dxNet>0?1:-1;
+							ball.px = W/2 + sidedness * BALLR;
+						}
+						audio.play('bounce',true);
+					}
+				}
+			} else if(typeGame=='football'){
+
+				let dx = ball.px-W/2;
+				let isSide = Math.abs(dx) > (W/2-120);
+				
+				if(isSide && !ball.dead){
+
+					let dir = dx > 0 ? 1 : -1;
+					let isAbove = ball.py < 350;
+					let isBelow = ball.py > 500;
+
+					if(isAbove){
+						ball.dead = true;
+						ball.floor = 350;
+						iTimeout = setTimeout(finiBall,1000);
+					} else if(isBelow) {
+						ball.dead = true;
+						doScore((ball.px > W/2)?0:1);
+					} else {
+						// isCrossbar
+						ball.px = W/2 + dir * (W/2-120);
+						ball.sx = Math.abs(ball.sx) * -dir;
+					}
+				}
+
+				
 			}
 
 			//ground
-			if(ball.py > H-BALLR){
-				ball.py = H-BALLR;
-				ball.sy = -Math.abs(ball.sy)/2;
-				ball.sx *= 0.5;
-				
-				if(!ball.dead){
-					audio.play('bounce',true);
-					let nScore = (ball.px > W/2)?0:1;
-					meepsActive[nScore].score++;
-					meepsActive[nScore].$score.text('+1').css({opacity:1}).delay(500).animate({opacity:0});
-					audio.play('cheer',true);
-					iTimeout = setTimeout(finiBall,1000);
+			if(ball.py > ball.floor){
 
-					hud.updatePlayers(meeps);
+				self.py = ball.floor;
+
+				if(!ball.dead) audio.play('bounce',true);
+
+				if(typeGame=='volley' && !ball.dead){
+					ball.dead = true;
+					doScore((ball.px > W/2)?0:1);
 				}
-				ball.dead = true;
+
+				if(ball.dead){
+					ball.sy = Math.min( -10, -Math.abs(ball.sy) * 0.7 );
+					ball.sx *= 0.8;
+				} else {
+					ball.sy = -35;
+				}
+
 			} else if( !ball.dead ){
 				for(var m in meepsActive){
 					let dx = (ball.px - meepsActive[m].px);
@@ -326,7 +400,7 @@ window.HeadersGame = function(){
 	let countPlayer = 2;
 	function initGame(COUNT){
 
-		audio.play('music');
+		
 
 		countPlayer = COUNT;
 
@@ -348,21 +422,33 @@ window.HeadersGame = function(){
 	function initTutorial(){
 		meepsActive = meeps;
 
-		for(var m=0; m<meepsActive.length; m++){
-			if(m<meepsActive.length/2) meepsActive[m].range = rangeLeft;
-			else meepsActive[m].range = rangeRight;
-		}
+		if(typeGame == 'volley'){
 
-		hud.initTutorial(
-			'Volley Heads',
-			{x:1.25, y:0.45, msg:'Align yourself<br>to your side of the net',icon:'align'},
-			{x:1.75, y:0.45, msg:'Move left & right<br>to head the ball over the net',icon:'side-to-side'},
+			for(var m=0; m<meepsActive.length; m++){
+				if(m<meepsActive.length/2) meepsActive[m].range = rangeLeft;
+				else meepsActive[m].range = rangeRight;
+			}
+
+			hud.initTutorial(
+				'Volley Heads',
+				{x:1.25, y:0.45, msg:'Align yourself<br>to your side of the net',icon:'align'},
+				{x:1.75, y:0.45, msg:'Move left & right<br>to head the ball over the net',icon:'side-to-side'},
+				);
+
+		} else {
+			hud.initTutorial(
+				'Soccer Heads',
+				{x:1.5, y:0.45, msg:'Move left & right<br>to head the ball into the goal',icon:'side-to-side'},
 			);
+		}
+		
 
 		hud.initTimer(10,finiTutorial);
 	}
 
 	function finiTutorial(){
+
+
 		hud.finiTutorial();
 		hud.finiTimer();
 		$tutoral.hide();
@@ -374,6 +460,7 @@ window.HeadersGame = function(){
 
 		setTimeout( function(){
 			hud.initPlayers(meeps);
+			audio.play('music');
 		},1000);
 
 		setTimeout(initNextMatchup,3000);
@@ -382,6 +469,8 @@ window.HeadersGame = function(){
 	function finiMatchup(){
 		clearTimeout(iTimeout);
 		ball.dead = true;
+		ball.$el.hide();
+		ball = undefined;
 		hud.initBanner('Finish!');
 
 		setTimeout( hud.finiBanner, 2000 );
@@ -412,12 +501,14 @@ window.HeadersGame = function(){
 		meepsActive[0] = meeps[iLeft];
 		meepsActive[1] = meeps[iRight];
 
-		meepsActive[0].range = rangeLeft;
-		meepsActive[1].range = rangeRight;
+		if(typeGame == 'volley'){
+			meepsActive[0].range = rangeLeft;
+			meepsActive[1].range = rangeRight;
+		}
 
+		for( var m in meeps ) meeps[m].$el.hide();
 		for( var m in meepsActive ) meepsActive[m].$el.show();
 
-	
 		initIntro();
 	}
 
