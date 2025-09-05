@@ -875,7 +875,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 			position:'absolute',
 			left:'0px',
 			right:'0px',
-			top:'15%',
+			top:'12%',
 		});
 
 		for(var t in tutor){

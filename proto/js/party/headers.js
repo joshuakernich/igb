@@ -1,3 +1,7 @@
+window.HeadersFootballGame = function(){
+
+}
+
 window.HeadersGame = function(){
 
 	let Ball = function(RADIUS,W,H){
@@ -122,11 +126,11 @@ window.HeadersGame = function(){
 				headersnet:before{
 					content:"";
 					width: 100px;
-					height: 20px;
+					height: 50px;
 					background: black;
 					border-radius: 100%;
 					position: absolute;
-					bottom: -10px;
+					bottom: -15px;
 					left: -30px;
 					opacity: 0.5;
 					display: block;
@@ -134,14 +138,16 @@ window.HeadersGame = function(){
 
 				headersnet:after{
 					content:"";
-					width: 20px;
-					height: ${NET}px;
-					background: white;
-					left: -10px;
+					width: 100px;
+					height: ${NET+30}px;
+					
+					left: -50px;
 					bottom: 0px;
 					display: block;
 					position: absolute;
 					border-radius: 5px;
+
+					background:url(proto/img/volleyball-net.png);
 				}
 
 				headersscore{
@@ -168,6 +174,14 @@ window.HeadersGame = function(){
 					width: 100%;
 				}
 
+				headerstutorial{
+					display: block;
+					position: absolute;
+					inset: 0px;
+					backdrop-filter: blur(20px);
+					background: rgba(150,150,150,0.2);
+				}
+
 			</style>`);
 	}
 
@@ -176,6 +190,7 @@ window.HeadersGame = function(){
 
 	self.$el = $('<igb>');
 	let $game = $('<headersgame>').appendTo(self.$el);
+	let $tutoral = $('<headerstutorial>').appendTo($game);
 	let $field = $('<headersfield>').appendTo($game);
 	let $line = $('<headersline>').appendTo($game);
 	let $net = $('<headersnet>').appendTo($field);
@@ -199,8 +214,14 @@ window.HeadersGame = function(){
 		for(var m=0; m<meepsActive.length; m++){
 			meepsActive[m].setHeight((H-meepsActive[m].py)+HEADR);
 
-			if(m==0 && meepsActive[m].px>(W/2-HEADR) ) meepsActive[m].px = W/2-HEADR;
-			if(m==1 && meepsActive[m].px<(W/2+HEADR) ) meepsActive[m].px = W/2+HEADR;
+
+			if(meepsActive[m].range){
+				if(meepsActive[m].px < meepsActive[m].range.min) meepsActive[m].px = meepsActive[m].range.min;
+				if(meepsActive[m].px > meepsActive[m].range.max) meepsActive[m].px = meepsActive[m].range.max;
+			}
+
+			//if(m==0 && meepsActive[m].px>(W/2-HEADR) ) meepsActive[m].px = W/2-HEADR;
+			//if(m==1 && meepsActive[m].px<(W/2+HEADR) ) meepsActive[m].px = W/2+HEADR;
 
 			meepsActive[m].$el.css({
 				left:W + meepsActive[m].px + 'px',
@@ -257,6 +278,8 @@ window.HeadersGame = function(){
 					meepsActive[nScore].$score.text(meepsActive[nScore].score).css({top:'7%',opacity:1}).delay(200).animate({top:'10%',opacity:0.2});
 					audio.play('cheer',true);
 					iTimeout = setTimeout(finiBall,1000);
+
+					hud.updatePlayers(meeps);
 				}
 				ball.dead = true;
 			} else if( !ball.dead ){
@@ -314,7 +337,43 @@ window.HeadersGame = function(){
 			});
 		}
 
-		setTimeout( initNextMatchup, 1000 );
+		initTutorial();
+
+		//setTimeout( initNextMatchup, 1000 );
+	}
+
+	function initTutorial(){
+		meepsActive = meeps;
+
+		for(var m=0; m<meepsActive.length; m++){
+			if(m<meepsActive.length/2) meepsActive[m].range = rangeLeft;
+			else meepsActive[m].range = rangeRight;
+		}
+
+		hud.initTutorial(
+			'Volley Heads',
+			{x:1.25, y:0.45, msg:'Align yourself<br>to your side of the net',icon:'align'},
+			{x:1.75, y:0.45, msg:'Move left & right<br>to head the ball over the net',icon:'side-to-side'},
+			);
+
+		hud.initTimer(10,finiTutorial);
+	}
+
+	function finiTutorial(){
+		hud.finiTutorial();
+		hud.finiTimer();
+		$tutoral.hide();
+
+		for(var m=0; m<meepsActive.length; m++) meepsActive[m].$el.hide();
+		meepsActive = [];
+
+		//initNextMatchup();
+
+		setTimeout( function(){
+			hud.initPlayers(meeps);
+		},1000);
+
+		setTimeout(initNextMatchup,3000);
 	}
 
 	function finiMatchup(){
@@ -338,6 +397,8 @@ window.HeadersGame = function(){
 
 	let meepsActive = [];
 	let iMatchup = -1;
+	let rangeLeft = {min:0,max:W/2-HEADR*2};
+	let rangeRight = {min:W/2+HEADR*2,max:W};
 	function initNextMatchup(){
 
 		for( var m in meepsActive ) meepsActive[m].$score.hide();
@@ -350,15 +411,22 @@ window.HeadersGame = function(){
 		meepsActive[0] = meeps[iLeft];
 		meepsActive[1] = meeps[iRight];
 
+		meepsActive[0].range = rangeLeft;
+		meepsActive[1].range = rangeRight;
+
 		meepsActive[0].$score.show().attr('side','left');
 		meepsActive[1].$score.show().attr('side','right');
 
+		for( var m in meepsActive ) meepsActive[m].$el.show();
+
+	
 		initIntro();
 	}
 
 	function initIntro(){
 		hud.summonPlayers(MATCHUPS[countPlayer][iMatchup]);
 		setTimeout(hud.finiBanner,3000);
+		hud.revealTimer(30);
 		setTimeout(function(){
 			hud.initBanner('Go!');
 			hud.initTimer(30,finiMatchup);
