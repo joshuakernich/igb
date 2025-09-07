@@ -479,11 +479,16 @@ window.HeadersGame = function( typeGame='volley' ){
 	}
 
 	function finiMatchup(){
+
+		hud.finiTimer();
+
 		clearTimeout(iTimeout);
 		ball.dead = true;
 		ball.$el.hide();
 		ball = undefined;
 		hud.initBanner('Finish!');
+
+		for(var m in meeps) meeps[m].$el.hide();
 
 		setTimeout( hud.finiBanner, 2000 );
 		setTimeout( MATCHUPS[countPlayer][iMatchup+1]?initNextMatchup:finiGame, 4000 );
@@ -491,12 +496,16 @@ window.HeadersGame = function( typeGame='volley' ){
 	}
 
 	function finiGame() {
+
+		let scores = [];
+		for(var m in meeps) scores[m] = meeps[m].score;
+
+		let rewards = window.scoresToRewards(scores);
+		hud.showFinalScores(scores,rewards);
 		
 		setTimeout(function(){
-			let scores = [];
-			for(var m in meeps) scores[m] = meeps[m].score;
 			window.doPartyGameComplete(scores);
-		})
+		},5000)
 	}
 
 	let meepsActive = [];
