@@ -238,16 +238,21 @@ window.HeadersGame = function( typeGame='volley' ){
 	audio.add('bounce','./proto/audio/party/sfx-bounce.mp3',0.3);
 	audio.add('cheer','./proto/audio/party/sfx-cheer.mp3',0.6);
 
+	let isTutorial = true;
+
 	let hud = new PartyHUD();
 	hud.$el.appendTo($game);
 
 	function doScore(nScore){
-		//audio.play('bounce',true);
-		meepsActive[nScore].score++;
-		meepsActive[nScore].$score.text('+1').css({opacity:1}).delay(500).animate({opacity:0});
-		audio.play('cheer',true);
+
+		if(!isTutorial){
+			meepsActive[nScore].score++;
+			meepsActive[nScore].$score.text('+1').css({opacity:1}).delay(500).animate({opacity:0});
+			audio.play('cheer',true);
+			hud.updatePlayers(meeps);
+		}
+
 		iTimeout = setTimeout(finiBall,1000);
-		hud.updatePlayers(meeps);
 	}
 
 	function step(){
@@ -420,6 +425,8 @@ window.HeadersGame = function( typeGame='volley' ){
 	}
 
 	function initTutorial(){
+
+		isTutorial = true;
 		meepsActive = meeps;
 
 		if(typeGame == 'volley'){
@@ -441,13 +448,20 @@ window.HeadersGame = function( typeGame='volley' ){
 				{x:1.5, y:0.45, msg:'Move left & right<br>to head the ball into the goal',icon:'side-to-side'},
 			);
 		}
+
+		initBall();
 		
 
-		hud.initTimer(10,finiTutorial);
+		hud.initTimer(30,finiTutorial);
 	}
 
 	function finiTutorial(){
 
+		isTutorial = false;
+		clearInterval(iTimeout);
+		ball.dead = true;
+		ball.$el.remove();
+		ball = undefined;
 
 		hud.finiTutorial();
 		hud.finiTimer();
@@ -455,8 +469,6 @@ window.HeadersGame = function( typeGame='volley' ){
 
 		for(var m=0; m<meepsActive.length; m++) meepsActive[m].$el.hide();
 		meepsActive = [];
-
-		//initNextMatchup();
 
 		setTimeout( function(){
 			hud.initPlayers(meeps);
