@@ -364,7 +364,7 @@ window.MazeGame = function(n){
 					'transform':'rotateX(-60deg) scale(0.8) translateZ(0px)'
 				})
 			}
-			if(iRound==0) hud.initRound(iRound,STRUCTURE[meeps.length].length);
+			if(iCohort==0) hud.initRound(iRound,STRUCTURE[meeps.length].length);
 		},6000);
 
 		setTimeout(function(){
