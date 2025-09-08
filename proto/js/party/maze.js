@@ -150,10 +150,11 @@ window.MazeGame = function(n){
 			[{players:[0,1],map:MAPS[2]},{players:[2,3],map:MAPS[3]}],
 		],
 		[
-			[{players:[0,1],map:MAPS[0]},{players:[2,3],map:MAPS[1]},{players:[4,0],map:MAPS[2]},{players:[1,2],map:MAPS[3]},{players:[3,4],map:MAPS[4]}],
+			[{players:[0,1,2],map:MAPS[0]},{players:[0,3,4],map:MAPS[1]},{players:[1,3,2],map:MAPS[2]},{players:[2,4,0],map:MAPS[3]},{players:[3,4,1],map:MAPS[4]}],
 		],
 		[
-			[{players:[0,1],map:MAPS[0]},{players:[2,3],map:MAPS[1]},{players:[4,5],map:MAPS[2]}]
+			[{players:[0,1,2],map:MAPS[0]},{players:[3,4,5],map:MAPS[1]}],
+			[{players:[0,1,2],map:MAPS[2]},{players:[3,4,5],map:MAPS[3]}],
 		],
 	]
 
