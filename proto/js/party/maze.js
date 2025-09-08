@@ -5,9 +5,157 @@ window.MazeGame = function(n){
 	let PLAYER_COUNT = 6;
 	let SCORE_MAX = 15;
 	const GRIDSIZE = 400;
-	const TRACKLENGTH = 200;
 
-	const GRID = {W:W/GRIDSIZE,H:TRACKLENGTH};
+	const GRID = {W:W/GRIDSIZE};
+
+	const MAPS = [
+		[
+			'0000',
+			'0000',
+			'0000',
+			'0000',
+			' 00 ',
+			'0000',
+			'0  0',
+			'0000',
+			' 0 0',
+			' 0 0',
+			'0000',
+			'0 0 ',
+			'0 0 ',
+			'0000',
+			' 0 0',
+			'00 0',
+			'0  0',
+			'0000',
+			'0  0',
+			'0000',
+			'0000',
+			'0000',
+			'0000',
+		],
+		[
+			'0000',
+			'0000',
+			'0000',
+			'0000',
+			'0  0',
+			'0000',
+			' 00',
+			'0000',
+			'0  0',
+			'0000',
+			'  00',
+			' 00 ',
+			'00  ',
+			' 00 ',
+			'  00',
+			' 00 ',
+			'00  ',
+			' 00 ',
+			'  00',
+			'0000',
+			'0000',
+			'0000',
+			'0000',
+		],
+		[
+			'0000',
+			'0000',
+			'0000',
+			'0000',
+			'0   ',
+			'00  ',
+			' 0 0',
+			' 000',
+			'   0',
+			'0000',
+			'0   ',
+			'0   ',
+			'000 ',
+			'  00',
+			' 000',
+			' 0  ',
+			' 0 0',
+			' 000',
+			'  0 ',
+			'0000',
+			'0000',
+			'0000',
+			'0000',
+		],
+		[
+			'0000',
+			'0000',
+			'0000',
+			'0000',
+			'   0',
+			'0000',
+			'0   ',
+			'0000',
+			'   0',
+			'0000',
+			'0   ',
+			'0000',
+			'   0',
+			'0000',
+			'0   ',
+			'0  0',
+			'0000',
+			'  0 ',
+			'0000',
+			'0000',
+			'0000',
+			'0000',
+		],
+		[
+			'0000',
+			'0000',
+			'0000',
+			'0000',
+			'0   ',
+			'0000',
+			'   0',
+			'0000',
+			'0   ',
+			'0  0',
+			'0  0',
+			'0000',
+			'   0',
+			'0  0',
+			'0  0',
+			'0000',
+			'  0 ',
+			'0000',
+			'0000',
+			'0000',
+			'0000',
+		],
+
+	]
+
+	const STRUCTURE = [
+		undefined,
+		undefined,
+		[
+			[{players:[0,1],map:MAPS[0]}],
+			[{players:[0,1],map:MAPS[1]}],
+		],
+		[
+			[{players:[0,1,2],map:MAPS[0]}],
+			[{players:[0,1,2],map:MAPS[1]}],
+		],
+		[
+			[{players:[0,1],map:MAPS[0]},{players:[2,3],map:MAPS[1]}],
+			[{players:[0,1],map:MAPS[2]},{players:[2,3],map:MAPS[3]}],
+		],
+		[
+			[{players:[0,1],map:MAPS[0]},{players:[2,3],map:MAPS[1]},{players:[4,0],map:MAPS[2]},{players:[1,2],map:MAPS[3]},{players:[3,4],map:MAPS[4]}],
+		],
+		[
+			[{players:[0,1],map:MAPS[0]},{players:[2,3],map:MAPS[1]},{players:[4,5],map:MAPS[2]}]
+		],
+	]
 
 	if(!MazeGame.didInit){
 		MazeGame.didInit = true;
@@ -19,8 +167,9 @@ window.MazeGame = function(n){
 					width: ${W*3}px;
 					height: ${H}px;
 					transform-origin: top left;
-					background: url(./proto/img/party/bg-mountains-clouds.png);
+					background: url(./proto/img/party/bg-cosmos.gif);
 					background-size: 100%;
+					background-position: center;
 					perspective: ${W}px;
 				}
 
@@ -30,6 +179,7 @@ window.MazeGame = function(n){
 					display: block;
 					inset: 0px;
 					background: linear-gradient(to top, #86C0D4, transparent);
+					display: none;
 				}
 
 				mazeworld{
@@ -47,32 +197,23 @@ window.MazeGame = function(n){
 					transform-style:preserve-3d;
 				}
 
-				mazeworld:after{
-					content:"";
-					border: 50px dashed yellow;
-					display: block;
-					position: absolute;
-					left: 0px;
-					right: 0px;
-					top: 0px;
-					bottom: 0px;
-					display: none;
-				}
 
 				mazeplatform{
 					display: block;
 					width: ${W}px;
-					height: ${TRACKLENGTH*GRIDSIZE}px;
+					
 					position: absolute;
 					left: 0px;
 					right: 0px;
 					bottom: 0px;
 					margin: auto;
+					transform-style:preserve-3d;
 				}
 
 				mazerow{
 					display: block;
 					height: ${GRIDSIZE}px;
+					transform-style:preserve-3d;
 				}
 
 				mazeblock{
@@ -80,7 +221,45 @@ window.MazeGame = function(n){
 					height: ${GRIDSIZE}px;
 					background: rgba(150,105,50,1);
 					display: inline-block;
-					border-bottom: 150px solid rgba(100,55,0,1);
+					box-shadow: inset -10px -20px 0px rgba(0,0,0,0.1), inset 10px 20px 0px rgba(255,255,255,0.1);
+					
+					border-radius:30px;
+					position: relative;
+
+					transform-style:preserve-3d;
+				}
+
+				mazeblock:before{
+					content:"";
+					display: block;
+					position: absolute;
+					inset: 0px;
+					background: radial-gradient( transparent, rgba(0,0,0,0.5) );
+				}
+
+				mazeblock:after{
+					content:"";
+					display: block;
+					position: absolute;
+					
+					height: 80px;
+					bottom: 0px;
+					background: gray;
+					transform: rotateX(90deg);
+					transform-style:preserve-3d;
+					transform-origin: bottom center;
+					border-radius:30px 30px 0px 0px;
+					left: 0px;
+					right: 0px;
+					background: radial-gradient( gray, black );
+				}
+
+				mazerow:nth-of-type(2n) mazeblock:nth-of-type(2n){
+					background: rgba(155,115,60,1);
+				}
+
+				mazerow:nth-of-type(2n+1) mazeblock:nth-of-type(2n+1){
+					background: rgba(155,115,60,1);
 				}
 
 				mazeblock[absent='true']{
@@ -89,36 +268,22 @@ window.MazeGame = function(n){
 			</style>`);
 	}
 
-	let yProgress = 0;
+	
 	let isGoTime = false;
 
 	let self = this;
 	self.$el = $('<igb>');
 
 	let audio = new AudioContext();
-	audio.add('music','./proto/audio/party/music-creeping.mp3',0.3,true);
+	audio.add('music','./proto/audio/party/music-cosmic-frenzy.mp3',0.3,true);
 	audio.add('fall','./proto/audio/party/sfx-fall.mp3',0.3);
 
 	let $game = $('<mazegame>').appendTo(self.$el);
 	let $world = $('<mazeworld>').appendTo($game);
 	let $platform = $('<mazeplatform>').appendTo($world);
 
-	let map = [];
-
-	for(var y=0; y<GRID.H; y++){
-		let $row = $('<mazerow>').prependTo($platform);
-		map[y] = [];
-		let iAbsent = Math.floor( Math.random() * GRID.W );
-		if(y<10 || y>(TRACKLENGTH-5) || y%4==0 ) iAbsent = -1;
-
-		for(var x=0; x<GRID.W; x++){
-			$('<mazeblock>')
-			.appendTo($row)
-			.attr('absent',x==iAbsent?'true':'false');
-
-			map[y][x] = (x!=iAbsent);
-		}
-	}
+	let hud = new PartyHUD('#4C7B93');
+	hud.$el.appendTo($game);
 
 	let meeps = [];
 	function initGame(count){
@@ -130,41 +295,102 @@ window.MazeGame = function(n){
 		for(var i=0; i<PLAYER_COUNT; i++){
 
 			meeps[i] = new PartyMeep(i);
-			meeps[i].$el.appendTo($world);
-			meeps[i].setHeight(370);
+			meeps[i].dead = true;
+			meeps[i].$el.appendTo($world).hide();
 			meeps[i].$el.css({
-
-				top:'200px',
-				left:(40+i*10)+'%',
 				'transform-style':'preserve-3d',
 				transform: 'rotateX(-60deg) scale(0.8)',
 				
 			});
 		}
 
+		hud.initPlayers(meeps);
+
 		audio.play('music');
-		//isGoTime = true;
+
+
+		initNextRound();
+	}
+
+	const palette = ['#37CCDA','#8DE968','#FEE955','#FEB850','#FD797B'];
+
+	let yProgress = 0;
+	let iCohort = -1;
+	let iRound = 0;
+	let round;
+	function initNextRound(){
+
+		iCohort++;
+
+		if(!STRUCTURE[meeps.length][iRound][iCohort]){
+			iCohort = 0;
+			iRound++;
+		}
+
+		if(!STRUCTURE[meeps.length][iRound]){
+			finiGame();
+			return;
+		}
+
+		$platform.empty();
+		round = STRUCTURE[meeps.length][iRound][iCohort];
+		let n = -1;
+		for(var y=0; y<round.map.length; y++){
+			let $row = $('<mazerow>').prependTo($platform);
+			for(var x=0; x<round.map[y].length; x++){
+
+				n++;
+
+				$('<mazeblock>')
+				.css({'background-color':palette[n%palette.length]})
+				.appendTo($row)
+				.attr('absent',round.map[y][x]==' '?'true':'false');
+			}
+		}
+
+		yProgress = round.map.length;
+		$({p:yProgress}).animate({p:0},{duration:5000,step:function(a){
+			yProgress = a;
+		}});
 
 		setTimeout(function(){
-			hud.initBanner('Ready?');
-		},2000);
+			for(var p in round.players){
+				let m = round.players[p];
+				meeps[m].$el.show();
+				meeps[m].dead = false;
 
-		setTimeout(function(){
-			hud.finiBanner();
-		},4000);
-
-		setTimeout(function(){
-			hud.initBanner('Go!');
-			isGoTime = true;
+				meeps[m].$el.css({
+					'transition':'',
+					'transform':'rotateX(-60deg) scale(0.8) translateZ(0px)'
+				})
+			}
+			if(iRound==0) hud.initRound(iRound,STRUCTURE[meeps.length].length);
 		},6000);
 
 		setTimeout(function(){
 			hud.finiBanner();
 		},8000);
+
+		setTimeout(function(){
+			hud.summonPlayers(round.players);
+		},10000);
+
+		setTimeout(function(){
+			hud.finiBanner();
+			isGoTime = true;
+		},12000);
 	}
-	
-	let hud = new PartyHUD('#4C7B93');
-	hud.$el.appendTo($game);
+
+	function finiRound(){
+
+		for(var m in meeps) meeps[m].$el.hide();
+
+		$({p:yProgress}).animate({p:-10},{duration:2000,step:function(a){
+			yProgress = a;
+		}});
+
+		setTimeout(initNextRound,2500);
+	}
 
 	hud.initPlayerCount(initGame);
 
@@ -184,6 +410,11 @@ window.MazeGame = function(n){
 		if(isGoTime){
 			speed += 0.0001;
 			yProgress += speed;
+
+			if(yProgress>(round.map.length-4)){
+				yProgress = round.map.length;
+				finiScroll();
+			}
 		}
 		
 		$platform.css({'bottom':-yProgress*GRIDSIZE+'px'});
@@ -195,19 +426,17 @@ window.MazeGame = function(n){
 			meeps[m].$el.css({
 				left:meeps[m].x + 'px',
 				top:meeps[m].y + 'px'
-			})
+			});
+
+			meeps[m].score = Math.max( meeps[m].score, Math.floor(yProgress) );
 
 			let gx = Math.floor(meeps[m].x/GRIDSIZE);
 			let gy = Math.floor((W-meeps[m].y)/GRIDSIZE+yProgress);
 
-			if(map[gy] && map[gy][gx]==false){
+			if(round.map[gy] && round.map[gy][gx]==' '){
 				meeps[m].dead = true;
 				
 				countDead++;
-				
-				meeps[m].score = countDead * scoreMult;
-
-				//meeps[m].$el.remove();
 
 				audio.play('fall',true);
 
@@ -221,22 +450,31 @@ window.MazeGame = function(n){
 		let count = 0;
 		for(var m in meeps) if(!meeps[m].dead) count++;
 
-		if(count == 1 && isGoTime){
+		if(count == 0 && isGoTime) finiScroll();
 
-			for(var m in meeps) if(!meeps[m].dead) meeps[m].score = SCORE_MAX;
+		hud.updatePlayers(meeps);
+	}
 
-			isGoTime = false;
-			clearInterval(interval);
-			hud.initBanner('Winner!');
-			setTimeout(function(){
+	function finiScroll(){
+		isGoTime = false;
+		hud.initBanner('Finish!');
 
-				let scores = [];
-				for(var m in meeps) scores[m] = meeps[m].score;
+		setTimeout(function(){
+			hud.finiBanner();
+			finiRound();
+		},3000);
+	}
 
-				self.fini();
-				window.doPartyGameComplete(scores);
-			},3000);
-		}
+	function finiGame(){
+		let scores = [];
+		for(var m in meeps) scores[m] = meeps[m].score;
+
+		hud.showFinalScores(scores,window.scoresToRewards(scores));
+
+		setTimeout(function(){
+			self.fini();
+			window.doPartyGameComplete(scores);
+		},5000);	
 	}
 
 	let interval = setInterval(step,1000/FPS);
