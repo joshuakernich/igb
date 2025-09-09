@@ -5,6 +5,7 @@ window.MazeGame = function(n){
 	let PLAYER_COUNT = 6;
 	let SCORE_MAX = 15;
 	const GRIDSIZE = 400;
+	const COIN = 150;
 
 	const GRID = {W:W/GRIDSIZE};
 
@@ -14,21 +15,21 @@ window.MazeGame = function(n){
 			'0000',
 			'0000',
 			'0000',
-			'**00',
+			'**10',
 			'0000',
-			'0***',
+			'1***',
 			'0000',
-			'0*00',
+			'0*01',
 			'00*0',
-			'0000',
-			'0*00',
+			'1000',
+			'0*01',
 			'*000',
+			'01*0',
 			'00*0',
-			'00*0',
-			'0000',
+			'0010',
 			'0**0',
 			'0000',
-			'00*0',
+			'01*0',
 			'0*00',
 			'0000',
 			'0000',
@@ -203,7 +204,9 @@ window.MazeGame = function(n){
 			[{players:[0,1],map:MAPS[2]},{players:[2,3],map:MAPS[3]}],
 		],
 		[
-			[{players:[0,1,2],map:MAPS[0]},{players:[0,3,4],map:MAPS[1]},{players:[1,3,2],map:MAPS[2]},{players:[2,4,0],map:MAPS[3]},{players:[3,4,1],map:MAPS[4]}],
+			[{players:[0,1,2],map:MAPS[0]},{players:[3,4],map:MAPS[1]}],
+			[{players:[0,2,4],map:MAPS[2]},{players:[1,3],map:MAPS[3]}],
+			[{players:[1,3,4],map:MAPS[4]},{players:[0,2],map:MAPS[5]}],
 		],
 		[
 			[{players:[0,1,2],map:MAPS[0]},{players:[3,4,5],map:MAPS[1]}],
@@ -389,6 +392,46 @@ window.MazeGame = function(n){
 					opacity: 0.9;
 				}
 
+				mazecoin{
+					position: absolute;
+					display: block;
+					transform-style: preserve-3d;
+
+					top: 50%;
+					left: 50%;
+				}
+
+				mazecoinbody{
+					position: absolute;
+					display: block;
+					width: ${COIN}px;
+					height: ${COIN}px;
+					background: purple;
+					border-radius: 100%;
+					left: -${COIN/2}px;
+					bottom: 0px;
+					transform: rotateX(-90deg);
+					transform-style: preserve-3d;
+					transform-origin: bottom center;
+					border-left: 10px solid white;
+					box-sizing: border-box;
+				}
+
+				mazecoinbody:after{
+					content:"";
+					position: absolute;
+					display: block;
+					top: 0px;
+					left: 0px;
+					right: 0px;
+					bottom: 0px;
+					margin: 20px;
+					box-sizing: border-box;
+					border: 5px solid black;
+					border-radius: 100%;
+					box-shadow: 4px 0px white;
+				}
+
 			</style>`);
 	}
 
@@ -440,9 +483,10 @@ window.MazeGame = function(n){
 	self.$el = $('<igb>');
 
 	let audio = new AudioContext();
-	audio.add('music','./proto/audio/party/music-cosmic-frenzy.mp3',0.3,true);
+	audio.add('music','./proto/audio/party/music-cosmic-frenzy.mp3',0.2,true);
 	audio.add('fall','./proto/audio/party/sfx-fall.mp3',0.3);
-	audio.add('blip','./proto/audio/party/sfx-select.mp3',0.3);
+	audio.add('blip','./proto/audio/party/sfx-select.mp3',0.1);
+	audio.add('explode','./proto/audio/party/sfx-explode.mp3',0.3);
 
 	let $game = $('<mazegame>').appendTo(self.$el);
 	let $world = $('<mazeworld>').appendTo($game);
@@ -521,6 +565,18 @@ window.MazeGame = function(n){
 
 				let $content = $('<mazeblockcontent>')
 				.appendTo($block);
+
+				if(round.map[y][x]=='1'){
+
+					let $shadow = $(`<mazeshadow>`).appendTo($block).css({opacity:0.5});
+
+					let $coin = $(`
+					<mazecoin>
+						<mazecoinbody>
+						</mazecoinbody>
+					</mazecoin>
+					`).appendTo($block);
+				}
 
 				blocks[n] = {
 					x:x,
@@ -634,6 +690,8 @@ window.MazeGame = function(n){
 							new MazeExplosion(GRIDSIZE/2,'white').$el.appendTo(blocks[b].$content).css({
 								left: '50%', bottom: '100px',
 							})
+
+							audio.play('explode',true);
 						}
 					})
 				}
@@ -659,7 +717,7 @@ window.MazeGame = function(n){
 			let block;
 			for(var b in blocks) if(blocks[b].x == gx && blocks[b].y == gy) block = blocks[b];
 
-			if(	meeps[m].gx != gx || meeps[m].gy != gy ){
+			/*if(	meeps[m].gx != gx || meeps[m].gy != gy ){
 				meeps[m].gx = gx;
 				meeps[m].gy = gy;
 				let $cell = self.$el.find(`mazeblock[x='${gx}'][y='${gy}']`);
@@ -670,7 +728,7 @@ window.MazeGame = function(n){
 					audio.play('blip',true);
 					reviseScores();
 				}
-			} 
+			} */
 			
 			if(!round.map[gy] || !round.map[gy][gx] || round.map[gy][gx]==' ' || block.isDead ){
 				meeps[m].dead = true;
