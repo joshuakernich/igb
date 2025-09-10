@@ -408,7 +408,6 @@ window.PainterPanicGame = function(){
 					<svg viewBox='-1 -1 2 2'>
 						<path vector-effect='non-scaling-stroke' d=''></path>
 					</svg>
-					
 					<painterpaint>
 						<canvas width=${BOX} height=${BOX}></canvas>
 						<canvas width=${BOX} height=${BOX}></canvas>

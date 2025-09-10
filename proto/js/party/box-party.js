@@ -246,8 +246,8 @@ BoxPartyCube = function(nCube,transform,game){
 	}
 
 	let audio = new AudioContext();
-    audio.add('reveal','./proto/audio/riddler-perfect.mp3',1);
-    audio.add('rumble','./proto/audio/party/sfx-rumble.mp3',1,true);
+    audio.add('reveal','./proto/audio/riddler-perfect.mp3',0.3);
+    audio.add('rumble','./proto/audio/party/sfx-rumble.mp3',0.15,true);
 
 	self.revealGame = function( ){
 
@@ -282,8 +282,8 @@ BoxPartyCube = function(nCube,transform,game){
 BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbackExitBox){
     
 	let audio = new AudioContext();
-    audio.add('rumble','./proto/audio/party/sfx-rumble.mp3',1);
-    audio.add('reverse','./proto/audio/fight-reverse.mp3',1);
+    audio.add('rumble','./proto/audio/party/sfx-rumble.mp3',0.2);
+    audio.add('reveal','./proto/audio/party/sfx-correct-echo.mp3',0.3);
 
     const W = 1600;
     const H = 1000;
@@ -653,7 +653,7 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
     		duration:3000,
     		complete:function(){
     			audio.stop('rumble');
-    			audio.play('reverse');
+    			audio.play('reveal');
     			callbackEnterBox(boxes[nSelect].game.game);
     		}
     	})
@@ -952,7 +952,7 @@ BoxPartyGame = function(){
         <style`);
 
  	let audio = new AudioContext();
-    audio.add('music','./proto/audio/party/music-adventure.mp3',0.5,true,true);
+    audio.add('music','./proto/audio/party/music-adventure.mp3',0.3,true,true);
    // audio.add('music','./proto/audio/party/sfx-rumble.mp3',1);
 
 	let self = this;
@@ -992,7 +992,7 @@ BoxPartyGame = function(){
 
 	function doLaunchGame(game){
 		let p = game;
-		liveModule = new p();
+		liveModule = new p(players);
 		liveModule.$el.appendTo($minigame);
 		audio.stop('music');
 		scene.$el.hide();

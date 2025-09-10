@@ -11,7 +11,7 @@ window.PartyPlayerHUD = function(n,meep,type){
 	head.$el.appendTo(self.$el);
 
 	self.redraw = function(score){
-		self.$el.find('partyscore').text(Math.floor(score));
+		self.$el.find('partyscore').text(score);
 	}
 
 	self.setActive = function(b){
@@ -31,6 +31,8 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	audio.add('tock','./proto/audio/party/sfx-tock.mp3',0.3);
 	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
 	audio.add('music','./proto/audio/party/music-tutorial.mp3',0.3);
+	audio.add('woosh','./proto/audio/party/sfx-woosh.mp3',0.05);
+	audio.add('woosh-long','./proto/audio/party/sfx-woosh-long.mp3',0.05);
 
 	new PartyMeep(0);
 
@@ -212,7 +214,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					text-align: left;
 					
 					box-sizing: border-box;
-					font-size: ${THICC}px;
+					font-size: ${THICC*0.9}px;
 					line-height: ${THICC*2}px;
 					font-weight: 100;
 
@@ -493,6 +495,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	}
 
 	self.initPlayerCount = function(callback){
+
 		setBanner(true);
 		$('<p>').text('How big is your squad?').appendTo($banner);
 		$('<spacer>').appendTo($banner);
@@ -508,7 +511,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	let isTimerRevealled = false;
 
 	self.revealTimer = function(seconds){
-
+		audio.play('woosh-long',true);
 		$timer.text(seconds);
 
 		if(isTimerRevealled) return;
@@ -520,7 +523,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	}
 
 	self.initTimer = function(seconds,callback){
-
+		
 		self.revealTimer(seconds);
 
 		let timeStart = new Date().getTime();
@@ -545,6 +548,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	}
 
 	self.finiTimer = function(){
+		audio.play('woosh-long',true);
 		isTimerRevealled = false;
 
 		$streamTimer.animate({top:-150},{duration:500,complete:function(){
@@ -563,7 +567,13 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 		let $chars = [];
 
+
 		for(var m=0; m<msg.length; m++){
+
+			setTimeout(function(){
+				audio.play('woosh',true);
+			},m*100);
+
 			let $char = $('<span>').appendTo(self.$el).text(msg[m]);
 			$char.css({
 				'position':'relative',
@@ -581,6 +591,11 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 		self.fini = function(){
 			for(var c=0; c<$chars.lenth; c++){
+
+				setTimeout(function(){
+					audio.play('woosh',true);
+				},c*50);
+
 				$chars[c].delay(($chars.lenth-c)*50).animate({
 					'top':'20px'
 				},300).animate({
@@ -618,11 +633,15 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	}
 
 	self.initBanner = function(msg,size='p'){
+		audio.play('woosh-long',true);
 		setBanner(true);
 		$banner.html(`<${size}>${msg}</${size}>`);
 	}
 
 	self.finiBanner = function(){
+		setTimeout(function(){
+			audio.play('woosh-long',true);
+		},300),
 		setBanner(false);
 	}
 
@@ -783,6 +802,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	}
 
 	self.summonPlayers = function( arrIn ){
+		audio.play('woosh-long',true);
 		setBanner(true);
 
 		$banner.empty();

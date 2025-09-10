@@ -12,7 +12,7 @@ window.MelodyMatchGame = function(){
 	let audio = new AudioContext();
 	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
 	audio.add('notes','./proto/audio/party/sfx-glockenspiel.mp3',0.3);
-	audio.add('music','./proto/audio/party/music-ambient.mp3',0.3);
+	audio.add('music','./proto/audio/party/music-ambient.mp3',0.3,true);
 
 	const LEVEL = [
 		[0,1,2,1,3],
@@ -91,10 +91,10 @@ window.MelodyMatchGame = function(){
 		let self = this;
 		self.$el = $('<melodymeep>');
 
+		self.score = 0;
 		self.ax = 0;
 		self.px = 0;
-
-		self.score = 0;
+		self.isComplete = false;
 
 		let $keys = [];
 
@@ -120,6 +120,8 @@ window.MelodyMatchGame = function(){
 		});
 
 		let iBounceWas = 0;
+		let iProgress = 0;
+		
 
 		self.step = function(beat){
 
@@ -140,20 +142,17 @@ window.MelodyMatchGame = function(){
 			});
 
 			let bounce = (beat/BPB);
-			let bp = bounce%1;
-			$ball.css({
-				bottom: 380 + Math.sin(bp*Math.PI) * 500,
-			});
+			let phase = bounce%1;
+			let iBounce = Math.floor(bounce);
 
-			if(bounce<0.5 || bounce > (self.melody.length+0.5)){
+			if( (iProgress + phase) > (self.melody.length + 0.5) ) self.isComplete = true;
+
+			if( bounce < 0.5 || self.isComplete ){
 				audio.stop('notes');
-				$ball.css({
-					bottom: 380 + Math.sin(0.5*Math.PI) * 500,
-				});
+				phase = 0.5;
 			} else {
-				let iBounce = Math.floor(bounce);
-
 				if(iBounce > iBounceWas){
+
 					let nNote = 2-Math.ceil(dx/KEYW);
 					audio.playAtTime('notes',nNote*2*4);
 					$keys[nNote].animate({
@@ -162,12 +161,31 @@ window.MelodyMatchGame = function(){
 						'top':'0px',
 					},100);
 
-					if(nNote == self.melody[iBounce-1]) self.score++;
+					let str = '';
+					while(str.length<iProgress) str += '✓';
 
-					$score.text(self.score);
+					if(nNote == self.melody[iProgress]){
+						//yay, progress!
+						iProgress++;
+
+						$score.text(str+'✓').css({opacity:0.4});
+
+						//if( iProgress < self.melody.length ) $score.delay(200).animate({opacity:0});
+					}
+					else{
+						iProgress = 0;
+						$score.text(str+'✗').css({opacity:0.4}).delay(200).animate({opacity:0});
+					}
 				}
 				iBounceWas = iBounce;
+
+				self.score = beat.toFixed(1);
+				//$score.text(self.score);
 			}
+
+			$ball.css({
+				bottom: 380 + Math.sin(phase*Math.PI) * 500,
+			});
 		}
 
 		self.initMelody = function(melody) {
@@ -276,12 +294,12 @@ window.MelodyMatchGame = function(){
 				melodyscore{
 					display: block;
 					position: absolute;
-					bottom: 650px;
-					left: -100px;
-					width: 200px;
+					bottom: 500px;
+					left: -200px;
+					width: 400px;
 					color: white;
 					text-align: center;
-					font-size: 150px;
+					font-size: 100px;
 					opacity: 0.3;
 				}
 
@@ -346,10 +364,13 @@ window.MelodyMatchGame = function(){
 			})
 		}
 
+		hud.initPlayers(meeps);
+
 		initNextRound();
 	}
 
 
+	let timeStart;
 	let isRoundLive = false;
 	let nLevel = -1;
 	let map;
@@ -371,8 +392,6 @@ window.MelodyMatchGame = function(){
 		let spacing = (1/(matchup.length-1));
 		if(spacing==Infinity) spacing = 0;
 
-
-
 		for(var m in matchup){
 			let n = matchup[m];
 			meeps[n].initMelody(level);
@@ -389,6 +408,14 @@ window.MelodyMatchGame = function(){
 		audio.play('music',true);
 		isRoundLive = true;
 
+		timeStart = new Date().getTime();
+
+		hud.initRound(nLevel,LEVEL.length);
+	}
+
+	let iPlayer = -1;
+	function initNextPlayer(){
+		iPlayer++;
 
 	}
 
@@ -438,16 +465,21 @@ window.MelodyMatchGame = function(){
 	self.step = function(){
 	
 		if(isRoundLive){
-			let timeCurrent = audio.getTime('music');
-			let beat = (timeCurrent) * BPS;
+			//let timeCurrent = audio.getTime('music');
+			let timeCurrent = new Date().getTime();
+			let timeElapsed = (timeCurrent - timeStart)/1000;
+			let beat = timeElapsed * BPS;
 			for(var m=0; m<meepsLive.length; m++) meepsLive[m].step(beat + m  + 0.1 - 6);
 
 			map.step(beat + 0.1 - 1);
 
-			if(beat>(level.length+3) * BPB){
+			/*if(beat>(level.length+3) * BPB){
 				isRoundLive = false;
 				finiRound();
-			}
+			}*/
+
+
+			hud.updatePlayers(meeps);
 		}
 		
 		resize();

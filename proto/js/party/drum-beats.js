@@ -1,4 +1,4 @@
-window.DrumBeatsGame = function(){
+window.DrumBeatsGame = function( players ){
 	
 	const W = 1600;
 	const H = 1000;
@@ -440,8 +440,7 @@ window.DrumBeatsGame = function(){
 	let hud = new PartyHUD();
 	hud.$el.appendTo($game);
 
-	let audio = new AudioContext()
-
+	let audio = new AudioContext();
 
 	function step(){
 
@@ -664,7 +663,8 @@ window.DrumBeatsGame = function(){
 		},3000);
 	}
 
-	hud.initPlayerCount(initGame);
+	if ( players ) initGame( players.length );
+	else hud.initPlayerCount(initGame);
 
 	let scale = 1;
 	function resize(){

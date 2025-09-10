@@ -1,8 +1,15 @@
 window.TUTORIALS = {
 	'Coconut Climbers':{},
 	'Mystery Maze':{},
-	'Volley Heads':{},
-	'Soccer Heads':{},
+	'Volley Heads':[
+		'Volley Heads',
+		{x:1.25, y:0.45, msg:'Align yourself<br>to your side of the net',icon:'align'},
+		{x:1.75, y:0.45, msg:'Move left & right<br>to head the ball over the net',icon:'side-to-side'},
+	],
+	'Soccer Heads':[
+		'Soccer Heads',
+		{x:1.5, y:0.45, msg:'Move left & right<br>to head the ball into the goal',icon:'side-to-side'},
+	],
 	'Drum Beats':{},
 	'Melody Match':{},
 	'Coin Chaos':{},
