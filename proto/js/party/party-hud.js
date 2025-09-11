@@ -45,6 +45,13 @@ window.PartyHUD = function( colour='#40B0ED' ){
 				@import url('https://fonts.googleapis.com/css2?family=Paytone+One&display=swap');
 				@import url('https://fonts.googleapis.com/css2?family=Knewave&display=swap');
 
+				blurlayer{
+					display: block;
+					position: absolute;
+					inset: 0px;
+					backdrop-filter: blur(20px);
+				}
+
 				partyhud{
 					position: absolute;
 					top: 0px;

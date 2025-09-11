@@ -1,3 +1,5 @@
+
+
 window.shuffleArray = function(array) {
   let currentIndex = array.length;
 

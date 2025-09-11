@@ -375,6 +375,7 @@ window.MelodyMatchGame = function(){
 	self.$el = $('<igb>');
 
 	let $game = $('<melodymatchgame>').appendTo(self.$el);
+	let $blur = $('<blurlayer>').appendTo($game);
 
 	let hud = new PartyHUD();
 	hud.$el.appendTo($game);
@@ -431,6 +432,7 @@ window.MelodyMatchGame = function(){
 
 	function finiTutorial(){
 
+		$blur.hide();
 		isRoundLive = false;
 
 		for(var m in meeps) meeps[m].$el.hide();
