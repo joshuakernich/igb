@@ -445,6 +445,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					display: block;
 					inset: 0px;
 					position: absolute;
+					color: white;
 				}
 
 				hudmessage{

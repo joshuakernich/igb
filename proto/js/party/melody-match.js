@@ -174,19 +174,25 @@ window.MelodyMatchGame = function(){
 					let str = '';
 					while(str.length<iProgress) str += '✓';
 
-					if(nNote == self.melody[iProgress]){
-						//yay, progress!
+					if(self.melody=='freeplay'){
 						audioNotes.playAtTime('notes',nNote*2*4);
-						iProgress++;
-						$score.text(str+'✓').css({opacity:0.4});
+					} else {
+						if(nNote == self.melody[iProgress]){
+							//yay, progress!
+							audioNotes.playAtTime('notes',nNote*2*4);
+							iProgress++;
+							$score.text(str+'✓').css({opacity:0.4});
 
-						//if( iProgress < self.melody.length ) $score.delay(200).animate({opacity:0});
+							//if( iProgress < self.melody.length ) $score.delay(200).animate({opacity:0});
+						}
+						else{
+							iProgress = 0;
+							$score.text(str+'✗').css({opacity:0.4}).delay(200).animate({opacity:0});
+							audio.play('incorrect',true);
+						}
 					}
-					else{
-						iProgress = 0;
-						$score.text(str+'✗').css({opacity:0.4}).delay(200).animate({opacity:0});
-						audio.play('incorrect',true);
-					}
+
+					
 				}
 				iBounceWas = iBounce;
 
@@ -385,11 +391,11 @@ window.MelodyMatchGame = function(){
 			})
 		}
 
-		hud.initPlayers(meeps);
+		
 
-		initNextRound();
+		//initNextRound();
+		initTutorial();
 	}
-
 
 	let timeStart;
 	let isRoundLive = false;
@@ -398,6 +404,45 @@ window.MelodyMatchGame = function(){
 	let map;
 	let melody;
 	let slots = [];
+
+	function initTutorial(){
+		for(var m=0; m<meeps.length; m++){
+			meepsLive[m] = meeps[m];
+			meepsLive[m].initMelody('freeplay');
+			meepsLive[m].ax = 0.15 + 0.7/(meeps.length-1) * m;
+			meepsLive[m].$el.css({
+				'bottom':[0,-20][m%2]+'px',
+				'left': W + meepsLive[m].ax*W + 'px',
+				'transform':'scale(0.5)',
+			})
+		}
+
+		hud.initTutorial(
+			'Melody Match',
+			{x:1.15, y:0.45, msg:'Align yourself<br>to your avatar',icon:'align'},
+			{x:1.7, y:0.45, msg:'Move left & right<br>to play the target melody',icon:'side-to-side'},
+		);
+
+		isRoundLive = true;
+		timeStart = new Date().getTime();
+
+		hud.initTimer(30,finiTutorial);
+	}
+
+	function finiTutorial(){
+
+		isRoundLive = false;
+
+		for(var m in meeps) meeps[m].$el.hide();
+
+		hud.finiTimer();
+		hud.finiTutorial();
+
+		hud.initPlayers(meeps);
+
+		setTimeout(initNextRound,1000);
+	}
+
 	function initNextRound(){
 		iRound++;
 		iPlayer = -1;
@@ -412,22 +457,6 @@ window.MelodyMatchGame = function(){
 		}).animate({
 			'top':'30%',
 		})
-
-		/*let spacing = (1/(matchup.length-1));
-		if(spacing==Infinity) spacing = 0;
-
-		for(var m in matchup){
-			let n = matchup[m];
-			meeps[n].initMelody(melody);
-			meeps[n].ax = 0.25 + spacing * m * 0.5;
-			meeps[n].$el.appendTo($game).css({
-				left: W + meeps[n].ax*W + 'px',
-			}).animate({
-				bottom: '-100px',
-			})
-
-			meepsLive[m] = meeps[n];
-		}*/
 
 		initNextPlayer();
 		initNextPlayer();
@@ -472,6 +501,7 @@ window.MelodyMatchGame = function(){
 			meepsLive[nSlot].ax = 0.25 + nSlot * 0.5;
 			meepsLive[nSlot].$el.appendTo($game).css({
 				left: W + meepsLive[nSlot].ax*W + 'px',
+				'transform':'',
 			}).animate({
 				bottom: '-100px',
 			});
