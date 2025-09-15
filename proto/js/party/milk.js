@@ -279,6 +279,16 @@ window.MilkTeat = function(){
 
 window.MilkGame = function(){
 
+	const ROUNDS = [
+		undefined,
+		undefined,
+		[{time:30,cohorts:['01'],countUdder:1},{time:60,cohorts:['01'],countUdder:2}],
+		[{time:30,cohorts:['01','12','02'],countUdder:1},{time:45,cohorts:['01','12','02'],countUdder:2}],
+		[{time:30,cohorts:['01','23'],countUdder:1},{time:30,cohorts:['01','23'],countUdder:2}],
+		[{time:30,cohorts:['01','23','40','12','34'],countUdder:2}],
+		[{time:30,cohorts:['01','23','45'],countUdder:1},{time:30,cohorts:['01','23','45'],countUdder:2}],
+	]
+
 	const SECONDS = 30;
 	const W = 1600;
 	const H = 1000;
@@ -572,6 +582,12 @@ window.MilkGame = function(){
 					z-index: 10;
 				}
 
+				milkcowlayer{
+					display: block;
+					position: absolute;
+					inset: 0px;
+				}
+
 				@keyframes wobble{
 					0%{
 						transform: rotate(-7deg);
@@ -600,6 +616,7 @@ window.MilkGame = function(){
 	let $game = $('<milkgame>').appendTo(self.$el);
 	let $bg = $('<milkbg>').appendTo($game);
 	let $blur = $('<blurlayer>').appendTo($game);
+	let $cows = $('<milkcowlayer>').appendTo($game);
 	let sea = new MilkSea();
 
 	//let $header = $('<milkheader>').appendTo(self.$el).text('Milkers');
@@ -756,9 +773,7 @@ window.MilkGame = function(){
 	}
 
 	const PLAYER_TIME = 15000;
-	const ROUNDS = [
-		{countUdder:1},{countUdder:2},{countUdder:3},
-	]
+	
 
 	function initTutorial(){
 
@@ -766,13 +781,13 @@ window.MilkGame = function(){
 			'Milkers',
 			{x:1.38, y:0.5, msg:'Align your avatar<br>with a teat', icon:'align'},
 			{x:1.75, y:0.5, msg:'Squat up and down<br>to milk', icon:'up-down'},
-			{x:0.75, y:0.5, msg:'Tap any wall<br>to move your avatar', icon:'tap'},
+			{x:0.75, y:0.5, msg:'Touch any wall<br>to realign your avatar', icon:'touch'},
 		);
 
 		for(var i=0; i<3; i++){
 			udders[i] = new MilkUdder();
 			udders[i].x = W*(i+ 0.5);
-			udders[i].$el.appendTo($game).css({left:udders[i].x });
+			udders[i].$el.appendTo($cows).css({left:udders[i].x });
 			udders[i].initEntry();
 		}
 
@@ -850,7 +865,7 @@ window.MilkGame = function(){
 		}
 		udders[nWall] = new MilkUdder();
 		udders[nWall].x = W*(nWall+ 0.4 + Math.random() * 0.2);
-		udders[nWall].$el.appendTo($game).css({left:udders[nWall].x });
+		udders[nWall].$el.appendTo($cows).css({left:udders[nWall].x });
 		udders[nWall].initEntry();
 	}
 
