@@ -599,6 +599,7 @@ window.MilkGame = function(){
 
 	let $game = $('<milkgame>').appendTo(self.$el);
 	let $bg = $('<milkbg>').appendTo($game);
+	let $blur = $('<blurlayer>').appendTo($game);
 	let sea = new MilkSea();
 
 	//let $header = $('<milkheader>').appendTo(self.$el).text('Milkers');
@@ -727,7 +728,7 @@ window.MilkGame = function(){
 					udders[u] = undefined;
 				},1000);
 
-				timeout = setTimeout(spawnUdder,2500);
+				timeout = setTimeout(spawnUdder,3000);
 			}
 		}
 
@@ -738,7 +739,7 @@ window.MilkGame = function(){
 
 	let iPlayer = -1;
 	function initGame(PLAYERCOUNT){
-		audio.play('music',false);
+		
 
 		for(var i=0; i<PLAYERCOUNT; i++){
 			meeps[i] = new PartyMeep(i,COLORS[i]);
@@ -751,15 +752,10 @@ window.MilkGame = function(){
 			meeps[i].$score = $('<milkscore>').appendTo(meeps[i].$el).text('+1');
 		}
 
-		hud.initPlayers(meeps);
+		
 
-		//hud.initTimer(120,finiGame);
-		
-		//setTimeout(summonNextPlayer,1000);
-
-		
-		
-		setTimeout(initNextRound,1000);
+		setTimeout(initTutorial,1000);
+		//
 		
 	}
 
@@ -768,18 +764,72 @@ window.MilkGame = function(){
 		{countUdder:1},{countUdder:2},{countUdder:3},
 	]
 
+	function initTutorial(){
+
+		hud.initTutorial(
+			'Milkers',
+			{x:1.38, y:0.5, msg:'Align your avatar<br>with a teat', icon:'align'},
+			{x:1.75, y:0.5, msg:'Squat up and down<br>to milk', icon:'up-down'},
+			{x:0.75, y:0.5, msg:'Tap any wall<br>to move your avatar', icon:'tap'},
+		);
+
+		for(var i=0; i<3; i++){
+			udders[i] = new MilkUdder();
+			udders[i].x = W*(i+ 0.5);
+			udders[i].$el.appendTo($game).css({left:udders[i].x });
+			udders[i].initEntry();
+		}
+
+		for(var m in meeps){
+			meeps[m].$el.show();
+			meeps[m].isActive = true;
+		}
+
+		isMilkingLive = true;
+
+		hud.initTimer(30,finiTutorial);
+	}
+
+	function finiTutorial(){
+
+		$blur.hide();
+
+		hud.finiTimer();
+		hud.finiTutorial();
+
+		isMilkingLive = false;
+
+		for(var u in udders){
+			udders[u].$el.hide();
+			udders[u] = undefined;
+		}
+
+		for(var m in meeps){
+			meeps[m].score = 0;
+			meeps[m].$el.hide();
+			meeps[m].isActive = false;
+		}
+
+		setTimeout(function(){
+			hud.initPlayers(meeps);
+		},2000);
+
+		setTimeout(initNextRound,3000);
+	}
+
 	let iRound = -1;
 	function initNextRound(){
 
 		iRound++;
+
+		audio.play('music',true, ((iRound == ROUNDS.length-1)?2:1));
+
 		iPlayer = -1;
 
 		if(!ROUNDS[iRound]){
 			finiGame();
 			return;
 		}
-
-		if(iRound == ROUNDS.length-1) audio.play('music',false,2);
 
 		hud.initRound(iRound,ROUNDS.length);
 		setTimeout(hud.finiBanner,2000);
@@ -803,7 +853,7 @@ window.MilkGame = function(){
 			if(udders[nWall]) nWall = nWall==0?2:0;
 		}
 		udders[nWall] = new MilkUdder();
-		udders[nWall].x = W*(nWall+ 0.4 + Math.random() * 0.4);
+		udders[nWall].x = W*(nWall+ 0.4 + Math.random() * 0.2);
 		udders[nWall].$el.appendTo($game).css({left:udders[nWall].x });
 		udders[nWall].initEntry();
 	}
@@ -867,13 +917,6 @@ window.MilkGame = function(){
 		$game.css('transform','scale('+scale+')');
 	}
 
-
-	let bMusic = false;
-	function initMusic(){
-		bMusic = true;
-		audio.play('music');
-	}
-
 	$game.on('click',function(e){
 		let o = $game.offset();
 		let x = (e.pageX - o.left)/scale/W;
@@ -889,8 +932,6 @@ window.MilkGame = function(){
 		}
 
 		meeps[nMeep].wall = wall;
-
-		if(!bMusic) initMusic();
 	});
 
 	self.setPlayers = function(p){
