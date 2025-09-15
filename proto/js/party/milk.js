@@ -752,11 +752,7 @@ window.MilkGame = function(){
 			meeps[i].$score = $('<milkscore>').appendTo(meeps[i].$el).text('+1');
 		}
 
-		
-
 		setTimeout(initTutorial,1000);
-		//
-		
 	}
 
 	const PLAYER_TIME = 15000;
