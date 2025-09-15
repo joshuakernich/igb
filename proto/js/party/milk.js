@@ -194,9 +194,6 @@ window.MilkTeat = function(){
 			isUntugged = true;
 		}
 
-
-
-
 		if(tugDelta>0){
 			tugging += tugDelta;
 		} else {
@@ -204,7 +201,7 @@ window.MilkTeat = function(){
 		}
 
 		if(tugging<0) tugging = 0;
-		if(tugging>15 && self.countTug && isUntugged && tugDelta>0){
+		if(tugging>15 && self.countTug && isUntugged && tugDelta>0 && !self.markedForRemoval){
 			//self.isActive = false;
 			//coolDown = 25;
 			//tugging = 100;
@@ -272,6 +269,9 @@ window.MilkTeat = function(){
 		$(self).stop(false,false);
 		self.flow = 0;
 		self.redraw();
+
+		audio.stop('squirt');
+		audio.stop('pour');
 	}
 
 	self.redraw();
@@ -718,13 +718,16 @@ window.MilkGame = function(){
 
 			udders[u].redraw();	
 
-			if(isComplete){
-
-				udders[u].initExit();
-				for(let t in udders[u].teats)  udders[u].teats[t].fini();
+			if(isComplete && !udders[u].markedForRemoval){
+				udders[u].markedForRemoval = true;
 				
-				udders[u] = undefined;
-				timeout = setTimeout(spawnUdder,2000);
+				setTimeout(function(){
+					udders[u].initExit();
+					for(let t in udders[u].teats)  udders[u].teats[t].fini();
+					udders[u] = undefined;
+				},1000);
+
+				timeout = setTimeout(spawnUdder,2500);
 			}
 		}
 
