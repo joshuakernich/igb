@@ -24,7 +24,7 @@ AudioContext = function(){
     self.play = function(id,restart,speed){
         audio[id].play();
         if(restart) audio[id].currentTime = 0;
-        if(speed) audio[id].playbackRate = 2;
+        if(speed) audio[id].playbackRate = speed;
     }
 
     self.playAtTime = function(id,timeFrom){
