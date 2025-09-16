@@ -9,9 +9,11 @@ window.CoconutClimbersGame = function(){
 	const COCONUT = 100;
 
 	let audio = new AudioContext();
-	audio.add('music','./proto/audio/party/music-calypso.mp3',0.3,true);
+	audio.add('music','./proto/audio/party/music-calypso.mp3',0.2,true);
+	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
+	audio.add('coconut','./proto/audio/party/sfx-coconut.mp3',0.3);
 	
-	let CoconutPlayer = function(n,ax,distance){
+	let CoconutPlayer = function(n,ax,distance,volumeCoconut,speedCoconut){
 
 		const MIN = 0.4;
 		const MULT = 12; // essentially saying I only need 1/6th of the room width
@@ -28,8 +30,13 @@ window.CoconutClimbersGame = function(){
 		self.py = undefined;
 		self.pyWas = undefined;
 		self.ticksComplete = undefined;
+		self.tally = 0;
+		self.score = 0;
+		self.isActive = self.isComplete = false;
+		self.distance = distance;
 
 		let ticksElapsed = 0;
+		let queueSide = [];
 
 		let meep = new PartyMeep(n);
 		meep.$el.appendTo(self.$el);
@@ -56,35 +63,36 @@ window.CoconutClimbersGame = function(){
 		}
 
 		let coconuts = [];
-		self.addCoconut = function(iSide){
 
-			if(self.ticksComplete != undefined) return;
+		for(var i=0; i<volumeCoconut; i++){
+			if(!queueSide.length){
+				queueSide = [-1,1];
+				shuffleArray(queueSide);
+			} 
 
-			coconuts.push({
-				iSide:iSide,
-				stepsRemaining:FPS*2, 
-				stepsTotal:FPS*2,
-				ay:Math.min( self.ay, DISTANCE ),
+			let iSide = queueSide.pop();
+			coconuts[i] = {
+				iSide: iSide,
+				ay:1.5 + (distance-0.5) / volumeCoconut * i,
 				$el:$('<coconut>').appendTo(self.$el).css({ left:iSide*120 + 'px' }),
-			});
+				countFalling: 0,
+			}
 		}
 
 		self.step = function(isGameLive){
 
-			if(!isGameLive) self.py = self.pyWas;
+			if(!isGameLive || !self.isActive) self.py = self.pyWas = 0.7;
 
 			ticksElapsed++;
 
+			
+
 			for(var c in coconuts){
 				if(!coconuts[c].hasHit){
-					coconuts[c].stepsRemaining--;
-					let progress = (coconuts[c].stepsRemaining/coconuts[c].stepsTotal);
-		
-					// dy allows the coconut to come closer because we are climbing toward us
-					// dividing by 3 means we can climb without having a profound impact on the height of the coconut
-					let dy = (coconuts[c].ay-self.ay)/3; 
 
-					coconuts[c].py = progress + dy;
+					if((self.ay+1.5) > coconuts[c].ay) coconuts[c].countFalling++;
+
+					coconuts[c].py = coconuts[c].ay - self.ay - (coconuts[c].countFalling / FPS) * speedCoconut;
 
 					coconuts[c].$el.css({
 						bottom: coconuts[c].py * H + 'px',
@@ -122,6 +130,9 @@ window.CoconutClimbersGame = function(){
 				if(self.ay > distance){
 					self.ticksComplete = ticksElapsed;
 					self.ay = distance;
+					self.isActive = false;
+					self.isComplete = true;
+					audio.play('correct',true);
 				}
 
 				oy = (self.py * 2)-1;
@@ -145,8 +156,10 @@ window.CoconutClimbersGame = function(){
 				if(!coconuts[c].hasHit && self.ticksComplete == undefined){
 					let dy = coconuts[c].py - (my + PHMEEP);
 					if(dy<0 && dy>-0.2 && coconuts[c].iSide == dir){
-						coconuts[c].hasHit = true;
 
+						audio.play('coconut',true);
+
+						coconuts[c].hasHit = true;
 						self.countSlipping = FPS/2;
 
 						coconuts[c].$el.css({
@@ -169,6 +182,8 @@ window.CoconutClimbersGame = function(){
 
 			self.pyWas = self.py;
 		}
+
+
 	}
 
 	if( !CoconutClimbersGame.init ){
@@ -270,16 +285,20 @@ window.CoconutClimbersGame = function(){
 		`)
 	}
 
+	// distance = 1 means 1 x screen height
+	// speedCoconus is how many seconds per screen height
+	// volumeCoconut is how many coconuts per player
 	const ROUNDS = [
-		{height:1.5},
-		{height:2.5},
-		{height:3.5},
+		{distance:1.5,speedCoconut:0.5,volumeCoconut:2},
+		{distance:2.5,speedCoconut:0.5,volumeCoconut:4},
+		{distance:3.5,speedCoconut:0.5,volumeCoconut:10},
 	]
 
 	let self = this;
 	self.$el = $('<igb>');
 
 	let $game = $('<coconutclimbersgame>').appendTo(self.$el);
+	let $blur = $('<blurlayer>').appendTo($game);
 
 	let meeps = [];
 	let countMeeps = undefined;
@@ -295,24 +314,34 @@ window.CoconutClimbersGame = function(){
 		
 		for(var i=0; i<countMeeps; i++){
 			let ax = (i+1) * 1/(countMeeps+1);
-			meeps[i] = new CoconutPlayer(i,ax,1.5);
+			meeps[i] = new CoconutPlayer(i,ax,1.5,2,0.5);
+			meeps[i].isActive = true;
 			meeps[i].$el.css({
 				'left':W + ax * W + 'px',
 				'transform':'scale(0.5)',
 			}).appendTo($game);
 		}
 
-		hud.initTutorial('Coconut Climbers');
+		hud.initTutorial('Coconut Climbers',
+			{x:1 + meeps[0].ax, y:0.45, msg:"Align yourself<br>with your avatar",icon:"align"},
+			{x:1.5, y:0.6, msg:"Squat up and down<br>to climb",icon:"up-down"},
+			{x:1.8, y:0.45, msg:"Move left and right<br>to dodge coconuts",icon:"side-to-side"},
+		);
 
-		hud.initTimer(5,finiTutorial);
+		hud.initTimer(30,finiTutorial);
 	}
 
 	function finiTutorial(){
+		$blur.hide();
+
 		isGameLive = false;
 		hud.finiTimer();
 		hud.finiTutorial();
 
-		for(var m in meeps) meeps[m].$el.remove();
+		for(var m in meeps){
+			meeps[m].$el.remove();
+			meeps[m].score = 0;
+		}
 
 		setTimeout(initNextRound);
 	}
@@ -320,20 +349,39 @@ window.CoconutClimbersGame = function(){
 	const SLOTS = 3;
 	let iRound = -1;
 	let isGameLive = false;
+	let timeStartRound = 0;
 	function initNextRound(){
+
+		isGameLive = false;
+
 		iRound++;
+		if(!ROUNDS[iRound]){
+			finiGame();
+			return;
+		}
 		
 		for(var i=0; i<countMeeps; i++){
-			meeps[i] = new CoconutPlayer(i,0,ROUNDS[iRound].distance);
-			meeps[i].$el.appendTo($game).hide();
+			let tally = meeps[i]?meeps[i].score:0;
+			meeps[i] = new CoconutPlayer(i,0,ROUNDS[iRound].distance,ROUNDS[iRound].volumeCoconut,ROUNDS[iRound].speedCoconut);
+			meeps[i].tally = meeps[i].score = tally;
+			meeps[i].$el.appendTo($game).hide().css({
+				'transform':'scale(0.8)',
+			})
 		}
 
+		hud.updatePlayers(meeps,1);
+
+		iPlayer = -1;
 		initNextPlayer();
 		initNextPlayer();
 		initNextPlayer();
 
 		setTimeout(function(){
 			hud.initRound(iRound,ROUNDS.length);
+			if(iRound==0){
+				hud.updatePlayers(meeps,1);
+				hud.initPlayers(meeps,1);
+			}
 		},2000);
 
 		setTimeout(function(){
@@ -341,18 +389,20 @@ window.CoconutClimbersGame = function(){
 		},4000);
 
 		setTimeout(function(){
-			hud.summonPlayers([0,1,2]);
-		},4000);
-
-		setTimeout(function(){
-			hud.finiBanner();
+			let summon = [0,1,2];
+			if(meeps.length < summon.length) summon.length = meeps.length;
+			hud.summonPlayers(summon);
 		},6000);
 
 		setTimeout(function(){
-			isGameLive = true;
-			console.log(iRound,ROUNDS.length,(iRound==ROUNDS.length-1)?2:1);
-			audio.play('music',true,(iRound==ROUNDS.length-1)?2:1);
+			hud.finiBanner();
 		},8000);
+
+		setTimeout(function(){
+			isGameLive = true;
+			timeStartRound = new Date().getTime();
+			audio.play('music',false,(iRound==ROUNDS.length-1)?2:1);
+		},10000);
 	}
 
 	let iPlayer = -1;
@@ -360,14 +410,31 @@ window.CoconutClimbersGame = function(){
 	function initNextPlayer(){
 		iPlayer ++;
 
-		let nSlot = 0;
-		while(slots[nSlot]) nSlot++;
+		if(meeps[iPlayer]){
+			let nPlayer = iPlayer;
 
-		slots[nSlot] = meeps[iPlayer];
-		let ax = (nSlot+1) * 1/(SLOTS+1);
+			let nSlot = 0;
+			while(slots[nSlot]) nSlot++;
 
-		meeps[iPlayer].ax = ax;
-		meeps[iPlayer].$el.css({left:W + ax * W + 'px'}).show();
+			slots[nSlot] = meeps[nPlayer];
+			let ax = (nSlot+1) * 1/(SLOTS+1);
+
+			meeps[nPlayer].ax = ax;
+			meeps[nPlayer].isActive = false;
+			meeps[nPlayer].$el.css({left:W + ax * W + 'px'}).show().css({
+				bottom: -(meeps[nPlayer].distance+0.5) * H
+			}).animate({
+				bottom: 0,
+			},{
+				duration:1000 + Math.random()*500, 
+				complete:function(){
+				meeps[nPlayer].isActive = true;
+			}});
+		} else {
+			let isRoundComplete = true;
+			for(var m in meeps) if(!meeps[m].isComplete) isRoundComplete = false;
+			if(isRoundComplete) initNextRound();
+		}
 	}
 
 	let hud = new PartyHUD('#FDC972');
@@ -381,22 +448,46 @@ window.CoconutClimbersGame = function(){
 	function step(){
 		nStep++;
 
-		/*let stepPerCoconut = FPS;
+		let timeNow = new Date().getTime();
+		let timeElapsed = (timeNow-timeStartRound)/1000;
 
-		if(nStep%stepPerCoconut==9){
-			if(!queue.length){
-				while(queue.length<countMeeps) queue.push(queue.length);
-				shuffleArray(queue);
-			}
-			let iMeep = queue.pop();
-			meeps[iMeep].addCoconut( Math.random()>0.5?1:-1);
-		}*/
-
-		for(var m in meeps){
+		for(let m in meeps){
 			meeps[m].step(isGameLive);
+			if(isGameLive && meeps[m].isActive) meeps[m].score = meeps[m].tally + timeElapsed;
+
+			if(meeps[m].isComplete){
+
+				for(let s in slots){
+					if(slots[s] == meeps[m]){
+						slots[s] = undefined;
+						meeps[m].$el.animate({bottom:-H});
+
+						setTimeout(function(){
+							meeps[m].$el.remove();
+							initNextPlayer();
+						},500)
+					}
+				}
+			}
 		}
 
+		hud.updatePlayers(meeps,1);
+
 		resize();
+	}
+
+	function finiGame(){
+		let scores = [];
+		for(var m in meeps) scores[m] = -meeps[m].score;
+
+		let rewards = window.scoresToRewards(scores);
+		hud.showFinalScores(scores,rewards);
+
+		setTimeout(function () {
+			clearInterval(interval);
+			audio.stop('music');
+			window.doPartyGameComplete(rewards);
+		},5000)
 	}
 
 	let scale = 1;

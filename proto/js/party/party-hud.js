@@ -10,7 +10,8 @@ window.PartyPlayerHUD = function(n,meep,type){
 	let head = new PartyMeepHead(n);
 	head.$el.appendTo(self.$el);
 
-	self.redraw = function(score){
+	self.redraw = function(score,toFixed=undefined){
+		if(toFixed) score = score.toFixed(toFixed);
 		self.$el.find('partyscore').text(score);
 	}
 
@@ -803,8 +804,8 @@ window.PartyHUD = function( colour='#40B0ED' ){
 		$streamTop.show().animate({top:'0px'});
 	}
 
-	self.updatePlayers = function(meeps) {
-		if(huds.length) for(var i=0; i<meeps.length; i++) huds[i].redraw(meeps[i].score);
+	self.updatePlayers = function(meeps,toFixed=undefined) {
+		if(huds.length) for(var i=0; i<meeps.length; i++) huds[i].redraw(meeps[i].score,toFixed);
 	}
 
 	self.summonPlayers = function( arrIn ){
