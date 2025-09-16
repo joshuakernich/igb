@@ -435,14 +435,19 @@ window.MelodyMatchGame = function(){
 		$blur.hide();
 		isRoundLive = false;
 
-		for(var m in meeps) meeps[m].$el.hide();
+		for(var m in meeps){
+			meeps[m].$el.hide();
+			meeps[m].tally = meeps[m].score = 0;
+		}
 
 		hud.finiTimer();
 		hud.finiTutorial();
 
-		hud.initPlayers(meeps);
+		setTimeout(function(){
+			hud.initPlayers(meeps);
+		},1000);
 
-		setTimeout(initNextRound,1000);
+		setTimeout(initNextRound,2000);
 	}
 
 	function initNextRound(){
@@ -501,7 +506,7 @@ window.MelodyMatchGame = function(){
 			meepsLive[nSlot] = meeps[iPlayer];
 			meepsLive[nSlot].initMelody(melody,iPlayer<2);
 			meepsLive[nSlot].ax = 0.25 + nSlot * 0.5;
-			meepsLive[nSlot].$el.appendTo($game).css({
+			meepsLive[nSlot].$el.appendTo($game).show().css({
 				left: W + meepsLive[nSlot].ax*W + 'px',
 				'transform':'',
 			}).animate({
@@ -591,7 +596,7 @@ window.MelodyMatchGame = function(){
 				}
 			}
 
-			map.step(beat);
+			if(map) map.step(beat);
 
 			/*if(beat>(level.length+3) * BPB){
 				isRoundLive = false;
