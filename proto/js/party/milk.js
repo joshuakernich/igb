@@ -252,6 +252,7 @@ window.MilkTeat = function(){
 		})
 
 		let size = self.flow * 300;
+
 		$milk.css({
 			'border-left-width': size+'px',
 			'border-right-width': size+'px',
@@ -282,11 +283,11 @@ window.MilkGame = function(){
 	const ROUNDS = [
 		undefined,
 		undefined,
-		[{time:30,cohorts:['01'],countUdder:1},{time:60,cohorts:['01'],countUdder:2}],
-		[{time:30,cohorts:['01','12','02'],countUdder:1},{time:45,cohorts:['01','12','02'],countUdder:2}],
-		[{time:30,cohorts:['01','23'],countUdder:1},{time:30,cohorts:['01','23'],countUdder:2}],
-		[{time:30,cohorts:['01','23','40','12','34'],countUdder:2}],
-		[{time:30,cohorts:['01','23','45'],countUdder:1},{time:30,cohorts:['01','23','45'],countUdder:2}],
+		[{time:30,cohorts:[[0,1]],countUdder:1},{time:60,cohorts:[[0,1]],countUdder:2}],
+		[{time:30,cohorts:[[0,1],[1,2],[0,2]],countUdder:1},{time:45,cohorts:[[0,1],[1,2],[0,2]],countUdder:2}],
+		[{time:30,cohorts:[[0,1],[2,3]],countUdder:1},{time:30,cohorts:[[0,1],[2,3]],countUdder:2}],
+		[{time:30,cohorts:[[0,1],[2,3],[4,0],[1,2],[3,4]],countUdder:2}],
+		[{time:30,cohorts:[[0,1],[2,3],[4,5]],countUdder:1},{time:30,cohorts:[[0,1],[2,3],[4,5]],countUdder:2}],
 	]
 
 	const SECONDS = 30;
@@ -527,8 +528,9 @@ window.MilkGame = function(){
 
 				milkteat{
 					position: absolute;
-					top: 200px;
+					top: 250px;
 					left: 0px;
+					z-index: 1;
 				}
 
 				milkteat svg{
@@ -607,8 +609,6 @@ window.MilkGame = function(){
 
 	let audio = new AudioContext();
 	audio.add('music','./proto/audio/milk-music.mp3',0.3,true);
-
-	
 
 	let self = this;
 	self.$el = $('<igb>');
@@ -781,7 +781,7 @@ window.MilkGame = function(){
 			'Milkers',
 			{x:1.38, y:0.5, msg:'Align your avatar<br>with a teat', icon:'align'},
 			{x:1.75, y:0.5, msg:'Squat up and down<br>to milk', icon:'up-down'},
-			{x:0.75, y:0.5, msg:'Touch any wall<br>to realign your avatar', icon:'touch'},
+			{x:0.75, y:0.5, msg:'Touch any wall<br>to switch walls', icon:'touch'},
 		);
 
 		for(var i=0; i<3; i++){
@@ -811,7 +811,7 @@ window.MilkGame = function(){
 		isMilkingLive = false;
 
 		for(var u in udders){
-			udders[u].$el.hide();
+			if(udders[u]) udders[u].$el.remove();
 			udders[u] = undefined;
 		}
 
@@ -825,37 +825,81 @@ window.MilkGame = function(){
 			hud.initPlayers(meeps);
 		},2000);
 
-		setTimeout(initNextRound,3000);
+		setTimeout(initNextCohort,3000);
 	}
 
-	let iRound = -1;
-	function initNextRound(){
+	let iRound = 0;
+	let iCohort = -1;
 
-		iRound++;
+	function initNextCohort(){
 
-		audio.play('music',true, ((iRound == ROUNDS.length-1)?2:1));
+		iCohort++;
+		if(!ROUNDS[meeps.length][iRound].cohorts[iCohort]){
+			iCohort = 0;
+			iRound++;
+		}
+		
 
-		iPlayer = -1;
-
-		if(!ROUNDS[iRound]){
+		if(!ROUNDS[meeps.length][iRound]){
 			finiGame();
-			return;
+		} else {
+
+			let delay = 1000;
+
+			if(iCohort == 0){
+				hud.initRound(iRound,ROUNDS[meeps.length].length);
+				audio.play('music',true, ((iRound == ROUNDS[meeps.length].length-1)?2:1));
+				setTimeout(hud.finiBanner,delay+=2000);
+			}
+		
+
+			setTimeout(function(){
+
+				let cohort = ROUNDS[meeps.length][iRound].cohorts[iCohort];
+
+				for(var c in cohort){
+					let m = cohort[c];
+					meeps[m].wall = 1;
+					meeps[m].$el.show();
+					meeps[m].isActive = true;
+				}
+
+				hud.summonPlayers(cohort);
+			},delay+=2000);
+
+			setTimeout(function(){
+				hud.finiBanner();
+			},delay+=2000);
+
+			setTimeout(function(){
+				isMilkingLive = true;
+				hud.initTimer(ROUNDS[meeps.length][iRound].time,finiCohort)
+				for(var i=0; i<ROUNDS[meeps.length][iRound].countUdder; i++){
+					setTimeout(spawnUdder,1000 + 3000 * i);
+				}
+			},delay+=2000);
 		}
 
-		hud.initRound(iRound,ROUNDS.length);
-		setTimeout(hud.finiBanner,2000);
-		setTimeout(initPlay,3000);
+		
 	}	
 
-	function initPlay(){
-		isMilkingLive = true;
-		initNextPlayer();
-		setTimeout(initNextPlayer,PLAYER_TIME/2);
+	function finiCohort(){
 
-		for(var i=0; i<ROUNDS[iRound].countUdder; i++){
-			setTimeout(spawnUdder,1000 + 3000 * i);
+		hud.finiTimer();
+
+		for(var u in udders){
+			if(udders[u]) udders[u].initExit();
+			udders[u] = undefined;
 		}
+
+		for(var m in meeps){
+			meeps[m].$el.hide();
+			meeps[m].isActive = false;
+		}
+
+		setTimeout(initNextCohort,2000);
 	}
+
 
 	function spawnUdder(){
 		let nWall = 1;
@@ -867,46 +911,6 @@ window.MilkGame = function(){
 		udders[nWall].x = W*(nWall+ 0.4 + Math.random() * 0.2);
 		udders[nWall].$el.appendTo($cows).css({left:udders[nWall].x });
 		udders[nWall].initEntry();
-	}
-
-	
-	function initNextPlayer(){
-
-		iPlayer++;
-
-		let nPlayer = iPlayer;
-		if(meeps[nPlayer]){
-			meeps[nPlayer].isActive = true;
-			meeps[nPlayer].$el.show().css({opacity:0}).animate({opacity:0.5})
-			meeps[nPlayer].wall = 1;
-
-			setTimeout(function() {
-				meeps[nPlayer].$el.css({opacity:1});
-			},2000);
-
-			setTimeout(function() {
-				meeps[nPlayer].$el.animate({opacity:0.5}).delay(250).animate({opacity:0},250);
-			},PLAYER_TIME-1000);
-
-			setTimeout(function(){
-				meeps[nPlayer].isActive = false;
-				meeps[nPlayer].$el.hide();
-				initNextPlayer();
-			},PLAYER_TIME)
-		}
-
-		let isComplete = true;
-		for(var m in meeps) if(meeps[m].isActive) isComplete = false;
-		if(isComplete){
-			for(var u in udders){
-				if(udders[u]) udders[u].initExit();
-				udders[u] = undefined;
-			}
-
-			clearTimeout(timeout);
-			setTimeout(initNextRound,3000);
-		}
-		
 	}
 
 	function finiGame() {

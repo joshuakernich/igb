@@ -626,15 +626,13 @@ window.PartyHUD = function( colour='#40B0ED' ){
 		$banner.empty();
 		let header = new FancyHeader(msg);
 		header.$el.appendTo($banner);
-		setTimeout( header.fini, 1000 );
+		//setTimeout( header.fini, 1000 );
 		
 		let $pips = $('<partyhudpips>').appendTo($banner).css({
 			position: 'relative',
 			top:'100px',
-		}).delay(2500).animate({
-			top:'-500px',
-			opacity:0,
-		})
+		});
+
 		for(var i=0; i<max; i++){
 			$('<partyhudpip>').appendTo($pips).attr('fill',(i<=n)).attr('highlight',(i==n));
 		}
