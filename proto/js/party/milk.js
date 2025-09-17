@@ -869,7 +869,7 @@ window.MilkGame = function(){
 
 		isMilkingLive = true;
 
-		hud.initTimer(10,finiTutorial);
+		hud.initTimer(30,finiTutorial);
 	}
 
 	function finiTutorial(){
