@@ -5,11 +5,11 @@ window.MilkGame = function(){
 	const ROUNDS = [
 		undefined,
 		undefined,
-		[{time:30,cohorts:[[0,1]],countUdder:1},{time:60,cohorts:[[0,1]],countUdder:2}],
-		[{time:30,cohorts:[[0,1],[1,2],[0,2]],countUdder:1},{time:45,cohorts:[[0,1],[1,2],[0,2]],countUdder:2}],
-		[{time:30,cohorts:[[0,1],[2,3]],countUdder:1},{time:30,cohorts:[[0,1],[2,3]],countUdder:2}],
+		[{time:20,cohorts:[[0,1]],countUdder:1},{time:30,cohorts:[[0,1]],countUdder:2}],
+		[{time:20,cohorts:[[0,1],[1,2],[0,2]],countUdder:1},{time:30,cohorts:[[0,1],[1,2],[0,2]],countUdder:2}],
+		[{time:20,cohorts:[[0,1],[2,3]],countUdder:1},{time:30,cohorts:[[0,1],[2,3]],countUdder:2}],
 		[{time:30,cohorts:[[0,1],[2,3],[4,0],[1,2],[3,4]],countUdder:2}],
-		[{time:30,cohorts:[[0,1],[2,3],[4,5]],countUdder:1},{time:30,cohorts:[[0,1],[2,3],[4,5]],countUdder:2}],
+		[{time:20,cohorts:[[0,1],[2,3],[4,5]],countUdder:1},{time:30,cohorts:[[0,1],[2,3],[4,5]],countUdder:2}],
 	]
 
 	const SECONDS = 30;
