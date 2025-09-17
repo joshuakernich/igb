@@ -1,282 +1,4 @@
-window.MilkSea = function(){
-	let self = this;
-	self.$el = $(`
-		<milksea>
-			<svg viewBox='0 0 100 100' preserveAspectRatio="none">
-				<path fill='rgba(0,0,0,0.5)' stroke='none'></path>
-				<path fill='white' stroke='none'></path>
-			</svg>
-		</milksea>
-	`);
 
-	let $path = self.$el.find('path');
-
-	self.milk = 0;
-
-	const SEG = 100;
-	let n = 0;
-	self.redraw = function(){
-
-		let fill = self.milk/2000;
-		let wibble = 0.05;
-		n += wibble;
-		let d = `M 0,100 L 0,${100-fill}`;
-		for(var i=0; i<=SEG; i++){
-			let amt = (i/SEG);
-			d = d + ` L ${i/SEG*100},${100-fill + Math.sin(i+n)}`
-		}
-		d = d + ' L 100,100';
-		$path.attr('d',d);
-	}
-
-	self.redraw();
-}
-
-
-window.MilkUdder = function(STAGE){
-	const W = 700;
-	const H = 200;
-	const COUNT = 2;
-
-	let self = this;
-	self.$el = $('<milkudder>');
-
-	let $legLeft = $('<milkleg>').appendTo(self.$el);
-	let $legRight = $('<milkleg>').appendTo(self.$el);
-	$('<milkbody>').appendTo(self.$el);
-
-	self.teats = [];
-	for(var i=0; i<COUNT; i++){
-		self.teats[i] = new MilkTeat();
-		self.teats[i].x = (-W/4) + (W/2)*(i/(COUNT-1));
-		self.teats[i].$el.appendTo(self.$el).css('left',self.teats[i].x);
-	}
-
-	self.xAnchor = 0;
-	self.xOffset = 0;
-
-	let isAnimating = false;
-
-	self.redraw = function(){
-
-		/*if(!isAnimating){
-			self.xOffset = -400 + Math.random() * 800;
-			$(self).animate({x:self.xAnchor + self.xOffset},{
-				duration:3500 + Math.random() * 1000,
-				complete:function(){ isAnimating=false; },
-			});
-			isAnimating = true;
-		}*/
-
-		self.$el.css({left:self.x+'px'});
-	}
-
-	self.initEntry = function(){
-		self.$el.css({
-			top: '-1000px',
-		}).animate({
-			top: '0px',
-		},{
-			duration: 300,
-			easing: 'linear'
-		}).animate({
-			top: '40px',
-		},200).animate({
-			top: '0px',
-		},300);
-
-		$legLeft.delay(300).animate({
-			top:'-40px'
-		},200).animate({
-			top:'0px'
-		},300);
-
-		$legRight.delay(300).animate({
-			top:'-40px'
-		},200).animate({
-			top:'0px'
-		},300);
-	}
-
-	self.initExit = function(){
-		self.$el.animate({
-			top: '40px',
-		},500).delay(500).animate({
-			top: '0px',
-		},100).animate({
-			top: '-1000px',
-			left: '+=100px',
-		},300);
-
-		$legLeft.animate({
-			top:'-40px'
-		},500).delay(500).animate({
-			top:'0px'
-		},100);
-
-		$legRight.animate({
-			top:'-40px'
-		},500).delay(500).animate({
-			top:'0px'
-		},100);
-	}
-}
-
-window.MilkTeat = function(){
-
-	const SEG = 20;
-	const MAX_TUG = 3;
-
-
-	let self = this;
-	self.ox = 10;
-	self.tug = 0;
-	self.$el = $('<milkteat>');
-
-	self.milking = 0;
-	self.countTug = Math.ceil( Math.random() * MAX_TUG );
-	self.capacity = self.countTug/MAX_TUG;
-	self.throbbing = 0;
-
-	self.flow = 0;
-	
-
-	let $stream = $('<milkstream>').appendTo(self.$el);
-	let $milk = $('<milk>').appendTo($stream);
-	
-
-	let $svg = $(`<svg preserveAspectRatio="none" viewBox='-50 0 100 110'>
-		<linearGradient id="nipfull" x1="0%" y1="50%" x2="0%" y2="100%">
-			<stop offset="0%" stop-color="pink"/>
-			<stop offset="100%" stop-color="red"/>
-		</linearGradient>
-		<linearGradient id="niphalf" x1="0%" y1="50%" x2="0%" y2="100%">
-			<stop offset="0%" stop-color="pink"/>
-			<stop offset="100%" stop-color="#ff5555"/>
-		</linearGradient>
-		<linearGradient id="nipempty" x1="0%" y1="50%" x2="0%" y2="100%">
-			<stop offset="0%" stop-color="pink"/>
-			<stop offset="100%" stop-color="pink"/>
-		</linearGradient>
-		<path fill='transparent' stroke='url(#nipfull)' stroke-width='20' stroke-linecap='round'></path>
-	</svg>`).appendTo(self.$el);
-	let $path = $svg.find('path');
-
-	let $alert = $('<milkalert>').appendTo(self.$el);
-
-	let $drops = [];
-	for(var i=0; i<self.countTug; i++){
-		$drops[i] = $('<milkdrop>').appendTo(self.$el);
-	}
-
-	let len = 100;
-
-	let n = Math.floor( Math.random()*SEG );
-
-	let audio = new AudioContext();
-	audio.add('squirt','./proto/audio/milk-squirt.mp3',0.3,false);
-	audio.add('pour','./proto/audio/milk-pour.mp3',0.3,false);
-
-	let tugDelta = 0;
-	let tugWas = 0;
-	let tugging = 0;
-
-	let isUntugged = true;
-
-	self.step = function(){
-		tugDelta = Math.max(0,self.tug - tugWas); 
-		
-		if(!self.isHeldBy){
-			self.tug *= 0.95;
-			self.ox *= 0.95;
-			tugDelta = 0;
-		} else if(self.tug < tugWas){
-			isUntugged = true;
-		}
-
-		if(tugDelta>0){
-			tugging += tugDelta;
-		} else {
-			tugging -= 5;
-		}
-
-		if(tugging<0) tugging = 0;
-		if(tugging>15 && self.countTug && isUntugged && tugDelta>0 && !self.markedForRemoval){
-			//self.isActive = false;
-			//coolDown = 25;
-			//tugging = 100;
-			self.countTug--;
-			isUntugged = false;
-
-			self.isHeldBy.score++;
-			self.isHeldBy.$score.stop(false,false).css({opacity:1}).delay(200).animate({opacity:0});
-
-			$drops[self.countTug].hide();
-
-			audio.play('squirt',true);
-			audio.play('pour',true);
-
-			$(self).stop(false,false).animate({flow:1},200).animate({flow:0},500);
-		}
-
-		self.milking = tugging;
-
-		tugWas = self.tug;
-
-	}
-
-	self.redraw = function(){
-		let wibble = 0.05;
-		n += wibble;
-
-		let d = 'M 0,0 '
-		let px;
-		for(var i=0; i<SEG; i++){
-			let amt = (i/SEG);
-			px = (Math.sin(i/2 + n)*2*amt +self.ox*amt);
-			d = d + ' L '+px+','+amt*100+' ';
-		}
-		$path.attr('d',d);
-		
-		let thicc = self.countTug/MAX_TUG;
-		$path.attr('stroke-width',12 + thicc*10-self.tug*0.01);
-
-		let level = thicc > 0.7 ? 'full' : ( thicc < 0.4 ? 'empty' : 'half' );
-		$path.attr('stroke',`url(#nip${level})`);
-		$svg.css({height:500 + self.tug+'px'});
-
-		$stream.css({
-			top:420 + self.tug+'px',
-			left:px*8,
-			transform:'rotate('+(-px*1.5)+'deg)',
-		})
-
-		let size = self.flow * 300;
-
-		$milk.css({
-			'border-left-width': size+'px',
-			'border-right-width': size+'px',
-			'left': -size+'px',
-		})
-
-		audio.setVolume('squirt',self.flow * 0.3);
-		audio.setVolume('pour',self.flow * 0.3);
-
-		//$alert.attr('active',self.countTug>0?'true':'false');
-	}
-
-	self.fini = function() {
-		// body...
-		$(self).stop(false,false);
-		self.flow = 0;
-		self.redraw();
-
-		audio.stop('squirt');
-		audio.stop('pour');
-	}
-
-	self.redraw();
-}
 
 window.MilkGame = function(){
 
@@ -300,7 +22,350 @@ window.MilkGame = function(){
 
 	const FPS = 50;
 	const GRAB = W/20;  //can grab a teat within 10% of screen width
-	const PLAYERCOUNT = 6;
+
+	window.MilkSea = function(){
+		let self = this;
+		self.$el = $(`
+			<milksea>
+				<svg viewBox='0 0 100 100' preserveAspectRatio="none">
+					<path fill='rgba(0,0,0,0.5)' stroke='none'></path>
+					<path fill='white' stroke='none'></path>
+				</svg>
+			</milksea>
+		`);
+
+		let $path = self.$el.find('path');
+
+		self.milk = 0;
+
+		const SEG = 100;
+		let n = 0;
+		self.redraw = function(){
+
+			let fill = self.milk/2000;
+			let wibble = 0.05;
+			n += wibble;
+			let d = `M 0,100 L 0,${100-fill}`;
+			for(var i=0; i<=SEG; i++){
+				let amt = (i/SEG);
+				d = d + ` L ${i/SEG*100},${100-fill + Math.sin(i+n)}`
+			}
+			d = d + ' L 100,100';
+			$path.attr('d',d);
+		}
+
+		self.redraw();
+	}
+
+
+	window.MilkUdder = function(STAGE){
+
+		const COUNT = 2;
+
+		let self = this;
+		self.$el = $('<milkudder>');
+
+		let $legLeft = $('<milkleg>').appendTo(self.$el);
+		let $legRight = $('<milkleg>').appendTo(self.$el);
+		$('<milkbody>').appendTo(self.$el);
+
+		self.teats = [];
+		for(var i=0; i<COUNT; i++){
+			self.teats[i] = new MilkTeat();
+			self.teats[i].x = (-UDDER/4) + (UDDER/2)*(i/(COUNT-1));
+			self.teats[i].$el.appendTo(self.$el).css('left',self.teats[i].x);
+		}
+
+		self.x = self.xAnchor = 0;
+		self.xOffset = 0;
+		self.nWall = -1;
+		self.isActive = true;
+
+		let queueWall = [];
+		let isAnimating = false;
+		let stepShuffle = -1;
+		let isWalkCycle = false;
+
+		self.toNewSpot = function(xTarget=undefined){
+
+			self.isActive = false;
+			self.nWall = -1;
+
+			let x = 0;
+
+			if(xTarget){
+				x = xTarget;
+			} else {
+
+				let isOccupied = false;
+				let nWall = -1;
+				do{
+					if(!queueWall.length){
+						queueWall = [0,1,2];
+						window.shuffleArray(queueWall);
+					}
+
+					isOccupied = false;
+
+					nWall = queueWall.pop();
+					for(var u in udders) if( udders[u].nWall == nWall ) isOccupied = true;
+				} while (isOccupied);
+
+
+				self.nWall = nWall;
+				x = (nWall + 0.35 + Math.random() * 0.3) * W;
+			}
+			
+
+			let dist = Math.abs(self.x - x);
+
+			if(dist<1000) dist = 1000;
+
+
+			stepShuffle = Math.floor( (dist/1000 + 4 + Math.random()*4) * FPS );
+
+			$(self).animate({x:x},{duration:dist,complete:function(){
+				isWalkCycle = false;
+				self.isActive = true;
+			}});
+		
+			isWalkCycle = true;
+			doWalkCycle();
+		}
+
+		function toStillness(){
+
+			self.$el.css({
+				'transform':'scale(1)',
+				'filter':'',
+				'z-index':'1',
+			});
+			$legLeft.animate({top:'-40px'},200);
+			$legRight.animate({top:'-40px'},200);
+			self.$el.animate({top:'40px'},200);
+
+
+		}
+
+		function doWalkCycle(){
+
+			if( !isWalkCycle ){
+				toStillness();
+				return;
+			}
+
+			self.$el.css({
+				'transform':'scale(0.9)',
+				'transition':'transform 0.5s',
+				'filter':'blur(5px)',
+				'z-index':'0',
+			})
+
+			self.$el.animate({
+				scale:0.5,
+			},100).animate({
+				top: '0px',
+			},100).animate({
+				top:'20px'
+			},100).animate({
+				top:'0px'
+			},{
+				duration:100,
+				complete:doWalkCycle
+			})
+
+			$legLeft.animate({
+				top:'-60px',
+			},100).animate({
+				top:'0px'
+			},100).animate({
+				top:'-60px',
+			},100).animate({
+				top:'0px'
+			},100)
+
+			$legRight.animate({
+				top:'0px'
+			},100).animate({
+				top:'-40px',
+			},100).animate({
+				top:'0px'
+			},100).animate({
+				top:'-40px',
+			},100)
+		}
+
+		self.step = function() {
+			stepShuffle--;
+			if(stepShuffle==0) self.toNewSpot();
+		}
+
+		self.redraw = function(){
+			self.$el.css({left:self.x+'px'});
+		}
+
+		self.initExit = function () {
+			self.toNewSpot(-W/2);
+		}
+	}
+
+	window.MilkTeat = function(){
+
+		const SEG = 20;
+		const MAX_TUG = 3;
+
+
+
+		let self = this;
+		self.ox = 10;
+		self.tug = 0;
+		self.$el = $('<milkteat>');
+
+		self.milking = 0;
+		self.countTug = 0;//Math.ceil( Math.random() * MAX_TUG );
+		self.capacity = self.countTug/MAX_TUG;
+		self.throbbing = 0;
+
+		self.flow = 0;
+		
+
+		let $stream = $('<milkstream>').appendTo(self.$el);
+		let $milk = $('<milk>').appendTo($stream);
+		
+
+		let $svg = $(`<svg preserveAspectRatio="none" viewBox='-50 0 100 110'>
+			<linearGradient id="nipfull" x1="0%" y1="50%" x2="0%" y2="100%">
+				<stop offset="0%" stop-color="pink"/>
+				<stop offset="100%" stop-color="red"/>
+			</linearGradient>
+			<linearGradient id="niphalf" x1="0%" y1="50%" x2="0%" y2="100%">
+				<stop offset="0%" stop-color="pink"/>
+				<stop offset="100%" stop-color="#ff5555"/>
+			</linearGradient>
+			<linearGradient id="nipempty" x1="0%" y1="50%" x2="0%" y2="100%">
+				<stop offset="0%" stop-color="pink"/>
+				<stop offset="100%" stop-color="pink"/>
+			</linearGradient>
+			<path fill='transparent' stroke='url(#nipfull)' stroke-width='20' stroke-linecap='round'></path>
+		</svg>`).appendTo(self.$el);
+		let $path = $svg.find('path');
+
+		let $alert = $('<milkalert>').appendTo(self.$el);
+
+		let $drops = [];
+		for(var i=0; i<self.countTug; i++){
+			$drops[i] = $('<milkdrop>').appendTo(self.$el);
+		}
+
+		let len = 100;
+
+		let n = Math.floor( Math.random()*SEG );
+
+		let audio = new AudioContext();
+		audio.add('squirt','./proto/audio/milk-squirt.mp3',0.3,false);
+		audio.add('pour','./proto/audio/milk-pour.mp3',0.3,false);
+
+		let tugDelta = 0;
+		let tugWas = 0;
+		let tugging = 0;
+
+		let isUntugged = true;
+
+		self.step = function(){
+			tugDelta = Math.max(0,self.tug - tugWas); 
+			
+			if(!self.isHeldBy){
+				self.tug *= 0.95;
+				self.ox *= 0.95;
+				tugDelta = 0;
+			} else if(self.tug < tugWas){
+				isUntugged = true;
+			}
+
+			if(tugDelta>0){
+				tugging += tugDelta;
+			} else {
+				tugging -= 5;
+			}
+
+			if(tugging<0) tugging = 0;
+			if(tugging>15 && isUntugged && tugDelta>0 && !self.markedForRemoval){
+				//self.isActive = false;
+				//coolDown = 25;
+				//tugging = 100;
+				//self.countTug--;
+				isUntugged = false;
+
+				self.isHeldBy.score++;
+				self.isHeldBy.$score.stop(false,false).css({opacity:1}).delay(200).animate({opacity:0});
+
+				//$drops[self.countTug].hide();
+
+				audio.play('squirt',true);
+				audio.play('pour',true);
+
+
+				$(self).stop(false,false).animate({flow:0.5},100).delay(500).animate({flow:0},100);
+			}
+
+			self.milking = tugging;
+
+			tugWas = self.tug;
+
+		}
+
+		self.redraw = function(){
+			let wibble = 0.05;
+			n += wibble;
+
+			let d = 'M 0,0 '
+			let px;
+			for(var i=0; i<SEG; i++){
+				let amt = (i/SEG);
+				px = (Math.sin(i/2 + n)*2*amt +self.ox*amt);
+				d = d + ' L '+px+','+amt*100+' ';
+			}
+			$path.attr('d',d);
+			
+			let thicc = 1 - self.tug * 0.005;
+			$path.attr('stroke-width',12 + thicc*10);
+
+			let level = 'half';//thicc > 0.7 ? 'full' : ( thicc < 0.4 ? 'empty' : 'half' );
+			$path.attr('stroke',`url(#nip${level})`);
+			$svg.css({height:500 + self.tug+'px'});
+
+			$stream.css({
+				top:420 + self.tug+'px',
+				left:px*8,
+				transform:'rotate('+(-px*1.5)+'deg)',
+			})
+
+			let size = self.flow * 300;
+
+			$milk.css({
+				'border-left-width': size+'px',
+				'border-right-width': size+'px',
+				'left': -size+'px',
+			})
+
+			audio.setVolume('squirt',self.flow * 0.3);
+			audio.setVolume('pour',self.flow * 0.3);
+
+			//$alert.attr('active',self.countTug>0?'true':'false');
+		}
+
+		self.fini = function() {
+			// body...
+			$(self).stop(false,false);
+			self.flow = 0;
+			self.redraw();
+
+			audio.stop('squirt');
+			audio.stop('pour');
+		}
+
+		self.redraw();
+	}
 
 	if(!MilkGame.didInit){
 		MilkGame.didInit = true;
@@ -383,13 +448,13 @@ window.MilkGame = function(){
 				milk{
 					display: block;
 				 	width: 0; 
-					  height: 0; 
-					  border-left: 20px solid transparent;
-					  border-right: 20px solid transparent;
-					  border-bottom: ${H}px solid white;
-					  position: absolute;
-					  left: -20px;
-					  top: 0px;
+				  height: 0; 
+				  border-left: 20px solid transparent;
+				  border-right: 20px solid transparent;
+				  border-bottom: ${H}px solid white;
+				  position: absolute;
+				  left: -20px;
+				  top: 0px;
 				}
 
 
@@ -445,6 +510,7 @@ window.MilkGame = function(){
 					height: ${H}px;
 					transform-origin: top left;
 
+					
 				}
 
 				milkgame h1{
@@ -462,13 +528,24 @@ window.MilkGame = function(){
 					position: absolute;
 					top: 0px;
 					left: 0px;
-					bottom: 0px;
+					bottom: 200px;
 					right: 0px;
 					background-color: #30A6DC;
 					background: url(./proto/img/party/bg-farm.png);
 					background-size: 100%;
 
 					
+				}
+
+				milkbg:before{
+					content:"";
+					bottom: -200px;
+					height: 400px;
+					left: 0px;
+					right: 0px;
+					display: block;
+					position: absolute;
+					background: linear-gradient( to bottom, transparent, #1F6E89, #0f4d63);
 				}
 
 				milkbg:after{
@@ -500,6 +577,22 @@ window.MilkGame = function(){
 					display: block;
 					position: absolute;
 					top: 0px;
+
+				}
+
+				milkudder:before{
+					content: "";
+					width: ${UDDER*2}px;
+					height: 50px;
+					left: ${-UDDER}px;
+					right: ${-UDDER}px;
+					top: ${H-50}px;
+					display: block;
+					position: absolute;
+					background: black;
+					border-radius: 100%;
+					opacity: 0.1;
+
 				}
 
 				milkudder:after{
@@ -679,10 +772,8 @@ window.MilkGame = function(){
 
 				for(var t in udders[u].teats){
 					let teat = udders[u].teats[t];
-					
 					let dx = (udders[u].x + teat.x) - meeps[m].x;
-
-					if(Math.abs(dx)<minx && isMilkingLive && !teat.isHeldBy){
+					if(Math.abs(dx)<minx && isMilkingLive && !teat.isHeldBy && udders[u].isActive){
 						dir = dx>0?1:-1;
 						minx = Math.abs(dx);
 						teatGrab = teat;
@@ -714,39 +805,20 @@ window.MilkGame = function(){
 
 			if(!udders[u]) continue;
 
-			let isComplete = true;
+			udders[u].step();	
 
 			for(var t in udders[u].teats){
 				
 				udders[u].teats[t].step(isMilkingLive);
 				
 				if(udders[u].teats[t].isHeldBy){
-					//sea.milk += udders[u].teats[t].milking;
-					//udders[u].teats[t].isHeldBy.score += udders[u].teats[t].milking/1000;
 					udders[u].teats[t].isHeldBy = undefined;
 				}
 
 				udders[u].teats[t].redraw(isMilkingLive);
-
-				if(udders[u].teats[t].countTug) isComplete = false;
-
-				//udders[u].$el.css({'top':'-'+H+'px'})
-				//udders[u].$el.css({'left':Math.cos(nStep*0.01)*W});
 			}
 
 			udders[u].redraw();	
-
-			if(isComplete && !udders[u].markedForRemoval){
-				udders[u].markedForRemoval = true;
-				
-				setTimeout(function(){
-					udders[u].initExit();
-					for(let t in udders[u].teats)  udders[u].teats[t].fini();
-					udders[u] = undefined;
-				},1000);
-
-				timeout = setTimeout(spawnUdder,3000);
-			}
 		}
 
 
@@ -761,7 +833,7 @@ window.MilkGame = function(){
 		for(var i=0; i<PLAYERCOUNT; i++){
 			meeps[i] = new PartyMeep(i,COLORS[i]);
 			meeps[i].$shadow.hide();
-			meeps[i].$el.appendTo($game).css({bottom:'50px'}).hide();
+			meeps[i].$el.appendTo($game).css({bottom:'40px'}).hide();
 			meeps[i].fx = meeps[i].fy = meeps[i].fz = 0.5;
 			meeps[i].wall = 1;
 			meeps[i].isActive = false;
@@ -788,7 +860,6 @@ window.MilkGame = function(){
 			udders[i] = new MilkUdder();
 			udders[i].x = W*(i+ 0.5);
 			udders[i].$el.appendTo($cows).css({left:udders[i].x });
-			udders[i].initEntry();
 		}
 
 		for(var m in meeps){
@@ -798,7 +869,7 @@ window.MilkGame = function(){
 
 		isMilkingLive = true;
 
-		hud.initTimer(30,finiTutorial);
+		hud.initTimer(10,finiTutorial);
 	}
 
 	function finiTutorial(){
@@ -833,26 +904,28 @@ window.MilkGame = function(){
 
 	function initNextCohort(){
 
+		udders.length = 0;
+
 		iCohort++;
 		if(!ROUNDS[meeps.length][iRound].cohorts[iCohort]){
 			iCohort = 0;
 			iRound++;
 		}
 		
-
 		if(!ROUNDS[meeps.length][iRound]){
 			finiGame();
 		} else {
 
 			let delay = 1000;
 
-			if(iCohort == 0){
+			if(iCohort == 0 && ROUNDS.length==1){
+				audio.play('music',true,1);
+			}else if(iCohort == 0){
 				hud.initRound(iRound,ROUNDS[meeps.length].length);
 				audio.play('music',true, ((iRound == ROUNDS[meeps.length].length-1)?2:1));
 				setTimeout(hud.finiBanner,delay+=2000);
 			}
 		
-
 			setTimeout(function(){
 
 				let cohort = ROUNDS[meeps.length][iRound].cohorts[iCohort];
@@ -889,7 +962,6 @@ window.MilkGame = function(){
 
 		for(var u in udders){
 			if(udders[u]) udders[u].initExit();
-			udders[u] = undefined;
 		}
 
 		for(var m in meeps){
@@ -897,20 +969,16 @@ window.MilkGame = function(){
 			meeps[m].isActive = false;
 		}
 
-		setTimeout(initNextCohort,2000);
+		setTimeout(initNextCohort,4000);
 	}
 
-
 	function spawnUdder(){
-		let nWall = 1;
-		if(udders[nWall]){
-			nWall = Math.random()>0.5?0:2;
-			if(udders[nWall]) nWall = nWall==0?2:0;
-		}
-		udders[nWall] = new MilkUdder();
-		udders[nWall].x = W*(nWall+ 0.4 + Math.random() * 0.2);
-		udders[nWall].$el.appendTo($cows).css({left:udders[nWall].x });
-		udders[nWall].initEntry();
+		let udder = new MilkUdder();
+		udder.$el.appendTo($cows);
+		udders.push(udder);
+
+		udder.x = -W/2;
+		udder.toNewSpot();
 	}
 
 	function finiGame() {

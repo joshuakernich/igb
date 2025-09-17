@@ -401,7 +401,7 @@ window.CoconutClimbersGame = function(){
 		setTimeout(function(){
 			isGameLive = true;
 			timeStartRound = new Date().getTime();
-			audio.play('music',false,(iRound==ROUNDS.length-1)?2:1);
+			audio.play('music',false,(iRound==ROUNDS.length-1)?1.5:1);
 		},10000);
 	}
 
