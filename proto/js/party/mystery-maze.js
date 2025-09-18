@@ -567,31 +567,22 @@ window.MysteryMazeGame = function(){
 		for(var i=0; i<mazes.length; i++) if(!mazes[i].isComplete) isComplete = false;
 
 		if(isComplete){
-			initNextRound();
+			if(ROUNDS[iRound+1]) initNextRound();
+			else finiGame();
 		}
 	}
 
 	function finiGame(){
-
-
-		setTimeout(function(){
-			for(var i=0; i<mazes.length; i++){
-				let meep = new PartyMeep(i);
-				$('<mysterscore>').appendTo(meep.$el).text(mazes[i].score);
-				meep.$el.appendTo($game).css({
-					'bottom':'-350px',
-					'left':W + (0.25 + 1/(mazes.length-1)*0.5 * i)*W + 'px',
-				}).animate({
-					'bottom':'0px'
-				})
-			}
-		},2000);
-
 		let scores = [];
-		for(var i=0; i<mazes.length; i++) scores[i] = mazes[i].score;
+		for(var i=0; i<mazes.length; i++) scores[i] = -mazes[i].score;
+
+		let rewards = window.scoresToRewards(scores);
+		hud.showFinalScores(scores,rewards);
+
 		setTimeout( function(){
-			window.doPartyGameComplete(scores);
-		},4000);
+			self.fini();
+			window.doPartyGameComplete(rewards);
+		},5000);
 	}
 
 	self.step = function(){
