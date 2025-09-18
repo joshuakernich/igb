@@ -1,10 +1,80 @@
 window.MysteryMazeGame = function(){
 
+	const TUTORIAL = 
+	[
+		'10',
+		'11',
+		'01',
+	];
+
+	const MAP3x4 = 
+	[
+		'100',
+		'111',
+		'001',
+		'001',
+	];
+
+	const MAP3x5 = 
+	[
+		'010',
+		'110',
+		'100',
+		'111',
+		'001',
+	];
+
+	const MAP4x5 = 
+	[
+		'0001',
+		'1111',
+		'1000',
+		'1110',
+		'0010',
+	];
+
+	const MAP4x7 = 
+	[
+		'0001',
+		'0011',
+		'0010',
+		'1110',
+		'1000',
+		'1100',
+		'0100',
+	];
+	
+	function generateVariants(map){
+		let arr = [];
+		for(var y=0; y<map.length; y++){
+			arr[y] = [];
+			for(var x=0; x<map[y].length; x++){
+				arr[y][x] = parseInt(map[y][x]);
+			}
+		}
+
+		let flipY = arr.concat().reverse();
+		let flipX = arr.concat();
+		for(var y in flipX) flipX[y] = flipX[y].concat().reverse();
+		let flipXY = flipX.concat().reverse();
+
+		return [arr,flipY,flipX,flipXY];
+	}
+	
+
+	const ROUNDS = [
+		generateVariants(MAP3x4),
+		generateVariants(MAP3x5),
+		generateVariants(MAP4x5),
+	]
+
+	const TUTORIALS = generateVariants(TUTORIAL);
+
 	const W = 1600;
 	const H = 1000;
 	const FPS = 50;
-	const TRACK = {W:W/4,L:W,C:4,R:6,PADY:2};
-	TRACK.PW = TRACK.W/W;
+	const PX_CELLH = 150; //pixel height for each cell
+	const SAFE_GY = 2; // grid height for safe zones
 
 	let audio = new AudioContext();
 	audio.add('fall','./proto/audio/party/sfx-fall.mp3',0.3);
@@ -33,8 +103,6 @@ window.MysteryMazeGame = function(){
 				mysterymaze{
 					display:block;
 					position: absolute;
-					width: ${TRACK.W}px;
-					height: ${TRACK.L}px;
 					
 					bottom: 100px;
 					transform: rotateX(60deg);
@@ -45,19 +113,18 @@ window.MysteryMazeGame = function(){
 
 				mysteryrow{
 					display: block;
-					
+					height: ${PX_CELLH}px;
 				}
 
 				mysteryrow[safe]{
 					background: gray;
-					height: ${TRACK.L/(TRACK.R+TRACK.PADY*2)}px;
+					
 					box-shadow: 0px 20px 0px black;
 				}
 
 				mysterycell{
 					display: inline-block;
-					width: ${TRACK.W/TRACK.C}px;
-					height: ${TRACK.L/(TRACK.R+TRACK.PADY*2)}px;
+					height: ${PX_CELLH}px;
 					background: #333;
 					box-shadow: 0px 20px 0px black;
 				}
@@ -79,8 +146,8 @@ window.MysteryMazeGame = function(){
 				mysterytarget{
 					display: block;
 					position: absolute;
-					width: 200px;
-					height: 200px;
+					width: 150px;
+					height: 150px;
 					
 					transform: translate(-50%, -50%);
 					border-radius: 100%;	
@@ -113,195 +180,197 @@ window.MysteryMazeGame = function(){
 					font-size: 100px;
 				}
 
+				mysterytext{
+					position: absolute;
+					top: ${PX_CELLH}px;
+					left: 0px;
+					right: 0px;
+					line-height: ${PX_CELLH}px;
+					font-size: ${PX_CELLH/2}px;
+					color: white;
+					text-align: center;
+					transform: rotateX(-90deg);
+					transform-origin: bottom center;
+					transform-style: preserve-3d;
+				}
+
 			<style>
 		`)
 	}
 
-
-
-	const MysteryMaze = function(n){
+	const MysteryMaze = function(n,map,wTrack){
 		let self = this;
 		self.$el = $(`<mysterymaze n=${n}>`);
+
+		let grid = {
+			w:map[0].length,
+			h:map.length,
+			hFull:map.length + SAFE_GY*2,
+			pw:wTrack,
+			ph:(map.length+SAFE_GY*2)*PX_CELLH,
+			px:wTrack/map[0].length,
+			py:PX_CELLH
+		};
 
 		let isActive = false;
 		let isReady = false;
 		let isDead = false;
+		let timeout = undefined;
 
 		self.isComplete = false;
 		
 		self.ax = 0;
 
+		// player location (0-1)
 		self.px = 0;
 		self.py = 0;
 
-		self.lx = 0;
-		self.ly = 0;
+		// reticule location
+		self.rx = 0;
+		self.ry = 0;
 
+		// target location
 		self.tx = 0;
 		self.ty = 0;
 
 		self.score = 0;
+		self.tally = 0;
 
-		
 		let path = [];
 		let nPath = 0;
 		let countDead = 0;
 
-		let $reticule = $('<mysteryreticule>').appendTo(self.$el);
-		let $target = $('<mysterytarget>').appendTo(self.$el);
+		let $reticule = $('<mysteryreticule>').appendTo(self.$el).hide();
+		let $target = $('<mysterytarget>').appendTo(self.$el).hide();
 
-		function next(){
-
-			let seq = [
-				{x:Math.random()>0.5?-1:1,y:0},
-				{x:0,y:-1},
-				{x:0,y:-1},
-			]
-
-			if(pos.x==0){
-				seq[0].x = 1;
-				seq.unshift(seq[0]);
-			}
-			if(pos.x==TRACK.C-1){
-				seq[0].x = -1;
-				seq.unshift(seq[0]);
-			}
-
-			if(Math.random()>0.5) seq.push({x:0,y:-1});
-			
-			for(var s in seq){
-				pos = {x:pos.x + seq[s].x, y:pos.y + seq[s].y};
-				if(pos.y>=0) path.push(pos);
-			}
-
-			if(pos.y>0) next();
-		}
-
-		let pos = {
-			x:Math.floor(Math.random()*TRACK.C),
-			y:TRACK.R-1,
-		};
-
-		path.push(pos);
-		pos = { x:pos.x, y:pos.y-1 };
-		path.push(pos);
-		next();
+		let timeBegin = undefined;
 
 		let meep = new PartyMeep(n);
 		meep.$el.appendTo(self.$el).css({
 			'left':'50%',
-			'transform':'rotateX(-50deg) scale(0.6)',
+			'transform':'rotateX(-50deg) scale(0.5)',
 		});
 
-		$('<mysteryrow safe>').appendTo(self.$el);
-		$('<mysteryrow safe>').appendTo(self.$el);
+		for(var i=0; i<SAFE_GY; i++) $('<mysteryrow safe>').appendTo(self.$el);
 
 		let $cells = [];
 
-		for(let r=0; r<TRACK.R; r++){
+		for(let r=0; r<grid.h; r++){
 			$cells[r] = [];
 			let $row = $('<mysteryrow>').appendTo(self.$el);
 
-			for(let c=0; c<TRACK.C; c++){
-				$cells[r][c] = $('<mysterycell>').appendTo($row);
-
-				//for(var p in path) if(path[p].x == c && path[p].y == r) $cell.attr('safe','safe');
+			for(let c=0; c<grid.w; c++){
+				$cells[r][c] = $('<mysterycell>').appendTo($row).css({width:grid.px});
 			}
 		}
 
-		$('<mysteryrow safe>').appendTo(self.$el);
-		$('<mysteryrow safe>').appendTo(self.$el);
+		for(var i=0; i<SAFE_GY; i++) $('<mysteryrow safe>').appendTo(self.$el);
+
+		let $text = $('<mysterytext>').appendTo(self.$el);
+		self.$text = $text;
 
 		function showPath(){
-			for(var p in path){
-				let cell = path[p];
-				$cells[cell.y][cell.x].delay(p*50).animate({
-					'background-color':'#94EF93',
-				},100).delay(500).animate({
-					'background-color':'#333',
-				},500)
+
+			for(var r in map){
+				for(var c in map[r]){
+					if(map[r][c] == 1){
+						$cells[r][c].delay((map.length-r)*100).animate({
+							'background-color':'#94EF93',
+						}).delay(500).animate({
+							'background-color':'#333',
+						})
+					}
+				}
 			}
 
 			audio.play('sequence',true);
 		}
 
 		self.showPathPreview = function(){
+			$text.text('Watch...').css({opacity:1});
 			setTimeout(showPath,0);
 			setTimeout(showPath,2000);
 			setTimeout(showPath,4000);
 			setTimeout(function(){
+				
 				isReady = true;
+				if(timeBegin == undefined) timeBegin = new Date().getTime();
+
+				$reticule.show();
+				$target.show();
+				$text.text('Go!').delay(1000).animate({opacity:0});
 			},5000);
 		}
 		
+		function die(){
+			isDead = true;
+			meep.$el.css({
+				'transition':'transform 1s',
+				'transform':'rotateX(-50deg) scale(0.6) translateY(2000px)'
+			});
+
+			audio.play('fall',true);
+
+			timeout = setTimeout(reset,2000);
+		}
+
 		self.step = function(){
 
-			self.lx = self.px - self.ax;
-			self.ly = -0.3 + self.py * 1.6;
+			self.rx = (self.px - self.ax) * (W/grid.pw) * grid.w
+			self.ry = (-0.4 + self.py * 1.8) * grid.hFull;
+
+			if(timeBegin != undefined && !self.isComplete){
+				let timeElapsed = new Date().getTime() - timeBegin;
+				self.score = self.tally + timeElapsed/1000;
+			}
 
 			if(isActive && !isDead){
-				self.tx = self.lx;
-				self.ty = self.ly;
 
-				let x = self.lx/(TRACK.W/W);
-				let y = self.ly/(TRACK.L/W);
+				self.tx = self.rx;
+				self.ty = self.ry;
 
-				let gx = Math.floor( x*TRACK.C );
-				let gy = Math.floor( y*(TRACK.R + TRACK.PADY*2) ) - TRACK.PADY;
+				let gx = Math.floor( self.rx );
+				let gyFull = Math.floor( self.ry );
+				let gy = Math.floor( self.ry ) - SAFE_GY;
 
-				let isOnPath = gy<0 || gy>=TRACK.R;
-				for(var p in path){
-					if( path[p].x == gx && path[p].y == gy ){
-						isOnPath = true;
-						if( $cells[gy][gx].attr('safe') == undefined ){
-							$cells[gy][gx].attr('safe','safe').css({
-								'background-color':'#94EF93',
-							})
-							audio.play('blip',true);
-						}
-					};
-				}
+				let isWithinBounds = gyFull>=0 && gyFull<grid.hFull && gx >= 0 && gx < grid.w;
+				let isWithinMaze = gy>=0 && gy<grid.h && gx >= 0 && gx < grid.w;
 
-				if(!isOnPath){
-					isDead = true;
-					countDead ++;
+				if(isWithinMaze && map[gy][gx] == 1){
 
-					if( $cells[gy] && $cells[gy][gx] ){
-						$cells[gy][gx].css('opacity',0);
-					};
-
-					meep.$el.css({
-						'transition':'transform 1s',
-						'transform':'rotateX(-50deg) scale(0.6) translateY(2000px)'
-					});
-
-					audio.play('fall',true);
-					setTimeout(reset,2000);
-
+					if($cells[gy][gx].attr('safe') == undefined){
+						$cells[gy][gx].attr('safe','safe').css({
+							'background-color':'#94EF93',
+						})
+						audio.play('blip',true);
+					}
+				} else if(isWithinMaze){
+					$cells[gy][gx].css('opacity',0);
+					die();
+				} else if( !isWithinBounds ){
+					die();
 				} else if(gy<0){
 					isDead = true;
-					$(self).animate({
-						tx: TRACK.W/W/2,
-						ty: 0.1,
-					});
-
 					self.isComplete = true;
+
 					audio.play('correct',true);
 
-					self.score = Math.max(1,10-countDead);
-					$('<mysterscore>').appendTo(meep.$el).text('+'+self.score);
+					$(self).animate({
+						tx:grid.w/2,
+						ty:SAFE_GY/2,
+					});
 				}
 
-			} else if(!isDead){
-				self.tx = TRACK.W/W/2;
-				self.ty = 0.9;
+			} else if(!isDead && !isActive){
+				self.tx = grid.w/2;
+				self.ty = grid.h + SAFE_GY*1.5;
 
 				if(isReady){
-					let dx = self.lx - self.tx;
-					let dy = self.ly - self.ty;
+					let dx = self.rx - self.tx;
+					let dy = self.ry - self.ty;
 					let d = Math.sqrt(dx*dx+dy*dy);
 
-					if(d<0.05){
+					if(d<0.5){
 						audio.play('blip',true);
 						$target.hide();
 						$reticule.hide();
@@ -314,18 +383,18 @@ window.MysteryMazeGame = function(){
 		self.redraw = function(){
 			
 			$reticule.css({
-				left: self.lx * W + 'px',
-				top: self.ly * TRACK.L + 'px'
+				left: self.rx * grid.px + 'px',
+				top: self.ry * grid.py + 'px'
 			});
 
 			$target.css({
-				left: self.tx * W + 'px',
-				top: self.ty * TRACK.L + 'px'
+				left: self.tx * grid.px + 'px',
+				top: self.ty * grid.py + 'px'
 			});
 
 			meep.$el.css({
-				left: self.tx * W + 'px',
-				top: self.ty * TRACK.L + 'px'
+				left: self.tx * grid.px + 'px',
+				top: self.ty * grid.py + 'px'
 			});
 		}
 
@@ -336,14 +405,18 @@ window.MysteryMazeGame = function(){
 
 			for(var r in $cells) for(var c in $cells[r]) $cells[r][c].css({'opacity':1,'background-color':'#333'}).removeAttr('safe');
 
-			$target.show();
-			$reticule.show();
+			$target.hide();
+			$reticule.hide();
 			meep.$el.css({
 				'transition':'none',
 				'transform':'rotateX(-50deg) scale(0.6)',
 			});
 
-			setTimeout( self.showPathPreview, 1000 );
+			timeout = setTimeout( self.showPathPreview, 1000 );
+		}
+
+		self.fini = function() {
+			clearTimeout(timeout);
 		}
 	}
 
@@ -360,35 +433,115 @@ window.MysteryMazeGame = function(){
 	let slots = [];
 	for(var i=0; i<3; i++) slots[i] = {ax:0.07 + i*0.3, occupant:-1};
 
-	function initGame(count) {
-		audio.play('music');
+	let iRound = -1;
+	let nPlayer = -1;
+	let countPlayer;
 
-		for(var i=0; i<count; i++){
-			mazes[i] = new MysteryMaze(i);
-			mazes[i].$el.appendTo($game).hide();
+	function initGame(count) {
+		
+		countPlayer = count;
+	
+		initTutorial();
+	}
+
+	function initTutorial(){
+
+		hud.initTutorial("Mystery Maze",
+			{ x:1.15, y:0.5, msg:'Align yourself<br>with your Avatar',icon:'align' },
+			{ x:1.75, y:0.5, msg:'Move around the box<br>to navigate the maze',icon:'around' },
+		);
+
+		for(var i=0; i<countPlayer; i++){
+			let iMaze = i%TUTORIALS.length;
+			mazes[i] = new MysteryMaze(i,TUTORIALS[iMaze],W/8);
+			mazes[i].ax = 0.1 + 0.7/(countPlayer-1) * i;
+			mazes[i].$text.hide();
+			mazes[i].$el.appendTo($game).css({
+				left:W + mazes[i].ax * W + 'px'
+			});
+			setTimeout( mazes[i].showPathPreview, 1000 );
 		}
 
-		initNextPlayer();
-		setTimeout( initNextPlayer, 200 );
-		setTimeout( initNextPlayer, 400 );
+		hud.initTimer(10,finiTutorial);
+	}
+
+	function finiTutorial(){
+
+		hud.finiTimer();
+		hud.finiTutorial();
+
+		for(var m in mazes){
+			mazes[m].fini();
+			mazes[m].$el.hide();
+			mazes[m].isComplete = true;
+			mazes[m].score = 0;
+		}
 
 		setTimeout(function(){
-			hud.initBanner('Watch Closely','small');
-		},2000);
+			hud.initPlayers(mazes,1);
+		},1000);
+		setTimeout(initNextRound,3000);
+	}
+
+	function initNextRound(){
+
+		iRound++;
+		nPlayer = -1;
+
+		audio.play('music',false,iRound==ROUNDS.length-1?1.5:1);
+
+		for(var s in slots) slots[s].occupant = -1;
+
+		for(var i=0; i<countPlayer; i++){
+			let iMaze = i%ROUNDS[iRound].length;
+			let tally = mazes[i]?mazes[i].score:0;
+			mazes[i] = new MysteryMaze(i,ROUNDS[iRound][iMaze],W/4);
+			mazes[i].$el.appendTo($game).hide();
+			mazes[i].score = mazes[i].tally = tally;
+		}
+
+		let delay = 0;
+
+		setTimeout(function(){
+			hud.initRound(iRound,ROUNDS.length);
+		},delay += 1000)
 
 		setTimeout(function(){
 			hud.finiBanner();
-		},10000);
+		},delay += 2000);
+
+		setTimeout(function(){
+			initNextPlayer();
+			setTimeout( initNextPlayer, 200 );
+			setTimeout( initNextPlayer, 400 );
+		},delay += 1000);
+
+		setTimeout(function(){
+			let summon = [0,1,2];
+			if(summon.length>countPlayer) summon.length = countPlayer;
+			hud.summonPlayers(summon);
+		},delay += 1000);
+
+		setTimeout(function(){
+			hud.finiBanner();
+		},delay += 2000);
+
+		setTimeout(function(){
+			for(var s in slots){
+				let m = slots[s].occupant;
+				mazes[m].showPathPreview();
+			}
+		},delay += 1000);
 	}
 
 	hud.initPlayerCount(initGame);
 
-	let nPlayer = -1;
-	function initNextPlayer(){
+	
+	function initNextPlayer(triggerPreview=false){
 		nPlayer++;
 
 		if(!mazes[nPlayer]){
-			checkForGameComplete();
+			checkForRoundComplete();
 			return;
 		}
 
@@ -406,34 +559,39 @@ window.MysteryMazeGame = function(){
 			bottom: 100
 		})
 
-		setTimeout( mazes[nPlayer].showPathPreview, 4000 );
+		if( triggerPreview ) setTimeout( mazes[nPlayer].showPathPreview, 1000 );
 	}
 
-	function checkForGameComplete(){
+	function checkForRoundComplete(){
 		let isComplete = true;
 		for(var i=0; i<mazes.length; i++) if(!mazes[i].isComplete) isComplete = false;
+
 		if(isComplete){
-			hud.initBanner("Finish");
-
-			setTimeout(function(){
-				for(var i=0; i<mazes.length; i++){
-					let meep = new PartyMeep(i);
-					$('<mysterscore>').appendTo(meep.$el).text(mazes[i].score);
-					meep.$el.appendTo($game).css({
-						'bottom':'-350px',
-						'left':W + (0.25 + 1/(mazes.length-1)*0.5 * i)*W + 'px',
-					}).animate({
-						'bottom':'0px'
-					})
-				}
-			},2000);
-
-			let scores = [];
-			for(var i=0; i<mazes.length; i++) scores[i] = mazes[i].score;
-			setTimeout( function(){
-				window.doPartyGameComplete(scores);
-			},4000);
+			initNextRound();
 		}
+	}
+
+	function finiGame(){
+
+
+		setTimeout(function(){
+			for(var i=0; i<mazes.length; i++){
+				let meep = new PartyMeep(i);
+				$('<mysterscore>').appendTo(meep.$el).text(mazes[i].score);
+				meep.$el.appendTo($game).css({
+					'bottom':'-350px',
+					'left':W + (0.25 + 1/(mazes.length-1)*0.5 * i)*W + 'px',
+				}).animate({
+					'bottom':'0px'
+				})
+			}
+		},2000);
+
+		let scores = [];
+		for(var i=0; i<mazes.length; i++) scores[i] = mazes[i].score;
+		setTimeout( function(){
+			window.doPartyGameComplete(scores);
+		},4000);
 	}
 
 	self.step = function(){
@@ -451,12 +609,16 @@ window.MysteryMazeGame = function(){
 							bottom: W + 'px',
 						})
 
-						setTimeout( initNextPlayer, 2000 );
+						setTimeout( function(){
+							initNextPlayer(true);
+						}, 2000 );
 					}
 				}
 			}
 		}
 		for(var m in mazes) mazes[m].redraw();
+
+		hud.updatePlayers(mazes,1);
 
 		resize();
 	}
