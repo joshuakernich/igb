@@ -462,7 +462,7 @@ window.MysteryMazeGame = function(){
 			setTimeout( mazes[i].showPathPreview, 1000 );
 		}
 
-		hud.initTimer(10,finiTutorial);
+		hud.initTimer(30,finiTutorial);
 	}
 
 	function finiTutorial(){
