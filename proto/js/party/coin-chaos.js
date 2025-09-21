@@ -100,6 +100,7 @@ window.CoinChaosGame = function(){
 			});
 
 			setTimeout(function(){
+				audio.play('coin',true);
 				$body.css({
 					transform:'rotateX(-90deg) translateY(0px)',
 					opacity:1,
@@ -341,8 +342,15 @@ window.CoinChaosGame = function(){
 	let self = this;
 	self.$el = $('<igb class="coinchaoswrapper">')
 	let $game = $('<coinchaosgame>').appendTo(self.$el);
+
+	let $blurBG = $('<blurlayer>').appendTo($game).css({
+		background: 'rgba(0,0,0,0.3)'
+	})
+
 	let $platform = $('<coinchaosplatform>').appendTo($game);
 	let $center = $('<coinchaoscenter>').appendTo($platform);
+
+
 
 	let audio = new AudioContext();
 	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
@@ -431,13 +439,57 @@ window.CoinChaosGame = function(){
 			meeps[i].isActive = false;
 		}
 
-		hud.initPlayers(meeps);
-		setTimeout(initNextCohort,2000);
+		
+		initTutorial();
+	}
+
+	function initTutorial(){
+		
+		$platform.animate({bottom:'-250px'});
+
+		hud.initTutorial('Coin Chaos',
+			{x:1.2, y:0.45, msg:"Move around the box<br>and steal opponent's coins", icon:"around"},
+			{x:1.8, y:0.4, msg:"Return stolen coins<br>to your safe zone", icon:"align"},
+		);
+
+		for(var m in meeps){
+			meeps[m].$el.show();
+			meeps[m].isActive = true;
+
+			piles[m] = new CoinPile(m,0.03);
+			piles[m].position = 1/meeps.length*m;
+			piles[m].$el.appendTo($center);
+
+			for(var c=0; c<4; c++){
+				let coin = new Coin(m);
+				piles[m].add(coin);
+				coin.redraw();
+				coin.$el.appendTo($center);
+				coins.push(coin);
+			}
+
+			piles[m].step();
+			piles[m].redraw();
+		}
+
+		isGameAlive = true;
+
+		hud.initTimer(30,finiTutorial);
+	}
+
+	function finiTutorial(){
+		for(var m in meep) meeps[m].score = 0;
+		hud.finiTutorial();
+		$blurBG.hide();
+		$platform.animate({bottom:'0px'});
+		finiRound();
 	}
 
 	let iCohort = -1;
 	let iRound = 0;
 	function initNextCohort(){
+
+		hud.initPlayers(meeps);
 
 		iCohort++;
 
@@ -467,12 +519,24 @@ window.CoinChaosGame = function(){
 			hud.summonPlayers(round.cohorts[iCohort]);
 			hud.revealTimer(round.time);
 
-
 			for(var i in cohort){
 				let m = cohort[i];
 
 				meeps[m].isActive = true;
 				meeps[m].$el.show();
+
+			}
+
+			
+		},4000);
+
+		setTimeout(function(){
+			hud.finiBanner();
+		},6000);
+
+		setTimeout(function(){
+			for(var i in cohort){
+				let m = cohort[i];
 
 				let coinsStart = meeps[m].score + round.coins;
 				meeps[m].score = coinsStart;
@@ -488,7 +552,7 @@ window.CoinChaosGame = function(){
 					coin.$el.appendTo($center);
 					coins.push(coin);
 
-					coin.initEntry(200 + c*200);
+					coin.initEntry(Math.random()*500 + (500/coinsStart)*c );
 				}
 
 				piles[i].step();
@@ -496,16 +560,13 @@ window.CoinChaosGame = function(){
 			}
 
 			hud.updatePlayers(meeps);
-		},4000);
 
-		setTimeout(function(){
-			hud.finiBanner();
-		},6000);
+		},7500);
 
 		setTimeout(function(){
 			hud.initTimer(round.time,finiRound);
 			isGameAlive = true;
-		},7000);
+		},10000);
 	}
 
 	function finiRound(){
