@@ -11,12 +11,12 @@ window.CoinChaosGame = function(){
 		undefined,
 		undefined,
 		[
-			{cohorts:[[0,1]],speed:0.05,coins:5,time:20},
-			{cohorts:[[0,1]],speed:0.1,coins:10,time:30}
+			{cohorts:[[0,1]],speed:0.05,coins:3,time:20},
+			{cohorts:[[0,1]],speed:0.1,coins:5,time:30}
 		],
 		[
-			{cohorts:[[0,1,2]],speed:0.05,coins:5,time:20},
-			{cohorts:[[0,1,2]],speed:0.1,coins:10,time:30},
+			{cohorts:[[0,1,2]],speed:0.05,coins:3,time:20},
+			{cohorts:[[0,1,2]],speed:0.1,coins:5,time:30},
 		],
 		[
 			{cohorts:[[0,1,2],[0,1,3],[0,2,3],[1,2,3]],speed:0.05,coins:5,time:20},
@@ -25,8 +25,8 @@ window.CoinChaosGame = function(){
 			{cohorts:[[0,1,2],[0,3,4],[1,3,4],[2,3,0],[2,4,1]],speed:0.05,coins:5,time:20},
 		],
 		[
-			{cohorts:[[0,1,2],[3,4,5]],speed:0.05,coins:5,time:20},
-			{cohorts:[[0,1,2],[3,4,5]],speed:0.1,coins:10,time:30},
+			{cohorts:[[0,1,2],[3,4,5]],speed:0.05,coins:3,time:20},
+			{cohorts:[[0,1,2],[3,4,5]],speed:0.1,coins:5,time:30},
 		],
 	]
 
@@ -36,20 +36,20 @@ window.CoinChaosGame = function(){
 
 		$('<coincircle>').appendTo(self.$el);
 
-		let coins = [];
-
+		self.n = n;
+		self.coins = [];
 		self.position = 0;
 		self.x = self.y = 0;
 
 		self.step = function() {
 			//let p = 1/PLAYERS*(i)*Math.PI*2;
-			self.position += 0.05/FPS;
+			self.position += speed/FPS;
 			self.x = Math.cos(self.position * Math.PI*2) * 0.7;
 			self.y = Math.sin(self.position * Math.PI*2) * 0.7;
 
-			for(var c in coins){
-				coins[c].x = self.x + Math.cos((self.position+coins[c].position) * Math.PI*2) * coins[c].radius;
-				coins[c].y = self.y + Math.sin((self.position+coins[c].position) * Math.PI*2) * coins[c].radius;
+			for(var c in self.coins){
+				self.coins[c].x = self.x + Math.cos((self.position+self.coins[c].position) * Math.PI*2) * self.coins[c].radius;
+				self.coins[c].y = self.y + Math.sin((self.position+self.coins[c].position) * Math.PI*2) * self.coins[c].radius;
 			}
 		}
 
@@ -63,13 +63,13 @@ window.CoinChaosGame = function(){
 		self.add = function(coin){
 			coin.position = Math.random();
 			coin.radius = Math.random() * 0.2;
-			coins.push(coin);
+			self.coins.push(coin);
 			coin.nPile = n;
 		}
 
 		self.remove = function(coin){
-			let nCoin = coins.indexOf(coin);
-			coins.splice(nCoin,1);
+			let nCoin = self.coins.indexOf(coin);
+			self.coins.splice(nCoin,1);
 		}
 	}
 
@@ -80,7 +80,7 @@ window.CoinChaosGame = function(){
 
 		self.$el.css({'animation-delay':(-Math.random()*6) + 's'})
 		$('<coinshadow>').appendTo(self.$el);
-		$('<coinbody>').appendTo(self.$el);
+		let $body = $('<coinbody>').appendTo(self.$el);
 
 		self.x = self.y = 0;
 
@@ -89,6 +89,23 @@ window.CoinChaosGame = function(){
 				left: self.x * SCALE,
 				top: self.y * SCALE,
 			}).attr('held',self.holder?'true':'false');
+		}
+
+		self.initEntry = function(delay){
+			$body.css({
+				transform:'rotateX(-90deg) translateY(-1000px)',
+				opacity:0,
+				transition:'all 0.3s',
+
+			});
+
+			setTimeout(function(){
+				$body.css({
+					transform:'rotateX(-90deg) translateY(0px)',
+					opacity:1,
+				});
+			},delay);
+
 		}
 	}
 
@@ -338,7 +355,7 @@ window.CoinChaosGame = function(){
 	function step(){
 
 		for(var p in piles){
-			piles[p].step();
+			if(isGameAlive) piles[p].step();
 			piles[p].redraw();
 		}
 
@@ -386,6 +403,9 @@ window.CoinChaosGame = function(){
 		}
 
 		for(var c in coins) coins[c].redraw();
+		for(var p in piles) meeps[piles[p].n].score = piles[p].coins.length;
+
+		hud.updatePlayers(meeps);
 
 		resize();
 	}
@@ -411,6 +431,7 @@ window.CoinChaosGame = function(){
 			meeps[i].isActive = false;
 		}
 
+		hud.initPlayers(meeps);
 		setTimeout(initNextCohort,2000);
 	}
 
@@ -425,12 +446,18 @@ window.CoinChaosGame = function(){
 			iRound++;
 		}
 
+		if(!ROUNDS[meeps.length][iRound]){
+			finiGame();
+			return;
+		}
+
 		let rounds = ROUNDS[meeps.length];
 		let round = rounds[iRound];
 		let cohort = rounds[iRound].cohorts[iCohort];
 
-		audio.play('music',false,iRound==rounds.length-1?1.5:1);
+		
 		hud.initRound(iRound,rounds.length);
+		audio.play('music',false,iRound==rounds.length-1?1.25:1);
 
 		setTimeout(function(){
 			hud.finiBanner();
@@ -438,13 +465,8 @@ window.CoinChaosGame = function(){
 
 		setTimeout(function(){
 			hud.summonPlayers(round.cohorts[iCohort]);
-		},4000);
+			hud.revealTimer(round.time);
 
-		setTimeout(function(){
-			hud.finiBanner();
-		},6000);
-
-		setTimeout(function(){
 
 			for(var i in cohort){
 				let m = cohort[i];
@@ -452,47 +474,71 @@ window.CoinChaosGame = function(){
 				meeps[m].isActive = true;
 				meeps[m].$el.show();
 
+				let coinsStart = meeps[m].score + round.coins;
+				meeps[m].score = coinsStart;
+
 				piles[i] = new CoinPile(m,round.speed);
 				piles[i].position = 1/cohort.length*i;
-				piles[i].step();
-				piles[i].redraw();
 				piles[i].$el.appendTo($center);
 
-				for(var c=0; c<round.coins; c++){
+				for(var c=0; c<coinsStart; c++){
 					let coin = new Coin(m);
 					piles[i].add(coin);
 					coin.redraw();
 					coin.$el.appendTo($center);
 					coins.push(coin);
+
+					coin.initEntry(200 + c*200);
 				}
+
+				piles[i].step();
+				piles[i].redraw();
 			}
-		},6000);
 
-
-		setTimeout(function(){
-			hud.initTimer(30,finiGame);
-			isGameAlive = true;
-		},4500);
+			hud.updatePlayers(meeps);
+		},4000);
 
 		setTimeout(function(){
 			hud.finiBanner();
 		},6000);
+
+		setTimeout(function(){
+			hud.initTimer(round.time,finiRound);
+			isGameAlive = true;
+		},7000);
+	}
+
+	function finiRound(){
+		isGameAlive = false;
+		hud.finiTimer();
+
+		for(var m in meeps){
+			meeps[m].$el.hide();
+			meeps[m].isActive = false;
+		}
+
+		for(var p in piles){
+			piles[p].$el.hide();
+		}
+
+		for(var c in coins){
+			coins[c].$el.hide();
+		}
+
+		piles.length = 0;
+		coins.length = 0;
+
+		setTimeout(initNextCohort,2000);
 	}
 
 	function finiGame(){
-		clearInterval(interval);
-		hud.initBanner('Time Up!');
+		let scores = [];
+		for(var m in meeps) scores[m] = meeps[m].score;
+		hud.showFinalScores(scores,scores);
+
 		setTimeout(function(){
-
-			let scores = [];
-
-			for(var p in piles) scores[p] = -10;
-			for(var c in coins) if( coins[c].nPile != undefined ) scores[ coins[c].nPile ] ++;
-
 			self.fini();
-
-			window.doPartyGameComplete(scores);
-		},1000)
+		},6000)
 	}
 
 	self.setPlayers = function(p){
