@@ -874,6 +874,7 @@ window.MazeGame = function(n){
 		let scores = [];
 		for(var m in meeps) scores[m] = meeps[m].score;
 
+		audio.stop('music');
 		hud.showFinalScores(scores,scores);
 
 		setTimeout(function(){
