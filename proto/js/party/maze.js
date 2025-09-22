@@ -310,31 +310,35 @@ window.MazeGame = function(n){
 	// reverse the maps so they render as displayed above
 	for(var m in MAPS) MAPS[m].reverse();
 
+	const SLOW = 0.05;
+	const MED = 0.06;
+	const FAST = 0.07;
+
 	const STRUCTURE = [
 		undefined,
 		undefined,
 		[
-			[{speed:0.05,players:[0,1],map:MAPS[0]}],
-			[{speed:0.05,players:[0,1],map:MAPS[1]}],
-			[{speed:0.05,players:[0,1],map:MAPS[2]}],
+			[{speed:SLOW,players:[0,1],map:MAPS[0]}],
+			[{speed:MED,players:[0,1],map:MAPS[1]}],
+			[{speed:FAST,players:[0,1],map:MAPS[2]}],
 		],
 		[
-			[{speed:0.05,players:[0,1,2],map:MAPS[0]}],
-			[{speed:0.05,players:[0,1,2],map:MAPS[1]}],
-			[{speed:0.05,players:[0,1,2],map:MAPS[2]}],
+			[{speed:SLOW,players:[0,1,2],map:MAPS[0]}],
+			[{speed:MED,players:[0,1,2],map:MAPS[1]}],
+			[{speed:FAST,players:[0,1,2],map:MAPS[2]}],
 		],
 		[
-			[{speed:0.05,players:[0,1],map:MAPS[0]},{players:[2,3],map:MAPS[0]}],
-			[{speed:0.05,players:[0,1],map:MAPS[2]},{players:[2,3],map:MAPS[2]}],
+			[{speed:SLOW,players:[0,1],map:MAPS[0]},{speed:SLOW,players:[2,3],map:MAPS[0]}],
+			[{speed:FAST,players:[0,1],map:MAPS[2]},{speed:FAST,players:[2,3],map:MAPS[2]}],
 		],
 		[
-			[{speed:0.05,players:[0,1,2],map:MAPS[0]},{speed:0.05,players:[3,4],map:MAPS[0]}],
-			[{speed:0.05,players:[0,2,4],map:MAPS[1]},{speed:0.05,players:[1,3],map:MAPS[1]}],
-			[{speed:0.05,players:[1,3,4],map:MAPS[2]},{speed:0.05,players:[0,2],map:MAPS[2]}],
+			[{speed:SLOW,players:[0,1,2],map:MAPS[0]},{speed:SLOW,players:[3,4],map:MAPS[0]}],
+			[{speed:MED,players:[0,2,4],map:MAPS[1]},{speed:MED,players:[1,3],map:MAPS[1]}],
+			[{speed:FAST,players:[1,3,4],map:MAPS[2]},{speed:FAST,players:[0,2],map:MAPS[2]}],
 		],
 		[
-			[{speed:0.05,players:[0,1,2],map:MAPS[0]},{speed:0.05,players:[3,4,5],map:MAPS[0]}],
-			[{speed:0.05,players:[0,1,2],map:MAPS[2]},{speed:0.05,players:[3,4,5],map:MAPS[2]}],
+			[{speed:SLOW,players:[0,1,2],map:MAPS[0]},{speed:SLOW,players:[3,4,5],map:MAPS[0]}],
+			[{speed:FAST,players:[0,1,2],map:MAPS[2]},{speed:FAST,players:[3,4,5],map:MAPS[2]}],
 		],
 	]
 
@@ -691,6 +695,8 @@ window.MazeGame = function(n){
 
 		$platform.empty();
 
+		hud.initPlayers(meeps);
+
 		setTimeout(initNextRound,1000);
 	}
 
@@ -756,9 +762,6 @@ window.MazeGame = function(n){
 			finiGame();
 			return;
 		}
-
-		hud.initPlayers(meeps);
-
 
 		$platform.empty();
 		blocks.length = 0;
