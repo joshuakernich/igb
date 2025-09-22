@@ -9,7 +9,57 @@ window.MazeGame = function(n){
 
 	const GRID = {W:W/GRIDSIZE};
 
+	const TUTORIAL = [
+		
+		'0000',
+		'0000',
+		'0000',
+		'0000',
+		'0100',
+		'1010',
+		'0101',
+		'0010',
+		'0000',
+		'0100',
+		'1010',
+		'0101',
+		'0010',
+		'0100',
+		'1010',
+		'0101',
+		'0010',
+		'0000',
+		'0100',
+		'1010',
+		'0101',
+		'0010',
+		'0100',
+		'1010',
+		'0101',
+		'0010',
+		'0000',
+		'0100',
+		'1010',
+		'0101',
+		'0010',
+		'0100',
+		'1010',
+		'0101',
+		'0010',
+		'0000',
+		'0100',
+		'1010',
+		'0101',
+		'0010',
+		'0000',
+		'0000',
+		'0000',
+		'0000',
+		
+	]
+
 	const MAPS = [
+
 		[
 			'0000',
 			'0000',
@@ -264,27 +314,27 @@ window.MazeGame = function(n){
 		undefined,
 		undefined,
 		[
-			[{players:[0,1],map:MAPS[0]}],
-			[{players:[0,1],map:MAPS[1]}],
-			[{players:[0,1],map:MAPS[2]}],
+			[{speed:0.05,players:[0,1],map:MAPS[0]}],
+			[{speed:0.05,players:[0,1],map:MAPS[1]}],
+			[{speed:0.05,players:[0,1],map:MAPS[2]}],
 		],
 		[
-			[{players:[0,1,2],map:MAPS[0]}],
-			[{players:[0,1,2],map:MAPS[1]}],
-			[{players:[0,1,2],map:MAPS[2]}],
+			[{speed:0.05,players:[0,1,2],map:MAPS[0]}],
+			[{speed:0.05,players:[0,1,2],map:MAPS[1]}],
+			[{speed:0.05,players:[0,1,2],map:MAPS[2]}],
 		],
 		[
-			[{players:[0,1],map:MAPS[0]},{players:[2,3],map:MAPS[0]}],
-			[{players:[0,1],map:MAPS[2]},{players:[2,3],map:MAPS[2]}],
+			[{speed:0.05,players:[0,1],map:MAPS[0]},{players:[2,3],map:MAPS[0]}],
+			[{speed:0.05,players:[0,1],map:MAPS[2]},{players:[2,3],map:MAPS[2]}],
 		],
 		[
-			[{players:[0,1,2],map:MAPS[0]},{players:[3,4],map:MAPS[0]}],
-			[{players:[0,2,4],map:MAPS[1]},{players:[1,3],map:MAPS[1]}],
-			[{players:[1,3,4],map:MAPS[2]},{players:[0,2],map:MAPS[2]}],
+			[{speed:0.05,players:[0,1,2],map:MAPS[0]},{speed:0.05,players:[3,4],map:MAPS[0]}],
+			[{speed:0.05,players:[0,2,4],map:MAPS[1]},{speed:0.05,players:[1,3],map:MAPS[1]}],
+			[{speed:0.05,players:[1,3,4],map:MAPS[2]},{speed:0.05,players:[0,2],map:MAPS[2]}],
 		],
 		[
-			[{players:[0,1,2],map:MAPS[0]},{players:[3,4,5],map:MAPS[0]}],
-			[{players:[0,1,2],map:MAPS[2]},{players:[3,4,5],map:MAPS[2]}],
+			[{speed:0.05,players:[0,1,2],map:MAPS[0]},{speed:0.05,players:[3,4,5],map:MAPS[0]}],
+			[{speed:0.05,players:[0,1,2],map:MAPS[2]},{speed:0.05,players:[3,4,5],map:MAPS[2]}],
 		],
 	]
 
@@ -366,6 +416,7 @@ window.MazeGame = function(n){
 					position: absolute;
 					inset: 0px;
 					background: radial-gradient( transparent, rgba(0,0,0,0.5) );
+					display: none;
 				}
 
 				mazeblock:after{
@@ -383,6 +434,7 @@ window.MazeGame = function(n){
 					left: 0px;
 					right: 0px;
 					background: radial-gradient( gray, black );
+					display: none;
 				}
 
 				mazeblock[absent='true']{
@@ -589,13 +641,12 @@ window.MazeGame = function(n){
 			});
 		}
 
-		hud.initPlayers(meeps);
+		
 
-	
-
-
-		initNextRound();
+		initTutorial();
 	}
+
+
 
 	const palette = ['#37CCDA','#8DE968','#FEE955','#FEB850','#FD797B'];
 
@@ -605,45 +656,64 @@ window.MazeGame = function(n){
 	let round;
 	let blocks = [];
 	let coins = [];
-	function initNextRound(){
 
-		iCohort++;
+	function initTutorial(){
+		hud.initTutorial('Final Frenzy',
+			{x:1.25, y:0.5, msg:'Move around the box<br>to collect coins', icon:'around'},
+			{x:1.75, y:0.5, msg:"Don't fall off!", icon:undefined},
+		);
 
-		if(!STRUCTURE[meeps.length][iRound][iCohort]){
-			iCohort = 0;
-			iRound++;
+		round = {map:TUTORIAL,speed:0.03};
+		initMaze(round.map);
+
+		setTimeout(function(){
+			for(var m in meeps){
+				meeps[m].$el.show();
+				meeps[m].dead = false;
+			}
+			isGoTime = true;
+		},2000);
+
+		hud.initTimer(30,finiTutorial);
+	}
+
+	function finiTutorial(){
+		isGoTime = false;
+
+		hud.finiTimer();
+		hud.finiTutorial();
+
+		for(var m in meeps){
+			meeps[m].$el.hide();
+			meeps[m].dead = true;
+			meeps[m].score = 0;
 		}
-
-		if(!STRUCTURE[meeps.length][iRound]){
-			finiGame();
-			return;
-		}
-
 
 		$platform.empty();
-		blocks.length = 0;
 
-		round = STRUCTURE[meeps.length][iRound][iCohort];
+		setTimeout(initNextRound,1000);
+	}
 
 
+	function initMaze(map){
 		let n = -1;
-		for(var y=0; y<round.map.length; y++){
+		for(var y=0; y<map.length; y++){
 			let $row = $('<mazerow>').prependTo($platform);
-			for(var x=0; x<round.map[y].length; x++){
+			for(var x=0; x<map[y].length; x++){
 
 				n++;
 
 				let $block = $('<mazeblock>')
 				.css({'background-color':palette[n%palette.length]})
 				.appendTo($row)
-				.attr('absent',round.map[y][x]==' '?'true':'false')
+				.attr('absent',map[y][x]==' '?'true':'false')
 				.attr('x',x)
 				.attr('y',y);
 
 				let $content = $('<mazeblockcontent>')
 				.appendTo($block);
 
-				if(round.map[y][x]=='1'){
+				if(map[y][x]=='1'){
 
 					let $shadow = $(`<mazeshadow>`).appendTo($block).css({opacity:0.3,width:COIN,height:COIN});
 
@@ -667,10 +737,36 @@ window.MazeGame = function(n){
 					y:y,
 					$el:$block,
 					$content:$content,
-					type:round.map[y][x]
+					type:map[y][x]
 				};
 			}
 		}
+	}
+
+	function initNextRound(){
+
+		iCohort++;
+
+		if(!STRUCTURE[meeps.length][iRound][iCohort]){
+			iCohort = 0;
+			iRound++;
+		}
+
+		if(!STRUCTURE[meeps.length][iRound]){
+			finiGame();
+			return;
+		}
+
+		hud.initPlayers(meeps);
+
+
+		$platform.empty();
+		blocks.length = 0;
+
+		round = STRUCTURE[meeps.length][iRound][iCohort];
+
+
+		initMaze(round.map);
 
 		yProgress = round.map.length;
 		$({p:yProgress}).animate({p:0},{duration:5000,step:function(a){
@@ -736,13 +832,14 @@ window.MazeGame = function(n){
 
 	let scoreMult = 1;
 	let countDead = 0;
-	let speed = 0.05;
+
 	function step(){
 		resize();
 		
 		if(isGoTime){
-			speed += 0.0001;
-			yProgress += speed;
+			
+			yProgress += round.speed;
+
 
 			if(yProgress>(round.map.length-4)){
 				yProgress = round.map.length-4;
@@ -834,6 +931,7 @@ window.MazeGame = function(n){
 
 			if(!round.map[gy] || !round.map[gy][gx] || round.map[gy][gx]==' ' || block.isDead ){
 				meeps[m].dead = true;
+				console.log('die');
 				
 				countDead++;
 
@@ -848,7 +946,9 @@ window.MazeGame = function(n){
 
 		let count = 0;
 		for(var m in meeps) if(!meeps[m].dead) count++;
+		//for(var m in meeps) console.log(meeps[m].dead);
 
+		//console.log(count);
 		if(count == 0 && isGoTime) finiScroll();
 
 		hud.updatePlayers(meeps);
