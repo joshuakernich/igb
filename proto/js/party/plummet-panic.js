@@ -293,7 +293,7 @@ window.PlummetPanicGame = function() {
 
 		let $logo = $('<plummetlogo>').appendTo(self.$el);
 
-		let levels = [];
+		let levels = self.levels = [];
 		let iPummel = -1;
 
 		for(var i=0; i<countLevel; i++){
@@ -385,10 +385,12 @@ window.PlummetPanicGame = function() {
 
 		self.doScoreUp = function(){
 			self.score++;
-			$score.show().text(self.score).css({
+			$score.show().stop(false,false).text('+1').css({
 				opacity:1,
-			}).delay(500).animate({
+				bottom:150,
+			}).delay(200).animate({
 				opacity:0,
+				bottom:100,
 			})
 		}
 
@@ -445,22 +447,63 @@ window.PlummetPanicGame = function() {
 			meeps[m] = new PlummetMeep(m);
 		}
 
-		setTimeout( initNextRound, 2000 );
+		initTutorial();
+	}
+
+
+	function initTutorial() {
+		hud.initTutorial("Plummet Panic",
+			{x:1.5, y:0.7, msg:"Move left and right<br>and fall through the gaps", icon:"side-to-side"},
+		)
+
+		round = {levels:10};
+		tower = new PlummetTower(round.levels);
+		tower.$el.appendTo($game);
+
+		for(var m in meeps){
+			meeps[m].isLive = true;
+			tower.add(meeps[m], 0);
+		}
+
+		isGoTime = true;
+
+		for(var l in tower.levels) tower.levels[l].revealGaps();
+
+		hud.initTimer(30,finiTutorial);
+	}
+
+	function finiTutorial(){
+		hud.finiTimer();
+		hud.finiTutorial();
+		isGoTime = false;
+
+		for(var m in meeps){
+			meeps[m].isLive = false;
+			meeps[m].score = 0;
+		}
+
+		tower.$el.remove();
+
+		hud.initPlayers(meeps);
+
+		setTimeout(initNextRound,1000);
 	}
 
 	let iRound = -1;
-
+	let round;
+	let isRoundComplete = false;
 	function initNextRound(){
 
 		if(tower) tower.$el.remove();
+
+		isRoundComplete = false;
 
 		scroll = 0;
 		iStomp = -1;
 
 		iRound++;
 
-		let round = STRUCTURE[meeps.length][iRound];
-
+		round = STRUCTURE[meeps.length][iRound];
 		tower = new PlummetTower(round.levels);
 
 		for(var p in round.players){
@@ -479,11 +522,6 @@ window.PlummetPanicGame = function() {
 			top: '0px',
 		})
 
-		let meepsOut = [];
-		for(var i=0; i<meeps.length; i++){
-			if(round.players.indexOf(i)==-1) meepsOut.push(i);
-		}
-
 		setTimeout(function(){
 			hud.initRound(iRound, STRUCTURE[meeps.length].length );
 		},1000);
@@ -493,7 +531,7 @@ window.PlummetPanicGame = function() {
 		},3000);
 
 		setTimeout(function(){
-			hud.summonPlayers(round.players,meepsOut);
+			hud.summonPlayers(round.players);
 		},5000);
 
 		setTimeout(function(){
@@ -501,6 +539,7 @@ window.PlummetPanicGame = function() {
 		},7000);
 
 		setTimeout(function(){
+			isGoTime = true;
 			initIntro();
 		},9000);
 	}
@@ -564,47 +603,6 @@ window.PlummetPanicGame = function() {
 		})
 	}
 
-	let iPlayerSwap = -1;
-
-	/*function initPlayerSwap(){
-
-		if(meeps.length <= PLAYERS_PER_ROUND && iStomp != 0){
-			initScroll();
-		} else {
-			iPlayerSwap++;
-
-			let a = (iPlayerSwap%meeps.length);
-			let b = (iPlayerSwap + PLAYERS_PER_ROUND-1);
-
-			for(var m in meeps){
-				meeps[m].$el.hide();
-				meeps[m].isLive = false;
-			}
-
-			let meepsIn = [];
-			let meepsOut = [];
-			for(var i=a; i<=b; i++){
-
-				let n = i%meeps.length;
-
-				meeps[n].$el.show();
-				meeps[n].isLive = true;
-				meeps[n].diedAtLevel = -1;
-
-				if( meeps[n].level.iLevel < iStomp ) tower.add(meeps[n], iStomp);
-				meepsIn.push(n);
-			}
-
-			for(var i=0; i<meeps.length; i++) if(meepsIn.indexOf(i) == -1) meepsOut.push(i);
-
-			if (iPlayerSwap == 0 ) hud.summonPlayers(meepsIn,meepsOut);
-			else hud.swapPlayers( (iPlayerSwap-1)%meeps.length, (iPlayerSwap+PLAYERS_PER_ROUND-1)%meeps.length );
-
-			setTimeout(hud.finiBanner, 3000);
-			setTimeout(initScroll, 5000);
-		}
-	}*/
-
 	function initReady(){
 		hud.initBanner('Ready...');
 
@@ -624,7 +622,7 @@ window.PlummetPanicGame = function() {
 	}
 
 	function initScroll(){
-		scrollSpeed = Math.min( LEVEL.H/10, 1 + iStomp*0.2 );
+		if(!isRoundComplete) scrollSpeed = Math.min( LEVEL.H/10, 1 + iStomp*0.2 );
 	}
 
 	let scrollDiff = 0;
@@ -634,17 +632,18 @@ window.PlummetPanicGame = function() {
 
 		if(!tower) return;
 
-		if(scrollSpeed){
+		if(!isRoundComplete && scrollSpeed){
 			scroll += scrollSpeed;
 			let iScroll = Math.floor( scroll/LEVEL.H );
-			if(iScroll>=STRUCTURE[meeps.length][iRound].levels){
+			if(iScroll>=round.levels){
 				initFinale('Finish!');	
 			} else if(iScroll>iStomp){
+				console.log('trigger stomp',iScroll,iStomp);
 				stomp();
 			}
 		}
 
-		let scrollTarget = Math.min( scroll, LEVEL.H*(STRUCTURE[meeps.length][iRound].levels-3));
+		let scrollTarget = Math.min( scroll, LEVEL.H*(round.levels-3));
 		scrollDiff = scroll - scrollTarget;
 
 		tower.$el.css({
@@ -669,19 +668,22 @@ window.PlummetPanicGame = function() {
 		for(var m in meeps) meeps[m].redraw();
 
 		if(isGoTime){
+
+			hud.updatePlayers(meeps);
+
 			let countAlive = 0;
 			for(var m in meeps) if(meeps[m].diedAtLevel==-1) countAlive++;
 
-			if(countAlive==1){
-				initFinale('Winner!');
-			} else if(countAlive==0){
+			if(countAlive==0){
 				initFinale('Finish!');
 			}
 		}
+
 	}
 
 	function initFinale(message){
 		isGoTime = false;
+		isRoundComplete = true;
 		scrollSpeed = 0;
 		hud.initBanner(message);
 
@@ -721,23 +723,10 @@ window.PlummetPanicGame = function() {
 			map[m].pos = pos;
 		}
 
-		let rewards = [];
-		for(var i=0; i<map.length; i++){
-			rewards[map[i].n] = MAXCOIN - Math.ceil(map[i].pos/map.length*MAXCOIN);
-		}
-
+		
 		tower.$el.hide();
-
-		/*clearInterval(interval);
-		for(var m=0; m<meeps.length; m++){
-			meeps[m].isLive = false;
-			meeps[m].$el.appendTo($game);
-			meeps[m].$el.css({
-				'left':W*1.5 + (-(meeps.length-1)/2 + m) * 150 + 'px',
-				'bottom':'0px',
-			})
-		}*/
-
+		
+		let rewards = window.scoresToRewards(scores);
 		hud.showFinalScores(scores,rewards);
 
 
