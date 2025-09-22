@@ -15,21 +15,93 @@ window.MazeGame = function(n){
 			'0000',
 			'0000',
 			'0000',
-			'**10',
-			'0000',
-			'1***',
-			'0000',
-			'0*01',
-			'00*0',
-			'1000',
-			'0*01',
-			'*000',
-			'01*0',
-			'00*0',
+			'1  1',
+			'0  0',
+			'0100',
+			'1010',
+			'0101',
 			'0010',
+			'1  1',
+			'0  0',
+			'0000',
+			'0100',
+			'1010',
+			'0101',
+			'0010',
+			'0000',
+			'0000',
+			'0000',
+			'0000',
+		],
+		[
+			'0000',
+			'0000',
+			'0000',
+			'0000',
+			'1  1',
+			'1001',
+			'*00*',
+			'0000',
 			'0**0',
 			'0000',
+			'*00*',
+			'0000',
+			'0**0',
+			'0000',
+			'*00*',
+			'0000',
+			'1  1',
+			'1  1',
+			'0000',
+			'0110',
+			'1001',
+			'0110',
+			'1001',
+			'0000',
+			'0  0',
+			'0000',
+			'*00*',
+			'1001',
+			'0110',
+			'0110',
+			'1001',
+			'0000',
+			'0000',
+			'0000',
+			'0000',
+		],
+		[
+			'0000',
+			'0000',
+			'0000',
+			'0000',
+			'0  0',
+			'1001',
+			'*00*',
+			'1001',
+			'0**0',
+			'**10',
+			'0100',
+			'1***',
+			'0100',
+			'0*10',
+			'00*0',
+			'0000',
+			'1010',
+			'0101',
+			'0  0',
+			'1  1',
+			'0  0',
+			'0**0',
+			'1111',
+			'0*01',
+			'*010',
 			'01*0',
+			'00*0',
+			'1111',
+			'0**0',
+			'0000',
+			'10*1',
 			'0*00',
 			'0000',
 			'0000',
@@ -42,22 +114,22 @@ window.MazeGame = function(n){
 			'0000',
 			'0000',
 			' *0 ',
-			'0000',
+			'0010',
 			'0  0',
 			'00*0',
-			' 0 0',
-			' 0 *',
+			' 100',
+			' 00*',
+			'0100',
+			'0 10',
+			'*000',
 			'0000',
-			'0 0 ',
-			'* 0 ',
-			'0000',
-			'0*00',
+			'0*10',
 			'00*0',
-			'0000',
-			' 0 0',
-			'00 0',
+			'0100',
+			' 000',
+			'0010',
 			'0  0',
-			'00*0',
+			'10*0',
 			'0  0',
 			'0000',
 			'0000',
@@ -194,23 +266,25 @@ window.MazeGame = function(n){
 		[
 			[{players:[0,1],map:MAPS[0]}],
 			[{players:[0,1],map:MAPS[1]}],
+			[{players:[0,1],map:MAPS[2]}],
 		],
 		[
 			[{players:[0,1,2],map:MAPS[0]}],
 			[{players:[0,1,2],map:MAPS[1]}],
+			[{players:[0,1,2],map:MAPS[2]}],
 		],
 		[
-			[{players:[0,1],map:MAPS[0]},{players:[2,3],map:MAPS[1]}],
-			[{players:[0,1],map:MAPS[2]},{players:[2,3],map:MAPS[3]}],
+			[{players:[0,1],map:MAPS[0]},{players:[2,3],map:MAPS[0]}],
+			[{players:[0,1],map:MAPS[2]},{players:[2,3],map:MAPS[2]}],
 		],
 		[
-			[{players:[0,1,2],map:MAPS[0]},{players:[3,4],map:MAPS[1]}],
-			[{players:[0,2,4],map:MAPS[2]},{players:[1,3],map:MAPS[3]}],
-			[{players:[1,3,4],map:MAPS[4]},{players:[0,2],map:MAPS[5]}],
+			[{players:[0,1,2],map:MAPS[0]},{players:[3,4],map:MAPS[0]}],
+			[{players:[0,2,4],map:MAPS[1]},{players:[1,3],map:MAPS[1]}],
+			[{players:[1,3,4],map:MAPS[2]},{players:[0,2],map:MAPS[2]}],
 		],
 		[
-			[{players:[0,1,2],map:MAPS[0]},{players:[3,4,5],map:MAPS[1]}],
-			[{players:[0,1,2],map:MAPS[2]},{players:[3,4,5],map:MAPS[3]}],
+			[{players:[0,1,2],map:MAPS[0]},{players:[3,4,5],map:MAPS[0]}],
+			[{players:[0,1,2],map:MAPS[2]},{players:[3,4,5],map:MAPS[2]}],
 		],
 	]
 
@@ -406,30 +480,30 @@ window.MazeGame = function(n){
 					display: block;
 					width: ${COIN}px;
 					height: ${COIN}px;
-					background: purple;
-					border-radius: 100%;
 					left: -${COIN/2}px;
 					bottom: 0px;
+					
+					background: url(./proto/img/party/sprite-coin.png);
+					
+					background-size: 900%;
+					background-position-y: 100%;
 					transform: rotateX(-90deg);
-					transform-style: preserve-3d;
 					transform-origin: bottom center;
-					border-left: 10px solid white;
-					box-sizing: border-box;
+
+					animation: coinspin;
+					animation-iteration-count: infinite;
+					animation-duration: 1s;
+					animation-timing-function: steps(9);
 				}
 
-				mazecoinbody:after{
-					content:"";
-					position: absolute;
-					display: block;
-					top: 0px;
-					left: 0px;
-					right: 0px;
-					bottom: 0px;
-					margin: 20px;
-					box-sizing: border-box;
-					border: 5px solid black;
-					border-radius: 100%;
-					box-shadow: 4px 0px white;
+				@keyframes coinspin{
+					0%{
+						background-position-x: 0%;
+					}
+
+					100%{
+						background-position-x: -900%;
+					}
 				}
 
 			</style>`);
@@ -487,6 +561,7 @@ window.MazeGame = function(n){
 	audio.add('fall','./proto/audio/party/sfx-fall.mp3',0.3);
 	audio.add('blip','./proto/audio/party/sfx-select.mp3',0.1);
 	audio.add('explode','./proto/audio/party/sfx-explode.mp3',0.3);
+	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
 
 	let $game = $('<mazegame>').appendTo(self.$el);
 	let $world = $('<mazeworld>').appendTo($game);
@@ -516,7 +591,7 @@ window.MazeGame = function(n){
 
 		hud.initPlayers(meeps);
 
-		audio.play('music');
+	
 
 
 		initNextRound();
@@ -529,6 +604,7 @@ window.MazeGame = function(n){
 	let iRound = 0;
 	let round;
 	let blocks = [];
+	let coins = [];
 	function initNextRound(){
 
 		iCohort++;
@@ -542,6 +618,7 @@ window.MazeGame = function(n){
 			finiGame();
 			return;
 		}
+
 
 		$platform.empty();
 		blocks.length = 0;
@@ -568,7 +645,7 @@ window.MazeGame = function(n){
 
 				if(round.map[y][x]=='1'){
 
-					let $shadow = $(`<mazeshadow>`).appendTo($block).css({opacity:0.5});
+					let $shadow = $(`<mazeshadow>`).appendTo($block).css({opacity:0.3,width:COIN,height:COIN});
 
 					let $coin = $(`
 					<mazecoin>
@@ -576,6 +653,13 @@ window.MazeGame = function(n){
 						</mazecoinbody>
 					</mazecoin>
 					`).appendTo($block);
+
+					coins.push({
+						x:x + 0.5,
+						y:y + 0.5,
+						$el:$coin,
+						$shadow:$shadow,
+					});
 				}
 
 				blocks[n] = {
@@ -594,6 +678,13 @@ window.MazeGame = function(n){
 		}});
 
 		setTimeout(function(){
+			if(iCohort==0){
+				hud.initRound(iRound,STRUCTURE[meeps.length].length);
+				audio.play('music',false,(iRound==STRUCTURE[meeps.length].length-1)?1.25:1);
+			}
+		},1000);
+
+		setTimeout(function(){
 			for(var p in round.players){
 				let m = round.players[p];
 				meeps[m].$el.show();
@@ -604,26 +695,28 @@ window.MazeGame = function(n){
 					'transform':'rotateX(-60deg) scale(0.8) translateZ(0px)'
 				})
 			}
-			if(iCohort==0) hud.initRound(iRound,STRUCTURE[meeps.length].length);
+			hud.finiBanner();
 		},6000);
 
 		setTimeout(function(){
-			hud.finiBanner();
+			hud.summonPlayers(round.players);
 		},8000);
 
 		setTimeout(function(){
-			hud.summonPlayers(round.players);
+			hud.finiBanner();
 		},10000);
 
 		setTimeout(function(){
-			hud.finiBanner();
 			isGoTime = true;
-		},12000);
+		},11000);
 	}
 
 	function finiRound(){
 
-		for(var m in meeps) meeps[m].$el.hide();
+		for(var m in meeps){
+			meeps[m].$el.hide();
+			meeps[m].dead = true;
+		}
 
 		$({p:yProgress}).animate({p:-10},{duration:2000,step:function(a){
 			yProgress = a;
@@ -709,27 +802,36 @@ window.MazeGame = function(n){
 				top:meeps[m].y + 'px'
 			});
 
-			//meeps[m].score = Math.max( meeps[m].score, Math.floor(yProgress) );
 
-			let gx = Math.floor(meeps[m].x/GRIDSIZE);
-			let gy = Math.floor((W-meeps[m].y)/GRIDSIZE+yProgress);
+
+			
+			let gx = meeps[m].x/GRIDSIZE;
+			let gy = (W-meeps[m].y)/GRIDSIZE+yProgress;
+
+			for(var c in coins){
+
+				if(coins[c].isCollected) continue;
+
+				let dx = coins[c].x - gx;
+				let dy = coins[c].y - gy;
+				let d = Math.sqrt(dx*dx + dy*dy);
+
+				if(d<0.5){
+					coins[c].$el.hide();
+					coins[c].$shadow.hide();
+					coins[c].isCollected = true;
+					meeps[m].score++;
+					audio.play('coin',true);
+				}
+			}
+
+			gx = Math.floor(gx);
+			gy = Math.floor(gy);
 
 			let block;
 			for(var b in blocks) if(blocks[b].x == gx && blocks[b].y == gy) block = blocks[b];
 
-			/*if(	meeps[m].gx != gx || meeps[m].gy != gy ){
-				meeps[m].gx = gx;
-				meeps[m].gy = gy;
-				let $cell = self.$el.find(`mazeblock[x='${gx}'][y='${gy}']`);
-				let nWas = $cell.attr('n');
 
-				if(nWas != m){
-					$cell.attr('n',m).css({'background':''});
-					audio.play('blip',true);
-					reviseScores();
-				}
-			} */
-			
 			if(!round.map[gy] || !round.map[gy][gx] || round.map[gy][gx]==' ' || block.isDead ){
 				meeps[m].dead = true;
 				
@@ -760,10 +862,7 @@ window.MazeGame = function(n){
 		isGoTime = false;
 		hud.initBanner('Finish!');
 
-		for(var m in meeps){
-			meeps[m].$el.hide();
-			meeps[m].dead = true;
-		}
+		
 
 		setTimeout(function(){
 			hud.finiBanner();
@@ -775,7 +874,7 @@ window.MazeGame = function(n){
 		let scores = [];
 		for(var m in meeps) scores[m] = meeps[m].score;
 
-		hud.showFinalScores(scores,window.scoresToRewards(scores));
+		hud.showFinalScores(scores,scores);
 
 		setTimeout(function(){
 			self.fini();

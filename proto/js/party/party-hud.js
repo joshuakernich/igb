@@ -32,6 +32,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	audio.add('tock','./proto/audio/party/sfx-tock.mp3',0.3);
 	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
 	audio.add('music','./proto/audio/party/music-tutorial.mp3',0.3);
+	audio.add('outro','./proto/audio/party/music-outro.mp3',0.3);
 	audio.add('woosh','./proto/audio/party/sfx-woosh.mp3',0.05);
 	audio.add('woosh-long','./proto/audio/party/sfx-woosh-long.mp3',0.05);
 
@@ -653,6 +654,8 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	}
 
 	self.showFinalScores = function(scores,rewards){
+
+		audio.play('outro',true);
 
 		for(var h in huds) huds[h].setActive(true);
 
