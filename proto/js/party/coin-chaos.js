@@ -391,7 +391,7 @@ window.CoinChaosGame = function(){
 				}
 
 				if(nCoin>-1){
-					piles[coins[nCoin].nPile].remove(coins[nCoin]);
+					for(var p in piles) if(piles[p].n == coins[nCoin].nPile) piles[p].remove(coins[nCoin]);
 					meeps[m].grab(coins[nCoin]);
 					audio.play('pickup',true);
 				}
@@ -451,13 +451,13 @@ window.CoinChaosGame = function(){
 	function initTutorial(){
 		
 		$platform.css({
-			'bottom':"100px",
-			'transform':'scale(0.9) rotateX(80deg)'
+			'bottom':"50px",
+			'transform':'scale(1) rotateX(80deg)'
 		})
 
 		hud.initTutorial('Coin Chaos',
-			{x:1.2, y:0.45, msg:"Move around the box<br>and steal opponent's coins", icon:"around"},
-			{x:1.8, y:0.4, msg:"Return stolen coins<br>to your safe zone", icon:"align"},
+			{x:1.25, y:0.45, msg:"Move around the box<br>and steal opponent's coins", icon:"around"},
+			{x:1.75, y:0.4, msg:"Return stolen coins<br>to your safe zone", icon:"align"},
 		);
 
 		for(var m in meeps){
@@ -495,6 +495,7 @@ window.CoinChaosGame = function(){
 
 		});
 
+		hud.initPlayers(meeps);
 		finiRound();
 	}
 
@@ -502,7 +503,7 @@ window.CoinChaosGame = function(){
 	let iRound = 0;
 	function initNextCohort(){
 
-		hud.initPlayers(meeps);
+		
 
 		iCohort++;
 
@@ -521,12 +522,16 @@ window.CoinChaosGame = function(){
 		let cohort = rounds[iRound].cohorts[iCohort];
 
 		
-		hud.initRound(iRound,rounds.length);
-		audio.play('music',false,iRound==rounds.length-1?1.25:1);
+		
+		audio.play('music',false,(rounds.length>1 && iRound==rounds.length-1)?1.25:1);
 
-		setTimeout(function(){
-			hud.finiBanner();
-		},2000);
+		if(rounds.length>1){
+			hud.initRound(iRound,rounds.length);
+			setTimeout(function(){
+				hud.finiBanner();
+			},2000);
+		}
+		
 
 		setTimeout(function(){
 			hud.summonPlayers(round.cohorts[iCohort]);
