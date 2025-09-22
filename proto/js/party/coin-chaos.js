@@ -203,6 +203,8 @@ window.CoinChaosGame = function(){
 					background-size: 20%;
 					border-bottom: 50px solid rgba(0,0,0,0.3);
 
+					transition: all 0.5s;
+
 				}
 
 				coinchaosplatform:after{
@@ -396,12 +398,15 @@ window.CoinChaosGame = function(){
 			} else {
 				
 				// find distance to home pile
-				let dx = piles[m].x - meeps[m].x;
-				let dy = piles[m].y - meeps[m].y;
+				let nPile = -1;
+				for(var p in piles) if( piles[p].n == m ) nPile = p;
+
+				let dx = piles[nPile].x - meeps[m].x;
+				let dy = piles[nPile].y - meeps[m].y;
 				let d = Math.sqrt(dx*dx + dy*dy);
 
 				if(d<0.14){
-					piles[m].add(meeps[m].coin);
+					piles[nPile].add(meeps[m].coin);
 					meeps[m].drop();
 					audio.play('coin',true);
 				}
@@ -445,7 +450,10 @@ window.CoinChaosGame = function(){
 
 	function initTutorial(){
 		
-		$platform.animate({bottom:'-250px'});
+		$platform.css({
+			'bottom':"100px",
+			'transform':'scale(0.9) rotateX(80deg)'
+		})
 
 		hud.initTutorial('Coin Chaos',
 			{x:1.2, y:0.45, msg:"Move around the box<br>and steal opponent's coins", icon:"around"},
@@ -478,10 +486,15 @@ window.CoinChaosGame = function(){
 	}
 
 	function finiTutorial(){
-		for(var m in meep) meeps[m].score = 0;
+		for(var m in meeps) meeps[m].score = 0;
 		hud.finiTutorial();
 		$blurBG.hide();
-		$platform.animate({bottom:'0px'});
+		$platform.css({
+			'bottom':'100px',
+			'transform':'rotateX(60deg)',
+
+		});
+
 		finiRound();
 	}
 
@@ -576,6 +589,7 @@ window.CoinChaosGame = function(){
 		for(var m in meeps){
 			meeps[m].$el.hide();
 			meeps[m].isActive = false;
+			meeps[m].coin = undefined;
 		}
 
 		for(var p in piles){
