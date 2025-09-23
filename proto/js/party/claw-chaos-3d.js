@@ -18,9 +18,26 @@ window.ClawChaos3DGame = function(countInit){
 			'transform':'rotateX(-90deg)',
 		})
 
+
 		self.ax = self.ay = 0;
 		self.px = self.py = 0;
 		self.altitude = 0;
+		self.isWalkingAround = true;
+		let trajectory =  Math.random() * Math.PI*2;
+		self.dx = Math.cos(trajectory);
+		self.dy = Math.sin(trajectory);
+		self.speed = 0.003;
+	
+		self.step = function(){
+			if(self.isWalkingAround){
+				self.ax += self.dx * self.speed;
+				self.ay += self.dy * self.speed;
+				if(self.ax > 0.9) self.dx = -Math.abs(self.dx);
+				if(self.ay > 0.9) self.dy = -Math.abs(self.dy);
+				if(self.ax < 0.1) self.dx = Math.abs(self.dx);
+				if(self.ay < 0.1) self.dy = Math.abs(self.dy);
+			}
+		}
 
 		self.redraw = function(){
 			self.$el.css({
@@ -34,6 +51,7 @@ window.ClawChaos3DGame = function(countInit){
 		}
 
 		self.initIdle = function(){
+			self.isWalkingAround = true;
 			meep.$shadow.show();
 			meep.toIdle();
 		}
@@ -49,6 +67,7 @@ window.ClawChaos3DGame = function(countInit){
 		}
 
 		self.initGrabbed = function(){
+			self.isWalkingAround = false;
 			meep.$shadow.hide();
 			meep.toRagdoll();
 		}
@@ -266,7 +285,7 @@ window.ClawChaos3DGame = function(countInit){
 			claw.grabbed.ay = claw.py;
 		}
 
-		//for(var m in meeps) meeps[m].step();
+		for(var m in meeps) meeps[m].step();
 		for(var m in meeps) meeps[m].redraw();
 
 		claw.redraw();
@@ -282,6 +301,8 @@ window.ClawChaos3DGame = function(countInit){
 
 	function initClaw(n){
 		//iClaw = n;
+
+		meeps[n].isWalkingAround = false;
 
 		$(claw).animate({
 			px:meeps[n].ax,
