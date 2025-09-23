@@ -308,6 +308,32 @@ window.PartyMeep = function(n){
 		self.$handRight.css({'left':'','top':''});
 	}
 
+	self.toRagdoll = function(){
+		self.$head.css({
+			'transform':'rotate(45deg) translate(20px)',
+		})
+
+		self.$body.css({
+			'transform':'rotate(70deg) translate(-30px)',
+		})
+
+		self.$legs.css({
+			'transform':'translate(-80px, -50px) rotate(15deg)',
+		})
+
+		self.$footLeft.css({
+			'transform':'rotate(-25deg)',
+		})
+
+		self.$footRight.css({
+			'transform':'rotate(25deg)',
+		})
+
+		self.$handLeft.hide();
+
+		self.$handRight.hide();
+	}
+
 	self.toSkydiver = function(){
 		self.$head.css({
 			'transform':'rotate(-10deg) translate(20px)',
