@@ -7,6 +7,7 @@ window.CoconutClimbersGame = function(){
 	const TREE = H*DISTANCE + H/2;
 	const THICC = 70;
 	const COCONUT = 100;
+	const TIME_PER_PLAYER = 60;
 
 	let audio = new AudioContext();
 	audio.add('music','./proto/audio/party/music-calypso.mp3',0.2,true);
@@ -84,8 +85,6 @@ window.CoconutClimbersGame = function(){
 			if(!isGameLive || !self.isActive) self.py = self.pyWas = 0.7;
 
 			ticksElapsed++;
-
-			
 
 			for(var c in coconuts){
 				if(!coconuts[c].hasHit){
@@ -401,6 +400,7 @@ window.CoconutClimbersGame = function(){
 		setTimeout(function(){
 			isGameLive = true;
 			timeStartRound = new Date().getTime();
+			for(var m in meeps) if(meeps[m].isActive) meeps[m].timeStart = timeStartRound;
 			audio.play('music',false,(iRound==ROUNDS.length-1)?1.5:1);
 		},10000);
 	}
@@ -429,10 +429,11 @@ window.CoconutClimbersGame = function(){
 				duration:1000 + Math.random()*500, 
 				complete:function(){
 				meeps[nPlayer].isActive = true;
+				meeps[nPlayer].timeStart = new Date().getTime();
 			}});
 		} else {
 			let isRoundComplete = true;
-			for(var m in meeps) if(!meeps[m].isComplete) isRoundComplete = false;
+			for(var m in meeps) if(!meeps[m].isRemoved) isRoundComplete = false;
 			if(isRoundComplete) initNextRound();
 		}
 	}
@@ -445,27 +446,53 @@ window.CoconutClimbersGame = function(){
 	let queue = [];
 	let nStep = 0;
 
+
+
 	function step(){
 		nStep++;
 
 		let timeNow = new Date().getTime();
-		let timeElapsed = (timeNow-timeStartRound)/1000;
+		//let timeElapsed = (timeNow-timeStartRound)/1000;
 
 		for(let m in meeps){
 			meeps[m].step(isGameLive);
-			if(isGameLive && meeps[m].isActive) meeps[m].score = meeps[m].tally + timeElapsed;
+			if(isGameLive && meeps[m].isActive){
+
+				let timeElapsed = (timeNow - meeps[m].timeStart)/1000;
+				let timeElapsedWas = meeps[m].timeElapsed;
+				
+				if(timeElapsed>=(TIME_PER_PLAYER-10) && timeElapsedWas<(TIME_PER_PLAYER-10)){
+					hud.flashMessage(1+meeps[m].ax,0.3,'10 seconds left',50);
+				}
+
+				for(var i=1; i<=5; i++){
+					if(timeElapsed>=(TIME_PER_PLAYER-i) && timeElapsedWas<(TIME_PER_PLAYER-i)){
+						hud.flashMessage(1+meeps[m].ax,0.3,i,150);
+					}
+				}
+
+				if(timeElapsed>=(TIME_PER_PLAYER) && timeElapsedWas<(TIME_PER_PLAYER)){
+					hud.flashMessage(1+meeps[m].ax,0.3,'Time Up!',50);
+
+					meeps[m].isActive = false;
+					meeps[m].isComplete = true;
+				}
+
+				timeElapsed = Math.min(TIME_PER_PLAYER,timeElapsed);
+				meeps[m].timeElapsed = timeElapsed;
+				meeps[m].score = meeps[m].tally + timeElapsed;
+			}
 
 			if(meeps[m].isComplete){
-
 				for(let s in slots){
 					if(slots[s] == meeps[m]){
 						slots[s] = undefined;
-						meeps[m].$el.animate({bottom:-H});
-
-						setTimeout(function(){
+						meeps[m].$el.delay(500).animate({bottom:-meeps[m].distance*H},{complete:function(){
+							meeps[m].isRemoved = true;
 							meeps[m].$el.remove();
 							initNextPlayer();
-						},500)
+						}});
+
 					}
 				}
 			}

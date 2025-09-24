@@ -447,6 +447,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					font-size: 200px;
 					transform: rotate(-5deg);
 					display: block;
+					color: white;
 					text-shadow: 5px 5px 0px ${GRAY}, 5px -5px 0px ${GRAY}, -5px -5px 0px ${GRAY}, -5px 5px 0px ${GRAY}, 0px 20px 0px ${GRAY};
 				}
 
@@ -486,6 +487,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	let $banner = $(`<partyhudbanner style="background:${colour};">`).appendTo(self.$el);
 	let $debugRight = $('<partydebug>').appendTo(self.$el);
 	let $mg = $('<partyhudlayer>').appendTo(self.$el);
+	let $fg = $('<partyhudlayer>').appendTo(self.$el);
 
 	function setBanner(b,isTransparent){
 
@@ -571,12 +573,28 @@ window.PartyHUD = function( colour='#40B0ED' ){
 		clearInterval(interval);
 	}
 
+	self.flashMessage = function(x,y,msg,size){
+		let $msg = $('<hudround>').html(msg);
+
+		$msg.appendTo($fg).css({
+			left: x * 100/3 + '%',
+			top: (y+0.1) * 100 + '%',
+			'position':'absolute',
+			'font-size':size+'px',
+			'transform': 'translate(-50%, -50%)',
+			'text-shadow': `5px 5px 0px ${GRAY}, 5px -5px 0px ${GRAY}, -5px -5px 0px ${GRAY}, -5px 5px 0px ${GRAY}, 0px ${Math.min(20,size*0.3)}px 0px ${GRAY}`,
+		}).animate({
+			top: y * 100 + '%',
+		},200).delay(Math.max(msg.length*100, 500)).animate({
+			'opacity':0,
+		},500)
+	}
+
 	let FancyHeader = function(msg,size=200){
 		let self = this;
 		self.$el = $('<hudround>').css({'font-size':size+'px'})
 
 		let $chars = [];
-
 
 		for(var m=0; m<msg.length; m++){
 

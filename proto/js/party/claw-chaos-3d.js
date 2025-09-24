@@ -19,8 +19,6 @@ window.ClawChaos3DGame = function(countInit){
 			width: w + 'px',
 		})
 
-
-
 		for(var i=0; i<coins; i++){
 			$('<claw3Dcoin>').appendTo(self.$el).css({
 				left: 30 + i%3 * (COIN*0.7) + 'px',
@@ -465,10 +463,6 @@ window.ClawChaos3DGame = function(countInit){
 			items[i].$el.appendTo($platform);
 			
 		}
-
-
-
-		
 
 		initNextClaw();
 	}
