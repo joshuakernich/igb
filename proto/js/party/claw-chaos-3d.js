@@ -5,7 +5,76 @@ window.ClawChaos3DGame = function(countInit){
 	const PLATFORM = 1400;
 	const FPS = 50;
 	const CLAW = 200;
+	const BALL = 300;
+	const ITEM = 300;
+	const COIN = 100;
 	const ALTITUDE = 400;
+
+	function Claw3DBag(n,coins){
+		let self = this;
+		let h = 150 + Math.floor(coins/3) * (COIN * 0.4);
+		let w = 100 + Math.min(coins,3) * (COIN * 0.7);
+		self.$el = $(`<claw3Dbag>`).attr('n',n).css({
+			height: h + 'px',
+			width: w + 'px',
+		})
+
+
+
+		for(var i=0; i<coins; i++){
+			$('<claw3Dcoin>').appendTo(self.$el).css({
+				left: 30 + i%3 * (COIN*0.7) + 'px',
+				bottom: -40 + Math.floor(i/3) * COIN*0.4 + 'px',
+				'background-position-y':-n*100+'%',
+			})
+		}
+
+		$('<claw3Dbagfg>').appendTo(self.$el);
+		$('<claw3Dbagtie>').appendTo(self.$el);
+		$('<claw3Dbagtop>').appendTo(self.$el);
+
+		if(n>-1){
+			let head = new PartyMeepHead(n);
+			//head.$el.appendTo(self.$el);
+			head.$el.css({
+				left: '40px',
+				top: '85px',
+				transform: 'rotate(15deg) scale(1.1)',
+				'box-shadow':'none',
+				'mix-blend-mode':'overlay',
+			})
+		}
+	}
+
+	function Claw3DItem(n=0,coins=0){
+		let self = this;
+		self.$el = $('<claw3Ditem>');
+
+		if(Math.random()>0.5) self.$el.css({'transform':'scaleX(-1)'})
+
+		let $shadow = $('<claw3Dshadow>').appendTo(self.$el).css({
+			width: ITEM,
+			height: ITEM,
+		})
+		
+		let bag = new Claw3DBag(n,coins);
+		bag.$el.appendTo(self.$el);
+
+		self.altitude = 0;
+
+		
+
+		self.redraw = function(){
+			self.$el.css({
+				left:self.px * PLATFORM + 'px',
+				top:self.py * PLATFORM + 'px',
+			});
+
+			bag.$el.css({
+				transform: `rotateX(-90deg) translateY(${-ALTITUDE * self.altitude}px)`,
+			})
+		}
+	}
 
 	function Claw3DMeep(n){
 		let self = this;
@@ -19,16 +88,23 @@ window.ClawChaos3DGame = function(countInit){
 		})
 
 
-		self.ax = self.ay = 0;
-		self.px = self.py = 0;
+		// hx & hy are home coordinates (i.e. disabled position)
+		// ax & ay are avatar coordinates (i.e. live render)
+		// px & py are real player coordinates
+
+		self.hx = self.ax = self.ay = 0;
+		self.hy = self.px = self.py = 0;
+
 		self.altitude = 0;
 		self.isWalkingAround = true;
+
 		let trajectory =  Math.random() * Math.PI*2;
 		self.dx = Math.cos(trajectory);
 		self.dy = Math.sin(trajectory);
 		self.speed = 0.003;
 	
 		self.step = function(){
+			return;
 			if(self.isWalkingAround){
 				self.ax += self.dx * self.speed;
 				self.ay += self.dy * self.speed;
@@ -146,7 +222,7 @@ window.ClawChaos3DGame = function(countInit){
 					border-radius: 100px;
 				}
 
-				claw3Dclaw, claw3Dmeep{
+				claw3Dclaw, claw3Dmeep, claw3Ditem{
 					display: block;
 					position: absolute;
 					left: 25%;
@@ -159,11 +235,12 @@ window.ClawChaos3DGame = function(countInit){
 					position: absolute;
 					width: ${CLAW*2}px;
 					height: ${CLAW*2}px;
-					left: ${-CLAW}px;
-					top: ${-CLAW}px;
+					left: 0px;
+					top: 0px;
 					background: black;
 					opacity: 0.3;
 					border-radius: 100%;
+					transform: translate(-50%, -50%);
 				}
 
 				claw3Dplane{
@@ -232,6 +309,129 @@ window.ClawChaos3DGame = function(countInit){
 				claw3Dclamp:last-of-type{
 					transform: scaleX(-1);
 				}
+
+				claw3Dball{
+					display: block;
+					position: absolute;
+					width: ${BALL}px;
+					height: ${BALL}px;
+					border-radius: 100%;
+					background: rgba(255,255,255,0.5);
+					left: ${-BALL/2}px;
+					bottom: 0px;
+					transform: rotateX(-90deg);
+					transform-style: preserve-3d;
+					transform-origin: bottom center;
+					overflow: hidden;
+				}
+
+				claw3Dball:before{
+					content:"";
+					display: block;
+					position: absolute;
+					width: ${BALL}px;
+					height: ${BALL*0.8}px;
+					top: 0px;
+					left: 0px;
+					background: red;
+					border-radius: 100%;
+					opacity: 0.2;
+					box-sizing: border-box;
+				}
+
+				claw3Dball:after{
+					content:"";
+					display: block;
+					position: absolute;
+					width: ${BALL}px;
+					height: ${BALL*0.8}px;
+					top: 0px;
+					left: 0px;
+					border-radius: 100%;
+
+					box-sizing: border-box;
+					border-bottom: 10px solid red;
+				}
+
+				claw3Dbag{
+					display: block;
+					position: absolute;
+					width: ${ITEM}px;
+					height: ${ITEM}px;
+					background: #222;
+					left: ${-ITEM/2}px;
+					bottom: 0px;
+					transform: rotateX(-90deg);
+					transform-style: preserve-3d;
+					transform-origin: bottom center;
+					box-shadow: inset -10px -10px 25px black;
+					border-radius: 100% 100% ${ITEM*0.7}px ${ITEM*0.7}px;
+				}
+
+				claw3Dbag[n='0'] claw3Dbagtie { background: var(--n0); }
+				claw3Dbag[n='1'] claw3Dbagtie { background: var(--n1); }
+				claw3Dbag[n='2'] claw3Dbagtie { background: var(--n2); }
+				claw3Dbag[n='3'] claw3Dbagtie { background: var(--n3); }
+				claw3Dbag[n='4'] claw3Dbagtie { background: var(--n4); }
+				claw3Dbag[n='5'] claw3Dbagtie { background: var(--n5); }
+
+				claw3Dbagfg{
+					display: block;
+					position: absolute;
+					inset: 0px;
+					border-radius: 100% 100% ${ITEM*0.7}px ${ITEM*0.7}px;
+					background: url(./proto/img/party/texture-hessian-fg.png);
+					opacity: 0.8;
+				}
+
+				claw3Dbagtie{
+					display: block;
+					position: absolute;
+					width: ${ITEM/3}px;
+					height: ${ITEM*0.2}px;
+					top: -10px;
+					left: 50%;
+					background: red;
+					border-radius: 100%;
+					transform: rotate(20deg);
+					box-shadow: inset -10px -10px 15px rgba(0,0,0,0.2);
+				}
+
+				claw3Dbagtop{
+					display: block;
+					position: absolute;
+					width: ${ITEM/2}px;
+					height: ${ITEM*0.25}px;
+					top:  ${-ITEM/3+40}px;
+					left: 48%;
+					background: #ffe7a8;
+					border-radius:  ${ITEM/4}px  ${ITEM/4}px 100% 100%;
+					transform: rotate(20deg);
+					background: url(./proto/img/party/texture-hessian-fg.png);
+					box-shadow: inset -10px -10px 15px rgba(0,0,0,0.2);
+				}
+
+				claw3Dbagtop:after{
+					content:"";
+					position: absolute;
+					display: block;
+					inset: 10px 15px 30px 15px;
+					background: black;
+					opacity: 0.5;
+					border-radius: 100%;
+				}
+
+				claw3Dcoin{
+					display: block;
+					position: absolute;
+					width: ${COIN}px;
+					height: ${COIN}px;
+					background: url(./proto/img/party/sprite-coin.png);
+					background-size: 900%;
+					background-position-x: -100%;
+					background-position-y: 100%;
+					transform: rotate(90deg) translateX(-50%);
+				}
 		`)
 	}
 
@@ -248,17 +448,27 @@ window.ClawChaos3DGame = function(countInit){
 	let claw = new Claw3DClaw();
 	claw.$el.appendTo($platform);
 
+	let items = [];
 	let meeps = [];
 	function initGame(count){
 		for(var i=0; i<count; i++){
 			meeps[i] = new Claw3DMeep(i);
 			meeps[i].$el.appendTo($platform);
 
-			meeps[i].ax = Math.random();
-			meeps[i].ay = Math.random();
+			meeps[i].hx = meeps[i].ax = -0.1;
+			meeps[i].hy = meeps[i].ay = 0.2 + 0.1 * i;
 			meeps[i].isActive = false;
+
+			items[i] = new Claw3DItem(i,5 + Math.floor( Math.random() * 10));
+			items[i].px = Math.random();
+			items[i].py = Math.random();
+			items[i].$el.appendTo($platform);
 			
 		}
+
+
+
+		
 
 		initNextClaw();
 	}
@@ -287,6 +497,7 @@ window.ClawChaos3DGame = function(countInit){
 
 		for(var m in meeps) meeps[m].step();
 		for(var m in meeps) meeps[m].redraw();
+		for(var i in items) items[i].redraw();
 
 		claw.redraw();
 
@@ -350,16 +561,16 @@ window.ClawChaos3DGame = function(countInit){
 		},500)
 
 		setTimeout(function(){
-			for(var m in meeps){
-				if(meeps[m] != claw.meep){
-					let dx = meeps[m].ax - claw.meep.ax;
-					let dy = meeps[m].ay - claw.meep.ay;
-					let d = Math.sqrt(dx*dx+dy*dy);
-					if(d<0.1){
-						claw.grabbed = meeps[m];
-						claw.grabbed.initGrabbed();
-					}
+			for(var i in items){
+			
+				let dx = items[i].px - claw.meep.ax;
+				let dy = items[i].py - claw.meep.ay;
+				let d = Math.sqrt(dx*dx+dy*dy);
+				if(d<0.1){
+					claw.grabbed = items[i];
+					//claw.grabbed.initGrabbed();
 				}
+				
 			}
 		},700);
 
@@ -375,8 +586,8 @@ window.ClawChaos3DGame = function(countInit){
 
 	function initReset(){
 		$(claw).animate({
-			px:0.5,
-			py:0.5,
+			px:claw.meep.hx,
+			py:claw.meep.hy,
 		}).animate({
 			open:1
 		},{
