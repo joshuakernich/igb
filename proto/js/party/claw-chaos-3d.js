@@ -570,6 +570,7 @@ window.ClawChaos3DGame = function(countInit){
 
 	let items = [];
 	let meeps = [];
+	let turnOrder = [];
 	function initGame(count){
 		for(var i=0; i<count; i++){
 			meeps[i] = new Claw3DMeep(i);
@@ -581,7 +582,11 @@ window.ClawChaos3DGame = function(countInit){
 			meeps[i].isActive = false;
 			meeps[i].score = 0;
 			meeps[i].$el.hide();
+
+			turnOrder[i] = i;
 		}
+
+		window.shuffleArray(turnOrder);
 
 		setTimeout( initNextClaw, 1000);
 	}
@@ -589,6 +594,7 @@ window.ClawChaos3DGame = function(countInit){
 	let iRound = -1;
 	function initNextRound(){
 
+		turnOrder.reverse();
 		claw.$el.hide();
 
 		iRound++;
@@ -616,6 +622,7 @@ window.ClawChaos3DGame = function(countInit){
 			hud.finiBanner();
 		},7000);
 		
+
 
 		for(let m=0; m<meeps.length; m++){
 			meeps[m].ax = 0.5 + (-(meeps.length-1)/2 + m) * 0.15;
@@ -799,6 +806,8 @@ window.ClawChaos3DGame = function(countInit){
 	}
 
 	function initClaw(n){
+
+		n = turnOrder[n];
 
 		claw.$el.show();
 		//iClaw = n;
