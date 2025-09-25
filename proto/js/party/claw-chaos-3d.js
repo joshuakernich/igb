@@ -16,6 +16,8 @@ window.ClawChaos3DGame = function(countInit){
 	audio.add('purse','./proto/audio/party/sfx-purse.mp3',0.3);
 	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
 	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
+	audio.add('machine','./proto/audio/party/sfx-machine.mp3',0.3,true,true);
+	audio.add('woosh','./proto/audio/party/sfx-woosh.mp3',0.1);
 
 	function Claw3DBag(n,coins){
 		let self = this;
@@ -619,7 +621,7 @@ window.ClawChaos3DGame = function(countInit){
 
 		setTimeout(function(){
 			hud.initBanner('Present 10% of your coins');
-			audio.play('music',iRound==ROUNDS.length-1?1.5:1);
+			audio.play('music',false,(iRound==ROUNDS.length-1)?1.5:1);
 		},4000);
 
 		setTimeout(function(){
@@ -676,6 +678,8 @@ window.ClawChaos3DGame = function(countInit){
 				meeps[m].initIdle();
 				item.meep = undefined;
 				item.isActive = false;
+
+				audio.play('woosh',true);
 
 				$(item).animate({
 					px: 0.4 + Math.random() * 0.2,
@@ -818,20 +822,36 @@ window.ClawChaos3DGame = function(countInit){
 
 		meeps[n].isWalkingAround = false;
 
+		audio.play('machine');
+
 		$(claw).animate({
 			px:meeps[n].ax,
 			py:meeps[n].ay,
+		},{
+			complete:function(){audio.stop('machine')},
 		}).delay(500).animate({
 			altitude:0,
 			open:1,
-		},500).delay(200).animate({
+		},{
+			duration:500,
+			start:function(){audio.play('machine')},
+			complete:function(){audio.stop('machine')},
+		}).delay(200).animate({
 			open:0,
-		},{duration:300,complete:function(){
-			meeps[n].initClaw();
-			claw.meep = meeps[n];
+		},{
+			duration:300,
+			start:function(){audio.play('machine')},
+			complete:function(){
+				meeps[n].initClaw();
+				claw.meep = meeps[n];
+				audio.stop('machine')
 		}}).delay(500).animate({
 			altitude:1,
-		},500).animate({
+		},{
+			duration:500,
+			start:function(){audio.play('machine')},
+			complete:function(){audio.stop('machine')},
+		}).animate({
 			chase: 50,
 		},100).animate({
 			chase: 0,
@@ -840,7 +860,9 @@ window.ClawChaos3DGame = function(countInit){
 				claw.meep = meeps[n];
 				claw.isTracking = true;
 				claw.$el.attr('n',n);
+				audio.play('machine');
 			},
+			complete:function(){audio.stop('machine')},
 			duration: 1000,
 		})
 
@@ -867,11 +889,23 @@ window.ClawChaos3DGame = function(countInit){
 
 		$(claw).delay(200).animate({
 			altitude:0,
+		},{
+			duration:500,
+			start:function(){audio.play('machine')},
+			complete:function(){audio.stop('machine')},
 		}).delay(500).animate({
 			altitude:1,
+		},{
+			duration:500,
+			start:function(){audio.play('machine')},
+			complete:function(){audio.stop('machine')},
 		}).delay(500).animate({
 			px:0.5,
 			py:1,
+		},{
+			duration:500,
+			start:function(){audio.play('machine')},
+			complete:function(){audio.stop('machine')},
 		})
 
 		setTimeout(function(){
@@ -905,7 +939,8 @@ window.ClawChaos3DGame = function(countInit){
 	function initRelease(){
 		let grabbed = claw.grabbed;
 		claw.grabbed = undefined;
-		$(grabbed).animate({altitude:0.1},{complete:function(){
+		$(grabbed).animate({altitude:0.1},{
+			complete:function(){
 			grabbed.$el.hide();
 			claw.meep.addScore( grabbed.coins );
 			audio.play('coin',true);
@@ -921,12 +956,22 @@ window.ClawChaos3DGame = function(countInit){
 		$(claw).animate({
 			px:claw.meep.hx,
 			py:claw.meep.hy,
+		},{
+			start:function(){audio.play('machine')},
+			complete:function(){audio.stop('machine')},
 		}).animate({
 			open:1
 		},{
-			start:finiClaw
+			start:function(){
+				finiClaw();
+				audio.play('machine');
+			},
+			complete:function(){audio.stop('machine')},
 		}).delay(500).animate({
 			open:0,
+		},{
+			start:function(){audio.play('machine')},
+			complete:function(){audio.stop('machine')},
 		})
 	}
 
