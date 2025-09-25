@@ -12,7 +12,10 @@ window.ClawChaos3DGame = function(countInit){
 	const ROUNDS = 2;
 
 	let audio = new AudioContext();
+	audio.add('music','./proto/audio/party/music-creeping.mp3',0.3,true,true);
 	audio.add('purse','./proto/audio/party/sfx-purse.mp3',0.3);
+	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
+	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
 
 	function Claw3DBag(n,coins){
 		let self = this;
@@ -616,6 +619,7 @@ window.ClawChaos3DGame = function(countInit){
 
 		setTimeout(function(){
 			hud.initBanner('Present 10% of your coins');
+			audio.play('music',iRound==ROUNDS.length-1?1.5:1);
 		},4000);
 
 		setTimeout(function(){
@@ -890,7 +894,10 @@ window.ClawChaos3DGame = function(countInit){
 		},700);
 
 		setTimeout(function(){
-			if(claw.grabbed) claw.grabbed.showContents();
+			if(claw.grabbed){
+				claw.grabbed.showContents();
+				audio.play('correct',true);
+			}
 		},4000);
 		setTimeout(initRelease,5000);
 	}
@@ -901,6 +908,7 @@ window.ClawChaos3DGame = function(countInit){
 		$(grabbed).animate({altitude:0.1},{complete:function(){
 			grabbed.$el.hide();
 			claw.meep.addScore( grabbed.coins );
+			audio.play('coin',true);
 			if(grabbed.n > -1){
 				meeps[grabbed.n].subtractScore(grabbed.coins);
 			}
