@@ -2,18 +2,25 @@ window.ClawChaos3DGame = function(countInit){
 	
 	const W = 1600;
 	const H = 1000;
-	const PLATFORM = 1400;
+	const PLATFORM = 1500;
 	const FPS = 50;
 	const CLAW = 200;
 	const BALL = 300;
 	const ITEM = 300;
 	const COIN = 100;
-	const ALTITUDE = 400;
+	const ALTITUDE = 250;
+	const ROUNDS = 2;
+
+	let audio = new AudioContext();
+	audio.add('purse','./proto/audio/party/sfx-purse.mp3',0.3);
 
 	function Claw3DBag(n,coins){
 		let self = this;
 		let h = 150 + Math.floor(coins/3) * (COIN * 0.4);
 		let w = 100 + Math.min(coins,3) * (COIN * 0.7);
+
+		w = 300;
+		h = 300;
 		self.$el = $(`<claw3Dbag>`).attr('n',n).css({
 			height: h + 'px',
 			width: w + 'px',
@@ -27,7 +34,7 @@ window.ClawChaos3DGame = function(countInit){
 			})
 		}
 
-		$('<claw3Dbagfg>').appendTo(self.$el);
+		let $fg = $('<claw3Dbagfg>').appendTo(self.$el);
 		$('<claw3Dbagtie>').appendTo(self.$el);
 		$('<claw3Dbagtop>').appendTo(self.$el);
 
@@ -42,23 +49,35 @@ window.ClawChaos3DGame = function(countInit){
 				'mix-blend-mode':'overlay',
 			})
 		}
+		self.showContents = function () {
+			$fg.css({opacity:0.6});
+		}
+
+		self.hideContents = function () {
+			$fg.css({opacity:0.95});
+		}
 	}
 
 	function Claw3DItem(n=0,coins=0){
 		let self = this;
 		self.$el = $('<claw3Ditem>');
+		self.n = n;
+		self.coins = coins;
 
 		if(Math.random()>0.5) self.$el.css({'transform':'scaleX(-1)'})
 
-		let $shadow = $('<claw3Dshadow>').appendTo(self.$el).css({
+		self.$shadow = $('<claw3Dshadow>').appendTo(self.$el).css({
 			width: ITEM,
 			height: ITEM,
-		})
+		});
+
+
 		
 		let bag = new Claw3DBag(n,coins);
 		bag.$el.appendTo(self.$el);
 
 		self.altitude = 0;
+		self.yOffset = 0;
 
 		
 
@@ -69,8 +88,18 @@ window.ClawChaos3DGame = function(countInit){
 			});
 
 			bag.$el.css({
-				transform: `rotateX(-90deg) translateY(${-ALTITUDE * self.altitude}px)`,
+				transform: `rotateX(-90deg) translateY(${-ALTITUDE * self.altitude - self.yOffset}px) translateZ(100px) scale(0.8)`,
 			})
+
+			
+		}
+
+		self.hideContents = function(){
+			bag.hideContents();
+		}
+
+		self.showContents = function () {
+			bag.showContents();
 		}
 	}
 
@@ -85,6 +114,8 @@ window.ClawChaos3DGame = function(countInit){
 			'transform':'rotateX(-90deg)',
 		})
 
+		let $score = $('<claw3Dscore>').appendTo(meep.$el);
+
 
 		// hx & hy are home coordinates (i.e. disabled position)
 		// ax & ay are avatar coordinates (i.e. live render)
@@ -93,6 +124,8 @@ window.ClawChaos3DGame = function(countInit){
 		self.hx = self.ax = self.ay = 0;
 		self.hy = self.px = self.py = 0;
 
+		self.score = 0;
+		self.height = 350;
 		self.altitude = 0;
 		self.isWalkingAround = true;
 
@@ -124,6 +157,11 @@ window.ClawChaos3DGame = function(countInit){
 			})
 		}
 
+		self.initCarry = function(){
+			meep.$handLeft.css({top:20});
+			meep.$handRight.css({top:20});
+		}
+
 		self.initIdle = function(){
 			self.isWalkingAround = true;
 			meep.$shadow.show();
@@ -144,6 +182,21 @@ window.ClawChaos3DGame = function(countInit){
 			self.isWalkingAround = false;
 			meep.$shadow.hide();
 			meep.toRagdoll();
+		}
+
+		self.setHeight = function(h) {
+			self.height = h;
+			meep.setHeight(h);
+		}
+
+		self.addScore = function(score) {
+			$score.text('+'+score).css({opacity:1}).delay(500).animate({opacity:0});
+			self.score += score;
+		}
+
+		self.subtractScore = function(score) {
+			$score.text('−'+score).css({opacity:1}).delay(500).animate({opacity:0});
+			self.score -= score;
 		}
 	}
 
@@ -196,8 +249,8 @@ window.ClawChaos3DGame = function(countInit){
 					height: ${H}px;
 					transform-origin: top left;
 					background: url(./proto/img/party/bg-village.png);
-					background-size: 33.3% 150%;
-					background-position: 0% 75%;
+					background-size: 33.3% 200%;
+					background-position: 0% 100%;
 					perspective: ${W}px;
 				}
 
@@ -208,15 +261,16 @@ window.ClawChaos3DGame = function(countInit){
 					width: ${PLATFORM}px;
 					height: ${PLATFORM}px;
 
-					transform: rotateX(80deg);
+					transform: rotateX(70deg);
 					transform-origin: bottom center;
 					transform-style: preserve-3d;
 					
 					
 					left: ${W*1.5 - PLATFORM/2}px;	
-					bottom: 100px;
+					bottom: 150px;
 
 					background: rgba(0,0,0,0.2);
+					background: none;
 					border-radius: 100px;
 				}
 
@@ -235,10 +289,11 @@ window.ClawChaos3DGame = function(countInit){
 					height: ${CLAW*2}px;
 					left: 0px;
 					top: 0px;
-					background: black;
-					opacity: 0.3;
+					background: rgba(0,0,0,0.3);
 					border-radius: 100%;
 					transform: translate(-50%, -50%);
+					box-sizing: border-box;
+					border: 30px solid transparent;
 				}
 
 				claw3Dplane{
@@ -252,6 +307,17 @@ window.ClawChaos3DGame = function(countInit){
 					transform-origin: bottom center;
 					left: ${-CLAW/2}px;
 					bottom: 0px;
+				}
+
+				claw3Dplane:after{
+					content:"";
+					display: block;
+					position: absolute;
+					inset: 0px -50px 0px -50px;
+					background: linear-gradient(to top, transparent, black, transparent, transparent, transparent);
+					transform: translateZ(200px);
+					filter: blur(20px);
+					opacity: 0.2;
 				}
 
 				claw3Dclamps{
@@ -364,22 +430,24 @@ window.ClawChaos3DGame = function(countInit){
 					transform-origin: bottom center;
 					box-shadow: inset -10px -10px 25px black;
 					border-radius: 100% 100% ${ITEM*0.7}px ${ITEM*0.7}px;
+
 				}
 
-				claw3Dbag[n='0'] claw3Dbagtie { background: var(--n0); }
-				claw3Dbag[n='1'] claw3Dbagtie { background: var(--n1); }
-				claw3Dbag[n='2'] claw3Dbagtie { background: var(--n2); }
-				claw3Dbag[n='3'] claw3Dbagtie { background: var(--n3); }
-				claw3Dbag[n='4'] claw3Dbagtie { background: var(--n4); }
-				claw3Dbag[n='5'] claw3Dbagtie { background: var(--n5); }
+				claw3Dclaw[n='0'] claw3Dshadow { border-color: var(--n0); }
+				claw3Dclaw[n='1'] claw3Dshadow { border-color: var(--n1); }
+				claw3Dclaw[n='2'] claw3Dshadow { border-color: var(--n2); }
+				claw3Dclaw[n='3'] claw3Dshadow { border-color: var(--n3); }
+				claw3Dclaw[n='4'] claw3Dshadow { border-color: var(--n4); }
+				claw3Dclaw[n='5'] claw3Dshadow { border-color: var(--n5); }
 
 				claw3Dbagfg{
 					display: block;
 					position: absolute;
 					inset: 0px;
 					border-radius: 100% 100% ${ITEM*0.7}px ${ITEM*0.7}px;
-					background: url(./proto/img/party/texture-hessian-fg.png);
-					opacity: 0.8;
+					background: url(./proto/img/party/texture-hessian.jpg);
+					opacity: 0.95;
+					box-shadow: inset -20px -20px 30px rgba(0,0,0,0.3);
 				}
 
 				claw3Dbagtie{
@@ -393,14 +461,15 @@ window.ClawChaos3DGame = function(countInit){
 					border-radius: 100%;
 					transform: rotate(20deg);
 					box-shadow: inset -10px -10px 15px rgba(0,0,0,0.2);
+					background: #555;
 				}
 
 				claw3Dbagtop{
 					display: block;
 					position: absolute;
-					width: ${ITEM/2}px;
-					height: ${ITEM*0.25}px;
-					top:  ${-ITEM/3+40}px;
+					width: ${ITEM*0.4}px;
+					height: ${ITEM*0.2}px;
+					top:  ${-ITEM*0.2+30}px;
 					left: 48%;
 					background: #ffe7a8;
 					border-radius:  ${ITEM/4}px  ${ITEM/4}px 100% 100%;
@@ -430,6 +499,57 @@ window.ClawChaos3DGame = function(countInit){
 					background-position-y: 100%;
 					transform: rotate(90deg) translateX(-50%);
 				}
+
+				claw3Dtube{
+					position: absolute;
+					display: block;
+					bottom: 0px;
+					left: 50%;
+				}
+
+				claw3Dtube:before{
+					content:"";
+					position: absolute;
+					display: block;
+					width: ${ITEM+100}px;
+					height: ${ITEM}px;
+					
+					left: ${-ITEM/2}px;
+					top: ${-ITEM/2+5}px;
+					border-radius: 100%;
+					box-sizing: border-box;
+					background: black;
+					opacity: 0.2;
+				}
+
+
+				claw3Dtube:after{
+					content:"";
+					position: absolute;
+					display: block;
+					width: ${ITEM}px;
+					height: ${ITEM}px;
+					border: 20px solid limegreen;
+					left: ${-ITEM/2}px;
+					top: ${-ITEM/2-50}px;
+					border-radius: 100%;
+					box-sizing: border-box;
+					background: black;
+					box-shadow: 0px 50px green;
+				}
+
+				claw3Dscore{
+					display: block;
+					position: absolute;
+					left: -100px;
+					right: -100px;
+					bottom: 350px;
+					font-size: 100px;
+					line-height: 100px;
+					color: white;
+					text-align: center;
+					text-shadow: 0px 0px 15px black;
+				}
 		`)
 	}
 
@@ -444,7 +564,9 @@ window.ClawChaos3DGame = function(countInit){
 	let $platform = $('<claw3Dplatform>').appendTo($game);
 
 	let claw = new Claw3DClaw();
-	claw.$el.appendTo($platform);
+	claw.$el.appendTo($platform).hide();
+
+	$('<claw3Dtube>').appendTo($platform);
 
 	let items = [];
 	let meeps = [];
@@ -453,18 +575,155 @@ window.ClawChaos3DGame = function(countInit){
 			meeps[i] = new Claw3DMeep(i);
 			meeps[i].$el.appendTo($platform);
 
-			meeps[i].hx = meeps[i].ax = -0.1;
-			meeps[i].hy = meeps[i].ay = 0.2 + 0.1 * i;
-			meeps[i].isActive = false;
 
-			items[i] = new Claw3DItem(i,5 + Math.floor( Math.random() * 10));
-			items[i].px = Math.random();
-			items[i].py = Math.random();
-			items[i].$el.appendTo($platform);
-			
+			meeps[i].hx = meeps[i].ax = 0.5 + Math.cos(-i*0.2) * (0.5 * [-1,1][i%2]);
+			meeps[i].hy = meeps[i].ay = 0.5 + Math.sin(-i*0.2) * 0.4;
+			meeps[i].isActive = false;
+			meeps[i].score = 0;
+			meeps[i].$el.hide();
 		}
 
-		initNextClaw();
+		setTimeout( initNextClaw, 1000);
+	}
+
+	let iRound = -1;
+	function initNextRound(){
+
+		claw.$el.hide();
+
+		iRound++;
+
+		if(iRound>=ROUNDS){
+			finiGame();
+			return;
+		}
+
+		if(iRound==0){
+			hud.initPlayers(meeps);
+		}
+		
+		hud.initRound(iRound,ROUNDS);
+
+		setTimeout(function(){
+			hud.finiBanner();
+		},2000);
+
+		setTimeout(function(){
+			hud.initBanner('Present 10% of your coins');
+		},4000);
+
+		setTimeout(function(){
+			hud.finiBanner();
+		},7000);
+		
+
+		for(let m=0; m<meeps.length; m++){
+			meeps[m].ax = 0.5 + (-(meeps.length-1)/2 + m) * 0.15;
+			meeps[m].ay = 0.7 + m%2 * 0.15;
+			meeps[m].altitude = 3;
+			meeps[m].$el.show();
+			meeps[m].initCarry();
+
+			let item =  new Claw3DItem(m, Math.floor(3 + Math.random()*12) );
+			
+			item.px = 0.4 + Math.random() * 0.2;
+			item.py = 0.4 + Math.random() * 0.2;
+			item.$el.appendTo($platform);
+
+			item.meep = meeps[m];
+			item.showContents();
+			item.$shadow.hide();
+
+			items.push(item);
+
+			let delay = 5000 + m*200;
+
+			$(meeps[m]).delay(delay).animate({
+				altitude:0,
+			},500).delay(3000).animate({
+				ax: meeps[m].hx,
+				ay: meeps[m].hy,
+			})
+
+			//land
+			setTimeout(function(){
+				audio.play('purse',true);
+				meeps[m].setHeight(300);
+			},delay + 500);
+
+			setTimeout(function(){
+				meeps[m].setHeight(350);
+			},delay + 1000);
+
+			//throw
+			setTimeout(function(){
+				meeps[m].setHeight(300);
+			},delay + 6000);
+
+			setTimeout(function(){
+				meeps[m].setHeight(350);
+				meeps[m].initIdle();
+				item.meep = undefined;
+				item.isActive = false;
+
+				$(item).animate({
+					px: 0.4 + Math.random() * 0.2,
+					py: 0.45 + Math.random() * 0.15,
+					altitude: 2,
+					yOffset: 0,
+				}).animate({
+					altitude:0,
+				},{
+					start:function(){
+						item.$shadow.show();
+						item.isActive = true;
+					},
+					complete:function(){
+						audio.play('purse',true);
+					}
+				})
+			},delay + 7500);
+
+			setTimeout(function(){
+				item.hideContents();
+			},delay + 11000);
+		}
+
+
+
+		
+
+		setTimeout(function(){
+			
+			for(var i=0; i<3; i++){
+				
+				let item = new Claw3DItem(-1,1 + Math.floor(Math.random()*4));
+				item.showContents();
+				item.$el.appendTo($platform);
+
+				item.px = 0.3 + Math.random() * 0.4;
+				item.py = 0.3 + Math.random() * 0.4;
+
+				items.push(item);
+				item.isActive = false;
+				item.altitude = 3;
+				$(item).delay(items.length*50).animate({altitude:0},{start:function() {
+					item.isActive = true;
+				},complete:function(){
+					audio.play('purse',true);
+				}})
+
+				setTimeout(function(){
+					item.hideContents();
+				},2000);
+
+
+			}
+		},meeps.length*200 + 15000);
+
+		setTimeout( function(){
+			initClaw(0);
+		}, meeps.length*200 + 20000 );
 	}
 
 	hud.initPlayerCount(initGame);
@@ -484,16 +743,45 @@ window.ClawChaos3DGame = function(countInit){
 		}
 
 		if(claw.grabbed){
-			claw.grabbed.altitude = claw.altitude-0.1;
-			claw.grabbed.ax = claw.px;
-			claw.grabbed.ay = claw.py;
+			claw.grabbed.altitude = claw.altitude;
+			claw.grabbed.px = claw.px;
+			claw.grabbed.py = claw.py;
 		}
 
 		for(var m in meeps) meeps[m].step();
 		for(var m in meeps) meeps[m].redraw();
-		for(var i in items) items[i].redraw();
+
+		for(var i in items){
+			if(items[i].meep){
+				items[i].px = items[i].meep.ax;
+				items[i].py = items[i].meep.ay;
+				items[i].altitude = items[i].meep.altitude;
+				items[i].yOffset = items[i].meep.height + 40;
+			} else {
+				for(var j in items){
+					if(i!=j && items[i].isActive && items[j].isActive){
+						let dx = items[i].px - items[j].px;
+						let dy = items[i].py - items[j].py;
+						let d = Math.sqrt(dx*dx + dy*dy);
+
+						if(d<0.15){
+							let r = Math.atan2(dy,dx);
+							items[i].px += Math.cos(r) * 0.01;
+							items[i].py += Math.sin(r) * 0.01;
+							items[j].px += Math.cos(r+Math.PI) * 0.01;
+							items[j].py += Math.sin(r+Math.PI) * 0.01;
+						}
+					}
+				}
+			}
+		
+
+			items[i].redraw();
+		}
 
 		claw.redraw();
+
+		hud.updatePlayers(meeps);
 
 		resize();
 	}
@@ -501,10 +789,18 @@ window.ClawChaos3DGame = function(countInit){
 	let nPlayer = -1;
 	function initNextClaw(){
 		nPlayer++;
-		initClaw(nPlayer);
+		nPlayer = nPlayer%meeps.length;
+
+		if(nPlayer==0){
+			initNextRound();
+		} else {
+			initClaw(nPlayer);
+		}
 	}
 
 	function initClaw(n){
+
+		claw.$el.show();
 		//iClaw = n;
 
 		meeps[n].isWalkingAround = false;
@@ -530,24 +826,39 @@ window.ClawChaos3DGame = function(countInit){
 			start:function(){
 				claw.meep = meeps[n];
 				claw.isTracking = true;
+				claw.$el.attr('n',n);
 			},
 			duration: 1000,
 		})
 
-		hud.initTimer(10,initGrab);
+		setTimeout(function(){
+			hud.summonPlayers([n]);
+		},2000);
+
+		setTimeout(function(){
+			hud.finiBanner();
+		},3500);
+
+		setTimeout(function(){
+			hud.initTimer(10,initGrab);
+		},4500);
+
+		//
 	}
 
 	function initGrab(){
 
 		claw.isTracking = false;
 		
-
 		hud.finiTimer();
 
 		$(claw).delay(200).animate({
-			altitude:0.1,
+			altitude:0,
 		}).delay(500).animate({
 			altitude:1,
+		}).delay(500).animate({
+			px:0.5,
+			py:1,
 		})
 
 		setTimeout(function(){
@@ -562,19 +873,30 @@ window.ClawChaos3DGame = function(countInit){
 				let d = Math.sqrt(dx*dx+dy*dy);
 				if(d<0.1){
 					claw.grabbed = items[i];
+					items[i].isActive = false;
 					//claw.grabbed.initGrabbed();
 				}
 				
 			}
 		},700);
 
-		setTimeout(initRelease,3000);
+		setTimeout(function(){
+			if(claw.grabbed) claw.grabbed.showContents();
+		},4000);
+		setTimeout(initRelease,5000);
 	}
 
 	function initRelease(){
-		let meepGrabbed = claw.grabbed;
+		let grabbed = claw.grabbed;
 		claw.grabbed = undefined;
-		$(meepGrabbed).animate({altitude:0},{complete:function(){meepGrabbed.initIdle()}});
+		$(grabbed).animate({altitude:0.1},{complete:function(){
+			grabbed.$el.hide();
+			claw.meep.addScore( grabbed.coins );
+			if(grabbed.n > -1){
+				meeps[grabbed.n].subtractScore(grabbed.coins);
+			}
+
+		}});
 		setTimeout(initReset,2000);
 	}
 
@@ -594,10 +916,26 @@ window.ClawChaos3DGame = function(countInit){
 	function finiClaw() {
 		let meepReset = claw.meep;
 		claw.meep = undefined;
+		claw.$el.attr('n',-1);
 
 		$(meepReset).animate({altitude:0},{complete:function(){meepReset.initIdle()}});
 		
 		setTimeout(initNextClaw,2000);
+	}
+
+	function finiGame(){
+		let scores = [];
+		for(var m in meeps){
+			meeps[m].$el.hide();
+			scores[m] = meeps[m].score;
+		}
+
+		hud.showFinalScores(scores,scores);
+
+		setTimeout(function() {
+			self.fini();
+			window.doPartyGameComplete(scores);
+		},5000);
 	}
 
 

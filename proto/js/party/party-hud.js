@@ -155,7 +155,6 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					position: absolute;
 					left: 0px;
 					right: 0px;
-					
 					top: 110%;
 					box-shadow: 0px 2px 20px black;
 					font-size: 80px;
@@ -173,7 +172,6 @@ window.PartyHUD = function( colour='#40B0ED' ){
 				partyhudbanner p{
 					margin: 0px;
 					padding: 0px;
-
 					color: ${GRAY};
 					font-family: "Knewave", system-ui;
 					text-shadow: 0px 2px white;
@@ -287,6 +285,8 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					right: -100px;
 					top: 50px;
 					font-size: 50px;
+					color:white;
+					text-shadow: 5px 5px 0px ${GRAY}, 5px -5px 0px ${GRAY}, -5px -5px 0px ${GRAY}, -5px 5px 0px ${GRAY}, 0px 10px 0px ${GRAY};
 				}
 
 				hudswaplist partymeephead{
@@ -330,8 +330,13 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 					color: ${GRAY};
 					font-family: "Knewave", system-ui;
-					text-shadow: 0px 2px white;
+					
 					font-weight: 100;
+
+					color:white;
+					text-shadow: 5px 5px 0px ${GRAY}, 5px -5px 0px ${GRAY}, -5px -5px 0px ${GRAY}, -5px 5px 0px ${GRAY}, 0px 10px 0px ${GRAY};
+					transform: rotate(-3deg);
+				
 				}
 
 				partyhudpips{
@@ -581,7 +586,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 			top: (y+0.1) * 100 + '%',
 			'position':'absolute',
 			'font-size':size+'px',
-			'transform': 'translate(-50%, -50%)',
+			'transform': 'translate(-50%, -50%) rotate(-5deg)',
 			'text-shadow': `5px 5px 0px ${GRAY}, 5px -5px 0px ${GRAY}, -5px -5px 0px ${GRAY}, -5px 5px 0px ${GRAY}, 0px ${Math.min(20,size*0.3)}px 0px ${GRAY}`,
 		}).animate({
 			top: y * 100 + '%',
