@@ -313,7 +313,7 @@ window.PainterPanicGame = function(){
 					border-radius: 100%;
 					box-sizing: border-box;
 					border: 10px solid red;
-					background: #C69A64;
+					background: #DED2C9;
 
 					animation: throb;
 					animation-iteration-count: infinite;
@@ -399,6 +399,8 @@ window.PainterPanicGame = function(){
 					mix-blend-mode: multiply;
 				}
 
+				
+
 
 			</style>
 		`)
@@ -428,6 +430,11 @@ window.PainterPanicGame = function(){
 	let queue = [];
 	const PainterBox = function(n,path,texture){
 
+		let audio = new AudioContext();
+		audio.add('buzz','./proto/audio/party/sfx-buzz.mp3',0.1,true);
+		audio.add('blip','./proto/audio/party/sfx-blip.mp3',0.3);
+		audio.add('incorrect','./proto/audio/party/sfx-incorrect.mp3',0.3);
+
 		let self = this;
 		self.isForeground = false;
 		self.y = 0.5;
@@ -435,8 +442,10 @@ window.PainterPanicGame = function(){
 		self.scale = 0.5;
 		self.spin = 80;
 		self.twist = 0;
-
-		let isPaintActive = true;
+		self.isInside = true;
+		self.cntOutside = 0;
+		self.amt = 0;
+		self.isPaintActive = false;
 
 		let d = '';
 		for(var p=0; p<path.length; p++){
@@ -450,7 +459,6 @@ window.PainterPanicGame = function(){
 		self.$el = $(`
 			<painterspace>
 				<painterbox>
-					
 					<painterpaint>
 						<canvas width=${BOX} height=${BOX}></canvas>
 						<canvas width=${BOX} height=${BOX}></canvas>
@@ -461,6 +469,8 @@ window.PainterPanicGame = function(){
 						<path stroke='black' vector-effect='non-scaling-stroke' d='${d}'></path>
 					</svg>
 
+
+
 					<painterwall></painterwall>
 					<painterwall></painterwall>
 					<painterwall></painterwall>
@@ -468,10 +478,10 @@ window.PainterPanicGame = function(){
 			</painterspace>
 			`);
 
-		/*let $start = $('<painterstart>').appendTo(self.$el).css({
+		let $start = $('<painterstart>').appendTo(self.$el).css({
 			left: '50%',
 			top: '50%',
-		})*/
+		})
 
 		let grids = [];
 		for(var x=0; x<GRID; x++){
@@ -480,7 +490,7 @@ window.PainterPanicGame = function(){
 				let gy = (y + 0.5) * STROKE/2;
 
 				if(inside([gx,gy],path)){
-					$('<div>').appendTo(self.$el)
+					let $el = $('<div>').appendTo(self.$el)
 					.css({
 						position:'absolute',
 						width:'4px',
@@ -490,7 +500,7 @@ window.PainterPanicGame = function(){
 						top:-BOX/2+gy-2+'px'
 					})
 
-					grids.push([gx,gy]);
+					grids.push([gx,gy,$el]);
 				}
 			}
 		}
@@ -541,6 +551,8 @@ window.PainterPanicGame = function(){
 		
 
 		self.step = function(){
+			self.isInside = true;
+
 			if(self.meep && self.isForeground){
 				let ox = self.meep.px - self.x*W;
 				let oy = self.meep.py - self.y*H;
@@ -551,10 +563,12 @@ window.PainterPanicGame = function(){
 					top: oy + 'px',
 				})
 
-				if(isPaintActive){
+				if(self.isPaintActive){
 
 					ox = ox + (BOX/2);
 					oy = oy + (BOX/2);
+
+					self.isInside = inside([ox,oy],path);
 
 					history.push({
 						x:ox,
@@ -574,12 +588,6 @@ window.PainterPanicGame = function(){
 					for(var h in history) ctx2.lineTo(history[h].x, history[h].y);
 					ctx2.stroke();
 
-					/*let data = ctx2.getImageData(0, 0, BOX, BOX);
-					let cnt = 0;
-					for(var i=0; i<data.data.length; i+=4) if(data.data[i+3]!=0) cnt++; //just check the alpha channel
-					let amt = Math.round(cnt/MAXPIXELS*100);
-					$score.text(amt+'%');*/
-
 					let cntPaint = 0;
 					for(var g in grids){
 						let isPaint = false;
@@ -587,32 +595,32 @@ window.PainterPanicGame = function(){
 							let dx = history[h].x - grids[g][0];
 							let dy = history[h].y - grids[g][1];
 							let d = Math.sqrt(dx*dx+dy*dy);
-							if(d<STROKE) isPaint = true;
+							if(d<STROKE*0.7) isPaint = true;
 						}
 
-						if(isPaint) cntPaint++;
+						if(isPaint){
+							grids[g][2].hide();
+							cntPaint++;
+						} else {
+							grids[g][2].show();
+						}
 					}
 
-					let amt = Math.round(cntPaint/grids.length*100);
-					$score.text(amt+'%');
+					self.amt = Math.floor(cntPaint/grids.length*100);
 
-
-					self.amt = amt;
+					if(self.amt>=100){
+						self.isComplete = true;
+						self.isPaintActive = false;
+					}
 
 					ctx.globalCompositeOperation = 'source-in';
 					ctx.drawImage(img, 0, 0, BOX, BOX);
 
-					/*let draw = '';
-					for(var h in history) draw = draw + (h==0?'M':'L') + history[h].x + ',' +history[h].y;
-					$cut.attr('d',draw);*/
-
-				} else if(!self.isComplete){
+				} else {
 					
-					if(false){
+					if(Math.abs(ox)<50 && Math.abs(oy)<50){
 						$start.hide();
-						isPaintActive = true;
-						$scoreHeader.text('Coverage');
-						$score.text('%');
+						self.isPaintActive = true;
 					}
 				}
 			}
@@ -621,14 +629,44 @@ window.PainterPanicGame = function(){
 		self.redraw = function(){
 
 			self.$el.css({
-				left: self.x*W + 'px',
-				top: self.y*H + 'px',
+				left: self.x*W + (self.isInside?0:-10 + Math.random()*20) + 'px',
+				top: self.y*H + (self.isInside?0:-10 + Math.random()*20) + 'px',
 				transform: 'scale('+self.scale+') rotateX('+self.spin+'deg) rotateY('+self.twist+'deg)',
 			});
 
 			self.meep.$el.css({
 				transform: 'rotateX('+(-self.spin)+'deg)',
-			})
+			});
+
+			$score.text(self.amt+'%');
+
+			if(self.isInside){
+				self.cntOutside = 0;
+				audio.stop('buzz');
+			} else {
+				self.cntOutside++;
+				audio.play('buzz');
+				audio.setVolume('buzz',0.1 + self.cntOutside*(1/FPS) * 0.5);
+
+				if(self.cntOutside>FPS/2){
+					self.isInside = true;
+					self.cntOutside = 0;
+					audio.stop('buzz');
+					audio.play('incorrect',true);
+					self.isPaintActive = false;
+					$start.show();
+
+					ctx.clearRect(0,0,BOX,BOX);
+					ctx2.clearRect(0,0,BOX,BOX);
+
+					history.length = 0;
+					self.amt = 0;
+
+					for(var g in grids) grids[g][2].show();
+				}
+			}
+
+			
 		}
 
 		self.setForeground = function(b){
@@ -662,8 +700,6 @@ window.PainterPanicGame = function(){
 					'line-height':THICC + 'px'
 				});
 			}
-
-			
 		}
 
 		self.setFinalScore = function(){
@@ -702,6 +738,8 @@ window.PainterPanicGame = function(){
 	const STACK = 0.06;
 
 	function initGame(count){
+
+		audio.play('music');
 
 		for(var m=0; m<count; m++){
 			meeps[m] = new PainterMeep(m);
