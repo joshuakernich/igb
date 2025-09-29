@@ -621,7 +621,7 @@ window.ClawChaos3DGame = function(countInit){
 
 		setTimeout(function(){
 			hud.initBanner('Present 10% of your coins');
-			audio.play('music',false,(iRound==ROUNDS.length-1)?1.5:1);
+			audio.play('music',false,(iRound==ROUNDS-1)?1.5:1);
 		},4000);
 
 		setTimeout(function(){
@@ -992,6 +992,7 @@ window.ClawChaos3DGame = function(countInit){
 			scores[m] = meeps[m].score;
 		}
 
+		audio.stop('music');
 		hud.showFinalScores(scores,scores);
 
 		setTimeout(function() {
