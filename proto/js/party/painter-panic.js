@@ -6,6 +6,7 @@ window.PainterPanicGame = function(){
 	const BOX = 500;
 	const THICC = BOX/6;
 	const BRUSH = {W:50,H:200};
+	const TIME = 30;
 
 	function toPath(arr){
 		let path = [];
@@ -16,14 +17,13 @@ window.PainterPanicGame = function(){
 		return path;
 	}
 
+	let TUTORIAL = toPath([176.1,499.15,183,472,163,455,156.35,433.6,156,407,108.65,390.65,60.8,353.65,37,309,47,294,62,292,80.2,318.55,104.5,346.6,144.1,370.3,164,378,178,364,196,357.3,151.95,338.75,121.2,305,98.35,240.45,86.7,137.4,103.3,80.45,133,45.7,170.7,32,232.95,19.65,276.7,35.6,313.55,67.4,339.1,126.9,353.4,219.8,351.55,268.6,331.65,311.1,298.4,342.85,273.35,349.3,271,357,297.1,371,305,381,343.7,369.3,387.8,345.85,421.2,320,439,302,453,300,463,325,445.9,351.2,407.8,376.95,362.95,395.4,311,408,311,431,301.85,457.65,292,467,308.05,503.65,268.95,509.5,260,478,215,478,215.6,514.5,176.1,499.15]);
 	let PICASSO = toPath([348,493.25,338.65,478.6,338.65,437.25,334.65,423.95,381.3,405.25,390.65,370.6,362.65,321.3,332,271.95,340,247.95,353.3,230.65,354.65,205.3,378.65,170.65,373.3,161.3,384,93.3,384,40,411.95,0,373.3,-1.35,361.3,30.65,349.3,33.35,336,68,338.65,82.65,334.65,97.3,320,64,288,49.35,245.35,69.35,212,80,166.7,66.65,124,76,117.35,112,128,137.3,150.7,149.3,188,154.65,188,166.65,196,175.95,198.7,197.3,188,246.65,189.35,258.65,194.7,283.95,204,299.95,178.7,315.95,134.7,339.95,118.7,361.3,120,374.6,145.35,402.6,132,417.25,132,429.25,112,457.25,100.05,466.6,96.05,483.9,102.7,493.25,130.7,487.9,137.35,469.25,153.35,449.25,185.35,433.25,208,429.25,250.65,435.95,302.65,462.6,329.3,495.9,333.3,505.25,352,505.25,348,493.25]);
 	let HORSE = toPath([221.35,505.25,280,477.25,269.35,469.25,269.35,446.6,194.7,390.6,176,398.6,130.7,379.95,117.35,395.95,122.7,407.95,110.7,429.25,101.35,414.6,100.05,389.25,93.35,383.95,104,363.95,73.35,375.95,56.05,399.95,60.05,413.25,48.05,434.6,36.05,411.95,40.05,387.95,89.35,339.95,113.35,334.6,122.7,339.95,144,326.6,150.7,297.3,178.7,269.3,169.35,255.95,188,254.65,230.65,195.95,221.35,182.65,197.35,181.3,181.35,178.65,172,150.65,190.7,132,233.35,140,225.35,128,260,128,285.35,149.3,297.35,149.3,269.35,112,270.65,82.65,320,136,333.3,113.3,364,109.3,409.3,141.3,378.65,144,377.3,158.65,413.3,164,442.65,189.3,442.65,219.95,411.95,261.3,405.3,293.3,376,318.6,385.3,334.6,427.95,346.6,463.95,371.95,481.3,402.6,502.65,413.25,503.95,462.6,474.65,486.6,427.95,509.25,288,511.9,221.35,505.25]);
 	let ANGEL = toPath([-6.6,462.6,77.35,453.25,98.7,393.25,129.35,339.95,113.35,334.6,85.35,301.3,42.7,239.95,16.05,193.3,73.35,182.65,162.7,189.3,201.35,207.95,197.35,182.65,208,169.3,198.7,157.3,202.65,140,200,128,216,100,232,101.3,246.65,85.3,257.35,86.65,277.35,77.3,293.35,77.3,313.3,66.65,345.3,69.35,362.65,89.3,374.65,98.65,397.3,122.65,394.65,144,400,156,389.3,181.3,402.65,217.3,405.3,251.95,417.3,255.95,441.3,281.3,458.65,335.95,435.95,394.6,434.65,430.6,427.95,454.6,505.3,454.6,510.6,514.6,-11.95,503.9,-6.6,462.6,]);
 	let APPLE = toPath([94.7,413.25,98.7,517.25,413.3,515.9,413.3,437.25,406.65,354.6,390.65,257.3,362.65,237.3,348,227.95,328,226.65,321.3,215.95,300,202.65,284,186.65,296,165.3,301.35,130.65,301.35,116,321.3,105.3,320,97.3,297.35,97.3,304,88,297.35,80,294.65,57.35,286.65,42.65,266.65,32,242.65,28,214.65,40,204,58.65,201.35,96,182.7,93.3,173.35,97.3,177.35,108,194.7,116,190.7,136,202.65,161.3,209.35,183.95,194.7,210.65,170.7,225.3,132,234.65,110.7,254.65,100.05,294.6,94.7,413.25]);
 	let MONA = toPath([137.35,458.6,142.7,475.95,168,493.25,185.35,473.25,204,465.25,272,470.6,354.65,466.6,406.65,461.25,423.95,441.25,425.3,393.25,392,281.3,374.65,253.3,328,219.95,302.65,85.3,276,42.65,249.35,36,210.65,41.35,186.7,73.3,168,125.3,165.35,160,177.35,207.95,168,234.65,138.7,266.65,120,309.3,105.35,338.6,78.7,359.95,68.05,402.6,73.35,425.25,93.35,433.25,128,433.25,149.35,437.25,137.35,458.6]);
 	let SCREAM = toPath([114.7,505.25,126.7,443.95,113.35,423.95,113.35,374.6,128,326.6,128,274.65,134.7,234.65,153.35,221.3,176,213.3,160,152,164,125.3,176,98.65,182.7,97.3,204,65.35,240,46.65,272,45.35,294.65,54.65,314.65,76,316,89.3,325.3,90.65,332,108,333.3,146.65,324,178.65,309.3,205.3,310.65,230.65,317.3,265.3,328,269.3,340,318.6,344,363.95,336,399.95,313.3,425.25,298.65,427.95,290.65,461.25,288,507.9,114.7,505.25]);
-
-
 
 	const PAINTINGS = [
 		{path:APPLE,img:'texture-painting-apple'},
@@ -327,12 +327,12 @@ window.PainterPanicGame = function(){
 				painterspace[n='4'] painterstart{ border-color:var(--n4); }
 				painterspace[n='5'] painterstart{ border-color:var(--n5); }
 
-				painterspace[n='0'] painterscore{ color:var(--n0); }
+				/*painterspace[n='0'] painterscore{ color:var(--n0); }
 				painterspace[n='1'] painterscore{ color:var(--n1); }
 				painterspace[n='2'] painterscore{ color:var(--n2); }
 				painterspace[n='3'] painterscore{ color:var(--n3); }
 				painterspace[n='4'] painterscore{ color:var(--n4); }
-				painterspace[n='5'] painterscore{ color:var(--n5); }
+				painterspace[n='5'] painterscore{ color:var(--n5); }*/
 
 				painterscore{
 					display: block;
@@ -345,24 +345,31 @@ window.PainterPanicGame = function(){
 					font-size: 80px;
 					line-height:${BOX/3}px;
 					text-align: center;
-					text-shadow: 0px 0px 20px rgba(255,255,255,0.3);
-
-					background: radial-gradient( #153A65, transparent, transparent );
+					opacity: 0.5;
 				}
 
 				painterheader{
 					display: block;
 					position: absolute;
-					top: ${-BOX/2 - BOX/3 - 30}px;
+					bottom: ${BOX/2}px;
 					left: ${-BOX/2}px;
-					width: ${BOX}px;
+					right: ${-BOX/2}px;
+					width: ${BOX/3}px;
+					margin: auto;
 
 					color: white;
 					font-size: 50px;
-					line-height: 50px;
-					text-align: center;
+					line-height: 70px;
+					text-align: left;
+					border-radius: 20px 20px 0px 0px;
+					padding: 0px 20px;
 
-					background: radial-gradient( #153A65, transparent, transparent );
+					background: #333;
+				}
+
+				painterheader:before{
+					content:"⏱️ ";
+
 				}
 
 				paintersurface{
@@ -432,7 +439,8 @@ window.PainterPanicGame = function(){
 
 		let audio = new AudioContext();
 		audio.add('buzz','./proto/audio/party/sfx-buzz.mp3',0.1,true);
-		audio.add('blip','./proto/audio/party/sfx-blip.mp3',0.3);
+		audio.add('blip','./proto/audio/party/sfx-select.mp3',0.3);
+		audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
 		audio.add('incorrect','./proto/audio/party/sfx-incorrect.mp3',0.3);
 
 		let self = this;
@@ -446,15 +454,15 @@ window.PainterPanicGame = function(){
 		self.cntOutside = 0;
 		self.amt = 0;
 		self.isPaintActive = false;
+		self.score = TIME;
 
 		let d = '';
+
 		for(var p=0; p<path.length; p++){
 			d = d + (p==0?'M':'L') + path[p][0] + ',' + path[p][1] + ' ';
 		}
 
 		d = d + 'Z';
-
-
 
 		self.$el = $(`
 			<painterspace>
@@ -489,13 +497,13 @@ window.PainterPanicGame = function(){
 				let gx = (x + 0.5) * STROKE/2;
 				let gy = (y + 0.5) * STROKE/2;
 
-				if(inside([gx,gy],path)){
+				if(inside([gx,gy],path,10)){
 					let $el = $('<div>').appendTo(self.$el)
 					.css({
 						position:'absolute',
 						width:'4px',
 						height:'4px',
-						background:'black',
+						background:'#222',
 						left:-BOX/2+gx-2+'px', 
 						top:-BOX/2+gy-2+'px'
 					})
@@ -530,7 +538,32 @@ window.PainterPanicGame = function(){
 
 		let history = [];
 
-		function inside(point, vs) {
+		function pointToPolygonDistance(point, polygon) {
+		  function pointToSegmentDistance(p, v, w) {
+		    const l2 = (w[0] - v[0]) ** 2 + (w[1] - v[1]) ** 2;
+		    if (l2 === 0) {
+		      // v and w are the same point
+		      return Math.hypot(p[0] - v[0], p[1] - v[1]);
+		    }
+		    let t = ((p[0] - v[0]) * (w[0] - v[0]) + (p[1] - v[1]) * (w[1] - v[1])) / l2;
+		    t = Math.max(0, Math.min(1, t));
+		    const projX = v[0] + t * (w[0] - v[0]);
+		    const projY = v[1] + t * (w[1] - v[1]);
+		    return Math.hypot(p[0] - projX, p[1] - projY);
+		  }
+
+		  let minDist = Infinity;
+		  for (let i = 0; i < polygon.length; i++) {
+		    const v = polygon[i];
+		    const w = polygon[(i + 1) % polygon.length];
+		    const dist = pointToSegmentDistance(point, v, w);
+		    if (dist < minDist) minDist = dist;
+		  }
+		  return minDist;
+		}
+
+
+		function inside(point, vs, buffer=0) {
 		    // ray-casting algorithm based on
 		    // https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html
 		    
@@ -544,6 +577,11 @@ window.PainterPanicGame = function(){
 		        var intersect = ((yi > y) != (yj > y))
 		            && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
 		        if (intersect) inside = !inside;
+		    }
+
+		    if(inside && buffer>0){
+		    	let dist = pointToPolygonDistance(point,vs);
+		    	if(dist<buffer) inside = false;
 		    }
 		    
 		    return inside;
@@ -568,7 +606,7 @@ window.PainterPanicGame = function(){
 					ox = ox + (BOX/2);
 					oy = oy + (BOX/2);
 
-					self.isInside = inside([ox,oy],path);
+					if(!self.isPracticeMode) self.isInside = inside([ox,oy],path);
 
 					history.push({
 						x:ox,
@@ -611,6 +649,7 @@ window.PainterPanicGame = function(){
 					if(self.amt>=100){
 						self.isComplete = true;
 						self.isPaintActive = false;
+						audio.play('correct',true);
 					}
 
 					ctx.globalCompositeOperation = 'source-in';
@@ -622,6 +661,39 @@ window.PainterPanicGame = function(){
 						$start.hide();
 						self.isPaintActive = true;
 					}
+				}
+
+
+				if(!self.isComplete){
+					let was = self.score;
+
+					let now = new Date().getTime();
+					let timeElapsed = now - self.timeStart;
+					self.score = TIME - Math.floor(timeElapsed/100)/10;
+
+					if(was>10 && self.score<=10){
+						hud.flashMessage(self.x,self.y,'10 seconds left',50);
+					}
+
+					for(var i=1; i<=3; i++){
+						if(was>i && self.score<=i) hud.flashMessage(self.x,self.y,i);
+					}
+
+					if(self.score<0) self.score = 0;
+
+					if(was>0 && self.score <=0){
+						hud.flashMessage(self.x,self.y,'Time up!',100);
+						self.isComplete = true;
+						audio.play('incorrect',true);
+					}
+				}
+
+				if(self.isPracticeMode){
+					self.isComplete = false;
+					self.score = 0;
+					self.isInside = true;
+					self.isPaintActive = true;
+					self.cntOutside = 0;
 				}
 			}
 		}
@@ -639,6 +711,7 @@ window.PainterPanicGame = function(){
 			});
 
 			$score.text(self.amt+'%');
+			$scoreHeader.text(self.score.toFixed(1));
 
 			if(self.isInside){
 				self.cntOutside = 0;
@@ -665,27 +738,30 @@ window.PainterPanicGame = function(){
 					for(var g in grids) grids[g][2].show();
 				}
 			}
-
-			
 		}
 
 		self.setForeground = function(b){
 			self.isForeground = b;
 			
 			if(b){
+
+				self.timeStart = new Date().getTime();
 				self.meep.$el.show();
 
 				$scoreHeader.text('Coverage');
 				$score.text('0%');
 
 				$score.css({
-					'top': -BOX/2 - BOX/3 + 'px',
+					'top': BOX/2 + 'px',
 					'transform':'rotateX(0deg)',
 					'transform-origin':'top center',
 					'background':'',
 					'height':'',
 					'line-height':'',
-				});
+				}).show();
+
+				$start.show();
+
 			} else { 
 				self.meep.$el.hide();
 
@@ -698,7 +774,9 @@ window.PainterPanicGame = function(){
 					'background':'none',
 					'height':THICC + 'px',
 					'line-height':THICC + 'px'
-				});
+				}).hide();
+
+				$start.hide();
 			}
 		}
 
@@ -713,12 +791,29 @@ window.PainterPanicGame = function(){
 				'line-height':BOX+'px',
 			});
 		}
+
+		self.toPracticeMode = function(){
+			self.isPracticeMode = true;
+			self.isPaintActive = true;
+			$start.hide();
+
+			$score.hide();
+			$scoreHeader.hide();
+
+			for(var g in grids) grids[g][2].remove();
+
+			if(n!=0){
+				self.$el.find('painterwall').hide();
+				self.$el.find('painterbox').css({background:'none'});
+			}
+		}
 	}
 
 	let self = this;
 	self.$el = $('<igb>');
 
 	let $game = $('<paintergame>').appendTo(self.$el);
+	let $blur = $('<blurlayer>').appendTo($game);
 	let $canvas = $('<paintercanvas>').appendTo($game);
 
 	let hud = new PartyHUD('#C09363');
@@ -729,82 +824,156 @@ window.PainterPanicGame = function(){
 	let boxes = [];
 	let meeps = [];
 
-	let nPlayer = 0;
+	let nPlayer = -1;
 	let foregrounds = [];
 	let completes = [];
 	let isPlayActive = false;
 
 	const FOREGROUND = 2;
 	const STACK = 0.06;
+	const SPACING = 1/3;
+	let slots = [];
 
 	function initGame(count){
 
-		audio.play('music');
+		
 
 		for(var m=0; m<count; m++){
 			meeps[m] = new PainterMeep(m);
-		
+		}
+
+		initTutorial();
+	}
+
+	function initTutorial(){
+
+		hud.initTutorial('Painter Panic',
+			{x:1.2, y:0.5, msg:'Align yourself<br>with your canvas',icon:'align'},
+			{x:1.8, y:0.5, msg:'Move around to paint<br>within the lines',icon:'around'},
+		);
+
+		for(var b=0; b<meeps.length; b++){
+			let box = new PainterBox(b,PAINTINGS[0].path,PAINTINGS[0].img);
+			box.$el.appendTo($canvas);
+			box.bindMeep(meeps[b]);
+			box.x = 1.5;
+			box.y = 0.6;
+			box.redraw();
+			boxes[b] = box;
+			box.setForeground(true);
+			box.scale = 1;
+			box.spin = 20;
+			box.twist = 0;
+			box.toPracticeMode();
+		}
+
+		hud.initTimer(30,finiTutorial);
+	}
+
+	function finiTutorial(){
+
+		$blur.hide();
+		hud.finiTimer();
+		hud.finiTutorial();
+		for(var b in boxes) boxes[b].$el.remove();
+		boxes.length = 0;
+
+		setTimeout(initPlay,1000);
+	}
+
+	function initPlay(){
+
+		audio.play('music');
+
+		for(var m=0; m<meeps.length; m++){
 			let box = new PainterBox(m,PAINTINGS[m].path,PAINTINGS[m].img);
 			box.$el.appendTo($canvas);
 			box.bindMeep(meeps[m]);
 			box.x = 0.75 + m%2 * 0.02;
-			box.y = 0.78 - STACK*(count-m-1);
+			box.y = 0.78 - STACK*(meeps.length-m-1);
 			box.redraw();
 			boxes[m] = box;
 
 			box.setForeground(false);
 		}
 
-		//initBox();
-		//initBox();
+		hud.initPlayers(boxes);
+		setTimeout(function(){
+			initNextPlayer(false);
+			initNextPlayer(false);
+		},1000);
 
-		isPlayActive = false;
-		setTimeout(doNextSet,1000);
+		setTimeout(function () {
+			hud.summonPlayers([0,1]);
+		},2000);
+
+		setTimeout(function(){
+			hud.finiBanner();
+		},4000);
+
+		setTimeout(function(){
+			for(var s in slots) slots[s].setForeground(true);
+		},5500);
 	}
 
-	function doNextSet(){
-		
-		foregrounds.length = 0;
+	function initNextPlayer(isAutoStart){
+		nPlayer++;
 
-		for(var i=0; i<FOREGROUND; i++){
-			if(boxes[nPlayer]){
-				foregrounds.push(boxes[nPlayer]);
-				nPlayer++;
+		if(boxes[nPlayer]){
+			let nSlot = 0;
+			while(slots[nSlot]) nSlot++;
+			slots[nSlot] = boxes[nPlayer];
+
+			$(slots[nSlot])
+			.animate(
+				{
+					x:2 - (nSlot+1) * SPACING,
+					y:0.5,
+					scale:1,
+					spin:20,
+					twist:-5 + nSlot*10,
+				},
+				{
+					duration:500,
+					complete:function(){
+						if(isAutoStart) slots[nSlot].setForeground( true );
+					}
+				}
+			);
+		} else {
+			let isComplete = true;
+			for(var b in boxes) if( !boxes[b].isComplete ) isComplete = false;
+			if(isComplete){
+				isPlayActive = false;
+				finiGame();
 			}
 		}
-
-		let spacing = 1/(foregrounds.length+1);
-	
-		for(let f=0; f<foregrounds.length; f++){
-			$(foregrounds[f])
-			.delay(f*200)
-			.animate({
-				x:2 - (f+1) * spacing,
-				y:0.55,
-				scale:1,
-				spin:20,
-				twist:-5 + f*10,
-			},{
-				duration:500,
-				complete:function(){
-					foregrounds[f].setForeground( true );
-				}
-			});
-		}
-
-		if(foregrounds.length==0){
-			isPlayActive = false;
-			finiGame();
-		} else {
-			isPlayActive = true;
-			hud.initTimer(30,finiSet);
-		}
 	}
 
-	function finiSet(){
+	function finiPlayerSlot(nSlot){
+		
+		let box = slots[nSlot];
+		let c = completes.push(box)-1;
 
-		isPlayActive = false;
-		setTimeout(doPutAway,1000);
+		$(box)
+		.delay(1000)
+		.animate({
+			x:2.25,
+			y:0.78 - STACK*c,
+			scale:0.5,
+			spin:80,
+			twist:0
+		},{
+			start:function(){
+				box.setForeground( false );
+			}
+		});
+
+		slots[nSlot] = undefined;
+
+		setTimeout(function(){
+			initNextPlayer(true);
+		},2500);
 	}
 
 	function finiGame(){
@@ -815,60 +984,38 @@ window.PainterPanicGame = function(){
 			.delay(completes.length-c*100)
 			.animate({
 				x:1.25 + (c%3)*0.25,
-				y:0.3 + Math.floor(c/3)*0.4,
+				y:0.3 + Math.floor(c/3)*0.35,
 				scale:0.6,
 				spin:20,
 				twist:0
 			});
 		}
 
+		let scores = [];
+		for(var b in boxes) scores[b] = boxes[b].score;
+
+		let rewards = window.scoresToRewards(scores);
+
 		setTimeout(function(){
-			
-			let ranks = [];
-			for(var a in boxes){
-				ranks[a] = 0;
-				for(var b in boxes){
-					if(boxes[a].amt >= boxes[b].amt) ranks[a]++;
-				}
-			}
-			let scores = [];
-			for(var r in ranks) scores[r] = Math.floor( (10/ranks.length) * (ranks[r]) );
-			window.doPartyGameComplete(scores);
+			audio.stop('music');
+			hud.showFinalScores(scores,rewards);
+		},2000);
 
-		},2000)
-	}
-
-	function doPutAway(){
-		for(var f in foregrounds){
-			foregrounds[f].setForeground( false );
-			completes.push(foregrounds[f]);
-		}
-
-		for(var c=0; c<completes.length; c++){
-			$(completes[c])
-			.delay(c*100)
-			.animate({
-				x:2.25,
-				y:0.78 - STACK*(c),
-				scale:0.5,
-				spin:80,
-				twist:0
-			});
-		}
-
-		setTimeout(doNextSet,2000);
+		setTimeout(function(){
+			self.fini();
+			window.doPartyGameComplete(rewards);
+		},7000);
 	}
 
 	self.step = function(){
 		for(var b in boxes) boxes[b].step();
 		for(var b in boxes) boxes[b].redraw();
 
-		let isComplete = isPlayActive;
-		for(var f in foregrounds ) if( !foregrounds[f].isComplete ) isComplete = false;
-
-		if(isComplete && isPlayActive){
-			finiSet();
+		for(var s in slots){
+			if(slots[s] && slots[s].isComplete) finiPlayerSlot(s);
 		}
+
+		hud.updatePlayers(boxes,1);
 
 		resize();
 	}

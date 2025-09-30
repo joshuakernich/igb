@@ -51,7 +51,9 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					display: block;
 					position: absolute;
 					inset: 0px;
-					backdrop-filter: blur(20px);
+					background: url(./proto/img/party/texture-glass.png);
+					background-size: 100%;
+					opacity: 0.7;
 				}
 
 				partyhud{
@@ -920,6 +922,8 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	let headerTutorial;
 
 	self.initTutorial = function(name, ...tutor){
+
+		
 
 		audio.play('music');
 
