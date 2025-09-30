@@ -862,7 +862,7 @@ window.PainterPanicGame = function(){
 			boxes[b] = box;
 			box.setForeground(true);
 			box.scale = 1;
-			box.spin = 20;
+			box.spin = 30;
 			box.twist = 0;
 			box.toPracticeMode();
 		}
@@ -983,11 +983,11 @@ window.PainterPanicGame = function(){
 			$(completes[c])
 			.delay(completes.length-c*100)
 			.animate({
-				x:1.25 + (c%3)*0.25,
-				y:0.3 + Math.floor(c/3)*0.35,
-				scale:0.6,
+				x:1.2 + c * 1/(completes.length-1) * 0.6,
+				y:0.3,
+				scale:0.5,
 				spin:20,
-				twist:0
+				twist:-20,
 			});
 		}
 
