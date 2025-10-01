@@ -861,7 +861,7 @@ BoxPartyGame = function(){
 		[ GAMES['Plummet Panic'], GAMES['Cookie Cutter'] ],
 		[ GAMES['Coin Chaos'] ],
 		[ GAMES['Find My Meep'], GAMES['Town Fair'] ],
-		[ GAMES['Goal Patrol'], GAMES['Bowling'] ],
+		[ GAMES['Goal Patrol'], GAMES['Bowling Bonanza'] ],
 		[ GAMES['Final Frenzy'] ],
 	]
 

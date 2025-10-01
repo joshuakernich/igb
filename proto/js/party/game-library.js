@@ -114,8 +114,8 @@ window.GAMES = {
 		color:'white',
 		bg:'gray',
 	},
-	'Bowling':{
-		name:'Bowling',
+	'Bowling Bonanza':{
+		name:'Bowling Bonanza',
 		game:window.BowlingGame,
 		color:'white',
 		bg:'gray',
