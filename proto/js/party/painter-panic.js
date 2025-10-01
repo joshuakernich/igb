@@ -6,7 +6,7 @@ window.PainterPanicGame = function(){
 	const BOX = 500;
 	const THICC = BOX/6;
 	const BRUSH = {W:50,H:200};
-	const TIME = 30;
+	const TIME = 60;
 
 	function toPath(arr){
 		let path = [];
@@ -17,7 +17,6 @@ window.PainterPanicGame = function(){
 		return path;
 	}
 
-	let TUTORIAL = toPath([176.1,499.15,183,472,163,455,156.35,433.6,156,407,108.65,390.65,60.8,353.65,37,309,47,294,62,292,80.2,318.55,104.5,346.6,144.1,370.3,164,378,178,364,196,357.3,151.95,338.75,121.2,305,98.35,240.45,86.7,137.4,103.3,80.45,133,45.7,170.7,32,232.95,19.65,276.7,35.6,313.55,67.4,339.1,126.9,353.4,219.8,351.55,268.6,331.65,311.1,298.4,342.85,273.35,349.3,271,357,297.1,371,305,381,343.7,369.3,387.8,345.85,421.2,320,439,302,453,300,463,325,445.9,351.2,407.8,376.95,362.95,395.4,311,408,311,431,301.85,457.65,292,467,308.05,503.65,268.95,509.5,260,478,215,478,215.6,514.5,176.1,499.15]);
 	let PICASSO = toPath([348,493.25,338.65,478.6,338.65,437.25,334.65,423.95,381.3,405.25,390.65,370.6,362.65,321.3,332,271.95,340,247.95,353.3,230.65,354.65,205.3,378.65,170.65,373.3,161.3,384,93.3,384,40,411.95,0,373.3,-1.35,361.3,30.65,349.3,33.35,336,68,338.65,82.65,334.65,97.3,320,64,288,49.35,245.35,69.35,212,80,166.7,66.65,124,76,117.35,112,128,137.3,150.7,149.3,188,154.65,188,166.65,196,175.95,198.7,197.3,188,246.65,189.35,258.65,194.7,283.95,204,299.95,178.7,315.95,134.7,339.95,118.7,361.3,120,374.6,145.35,402.6,132,417.25,132,429.25,112,457.25,100.05,466.6,96.05,483.9,102.7,493.25,130.7,487.9,137.35,469.25,153.35,449.25,185.35,433.25,208,429.25,250.65,435.95,302.65,462.6,329.3,495.9,333.3,505.25,352,505.25,348,493.25]);
 	let HORSE = toPath([221.35,505.25,280,477.25,269.35,469.25,269.35,446.6,194.7,390.6,176,398.6,130.7,379.95,117.35,395.95,122.7,407.95,110.7,429.25,101.35,414.6,100.05,389.25,93.35,383.95,104,363.95,73.35,375.95,56.05,399.95,60.05,413.25,48.05,434.6,36.05,411.95,40.05,387.95,89.35,339.95,113.35,334.6,122.7,339.95,144,326.6,150.7,297.3,178.7,269.3,169.35,255.95,188,254.65,230.65,195.95,221.35,182.65,197.35,181.3,181.35,178.65,172,150.65,190.7,132,233.35,140,225.35,128,260,128,285.35,149.3,297.35,149.3,269.35,112,270.65,82.65,320,136,333.3,113.3,364,109.3,409.3,141.3,378.65,144,377.3,158.65,413.3,164,442.65,189.3,442.65,219.95,411.95,261.3,405.3,293.3,376,318.6,385.3,334.6,427.95,346.6,463.95,371.95,481.3,402.6,502.65,413.25,503.95,462.6,474.65,486.6,427.95,509.25,288,511.9,221.35,505.25]);
 	let ANGEL = toPath([-6.6,462.6,77.35,453.25,98.7,393.25,129.35,339.95,113.35,334.6,85.35,301.3,42.7,239.95,16.05,193.3,73.35,182.65,162.7,189.3,201.35,207.95,197.35,182.65,208,169.3,198.7,157.3,202.65,140,200,128,216,100,232,101.3,246.65,85.3,257.35,86.65,277.35,77.3,293.35,77.3,313.3,66.65,345.3,69.35,362.65,89.3,374.65,98.65,397.3,122.65,394.65,144,400,156,389.3,181.3,402.65,217.3,405.3,251.95,417.3,255.95,441.3,281.3,458.65,335.95,435.95,394.6,434.65,430.6,427.95,454.6,505.3,454.6,510.6,514.6,-11.95,503.9,-6.6,462.6,]);
@@ -36,6 +35,7 @@ window.PainterPanicGame = function(){
 
 	let audio = new AudioContext();
 	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
+	audio.add('tutorial','./proto/audio/party/tutorial-painter.mp3',0.5);
 
 	if( !PainterPanicGame.init ){
 		PainterPanicGame.init = true;
@@ -454,7 +454,7 @@ window.PainterPanicGame = function(){
 		self.cntOutside = 0;
 		self.amt = 0;
 		self.isPaintActive = false;
-		self.score = TIME;
+		self.score = 0;
 
 		let d = '';
 
@@ -665,27 +665,29 @@ window.PainterPanicGame = function(){
 
 
 				if(!self.isComplete){
-					let was = self.score;
+					let was = self.countdown;
 
 					let now = new Date().getTime();
 					let timeElapsed = now - self.timeStart;
-					self.score = TIME - Math.floor(timeElapsed/100)/10;
+					self.countdown = TIME - Math.floor(timeElapsed/100)/10;
 
-					if(was>10 && self.score<=10){
+					if(was>10 && self.countdown<=10){
 						hud.flashMessage(self.x,self.y,'10 seconds left',50);
 					}
 
 					for(var i=1; i<=3; i++){
-						if(was>i && self.score<=i) hud.flashMessage(self.x,self.y,i);
+						if(was>i && self.countdown<=i) hud.flashMessage(self.x,self.y,i);
 					}
 
-					if(self.score<0) self.score = 0;
+					if(self.countdown<0) self.countdown = 0;
 
-					if(was>0 && self.score <=0){
+					if(was>0 && self.countdown <=0){
 						hud.flashMessage(self.x,self.y,'Time up!',100);
 						self.isComplete = true;
 						audio.play('incorrect',true);
 					}
+
+					self.score = TIME-self.countdown;
 				}
 
 				if(self.isPracticeMode){
@@ -748,7 +750,7 @@ window.PainterPanicGame = function(){
 				self.timeStart = new Date().getTime();
 				self.meep.$el.show();
 
-				$scoreHeader.text('Coverage');
+				$scoreHeader.text('')
 				$score.text('0%');
 
 				$score.css({
@@ -758,14 +760,14 @@ window.PainterPanicGame = function(){
 					'background':'',
 					'height':'',
 					'line-height':'',
-				}).show();
+				}).hide();
 
 				$start.show();
 
 			} else { 
 				self.meep.$el.hide();
 
-				$scoreHeader.text('');
+				$scoreHeader.text('')
 				
 				$score.css({
 					'top': BOX/2 + 'px',
@@ -866,6 +868,10 @@ window.PainterPanicGame = function(){
 			box.twist = 0;
 			box.toPracticeMode();
 		}
+
+		setTimeout(function () {
+			audio.play('tutorial');
+		},2000)
 
 		hud.initTimer(30,finiTutorial);
 	}
@@ -977,7 +983,7 @@ window.PainterPanicGame = function(){
 	}
 
 	function finiGame(){
-		hud.finiTimer();
+		
 		for(var c=0; c<completes.length; c++){
 			completes[c].setFinalScore();
 			$(completes[c])

@@ -5,6 +5,7 @@ window.CardboardCutoutGame = function(){
 	const FPS = 50;
 	const BOX = 500;
 	const CUTTER = {W:50,H:200};
+	const TIME = 60;
 
 	let audio = new AudioContext();
 	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
@@ -280,14 +281,24 @@ window.CardboardCutoutGame = function(){
 				cutoutheader{
 					display: block;
 					position: absolute;
-					top: ${-BOX/2 - BOX/3 - 30}px;
+					bottom: ${BOX/2}px;
 					left: ${-BOX/2}px;
-					width: ${BOX}px;
+					right: ${-BOX/2}px;
+					width: ${BOX/3}px;
+					margin: auto;
 
 					color: white;
 					font-size: 50px;
-					line-height: 50px;
-					text-align: center;
+					line-height: 70px;
+					text-align: left;
+					border-radius: 20px 20px 0px 0px;
+					padding: 0px 20px;
+
+					background: #333;
+				}
+
+				cutoutheader:before{
+					content:"⏱️ ";
 				}
 
 				cutoutsurface{
@@ -368,45 +379,91 @@ window.CardboardCutoutGame = function(){
 		COLLECTION.push(s);
 	}
 
-	// Calculate squared distance from point to segment
-	function pointToSegmentDistanceSquared(px, py, x1, y1, x2, y2) {
-	    const dx = x2 - x1;
-	    const dy = y2 - y1;
-
-	    if (dx === 0 && dy === 0) {
-	        // The segment is a single point
-	        return (px - x1) ** 2 + (py - y1) ** 2;
+	function pointToPolygonDistance(point, polygon) {
+	  function pointToSegmentDistance(p, v, w) {
+	    // squared length of segment
+	    const l2 = (w.x - v.x) ** 2 + (w.y - v.y) ** 2;
+	    if (l2 === 0) {
+	      // v and w are the same point
+	      return Math.hypot(p.x - v.x, p.y - v.y);
 	    }
-
-	    // Project point onto segment, computing parameterized t
-	    let t = ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy);
-
-	    // Clamp t from 0 to 1
+	    // Project point onto the segment, parameterized t ∈ [0,1]
+	    let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
 	    t = Math.max(0, Math.min(1, t));
+	    const projX = v.x + t * (w.x - v.x);
+	    const projY = v.y + t * (w.y - v.y);
+	    return Math.hypot(p.x - projX, p.y - projY);
+	  }
 
-	    // Find the closest point on the segment
-	    const closestX = x1 + t * dx;
-	    const closestY = y1 + t * dy;
-
-	    // Return squared distance from point to closest point
-	    return (px - closestX) ** 2 + (py - closestY) ** 2;
+	  let minDist = Infinity;
+	  for (let i = 0; i < polygon.length; i++) {
+	    const v = polygon[i];
+	    const w = polygon[(i + 1) % polygon.length]; // wrap around
+	    const dist = pointToSegmentDistance(point, v, w);
+	    if (dist < minDist) minDist = dist;
+	  }
+	  return minDist;
 	}
 
-	// Main function: get minimum distance from point to polygon border
-	function distanceToShapeBorder(point, shapePoints) {
-	    let minDistSq = Infinity;
+	function pointPolygonProgress(point, polygon) {
+	  // Helper: distance between two points
+	  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
-	    for (let i = 0; i < shapePoints.length; i++) {
-	        const p1 = shapePoints[i];
-	        const p2 = shapePoints[(i + 1) % shapePoints.length]; // wrap around
+	  // Compute perimeter lengths
+	  const edgeLengths = [];
+	  let perimeter = 0;
+	  for (let i = 0; i < polygon.length; i++) {
+	    const a = polygon[i];
+	    const b = polygon[(i + 1) % polygon.length];
+	    const len = dist(a, b);
+	    edgeLengths.push(len);
+	    perimeter += len;
+	  }
 
-	        const distSq = pointToSegmentDistanceSquared(point.x, point.y, p1.x, p1.y, p2.x, p2.y);
-	        if (distSq < minDistSq) {
-	            minDistSq = distSq;
-	        }
+	  let bestProgress = 0;
+	  let minDist = Infinity;
+	  let accumulated = 0;
+
+	  for (let i = 0; i < polygon.length; i++) {
+	    const a = polygon[i];
+	    const b = polygon[(i + 1) % polygon.length];
+	    const ab = {x: b.x - a.x, y: b.y - a.y};
+	    const ap = {x: point.x - a.x, y: point.y - a.y};
+
+	    const ab2 = ab.x * ab.x + ab.y * ab.y;
+	    let t = (ap.x * ab.x + ap.y * ab.y) / ab2;
+	    t = Math.max(0, Math.min(1, t));
+
+	    const proj = {x: a.x + t * ab.x, y: a.y + t * ab.y};
+	    const d = dist(point, proj);
+
+	    if (d < minDist) {
+	      minDist = d;
+	      const alongEdge = dist(a, proj);
+	      const progressDist = accumulated + alongEdge;
+	      bestProgress = progressDist / perimeter;
 	    }
 
-	    return Math.sqrt(minDistSq);
+	    accumulated += edgeLengths[i];
+	  }
+
+	  return bestProgress;
+	}
+
+	function polygonLength(points) {
+	  let length = 0;
+
+	  for (let i = 0; i < points.length; i++) {
+	    let p1 = points[i];
+	    let p2 = points[(i + 1) % points.length]; // wrap around to first point
+
+	    let dx = p2.x - p1.x;
+	    let dy = p2.y - p1.y;
+
+	    length += Math.sqrt(dx * dx + dy * dy);
+	  }
+
+	  return length;
 	}
 
 	const CutterMeep = function(n){
@@ -428,6 +485,12 @@ window.CardboardCutoutGame = function(){
 	let queue = [];
 	const CutoutBox = function(n){
 
+		let audio = new AudioContext();
+		audio.add('buzz','./proto/audio/party/sfx-buzz.mp3',0.3,true);
+		audio.add('blip','./proto/audio/party/sfx-select.mp3',0.3);
+		audio.add('incorrect','./proto/audio/party/sfx-incorrect.mp3',0.3);
+		audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
+
 		let self = this;
 		self.isForeground = false;
 		self.y = 0.5;
@@ -435,6 +498,9 @@ window.CardboardCutoutGame = function(){
 		self.scale = 0.5;
 		self.spin = 80;
 		self.twist = 0;
+		self.score = 0;
+		self.isOnLine = true;
+		self.drift = 0;
 
 		if(!queue.length){
 			queue = COLLECTION.concat();
@@ -473,6 +539,7 @@ window.CardboardCutoutGame = function(){
 		let $score = $('<cutoutscore>').appendTo(self.$el).text('');
 
 		let $surface = $('<cutoutsurface>').appendTo(self.$el);
+		let $shape = self.$el.find('path').first();
 		let $cut = self.$el.find('path').last();
 		
 		self.bindMeep = function(meep){
@@ -500,28 +567,28 @@ window.CardboardCutoutGame = function(){
 					for(var h in history) draw = draw + (h==0?'M':'L') + history[h].x + ',' +history[h].y;
 					$cut.attr('d',draw);
 
-					let dx = ox - pattern[0].x * BOX/2;
-					let dy = oy - pattern[0].y * BOX/2;
-					let d = Math.sqrt(dx*dx+dy*dy);
+					let progress = pointPolygonProgress(history[history.length-1], pattern);
+					let length = polygonLength(history);
+					let dist = pointToPolygonDistance(history[history.length-1], pattern);
+					self.drift = dist;
+					self.isOnLine = self.drift < 0.1;
 
-					let distMax = 0;
-					for(var h in history){
-						let dist = distanceToShapeBorder( history[h], pattern );
-						if(dist>distMax) distMax = dist;
+					$score.text( Math.floor(progress*100) + '%');
+
+					if(self.isPractice){
+						progress = 0;
+						length = 0;
+						dist = 0;
+						self.isOnLine = true;
 					}
 
-					let accuracy = ((1-distMax)*100).toFixed(1);
-
-					$score.text(accuracy + '%');
-
-					if(d<35 && history.length>100){
+					if((progress > 0.98 || progress < 0.02) && length > 2){
 						isCutActive = false;
 						self.isComplete = true;
-						self.score = accuracy;
-						$scoreHeader.text('Finish!');
-
 						$cut.attr('d',draw + 'Z');
 						$cut.addClass('done');
+
+						audio.play('correct');
 					}
 
 				} else if(!self.isComplete){
@@ -529,55 +596,118 @@ window.CardboardCutoutGame = function(){
 					let dy = oy - pattern[0].y * BOX/2;
 					let d = Math.sqrt(dx*dx+dy*dy);
 
-					if(d<35){
+					if(d<25){
 						$start.hide();
 						isCutActive = true;
-						$scoreHeader.text('Accuracy');
-						$score.text('%');
+						audio.play('blip',true);
+
 					}
 				}
+			}
+
+			if(!self.isComplete){
+				let was = self.countdown;
+
+				let now = new Date().getTime();
+				let timeElapsed = now - self.timeStart;
+				self.countdown = TIME - Math.floor(timeElapsed/100)/10;
+
+				if(was>10 && self.countdown<=10){
+					hud.flashMessage(self.x,self.y,'10 seconds left',50);
+				}
+
+				for(var i=1; i<=3; i++){
+					if(was>i && self.countdown<=i) hud.flashMessage(self.x,self.y,i);
+				}
+
+				if(self.countdown<0) self.countdown = 0;
+
+				if(was>0 && self.countdown <=0){
+					hud.flashMessage(self.x,self.y,'Time up!',100);
+					self.isComplete = true;
+					audio.play('incorrect',true);
+				}
+
+				self.score = TIME-self.countdown;
 			}
 		}
 
 		self.redraw = function(){
 			self.$el.css({
-				left: self.x*W + 'px',
-				top: self.y*H + 'px',
+				left: self.x*W + (self.isOnLine?0:-10 + Math.random()*20) + 'px',
+				top: self.y*H + (self.isOnLine?0:-10 + Math.random()*20) +'px',
 				transform: 'scale('+self.scale+') rotateX('+self.spin+'deg) rotateY('+self.twist+'deg)',
 			});
 
 			self.meep.$el.css({
 				transform: 'rotateX('+(-self.spin)+'deg)',
 			})
+
+			$scoreHeader.text(self.score.toFixed(1));
+
+			if(self.isOnLine){
+				self.countOffLine = 0;
+				audio.stop('buzz');
+			} else {
+				audio.play('buzz');
+				self.countOffLine ++;
+				if(self.countOffLine > FPS/2){
+					self.reset();
+					audio.play('incorrect');
+				}
+			}
+		}
+
+		self.reset = function(){
+
+			self.isOnLine = true;
+			isCutActive = false;
+			$start.show();
+			history.length = 0;
+			$cut.attr('d','');
 		}
 
 		self.setForeground = function(b){
 			self.isForeground = b;
 			
 			if(b){
+
+				self.timeStart = new Date().getTime();
+
 				self.meep.$el.show();
-
-				$scoreHeader.text('Accuracy');
-				$score.text('0%');
-
+				$score.text('0%').hide();
 				$score.css({
-					'top': -BOX/2 - BOX/3 + 'px',
+					'bottom': -BOX/2 + 'px',
 					'transform':'rotateX(0deg)',
 					'transform-origin':'top center',
 				});
 			} else { 
 				self.meep.$el.hide();
 
-				$scoreHeader.text('');
 				
 				$score.css({
 					'top': BOX/2 + 'px',
 					'transform':'rotateX(-90deg)',
 					'transform-origin':'top center',
-				});
+				}).hide();
 			}
+		}
+
+		self.setPracticeMode = function(){
+			self.isPractice = true;
+			self.isForeground = true;
+			$score.hide();
+			$scoreHeader.hide();
 
 			
+
+			if(n!=0){
+				$shape.hide();
+				self.$el.find('cutoutbox').css('background','none');
+				self.$el.find('cutoutwall').hide();
+			}
+			isCutActive = true;
+			$start.hide();
 		}
 	}
 
@@ -585,6 +715,7 @@ window.CardboardCutoutGame = function(){
 	self.$el = $('<igb>');
 
 	let $game = $('<cutoutgame>').appendTo(self.$el);
+	let $blur = $('<blurlayer>').appendTo($game);
 	let $canvas = $('<cutoutcanvas>').appendTo($game);
 
 	let hud = new PartyHUD('#C09363');
@@ -595,7 +726,7 @@ window.CardboardCutoutGame = function(){
 	let boxes = [];
 	let meeps = [];
 
-	let nPlayer = 0;
+	let nPlayer = -1;
 	let foregrounds = [];
 	let completes = [];
 	let isPlayActive = false;
@@ -606,126 +737,168 @@ window.CardboardCutoutGame = function(){
 
 		for(var m=0; m<count; m++){
 			meeps[m] = new CutterMeep(m);
-		
-			let box = new CutoutBox(m);
-			box.$el.appendTo($canvas);
-			box.bindMeep(meeps[m]);
-			box.x = 0.75 + m%2 * 0.02;
-			box.y = 0.78 - 0.09*(count-m-1);
-			box.redraw();
-			boxes[m] = box;
-
-			box.setForeground(false);
 		}
 
 		//initBox();
 		//initBox();
 
 		isPlayActive = false;
-		setTimeout(doNextSet,1000);
+		//setTimeout(doNextSet,1000);
+
+
+		initPlay();
 	}
 
-	function doNextSet(){
-		
+	function initTutorial(){
 
-		foregrounds.length = 0;
+		for(var m in meeps){
 
-		for(var i=0; i<FOREGROUND; i++){
-			if(boxes[nPlayer]){
-				foregrounds.push(boxes[nPlayer]);
-				nPlayer++;
-			}
+			let box = new CutoutBox(m);
+			box.$el.appendTo($canvas);
+			box.bindMeep(meeps[m]);
+			box.x = 1.5;
+			box.y = 0.6;
+			box.scale = 1;
+			box.spin = 20;
+			box.twist = 0;
+			box.redraw();
+			boxes[m] = box;
+			box.setPracticeMode();
 		}
 
-		let spacing = 1/(foregrounds.length+1);
-	
-		for(let f=0; f<foregrounds.length; f++){
-			$(foregrounds[f])
-			.delay(f*200)
+		hud.initTutorial('Cardboard Cutout',
+			{x:1.2, y:0.5, msg:'Align yourself<br>with your box',icon:'align'},
+			{x:1.8, y:0.5, msg:'Move around to cut<br>along the line',icon:'around'},
+		);
+
+		hud.initTimer(30, finiTutorial);
+	}
+
+	function finiTutorial(){
+		$blur.hide();
+		hud.finiTutorial();
+		hud.finiTimer();
+
+		for(var b in boxes) boxes[b].$el.remove();
+		boxes.length = 0;
+
+		setTimeout(initPlay,2000);
+	}
+
+	function initPlay(){
+		audio.play('music');
+
+		for(var m in meeps){
+
+			let box = new CutoutBox(m);
+			box.$el.appendTo($canvas);
+			box.bindMeep(meeps[m]);
+			box.x = 0.75 + m%2 * 0.02;
+			box.y = 0.78 - 0.09*(meeps.length-m-1);
+			box.redraw();
+			boxes[m] = box;
+			box.setForeground(false);
+		}
+
+
+		hud.initPlayers(boxes);
+		initNextPlayer();
+		initNextPlayer();
+	}
+
+	const SPACING = 1/3;
+	let slots = [];
+
+	function initNextPlayer() {
+		nPlayer++;
+
+		if(boxes[nPlayer]){
+			let nSlot = 0;
+			while(slots[nSlot]) nSlot++;
+			slots[nSlot] = boxes[nPlayer];
+
+			$(slots[nSlot])
 			.animate({
-				x:2 - (f+1) * spacing,
+				x:2 - (nSlot+1) * SPACING,
 				y:0.5,
 				scale:1,
 				spin:20,
-				twist:5 - f*10,
+				twist:5 - nSlot*10,
 			},{
 				duration:500,
 				complete:function(){
-					foregrounds[f].setForeground( true );
+					slots[nSlot].setForeground( true );
 				}
 			});
 		}
 
+		let isComplete = true;
+		for(var b in boxes) if(!boxes[b].isComplete) isComplete = false;
 
-		if(foregrounds.length==0){
+		if(isComplete){
 			isPlayActive = false;
-			doFiniGame();
+			finiGame();
 		} else {
 			isPlayActive = true;
 		}
 	}
 
-	function doFiniGame(){
+	function finiGame(){
 		for(var c=0; c<completes.length; c++){
+			
 			$(completes[c])
 			.delay(completes.length-c*100)
 			.animate({
-				x:1.25 + (c%3)*0.25,
-				y:0.3 + Math.floor(c/3)*0.4,
-				scale:0.6,
+				x:1.2 + c * 1/(completes.length-1) * 0.6,
+				y:0.3,
+				scale:0.5,
 				spin:20,
-				twist:0
+				twist:-20,
 			});
 		}
+
+		let scores = [];
+		for(var b in boxes) scores[b] = boxes[b].score;
+
+		let rewards = window.scoresToRewards(scores);
 
 		setTimeout(function(){
-			
-			let scores = [];
-			for(var a in boxes){
-				scores[a] = 0;
-				for(var b in boxes){
-					if(boxes[a].score > boxes[b].score) scores[a]++;
-				}
-			}
+			audio.stop('music');
+			hud.showFinalScores(scores,rewards);
+		},2000);
 
-			window.doPartyGameComplete(scores);
-
-		},2000)
+		setTimeout(function(){
+			self.fini();
+			window.doPartyGameComplete(rewards);
+		},7000);
 	}
 
-	function doPutAway(){
-		for(var f in foregrounds){
-			foregrounds[f].setForeground( false );
-			completes.push(foregrounds[f]);
-		}
+	function finiSlot(n){
+		
+		slots[n].setForeground( false );
+		completes.push(slots[n]);
+		
+		$(slots[n])
+		.delay(1000)
+		.animate({
+			x:2.25,
+			y:0.78 - 0.09*(completes.length-1),
+			scale:0.5,
+			spin:80,
+			twist:0
+		});
 
-		for(var c=0; c<completes.length; c++){
-			$(completes[c])
-			.delay(c*100)
-			.animate({
-				x:2.25,
-				y:0.78 - 0.09*(c),
-				scale:0.5,
-				spin:80,
-				twist:0
-			});
-		}
-
-		setTimeout(doNextSet,2000);
+		slots[n] = undefined;
+		
+		setTimeout(initNextPlayer,2000);
 	}
 
 	self.step = function(){
 		for(var b in boxes) boxes[b].step();
 		for(var b in boxes) boxes[b].redraw();
 
-		let isComplete = isPlayActive;
-		for(var f in foregrounds ) if( !foregrounds[f].isComplete ) isComplete = false;
+		for(var s in slots ) if( slots[s] && slots[s].isComplete ) finiSlot(s);
 
-
-		if(isComplete){
-			isPlayActive = false;
-			setTimeout(doPutAway,1000);
-		}
 
 		resize();
 	}

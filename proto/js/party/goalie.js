@@ -352,7 +352,7 @@ GoalieGame = function () {
 	let ball;
 	
 
-	function getYaw(q)
+	/*function getYaw(q)
     {
         let x2 = q.X * q.X;
         let y2 = q.Y * q.Y;
@@ -369,7 +369,7 @@ GoalieGame = function () {
         let x2 = q.X * q.X;
         let z2 = q.Z * q.Z;
         return -Math.atan2(2 * q.Z * q.W - 2 * q.Y * q.X, 1 - 2 * z2 - 2 * x2);
-    }
+    }*/
 
 	function spawnBall(){
 		let $shadow = $('<goaliegameshadow>').prependTo($game).css({opacity:0});
@@ -420,9 +420,9 @@ GoalieGame = function () {
 			dudes[p].setHeight((1-pyHead)*H);
 
 			let q = {W:players[p].rW, X:players[p].rX, Y:players[p].rY, Z:players[p].rZ};
-			players[p].yaw = getYaw(q);
+			/*players[p].yaw = getYaw(q);
 			players[p].roll = getRoll(q);
-			players[p].pitch = getPitch(q);
+			players[p].pitch = getPitch(q);*/
 
 			//dudes[p].$hands.css({ left:players[p].px/100*W + 'px', top:players[p].py/100*H + 'px', transform:'rotate('+players[p].yaw+'rad)'});
 			dudes[p].$hands.css({ left:players[p].px*W + 'px', top:players[p].py*H + 'px'});

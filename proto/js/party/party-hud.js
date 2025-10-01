@@ -947,7 +947,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 	self.finiTutorial = function (argument) {
 		audio.stop('music');
-		$tutorial.animate({opacity:0});
+		$tutorial.empty();
 	}
 
 	self.redraw = function(sec=0){

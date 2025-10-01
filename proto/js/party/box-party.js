@@ -851,67 +851,17 @@ BoxPartyGame = function(){
 	const H = 10;
 	const GRID = 100;
 
-	const GAMES = {
-		'Milkers':{
-			game:window.MilkGame,
-			color:'#40B0ED',
-			bg:'url(./proto/img/icon-milk.png) center / cover'},
-		'Cookie Cutter':{
-			game:window.CookieCutterGame,
-			color:'orange',
-			bg:'url(./proto/img/party/icon-cookie-cutter.jpg) center / cover'
-		},
-		'Follicle Frenzy':{
-			game:window.FollicleFrenzyGame,
-			color:'brown',
-			bg:'url(./proto/img/party/icon-follicle.png) center / cover'
-		},
-		'Headers':{
-			game:window.HeadersGame,
-			color:'white',
-			bg:'url(./proto/img/party/icon-headers-lite.png) center / cover'
-		},
-		'Death Maze':{
-			game:window.MazeGame,
-			color:'white',
-			bg:'url(./proto/img/party/icon-maze.png) center / cover'
-		},
-		'Pump Pop':{
-			game:window.PumpPopGame,
-			color:'white',
-			bg:'url(./proto/img/party/icon-pump.png) center / cover'
-		},
-		'Coin Chaos':{
-			game:window.CoinChaosGame,
-			color:'white',
-			bg:'url(./proto/img/party/icon-coin-chaos.png) center / cover'
-		},
-		'Spot The Meep':{
-			game:window.SpotTheMeepGame,
-			color:'white',
-			bg:'url(./proto/img/party/icon-spot.png) center / cover'
-		},
-		'Drum Beats':{
-			game:window.DrumBeatsGame,
-			color:'white',
-			bg:'url(./proto/img/party/icon-drum.png) center / cover',
-		},
-		'Final Frenzy':{
-			game:window.FinalFrenzyGame,
-			color:'white',
-			bg:'url(./proto/img/party/bg-cosmos.jpg) center / cover',
-		},
-		
-	}
-
-	for(var g in GAMES) GAMES[g].name = g;
-
 	const QUEUE = [
-		[ GAMES['Spot The Meep'], GAMES['Drum Beats'] ],
-		[ GAMES['Headers'], GAMES['Pump Pop'] ],
-		[ GAMES['Milkers']/*, GAMES['Follicle Frenzy']*/  ],
+		[ GAMES['Coconut Climbers'], GAMES['Mystery Maze'] ],
+		[ GAMES['Soccer Heads'], GAMES['Volley Heads'] ],
+		[ GAMES['Bongo Beats'], GAMES['Melody Match'] ],
 		[ GAMES['Coin Chaos'] ],
-		[ GAMES['Death Maze'], GAMES['Cookie Cutter'] ],
+		[ GAMES['Painter Panic'], GAMES['Cardboard Cutout'], GAMES['Stubble Trouble'] ],
+		[ GAMES['Milkers'], GAMES['Popcorn Panhandlers'] ],
+		[ GAMES['Plummet Panic'], GAMES['Cookie Cutter'] ],
+		[ GAMES['Coin Chaos'] ],
+		[ GAMES['Find My Meep'], GAMES['Town Fair'] ],
+		[ GAMES['Goalie'], GAMES['Bowling'] ],
 		[ GAMES['Final Frenzy'] ],
 	]
 

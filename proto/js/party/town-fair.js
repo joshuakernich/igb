@@ -1,4 +1,4 @@
-window.FunRunGame = function(){
+window.TownFairGame = function(){
 
 	const W = 1600;
 	const H = 1000;
