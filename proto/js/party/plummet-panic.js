@@ -406,6 +406,7 @@ window.PlummetPanicGame = function() {
 	self.$el = $('<igb>');
 
 	let $game = $('<plummetpanicgame>').appendTo(self.$el);
+	let $blur = $('<blurlayer>').appendTo($game);
 
 	let tower;
 
@@ -473,6 +474,7 @@ window.PlummetPanicGame = function() {
 	}
 
 	function finiTutorial(){
+		$blur.hide();
 		hud.finiTimer();
 		hud.finiTutorial();
 		isGoTime = false;

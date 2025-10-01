@@ -1,10 +1,10 @@
-window.SpotTheMeepGame = function(){
+window.FindMyMeepGame = function(){
 
 	const W = 1600;
 	const H = 1000;
 
-	if( !SpotTheMeepGame.init ){
-		SpotTheMeepGame.init = true;
+	if( !FindMyMeepGame.init ){
+		FindMyMeepGame.init = true;
 
 		$("head").append(`
 			<style>

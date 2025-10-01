@@ -344,6 +344,7 @@ window.CoinChaosGame = function(){
 	let self = this;
 	self.$el = $('<igb class="coinchaoswrapper">')
 	let $game = $('<coinchaosgame>').appendTo(self.$el);
+	let $blur = $('<blurlayer>').appendTo($game);
 
 	let $blurBG = $('<blurlayer>').appendTo($game).css({
 		background: 'rgba(0,0,0,0.3)'
@@ -486,6 +487,8 @@ window.CoinChaosGame = function(){
 	}
 
 	function finiTutorial(){
+		$blur.hide();
+		
 		for(var m in meeps) meeps[m].score = 0;
 		hud.finiTutorial();
 		$blurBG.hide();

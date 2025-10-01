@@ -133,8 +133,8 @@ window.TownFairGame = function(){
 		item.appendTo(self.$el);
 	}
 
-	if( !FunRunGame.init ){
-		FunRunGame.init = true;
+	if( !TownFairGame.init ){
+		TownFairGame.init = true;
 
 		$("head").append(`
 			<style>

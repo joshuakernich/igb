@@ -103,7 +103,7 @@ window.GAMES = {
 	},
 	'Find My Meep':{
 		name:'Find My Meep',
-		game:window.SpotTheMeepGame,
+		game:window.FindMyMeepGame,
 		color:'white',
 		bg:'gray',
 	},
