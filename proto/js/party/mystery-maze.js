@@ -424,6 +424,7 @@ window.MysteryMazeGame = function(){
 	self.$el = $('<igb>');
 
 	let $game = $('<mysterymazegame>').appendTo(self.$el);
+	let $blur = $('<blurlayer>').appendTo($game);
 	let meeps = [];
 	let mazes = [];
 
@@ -466,6 +467,8 @@ window.MysteryMazeGame = function(){
 	}
 
 	function finiTutorial(){
+
+		$blur.hide();
 
 		hud.finiTimer();
 		hud.finiTutorial();

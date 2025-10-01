@@ -1,4 +1,4 @@
-window.DrumBeatsGame = function( players ){
+window.BongoBounceGame = function( players ){
 	
 	const W = 1600;
 	const H = 1000;
@@ -227,8 +227,8 @@ window.DrumBeatsGame = function( players ){
 		}
 	}
 
-	if( !DrumBeatsGame.init ){
-		DrumBeatsGame.init = true;
+	if( !BongoBounceGame.init ){
+		BongoBounceGame.init = true;
 
 		$("head").append(`
 			<style>
@@ -423,8 +423,6 @@ window.DrumBeatsGame = function( players ){
 					display: block;
 					position: absolute;
 					inset: 0px;
-					background: rgba(150,150,150,0.2);
-					backdrop-filter: blur(20px);
 				}
 
 			</style>`);
@@ -435,6 +433,7 @@ window.DrumBeatsGame = function( players ){
 
 	self.$el = $('<igb>');
 	let $game = $('<drumgame>').appendTo(self.$el);
+	let $blur = $('<blurlayer>').appendTo($game);
 	let $tutorial = $('<drumgametutorial>').appendTo($game);
 
 	let hud = new PartyHUD();
@@ -605,6 +604,9 @@ window.DrumBeatsGame = function( players ){
 	}
 
 	function finiTutorial() {
+
+		$blur.hide();
+
 		isTutorial = false;
 		hud.finiTimer();
 		hud.finiTutorial();

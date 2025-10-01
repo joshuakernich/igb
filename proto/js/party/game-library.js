@@ -30,9 +30,9 @@ window.GAMES = {
 		bg:'url(./proto/img/party/cube/cube-volleyball.png) center / cover'
 	},
 
-	'Bongo Beats':{
-		name:'Bongo Beats',
-		game:window.DrumBeatsGame,
+	'Bongo Bounce':{
+		name:'Bongo Bounce',
+		game:window.BongoBounceGame,
 		color:'white',
 		bg:'url(./proto/img/party/icon-drum.png) center / cover',
 	},

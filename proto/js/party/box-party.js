@@ -854,7 +854,7 @@ BoxPartyGame = function(){
 	const QUEUE = [
 		[ GAMES['Coconut Climbers'], GAMES['Mystery Maze'] ],
 		[ GAMES['Soccer Heads'], GAMES['Volley Heads'] ],
-		[ GAMES['Bongo Beats'], GAMES['Melody Match'] ],
+		[ GAMES['Bongo Bounce'], GAMES['Melody Match'] ],
 		[ GAMES['Coin Chaos'] ],
 		[ GAMES['Painter Panic'], GAMES['Cardboard Cutout'], GAMES['Stubble Trouble'] ],
 		[ GAMES['Milkers'], GAMES['Popcorn Panhandlers'] ],

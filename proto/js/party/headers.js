@@ -189,8 +189,6 @@ window.HeadersGame = function( typeGame='volley' ){
 					display: block;
 					position: absolute;
 					inset: 0px;
-					backdrop-filter: blur(20px);
-					background: rgba(150,150,150,0.2);
 				}
 
 				headersgoal{
@@ -222,7 +220,8 @@ window.HeadersGame = function( typeGame='volley' ){
 
 	self.$el = $('<igb>');
 	let $game = $('<headersgame>').appendTo(self.$el);
-	let $tutoral = $('<headerstutorial>').appendTo($game);
+	let $blur = $('<blurlayer>').appendTo($game);
+	let $tutorial = $('<headerstutorial>').appendTo($game);
 	let $field = $('<headersfield>').appendTo($game);
 	
 
@@ -456,6 +455,8 @@ window.HeadersGame = function( typeGame='volley' ){
 	}
 
 	function finiTutorial(){
+
+		$blur.hide();
 
 		isTutorial = false;
 		clearInterval(iTimeout);
