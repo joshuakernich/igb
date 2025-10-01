@@ -108,8 +108,8 @@ window.GAMES = {
 		bg:'gray',
 	},
 
-	'Goalie':{
-		name:'Goalie',
+	'Goal Patrol':{
+		name:'Goal Patrol',
 		game:window.GoalieGame,
 		color:'white',
 		bg:'gray',
@@ -130,4 +130,3 @@ window.GAMES = {
 	},
 	
 }
-for(var g in window.GAMES) if(!window.GAMES[g].game) console.log(g);
