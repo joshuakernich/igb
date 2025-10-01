@@ -406,7 +406,7 @@ GoalieGame = function () {
 
 	self.setPlayers = function(p){
 		was = players.length?players.concat():p;
-		if(p[6]) racket = p[6];
+
 		players = p;
 		players.length = 1;
 		for(var p=0; p<players.length; p++){

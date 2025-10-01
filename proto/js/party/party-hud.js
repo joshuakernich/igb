@@ -580,8 +580,10 @@ window.PartyHUD = function( colour='#40B0ED' ){
 		clearInterval(interval);
 	}
 
-	self.flashMessage = function(x,y,msg,size){
+	self.flashMessage = function(x,y,msg,size,time=undefined){
 		let $msg = $('<hudround>').html(msg);
+
+		if(time == undefined) time = Math.max(msg.length*100, 500);
 
 		$msg.appendTo($fg).css({
 			left: x * 100/3 + '%',
@@ -592,7 +594,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 			'text-shadow': `5px 5px 0px ${GRAY}, 5px -5px 0px ${GRAY}, -5px -5px 0px ${GRAY}, -5px 5px 0px ${GRAY}, 0px ${Math.min(20,size*0.3)}px 0px ${GRAY}`,
 		}).animate({
 			top: y * 100 + '%',
-		},200).delay(Math.max(msg.length*100, 500)).animate({
+		},200).delay( time ).animate({
 			'opacity':0,
 		},500)
 	}

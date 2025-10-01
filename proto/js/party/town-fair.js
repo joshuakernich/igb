@@ -351,7 +351,6 @@ window.TownFairGame = function(){
 					display: block;
 					position: absolute;
 					inset: 0px;
-
 				}
 
 				funruncurtain:before{
