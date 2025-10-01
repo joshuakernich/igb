@@ -75,6 +75,18 @@ window.FindMyMeepGame = function(){
 					position: absolute;
 					display: block;
 				}
+
+				findscore{
+					display: block;
+					position: absolute;
+					bottom: 350px;
+					font-size: 70px;
+					line-height: 140px;
+					color: white;
+					left: -100px;
+					right: -100px;
+					text-align: center;
+				}
 			</style>`);
 	}
 
@@ -91,6 +103,9 @@ window.FindMyMeepGame = function(){
 		self.sy = 0;
 
 		self.$el = $('<findmeep>');
+
+		let $score = $('<findscore>').appendTo(self.$el);
+
 		if(n==-1) self.$el.css({'pointer-events':'none'});
 		self.range = {};
 
@@ -189,6 +204,10 @@ window.FindMyMeepGame = function(){
 				'z-index':Math.floor(self.y),
 			})
 		}
+
+		self.setScore = function(score) {
+			$score.text('+'+score).css({bottom:300}).animate({bottom:350},200);
+		}
 	}
 
 	let audio = new AudioContext();
@@ -280,8 +299,6 @@ window.FindMyMeepGame = function(){
 				yMax:H - 150,
 			}
 
-			meep.$el.click(onMeep);
-
 			meeps[i] = meep;
 
 			meep.callback = onMeep;
@@ -299,25 +316,20 @@ window.FindMyMeepGame = function(){
 
 			audio.play('correct',true);
 
+			let score = self.playerCount - cntCorrect;
+
 			meeps[i].initCelebration();
+			meeps[i].setScore(score);
 
-			let nPlayer = -1;
-			let nWall = meeps[i].wall
-			let min = 1;
-			for(var p=0; p<self.playerCount; p++){
-				if( self.players[p].walls[nWall].dist < min ){
-					min = self.players[p].walls[nWall].dist;
-					nPlayer = p;
-				}
-			}
-
-			self.scores[nPlayer].score++;
+			self.scores[i].score += score;
 
 			cntCorrect++;
 			if(cntCorrect==self.playerCount){
 				audio.play('complete',true);
 				setTimeout( finiRound, 1000 );
 			}
+
+			hud.updatePlayers(self.scores);
 		}
 	}
 
@@ -353,11 +365,18 @@ window.FindMyMeepGame = function(){
 	}
 
 	function finiGame() {
+
+		audio.stop('music');
+		let scores = [];
+		for(var s in self.scores) scores[s] = self.scores[s].score;
+
+		let rewards = window.scoresToRewards(scores);
+		hud.showFinalScores(rewards);
 		
 		setTimeout(function(){
 			self.fini();
-			window.doPartyGameComplete(self.scores);
-		},2000);
+			window.doPartyGameComplete(scores);
+		},5000);
 	}
 
 	function initGame(playerCount){
