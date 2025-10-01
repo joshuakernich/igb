@@ -66,6 +66,11 @@ window.FindMyMeepGame = function(){
 					transition: width 1s;
 				}
 
+				findcurtain.ajar:before, findcurtain.ajar:after{
+					width: 36%;
+					transition: width 1s;
+				}
+
 				findmeep{
 					position: absolute;
 					display: block;
@@ -92,11 +97,29 @@ window.FindMyMeepGame = function(){
 		let meep = new PartyMeep(n);
 		meep.$el.appendTo(self.$el);
 
+		self.$el.click(function(){
+			if(self.callback) self.callback(self);
+		});
+
 		self.initCelebration = function(){
 			self.finiShuffle();
 			$(self).stop(true,false);
 			meep.$handLeft.animate({top:'40%'},200);
 			meep.$handRight.animate({top:'40%'},200);
+
+			self.$el.css({
+				'pointer-events':'none',
+			})
+		}
+
+		self.reset = function(){
+			self.isMoving = false;
+			meep.$handLeft.animate({top:'60%'},200);
+			meep.$handRight.animate({top:'60%'},200);
+
+			self.$el.css({
+				'pointer-events':'auto',
+			})
 		}
 
 		self.initNextMove = function(){
@@ -157,23 +180,6 @@ window.FindMyMeepGame = function(){
 			if(self.speed && !self.isMoving){
 				self.initNextMove();
 			}
-
-			/*if(self.speed && self.dir == undefined){
-				self.dir = Math.random() * Math.PI * 2;
-				self.sx = Math.cos(self.dir) * self.speed;
-				self.sy = Math.sin(self.dir) * self.speed;
-			}
-
-			if(self.speed){
-
-				self.x += self.sx;
-				self.y += self.sy;
-
-				if( self.x < self.range.xMin ) self.sx = Math.abs(self.sx);
-				if( self.x > self.range.xMax ) self.sx = -Math.abs(self.sx);
-				if( self.y < self.range.yMin ) self.sy = Math.abs(self.sy);
-				if( self.y > self.range.yMax ) self.sy = -Math.abs(self.sy);
-			}*/
 		}
 
 		self.redraw = function(){
@@ -190,10 +196,12 @@ window.FindMyMeepGame = function(){
 	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
 	audio.add('complete','./proto/audio/party/sfx-correct-echo.mp3',0.3);
 	audio.add('curtain','./proto/audio/party/sfx-curtain.mp3',0.3);
+	audio.add('yay','./proto/audio/party/sfx-yay.mp3',0.3);
 
 	let self = this;
 	self.$el = $('<igb>');
 	let $game = $('<findgame>').appendTo(self.$el);
+	let $blur = $('<blurlayer>').appendTo($game);
 	let $meeps = $('<findmeeps>').appendTo($game);
 	let $curtain = $('<findcurtain>').appendTo($game);
 
@@ -260,7 +268,7 @@ window.FindMyMeepGame = function(){
 			meep.wall = nWall;
 			
 			meep.$el.appendTo($meeps);
-			meep.$el.attr('i',i);
+			
 			meep.x = CENTER[nWall]*W + (-(countPerWall-1)/2 + nMeep)*spacing;
 			meep.y = H - 150 - i%2 * 80;
 			meep.speed = ROUNDS[nRound].speed;
@@ -275,12 +283,14 @@ window.FindMyMeepGame = function(){
 			meep.$el.click(onMeep);
 
 			meeps[i] = meep;
+
+			meep.callback = onMeep;
 		}
 	}
 
-	function onMeep(){
+	function onMeep(meep){
 
-		let i = parseInt( $(this).attr('i') );
+		let i = meeps.indexOf(meep);
 		let n = meeps[i].n;
 
 		if(n == -1){
@@ -301,7 +311,7 @@ window.FindMyMeepGame = function(){
 				}
 			}
 
-			self.scores[nPlayer]++;
+			self.scores[nPlayer].score++;
 
 			cntCorrect++;
 			if(cntCorrect==self.playerCount){
@@ -343,7 +353,7 @@ window.FindMyMeepGame = function(){
 	}
 
 	function finiGame() {
-		hud.initBanner('Finish!');
+		
 		setTimeout(function(){
 			self.fini();
 			window.doPartyGameComplete(self.scores);
@@ -351,12 +361,73 @@ window.FindMyMeepGame = function(){
 	}
 
 	function initGame(playerCount){
-		audio.play('music');
+		
 
-		while(self.scores.length<playerCount) self.scores.push(0);
+		while(self.scores.length<playerCount) self.scores.push({score:0});
 
 		self.playerCount = playerCount;
-		setTimeout(initRound,1000);
+		setTimeout(initTutorial,1000);
+	}
+
+	function initTutorial(){
+
+		hud.initTutorial('Find My Meep',
+			{
+				x:1.5, y:0.45, msg: 'Find and tap on your player<br>when the curtain draws', icon:'touch'
+			});
+
+		for(var i=0; i<6; i++){
+			let n = i<self.playerCount?i:-1;
+			let meep = new FindMeep(n);
+			meep.wall = 1;
+			meep.x = (1.2 + Math.random() * 0.6)*W;
+			meep.y = H-150 - Math.random() * 80;
+			meep.range = { 
+				xMin:(CENTER[1]-0.35)*W,
+				xMax:(CENTER[1]+0.35)*W,
+				yMin:H - 100 - 80,
+				yMax:H - 100,
+			}
+
+			meep.speed = 0.5;
+			meeps[i] = meep;
+			meep.$el.appendTo($meeps);
+
+			meep.callback = onTutorialMeep;
+		}
+
+		$curtain.addClass('ajar');
+		audio.play('curtain',true);
+
+		hud.initTimer(30,finiTutorial);
+	}
+
+	function finiTutorial(){
+		
+		hud.finiTimer();
+		hud.finiTutorial();
+		$curtain.removeClass('ajar');
+		audio.play('curtain',true);
+
+		setTimeout(function(){
+			$blur.hide();
+			$meeps.empty();
+			meeps.length = 0;
+		},1000);
+
+		setTimeout(initPlay,2000);
+	}
+
+	function onTutorialMeep(meep){
+		audio.play('yay');
+		meep.initCelebration();
+		setTimeout(meep.reset,1000);
+	}
+
+	function initPlay(){
+		audio.play('music');
+		hud.initPlayers(self.scores);
+		initRound();
 	}
 
 	hud.initPlayerCount(initGame);
