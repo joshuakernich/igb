@@ -215,7 +215,7 @@ window.FindMyMeepGame = function(){
 	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
 	audio.add('complete','./proto/audio/party/sfx-correct-echo.mp3',0.3);
 	audio.add('curtain','./proto/audio/party/sfx-curtain.mp3',0.3);
-	audio.add('yay','./proto/audio/party/sfx-yay.mp3',0.3);
+	audio.add('yay','./proto/audio/party/sfx-yay.mp3',0.5);
 
 	let self = this;
 	self.$el = $('<igb>');
@@ -321,7 +321,7 @@ window.FindMyMeepGame = function(){
 			meeps[i].initCelebration();
 			meeps[i].setScore(score);
 
-			self.scores[i].score += score;
+			self.scores[n].score += score;
 
 			cntCorrect++;
 			if(cntCorrect==self.playerCount){
@@ -371,7 +371,7 @@ window.FindMyMeepGame = function(){
 		for(var s in self.scores) scores[s] = self.scores[s].score;
 
 		let rewards = window.scoresToRewards(scores);
-		hud.showFinalScores(rewards);
+		hud.showFinalScores(scores,rewards);
 		
 		setTimeout(function(){
 			self.fini();
@@ -438,7 +438,7 @@ window.FindMyMeepGame = function(){
 	}
 
 	function onTutorialMeep(meep){
-		audio.play('yay');
+		audio.play('yay',true);
 		meep.initCelebration();
 		setTimeout(meep.reset,1000);
 	}
