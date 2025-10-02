@@ -17,7 +17,7 @@ window.PainterPanicGame = function(){
 		return path;
 	}
 
-	let PICASSO = toPath([348,493.25,338.65,478.6,338.65,437.25,334.65,423.95,381.3,405.25,390.65,370.6,362.65,321.3,332,271.95,340,247.95,353.3,230.65,354.65,205.3,378.65,170.65,373.3,161.3,384,93.3,384,40,411.95,0,373.3,-1.35,361.3,30.65,349.3,33.35,336,68,338.65,82.65,334.65,97.3,320,64,288,49.35,245.35,69.35,212,80,166.7,66.65,124,76,117.35,112,128,137.3,150.7,149.3,188,154.65,188,166.65,196,175.95,198.7,197.3,188,246.65,189.35,258.65,194.7,283.95,204,299.95,178.7,315.95,134.7,339.95,118.7,361.3,120,374.6,145.35,402.6,132,417.25,132,429.25,112,457.25,100.05,466.6,96.05,483.9,102.7,493.25,130.7,487.9,137.35,469.25,153.35,449.25,185.35,433.25,208,429.25,250.65,435.95,302.65,462.6,329.3,495.9,333.3,505.25,352,505.25,348,493.25]);
+	/*let PICASSO = toPath([348,493.25,338.65,478.6,338.65,437.25,334.65,423.95,381.3,405.25,390.65,370.6,362.65,321.3,332,271.95,340,247.95,353.3,230.65,354.65,205.3,378.65,170.65,373.3,161.3,384,93.3,384,40,411.95,0,373.3,-1.35,361.3,30.65,349.3,33.35,336,68,338.65,82.65,334.65,97.3,320,64,288,49.35,245.35,69.35,212,80,166.7,66.65,124,76,117.35,112,128,137.3,150.7,149.3,188,154.65,188,166.65,196,175.95,198.7,197.3,188,246.65,189.35,258.65,194.7,283.95,204,299.95,178.7,315.95,134.7,339.95,118.7,361.3,120,374.6,145.35,402.6,132,417.25,132,429.25,112,457.25,100.05,466.6,96.05,483.9,102.7,493.25,130.7,487.9,137.35,469.25,153.35,449.25,185.35,433.25,208,429.25,250.65,435.95,302.65,462.6,329.3,495.9,333.3,505.25,352,505.25,348,493.25]);
 	let HORSE = toPath([221.35,505.25,280,477.25,269.35,469.25,269.35,446.6,194.7,390.6,176,398.6,130.7,379.95,117.35,395.95,122.7,407.95,110.7,429.25,101.35,414.6,100.05,389.25,93.35,383.95,104,363.95,73.35,375.95,56.05,399.95,60.05,413.25,48.05,434.6,36.05,411.95,40.05,387.95,89.35,339.95,113.35,334.6,122.7,339.95,144,326.6,150.7,297.3,178.7,269.3,169.35,255.95,188,254.65,230.65,195.95,221.35,182.65,197.35,181.3,181.35,178.65,172,150.65,190.7,132,233.35,140,225.35,128,260,128,285.35,149.3,297.35,149.3,269.35,112,270.65,82.65,320,136,333.3,113.3,364,109.3,409.3,141.3,378.65,144,377.3,158.65,413.3,164,442.65,189.3,442.65,219.95,411.95,261.3,405.3,293.3,376,318.6,385.3,334.6,427.95,346.6,463.95,371.95,481.3,402.6,502.65,413.25,503.95,462.6,474.65,486.6,427.95,509.25,288,511.9,221.35,505.25]);
 	let ANGEL = toPath([-6.6,462.6,77.35,453.25,98.7,393.25,129.35,339.95,113.35,334.6,85.35,301.3,42.7,239.95,16.05,193.3,73.35,182.65,162.7,189.3,201.35,207.95,197.35,182.65,208,169.3,198.7,157.3,202.65,140,200,128,216,100,232,101.3,246.65,85.3,257.35,86.65,277.35,77.3,293.35,77.3,313.3,66.65,345.3,69.35,362.65,89.3,374.65,98.65,397.3,122.65,394.65,144,400,156,389.3,181.3,402.65,217.3,405.3,251.95,417.3,255.95,441.3,281.3,458.65,335.95,435.95,394.6,434.65,430.6,427.95,454.6,505.3,454.6,510.6,514.6,-11.95,503.9,-6.6,462.6,]);
 	let APPLE = toPath([94.7,413.25,98.7,517.25,413.3,515.9,413.3,437.25,406.65,354.6,390.65,257.3,362.65,237.3,348,227.95,328,226.65,321.3,215.95,300,202.65,284,186.65,296,165.3,301.35,130.65,301.35,116,321.3,105.3,320,97.3,297.35,97.3,304,88,297.35,80,294.65,57.35,286.65,42.65,266.65,32,242.65,28,214.65,40,204,58.65,201.35,96,182.7,93.3,173.35,97.3,177.35,108,194.7,116,190.7,136,202.65,161.3,209.35,183.95,194.7,210.65,170.7,225.3,132,234.65,110.7,254.65,100.05,294.6,94.7,413.25]);
@@ -31,6 +31,40 @@ window.PainterPanicGame = function(){
 		{path:SCREAM,img:'texture-painting-scream'},
 		{path:MONA,img:'texture-painting-mona'},
 		{path:PICASSO,img:'texture-painting-picasso'},
+	]*/
+
+	let PAINTINGS = [];
+	for(var p in PAINTING_LIBRARY){
+		PAINTINGS.push({
+			path:toPath(PAINTING_LIBRARY[p]),
+			img:p,
+		})
+	}
+
+	const STRUCTURE = [
+		undefined,
+		undefined,
+		[
+			[PAINTINGS[0],PAINTINGS[1]],
+			[PAINTINGS[2],PAINTINGS[3]],
+			[PAINTINGS[6],PAINTINGS[7]],
+		],
+		[
+			[PAINTINGS[0],PAINTINGS[1],PAINTINGS[2]],
+			[PAINTINGS[6],PAINTINGS[7],PAINTINGS[8]],
+		],
+		[
+			[PAINTINGS[0],PAINTINGS[1],PAINTINGS[2],PAINTINGS[3]],
+			[PAINTINGS[6],PAINTINGS[7],PAINTINGS[8],PAINTINGS[9]],
+		],
+		[
+			[PAINTINGS[0],PAINTINGS[1],PAINTINGS[2],PAINTINGS[3],PAINTINGS[4]],
+			[PAINTINGS[6],PAINTINGS[7],PAINTINGS[8],PAINTINGS[9],PAINTINGS[10]],
+		],
+		[
+			[PAINTINGS[0],PAINTINGS[1],PAINTINGS[2],PAINTINGS[3],PAINTINGS[4],PAINTINGS[5]],
+			[PAINTINGS[6],PAINTINGS[7],PAINTINGS[8],PAINTINGS[9],PAINTINGS[10],PAINTINGS[11]],
+		],
 	]
 
 	let audio = new AudioContext();
@@ -399,11 +433,12 @@ window.PainterPanicGame = function(){
 				}
 
 				painterbox canvas:first-of-type{
-					
+					filter: grayscale(1);
 				}
 
 				painterbox canvas:last-of-type{
 					mix-blend-mode: multiply;
+
 				}
 
 				
@@ -425,6 +460,8 @@ window.PainterPanicGame = function(){
 			</paintermeep>
 		`);
 
+		self.tally = 0;
+		self.score = 0;
 		self.px = 0;
 		self.py = 0;
 		self.n = n;
@@ -454,7 +491,7 @@ window.PainterPanicGame = function(){
 		self.cntOutside = 0;
 		self.amt = 0;
 		self.isPaintActive = false;
-		self.score = 0;
+		self.countup = 0;
 
 		let d = '';
 
@@ -470,7 +507,7 @@ window.PainterPanicGame = function(){
 					<painterpaint>
 						<canvas width=${BOX} height=${BOX}></canvas>
 						<canvas width=${BOX} height=${BOX}></canvas>
-						<img src='./proto/img/party/${texture}.png'/>
+						<img src='${texture}'/>
 					</painterpaint>
 
 					<svg width=${BOX} height=${BOX}>
@@ -687,7 +724,8 @@ window.PainterPanicGame = function(){
 						audio.play('incorrect',true);
 					}
 
-					self.score = TIME-self.countdown;
+					self.countup = TIME-self.countdown;
+					self.meep.score = self.meep.tally + self.countup;
 				}
 
 				if(self.isPracticeMode){
@@ -713,7 +751,7 @@ window.PainterPanicGame = function(){
 			});
 
 			$score.text(self.amt+'%');
-			$scoreHeader.text(self.score.toFixed(1));
+			$scoreHeader.text(self.countup.toFixed(1));
 
 			if(self.isInside){
 				self.cntOutside = 0;
@@ -829,7 +867,6 @@ window.PainterPanicGame = function(){
 	let nPlayer = -1;
 	let foregrounds = [];
 	let completes = [];
-	let isPlayActive = false;
 
 	const FOREGROUND = 2;
 	const STACK = 0.06;
@@ -838,7 +875,6 @@ window.PainterPanicGame = function(){
 
 	function initGame(count){
 
-		
 
 		for(var m=0; m<count; m++){
 			meeps[m] = new PainterMeep(m);
@@ -855,7 +891,7 @@ window.PainterPanicGame = function(){
 		);
 
 		for(var b=0; b<meeps.length; b++){
-			let box = new PainterBox(b,PAINTINGS[0].path,PAINTINGS[0].img);
+			let box = new PainterBox(b,PAINTINGS[6].path,PAINTINGS[6].img);
 			box.$el.appendTo($canvas);
 			box.bindMeep(meeps[b]);
 			box.x = 1.5;
@@ -882,44 +918,78 @@ window.PainterPanicGame = function(){
 		hud.finiTimer();
 		hud.finiTutorial();
 		for(var b in boxes) boxes[b].$el.remove();
+		for(var m in meeps) meeps[m].score = 0;
 		boxes.length = 0;
 
 		setTimeout(initPlay,1000);
 	}
 
 	function initPlay(){
+		hud.initPlayers(meeps);
+		setTimeout(initNextRound,1000);
+	}
+
+	let iRound = -1;
+	function initNextRound(){
+
+		iRound++;
+
+		slots.length = 0;
+		boxes.length = 0;
+		nPlayer = -1;
+
+		let collection = STRUCTURE[meeps.length][iRound];
+
+		if(!collection){
+			finiGame();
+			return;
+		}
 
 		audio.play('music');
 
 		for(var m=0; m<meeps.length; m++){
-			let box = new PainterBox(m,PAINTINGS[m].path,PAINTINGS[m].img);
+
+			meeps[m].tally = meeps[m].score;
+
+			let box = new PainterBox(m,collection[m].path,collection[m].img);
 			box.$el.appendTo($canvas);
 			box.bindMeep(meeps[m]);
 			box.x = 0.75 + m%2 * 0.02;
-			box.y = 0.78 - STACK*(meeps.length-m-1);
+			box.y = -0.1;
 			box.redraw();
 			boxes[m] = box;
 
+			$(box).delay((meeps.length-m)*100).animate({
+				y:0.78 - STACK*(meeps.length-m-1),
+			})
+
 			box.setForeground(false);
 		}
-
-		hud.initPlayers(boxes);
+		
 		setTimeout(function(){
-			initNextPlayer(false);
-			initNextPlayer(false);
-		},1000);
-
-		setTimeout(function () {
-			hud.summonPlayers([0,1]);
-		},2000);
+			hud.initRound(iRound,STRUCTURE[meeps.length].length);
+		},1500);
 
 		setTimeout(function(){
 			hud.finiBanner();
-		},4000);
+		},3500);
+
+		setTimeout(function(){
+			initNextPlayer(false);
+			initNextPlayer(false);
+		},5000);
+
+		setTimeout(function () {
+			hud.summonPlayers([0,1]);
+		},6000);
+
+		setTimeout(function(){
+			hud.finiBanner();
+		},8000);
 
 		setTimeout(function(){
 			for(var s in slots) slots[s].setForeground(true);
-		},5500);
+		},10000);
 	}
 
 	function initNextPlayer(isAutoStart){
@@ -950,8 +1020,7 @@ window.PainterPanicGame = function(){
 			let isComplete = true;
 			for(var b in boxes) if( !boxes[b].isComplete ) isComplete = false;
 			if(isComplete){
-				isPlayActive = false;
-				finiGame();
+				initNextRound();
 			}
 		}
 	}
@@ -984,8 +1053,8 @@ window.PainterPanicGame = function(){
 
 	function finiGame(){
 		
-		for(var c=0; c<completes.length; c++){
-			completes[c].setFinalScore();
+		for(let c=0; c<completes.length; c++){
+			
 			$(completes[c])
 			.delay(completes.length-c*100)
 			.animate({
@@ -994,11 +1063,15 @@ window.PainterPanicGame = function(){
 				scale:0.5,
 				spin:20,
 				twist:-20,
+			},{
+				step:function(){
+					completes[c].redraw();
+				}
 			});
 		}
 
 		let scores = [];
-		for(var b in boxes) scores[b] = boxes[b].score;
+		for(var b in meeps) scores[b] = meeps[b].score;
 
 		let rewards = window.scoresToRewards(scores);
 
@@ -1021,7 +1094,7 @@ window.PainterPanicGame = function(){
 			if(slots[s] && slots[s].isComplete) finiPlayerSlot(s);
 		}
 
-		hud.updatePlayers(boxes,1);
+		hud.updatePlayers(meeps,1);
 
 		resize();
 	}
