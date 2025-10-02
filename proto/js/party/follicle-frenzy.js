@@ -356,6 +356,8 @@ window.FollicleFrenzyGame = function(){
 				}
 			}
 
+			return Math.max( 0, 100 - cntIncorrect );
+
 			return Math.floor( cntCorrect/(cntCorrect+cntIncorrect) * 100 );
 
 		}
