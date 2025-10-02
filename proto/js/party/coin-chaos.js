@@ -40,10 +40,11 @@ window.CoinChaosGame = function(){
 		self.coins = [];
 		self.position = 0;
 		self.x = self.y = 0;
+		self.speed = speed;
 
 		self.step = function() {
 			//let p = 1/PLAYERS*(i)*Math.PI*2;
-			self.position += speed/FPS;
+			self.position += self.speed/FPS;
 			self.x = Math.cos(self.position * Math.PI*2) * 0.7;
 			self.y = Math.sin(self.position * Math.PI*2) * 0.7;
 
@@ -96,7 +97,6 @@ window.CoinChaosGame = function(){
 				transform:'rotateX(-90deg) translateY(-1000px)',
 				opacity:0,
 				transition:'all 0.3s',
-
 			});
 
 			setTimeout(function(){
@@ -353,8 +353,6 @@ window.CoinChaosGame = function(){
 	let $platform = $('<coinchaosplatform>').appendTo($game);
 	let $center = $('<coinchaoscenter>').appendTo($platform);
 
-
-
 	let audio = new AudioContext();
 	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
     audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
@@ -362,6 +360,7 @@ window.CoinChaosGame = function(){
 
 
     let isGameAlive = false;
+
 
 	function step(){
 
@@ -488,7 +487,7 @@ window.CoinChaosGame = function(){
 
 	function finiTutorial(){
 		$blur.hide();
-		
+
 		for(var m in meeps) meeps[m].score = 0;
 		hud.finiTutorial();
 		$blurBG.hide();
@@ -505,8 +504,6 @@ window.CoinChaosGame = function(){
 	let iCohort = -1;
 	let iRound = 0;
 	function initNextCohort(){
-
-		
 
 		iCohort++;
 

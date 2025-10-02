@@ -13,7 +13,6 @@ window.PainterPanicGame = function(){
 		for(var i=0; i<arr.length/2; i++){
 			path[i] = [ arr[i*2], arr[i*2+1] ];
 		}
-
 		return path;
 	}
 
