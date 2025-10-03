@@ -647,6 +647,10 @@ window.FollicleFrenzyGame = function(){
 
 				let r = ox>face.pw/2?-15:15;
 
+				// resist moving too far from face
+				if(ox > 0.24) ox = 0.24 + (ox-0.24) * 0.3;
+				if(ox < -0.08) ox = -0.08 + (ox+0.08) * 0.3;
+
 				$hand.css({
 					left: ox*W + 'px',
 					top: oy*H + 'px',
@@ -658,19 +662,22 @@ window.FollicleFrenzyGame = function(){
 			}
 		}
 
+
 		self.toForeground = function(b) {
 			if(b){
 				self.$el.addClass('foreground');
-				$hand.show();
 				self.setEnabled(true);
 				self.finiHop();
 			} else {
 				self.$el.removeClass('foreground');
-				$hand.hide();
 				self.setEnabled(false);
 			}
+		}
 
-
+		self.setScale = function(scale) {
+			self.$el.css({
+				transform: 'scale('+scale+') rotateX(30deg)'
+			});
 		}
 
 		self.evaluate = function(){
@@ -722,6 +729,7 @@ window.FollicleFrenzyGame = function(){
 	self.$el = $('<igb>');
 
 	let $game = $('<folliclegame>').appendTo(self.$el);
+	let $blur = $('<blurlayer>').appendTo($game);
 
 	let players = [];
 	function initGame(count){
@@ -733,7 +741,7 @@ window.FollicleFrenzyGame = function(){
 			players[i] = {score:0, tally:0};
 		}
 
-		setTimeout(initPlay,1000);
+		setTimeout(initTutorial,1000);
 	}
 
 
@@ -743,6 +751,44 @@ window.FollicleFrenzyGame = function(){
 	let iCohort = -1;
 	let iRound = 0;
 	let cntShaver = 0;
+
+	function initTutorial(){
+
+		hud.initTutorial('Stubble Trouble',
+		{ x:1.25, y:0.45, msg:'Align yourself<br>with your Avatar', icon:'align'},
+		{ x:1.75, y:0.45, msg:'Move around<br>to shave your face', icon:'around'},
+		)
+
+
+		for(var p in players){
+			meeps[p] = new FollicleMeep(p, UNTOUCHED);
+			meeps[p].bindPlayer(players[p]);
+			meeps[p].wall = 1;
+			meeps[p].ax = 0.08 + 0.65 * (1/(players.length-1))*p;
+			meeps[p].ay = 0.65;
+			meeps[p].$el.appendTo($game);
+			
+			meeps[p].redraw();
+			meeps[p].setEnabled(true);
+			meeps[p].setScale(0.5);
+		}
+
+		hud.initTimer(30,finiTutorial);
+	}
+
+	function finiTutorial(){
+		$blur.hide();
+		hud.finiTutorial();
+		hud.finiTimer();
+
+		for(var m in meeps){
+			meeps[m].score = 0;
+			meeps[m].$el.remove();
+		}
+
+		meeps.length = 0;
+		setTimeout(initPlay,1000);
+	}
 
 	function initPlay(){
 		hud.initPlayers(players);
