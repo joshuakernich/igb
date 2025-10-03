@@ -678,6 +678,7 @@ window.FollicleFrenzyGame = function(){
 
 			$({amt:0}).animate({amt:self.amt},{duration:1000,step:function(a){
 				$score.text(Math.floor(a)+'%');
+				self.player.score = self.player.tally + Math.floor(a);
 			}});
 		}
 
@@ -729,7 +730,7 @@ window.FollicleFrenzyGame = function(){
 		audio.play('shaver');
 
 		for(let i=0; i<count; i++){
-			players[i] = {score:0};
+			players[i] = {score:0, tally:0};
 		}
 
 		setTimeout(initPlay,1000);
@@ -762,9 +763,9 @@ window.FollicleFrenzyGame = function(){
 			return;
 		}
 
-		let cohort = ROUNDS[players.length][iRound][iCohort];
+		for(var p in players) players[p].tally = players[p].score;
 
-		
+		let cohort = ROUNDS[players.length][iRound][iCohort];
 
 		let delay = 0;
 
@@ -898,6 +899,8 @@ window.FollicleFrenzyGame = function(){
 		for(var m in meeps) meeps[m].redraw();
 
 		audio.setVolume('shaver',cntShaver/FPS);
+
+		hud.updatePlayers(players);
 	}
 
 	setInterval(step,1000/FPS);
