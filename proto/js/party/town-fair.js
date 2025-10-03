@@ -173,7 +173,7 @@ window.TownFairGame = function(){
 				}
 
 				funrunoption funrunitem{
-					inset: 150px;
+					inset: 200px 0px;
 				}
 
 				funrunbg.floorview:before{
@@ -243,7 +243,7 @@ window.TownFairGame = function(){
 					position: absolute;
 					display: block;
 					width: ${W}px;
-					height: ${W}px;
+					height: ${W/2}px;
 					left: ${-W/2}px;
 					bottom: ${0}px;
 					background: #999;
@@ -269,7 +269,7 @@ window.TownFairGame = function(){
 					bottom: ${0}px;
 
 					box-sizing: border-box;
-					transform: translateZ(${-W}px);
+					transform: translateZ(${-W/2}px);
 					transform-style: preserve-3d;
 					transform-origin: bottom center;
 
@@ -397,23 +397,24 @@ window.TownFairGame = function(){
 					position: absolute;
 					inset: 0px;
 					white-space: normal;
+					margin: 0px 2.5%;
+
 				}
 
 				funrunoption{
 					display: inline-block;
-					width: 50%;
-					height: 50%;
+					width: 25%;
+					height: 100%;
 					position: relative;
 				}
 
 				funrunoption:before{
 					content:"";
-					background: rgba(0,0,0,0.1);
+					background: rgba(0,0,0,0.3);
 					display: block;
 					position: absolute;
-					inset: 50px;
+					inset: 50px 25px;
 					border-radius: 20px;
-	
 					border-top: 10px solid rgba(0,0,0,0.5);
 				}
 
@@ -496,7 +497,8 @@ window.TownFairGame = function(){
 	function initNextQuestion(){
 		nQuestion++;
 		toWall();
-		hud.initBanner('Round '+(nQuestion+1));
+		hud.initRound(nQuestion,QUESTIONS.length);
+		//hud.initBanner('Round '+(nQuestion+1));
 		setTimeout(initVignette,2000);
 	}
 
@@ -569,7 +571,6 @@ window.TownFairGame = function(){
 	}
 
 	function initFinale(){
-		hud.initBanner('Finish!');
 		toWall();
 		for( var m in meeps ) $('<funruntick>').appendTo(meeps[m].$el).text(meeps[m].score);
 
@@ -607,7 +608,7 @@ window.TownFairGame = function(){
 		for(var m in meeps){
 			if(!meeps[m].isFrozen) meeps[m].$el.css({
 				left: meeps[m].px*W + 'px',
-				top: meeps[m].py*W + 'px',
+				top: meeps[m].py*W/2 + 'px',
 			})
 		}
 
