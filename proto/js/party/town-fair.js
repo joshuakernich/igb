@@ -4,86 +4,162 @@ window.TownFairGame = function(){
 	const H = 1000;
 	const FPS = 50;
 
+	const TUTORIAL = {
+		type:'item',
+		parade:[
+			{m:2,i:0},
+		],
+		options:[
+			{i:1},
+			{i:0,isCorrect:true},
+			{i:2},
+			{i:3},
+		]
+	};
+
 	const QUESTIONS = [
 		{
-			q:"What was the second meep carrying?",
+			q:"What colour was the second meep?",
+			type:'meep',
+			parade:[
+				{m:2,i:0},
+				{m:1,i:0},
+				{m:0,i:0},
+			],
+			options:[
+				{m:0},
+				{m:2},
+				{m:1,isCorrect:true},
+				{m:3},
+			]
+		},
+		{
+			q:"What was the first meep carrying?",
 			type:'item',
 			parade:[
-				{m:0,i:0},
-				{m:1,i:1},
+				{m:2,i:1},
+				{m:2,i:0},
 				{m:2,i:2},
 			],
 			options:[
 				{i:0},
-				{i:1},
-				{i:2,isCorrect:true},
+				{i:2},
 				{i:3},
+				{i:1,isCorrect:true},
 			]
 		},
-
+		{
+			q:"How many cows?",
+			type:'text',
+			parade:[
+				{m:1,i:2},
+				{m:2,i:1},
+				{m:0,i:2},
+				{m:3,i:1},
+			],
+			options:[
+				{t:0},
+				{t:1},
+				{t:2,isCorrect:true},
+				{t:3},
+			]
+		},
 		{
 			q:"What colour was the third meep?",
 			type:'meep',
 			parade:[
-				{m:1,i:2},
-				{m:2,i:1},
-				{m:0,i:2},
+				{m:0,i:3},
+				{m:2,i:2},
 				{m:3,i:1},
+				{m:1,i:0},
 			],
 			options:[
-				{i:0,isCorrect:true},
-				{i:1},
-				{i:2},
-				{i:3},
+				{m:0},
+				{m:2,isCorrect:true},
+				{m:1},
+				{m:3},
 			]
 		},
-
 		{
-			q:"What was was the fourth meep carrying?",
+			q:"How many meeps?",
+			type:'text',
+			parade:[
+				{m:5,i:0},
+				{m:2,i:2},
+				{m:0,i:4},
+				{m:4,i:1},
+				{m:1,i:3},
+				{m:6,i:4},
+			],
+			options:[
+				{t:4},
+				{t:5},
+				{t:6,isCorrect:true},
+				{t:7},
+			]
+		},
+		{
+			q:"What was was the second meep carrying?",
 			type:'item',
 			parade:[
-				{m:1,i:2},
+				{m:1,i:0},
 				{m:2,i:1},
 				{m:0,i:2},
-				{m:3,i:1},
-				{m:2,i:2},
+				{m:3,i:3},
 			],
 			options:[
 				{i:0},
-				{i:1,isCorrect:true},
 				{i:2},
 				{i:3},
+				{i:1,isCorrect:true},
 			]
 		},
-
 	]
 
 	
 
 	let audio = new AudioContext();
 	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
+	audio.add('pig','./proto/audio/party/sfx-pig.mp3',0.5);
+	audio.add('cow','./proto/audio/party/sfx-cow.mp3',0.5);
+	audio.add('goat','./proto/audio/party/sfx-goat.mp3',0.5);
+	audio.add('chicken','./proto/audio/party/sfx-chicken.mp3',0.5);
+	audio.add('sheep','./proto/audio/party/sfx-sheep.mp3',0.5);
+	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
+	audio.add('incorrect','./proto/audio/party/sfx-incorrect.mp3',0.3);
+	audio.add('curtain','./proto/audio/party/sfx-curtain.mp3',0.3);
+
+	let sounds = ['pig','cow','goat','chicken','sheep'];
+
 
 	const FunRunVignette = function(parade,callback){
 		let self = this;
 		self.$el = $('<funrunvignette>');
 
-		for(var i=0; i<parade.length; i++){
+		for(let i=0; i<parade.length; i++){
+
+			let delay = i*1000 + Math.random() * 500;
+
 			let carrier = new FunRunCarrier( parade[i].m, parade[i].i );
 			carrier.$el.appendTo(self.$el);
 			carrier.$el.css({
 				left: (parade[i].dir==-1?'-50%':'150%'),
 				bottom: '50px',
 			})
-			.delay(i*1000)
+			.delay(delay)
 			.animate({
 				left: (parade[i].dir==-1?'150%':'-50%'),
 			},{
-				duration:6000,
+				duration:4500 + Math.random() * 2000,
 				easing:'linear',
 			})
+
+			setTimeout(function(){
+				audio.play(sounds[parade[i].i],true);
+			},1500 + delay);
 		}
 
-		setTimeout( callback, 6000 + (i-1)*700 );
+		setTimeout( callback, 6000 + parade.length*700 );
 	}
 
 	const FunRunOptions = function(type,options){
@@ -95,11 +171,13 @@ window.TownFairGame = function(){
 			$options[o] = $('<funrunoption>').appendTo(self.$el);
 
 			if(type=='meep'){
-				new PartyMeepHead(options[o].i).$el.appendTo($options[o]).css({
+				new PartyMeepHead(options[o].m).$el.appendTo($options[o]).css({
 					'left':'50%',
 					'top':'50%',
 					'transform':'translateX(-50%) scale(2)',
 				})
+			} else if (type == 'text'){
+				$options[o].text(options[o].t);
 			} else {
 				$('<funrunitem>').appendTo($options[o]).css({
 					'background-position-x':-options[o].i*100+'%',
@@ -160,8 +238,8 @@ window.TownFairGame = function(){
 					display: block;
 					position: absolute;
 					
-					background: url(./proto/img/party/actor-farm-items.png);
-					background-size: 1200%;	
+					background: url(./proto/img/party/actor-animals.png);
+					background-size: 600%;	
 					
 				}
 
@@ -173,7 +251,7 @@ window.TownFairGame = function(){
 				}
 
 				funrunoption funrunitem{
-					inset: 200px 0px;
+					inset: 210px 0px;
 				}
 
 				funrunbg.floorview:before{
@@ -383,7 +461,6 @@ window.TownFairGame = function(){
 
 				funruncurtain.open:before, funruncurtain.open:after{
 					width: 5%;
-					transition: width 1s;
 				}
 
 				funrunvignette{
@@ -399,6 +476,10 @@ window.TownFairGame = function(){
 					white-space: normal;
 					margin: 0px 2.5%;
 
+					line-height: ${W/2}px;
+					font-size: ${W/6}px;
+					color: white;
+					text-align: center;
 				}
 
 				funrunoption{
@@ -465,7 +546,9 @@ window.TownFairGame = function(){
 	self.$el = $('<igb>');
 
 	let $game = $('<funrungame>').appendTo(self.$el);
+	
 	let $bg = $('<funrunbg>').appendTo($game);
+	let $blur = $('<blurlayer>').appendTo($game);
 	let $world = $('<funrunworld>').appendTo($game);
 
 	let $floor = $('<funrunfloor>').appendTo($world);
@@ -489,13 +572,75 @@ window.TownFairGame = function(){
 			})
 		}
 
-		setTimeout( initNextQuestion, 1000 );
+		setTimeout( initTutorial, 1000 );
+	}
+
+	function initTutorial(){
+
+
+
+		hud.initTutorial('Town Fair',
+		{x:1.3, y:0.5, msg:'When the curtain opens,<br>watch the sequence carefully', icon:'watch'},
+		{x:1.7, y:0.5, msg:'Move left & right to answer<br>a simple question', icon:'side-to-side'},
+		)
+
+		toWall();
+
+		setTimeout(function(){
+			vignette = new FunRunVignette(TUTORIAL.parade,finiTutorialVignette);
+			vignette.$el.appendTo($screen);
+			$curtain.appendTo($screen);
+
+			
+		},4000);
+
+		setTimeout(function(){
+			$curtain.addClass('open');
+			audio.play('curtain');
+		},4200);
+
+		setTimeout(function(){
+			options.showCorrect();
+			audio.play('correct');
+		},25000)
+
+		hud.initTimer(30, finiTutorial);
+	}
+
+	function finiTutorialVignette() {
+		$curtain.removeClass('open');
+		audio.play('curtain');
+
+		options = new FunRunOptions(TUTORIAL.type,TUTORIAL.options);
+		options.$el.appendTo($floor);
+
+		toFloor();
+	}
+
+
+	function finiTutorial(){
+		$blur.hide();
+		hud.finiTutorial();
+		hud.finiTimer();
+
+		options.$el.remove();
+		vignette.$el.remove();
+		
+		setTimeout(initPlay,2000);
+	}
+
+	function initPlay(){
+		hud.initPlayers(meeps);
+		setTimeout( initNextQuestion, 2000 );
 	}
 
 	let nQuestion = -1;
 
 	function initNextQuestion(){
 		nQuestion++;
+
+		audio.play('music');
+
 		toWall();
 		hud.initRound(nQuestion,QUESTIONS.length);
 		//hud.initBanner('Round '+(nQuestion+1));
@@ -520,12 +665,14 @@ window.TownFairGame = function(){
 		options.$el.hide();
 
 		setTimeout(function(){
+			audio.play('curtain');
 			$curtain.addClass('open');
 		},500);
 	}
 
 	function finiVignette(){
-		$curtain.addClass('close');
+		audio.play('curtain');
+		$curtain.removeClass('open');
 		setTimeout(function(){
 			toFloor();
 			hud.initBanner(question.q,'small');
@@ -536,28 +683,41 @@ window.TownFairGame = function(){
 
 	function initSolution(){
 
+		hud.finiBanner();
+		hud.finiTimer();
+
+		options.showCorrect();
+
+		let isAnyoneCorrect = false;
+
 		for(let m in meeps){
 			meeps[m].isFrozen = true;
-			meeps[m].iVote = Math.round(meeps[m].px) + Math.round(meeps[m].py)*2;
+			meeps[m].iVote = Math.floor(meeps[m].px*4);
+			console.log(m,meeps[m].iVote);
 
 			if( question.options[meeps[m].iVote].isCorrect ){
 				meeps[m].score++;
-				options.showCorrect();
 
-				$('<funruntick>').appendTo(meeps[m].$el).text('+'+meeps[m].score).animate({
+				$('<funruntick>').appendTo(meeps[m].$el).text('+1').animate({
 					bottom: 450
 				},200).animate({
 					bottom: 400
-				},200)
+				},200);
+
+				isAnyoneCorrect = true;
 			}
 		}
+
+		audio.play(isAnyoneCorrect?'correct':'incorrect');
+
+		hud.updatePlayers(meeps);
 
 		setTimeout(finiQuestion,2000);
 	}
 
 	function finiQuestion(){
 
-		hud.finiTimer();
+		
 
 		self.$el.find('funruntick').remove();
 
@@ -567,21 +727,30 @@ window.TownFairGame = function(){
 		for(var m in meeps) meeps[m].isFrozen = false;
 
 		if( QUESTIONS[nQuestion+1] ) initNextQuestion();
-		else initFinale();
+		else finiGame();
 	}
 
-	function initFinale(){
+	function finiGame(){
 		toWall();
-		for( var m in meeps ) $('<funruntick>').appendTo(meeps[m].$el).text(meeps[m].score);
+
+		audio.stop('music');
+
+		let scores = [];
+		for( var m in meeps ){
+			meeps[m].$el.hide();
+			scores[m] = meeps[m].score;
+		}
+
+		let rewards = window.scoresToRewards(scores);
+
+		hud.showFinalScores(scores,rewards);
 
 		setTimeout(function(){
-			let scores = [];
-			for(var m in meeps) scores[m] = meeps[m].score;
-			window.doPartyGameComplete(scores);
-		},2000)
+			window.doPartyGameComplete(rewards);
+		},5000)
 	}
 
-	initGame(6);
+	hud.initPlayerCount(initGame);
 
 	function toWall(){
 		$world.css({
@@ -598,7 +767,6 @@ window.TownFairGame = function(){
 		})
 
 		$bg.addClass('floorview');
-		$curtain.removeClass('open');
 	}
 
 	toFloor();

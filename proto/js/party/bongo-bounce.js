@@ -58,8 +58,6 @@ window.BongoBounceGame = function( players ){
 		}
 	}
 
-	console.log(SONGS);
-
 	const STRUCTURE = [
 		undefined,
 		undefined,
