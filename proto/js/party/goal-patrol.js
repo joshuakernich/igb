@@ -693,6 +693,8 @@ window.GoalPatrolGame = function( ){
 
 	function finiGame() {
 
+		audio.stop('music');
+
 		let scores = [];
 		for(var m in meeps) scores[m] = meeps[m].score;
 
@@ -700,6 +702,7 @@ window.GoalPatrolGame = function( ){
 		hud.showFinalScores(scores,rewards);
 		
 		setTimeout(function(){
+			self.fini();
 			window.doPartyGameComplete(scores);
 		},5000)
 	}
