@@ -375,6 +375,14 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					inset: 0px;
 				}
 
+				partyframelayer{
+					display: block;
+					position: absolute; 
+					inset: 0px;
+					background: url(./proto/img/party/bg-frame.png);
+
+				}
+
 				hudmeepscore{
 					display: block;
 					position: absolute; 
@@ -489,6 +497,8 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 	let self = this;
 	self.$el = $('<partyhud>');
+
+	//let $frame = $('<partyframelayer>').appendTo(self.$el);
 
 	let $tutorial = $(`<hudtutorial>`).appendTo(self.$el);
 	let $banner = $(`<partyhudbanner style="background:${colour};">`).appendTo(self.$el);
@@ -746,7 +756,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 		});
 	}
 
-	for(var i=0; i<3; i++){
+	/*for(var i=0; i<3; i++){
 		$(`
 		<partyhudframe>
 			<partyhudborder style='border-width:${THICC}px'></partyhudborder>
@@ -775,7 +785,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 		<partyhudframe>
 		`).appendTo(self.$el);
-	}
+	}*/
 
 	let $baseline = $('<partyhudbaseline>').appendTo(self.$el);
 	let $stream = $(`

@@ -734,7 +734,7 @@ window.FollicleFrenzyGame = function(){
 	let players = [];
 	function initGame(count){
 
-		audio.play('music');
+		
 		audio.play('shaver');
 
 		for(let i=0; i<count; i++){
@@ -808,6 +808,8 @@ window.FollicleFrenzyGame = function(){
 			finiGame();
 			return;
 		}
+
+		audio.play('music');
 
 		for(var p in players) players[p].tally = players[p].score;
 
