@@ -233,7 +233,7 @@ window.HeadersGame = function( typeGame='volley' ){
 	}
 	
 	let audio = new AudioContext();
-	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
+	audio.add('music','./proto/audio/party/music-sport.mp3',0.3,true);
 	audio.add('bounce','./proto/audio/party/sfx-bounce.mp3',0.3);
 	audio.add('cheer','./proto/audio/party/sfx-cheer.mp3',0.6);
 
@@ -466,7 +466,7 @@ window.HeadersGame = function( typeGame='volley' ){
 
 		hud.finiTutorial();
 		hud.finiTimer();
-		$tutoral.hide();
+		$tutorial.hide();
 
 		for(var m=0; m<meepsActive.length; m++) meepsActive[m].$el.hide();
 		meepsActive = [];
