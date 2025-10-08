@@ -71,10 +71,13 @@ window.GoalPatrolGame = function( ){
 
 			if(player.cnt%10==0){
 				player.sequence = SEQUENCE[nSequence%SEQUENCE.length];
+
+				//if(nMeep==0) console.log('set',nMeep,'sequence',nSequence,player.sequence);
 				nSequence++;
 			}
 
-			let nPos = player.sequence[ player.cnt ];
+			let nPos = player.sequence.indexOf( player.cnt );
+
 			player.cnt++;
 
 			let ball = {
@@ -87,11 +90,23 @@ window.GoalPatrolGame = function( ){
 				cy: -0.2 + Math.random() * 0.3,
 			}
 
+			//if(nMeep==0) console.log(nMeep,nPos,ball.tx,ball.ty);
+
 			balls[b] = ball;
 		}
 
 		return balls;
 	}
+
+	const TUTORIALS = [
+		undefined,
+		undefined,
+		generateQueue(30,[0,1],3),
+		generateQueue(30,[0,1,2],2),
+		generateQueue(30,[0,1,2,3],2),
+		generateQueue(30,[0,1,2,3,4],1),
+		generateQueue(30,[0,1,2,3,4,5],1),
+	]
 
 	const ROUNDS = [
 		undefined,
@@ -497,6 +512,12 @@ window.GoalPatrolGame = function( ){
 					border-top: none;
 				}
 
+				goallayer{
+					display: block;
+					position: absolute;
+					inset: 0px;
+				}
+
 			</style>`);
 	}
 
@@ -506,6 +527,8 @@ window.GoalPatrolGame = function( ){
 	self.$el = $('<igb>');
 	let $game = $('<goalgame>').appendTo(self.$el);
 	let $blur = $('<blurlayer>').appendTo($game);
+	let $balls = $('<goallayer>').appendTo($game);
+	let $meeps = $('<goallayer>').appendTo($game);
 	let $goal = $('<goalgoal>').appendTo($game);
 	
 	let audio = new AudioContext();
@@ -528,10 +551,10 @@ window.GoalPatrolGame = function( ){
 		for(var i=0; i<countPlayer; i++){
 			meeps[i] = new GoalMeep(i);
 			meeps[i].isActive = false;
-			meeps[i].$el.appendTo($game).hide();
+			meeps[i].$el.appendTo($meeps).hide();
 		}
 
-		setTimeout( initPlay, 1000 );
+		setTimeout( initTutorial, 1000 );
 	}
 
 	function initTutorial(){
@@ -542,7 +565,7 @@ window.GoalPatrolGame = function( ){
 
 		hud.initTutorial(
 			'Goal Patrol',
-			{x:1.25, y:0.45, msg:'Move left & right<br>to save the incoming balls',icon:'side-to-side'},
+			{x:1.25, y:0.45, msg:'Move left & right<br>to save your coloured balls',icon:'side-to-side'},
 			{x:1.75, y:0.45, msg:'Squat up and down<br>to reach',icon:'up-down'},
 		);
 
@@ -551,7 +574,12 @@ window.GoalPatrolGame = function( ){
 			meeps[m].isActive = true;
 		}
 		
-		setTimeout(initBall,3000);
+		let queue = TUTORIALS[meeps.length];
+		for(let i in queue){
+			setTimeout(function(){
+				initBall(queue[i]);
+			},queue[i].time)
+		}
 
 
 		hud.initTimer(30,finiTutorial);
@@ -678,7 +706,7 @@ window.GoalPatrolGame = function( ){
 		ball.cx = def.cx;
 		ball.cy = def.cy;
 		ball.redraw();
-		ball.$el.prependTo($game);
+		ball.$el.prependTo($balls);
 		balls.push(ball);
 
 		ball.isKicked = false;
