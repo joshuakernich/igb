@@ -369,7 +369,7 @@ window.GoalPatrolGame = function( ){
 
 				}
 
-				goalballball:after{
+				goalballball:before{
 					content:"";
 					background: red;
 					position: absolute;
@@ -379,12 +379,29 @@ window.GoalPatrolGame = function( ){
 					border-radius: 100%;
 				}
 
-				goalballball[n='0']:after{ background: var(--n0); }
-				goalballball[n='1']:after{ background: var(--n1); }
-				goalballball[n='2']:after{ background: var(--n2); }
-				goalballball[n='3']:after{ background: var(--n3); }
-				goalballball[n='4']:after{ background: var(--n4); }
-				goalballball[n='5']:after{ background: var(--n5); }
+				goalballball:after{
+					content:"";
+					position: absolute;
+					display: block; 
+					inset: 0px;
+					border-radius: 100%;
+					box-sizing: border-box;
+					border: 10px solid red;
+				}
+
+				goalballball[n='0']:before{ background: var(--n0); }
+				goalballball[n='1']:before{ background: var(--n1); }
+				goalballball[n='2']:before{ background: var(--n2); }
+				goalballball[n='3']:before{ background: var(--n3); }
+				goalballball[n='4']:before{ background: var(--n4); }
+				goalballball[n='5']:before{ background: var(--n5); }
+
+				goalballball[n='0']:after{ border-color: var(--n0); }
+				goalballball[n='1']:after{ border-color: var(--n1); }
+				goalballball[n='2']:after{ border-color: var(--n2); }
+				goalballball[n='3']:after{ border-color: var(--n3); }
+				goalballball[n='4']:after{ border-color: var(--n4); }
+				goalballball[n='5']:after{ border-color: var(--n5); }
 
 				goalmeep{
 					display:block;
@@ -535,6 +552,7 @@ window.GoalPatrolGame = function( ){
 	audio.add('music','./proto/audio/party/music-sport.mp3',0.3,true);
 	audio.add('bounce','./proto/audio/party/sfx-bounce.mp3',1);
 	audio.add('cheer','./proto/audio/party/sfx-cheer.mp3',0.4);
+	audio.add('boo','./proto/audio/party/sfx-boo.mp3',0.4);
 	audio.add('incorrect','./proto/audio/party/sfx-incorrect.mp3',0.3);
 
 	let isTutorial = false;
@@ -758,7 +776,9 @@ window.GoalPatrolGame = function( ){
 						meeps[m].catch(balls[b].n);
 						if(!isTutorial) meeps[balls[b].n].addScore();
 
-						audio.play('cheer',true);
+						let isCorrectMeep = (m==balls[b].n);
+
+						audio.play(isCorrectMeep?'cheer':'boo',true);
 					}
 				}
 			}
