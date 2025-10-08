@@ -7,28 +7,149 @@ window.GoalPatrolGame = function( ){
 	const START = 300;
 	const BALLR = 70;
 
+
+	const SEQUENCE = [
+		[
+			0,6,2,3,7,
+			8,4,9,1,5,
+		],
+		[
+			7,1,6,2,4,
+			3,9,5,8,0,
+		],
+		[
+			3,0,8,4,6,
+			5,7,2,9,1,
+		],
+		[
+			5,3,9,0,7,
+			1,8,6,4,2,
+		],
+		[
+			9,3,7,6,2,
+			1,5,0,8,4
+		],
+		[
+			2,8,3,7,5,
+			6,0,4,1,9
+		],
+		[
+			6,9,1,5,3,
+			4,2,7,0,8
+		],
+		[
+			4,6,0,9,2,
+			8,1,3,5,7
+		]
+	]
+
+	let nSequence = 0;
+
+	function generateQueue(seconds,cohort,ballsPerPlayer){
+
+		let total = cohort.length * ballsPerPlayer;
+		let timePerSpawn = (seconds - 3.5)/total;
+
+		let nSequence = 0;
+
+		let balls = [];
+		let queue = [];
+		let players = {};
+
+		for(var c in cohort) players[cohort[c]] = {sequence:undefined, cnt:0};
+
+		for(var b=0; b<total; b++){
+
+			if(!queue.length){
+				queue = cohort.concat();
+				shuffleArray(queue);
+			}
+			
+			let nMeep = queue.pop();
+			
+			let player = players[nMeep];
+
+			if(player.cnt%10==0){
+				player.sequence = SEQUENCE[nSequence%SEQUENCE.length];
+				nSequence++;
+			}
+
+			let nPos = player.sequence[ player.cnt ];
+			player.cnt++;
+
+			let ball = {
+				n:nMeep,
+				time: timePerSpawn * b * 1000,
+				ox: 0.3 + (nPos%5) * 0.1,
+				tx: 0.2 + (nPos%5) * 0.15,
+				ty: 0.4 + Math.floor(nPos/5) * 0.2,
+				cx: -0.2 + Math.random() * 0.4,
+				cy: -0.2 + Math.random() * 0.3,
+			}
+
+			balls[b] = ball;
+		}
+
+		return balls;
+	}
+
 	const ROUNDS = [
 		undefined,
 		undefined,
 		[
-			[[0,1]],
-			[[0,1]],
-			[[0,1]],
+			[
+				{cohort:[0,1], seconds:30, queue: generateQueue(30,[0,1],4) },
+			],
+			[
+				{cohort:[0,1], seconds:30, queue: generateQueue(30,[0,1],7) },
+			],
+			[
+				{cohort:[0,1], seconds:30, queue: generateQueue(30,[0,1],9) },
+			],
 		],
 		[
-			[[0,1],[1,2],[0,2]],
-			[[0,1],[1,2],[0,2]],
+			[
+				{cohort:[0,1], seconds:30, queue: generateQueue(30,[0,1],5)},
+				{cohort:[1,2], seconds:30, queue: generateQueue(30,[1,2],5)},
+				{cohort:[0,2], seconds:30, queue: generateQueue(30,[0,2],5)},
+			],
+			[
+				{cohort:[0,1], seconds:30, queue: generateQueue(30,[0,1],10)},
+				{cohort:[1,2], seconds:30, queue: generateQueue(30,[1,2],10)},
+				{cohort:[0,2], seconds:30, queue: generateQueue(30,[0,2],10)},
+			]
+			
 		],
 		[
-			[[0,1],[2,3]],
-			[[0,1],[2,3]],
+			[
+				{cohort:[0,1], seconds:30, queue: generateQueue(30,[0,1],5) },
+				{cohort:[2,3], seconds:30, queue: generateQueue(30,[2,3],5) },
+			],
+			[
+				{cohort:[0,1], seconds:30, queue: generateQueue(30,[0,1],10) },
+				{cohort:[2,3], seconds:30, queue: generateQueue(30,[2,3],10) },
+			],
 		],
 		[
-			[[0,1],[2,3],[4,0],[1,2],[3,4]],
+			[
+				{cohort:[0,1], seconds:30, queue: generateQueue(30,[0,1],8)},
+				{cohort:[2,3], seconds:30, queue: generateQueue(30,[2,3],8)},
+				{cohort:[4,0], seconds:30, queue: generateQueue(30,[4,0],8)},
+				{cohort:[1,2], seconds:30, queue: generateQueue(30,[1,2],8)},
+				{cohort:[3,4], seconds:30, queue: generateQueue(30,[3,4],8)},
+			]
 		],
 		[
-			[[0,1],[2,3],[4,5]],
-			[[0,1],[2,3],[4,5]],
+			[
+				{cohort:[0,1], seconds:30, queue: generateQueue(30,[0,1],5) },
+				{cohort:[2,3], seconds:30, queue: generateQueue(30,[2,3],5) },
+				{cohort:[4,5], seconds:30, queue: generateQueue(30,[4,5],5) },
+			],
+			[
+				{cohort:[0,1], seconds:30, queue: generateQueue(30,[0,1],10) },
+				{cohort:[2,3], seconds:30, queue: generateQueue(30,[2,3],10) },
+				{cohort:[4,5], seconds:30, queue: generateQueue(30,[4,5],10) },
+			],
 		],
 	]
 
@@ -393,7 +514,7 @@ window.GoalPatrolGame = function( ){
 	audio.add('cheer','./proto/audio/party/sfx-cheer.mp3',0.4);
 	audio.add('incorrect','./proto/audio/party/sfx-incorrect.mp3',0.3);
 
-	let isTutorial = true;
+	let isTutorial = false;
 
 	let hud = new PartyHUD();
 	hud.$el.appendTo($game);
@@ -410,14 +531,10 @@ window.GoalPatrolGame = function( ){
 			meeps[i].$el.appendTo($game).hide();
 		}
 
-		
-
-		setTimeout( initTutorial, 1000 );
+		setTimeout( initPlay, 1000 );
 	}
 
 	function initTutorial(){
-
-		isTimerActive = true;
 		isTutorial = true;
 
 		cohort = [];
@@ -461,9 +578,6 @@ window.GoalPatrolGame = function( ){
 		}
 
 		balls.length = 0;
-
-		isTimerActive = false;
-
 		setTimeout(initPlay,1000);
 	}
 
@@ -475,7 +589,6 @@ window.GoalPatrolGame = function( ){
 
 	let iCohort = -1;
 	let iRound = 0;
-	let isTimerActive = false;
 	let cohort;
 	function initNextCohort(){
 		iCohort++;
@@ -492,8 +605,9 @@ window.GoalPatrolGame = function( ){
 
 		audio.play('music');
 		
-		cohort = ROUNDS[meeps.length][iRound][iCohort];
-		queue.length = 0;
+		let round = ROUNDS[meeps.length][iRound][iCohort];
+		cohort = round.cohort;
+		
 
 		for(var c in cohort){
 			meeps[cohort[c]].$el.show();
@@ -522,50 +636,47 @@ window.GoalPatrolGame = function( ){
 		},delay+4000);
 
 		setTimeout(function(){
-			hud.initTimer(30,finiTimer);
+			hud.initTimer(30,finiCohort);
+
+			let queue = round.queue;
+			for(let i in round.queue){
+				setTimeout(function(){
+					initBall(round.queue[i]);
+				},round.queue[i].time)
+			}
+
 		},delay+6000);
 
-		setTimeout(function(){
-			isTimerActive = true;
-			initBall();
-		},delay+7000);
-	}
 
-	function finiTimer(){
-		hud.finiTimer();
-		isTimerActive = false;
+		
+		
 	}
 
 	function finiCohort(){
-		setTimeout(function(){
-			for(var m in meeps){
-				meeps[m].$el.hide();
-				meeps[m].isActive = false;
-			}
-		},2000);
+
+		hud.finiTimer();
+
+		for(var m in meeps){
+			meeps[m].$el.hide();
+			meeps[m].isActive = false;
+		}
 
 		setTimeout(function(){
 			initNextCohort();
-		},4000);
+		},2000);
 	}
 
 	let balls = [];
 	let queue = [];
-	function initBall(){
+	function initBall(def){
 
-		if(!queue.length){
-			queue = cohort.concat();
-			shuffleArray(queue);
-		}
-
-		let n = queue.pop();
-
-		let ball = new Ball(n);
-		ball.ox = 0.3 + Math.random() * 0.4;
-		ball.tx = 0.1 + Math.random() * 0.8;
-		ball.ty = 0.4 + Math.random() * 0.2;
-		ball.cx = -0.2 + Math.random() * 0.4;
-		ball.cy = -0.2 + Math.random() * 0.3;
+	
+		let ball = new Ball(def.n);
+		ball.ox = def.ox;
+		ball.tx = def.tx;
+		ball.ty = def.ty;
+		ball.cx = def.cx;
+		ball.cy = def.cy;
 		ball.redraw();
 		ball.$el.prependTo($game);
 		balls.push(ball);
@@ -629,9 +740,6 @@ window.GoalPatrolGame = function( ){
 				if(!balls[b].isClaimed) makePulse(balls[b]);
 				balls.splice(b,1);
 				b--;
-				
-				if(isTimerActive) initBall();
-				else finiCohort();
 
 			} else {
 				balls[b].redraw();
