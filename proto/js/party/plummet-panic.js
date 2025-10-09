@@ -442,7 +442,7 @@ window.PlummetPanicGame = function() {
 
 	function initGame(count){
 
-		audio.play('music');
+		
 
 		for(var m=0; m<count; m++){
 			meeps[m] = new PlummetMeep(m);
@@ -495,6 +495,8 @@ window.PlummetPanicGame = function() {
 	let round;
 	let isRoundComplete = false;
 	function initNextRound(){
+
+		audio.play('music');
 
 		if(tower) tower.$el.remove();
 

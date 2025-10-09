@@ -3,8 +3,8 @@ window.BowlingGame = function(){
 	const W = 1600;
 	const H = 1000;
 	const FPS = 50;
-	const COIN = 80;
-	const L = 25;
+	const BALLS_PER_TURN = 2;
+	const YSCALE = 1;
 
 	let audio = new AudioContext();
 	audio.add('tick','./proto/audio/party/sfx-select.mp3',0.3);
@@ -12,9 +12,307 @@ window.BowlingGame = function(){
 	audio.add('roll','./proto/audio/party/sfx-bowling-ball.mp3',0.3,true);
 	audio.add('pin','./proto/audio/party/sfx-pin.mp3',0.3);
 
+	const TUTORIAL = [
+		'  1 1 1  ',
+		'   1 1   ',
+		'    1    ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		'  1      ',
+		'         ',
+		'    1    ',
+		'         ',
+		'      1  ',
+		'         ',
+		'    1    ',
+		'         ',
+		'  1      ',
+		'         ',
+		'    1    ',
+		'         ',
+		'      1  ',
+		'         ',
+		'    1    ',
+		'         ',
+		'  1      ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+	]
+
+	const SINGLES = [
+		'  1 1 1  ',
+		'   1 1   ',
+		'    1    ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		' 1     1 ',
+		'         ',
+		'1     1  ',
+		'         ',
+		' 1     1 ',
+		'         ',
+		'   1    1',
+		'         ',
+		'     1  1',
+		'         ',
+		'      1 1',
+		'         ',
+		'     1  1',
+		'         ',
+		'   1    1',
+		'         ',
+		' 1     1 ',
+		'         ',
+		'1     1  ',
+		'         ',
+		' 1     1 ',
+		'         ',
+		'  1     1',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+	]
+
+	const ROWS = [
+		'  1 1 1  ',
+		'   1 1   ',
+		'    1    ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		' 1     1 ',
+		' 1     1 ',
+		' 1     1 ',
+		' 1     1 ',
+		'         ',
+		'         ',
+		'         ',
+		'    1    ',
+		'    1    ',
+		'    1    ',
+		'    1    ',
+		'         ',
+		'         ',
+		'         ',
+		'  1   1  ',
+		'  1   1  ',
+		'  1   1  ',
+		'  1   1  ',
+		'         ',
+		'         ',
+		'         ',
+		'    1    ',
+		'    1    ',
+		'    1    ',
+		'    1    ',
+		'         ',
+		'         ',
+		'         ',
+	]
+
+	const BARRIERS = [
+		'  1 1 1  ',
+		'   1 1   ',
+		'    1    ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		' 11   11 ',
+		'         ',
+		'         ',
+		'         ',
+		'     111 ',
+		'         ',
+		'         ',
+		'         ',
+		'   111   ',
+		'         ',
+		'         ',
+		'         ',
+		' 111     ',
+		'         ',
+		'         ',
+		'         ',
+		' 11   11 ',
+		'         ',
+		'         ',
+		'         ',
+		'   111   ',
+		'         ',
+		'         ',
+		'         ',
+		' 11   11 ',
+		'         ',
+		'         ',
+		'         ',
+	]
+
+	const TRIANGLES = [
+		'  1 1 1  ',
+		'   1 1   ',
+		'    1    ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		'1 1   1 1',
+		' 1     1 ',
+		'         ',
+		'         ',
+		'         ',
+		'   1 1   ',
+		'    1    ',
+		'         ',
+		'         ',
+		'         ',
+		'1 1   1 1',
+		' 1     1 ',
+		'         ',
+		'         ',
+		'         ',
+		'   1 1   ',
+		'    1    ',
+		'         ',
+		'         ',
+		'         ',
+		'1 1   1 1',
+		' 1     1 ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+	]
+
+	const ZIGZAG = [
+		'  1 1 1  ',
+		'   1 1   ',
+		'    1    ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		'     1   ',
+		'      1  ',
+		' 1     1 ',
+		' 1     1 ',
+		' 1     1 ',
+		'      1  ',
+		'     1   ',
+		'         ',
+		'         ',
+		'         ',
+		'  1 1 1  ',
+		'         ',
+		'         ',
+		'         ',
+		'   1     ',
+		'  1      ',
+		' 1    1  ',
+		' 1    1  ',
+		' 1    1  ',
+		'  1      ',
+		'   1     ',
+		'    1    ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+	]
+
+	const STACKS = [
+		'  1 1 1  ',
+		'   1 1   ',
+		'    1    ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		'1 1 1    ',
+		' 1 1     ',
+		'  1      ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		'  1 1 1  ',
+		'   1 1   ',
+		'    1    ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		'    1 1 1',
+		'     1 1 ',
+		'      1  ',
+		'         ',
+		'         ',
+		'         ',
+		'         ',
+		'  1 1 1  ',
+		'   1 1   ',
+		'    1    ',
+		'         ',
+		'         ',
+		'         ',
+	]
 
 
-	const PINS = [
+	function logPinCount(pattern){
+		let cnt = 0;
+		for(var y in pattern){
+			for(var x=0; x<pattern[y].length; x++) if(pattern[y][x]=='1') cnt++;
+		}
+		console.log(pattern.length,cnt);
+	}	
+
+	logPinCount(TUTORIAL);
+
+	const ROUNDS = [
+		undefined,
+		undefined,
+		[
+			[SINGLES,ROWS],
+			[BARRIERS,ZIGZAG],
+			[TRIANGLES,STACKS],
+		],
+		[
+			[ROWS,TRIANGLES,BARRIERS],
+			[ZIGZAG,TRIANGLES,STACKS],
+		],
+		[
+			[ROWS,ZIGZAG,TRIANGLES,STACKS],
+		],
+		[
+			[ROWS,BARRIERS,ZIGZAG,TRIANGLES,STACKS],
+		],
+		[
+			[SINGLES,ROWS,BARRIERS,ZIGZAG,TRIANGLES,STACKS]
+		]
+	]
+
+	/*const PINS = [
 		{y:L-0.5,x:0.3},
 		{y:L-0.5,x:0.5},
 		{y:L-0.5,x:0.7},
@@ -50,7 +348,7 @@ window.BowlingGame = function(){
 		{y:12,x:0.85},
 		{y:13,x:0.8},
 		{y:14,x:0.7},
-	]
+	]*/
 
 
 
@@ -90,7 +388,7 @@ window.BowlingGame = function(){
 					bottom: 0px;
 					left: 0px;
 					width: ${W}px;
-					height: ${W*L}px;
+					height: ${W*3}px;
 					background: #056479;
 					transform-origin: bottom center;
 					transform-style: preserve-3d;
@@ -147,6 +445,7 @@ window.BowlingGame = function(){
 					background: white;
 					border-radius: 50%;
 					background: linear-gradient(to bottom right, white, white, #777);
+
 				}
 
 				bowlingpinbody:after{
@@ -308,6 +607,29 @@ window.BowlingGame = function(){
 
 			self.$el.delay(500).animate({opacity:0});
 		}
+
+		self.initAppear = function(delay){
+
+			self.$el.find('bowlingpinshadow').css({opacity:0});
+
+			self.$el.find('bowlingpinbody').css({
+				transform: `translateX(-50%) rotateX(-85deg) translateY(-300px)`,
+				transition: 'all 0.2s',
+				opacity:0,
+			})
+
+			setTimeout(function(){
+				self.$el.find('bowlingpinbody').css({ 
+					transform: `translateX(-50%) rotateX(-85deg) translateY(0px)`,
+					opacity:1,
+				});
+				self.$el.find('bowlingpinshadow').css({opacity:1});
+			},delay);
+
+			setTimeout(function(){
+				self.$el.find('bowlingpinbody').css({ transition: `none` });
+			},delay + 500);
+		}
 	}
 
 	const BowlingMeep = function(i){
@@ -317,7 +639,7 @@ window.BowlingGame = function(){
 		let $shadow = $('<bowlingballshadow>').appendTo(self.$el);
 		let $ball = $('<bowlingball>').appendTo(self.$el);
 		let $inner = $('<bowlingballinner>').appendTo($ball);
-		let $score = $('<bowlingscore>').appendTo($ball).text('');
+		
 
 		self.px = 0;
 		self.py = 0;
@@ -338,11 +660,18 @@ window.BowlingGame = function(){
 
 		self.addScore = function(){
 			self.score++;
-			$score.text(self.score).stop(false,false).css({opacity:1}).delay(200).animate({opacity:0});
+
+			let $score = $('<bowlingscore>')
+			.appendTo($ball)
+			.text('+1')
+			.css({opacity:1,bottom:300})
+			.animate({bottom:500,opacity:0},{duration:400,complete:function(){
+				$score.remove();
+			}})
 		}
 
 		self.showScore = function(){
-			$score.text(self.score).stop(false,false).css({opacity:1});
+			//$score.text(self.score).stop(false,false).css({opacity:1});
 		}
 	}
 
@@ -351,6 +680,7 @@ window.BowlingGame = function(){
 	self.$el = $('<igb>');
 
 	let $game = $('<bowlinggame>').appendTo(self.$el);
+	let $blur = $('<blurlayer>').appendTo($game);
 	let $lane = $('<bowlinglane>').appendTo($game);
 	let $scroll = $('<bowlinglanescroll>').appendTo($lane);
 	let $hole = $('<bowlinghole>').appendTo($scroll);
@@ -363,83 +693,216 @@ window.BowlingGame = function(){
 	let pins = [];
 	
 	function initGame(count){
-		audio.play('music');
+		
 
 		for(var i=0; i<count; i++){
 			meeps[i] = new BowlingMeep(i);
 			meeps[i].$el.appendTo($scroll).hide();
 		}
 
-		initNextPlayer();
+		initTutorial();
 	}
 
 	hud.initPlayerCount(initGame);
 
-	function initNextPlayer(){
-		nPlayer++;
-		nRound = -1;
+	function initTutorial(){
+		initPattern(TUTORIAL);
 
-		meeps[nPlayer].ay = 0;
-		meeps[nPlayer].$el.show();
+		anim.isActive = true;
+		anim.sy = length-3;
+
+		$(anim).delay(1000).animate({sy:0},4000);
+
+		for(var m in meeps){
+			meeps[m].$el.show();
+			meeps[m].ay = 0;
+			meeps[m].isActive = true;
+		}
+
+		setTimeout(function(){
+			hud.initTutorial('Bowling Bonanza',
+				{x:1.5, y:0.5, msg:'Move side to side<br>to knock down the pins', icon:'side-to-side'},
+			)
+		},5000);
+
+		
+
+		setTimeout(function(){
+			anim.isActive = false;
+			self.speed = 0.05;
+			audio.play('roll');
+		},10000)
+
+		hud.initTimer(30,finiTutorial);
+	}
+
+	function finiTutorial(){
+
+		anim.isActive = true;
+		anim.sy = length-3;
+
+		hud.finiTutorial();
+		hud.finiTimer();
+		$blur.hide();
 
 		for(var p in pins) pins[p].$el.remove();
 		pins.length = 0;
 
-		for(var p=0; p<PINS.length; p++){
-			pins[p] = new BowlingPin(PINS[p].x,PINS[p].y);
-			pins[p].$el.appendTo($scroll);
+		for(var m in meeps){
+			meeps[m].score = 0;
+			meeps[m].$el.hide();
+			meeps[m].isActive = false;
+		}
+		setTimeout(initPlay,1000);
+	}
+
+	function initPlay() {
+		hud.initPlayers(meeps);
+		initNextRound();
+	}
+
+	let pattern;
+	let length = 3;
+	let anim = {isActive:true,sy:length-3};
+	function initNextRound(){
+		nPlayer = -1;
+		nRound++;
+
+		if(!ROUNDS[meeps.length][nRound]){
+			finiGame();
+			return;
 		}
 
-		setTimeout( function(){
-			//hud.initBanner('Step Forward Player '+(nPlayer+1));
+		if(ROUNDS[meeps.length].length>1){
+			setTimeout(function(){
+				audio.play('music');
+				hud.initRound( nRound, ROUNDS[meeps.length].length );
+			},2000);
 
-			let inMeep = [];
-			let outMeep = [];
-			for(var m in meeps){
-				if(m==nPlayer) inMeep.push(m);
-				else outMeep.push(m);
+			setTimeout(function(){
+				hud.finiBanner();
+			},4000);
+
+			setTimeout(function(){
+				initNextPlayer();
+			},6000);
+		} else {
+			initNextPlayer();
+		}
+	}
+
+	function initPattern(patternNew){
+
+		for(var p in pins) pins[p].$el.remove();
+		pins.length = 0;
+
+		pattern = patternNew;
+		length = pattern.length*YSCALE;
+
+		$scroll.height(length*W);
+
+		for(var y=0; y<pattern.length; y++){
+			for(var x=0; x<pattern[y].length; x++){
+				if(pattern[y][x] == '1'){
+					let pin = new BowlingPin(0.1 + x*(1/10),(pattern.length-y)*YSCALE);
+					pin.$el.appendTo($scroll);
+					pins.push(pin);
+
+					if(y < 5) pin.initAppear(500 + y*100);
+				}
 			}
-			hud.summonPlayers(inMeep,outMeep);
-		},1500);
+		}
+	}
+
+	function initNextPlayer(){
+
+		for(var p in pins) pins[p].$el.remove();
+		pins.length = 0;
+
+		for(var m in meeps){
+			meeps[m].$el.hide();
+			meeps[m].isActive = false;
+		}
+		
+
+		nPlayer++;
+		nBall = -1;
+
+		meeps[nPlayer].ay = 0;
+		meeps[nPlayer].isActive = true;
+		meeps[nPlayer].$el.show();
+
+		initPattern(ROUNDS[meeps.length][nRound][nPlayer]);
+
+		anim.isActive = true;
+		anim.sy = length - 3;
+
+		$(anim).delay(2000).animate({sy:0},{
+			duration:2000,
+			complete:function(){
+				anim.isActive = false;
+			}
+		});
+
+		setTimeout( function(){
+			hud.summonPlayers([nPlayer]);
+		},4000);
 
 		setTimeout(function(){
 			hud.finiBanner();
-		},4000)
+		},6000);
 
-		setTimeout( initRound, 6000 );
+		setTimeout( initNextBall, 7000 );
 	}
 
 	let $pins = [];
 	let nPlayer = -1;
 	let nRound = -1;
-	function initRound(){
-		nRound++;
+	function initNextBall(){
+		nBall++;
 		meeps[nPlayer].ay = 0;
 		meeps[nPlayer].$el.show();
+		meeps[nPlayer].isActive = true;
 
-		hud.initRound(nRound,2,'Ball '+(nRound+1));
+		if(nBall>0){
+			anim.isActive = true;
+			anim.sy = length-3;
+			$(anim).animate({sy:0});
+		}
+
+		hud.initRound(nBall,2,'Ball '+(nBall+1));
 
 		setTimeout(function(){
 			hud.finiBanner();
 		},2000);
 
 		setTimeout(function() {
-			hud.initTimer(5,initBowl);
+			anim.isActive = false;
+			hud.initTimer(5,initBallRoll);
 		},3000);
 	}
 
-	function finiBowl(){
+	function initBallRoll(){
+		self.speed = 0.1;
+		hud.finiTimer();
+		audio.play('roll');
+	}
+
+	function finiBallRoll(){
 		audio.stop('roll');
-		if(nRound<1) setTimeout( initRound, 2000 );
+
+		if(nPlayer==-1) return;
+
+		if(nBall<(BALLS_PER_TURN-1)) setTimeout( initNextBall, 2000 );
 		else if( meeps[nPlayer+1] ) setTimeout( initNextPlayer, 2000 );
-		else setTimeout( initEndGame, 2000 );
+		else setTimeout( initNextRound, 2000 );
 	}
 
 	function initEndGame(){
 		for(var m in meeps){
 			meeps[m].ay = 0;
 			meeps[m].$el.show();
-			meeps[m].showScore();
+			//meeps[m].showScore();
 		}
 
 		setTimeout(finiGame,2000);
@@ -447,16 +910,18 @@ window.BowlingGame = function(){
 	}
 
 	function finiGame() {
-		self.fini();
+		audio.stop('music');
 		var scores = [];
 		for(var m in meeps) scores[m] = meeps[m].score;
-		window.doPartyGameComplete(scores);
-	}
 
-	function initBowl(){
-		self.speed = 0.1;
-		hud.finiTimer();
-		audio.play('roll');
+		var rewards = scoresToRewards(scores);
+
+		hud.showFinalScores(scores,rewards);
+
+		setTimeout(function(){
+			self.fini();
+			window.doPartyGameComplete(rewards);
+		},5000);
 	}
 
 	self.speed = 0;
@@ -464,34 +929,41 @@ window.BowlingGame = function(){
 
 		let sy = 0;
 
-		if( meeps[nPlayer] ){
-			meeps[nPlayer].ay += self.speed;
-			if(meeps[nPlayer].ay>L && self.speed){
-				self.speed = 0;
-				setTimeout(finiBowl);
-			}
-			sy = Math.min(meeps[nPlayer].ay, L-3);
+		for(var m in meeps){
+			if(meeps[m].isActive){
+				meeps[m].ay += self.speed;
+				if(meeps[m].ay>length && self.speed){
+					self.speed = 0;
+					setTimeout(finiBallRoll);
+				}
+				sy = Math.min(meeps[m].ay, length-3);
 
-			for(var p in pins){
+				for(var p in pins){
 
-				if(pins[p].isActive){
-					let dx = pins[p].x - meeps[nPlayer].px;
-					let dy = pins[p].y - (meeps[nPlayer].ay + meeps[nPlayer].py);
-					let d = Math.sqrt(dx*dx+dy*dy);
-					
-					if(d<0.15){
-						pins[p].initHit(dx);
-						meeps[nPlayer].addScore();
+					if(pins[p].isActive){
+						let dx = pins[p].x - meeps[m].px;
+						let dy = pins[p].y - (meeps[m].ay + meeps[m].py);
+						let d = Math.sqrt(dx*dx+dy*dy);
+						
+						if(d<0.15){
+							pins[p].initHit(dx);
+							meeps[m].addScore();
+						}
 					}
 				}
 			}
 		}
 
+
 		for(var m in meeps) meeps[m].redraw();
+
+		if(anim.isActive) sy = anim.sy;
 
 		$scroll.css({
 			'bottom':-sy * W + 'px',
 		});
+
+		hud.updatePlayers(meeps);
 
 		resize();
 	}
