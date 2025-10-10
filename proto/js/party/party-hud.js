@@ -398,9 +398,9 @@ window.PartyHUD = function( colour='#40B0ED' ){
 				hudmeepreward{
 					display: block;
 					position: absolute; 
-					bottom: 100px;
-					left: -90px;
-					right: -90px;
+					top: 10px;
+					left: 10px;
+					right: 10px;
 					text-align: center;
 					color: white;
 					
@@ -409,7 +409,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					background: #9B62E8; 
 					padding: 10px 0px 20px;
 					border-radius: 10px;
-					transform: rotate(-2deg);
+					
 					line-height: 60px;
 					padding-right: 20px;
 					box-sizing: border-box;
@@ -429,7 +429,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					position: absolute;
 					right: -20px;
 					top: -20px;
-
+					z-index: 1;
 				}
 
 				hudmeeprewardcoin:before{
@@ -490,6 +490,24 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					margin-top: 20px;
 				}
 
+				hudplatforms{
+					display: block;
+					position: absolute;
+					left: 0px;
+					right: 0px;
+					bottom: 0px;
+					text-align: center;
+				}
+
+				hudplatformmeep{
+					display: inline-block;
+					width: ${200}px;
+					height: ${500}px;
+					background: linear-gradient( to top right, white, white, #ddd);
+					position: relative;
+					border-top: 40px solid #ccc;
+
+				}
 				
 			</style>
 			`);
@@ -690,6 +708,35 @@ window.PartyHUD = function( colour='#40B0ED' ){
 		setBanner(false);
 	}
 
+	var PlatformMeep = function(n,reward,height){
+
+		let h = 130 + 350*height;
+		let time = 500 + 500*height;
+
+		let self = this;
+		self.$el = $('<hudplatformmeep>').css({
+			height:h+'px',
+			top:(400+h)+'px',
+		}).delay(500).animate({
+			top:-50 + 'px',
+		},time).animate({
+			top:0 + 'px',
+		},100);
+
+		$('<hudplatform>').appendTo(self.$el);
+
+		let meep = new PartyMeep(n);
+		meep.$el.appendTo(self.$el).css({
+			left:'50%',
+			top: '-20px',
+		})
+
+		
+
+		let $reward = $('<hudmeepreward>').appendTo(self.$el).text('+'+reward);
+		let $coin = $('<hudmeeprewardcoin>').appendTo($reward);
+	}
+
 	self.showFinalScores = function(scores,rewards){
 
 		audio.play('outro',true);
@@ -699,6 +746,14 @@ window.PartyHUD = function( colour='#40B0ED' ){
 		let max = 0;
 		for(var r in rewards) max = Math.max(max, rewards[r]);
 
+		let $platforms = $('<hudplatforms>').appendTo($mg);
+
+		for(let r=0; r<rewards.length; r++){
+			let meep = new PlatformMeep(r,rewards[r],rewards[r]/max);
+			meep.$el.appendTo($platforms);
+		}
+
+		return;
 		for(let s=0; s<scores.length; s++){
 			let meep = new PartyMeep(s);
 			meep.$el.appendTo($mg);
@@ -934,8 +989,6 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	let headerTutorial;
 
 	self.initTutorial = function(name, ...tutor){
-
-		
 
 		audio.play('music');
 

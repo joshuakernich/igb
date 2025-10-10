@@ -915,7 +915,6 @@ window.BowlingGame = function(){
 		for(var m in meeps) scores[m] = meeps[m].score;
 
 		var rewards = scoresToRewards(scores);
-
 		hud.showFinalScores(scores,rewards);
 
 		setTimeout(function(){
