@@ -731,10 +731,19 @@ window.PartyHUD = function( colour='#40B0ED' ){
 			top: '-20px',
 		})
 
-		
-
 		let $reward = $('<hudmeepreward>').appendTo(self.$el).text('+'+reward);
 		let $coin = $('<hudmeeprewardcoin>').appendTo($reward);
+
+		$reward.css({
+			opacity:0,
+			top: '-200px',
+		}).delay(time+2000).animate({
+			opacity:1,
+			top: '-250px',
+			start:function(){
+				audio.play('coin',true);
+			}
+		},200)
 	}
 
 	self.showFinalScores = function(scores,rewards){

@@ -287,8 +287,6 @@ window.BowlingGame = function(){
 		console.log(pattern.length,cnt);
 	}	
 
-	logPinCount(TUTORIAL);
-
 	const ROUNDS = [
 		undefined,
 		undefined,
