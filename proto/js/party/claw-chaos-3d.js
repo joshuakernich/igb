@@ -2,7 +2,7 @@ window.ClawChaos3DGame = function(countInit){
 	
 	const W = 1600;
 	const H = 1000;
-	const PLATFORM = 1500;
+	const PLATFORM = W;
 	const FPS = 50;
 	const CLAW = 200;
 	const BALL = 300;
@@ -63,48 +63,70 @@ window.ClawChaos3DGame = function(countInit){
 		}
 	}
 
+	function Claw3DStack(n,coins){
+		let self = this;
+
+		self.$el = $(`<claw3Dstack>`).attr('n',n);
+
+		for(var i=0; i<coins; i++){
+			$('<claw3Dcoin>').appendTo(self.$el).css({
+				'bottom':35 + i*20+'px',
+				'background-position-y':-n*100+'%',
+			});
+		}
+	}
+
 	function Claw3DItem(n=0,coins=0){
 		let self = this;
 		self.$el = $('<claw3Ditem>');
 		self.n = n;
 		self.coins = coins;
+		self.altitude = 1;
 
-		if(Math.random()>0.5) self.$el.css({'transform':'scaleX(-1)'})
+		self.r = Math.random() * Math.PI * 2;
+		self.d = 0.15 + Math.random() * 0.2;
+
+		//if(Math.random()>0.5) self.$el.css({'transform':'scaleX(-1)'})
 
 		self.$shadow = $('<claw3Dshadow>').appendTo(self.$el).css({
-			width: ITEM,
-			height: ITEM,
+			width: '160px',
+			height: '120px',
+			left: '50px',
 		});
 
-
+		let stack = new Claw3DStack(n,coins);
+		stack.$el.appendTo(self.$el);
 		
-		let bag = new Claw3DBag(n,coins);
-		bag.$el.appendTo(self.$el);
+		/*let bag = new Claw3DBag(n,coins);
+		bag.$el.appendTo(self.$el);*/
 
-		self.altitude = 0;
+	
 		self.yOffset = 0;
 
-		
-
 		self.redraw = function(){
+
+			if(!self.meep){
+				self.px = 0.5 + Math.cos(self.r) * self.d;
+				self.py = 0.5 + Math.sin(self.r) * self.d;
+			}
+
 			self.$el.css({
 				left:self.px * PLATFORM + 'px',
 				top:self.py * PLATFORM + 'px',
 			});
 
-			bag.$el.css({
-				transform: `rotateX(-90deg) translateY(${-ALTITUDE * self.altitude - self.yOffset}px) translateZ(100px) scale(0.8)`,
+			stack.$el.css({
+				transform: 'rotateX(-90deg) translateX(-50%) translateZ(30px) translateY('+(-ALTITUDE * self.altitude)+'px)',
 			})
 
-			
 		}
 
 		self.hideContents = function(){
-			bag.hideContents();
+			//bag.hideContents();
 		}
 
 		self.showContents = function () {
-			bag.showContents();
+			//bag.showContents();
 		}
 	}
 
@@ -253,10 +275,10 @@ window.ClawChaos3DGame = function(countInit){
 					width: ${W*3}px;
 					height: ${H}px;
 					transform-origin: top left;
-					background: url(./proto/img/party/bg-village.png);
-					background-size: 33.3% 200%;
-					background-position: 0% 100%;
-					perspective: ${W}px;
+					background: url(./proto/img/party/bg-mountains-clouds.png);
+					background-size: 100% 100%;
+					
+					perspective: ${W*3}px;
 				}
 
 				claw3Dplatform{
@@ -266,17 +288,39 @@ window.ClawChaos3DGame = function(countInit){
 					width: ${PLATFORM}px;
 					height: ${PLATFORM}px;
 
-					transform: rotateX(70deg);
+
+					transform: rotateX(60deg);
 					transform-origin: bottom center;
 					transform-style: preserve-3d;
 					
 					
 					left: ${W*1.5 - PLATFORM/2}px;	
-					bottom: 150px;
+					bottom: 40px;
 
-					background: rgba(0,0,0,0.2);
-					background: none;
-					border-radius: 100px;
+					background: url(./proto/img/party/texture-wood.png);
+					
+
+					border-radius: 100%;
+
+					box-shadow: 0px 50px black;
+				}
+
+				claw3Dspinner{
+					display: block;
+					position: absolute;
+					background: url(./proto/img/party/texture-wood.png);
+					inset: 10%;
+					border-radius: 100%;
+					box-shadow: 0px 0px 10px black;
+				}
+
+				claw3Dcenter{
+					display: block;
+					position: absolute;
+					background: url(./proto/img/party/texture-wood.png);
+					inset: 35%;
+					border-radius: 100%;
+					box-shadow: 0px 0px 10px black;
 				}
 
 				claw3Dclaw, claw3Dmeep, claw3Ditem{
@@ -290,8 +334,8 @@ window.ClawChaos3DGame = function(countInit){
 				claw3Dshadow{
 					display: block;
 					position: absolute;
-					width: ${CLAW*2}px;
-					height: ${CLAW*2}px;
+					width: ${CLAW}px;
+					height: ${CLAW}px;
 					left: 0px;
 					top: 0px;
 					background: rgba(0,0,0,0.3);
@@ -438,6 +482,20 @@ window.ClawChaos3DGame = function(countInit){
 
 				}
 
+				claw3Dstack{
+					display: block;
+					position: absolute;
+					bottom: 0px;
+					left: 0px;
+					height: 500px;
+					width: 100px;
+
+					transform: rotateX(-90deg) translateX(-50%) translateZ(30px);
+					transform-style: preserve-3d;
+					transform-origin: bottom center;
+					
+				}
+
 				claw3Dclaw[n='0'] claw3Dshadow { border-color: var(--n0); }
 				claw3Dclaw[n='1'] claw3Dshadow { border-color: var(--n1); }
 				claw3Dclaw[n='2'] claw3Dshadow { border-color: var(--n2); }
@@ -498,17 +556,17 @@ window.ClawChaos3DGame = function(countInit){
 					position: absolute;
 					width: ${COIN}px;
 					height: ${COIN}px;
-					background: url(./proto/img/party/sprite-coin.png);
+					background-image: url(./proto/img/party/sprite-coin.png);
 					background-size: 900%;
 					background-position-x: -100%;
 					background-position-y: 100%;
-					transform: rotate(90deg) translateX(-50%);
+					transform: rotate(90deg) translateX(50%);
 				}
 
 				claw3Dtube{
 					position: absolute;
 					display: block;
-					bottom: 0px;
+					top: 50%;
 					left: 50%;
 				}
 
@@ -567,6 +625,8 @@ window.ClawChaos3DGame = function(countInit){
 	hud.$el.appendTo($game);
 
 	let $platform = $('<claw3Dplatform>').appendTo($game);
+	let $spinner = $('<claw3Dspinner>').appendTo($platform);
+	let $center = $('<claw3Dcenter>').appendTo($platform);
 
 	let claw = new Claw3DClaw();
 	claw.$el.appendTo($platform).hide();
@@ -581,12 +641,10 @@ window.ClawChaos3DGame = function(countInit){
 			meeps[i] = new Claw3DMeep(i);
 			meeps[i].$el.appendTo($platform);
 
-
-			meeps[i].hx = meeps[i].ax = 0.5 + Math.cos(-i*0.2) * (0.5 * [-1,1][i%2]);
-			meeps[i].hy = meeps[i].ay = 0.5 + Math.sin(-i*0.2) * 0.4;
+			meeps[i].hx = meeps[i].ax = 0.5 + Math.cos(-i*0.2) * (0.45 * [-1,1][i%2]);
+			meeps[i].hy = meeps[i].ay = 0.5 + Math.sin(-i*0.2) * 0.45;
 			meeps[i].isActive = false;
 			meeps[i].score = 0;
-			meeps[i].$el.hide();
 
 			turnOrder[i] = i;
 		}
@@ -629,112 +687,37 @@ window.ClawChaos3DGame = function(countInit){
 		},7000);
 		
 
+		setTimeout(function(){
+			for(let m=0; m<meeps.length; m++){
 
-		for(let m=0; m<meeps.length; m++){
-			meeps[m].ax = 0.5 + (-(meeps.length-1)/2 + m) * 0.15;
-			meeps[m].ay = 0.7 + m%2 * 0.15;
-			meeps[m].altitude = 3;
-			meeps[m].$el.show();
-			meeps[m].initCarry();
+				let count = Math.floor(3 + Math.random()*20);
 
-			let item =  new Claw3DItem(m, Math.floor(3 + Math.random()*12) );
-			
-			item.px = 0.4 + Math.random() * 0.2;
-			item.py = 0.4 + Math.random() * 0.2;
-			item.$el.appendTo($platform);
+				while(count){
+					let amt = count;
+					if(count>3) amt = Math.min( 5, 3 + Math.floor( Math.random()* (count-3)));
+					let item =  new Claw3DItem(m, amt );
+					item.$el.appendTo($platform);
+					items.push(item);
 
-			item.meep = meeps[m];
-			item.showContents();
-			item.$shadow.hide();
+					count -= amt;
 
-			items.push(item);
-
-			let delay = 5000 + m*200;
-
-			$(meeps[m]).delay(delay).animate({
-				altitude:0,
-			},500).delay(3000).animate({
-				ax: meeps[m].hx,
-				ay: meeps[m].hy,
-			})
-
-			//land
-			setTimeout(function(){
-				audio.play('purse',true);
-				meeps[m].setHeight(300);
-			},delay + 500);
-
-			setTimeout(function(){
-				meeps[m].setHeight(350);
-			},delay + 1000);
-
-			//throw
-			setTimeout(function(){
-				meeps[m].setHeight(300);
-			},delay + 6000);
-
-			setTimeout(function(){
-				meeps[m].setHeight(350);
-				meeps[m].initIdle();
-				item.meep = undefined;
-				item.isActive = false;
-
-				audio.play('woosh',true);
-
-				$(item).animate({
-					px: 0.4 + Math.random() * 0.2,
-					py: 0.45 + Math.random() * 0.15,
-					altitude: 2,
-					yOffset: 0,
-				}).animate({
-					altitude:0,
-				},{
-					start:function(){
-						item.$shadow.show();
-						item.isActive = true;
-					},
-					complete:function(){
-						audio.play('purse',true);
-					}
-				})
-			},delay + 7500);
-
-			setTimeout(function(){
-				item.hideContents();
-			},delay + 11000);
-		}
-
-
+					item.altitude = 1;
+					$(item).animate({altitude:0},200+Math.random()*200);
+				}
+				
+			}
+		},5000);
 
 		
-
-		setTimeout(function(){
-			
-			for(var i=0; i<3; i++){
-				
-				let item = new Claw3DItem(-1,1 + Math.floor(Math.random()*4));
-				item.showContents();
-				item.$el.appendTo($platform);
-
-				item.px = 0.3 + Math.random() * 0.4;
-				item.py = 0.3 + Math.random() * 0.4;
-
-				items.push(item);
-				item.isActive = false;
-				item.altitude = 3;
-				$(item).delay(items.length*50).animate({altitude:0},{start:function() {
-					item.isActive = true;
-				},complete:function(){
-					audio.play('purse',true);
-				}})
-
-				setTimeout(function(){
-					item.hideContents();
-				},2000);
+		for(var i=0; i<3; i++){
+			let item = new Claw3DItem(-1,1 + Math.floor(Math.random()*4));
+			item.$el.appendTo($platform);
+			items.push(item);
 
 
-			}
-		},meeps.length*200 + 15000);
+			item.altitude = 1;
+			$(item).animate({altitude:0},200+Math.random()*200);
+		}
 
 		setTimeout( function(){
 			initClaw(0);
@@ -744,6 +727,7 @@ window.ClawChaos3DGame = function(countInit){
 	hud.initPlayerCount(initGame);
 
 	let iClaw = -1;
+	let r = 0;
 	self.step = function(){
 
 		if(claw.meep && claw.isTracking){
@@ -773,13 +757,16 @@ window.ClawChaos3DGame = function(countInit){
 				items[i].altitude = items[i].meep.altitude;
 				items[i].yOffset = items[i].meep.height + 40;
 			} else {
-				for(var j in items){
+
+				items[i].r += 0.005;
+
+				/*for(var j in items){
 					if(i!=j && items[i].isActive && items[j].isActive){
 						let dx = items[i].px - items[j].px;
 						let dy = items[i].py - items[j].py;
 						let d = Math.sqrt(dx*dx + dy*dy);
 
-						if(d<0.15){
+						if(d<0.05){
 							let r = Math.atan2(dy,dx);
 							items[i].px += Math.cos(r) * 0.01;
 							items[i].py += Math.sin(r) * 0.01;
@@ -787,7 +774,7 @@ window.ClawChaos3DGame = function(countInit){
 							items[j].py += Math.sin(r+Math.PI) * 0.01;
 						}
 					}
-				}
+				}*/
 			}
 		
 
@@ -797,6 +784,11 @@ window.ClawChaos3DGame = function(countInit){
 		claw.redraw();
 
 		hud.updatePlayers(meeps);
+
+		r += 0.005;
+		$spinner.css({
+			transform: 'rotate('+r+'rad)',
+		})
 
 		resize();
 	}
@@ -901,7 +893,7 @@ window.ClawChaos3DGame = function(countInit){
 			complete:function(){audio.stop('machine')},
 		}).delay(500).animate({
 			px:0.5,
-			py:1,
+			py:0.5,
 		},{
 			duration:500,
 			start:function(){audio.play('machine')},
@@ -921,7 +913,7 @@ window.ClawChaos3DGame = function(countInit){
 				if(d<0.1){
 					claw.grabbed = items[i];
 					items[i].isActive = false;
-					//claw.grabbed.initGrabbed();
+					items[i].meep = claw.meep;
 				}
 				
 			}
