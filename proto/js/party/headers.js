@@ -1,16 +1,14 @@
-window.HeadersFootballGame = function(){
+window.HeadersFootballGame = function( playersMeta ){
 	let self = this;
 
-	let game = new window.HeadersGame('football');
+	let game = new window.HeadersGame( playersMeta, 'football');
 	self.$el = game.$el;
 
 	self.setPlayers = game.setPlayers;
 	self.fini = game.fini;
-
-
 }
 
-window.HeadersGame = function( typeGame='volley' ){
+window.HeadersGame = function( playersMeta, typeGame='volley' ){
 
 	let Ball = function(RADIUS,W,H){
 
@@ -546,7 +544,8 @@ window.HeadersGame = function( typeGame='volley' ){
 		setTimeout(initBall,7000);
 	}
 
-	hud.initPlayerCount(initGame);
+	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
+	else hud.initPlayerCount(initGame);
 
 	let scale = 1;
 	function resize(){

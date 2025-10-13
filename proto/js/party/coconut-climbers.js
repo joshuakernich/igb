@@ -1,4 +1,4 @@
-window.CoconutClimbersGame = function(){
+window.CoconutClimbersGame = function(playersMeta){
 
 	const W = 1600;
 	const H = 1000;
@@ -441,7 +441,8 @@ window.CoconutClimbersGame = function(){
 	let hud = new PartyHUD('#FDC972');
 	hud.$el.appendTo($game);
 
-	hud.initPlayerCount(initGame);
+	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
+	else hud.initPlayerCount(initGame);
 
 	let queue = [];
 	let nStep = 0;
@@ -535,6 +536,7 @@ window.CoconutClimbersGame = function(){
 	let interval = setInterval(step,1000/FPS);
 
 	self.fini = function(){
-		
+		audio.stop('music');
+		hud.finiTutorial();
 	}
 }

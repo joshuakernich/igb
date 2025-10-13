@@ -16,7 +16,7 @@ window.PartyTally = function(players){
 					height: 1000px;
 					padding: 100px;
 					pointer-events: none;
-					overflow: hidden;
+
 					box-sizing: border-box;
 				}
 
@@ -128,6 +128,9 @@ window.PartyTally = function(players){
 		`)
 	}
 
+	let audio = new AudioContext();
+	audio.add('woosh','./proto/audio/party/sfx-woosh.mp3',0.1);
+
 	let self = this;
 	self.$el = $(`<partytallymodal>`);
 	let $table = $(`<partytallytable>`).appendTo(self.$el);
@@ -143,11 +146,11 @@ window.PartyTally = function(players){
 	}
 
 	self.hideRows = function(){
-		for(var r in rows) rows[r].$el.delay(r*100).animate({left:-500});
+		for(var r in rows) rows[r].$el.delay(r*100).animate({left:-500},{start:function(){audio.play('woosh',true);}});
 	}
 
 	self.showRows = function(){
-		for(var r in rows) rows[r].$el.delay(r*100).animate({left:0});
+		for(var r in rows) rows[r].$el.delay(r*100).animate({left:0},{start:function(){audio.play('woosh',true);}});
 	}
 
 	self.showResults = function(results){
@@ -162,6 +165,10 @@ window.PartyTally = function(players){
 }
 
 window.PartyTallyRow = function(n,player){
+
+	let audio = new AudioContext();
+	audio.add('woosh','./proto/audio/party/sfx-woosh.mp3',0.05);
+
 	let self = this;
 	self.$el = $(`
 		<partytallyrow n=${n}>
@@ -191,11 +198,15 @@ window.PartyTallyRow = function(n,player){
 		.show()
 		.css({left:-200})
 		.delay(delay)
-		.animate({left:0});
+		.animate({left:0},{start:function(){audio.play('woosh',true);}});
+
+		audio.play('woosh',true);
 	}
 
 	self.resolveResult = function(delay=0){
-		self.$el.find('partytallyresult').delay(delay).animate({left:-200});
+		self.$el.find('partytallyresult').delay(delay).animate({left:-200},{start:function(){audio.play('woosh',true);}});
 		setTimeout( self.redraw, delay );
+
+
 	}
 }

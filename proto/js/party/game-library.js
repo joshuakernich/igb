@@ -126,7 +126,7 @@ window.GAMES = {
 		name:'',
 		game:window.MazeGame,
 		color:'white',
-		bg:'url(./proto/img/party/icon-maze.png) center / cover'
+		bg:'url(./proto/img/party/bg-cosmos.gif) center / cover'
 	},
 	
 }

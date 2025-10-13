@@ -303,7 +303,7 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
                 width: ${W*3}px;
                 height: ${H}px;
                 transform-origin: top left;
-                overflow: hidden;
+               
                 perspective: ${W}px;
                 position: absolute;
                 left: 0px;
@@ -638,6 +638,7 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
     	nSelect = nTry;
     	boxes[nSelect].isSpinning = false;
 
+    	audio.stop('music');
     	audio.play('rumble');
     	audio.play('saber',true);
     	audio.setVolume('saber',0);
@@ -651,9 +652,6 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
     		step:function(n) {
     			audio.setVolume('saber',n);
     		},
-    		complete:function(){
-				audio.stop('music');
-			},
     	}).animate({
     		openX:1,
     		openY:1,
@@ -811,16 +809,26 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
     		duration:1500,
     		complete:function(){
     			boxes[nSelect].$el.remove();
+    			pop(boxes[nSelect].transform);
     			nSelect = undefined;
-    			pop();
+   
     			setTimeout(callbackExitBox,500);
+
+    			audio.play('music');
     		}
     	})
 	}
 
 	const EXPLOSION = 200;
-	function pop(){
-		let $pop = $('<boxpartypop>')
+	function pop(t){
+		let $pop = $('<boxpartypop>').css({
+			'left':t.x+'px',
+			'bottom':t.y+'px',
+			'transform':'rotateX(90deg) translateZ(-200px) translateY('+t.altitude+'px)',
+		}).appendTo($plane);
+
+
+
 		for(var i=0; i<6; i++){
 			let size = 20 + Math.random() * 20;
 			let r = Math.random() * Math.PI*2;
@@ -843,6 +851,8 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 			},1000)
 		}
 	}
+
+	pop(boxes[0].transform);
 
 	self.anchorPlayer = {x:0,y:W};
 
@@ -925,12 +935,19 @@ BoxPartyGame = function(){
 	self.$el = $('<igb>');
 
 	let $minigame = $('<boxpartyminigame>').appendTo(self.$el);
-
 	let $game = $('<boxpartygame>').appendTo(self.$el);
 	
 	
 	let scene = new BoxPartyScene3D(QUEUE, doShowOverlay, doLaunchGame, doExitGame);
 	scene.$el.appendTo($game);
+
+	 let hud = new PartyHUD('#7538D4',0);
+	hud.$el.find('partyhudframe').hide();
+    hud.$el.appendTo($game);
+    hud.initPlayerCount(initGame);
+
+    hud.addDebug('SKIP LOCATION',doSkipLocation);
+    hud.addDebug('SKIP MINIGAME',doSkipMinigame);
 
 	
 	let $overlay = $('<boxpartyoverlay>').appendTo(self.$el);
@@ -957,6 +974,7 @@ BoxPartyGame = function(){
 	}
 
 	function doLaunchGame(game){
+
 		let p = game;
 		liveModule = new p(players);
 		liveModule.$el.appendTo($minigame);
@@ -970,6 +988,8 @@ BoxPartyGame = function(){
 
 	let resultsPending;
 	function doCompleteGame(results){
+
+
 		
 		if(liveModule.fini) liveModule.fini();
 
@@ -977,6 +997,7 @@ BoxPartyGame = function(){
 		scene.$el.show();
 		liveModule.$el.remove();
 		scene.doCompleteBox();
+
 
 		liveModule = undefined;
 		window.doPartyGameComplete = undefined;
@@ -1010,6 +1031,7 @@ BoxPartyGame = function(){
 	}
 
 	function doShowTally(){
+		
 		tally.showRows();
 	}
 
@@ -1043,13 +1065,7 @@ BoxPartyGame = function(){
 		if(liveModule) doCompleteGame([]);
 	}
 
-    let hud = new PartyHUD('#7538D4',0);
-	hud.$el.find('partyhudframe').hide();
-    hud.$el.appendTo($game);
-    hud.initPlayerCount(initGame);
-
-    hud.addDebug('SKIP LOCATION',doSkipLocation);
-    hud.addDebug('SKIP MINIGAME',doSkipMinigame);
+  
 
     self.setPlayers = function(p){
     	scene.setPlayers(p);

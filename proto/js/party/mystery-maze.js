@@ -1,4 +1,4 @@
-window.MysteryMazeGame = function(){
+window.MysteryMazeGame = function(playersMeta){
 
 	const TUTORIAL = 
 	[
@@ -537,9 +537,9 @@ window.MysteryMazeGame = function(){
 		},delay += 1000);
 	}
 
-	hud.initPlayerCount(initGame);
+	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
+	else hud.initPlayerCount(initGame);
 
-	
 	function initNextPlayer(triggerPreview=false){
 		nPlayer++;
 
