@@ -825,6 +825,9 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 
 	self.doCompleteBox = function(){
 
+		audio.play('rumble');
+		audio.play('saber');
+
 		boxes[nSelect].isComplete = true;
 
 		boxes[nSelect].transformCache.w = 0;
@@ -834,6 +837,10 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 		$(boxes[nSelect].transform).animate(boxes[nSelect].transformCache,{
     		duration:1500,
     		complete:function(){
+
+    			audio.stop('rumble');
+				audio.stop('saber');
+
     			boxes[nSelect].$el.remove();
     			pop(boxes[nSelect].transform);
     			
