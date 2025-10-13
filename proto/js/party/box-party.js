@@ -154,6 +154,10 @@ BoxPartyCube = function(nCube,transform,game){
 
 	let self = this;
 
+	let audio = new AudioContext();
+    audio.add('reveal','./proto/audio/riddler-perfect.mp3',0.3);
+    audio.add('rumble','./proto/audio/party/sfx-rumble.mp3',0.1,true);
+
 	self.game = game;
 	self.transform = transform;
 	self.transformCache = {};
@@ -245,9 +249,7 @@ BoxPartyCube = function(nCube,transform,game){
 		if(!showFace) $face.find('boxeye').hide();
 	}
 
-	let audio = new AudioContext();
-    audio.add('reveal','./proto/audio/riddler-perfect.mp3',0.3);
-    audio.add('rumble','./proto/audio/party/sfx-rumble.mp3',0.15,true);
+	
 
 	self.revealGame = function( ){
 
@@ -282,8 +284,11 @@ BoxPartyCube = function(nCube,transform,game){
 BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbackExitBox){
     
 	let audio = new AudioContext();
-    audio.add('rumble','./proto/audio/party/sfx-rumble.mp3',0.2);
+    audio.add('rumble','./proto/audio/party/sfx-rumble.mp3',0.1);
     audio.add('reveal','./proto/audio/party/sfx-correct-echo.mp3',0.3);
+	audio.add('saber','./proto/audio/party/sfx-saber.mp3',1);
+	audio.add('saber-ignition','./proto/audio/party/sfx-saber-ignition.mp3',0.3);
+	audio.add('music','./proto/audio/party/music-adventure.mp3',0.3,true,true);
 
     const W = 1600;
     const H = 1000;
@@ -594,6 +599,8 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 
 	    	meeps[i] = meep;
 	    }
+
+	    audio.play('music');
     }
     
 
@@ -631,13 +638,28 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
     	nSelect = nTry;
     	boxes[nSelect].isSpinning = false;
 
+    	audio.play('rumble');
+    	audio.play('saber',true);
+    	audio.setVolume('saber',0);
+    	audio.play('saber-ignition',true);
+
     	$(boxes[nSelect]).animate({
     		openX: 0.1,
     		openY: 0.4,
-    	},500).animate({
+    	},{
+    		duration: 500,
+    		step:function(n) {
+    			audio.setVolume('saber',n);
+    		},
+    		complete:function(){
+				audio.stop('music');
+			},
+    	}).animate({
     		openX:1,
     		openY:1,
-    	},2500)
+    	},{
+    		duration: 2500
+		})
 
     	$(boxes[nSelect].transform).delay(500).animate({
     		rx:0,
@@ -652,19 +674,17 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
     	},{
     		duration:3000,
     		complete:function(){
+    			console.log('stop saber');
     			audio.stop('rumble');
+    			audio.stop('saber');
     			audio.play('reveal');
     			callbackEnterBox(boxes[nSelect].game.game);
     		}
     	})
 
     	setTimeout(callbackShowOverlay,2000);
-
-    	/*boxes[nSelect].$el.find('.partycube3D-front partycube3Dsurface').animate({
-    		opacity:0
-    	},3000);*/
     	
-    	audio.play('rumble');
+    	
     }
 
     let iLevel = -1;
@@ -901,10 +921,6 @@ BoxPartyGame = function(){
 
         <style`);
 
- 	let audio = new AudioContext();
-    audio.add('music','./proto/audio/party/music-adventure.mp3',0.3,true,true);
-   // audio.add('music','./proto/audio/party/sfx-rumble.mp3',1);
-
 	let self = this;
 	self.$el = $('<igb>');
 
@@ -944,7 +960,7 @@ BoxPartyGame = function(){
 		let p = game;
 		liveModule = new p(players);
 		liveModule.$el.appendTo($minigame);
-		audio.stop('music');
+		
 		scene.$el.hide();
 
 		window.doPartyGameComplete = doCompleteGame;
@@ -960,7 +976,6 @@ BoxPartyGame = function(){
 		resultsPending = results;
 		scene.$el.show();
 		liveModule.$el.remove();
-		audio.play('music');
 		scene.doCompleteBox();
 
 		liveModule = undefined;
@@ -1004,7 +1019,6 @@ BoxPartyGame = function(){
 
 	let tally;
 	function initGame(count){
-		audio.play('music');
 
 		for(var i=0; i<count; i++) players[i] = {score:0};
 

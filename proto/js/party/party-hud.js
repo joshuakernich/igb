@@ -35,6 +35,11 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	audio.add('outro','./proto/audio/party/music-outro.mp3',0.3);
 	audio.add('woosh','./proto/audio/party/sfx-woosh.mp3',0.05);
 	audio.add('woosh-long','./proto/audio/party/sfx-woosh-long.mp3',0.05);
+	audio.add('5','./proto/audio/party/speech-5.mp3',0.3);
+	audio.add('4','./proto/audio/party/speech-4.mp3',0.3);
+	audio.add('3','./proto/audio/party/speech-3.mp3',0.3);
+	audio.add('2','./proto/audio/party/speech-2.mp3',0.3);
+	audio.add('1','./proto/audio/party/speech-1.mp3',0.3);
 
 	new PartyMeep(0);
 
@@ -584,7 +589,10 @@ window.PartyHUD = function( colour='#40B0ED' ){
 			if(secondsRemaining<secondsWas && secondsRemaining<=5){
 				secondsWas = secondsRemaining;
 				if(secondsRemaining==0) audio.play('tock',true);
-				else audio.play('tick',true);
+				else{
+					audio.play('tick',true);
+					audio.play(secondsRemaining,true);
+				}
 			}
 
 			if(secondsRemaining==0){
