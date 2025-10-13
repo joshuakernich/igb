@@ -603,6 +603,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	}
 
 	self.finiTimer = function(){
+		clearInterval(interval);
 		audio.play('woosh-long',true);
 		isTimerRevealled = false;
 

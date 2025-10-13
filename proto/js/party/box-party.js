@@ -288,7 +288,7 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
     audio.add('reveal','./proto/audio/party/sfx-correct-echo.mp3',0.3);
 	audio.add('saber','./proto/audio/party/sfx-saber.mp3',1);
 	audio.add('saber-ignition','./proto/audio/party/sfx-saber-ignition.mp3',0.3);
-	audio.add('music','./proto/audio/party/music-adventure.mp3',0.3,true,true);
+	audio.add('music','./proto/audio/party/music-adventure.mp3',0.2,true,true);
 
     const W = 1600;
     const H = 1000;
@@ -912,6 +912,18 @@ BoxPartyGame = function(){
 				pointer-events: none;
         	}
 
+			boxpartygame:after{
+				content:"";
+				display: block;
+				position: absolute;
+				top: 0px;
+				bottom: 0px;
+				left: 33.3%;
+				right: 33.3%;
+				border-right: 1px solid white;
+				border-left: 1px solid white;
+			}
+
         	boxpartyoverlay{
         		position: absolute;
         		inset: 0px;
@@ -980,6 +992,7 @@ BoxPartyGame = function(){
 		liveModule.$el.appendTo($minigame);
 		
 		scene.$el.hide();
+		tally.$el.hide();
 
 		window.doPartyGameComplete = doCompleteGame;
 
@@ -995,6 +1008,7 @@ BoxPartyGame = function(){
 
 		resultsPending = results;
 		scene.$el.show();
+		tally.$el.show();
 		liveModule.$el.remove();
 		scene.doCompleteBox();
 

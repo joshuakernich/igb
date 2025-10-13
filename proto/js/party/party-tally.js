@@ -36,7 +36,8 @@ window.PartyTally = function(players){
 					margin: 20px;
 					box-shadow: 0px 2px 20px black;
 
-					left: -550px;
+					left: -600px;
+					opacity: 0.5;
 				}
 
 				partytallypos{
@@ -146,11 +147,11 @@ window.PartyTally = function(players){
 	}
 
 	self.hideRows = function(){
-		for(var r in rows) rows[r].$el.delay(r*100).animate({left:-500},{start:function(){audio.play('woosh',true);}});
+		for(var r in rows) rows[r].$el.delay(r*100).animate({left:-600, opacity:0.5},{start:function(){audio.play('woosh',true);}});
 	}
 
 	self.showRows = function(){
-		for(var r in rows) rows[r].$el.delay(r*100).animate({left:0},{start:function(){audio.play('woosh',true);}});
+		for(var r in rows) rows[r].$el.delay(r*100).animate({left:0, opacity:1},{start:function(){audio.play('woosh',true);}});
 	}
 
 	self.showResults = function(results){

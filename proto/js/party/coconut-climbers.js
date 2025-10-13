@@ -538,5 +538,6 @@ window.CoconutClimbersGame = function(playersMeta){
 	self.fini = function(){
 		audio.stop('music');
 		hud.finiTutorial();
+		hud.finiTimer();
 	}
 }
