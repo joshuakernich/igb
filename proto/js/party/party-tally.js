@@ -122,23 +122,29 @@ window.PartyTally = function(players){
 				partytallyresultmask{
 					overflow: hidden;
 					position: absolute;
-					padding-left: 20px;
+					display: block;
+					
+					
+					left: 100%;
+					width: 140px;
 					top: 0px;
 					bottom: 0px;
-					width: 200px;
 				}
 
 				partytallyresult{
 					position: relative;
 					background: #9B62E8; 
 					color: white;
-					height: 100%;
+					height: 80px;
 					display: inline-block;
 					box-sizing: border-box;
-					padding: 5px 20px;
+					
 					border: 5px solid white;
 
-					left: -150px;
+					line-height: 70px;
+					width: 120px;
+					left: -120px;
+					text-align: center;
 				}
 			</style>
 		`)
@@ -146,6 +152,7 @@ window.PartyTally = function(players){
 
 	let audio = new AudioContext();
 	audio.add('woosh','./proto/audio/party/sfx-woosh.mp3',0.1);
+	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
 
 	let self = this;
 	self.$el = $(`<partytallymodal>`);
@@ -184,6 +191,7 @@ window.PartyTallyRow = function(n,player){
 
 	let audio = new AudioContext();
 	audio.add('woosh','./proto/audio/party/sfx-woosh.mp3',0.05);
+	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
 
 	let self = this;
 	self.$el = $(`
@@ -210,21 +218,20 @@ window.PartyTallyRow = function(n,player){
 	}
 
 	self.showResult = function(result,delay=0){
-		if(isNaN(result)) return;
+		if(isNaN(result)) result = 0;
+
 		self.$el.find('partytallyresult')
 		.text(result>=0?'+ '+result:'- '+(-result))
 		.show()
-		.css({left:-200})
+		.css({left:-120})
 		.delay(delay)
-		.animate({left:0},{start:function(){audio.play('woosh',true);}});
-
-		audio.play('woosh',true);
+		.animate({left:20},{start:function(){audio.play('woosh',true);}});
 	}
 
 	self.resolveResult = function(delay=0){
-		self.$el.find('partytallyresult').delay(delay).animate({left:-200},{start:function(){audio.play('woosh',true);}});
+		self.$el.find('partytallyresult').delay(delay).animate({left:-200},{
+			start:function(){audio.play('coin',true)},
+		});
 		setTimeout( self.redraw, delay );
-
-
 	}
 }

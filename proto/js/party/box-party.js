@@ -286,6 +286,8 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 	let audio = new AudioContext();
     audio.add('rumble','./proto/audio/party/sfx-rumble.mp3',0.1);
     audio.add('reveal','./proto/audio/party/sfx-correct-echo.mp3',0.3);
+	audio.add('woosh-long','./proto/audio/party/sfx-woosh-long.mp3',0.1);
+	audio.add('explode','./proto/audio/party/sfx-explode.mp3',0.3);
 	audio.add('saber','./proto/audio/party/sfx-saber.mp3',1);
 	audio.add('saber-ignition','./proto/audio/party/sfx-saber-ignition.mp3',0.3);
 	audio.add('music','./proto/audio/party/music-adventure.mp3',0.2,true,true);
@@ -474,6 +476,16 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
     			display: block;
 				position: absolute;
     			
+    		}
+
+    		boxpartypopball{
+    			display: block;
+    			position: absolute;
+    			width: 200px;
+    			height: 200px;
+				transform: translate(-50%, -50%);
+    			background: white;
+    			border-radius: 100%;
     		}
 
     		boxpartysmoke{
@@ -743,6 +755,7 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 	}
 
 	self.doWalkForward = function(){
+
 		iLevel++;
 		let stop = stops[iLevel];
 		$(self.anchorPlayer).animate({
@@ -752,6 +765,8 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 	}
 
 	self.doActivateStop = function(){
+		audio.play('woosh-long');
+
 		$plane.css({
 			'transition':'all 1s',
 			'transform':'translateZ('+0+'px)',
@@ -777,6 +792,16 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 	}
 
 	self.doDeactivateStop = function(){
+		audio.play('music');
+		audio.setVolume('music',0);
+
+		let volume = {v:0};
+		$(volume).animate({v:0.2},{
+			duration: 1000,
+			step:function(n){
+			audio.setVolume('music',n);
+		}})
+
 		$plane.css({
 			'transition':'all 1s',
 		});
@@ -811,17 +836,38 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
     		complete:function(){
     			boxes[nSelect].$el.remove();
     			pop(boxes[nSelect].transform);
+    			
+
+    			for(var b in boxes){
+    				if(b!=nSelect && boxes[b].iLevel == boxes[nSelect].iLevel){
+
+    					let dir = (boxes[b].transform.x > boxes[nSelect].transform.x)?1:-1;
+
+    					$(boxes[b].transform).animate({
+    						x:boxes[b].transform.x + 500 * dir,
+    						y:boxes[b].transform.y + 500,
+    					})
+
+    					$(boxes[b].$el).delay(500).css({opacity:1}).animate({
+    						opacity:0,
+    					});
+    				}
+    			}
+
     			nSelect = undefined;
+
+
    
     			setTimeout(callbackExitBox,500);
-
-    			audio.play('music');
     		}
     	})
 	}
 
 	const EXPLOSION = 200;
 	function pop(t){
+
+		audio.play('explode',true);
+
 		let $pop = $('<boxpartypop>').css({
 			'left':t.x+'px',
 			'bottom':t.y+'px',
@@ -829,6 +875,12 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 		}).appendTo($plane);
 
 
+		$('<boxpartypopball>').appendTo($pop).css({
+			width: 300,
+			height: 300,
+		}).delay(500).animate({
+			opacity:0,
+		})
 
 		for(var i=0; i<6; i++){
 			let size = 20 + Math.random() * 20;
@@ -852,8 +904,6 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 			},1000)
 		}
 	}
-
-	pop(boxes[0].transform);
 
 	self.anchorPlayer = {x:0,y:W};
 
