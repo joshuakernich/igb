@@ -1,4 +1,4 @@
-window.NameEntryPlayer = function(nPlayer){
+window.NameEntryPlayer = function(nPlayer,callback){
 
 	const ALPHABET = 'qwertyuiop|asdfghjkl|zxcvbnm';
 
@@ -7,15 +7,16 @@ window.NameEntryPlayer = function(nPlayer){
 
 	let $input = $('<nameentryinput>').appendTo(self.$el).text('Enter your name');
 	
-	let text = '';
+	self.nPlayer = nPlayer;
+	self.text = '';
 	function onLetter(){
 
 		let $letter = $(this);
 
 		let letter = $letter.attr('letter');
 
-		text = text + letter;
-		$input.text(text);
+		self.text = self.text + letter;
+		$input.text(self.text);
 
 
 		$letter.addClass('tapped');
@@ -23,12 +24,23 @@ window.NameEntryPlayer = function(nPlayer){
 	}
 
 	function onBackspace(){
-		text = text.substr(0,text.length-1);
-		$input.text(text);
+		self.text = self.text.substr(0,self.text.length-1);
+		$input.text(self.text);
 
 		let $letter = $(this);
 		$letter.addClass('tapped');
 		setTimeout(function(){ $letter.removeClass('tapped'); });
+	}
+
+	function onComplete() {
+		// body...
+		let $letter = $(this);
+		$letter.addClass('tapped');
+		self.$el.css({'pointer-events':'none'}).delay(1000).animate({opacity:0});
+		meep.$el.delay(500).animate({top:500},{complete:function() {
+			callback(self);
+		}});
+		//callback(text);
 	}
 
 
@@ -38,17 +50,33 @@ window.NameEntryPlayer = function(nPlayer){
 	}
 
 	$('<nameentrybutton>').appendTo( self.$el ).text('←').click(onBackspace);
+	$('<nameentrybutton class="done">').appendTo( self.$el ).click(onComplete);
+
+	let $meepContainer = $("<div>").appendTo(self.$el).css({
+		top: '14vw',
+		position: 'absolute',
+		left: '50%',
+	})
 
 	let meep = new PartyMeep(nPlayer);
-	meep.$el.appendTo(self.$el);
+	meep.$el.appendTo($meepContainer);
 	meep.setHeight(300);
 	meep.$el.css({
-		left: '50%',
-		top: 'calc( 14vw + 300px )',
+		top: '500px',
+	}).delay(500).animate({
+		top:'290px'
+	},400).animate({
+		top:'300px'
+	},200);
+
+	self.$el.css({
+		opacity:0,
+	}).animate({
+		opacity:1,
 	})
 }
 
-window.NameEntry = function(){
+window.NameEntry = function( playersMeta, callback ){
 	
 	if(!NameEntry.didInit){
 		NameEntry.didInit = true;
@@ -62,7 +90,8 @@ window.NameEntry = function(){
 					font-size: 1.5vw;
 					text-align: center;
 					font-weight: 700;
-					background: #5F01FF;
+					
+					background: transparent;
 				}
 
 				.nameentry igbside{
@@ -79,19 +108,9 @@ window.NameEntry = function(){
 					position:relative;
 					padding: 0.5vw;
 					box-sizing: border-box;
+					background: transparent;
 				}
 
-				nameentryplayer:before{
-					content: "";
-					display:block;
-					position: absolute;
-					top: 0px;
-					left: 0px;
-					right: 0px;
-					bottom: 0px;
-					background: linear-gradient( to bottom, transparent, #5F01FF );
-					opacity: 0.5;
-				}
 
 				.nameentry igbside:first-of-type nameentryplayer{
 					padding-left: 3.5vw;
@@ -112,6 +131,17 @@ window.NameEntry = function(){
 					font-weight: inherit;
 					transition: all 1s;
 					position: relative;
+					vertical-align: middle;
+				}
+
+				nameentrybutton.done{
+					font-size: 0.8vw;
+					width: 3.5vw;
+				}
+
+				nameentrybutton.done:after{
+					content: "DONE";
+
 				}
 
 				nameentrybutton.tapped{
@@ -131,9 +161,12 @@ window.NameEntry = function(){
 					position: relative;
 				}
 
-				nameentryplayer[n='0']{ background:red; }
-				nameentryplayer[n='1']{ background:blue; }
-				nameentryplayer[n='2']{ background:limegreen; }
+				nameentryplayer[n='0']{ background: linear-gradient(to top, var(--n0), transparent) }
+				nameentryplayer[n='1']{ background: linear-gradient(to top, var(--n1), transparent) }
+				nameentryplayer[n='2']{ background: linear-gradient(to top, var(--n2), transparent) }
+				nameentryplayer[n='3']{ background: linear-gradient(to top, var(--n3), transparent) }
+				nameentryplayer[n='4']{ background: linear-gradient(to top, var(--n4), transparent) }
+				nameentryplayer[n='5']{ background: linear-gradient(to top, var(--n5), transparent) }
 
 				
 			</style>`);
@@ -148,13 +181,47 @@ window.NameEntry = function(){
 	let $sides = [];
 	for(var i=0; i<3; i++){
 		$sides[i] = $('<igbside>').appendTo(self.$el);
-
-		new NameEntryPlayer(i).$el.appendTo($sides[i]);
 	}
 
-	
+
+
 	
 
+	let slots = [];
+	let nPlayer = -1;
+
+	function doNextEntry() {
+
+		nPlayer++;
+		let nSlot = 0;
+		while(slots[nSlot]) nSlot++;
+		slots[nSlot] = new NameEntryPlayer(nPlayer, onEntryComplete);
+		slots[nSlot].$el.appendTo($sides[nSlot]);
+	}
+
+	function onEntryComplete( entry ){
+
+		let nSlot = slots.indexOf(entry);
+		slots[nSlot].$el.remove();
+		slots[nSlot] = undefined;
+
+		playersMeta[entry.nPlayer].name = entry.text;
+
+		if(nPlayer<playersMeta.length-1){
+			doNextEntry();
+		} else {
+			let isComplete = true;
+			for(var s in slots) if(slots[s]) isComplete = false;
+			if(isComplete) callback();
+		}
+	}
+
+	if(!playersMeta) playersMeta = [{},{},{},{},{},{}];
+
+	// make the middle side the last preference
+	if( playersMeta.length==2) $sides[1].appendTo(self.$el);
+
+	while(slots.length<Math.min(3,playersMeta.length)) doNextEntry();
 
 	self.setPlayers = function(p){
 		

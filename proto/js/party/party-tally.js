@@ -30,15 +30,15 @@ window.PartyTally = function(players){
 					display: block;
 					background: rgba(255,255,255,0.7);
 					
-					width: 330px;
+					width: 560px;
 					height: 80px;
 					text-align: left;
 					position: relative;
 					margin: 20px;
 					box-shadow: 0px 2px 20px black;
 
-					left: -600px;
-					opacity: 0.5;
+					left: -800px;
+					opacity: 0;
 					line-height: 80px;
 					font-weight: bold;
 				}
@@ -56,6 +56,16 @@ window.PartyTally = function(players){
 					font: inherit;
 					margin-left: 20px;
 					vertical-align:middle;
+				}
+
+				partytallyname{
+					display: inline-block;
+					width: 250px;
+					font: inherit;
+					margin-left: 70px;
+					overflow: hidden;
+					vertical-align:middle;
+
 				}
 
 				partytallyscore{
@@ -81,7 +91,7 @@ window.PartyTally = function(players){
 					transform: rotate(20deg);
 					box-shadow: inset -2px 0px rgba(255,255,255,0.5);
 
-					margin-left: 70px;
+					margin-left: 0px;
 				}
 
 				partytallycoin:before{
@@ -169,7 +179,7 @@ window.PartyTally = function(players){
 	}
 
 	self.hideRows = function(){
-		for(var r in rows) rows[r].$el.delay(r*100).animate({left:-600, opacity:0.5},{start:function(){audio.play('woosh',true);}});
+		for(var r in rows) rows[r].$el.delay(r*100).animate({left:-800, opacity:0.5},{start:function(){audio.play('woosh',true);}});
 	}
 
 	self.showRows = function(){
@@ -198,12 +208,14 @@ window.PartyTallyRow = function(n,player){
 		<partytallyrow n=${n}>
 			<partytallycontent>
 				<partytallypos>1st</partytallypos>
+				
 				<partymeephead n=${n}>
 					<partymeephat></partymeephat>
 					<partymeepeye></partymeepeye>
 					<partymeepeye></partymeepeye><br>
 					<partymeepmouth></partymeepmouth>
 				</partymeephead>
+				<partytallyname>${player.name}</partytallyname>
 				<partytallycoin></partytallycoin>
 				<partytallyscore>${player.score}</partytallyscore>
 			</partytallycontent>

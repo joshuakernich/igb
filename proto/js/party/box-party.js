@@ -1108,21 +1108,45 @@ BoxPartyGame = function(){
 		tally.hideRows();
 	}
 
+	let nameEntry;
 	let tally;
 	function initGame(count){
 
-		for(var i=0; i<count; i++) players[i] = {score:0};
+		for(var i=0; i<count; i++) players[i] = {score:0,name:'unknown'};
 
-		tally = new PartyTally(players);
-		tally.$el.appendTo($game);
+		
 
 		scene.initMeeps(count);
 
 		scene.doFlyover();
-		setTimeout(doShowTally,10000);
+		/*setTimeout(doShowTally,10000);
 		setTimeout(doHideTally,13000);
 		setTimeout(scene.doWalkForward,14000);
-		setTimeout(scene.doActivateStop,16000);
+		setTimeout(scene.doActivateStop,16000);*/
+
+		setTimeout(initNameEntry,12000);
+	}
+
+	function initNameEntry(){
+		nameEntry = new NameEntry(players, finiNameEntry);
+		nameEntry.$el.appendTo(self.$el);
+		nameEntry.$el.css({
+			opacity:0
+		}).animate({
+			opacity:1,
+		})
+	}
+
+	function finiNameEntry(){
+		nameEntry.$el.remove();
+
+		tally = new PartyTally(players);
+		tally.$el.appendTo($game);
+
+		setTimeout(doShowTally,1000);
+		setTimeout(doHideTally,3000);
+		setTimeout(scene.doWalkForward,4000);
+		setTimeout(scene.doActivateStop,5000);
 	}
 
 	function doSkipLocation() {
