@@ -1,4 +1,4 @@
-window.PlummetPanicGame = function() {
+window.PlummetPanicGame = function(playersMeta) {
 	
 	const W = 1600;
 	const H = 1000;
@@ -414,8 +414,9 @@ window.PlummetPanicGame = function() {
 
 	let hud = new PartyHUD('#7399C5');
 	hud.$el.appendTo($game);
-	hud.initPlayerCount(initGame);
-	//hud.showFinalScores([1,2,3,4,5,6],[10,5,3,2,1,0])
+	
+	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
+	else hud.initPlayerCount(initGame);
 
 	let meeps = [];
 	let scrollSpeed = 0;

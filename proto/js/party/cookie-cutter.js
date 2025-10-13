@@ -1,4 +1,4 @@
-window.CookieCutterGame = function(){
+window.CookieCutterGame = function( playersMeta ){
 
 	const W = 1600;
 	const H = 1000;
@@ -328,7 +328,8 @@ window.CookieCutterGame = function(){
 	let hud = new PartyHUD('#71A4A2');
 	hud.$el.appendTo($game);
 
-	hud.initPlayerCount(initGame);
+	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
+	else hud.initPlayerCount(initGame);
 
 	let timer;
 	let scale = 1;

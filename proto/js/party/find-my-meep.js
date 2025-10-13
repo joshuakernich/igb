@@ -1,4 +1,4 @@
-window.FindMyMeepGame = function(){
+window.FindMyMeepGame = function( playersMeta ){
 
 	const W = 1600;
 	const H = 1000;
@@ -449,7 +449,8 @@ window.FindMyMeepGame = function(){
 		initRound();
 	}
 
-	hud.initPlayerCount(initGame);
+	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
+	else hud.initPlayerCount(initGame);
 
 	
 	let interval = setInterval(step,1000/FPS);

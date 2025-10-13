@@ -1,4 +1,4 @@
-window.ClawChaos3DGame = function(countInit){
+window.ClawChaos3DGame = function( playersMeta ){
 	
 	const W = 1600;
 	const H = 1000;
@@ -724,7 +724,8 @@ window.ClawChaos3DGame = function(countInit){
 		}, meeps.length*200 + 20000 );
 	}
 
-	hud.initPlayerCount(initGame);
+	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
+	else hud.initPlayerCount(initGame);
 
 	let iClaw = -1;
 	let r = 0;

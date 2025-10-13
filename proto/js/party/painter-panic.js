@@ -1,4 +1,4 @@
-window.PainterPanicGame = function(){
+window.PainterPanicGame = function( playersMeta ){
 
 	const W = 1600;
 	const H = 1000;
@@ -858,7 +858,8 @@ window.PainterPanicGame = function(){
 	let hud = new PartyHUD('#C09363');
 	hud.$el.appendTo($game);
 
-	hud.initPlayerCount(initGame);
+	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
+	else hud.initPlayerCount(initGame);
 
 	let boxes = [];
 	let meeps = [];

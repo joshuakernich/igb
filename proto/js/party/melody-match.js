@@ -1,4 +1,4 @@
-window.MelodyMatchGame = function(){
+window.MelodyMatchGame = function( playersMeta ){
 
 	const W = 1600;
 	const H = 1000;
@@ -571,7 +571,8 @@ window.MelodyMatchGame = function(){
 		},5000)
 	}
 
-	hud.initPlayerCount(initGame);
+	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
+	else hud.initPlayerCount(initGame);
 
 	self.step = function(){
 	

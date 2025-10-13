@@ -1,4 +1,4 @@
-window.GoalPatrolGame = function( ){
+window.GoalPatrolGame = function( playersMeta ){
 
 	const W = 1600;
 	const H = 1000;
@@ -753,7 +753,8 @@ window.GoalPatrolGame = function( ){
 		},5000)
 	}
 
-	hud.initPlayerCount(initGame);
+	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
+	else hud.initPlayerCount(initGame);
 
 
 	function step(){

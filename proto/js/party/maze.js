@@ -1,4 +1,4 @@
-window.MazeGame = function(n){
+window.MazeGame = function( playersMeta ){
 	const W = 1600;
 	const H = 1000;
 	const FPS = 20;
@@ -826,7 +826,8 @@ window.MazeGame = function(n){
 		setTimeout(initNextRound,2500);
 	}
 
-	hud.initPlayerCount(initGame);
+	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
+	else hud.initPlayerCount(initGame);
 
 	let scale = 1;
 	function resize(){

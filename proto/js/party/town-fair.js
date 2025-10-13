@@ -1,4 +1,4 @@
-window.TownFairGame = function(){
+window.TownFairGame = function( playersMeta ){
 
 	const W = 1600;
 	const H = 1000;
@@ -750,7 +750,8 @@ window.TownFairGame = function(){
 		},5000)
 	}
 
-	hud.initPlayerCount(initGame);
+	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
+	else hud.initPlayerCount(initGame);
 
 	function toWall(){
 		$world.css({

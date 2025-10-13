@@ -1,4 +1,4 @@
-window.BowlingGame = function(){
+window.BowlingGame = function( playersMeta ){
 
 	const W = 1600;
 	const H = 1000;
@@ -701,7 +701,8 @@ window.BowlingGame = function(){
 		initTutorial();
 	}
 
-	hud.initPlayerCount(initGame);
+	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
+	else hud.initPlayerCount(initGame);
 
 	function initTutorial(){
 		initPattern(TUTORIAL);

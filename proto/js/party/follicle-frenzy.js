@@ -1,8 +1,5 @@
 
-
-
-
-window.FollicleFrenzyGame = function(){
+window.FollicleFrenzyGame = function( playersMeta ){
 
 	const W = 1600;
 	const H = 1000;
@@ -928,7 +925,9 @@ window.FollicleFrenzyGame = function(){
 
 	let hud = new PartyHUD();
 	hud.$el.appendTo($game);
-	hud.initPlayerCount(initGame);
+	
+	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
+	else hud.initPlayerCount(initGame);
 
 	let scale = 1;
 	function resize(){

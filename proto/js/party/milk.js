@@ -1,6 +1,6 @@
 
 
-window.MilkGame = function(){
+window.MilkGame = function( playersMeta ){
 
 	const ROUNDS = [
 		undefined,
@@ -1043,5 +1043,7 @@ window.MilkGame = function(){
 	}
 	
 	self.init();
-	hud.initPlayerCount(initGame);
+	
+	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
+	else hud.initPlayerCount(initGame);
 }

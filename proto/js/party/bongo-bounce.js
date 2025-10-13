@@ -1,4 +1,4 @@
-window.BongoBounceGame = function( players ){
+window.BongoBounceGame = function( playersMeta ){
 	
 	const W = 1600;
 	const H = 1000;
@@ -663,7 +663,7 @@ window.BongoBounceGame = function( players ){
 		},3000);
 	}
 
-	if ( players ) initGame( players.length );
+	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
 	else hud.initPlayerCount(initGame);
 
 	let scale = 1;

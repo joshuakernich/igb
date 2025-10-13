@@ -1,4 +1,4 @@
-window.PopcornGame = function(){
+window.PopcornGame = function( playersMeta ){
 	const W = 1600;
 	const H = 1000;
 	const FPS = 50;
@@ -474,7 +474,8 @@ window.PopcornGame = function(){
 		if(nPlayer>=meeps.length) clearInterval(intervalQueue);
 	}
 
-	hud.initPlayerCount(initGame);
+	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
+	else hud.initPlayerCount(initGame);
 
 	function spawnKernel(wall,px,delay) {
 		
