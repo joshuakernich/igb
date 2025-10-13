@@ -537,11 +537,9 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 		setTimeout(hud.finiBanner,3000);
 		hud.revealTimer(30);
 		setTimeout(function(){
-			hud.initBanner('Go!');
 			hud.initTimer(30,finiMatchup);
 		},4000);
-		setTimeout(hud.finiBanner,6000);
-		setTimeout(initBall,7000);
+		setTimeout(initBall,5000);
 	}
 
 	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
