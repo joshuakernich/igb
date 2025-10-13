@@ -28,9 +28,10 @@ window.PartyTally = function(players){
 
 				partytallyrow{
 					display: block;
-					background: white;
-					padding: 10px 15px;
+					background: rgba(255,255,255,0.7);
+					
 					width: 330px;
+					height: 80px;
 					text-align: left;
 					position: relative;
 					margin: 20px;
@@ -38,22 +39,33 @@ window.PartyTally = function(players){
 
 					left: -600px;
 					opacity: 0.5;
+					line-height: 80px;
+					font-weight: bold;
+				}
+
+				partytallycontent{
+					display: block;
+					position: absolute;
+					inset: 0px;
+					overflow: hidden;
 				}
 
 				partytallypos{
 					display: inline-block;
 					width: 100px;
 					font: inherit;
-					margin-right: 100px;
+					margin-left: 20px;
 					vertical-align:middle;
 				}
 
 				partytallyscore{
 					display: inline-block;
 					width: 100px;
+					right: 20px;
 					font: inherit;
 					color: #9B62E8;
 					vertical-align:middle;
+
 				}
 
 				partytallycoin{
@@ -68,6 +80,8 @@ window.PartyTally = function(players){
 					vertical-align: middle;
 					transform: rotate(20deg);
 					box-shadow: inset -2px 0px rgba(255,255,255,0.5);
+
+					margin-left: 70px;
 				}
 
 				partytallycoin:before{
@@ -98,10 +112,11 @@ window.PartyTally = function(players){
 					display: inline-block;
 					position: absolute;
 					left: 100px;
-					top: -80px;
+					top: 10px;
 
-					transform: scale(0.5);
-					box-shadow: 0px 2px 10px black;
+					transform: scale(0.7);
+					transform-origin: top left;
+					
 				}
 
 				partytallyresultmask{
@@ -173,15 +188,17 @@ window.PartyTallyRow = function(n,player){
 	let self = this;
 	self.$el = $(`
 		<partytallyrow n=${n}>
-			<partytallypos>1st</partytallypos>
-			<partymeephead n=${n}>
-				<partymeephat></partymeephat>
-				<partymeepeye></partymeepeye>
-				<partymeepeye></partymeepeye><br>
-				<partymeepmouth></partymeepmouth>
-			</partymeephead>
-			<partytallycoin></partytallycoin>
-			<partytallyscore>${player.score}</partytallyscore>
+			<partytallycontent>
+				<partytallypos>1st</partytallypos>
+				<partymeephead n=${n}>
+					<partymeephat></partymeephat>
+					<partymeepeye></partymeepeye>
+					<partymeepeye></partymeepeye><br>
+					<partymeepmouth></partymeepmouth>
+				</partymeephead>
+				<partytallycoin></partytallycoin>
+				<partytallyscore>${player.score}</partytallyscore>
+			</partytallycontent>
 			<partytallyresultmask>
 				<partytallyresult>+10</partytallyresult>
 			</partytallyresultmask>

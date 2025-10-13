@@ -408,12 +408,13 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 
             boxheader{
             	position: absolute;
-            	left: -50px;
-            	right: -50px;
+            	left: 0px;
+            	right: 0px;
             	bottom: 110%;
-            	font-size: 50px;
+            	font-size: 40px;
             	color: white;
-            	
+            	white-space: normal;
+    			font-weight: 900;
             }
 
             boxface{
@@ -899,8 +900,6 @@ BoxPartyGame = function(){
 
 	$("head").append(`
         <style>
-        	@import url('https://fonts.googleapis.com/css2?family=Paytone+One&display=swap');
-
         	boxpartygame{
         		display: block;
         		width: ${W*GRID*3}px;
@@ -908,7 +907,6 @@ BoxPartyGame = function(){
         		transform-origin: top left;
         		
                 position: relative;
-                font-family: "Paytone One";
 				pointer-events: none;
         	}
 

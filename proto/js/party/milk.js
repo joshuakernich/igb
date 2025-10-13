@@ -1036,9 +1036,10 @@ window.MilkGame = function(){
 	}
 	
 	self.fini = function(){
-		hud.fini();
-		clearInterval(interval);
 		audio.stop('music');
+		hud.finiTutorial();
+		hud.finiTimer();
+		clearInterval(interval);
 	}
 	
 	self.init();

@@ -1003,6 +1003,8 @@ window.ClawChaos3DGame = function(countInit){
 
 	self.fini = function(){
 		audio.stop('music');
+		hud.finiTutorial();
+		hud.finiTimer();
 		clearInterval(interval);
 	}
 

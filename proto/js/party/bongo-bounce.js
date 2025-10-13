@@ -683,4 +683,11 @@ window.BongoBounceGame = function( players ){
 			meeps[m].r =  {W:p[m].rW, X:p[m].rX, Y:p[m].rY, Z:p[m].rZ};
 		}
 	}
+
+	self.fini = function(){
+		audio.stop('music');
+		hud.finiTutorial();
+		hud.finiTimer();
+		clearInterval(interval);
+	}
 }

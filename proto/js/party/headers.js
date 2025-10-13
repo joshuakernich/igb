@@ -567,7 +567,8 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 
 	self.fini = function(){
 		audio.stop('music');
+		hud.finiTutorial();
+		hud.finiTimer();
 		clearInterval(interval);
-		hud.fini();
 	}
 }

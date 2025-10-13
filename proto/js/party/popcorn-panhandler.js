@@ -594,6 +594,8 @@ window.PopcornGame = function(){
 
 	self.fini = function(){
 		audio.stop('music');
+		hud.finiTutorial();
+		hud.finiTimer();
 		clearInterval(interval);
 	}
 }

@@ -633,7 +633,8 @@ window.CoinChaosGame = function(){
 
 	self.fini = function(){
 		audio.stop('music');
-		hud.fini();
+		hud.finiTutorial();
+		hud.finiTimer();
 		clearInterval(interval);
 	}
 }

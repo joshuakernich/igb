@@ -501,7 +501,9 @@ window.CookieCutterGame = function(){
 	}
 
 	self.fini = function(){
-		clearInterval(interval);
 		audio.stop('music');
+		hud.finiTutorial();
+		hud.finiTimer();
+		clearInterval(interval);
 	}
 }
