@@ -1,4 +1,4 @@
-window.NameEntryPlayer = function(nPlayer,callback){
+window.NameEntryPlayer = function(nPlayer, nSlot, human, callback){
 
 	const ALPHABET = 'qwertyuiop|asdfghjkl|zxcvbnm';
 
@@ -56,6 +56,7 @@ window.NameEntryPlayer = function(nPlayer,callback){
 		top: '14vw',
 		position: 'absolute',
 		left: '50%',
+		width: '100%',
 	})
 
 	let meep = new PartyMeep(nPlayer);
@@ -74,6 +75,14 @@ window.NameEntryPlayer = function(nPlayer,callback){
 	}).animate({
 		opacity:1,
 	})
+
+	self.redraw = function() {
+
+		let x = [human.z,human.x,-human.z][nSlot];
+		meep.$el.css({
+			left: 50 * x + '%'
+		})
+	}
 }
 
 window.NameEntry = function( playersMeta, callback ){
@@ -186,7 +195,7 @@ window.NameEntry = function( playersMeta, callback ){
 
 
 	
-
+	let humans = [{},{},{},{},{},{}];
 	let slots = [];
 	let nPlayer = -1;
 
@@ -195,7 +204,11 @@ window.NameEntry = function( playersMeta, callback ){
 		nPlayer++;
 		let nSlot = 0;
 		while(slots[nSlot]) nSlot++;
-		slots[nSlot] = new NameEntryPlayer(nPlayer, onEntryComplete);
+
+		// Don't use the middle slot for 2 players
+		if( playersMeta.length==2 && nSlot==1 ) nSlot = 2;
+
+		slots[nSlot] = new NameEntryPlayer(nPlayer, nSlot, humans[nPlayer], onEntryComplete);
 		slots[nSlot].$el.appendTo($sides[nSlot]);
 	}
 
@@ -212,18 +225,27 @@ window.NameEntry = function( playersMeta, callback ){
 		} else {
 			let isComplete = true;
 			for(var s in slots) if(slots[s]) isComplete = false;
-			if(isComplete) callback();
+			if(isComplete){
+				clearInterval(interval);
+				callback();
+			}
 		}
 	}
 
+	let interval = setInterval(function(){
+		for(var s in slots) slots[s].redraw();
+ 	})
+
 	if(!playersMeta) playersMeta = [{},{},{},{},{},{}];
 
-	// make the middle side the last preference
-	if( playersMeta.length==2) $sides[1].appendTo(self.$el);
+
 
 	while(slots.length<Math.min(3,playersMeta.length)) doNextEntry();
 
 	self.setPlayers = function(p){
-		
+		for(var h in humans){
+			humans[h].z = p[h].z;
+			humans[h].x = p[h].x;
+		}
 	}
 }
