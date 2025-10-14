@@ -513,6 +513,14 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					border-top: 40px solid #ccc;
 
 				}
+
+				hudfinalbg{
+					display: block;
+					position: absolute;
+					inset: 0px;
+					background: url(./proto/img/party/bg-rainbow.png);
+					background-size: 100%;
+				}
 				
 			</style>
 			`);
@@ -756,6 +764,12 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	}
 
 	self.showFinalScores = function(scores,rewards){
+
+		$('<hudfinalbg>').appendTo($mg).css({
+			opacity:0,
+		}).animate({
+			opacity:1,
+		},1000);
 
 		audio.play('outro',true);
 

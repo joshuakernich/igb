@@ -50,6 +50,7 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 	const BALLR = 60;
 	const HEADR = 50;
 
+
 	const NET = 350;
 	const COLLIDE = HEADR+BALLR;
 
@@ -63,6 +64,16 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 		['01','23'],
 		['01','23','40','12','34'],
 		['01','23','45'],
+	]
+
+	const ROUND_TIMES = [
+		undefined,
+		undefined,
+		90,
+		30,
+		45,
+		30,
+		30,
 	]
 
 	if( !HeadersGame.init ){
@@ -535,14 +546,14 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 
 	function initIntro(){
 
-		hud.revealTimer(30);
+		hud.revealTimer(ROUND_TIMES[meeps.length]);
 		hud.summonPlayers(MATCHUPS[countPlayer][iMatchup]);
 
 		setTimeout(hud.finiBanner,3000);
 
 		setTimeout(function() {
 			hud.flashMessage(1.2, 0.4, meeps[MATCHUPS[countPlayer][iMatchup][0]].name, 100, 3000);
-			hud.flashMessage(1.2, 0.5, 'Go this way', 50, 3000);
+			hud.flashMessage(1.2, 0.5, typeGame=='volley'?'Shoot this way':'', 50, 3000);
 			hud.flashMessage(1.2, 0.3, '⇢', 200, 3000, );
 
 			hud.flashMessage(1.8, 0.4, meeps[MATCHUPS[countPlayer][iMatchup][1]].name, 100, 3000);
@@ -552,7 +563,7 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 
 		
 		setTimeout(function(){
-			hud.initTimer(30,finiMatchup);
+			hud.initTimer(ROUND_TIMES[meeps.length],finiMatchup);
 		},6000);
 		setTimeout(initBall,7000);
 	}
