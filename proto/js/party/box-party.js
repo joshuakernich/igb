@@ -1128,7 +1128,7 @@ BoxPartyGame = function(){
 	}
 
 	function initNameEntry(){
-		nameEntry = new NameEntry(players, finiNameEntry);
+		liveModule = nameEntry = new NameEntry(players, finiNameEntry);
 		nameEntry.$el.appendTo(self.$el);
 		nameEntry.$el.css({
 			opacity:0
@@ -1139,6 +1139,7 @@ BoxPartyGame = function(){
 
 	function finiNameEntry(){
 		nameEntry.$el.remove();
+		liveModule = undefined;
 
 		tally = new PartyTally(players);
 		tally.$el.appendTo($game);
