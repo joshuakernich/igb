@@ -617,12 +617,12 @@ window.PartyHUD = function( colour='#40B0ED' ){
 		clearInterval(interval);
 	}
 
-	self.flashMessage = function(x,y,msg,size,time=undefined){
+	self.flashMessage = function(x,y,msg,size,time=undefined,n='-1'){
 		let $msg = $('<hudround>').html(msg);
 
 		if(time == undefined) time = Math.max(msg.length*100, 500);
 
-		$msg.appendTo($fg).css({
+		$msg.attr('n',n).appendTo($fg).css({
 			left: x * 100/3 + '%',
 			top: (y+0.1) * 100 + '%',
 			'position':'absolute',

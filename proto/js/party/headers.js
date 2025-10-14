@@ -408,6 +408,7 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 
 		for(var i=0; i<countPlayer; i++){
 			meeps[i] = new PartyMeep(i);
+			meeps[i].name = playersMeta?playersMeta[i].name:'ANONYMOUS';
 			meeps[i].$score = $('<headersscore>').appendTo(meeps[i].$el).css({opacity:0});
 			meeps[i].$el.appendTo($field);
 			meeps[i].$el.css({
@@ -533,13 +534,27 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 	}
 
 	function initIntro(){
-		hud.summonPlayers(MATCHUPS[countPlayer][iMatchup]);
-		setTimeout(hud.finiBanner,3000);
+
 		hud.revealTimer(30);
+		hud.summonPlayers(MATCHUPS[countPlayer][iMatchup]);
+
+		setTimeout(hud.finiBanner,3000);
+
+		setTimeout(function() {
+			hud.flashMessage(1.2, 0.4, meeps[MATCHUPS[countPlayer][iMatchup][0]].name, 100, 3000);
+			hud.flashMessage(1.2, 0.5, 'Go this way', 50, 3000);
+			hud.flashMessage(1.2, 0.3, '⇢', 200, 3000, );
+
+			hud.flashMessage(1.8, 0.4, meeps[MATCHUPS[countPlayer][iMatchup][1]].name, 100, 3000);
+			hud.flashMessage(1.8, 0.5, 'Go that way', 50, 3000);
+			hud.flashMessage(1.8, 0.3, '⇠', 200, 3000, MATCHUPS[countPlayer][iMatchup][0]);
+		},3000);
+
+		
 		setTimeout(function(){
 			hud.initTimer(30,finiMatchup);
-		},4000);
-		setTimeout(initBall,5000);
+		},6000);
+		setTimeout(initBall,7000);
 	}
 
 	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
