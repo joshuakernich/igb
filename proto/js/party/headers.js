@@ -552,20 +552,20 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 		setTimeout(hud.finiBanner,3000);
 
 		setTimeout(function() {
-			hud.flashMessage(1.2, 0.4, meeps[MATCHUPS[countPlayer][iMatchup][0]].name, 100, 3000);
-			hud.flashMessage(1.2, 0.5, typeGame=='volley'?'Shoot this way':'', 50, 3000);
-			hud.flashMessage(1.2, 0.3, '⇢', 200, 3000, );
+			hud.flashMessage(1.25, 0.4, meeps[MATCHUPS[countPlayer][iMatchup][0]].name, 80, 3500);
+			hud.flashMessage(1.25, 0.5, typeGame=='volley'?'This side':'Shoot that way', 50, 3500);
+			if( typeGame == 'football' ) hud.flashMessage(1.25, 0.3, '⇢', 200, 3000, );
 
-			hud.flashMessage(1.8, 0.4, meeps[MATCHUPS[countPlayer][iMatchup][1]].name, 100, 3000);
-			hud.flashMessage(1.8, 0.5, 'Go that way', 50, 3000);
-			hud.flashMessage(1.8, 0.3, '⇠', 200, 3000, MATCHUPS[countPlayer][iMatchup][0]);
-		},3000);
+			hud.flashMessage(1.75, 0.4, meeps[MATCHUPS[countPlayer][iMatchup][1]].name, 80, 3500);
+			hud.flashMessage(1.75, 0.5, typeGame=='volley'?'This side':'Shoot that way', 50, 3500);
+			if( typeGame == 'football' ) hud.flashMessage(1.75, 0.3, '⇠', 200, 3500, MATCHUPS[countPlayer][iMatchup][0]);
+		},3500);
 
 		
 		setTimeout(function(){
 			hud.initTimer(ROUND_TIMES[meeps.length],finiMatchup);
-		},6000);
-		setTimeout(initBall,7000);
+		},7000);
+		setTimeout(initBall,8000);
 	}
 
 	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });

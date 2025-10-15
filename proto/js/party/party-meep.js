@@ -41,7 +41,7 @@ window.PartyMeep = function(n){
 	const W = 100;
 	const H = 350;
 	const HEAD = {w:W,h:150};
-	const BODY = {w:W*0.6,h:100};
+	const BODY = {w:60,h:60};
 
 	if(!PartyMeep.didInit){
 		PartyMeep.didInit = true;

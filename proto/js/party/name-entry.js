@@ -1,10 +1,16 @@
+window.AvatarEntryPlayer = function(nPlayer,nSlot,human,callback){
+	let self = this;
+	self.$el = $('<nameentryplayer>').attr('n',nPlayer);
+
+	
+}
+
 window.NameEntryPlayer = function(nPlayer, nSlot, human, callback){
 
 	const ALPHABET = 'qwertyuiop|asdfghjkl|zxcvbnm';
 
 	let self = this;
 	self.$el = $('<nameentryplayer>').attr('n',nPlayer);
-
 	let $input = $('<nameentryinput>').appendTo(self.$el).text('Enter your name');
 	
 	self.nPlayer = nPlayer;
