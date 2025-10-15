@@ -28,9 +28,9 @@ window.MelodyMatchGame = function( playersMeta ){
 		undefined,
 		[{melody:MELODIES[0]},{melody:MELODIES[1]},{melody:MELODIES[2]}],
 		[{melody:MELODIES[0]},{melody:MELODIES[1]},{melody:MELODIES[2]}],
-		[{melody:MELODIES[0]},{melody:MELODIES[2]}],
-		[{melody:MELODIES[0]},{melody:MELODIES[2]}],
-		[{melody:MELODIES[0]},{melody:MELODIES[2]}],
+		[{melody:MELODIES[1]},{melody:MELODIES[2]}],
+		[{melody:MELODIES[1]},{melody:MELODIES[2]}],
+		[{melody:MELODIES[1]},{melody:MELODIES[2]}],
 	]
 
 	const MelodyMap = function(map){
