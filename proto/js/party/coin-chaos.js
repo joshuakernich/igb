@@ -26,7 +26,7 @@ window.CoinChaosGame = function( playersMeta ){
 		],
 		[
 			{cohorts:[[0,1,2],[3,4,5]],speed:0.05,coins:3,time:20},
-			{cohorts:[[0,1,2],[3,4,5]],speed:0.1,coins:5,time:30},
+			{cohorts:[[0,1,2],[3,4,5]],speed:0.1,coins:5,time:20},
 		],
 	]
 

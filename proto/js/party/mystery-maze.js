@@ -68,6 +68,16 @@ window.MysteryMazeGame = function(playersMeta){
 		generateVariants(MAP4x5),
 	]
 
+	const STRUCTURE = [
+		undefined,
+		undefined,
+		[ROUNDS[0],ROUNDS[1],ROUNDS[2]],
+		[ROUNDS[0],ROUNDS[1],ROUNDS[2]],
+		[ROUNDS[1],ROUNDS[2]],
+		[ROUNDS[1],ROUNDS[2]],
+		[ROUNDS[1],ROUNDS[2]],
+	]
+
 	const TUTORIALS = generateVariants(TUTORIAL);
 
 	const W = 1600;
@@ -491,14 +501,14 @@ window.MysteryMazeGame = function(playersMeta){
 		iRound++;
 		nPlayer = -1;
 
-		audio.play('music',false,iRound==ROUNDS.length-1?1.5:1);
+		audio.play('music',false,iRound==STRUCTURE[countPlayer].length-1?1.5:1);
 
 		for(var s in slots) slots[s].occupant = -1;
 
 		for(var i=0; i<countPlayer; i++){
-			let iMaze = i%ROUNDS[iRound].length;
+			let iMaze = i%STRUCTURE[countPlayer][iRound].length;
 			let tally = mazes[i]?mazes[i].score:0;
-			mazes[i] = new MysteryMaze(i,ROUNDS[iRound][iMaze],W/4);
+			mazes[i] = new MysteryMaze(i,STRUCTURE[countPlayer][iRound][iMaze],W/4);
 			mazes[i].$el.appendTo($game).hide();
 			mazes[i].score = mazes[i].tally = tally;
 		}
@@ -506,7 +516,7 @@ window.MysteryMazeGame = function(playersMeta){
 		let delay = 0;
 
 		setTimeout(function(){
-			hud.initRound(iRound,ROUNDS.length);
+			hud.initRound(iRound,STRUCTURE[countPlayer].length);
 		},delay += 1000)
 
 		setTimeout(function(){
@@ -570,7 +580,7 @@ window.MysteryMazeGame = function(playersMeta){
 		for(var i=0; i<mazes.length; i++) if(!mazes[i].isComplete) isComplete = false;
 
 		if(isComplete){
-			if(ROUNDS[iRound+1]) initNextRound();
+			if(STRUCTURE[meeps.length][iRound+1]) initNextRound();
 			else finiGame();
 		}
 	}
