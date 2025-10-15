@@ -10,6 +10,8 @@ window.BongoBounceGame = function( playersMeta ){
 	const DRUMW = 150;
 	const BOUNCE = 0.7;
 
+	let offset = 16;
+
 	const SONGS = [
 		{
 			track:'./proto/audio/party/music-beats-90.mp3',
@@ -44,6 +46,34 @@ window.BongoBounceGame = function( playersMeta ){
 				{ from:127, to:132, every:1 },
 				{ from:135, to:140, every:1 },
 			]
+		},{
+			track:'./proto/audio/party/music-beats-90-short.mp3',
+			bpm:90,
+			offset:0,
+			seconds:42,
+			map:[
+				
+				{ from:18-offset, to:20-offset, every:2 },
+				{ from:24-offset, to:32-offset, every:2 },
+				{ from:38-offset, to:48-offset, every:2 },
+				{ from:50-offset, to:62-offset, every:1 },
+				{ from:66-offset, to:68-offset, every:2 },
+				{ from:72-offset, to:72-offset, every:1 }
+			]
+		},{
+			track:'./proto/audio/party/music-beats-120-short.mp3',
+			bpm:120,
+			offset:0,
+			seconds:42,
+			map:[
+				{ from:2, to:14, every:4 },
+				{ from:15, to:18, every:1 },
+				{ from:22, to:26, every:1 },
+				{ from:30, to:32, every:1 },
+				{ from:36, to:64, every:1 },
+				{ from:68, to:72, every:1 },
+				{ from:76, to:80, every:1 },
+			]
 		}
 	]
 
@@ -70,16 +100,16 @@ window.BongoBounceGame = function( playersMeta ){
 			[{players:[0,1,2], song:SONGS[1]}],
 		],
 		[
-			[{players:[0,1], song:SONGS[0]},{players:[2,3], song:SONGS[0]}],
-			[{players:[0,1], song:SONGS[1]},{players:[2,3], song:SONGS[1]}],
+			[{players:[0,1], song:SONGS[2]},{players:[2,3], song:SONGS[2]}],
+			[{players:[0,1], song:SONGS[3]},{players:[2,3], song:SONGS[3]}],
 		],
 		[
-			[{players:[0,1,2], song:SONGS[0]},{players:[3,4], song:SONGS[0]}],
-			[{players:[0,1,2], song:SONGS[1]},{players:[3,4], song:SONGS[1]}],
+			[{players:[0,1,2], song:SONGS[2]},{players:[3,4], song:SONGS[2]}],
+			[{players:[0,1,2], song:SONGS[3]},{players:[3,4], song:SONGS[3]}],
 		],
 		[
-			[{players:[0,1,2], song:SONGS[0]},{players:[3,4,5], song:SONGS[0]}],
-			[{players:[0,1,2], song:SONGS[1]},{players:[3,4,5], song:SONGS[1]}],
+			[{players:[0,1,2], song:SONGS[2]},{players:[3,4,5], song:SONGS[2]}],
+			[{players:[0,1,2], song:SONGS[3]},{players:[3,4,5], song:SONGS[3]}],
 		],
 	]
 
@@ -562,7 +592,7 @@ window.BongoBounceGame = function( playersMeta ){
 			})
 		}
 
-		initTutorial();
+		initPlay();
 	}
 
 	let isTutorial = false;
