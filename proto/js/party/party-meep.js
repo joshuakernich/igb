@@ -261,9 +261,6 @@ window.PartyMeep = function(n){
 
 			<partymeepshadow></partymeepshadow>
 			<partymeepavatar>
-				
-				
-				
 				<partymeeplegs>
 					<partymeepleg></partymeepleg>
 					<partymeepleg></partymeepleg>

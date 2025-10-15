@@ -477,7 +477,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					position: absolute;
 					color: white;
 					font-weight: normal;
-					font-family: "Knewave", system-ui;
+					
 				}
 
 				hudmessage{
@@ -491,6 +491,18 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					font-weight: 100;
 
 					transform: translate(-50%, -50%);
+
+					
+				}
+
+				hudmessage:before{
+					content:"";
+					position: absolute;
+					display: block;
+					inset: -150px -100px 0px -100px;
+					background: radial-gradient(${GRAY}, transparent, transparent);
+					z-index: -1;
+					opacity: 0.5;
 				}
 
 				hudmessage img{
