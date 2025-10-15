@@ -183,6 +183,7 @@ window.NameEntryPlayer = function(nPlayer, nSlot, human, callback){
 	}
 
 	$('<nameentrybutton>').appendTo( self.$el ).text('←').click(onBackspace);
+	
 	$('<nameentrybutton class="done">').appendTo( self.$el ).click(onComplete);
 
 	let $meepContainer = $("<div>").appendTo(self.$el).css({
@@ -316,12 +317,29 @@ window.NameEntry = function( playersMeta, callback ){
 
 				nameentrybutton.done{
 					font-size: 0.8vw;
-					width: 3.5vw;
+					width: 6vw;
+					border-radius: 1.25vw;
+
+					bottom: 3.5vw;
+					right: 2vw;
+					position: absolute;
+		
+				}
+
+				nameentrybutton.done:before{
+					content: "DONE";
 				}
 
 				nameentrybutton.done:after{
-					content: "DONE";
-
+					content: "";
+					width: 0.4vw;
+					height: 0.7vw;
+					border-right: 0.2vw solid white;
+					border-bottom: 0.2vw solid white;
+					display: inline-block;
+					box-sizing: border-box;
+					transform: rotate(45deg) translateY(-0.1vw);
+					margin-left: 0.5vw;
 				}
 
 				nameentrybutton.tapped{
