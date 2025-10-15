@@ -262,12 +262,7 @@ window.PartyMeep = function(n){
 			<partymeepshadow></partymeepshadow>
 			<partymeepavatar>
 				
-				<partymeephead>
-					<partymeephat></partymeephat>
-					<partymeepeye></partymeepeye>
-					<partymeepeye></partymeepeye><br>
-					<partymeepmouth></partymeepmouth>
-				</partymeephead>
+				
 				
 				<partymeeplegs>
 					<partymeepleg></partymeepleg>
@@ -278,8 +273,15 @@ window.PartyMeep = function(n){
 				<partymeepbody>
 					<partymeepaccessory></partymeepaccessory>
 				</partymeepbody>
+				<partymeephead>
+					<partymeephat></partymeephat>
+					<partymeepeye></partymeepeye>
+					<partymeepeye></partymeepeye><br>
+					<partymeepmouth></partymeepmouth>
+				</partymeephead>
 				<partymeephand></partymeephand>
 				<partymeephand></partymeephand>
+
 			</partymeepavatar>
 		</partymeep>
 	`);

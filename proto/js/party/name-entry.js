@@ -2,7 +2,7 @@ window.AvatarEntryPlayer = function(nPlayer,nSlot,human,callback){
 
 	const SHIRTS = [
 		{url:'./proto/img/party/avatar-shirt-skeleton.png'},
-		{url:'./proto/img/party/avatar-shirt-trekkie.png'},
+		{url:'./proto/img/party/avatar-shirt-overall.png'},
 		{url:'./proto/img/party/avatar-shirt-bear.png'},
 		{url:'./proto/img/party/avatar-shirt-stripes.png'},
 		{url:'./proto/img/party/avatar-shirt-vest.png'},
