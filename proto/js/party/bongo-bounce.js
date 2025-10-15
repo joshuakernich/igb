@@ -10,7 +10,6 @@ window.BongoBounceGame = function( playersMeta ){
 	const DRUMW = 150;
 	const BOUNCE = 0.7;
 
-	let offset = 16;
 
 	const SONGS = [
 		{
@@ -52,13 +51,12 @@ window.BongoBounceGame = function( playersMeta ){
 			offset:0,
 			seconds:42,
 			map:[
-				
-				{ from:18-offset, to:20-offset, every:2 },
-				{ from:24-offset, to:32-offset, every:2 },
-				{ from:38-offset, to:48-offset, every:2 },
-				{ from:50-offset, to:62-offset, every:1 },
-				{ from:66-offset, to:68-offset, every:2 },
-				{ from:72-offset, to:72-offset, every:1 }
+			    { from:2, to:4, every:2 },
+			    { from:8, to:16, every:2 },
+			    { from:22, to:32, every:2 },
+			    { from:34, to:46, every:1 },
+			    { from:50, to:52, every:2 },
+			    { from:56, to:56, every:1 }
 			]
 		},{
 			track:'./proto/audio/party/music-beats-120-short.mp3',
@@ -592,7 +590,7 @@ window.BongoBounceGame = function( playersMeta ){
 			})
 		}
 
-		initPlay();
+		initTutorial();
 	}
 
 	let isTutorial = false;
