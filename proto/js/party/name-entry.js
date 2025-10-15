@@ -64,7 +64,13 @@ window.AvatarEntryPlayer = function(nPlayer,nSlot,human,callback){
 			})
 
 			if(SHIRTS[s].legs=='none'){
+				meep.$legLeft.css({
+					'border-color':`white`,
+				})
 
+				meep.$legRight.css({
+					'border-color':`white`,
+				})
 			} else {
 				meep.$legLeft.css({
 					'border-color':`var(--n${nPlayer})`,
