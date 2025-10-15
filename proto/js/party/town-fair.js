@@ -81,24 +81,6 @@ window.TownFairGame = function( playersMeta ){
 			]
 		},
 		{
-			q:"How many meeps?",
-			type:'text',
-			parade:[
-				{m:5,i:0},
-				{m:2,i:2},
-				{m:0,i:4},
-				{m:4,i:1},
-				{m:1,i:3},
-				{m:6,i:4},
-			],
-			options:[
-				{t:4},
-				{t:5},
-				{t:6,isCorrect:true},
-				{t:7},
-			]
-		},
-		{
 			q:"What was was the second meep carrying?",
 			type:'item',
 			parade:[
@@ -112,6 +94,29 @@ window.TownFairGame = function( playersMeta ){
 				{i:2},
 				{i:3},
 				{i:1,isCorrect:true},
+			]
+		},
+		{
+			q:"How many pigs?",
+			type:'text',
+			parade:[
+				{m:5,i:0},
+				{m:2,i:0},
+				{m:0,i:0},
+				{m:4,i:0},
+				{m:1,i:0},
+				{m:6,i:0},
+				{m:3,i:0},
+				{m:5,i:0},
+				{m:0,i:0},
+				{m:1,i:0},
+				{m:2,i:0},
+			],
+			options:[
+				{t:9},
+				{t:10},
+				{t:11,isCorrect:true},
+				{t:12},
 			]
 		},
 	]
