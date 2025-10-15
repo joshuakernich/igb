@@ -1,4 +1,4 @@
-
+s
 window.FollicleFrenzyGame = function( playersMeta ){
 
 	const W = 1600;
@@ -6,6 +6,7 @@ window.FollicleFrenzyGame = function( playersMeta ){
 	const FPS = 50;
 	const PLAYER_COUNT = 6;
 	const GRIDSIZE = 15;
+	const ROUND_TIME = 20;
 
 	const UNTOUCHED = [
 		    "      00000000      ",
@@ -858,7 +859,7 @@ window.FollicleFrenzyGame = function( playersMeta ){
 		},delay+2500);
 
 		setTimeout(function(){
-			hud.initTimer(20,finiRound);
+			hud.initTimer(ROUND_TIME,finiRound);
 			for(var m in meeps) meeps[m].toForeground(true);
 		},delay+3500);
 	}
