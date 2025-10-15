@@ -140,6 +140,13 @@ window.PartyMeep = function(n){
 					border-radius: ${BODY.w/2}px;
 				}
 
+				partymeepaccessory{
+					display: block;
+					position: absolute;
+					inset: -50%;
+					background-size: 100%;
+				}
+
 				partymeeplegs{
 					display:block;
 					position: absolute;
@@ -254,7 +261,7 @@ window.PartyMeep = function(n){
 
 			<partymeepshadow></partymeepshadow>
 			<partymeepavatar>
-				<partymeepbody></partymeepbody>
+				
 				<partymeephead>
 					<partymeephat></partymeephat>
 					<partymeepeye></partymeepeye>
@@ -265,10 +272,12 @@ window.PartyMeep = function(n){
 				<partymeeplegs>
 					<partymeepleg></partymeepleg>
 					<partymeepleg></partymeepleg>
-
 					<partymeepfoot></partymeepfoot>
 					<partymeepfoot></partymeepfoot>
 				</partymeeplegs>
+				<partymeepbody>
+					<partymeepaccessory></partymeepaccessory>
+				</partymeepbody>
 				<partymeephand></partymeephand>
 				<partymeephand></partymeephand>
 			</partymeepavatar>
@@ -280,6 +289,7 @@ window.PartyMeep = function(n){
 	self.$handRight = self.$el.find('partymeephand').last();
 	self.$shadow = self.$el.find('partymeepshadow');
 	self.$body = self.$el.find('partymeepbody');
+	self.$accessory = self.$el.find('partymeepaccessory');
 	self.$legs = self.$el.find('partymeeplegs');
 	self.$legLeft = self.$el.find('partymeepleg').first();
 	self.$legRight = self.$el.find('partymeepleg').last();

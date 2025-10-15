@@ -465,10 +465,10 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					font-weight: 400;
 					font-style: normal;
 					font-size: 200px;
-					transform: rotate(-5deg);
+					
 					display: block;
 					color: white;
-					text-shadow: 5px 5px 0px ${GRAY}, 5px -5px 0px ${GRAY}, -5px -5px 0px ${GRAY}, -5px 5px 0px ${GRAY}, 0px 20px 0px ${GRAY};
+					-webkit-text-stroke: 5px ${GRAY};
 				}
 
 				hudtutorial{
@@ -476,6 +476,8 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					inset: 0px;
 					position: absolute;
 					color: white;
+					font-weight: normal;
+					font-family: "Knewave", system-ui;
 				}
 
 				hudmessage{

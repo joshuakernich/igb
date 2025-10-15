@@ -1,8 +1,127 @@
 window.AvatarEntryPlayer = function(nPlayer,nSlot,human,callback){
+
+	const SHIRTS = [
+		{url:'./proto/img/party/avatar-shirt-skeleton.png'},
+		{url:'./proto/img/party/avatar-shirt-trekkie.png'},
+		{url:'./proto/img/party/avatar-shirt-bear.png'},
+		{url:'./proto/img/party/avatar-shirt-stripes.png'},
+		{url:'./proto/img/party/avatar-shirt-vest.png'},
+		{url:'./proto/img/party/avatar-shirt-jocks.png', legs:'none'},
+	]	
+
+	const FEATURES = [
+		{url:'./proto/img/party/avatar-accessory-skirt.png'},
+		{url:'./proto/img/party/avatar-accessory-bowtie.png'},
+		{url:'./proto/img/party/avatar-accessory-belt.png'},
+		{url:'./proto/img/party/avatar-accessory-chain.png'},
+		{url:'./proto/img/party/avatar-accessory-sash.png'},
+		{url:'./proto/img/party/avatar-accessory-bust.png'},
+	]
+
 	let self = this;
 	self.$el = $('<nameentryplayer>').attr('n',nPlayer);
 
-	
+	let $input = $('<nameentryinput>').appendTo(self.$el).text(human.name);
+
+	let $meepContainer = $("<div>").appendTo(self.$el).css({
+		top: '14vw',
+		position: 'absolute',
+		left: '50%',
+		width: '100%',
+	})
+
+	let meep = new PartyMeep(nPlayer);
+	meep.$el.appendTo($meepContainer);
+	meep.setHeight(300);
+	meep.$el.css({
+		top: '300px',
+		'transition':'top 1s, transform 1s',
+	});
+
+	setTimeout(function () {
+		meep.$el.css({
+			'top':'100px',
+			'transform':'scale(0.3)',
+		});
+	},500)
+
+	let $left = $('<avatarbuttonset>').appendTo(self.$el);
+	let $right = $('<avatarbuttonset>').appendTo(self.$el);
+
+	if(nSlot==0) $left.css({left:'5%'});
+	if(nSlot==2) $right.css({right:'5%'});
+
+	for(let s in SHIRTS){
+		$('<avatarbutton>').appendTo($left).css({
+			'background-image':`url(${SHIRTS[s].url})`,
+			'background-color':`var(--n${nPlayer})`,
+		}).click(function(){
+			
+			meep.$body.css({
+				'background-size':`100%`,
+				'background-image':`url(${SHIRTS[s].url})`,
+				'background-color':`var(--n${nPlayer})`,
+			})
+
+			if(SHIRTS[s].legs=='none'){
+
+			} else {
+				meep.$legLeft.css({
+					'border-color':`var(--n${nPlayer})`,
+				})
+
+				meep.$legRight.css({
+					'border-color':`var(--n${nPlayer})`,
+				})
+			}
+			
+		})
+		if(s==2) $('<br>').appendTo($left);
+	}
+
+	for(let f in FEATURES){
+		let $btn = $('<avatarbutton>').appendTo($right).click(function(){
+			meep.$accessory.css({
+				'background-image':`url(${FEATURES[f].url})`,
+			})
+		});
+		
+		$('<avatarfeature>').appendTo($btn).css({
+			'background-image':`url(${FEATURES[f].url})`,
+		});
+
+		
+
+		if(f==2) $('<br>').appendTo($right);
+	}
+
+
+	$('<nameentrybutton class="done">').appendTo( self.$el ).click(onComplete);
+
+	function onComplete() {
+		// body...
+		let $letter = $(this);
+		$letter.addClass('tapped');
+		
+		self.$el.css({'pointer-events':'none'}).delay(500).animate({
+			opacity:0
+		})
+
+		setTimeout(function(){
+			callback(self);
+		},1000);
+
+	}
+
+	self.redraw = function() {
+
+		let x = [human.z,human.x,-human.z][nSlot];
+		meep.$el.css({
+			left: 50 * x + '%'
+		})
+	}
+
+	self.redraw();
 }
 
 window.NameEntryPlayer = function(nPlayer, nSlot, human, callback){
@@ -42,10 +161,12 @@ window.NameEntryPlayer = function(nPlayer, nSlot, human, callback){
 		// body...
 		let $letter = $(this);
 		$letter.addClass('tapped');
-		self.$el.css({'pointer-events':'none'}).delay(1000).animate({opacity:0});
-		meep.$el.delay(500).animate({top:500},{complete:function() {
+		
+		self.$el.css({'pointer-events':'none'});
+
+		setTimeout(function(){
 			callback(self);
-		}});
+		},500);
 		//callback(text);
 	}
 
@@ -113,6 +234,44 @@ window.NameEntry = function( playersMeta, callback ){
 					
 					box-sizing: border-box;
 					
+				}
+
+				avatarbuttonset{
+					display: block;
+					width: 50%;
+					position: absolute;
+					
+					top: 50%;
+					line-height: 0px;
+					text-align: center;
+					transform: translateY(-50%);
+
+				}
+
+				avatarbuttonset:first-of-type{
+					left: 0px;
+				}
+
+				avatarbuttonset:last-of-type{
+					right: 0px;
+				}	
+
+				avatarbutton{
+					display: inline-block;
+					width: 3vw;
+					height: 3vw;
+					margin: 0.5vw;
+					background: white;
+					border-radius: 25%;
+					background-size: 100%;
+					position: relative;
+				}
+
+				avatarfeature{
+					position: absolute;
+					display: block;
+					inset: -50%;
+					background-size: 100%;
 				}
 
 				nameentryplayer{
@@ -214,17 +373,25 @@ window.NameEntry = function( playersMeta, callback ){
 		// Don't use the middle slot for 2 players
 		if( playersMeta.length==2 && nSlot==1 ) nSlot = 2;
 
-		slots[nSlot] = new NameEntryPlayer(nPlayer, nSlot, humans[nPlayer], onEntryComplete);
+		slots[nSlot] = new NameEntryPlayer(nPlayer, nSlot, humans[nPlayer], onNameEntryComplete);
 		slots[nSlot].$el.appendTo($sides[nSlot]);
 	}
 
-	function onEntryComplete( entry ){
+	function onNameEntryComplete( entry ){
+		let nSlot = slots.indexOf(entry);
+		slots[nSlot].$el.remove();
+
+		humans[entry.nPlayer].name = playersMeta[entry.nPlayer].name = entry.text;
+
+		slots[nSlot] = new AvatarEntryPlayer(entry.nPlayer, nSlot, humans[entry.nPlayer], onAvatarEntryComplete);
+		slots[nSlot].$el.appendTo($sides[nSlot]);
+	}
+
+	function onAvatarEntryComplete( entry ){
 
 		let nSlot = slots.indexOf(entry);
 		slots[nSlot].$el.remove();
 		slots[nSlot] = undefined;
-
-		playersMeta[entry.nPlayer].name = entry.text;
 
 		if(nPlayer<playersMeta.length-1){
 			doNextEntry();
