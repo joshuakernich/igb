@@ -72,7 +72,7 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 		90,
 		30,
 		45,
-		30,
+		25,
 		30,
 	]
 
