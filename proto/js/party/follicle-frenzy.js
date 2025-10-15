@@ -1,4 +1,3 @@
-s
 window.FollicleFrenzyGame = function( playersMeta ){
 
 	const W = 1600;
