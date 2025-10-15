@@ -21,7 +21,7 @@ window.AvatarEntryPlayer = function(nPlayer,nSlot,human,callback){
 	let self = this;
 	self.$el = $('<nameentryplayer>').attr('n',nPlayer);
 
-	let $input = $('<nameentryinput>').appendTo(self.$el).text(human.name);
+	let $input = $('<nameentryinput class="complete">').appendTo(self.$el).text(human.name);
 
 	let $meepContainer = $("<div>").appendTo(self.$el).css({
 		top: '14vw',
@@ -57,6 +57,9 @@ window.AvatarEntryPlayer = function(nPlayer,nSlot,human,callback){
 			'background-color':`var(--n${nPlayer})`,
 		}).click(function(){
 			
+			$left.find('avatarbutton').removeClass('selected');
+			$(this).addClass('selected');
+
 			meep.$body.css({
 				'background-size':`100%`,
 				'background-image':`url(${SHIRTS[s].url})`,
@@ -87,6 +90,10 @@ window.AvatarEntryPlayer = function(nPlayer,nSlot,human,callback){
 
 	for(let f in FEATURES){
 		let $btn = $('<avatarbutton>').appendTo($right).click(function(){
+
+			$right.find('avatarbutton').removeClass('selected');
+			$(this).addClass('selected');
+
 			meep.$accessory.css({
 				'background-image':`url(${FEATURES[f].url})`,
 			})
@@ -146,7 +153,9 @@ window.NameEntryPlayer = function(nPlayer, nSlot, human, callback){
 
 		let letter = $letter.attr('letter');
 
-		self.text = self.text + letter;
+		if(self.text.length<14) self.text = self.text + letter;
+		else $input.animate({left:'-0.5vw'},50).animate({left:'0.5vw'},50).animate({left:'-0.5vw'},50).animate({left:'0.5vw'},50).animate({left:0},50);
+
 		$input.text(self.text);
 
 
@@ -167,6 +176,8 @@ window.NameEntryPlayer = function(nPlayer, nSlot, human, callback){
 		// body...
 		let $letter = $(this);
 		$letter.addClass('tapped');
+
+		$input.addClass('complete');
 		
 		self.$el.css({'pointer-events':'none'});
 
@@ -274,6 +285,11 @@ window.NameEntry = function( playersMeta, callback ){
 					position: relative;
 				}
 
+				avatarbutton.selected{
+					outline: 0.2vw solid black;
+				}
+
+
 				avatarfeature{
 					position: absolute;
 					display: block;
@@ -359,12 +375,16 @@ window.NameEntry = function( playersMeta, callback ){
 					position: relative;
 				}
 
-				nameentryplayer[n='0']{ background: linear-gradient(to top, var(--n0), transparent) }
-				nameentryplayer[n='1']{ background: linear-gradient(to top, var(--n1), transparent) }
-				nameentryplayer[n='2']{ background: linear-gradient(to top, var(--n2), transparent) }
-				nameentryplayer[n='3']{ background: linear-gradient(to top, var(--n3), transparent) }
-				nameentryplayer[n='4']{ background: linear-gradient(to top, var(--n4), transparent) }
-				nameentryplayer[n='5']{ background: linear-gradient(to top, var(--n5), transparent) }
+				nameentryinput.complete{
+					background: none;
+				}
+
+				nameentryplayer[n='0']{ background: linear-gradient(to bottom, var(--n0), transparent) }
+				nameentryplayer[n='1']{ background: linear-gradient(to bottom, var(--n1), transparent) }
+				nameentryplayer[n='2']{ background: linear-gradient(to bottom, var(--n2), transparent) }
+				nameentryplayer[n='3']{ background: linear-gradient(to bottom, var(--n3), transparent) }
+				nameentryplayer[n='4']{ background: linear-gradient(to bottom, var(--n4), transparent) }
+				nameentryplayer[n='5']{ background: linear-gradient(to bottom, var(--n5), transparent) }
 
 				
 			</style>`);
