@@ -73,7 +73,7 @@ window.FinaleSequence = function( playersMeta ){
 					display:block;
 					position: absolute;
 					inset: 0px;
-					background: linear-gradient(to top, black, transparent);
+					background: linear-gradient(to top, blue, transparent, transparent);
 				}
 
 				finaleplatform{
@@ -297,9 +297,12 @@ window.FinaleSequence = function( playersMeta ){
 			transform: 'scale(1.5)',
 		});
 
-		cube.$el.hide();
+		
 
-		setTimeout(doReveal,7000);
+		setTimeout(function(){
+			cube.$el.hide();
+			doReveal();
+		},7000);
 	}
 
 	function doReveal(){
@@ -353,7 +356,10 @@ window.FinaleSequence = function( playersMeta ){
 		$(cube.transform).animate({
 			altitude: 2000,
 			rx:-45,
-		},1000)
+		},{
+			duration:1000,
+			step:cube.redraw,
+		})
 
 	}
 
