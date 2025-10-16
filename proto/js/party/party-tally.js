@@ -195,6 +195,7 @@ window.PartyTally = function(players){
 	}
 
 	self.showRows = function(){
+		console.log(rows);
 		for(var r in rows) rows[r].$el.delay(r*100).animate({left:0, opacity:1},{start:function(){audio.play('woosh',true);}});
 	}
 

@@ -111,6 +111,13 @@ window.FinaleSequence = function( playersMeta ){
 					background-position: center;
 				}
 
+				finaleoverlay{
+					display:block;
+					position: absolute;
+					inset: 0px;
+					background: black;
+				}
+
 				finalesmoke{
 					display: block;
 					position: absolute;
@@ -146,7 +153,7 @@ window.FinaleSequence = function( playersMeta ){
 	audio.add('middle','./proto/audio/party/speech-finale-middle.mp3',0.5);
 	audio.add('third','./proto/audio/party/speech-finale-third.mp3',0.5);
 	audio.add('second','./proto/audio/party/speech-finale-second.mp3',0.5);
-	audio.add('winner','./proto/audio/party/speech-finale-first.mp3',0.5);
+	audio.add('winner','./proto/audio/party/speech-finale-winner.mp3',0.5);
 	audio.add('reward','./proto/audio/party/speech-finale-reward.mp3',0.5);
 	audio.add('outro','./proto/audio/party/music-outro.mp3',0.3);
 	audio.add('music','./proto/audio/party/music-awards.mp3',0.25);
@@ -194,7 +201,7 @@ window.FinaleSequence = function( playersMeta ){
 
 	let $face = cube.$el.find('.partycube3D-front');
 
-	let $mouth = $('<finalemouth>').appendTo($face);
+	let $mouth = $('<finalemouth>').appendTo($face).hide();
 
 	let meeps = [];
 
@@ -219,6 +226,7 @@ window.FinaleSequence = function( playersMeta ){
 
 			meeps[i].name = names[i];
 			meeps[i].score = (count-i)*10;
+			meeps[i].$el.hide();
 		}
 
 		tally = new PartyTally(meeps);
@@ -232,9 +240,59 @@ window.FinaleSequence = function( playersMeta ){
 
 	function doIntro(){
 		say('intro');
-		setTimeout(doNextPlace,9000);
-		//doNextPlace();
+		setTimeout(doShortFinale,9000);
+		//setTimeout(doNextPlace,9000);
 	}
+
+	let resultsPending = [];
+	function doShortFinale(){
+		while(resultsPending.length<meeps.length) resultsPending.push(Math.floor(2 + Math.random() * 5));
+
+		tally.showRows();
+
+		setTimeout(function(){
+			tally.showResults(resultsPending);
+		},2000);
+
+		setTimeout(function(){
+			for(var r in meeps) meeps[r].score += resultsPending[r];
+			resultsPending = undefined;
+			tally.resolveResults();
+		},4000);
+
+		setTimeout(function(){
+			tally.hideRows();
+		},7000);
+
+		setTimeout(function(){
+			doShortReward();
+		},8000);
+	}
+
+	function doShortReward(){
+		say('reward');
+		let duration = audio.getDuration('reward');
+
+		$('<finaleoverlay>').appendTo($game).css({
+			opacity:0
+		}).delay((duration-1)*1000).animate({
+			opacity:1,
+		},4000);
+
+		$(cube.transform).delay((duration-1)*1000).animate({x:W*0.25,y:W*2,rz:720,ry:0},4000);
+
+		let vol = {volume:1};
+		$(vol).delay((duration+1)*1000).animate({
+			volume:0
+		},{
+			duration:2000,
+			step:function(n){
+				audio.setVolume( 'music', n*0.52 );
+			}
+		})
+	}
+
+
 
 	let isTalking = false;
 	let nSequence = -1;
@@ -261,13 +319,15 @@ window.FinaleSequence = function( playersMeta ){
 			setTimeout(hideMeep,(duration+1)*1000);
 			setTimeout(doNextPlace,(duration+2)*1000);
 		} else {
-			setTimeout(doUltimateReward,(duration+2)*1000);
+			setTimeout(function(){
+				tally.hideRow(nSequence);
+				doUltimateReward();
+			},(duration+2)*1000);
 		}
 	}
 
 	function doUltimateReward(){
-		tally.hideRow(nSequence);
-
+		
 		say('reward');
 		let duration = audio.getDuration('reward');
 		setTimeout(doWubWub,(duration+1)*1000);

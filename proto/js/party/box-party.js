@@ -1114,7 +1114,6 @@ BoxPartyGame = function(){
 	}
 
 	function doShowTally(){
-		
 		tally.showRows();
 	}
 
