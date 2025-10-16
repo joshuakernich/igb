@@ -190,6 +190,7 @@ window.FinaleSequence = function( playersMeta ){
 	    'border':'10px solid white',
 	})
 	cube.redraw();
+	cube.$el.find('boxpartyshadow').hide();
 
 	let $face = cube.$el.find('.partycube3D-front');
 
@@ -340,7 +341,7 @@ window.FinaleSequence = function( playersMeta ){
 		let $face = cube.$el.find('.partycube3D-front');
 		let $mouth = $('<finalemouth>').appendTo($face);
 
-		self.$el.find('boxpartyshadow').hide();
+		cube.$el.find('boxpartyshadow').hide();
 
 		$platform.appendTo($game).css({
 			background: 'none',
@@ -353,9 +354,10 @@ window.FinaleSequence = function( playersMeta ){
 
 		audio.play('explode');
 
-		$(cube.transform).animate({
-			altitude: 2000,
-			rx:-45,
+		$(cube.transform).delay(3000).animate({
+			altitude: 1000,
+			rz:360,
+
 		},{
 			duration:1000,
 			step:cube.redraw,
