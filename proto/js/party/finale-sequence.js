@@ -42,9 +42,23 @@ window.FinaleSequence = function( playersMeta ){
 					left: ${W*1.25}px;
 					background: #360676;
 					position: absolute;
-					transform: rotateX(80deg);
+					transform: rotateX(90deg);
 					transform-style: preserve-3d;
+					transform-origin: bottom center;
+					bottom: 0px;
+				}
 
+				finalemouth{
+					display:block;
+					position: absolute;
+					background: white;
+					width: 70px;
+					height: 50px;
+					top: 50px;
+					left: 0px;
+					border-radius: 0px 0px 100% 100%;
+					transform: translate(-50%,-10%);
+					box-shadow: 0px 0px 50px black;
 				}
 			</style>
 		`)
@@ -60,6 +74,7 @@ window.FinaleSequence = function( playersMeta ){
 	audio.add('third','./proto/audio/party/speech-finale-third.mp3');
 	audio.add('second','./proto/audio/party/speech-finale-second.mp3');
 	audio.add('winner','./proto/audio/party/speech-finale-first.mp3');
+	audio.add('outro','./proto/audio/party/music-outro.mp3',0.3);
 
 	const SEQUENCE = [
 		undefined,
@@ -80,7 +95,7 @@ window.FinaleSequence = function( playersMeta ){
 		w:size,h:size,d:size,
 		x:W*0.25,
 		y:-W/2,
-		altitude:size/2 + 250,
+		altitude:size/2 + 450,
 		rx:0,
 		ry:0,
 		rz:0,
@@ -89,7 +104,17 @@ window.FinaleSequence = function( playersMeta ){
 
 	let cube = new BoxPartyCube(0,transform,undefined);
 	cube.$el.appendTo($platform);
+	cube.$el.find('partycube3Dsurface').css({
+		'background': 'url(./proto/img/party/bg-cosmos.jpg)',
+	    'background-size': 'cover',
+	    'background-position': 'center',
+	    'border':'10px solid white',
+	})
 	cube.redraw();
+
+	let $face = cube.$el.find('.partycube3D-front');
+
+	let $mouth = $('<finalemouth>').appendTo($face);
 
 	let meeps = [];
 
@@ -101,10 +126,12 @@ window.FinaleSequence = function( playersMeta ){
 			meeps[i] = new PartyMeep(i);
 			meeps[i].$el.find('partymeepeye').hide();
 			meeps[i].$el.find('partymeepmouth').hide();
+			meeps[i].$shadow.hide();
 			meeps[i].$el.appendTo($game).css({
-				'bottom':'-350px',
+				'bottom':'-320px',
 				'filter':'blur(5px)',
 				'transform':'scale(2)',
+				'transition': 'all 1s',
 			})
 		}
 
@@ -114,13 +141,17 @@ window.FinaleSequence = function( playersMeta ){
 	function doIntro(){
 		say('intro');
 		setTimeout(doNextPlace,9000);
+		//doNextPlace();
 	}
 
+	let isTalking = false;
 	let nSequence = -1;
 	let analyser;
 	let dataArray;
 	function doNextPlace(){
 		nSequence++;
+
+		$(cube.transform).animate({x:[0,W*0.5][nSequence%2],rz:[-30,30][nSequence%2],ry:[10,-10][nSequence%2]},500);
 
 		let id = SEQUENCE[meeps.length][nSequence];
 
@@ -128,35 +159,90 @@ window.FinaleSequence = function( playersMeta ){
 		
 		let duration = audio.getDuration(id);
 		
-		if(SEQUENCE[meeps.length][nSequence+1]) setTimeout(doNextPlace,(duration+2)*1000);
+		setTimeout(showMeep,(duration-2)*1000);
+		
+		if(SEQUENCE[meeps.length][nSequence+1]){
+			setTimeout(hideMeep,(duration+1)*1000);
+			setTimeout(doNextPlace,(duration+2)*1000);
+		} else {
+			setTimeout(doUltimateReward,(duration+2)*1000);
+		}
+	}
+
+	function doUltimateReward(){
+
+		audio.play('outro');
+
+		$(cube.transform).animate({x:W*0.25,y:W*2,rz:720,ry:0},2000);
+
+		$('<hudfinalbg>').insertBefore(meeps[nSequence].$el).css({
+			opacity:0,
+		}).animate({
+			opacity:1,
+		},2000);
+
+		meeps[nSequence].$el.css({
+			bottom: '300px',
+			left: 1.5*W+'px',
+			transform: 'scale(1.5)',
+		});
+	}
+
+	function showMeep() {
+
+		meeps[nSequence].$el.find('partymeepeye').show();
+		meeps[nSequence].$el.find('partymeepmouth').show();
+
+		meeps[nSequence].isAnimating = true;
+		meeps[nSequence].toFlyer();
+		meeps[nSequence].$el.css({
+			filter:'none',
+			bottom: '450px',
+			left: [1.7,1.3][nSequence%2]*W+'px',
+			transform: 'scale(1)'
+		});
+
+
+	}
+
+	function hideMeep() {
+		meeps[nSequence].$el.css({
+			bottom: '-500px',
+			left: [W*2,W][nSequence%2]+'px',
+			transform: 'rotate('+([120,-120][nSequence%2])+'deg)'
+		});
 	}
 
 	function say(id){
+		isTalking = true;
 		audio.play(id);
-		analyser = audio.initAnalyser(id);
-		const bufferLength = analyser.frequencyBinCount;
-    	dataArray = new Uint8Array(bufferLength);
+
+		setTimeout(function(){
+			isTalking = false;
+		},audio.getDuration(id)*1000);
+
+		flapMouth();
+	}
+
+	function flapMouth() {
+		if(!isTalking) return;
+		$mouth.delay(100+Math.random()*100).animate({width:50,height:30 + Math.random()*50},100).animate({width:70,height:20},{duration:100, complete:flapMouth});
 	}
 
 	hud.initPlayerCount(initGame);
 
 	function step(){
 
-		if(analyser){
-			analyser.getByteTimeDomainData(dataArray);
-
-			let sum = 0;
-	        for (let i = 0; i<dataArray; i++) {
-	        	sum += dataArray[i]; //add current bar value (max 255)
-	        }
-	        console.log(sum);
-	    }
+		
+		cube.redraw();
 
 		for(var m in meeps){
+			if(meeps[m].isAnimating) continue;
 			meeps[m].$el.css({
 				left: (1.5+meeps[m].x*0.25) * W,
 			})
 		}
+
 
 		resize();
 	}
