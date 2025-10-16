@@ -1001,6 +1001,11 @@ BoxPartyGame = function(){
         <style`);
 
 	let self = this;
+
+
+	let audio = new AudioPlayer();
+	audio.add('speech-zero','./proto/audio/party/speech-zero.mp3',0.4);
+
 	self.$el = $('<igb>');
 
 	let $minigame = $('<boxpartyminigame>').appendTo(self.$el);
@@ -1153,10 +1158,13 @@ BoxPartyGame = function(){
 		tally = new PartyTally(players);
 		tally.$el.appendTo($game);
 
-		setTimeout(doShowTally,1000);
-		setTimeout(doHideTally,3000);
-		setTimeout(scene.doWalkForward,4000);
-		setTimeout(scene.doActivateStop,5000);
+		setTimeout(function(){
+			audio.play('speech-zero');
+			doShowTally();
+		},1000);
+		setTimeout(doHideTally,5000);
+		setTimeout(scene.doWalkForward,6000);
+		setTimeout(scene.doActivateStop,7000);
 	}
 
 	function doSkipLocation() {
