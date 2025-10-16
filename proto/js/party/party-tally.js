@@ -174,6 +174,18 @@ window.PartyTally = function(players){
 		rows[i].$el.appendTo($table);
 	}
 
+	self.showRow = function (r) {
+		console.log('show row');
+		audio.play('woosh',true);
+		rows[r].$el.animate({left:0, opacity:1});
+	}
+
+	self.hideRow = function (r) {
+		console.log('hide row');
+		audio.play('woosh',true);
+		rows[r].$el.animate({left:-800, opacity:0.5});
+	}
+
 	self.redraw = function(){
 		for(var r in rows) rows[r].redraw();
 	}

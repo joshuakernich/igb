@@ -184,7 +184,7 @@ window.FinaleSequence = function( playersMeta ){
 	let cube = new BoxPartyCube(0,transform,undefined);
 	cube.$el.appendTo($platform);
 	cube.$el.find('partycube3Dsurface').css({
-		'background': 'url(./proto/img/party/bg-cosmos.jpg)',
+		'background': 'url(./proto/img/party/bg-cosmic-cube.jpeg)',
 	    'background-size': 'cover',
 	    'background-position': 'center',
 	    'border':'10px solid white',
@@ -200,6 +200,10 @@ window.FinaleSequence = function( playersMeta ){
 	let hud = new PartyHUD();
 	hud.$el.appendTo($game);
 
+	let tally;
+	let names = ['Dave','Noah','Josh','Sean','Paul','Jack'];
+	shuffleArray(names);
+
 	function initGame(count) {
 		for(var i=0; i<count; i++){
 			meeps[i] = new PartyMeep(i);
@@ -210,9 +214,16 @@ window.FinaleSequence = function( playersMeta ){
 				'bottom':'-320px',
 				'filter':'blur(5px)',
 				'transform':'scale(2)',
-				'transition': 'all 1s',
 			})
+
+			meeps[i].name = names[i];
+			meeps[i].score = (count-i)*10;
 		}
+
+		tally = new PartyTally(meeps);
+		tally.$el.appendTo($game);
+		
+		nSequence = meeps.length;
 
 		audio.play('music');
 		setTimeout( doIntro, 2000);
@@ -229,30 +240,33 @@ window.FinaleSequence = function( playersMeta ){
 	let analyser;
 	let dataArray;
 	function doNextPlace(){
-		nSequence++;
+		nSequence--;
 
 		audio.play('woosh',true);
 
 		$(cube.transform).animate({x:[0,W*0.5][nSequence%2],rz:[-30,30][nSequence%2],ry:[10,-10][nSequence%2]},500);
 
-		let id = SEQUENCE[meeps.length][nSequence];
+		let id = SEQUENCE[meeps.length][meeps.length-nSequence-1];
 
 		say(id);
 		
 		let duration = audio.getDuration(id);
 		
-		setTimeout(showMeep,(duration-2)*1000);
+		setTimeout(function(){
+			showMeep();
+		},(duration-2)*1000);
 		
-		if(SEQUENCE[meeps.length][nSequence+1]){
+		if(SEQUENCE[meeps.length][nSequence-1]){
 			setTimeout(hideMeep,(duration+1)*1000);
 			setTimeout(doNextPlace,(duration+2)*1000);
 		} else {
-
 			setTimeout(doUltimateReward,(duration+2)*1000);
 		}
 	}
 
 	function doUltimateReward(){
+		tally.hideRow(nSequence);
+
 		say('reward');
 		let duration = audio.getDuration('reward');
 		setTimeout(doWubWub,(duration+1)*1000);
@@ -283,6 +297,8 @@ window.FinaleSequence = function( playersMeta ){
 			transform: 'scale(1.5)',
 		});
 
+		cube.$el.hide();
+
 		setTimeout(doReveal,7000);
 	}
 
@@ -295,7 +311,7 @@ window.FinaleSequence = function( playersMeta ){
 			w:size,h:size,d:size,
 			x:W*0.25,
 			y:-W/2,
-			altitude:size/2 + 450,
+			altitude:size/2 + 270,
 			rx:0,
 			ry:0,
 			rz:0,
@@ -305,12 +321,23 @@ window.FinaleSequence = function( playersMeta ){
 		let cube = new BoxPartyCube(0,transform,undefined);
 		cube.$el.appendTo($platform);
 		cube.$el.find('partycube3Dsurface').css({
-			'background': 'url(./proto/img/party/bg-cosmos.jpg)',
+			'background': 'url(./proto/img/party/bg-cosmos-rainbow.webp)',
 		    'background-size': 'cover',
 		    'background-position': 'center',
 		    'border':'10px solid white',
 		})
 		cube.redraw();
+		cube.$el.find('boxeye').css({
+			'width': '10%',
+			'height': '20%',
+			'border-radius':'100%',
+			'transform':'none',
+		})
+
+		let $face = cube.$el.find('.partycube3D-front');
+		let $mouth = $('<finalemouth>').appendTo($face);
+
+		self.$el.find('boxpartyshadow').hide();
 
 		$platform.appendTo($game).css({
 			background: 'none',
@@ -323,9 +350,20 @@ window.FinaleSequence = function( playersMeta ){
 
 		audio.play('explode');
 
+		$(cube.transform).animate({
+			altitude: 2000,
+			rx:-45,
+		},1000)
+
 	}
 
 	function showMeep() {
+
+		tally.showRow(nSequence);
+
+		meeps[nSequence].$el.css({
+			'transition': 'all 1s',
+		})
 
 		audio.play('woosh',true);
 
@@ -334,17 +372,22 @@ window.FinaleSequence = function( playersMeta ){
 
 		meeps[nSequence].isAnimating = true;
 		meeps[nSequence].toFlyer();
-		meeps[nSequence].$el.css({
-			filter:'none',
-			bottom: '450px',
-			left: [1.7,1.3][nSequence%2]*W+'px',
-			transform: 'scale(1)'
-		});
+		setTimeout(function(){
+			meeps[nSequence].$el.css({
+				filter:'none',
+				bottom: '450px',
+				left: [1.7,1.3][nSequence%2]*W+'px',
+				transform: 'scale(1)'
+			});
+		})
+		
 
 
 	}
 
 	function hideMeep() {
+
+		tally.hideRow(nSequence);
 
 		audio.play('fall',true);
 
