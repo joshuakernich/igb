@@ -1,5 +1,46 @@
 window.FinaleSequence = function( playersMeta ){
 
+	const FinaleExplosion = function(size,color){
+
+		let self = this;
+		self.$el = $('<finaleexplosioncontainer>');
+
+		$('<finaleexplosion>').appendTo(self.$el).css({
+			width: size +'px',
+			height: size +'px',
+			background: color,
+		}).animate({
+			width: (size * 1.5) + 'px',
+			height: (size * 1.5) + 'px',
+		},200).delay(200).animate({
+			width: '0px',
+			height: '0px',
+			opacity: 0,
+		},1000);
+
+		for(var i=0; i<6; i++){
+			let sizeSmoke = 20 + Math.random() * 20;
+			let r = Math.random() * Math.PI*2;
+			$('<finalesmoke>').appendTo(self.$el).css({
+				width: sizeSmoke + 'px',
+				height: sizeSmoke + 'px',
+				left: Math.cos(r) * size/2 * Math.random(),
+				top: Math.sin(r) * size/2 * Math.random(),
+			}).animate({
+				left: Math.cos(r) * (size*1.5)/2,
+				top: Math.sin(r) * (size*1.5)/2,
+				width: (sizeSmoke*2) + 'px',
+				height: (sizeSmoke*2) + 'px',
+			},200 + Math.random()*100).animate({
+				left: Math.cos(r) * (size*2)/2,
+				top: Math.sin(r) * (size*2)/2,
+				width: (sizeSmoke) + 'px',
+				height: (sizeSmoke) + 'px',
+				opacity: 0,
+			},1000)
+		}
+	}
+
 	const W = 1600;
 	const H = 1000;
 	const FPS = 50;
@@ -53,13 +94,45 @@ window.FinaleSequence = function( playersMeta ){
 					position: absolute;
 					background: white;
 					width: 70px;
-					height: 50px;
+					height: 20px;
 					top: 50px;
 					left: 0px;
 					border-radius: 0px 0px 100% 100%;
 					transform: translate(-50%,-10%);
 					box-shadow: 0px 0px 50px black;
 				}
+
+				finalevortex{
+					display:block;
+					position: absolute;
+					inset: 0px;
+					background: url(./proto/img/party/bg-vortex.gif);
+					background-size: cover;
+					background-position: center;
+				}
+
+				finalesmoke{
+					display: block;
+					position: absolute;
+					background: white;
+					border-radius: 100%;
+					transform: translate(-50%, -50%);
+				}
+
+				finaleexplosioncontainer{
+					display: block;
+					position: absolute;
+				}
+
+				finaleexplosion{
+					display: block;
+					position: absolute;
+					overflow: visible;
+					transform: translate(-50%, -50%);
+					border-radius: 100%;
+					opacity: 0.9;
+				}
+
 			</style>
 		`)
 	}
@@ -67,14 +140,20 @@ window.FinaleSequence = function( playersMeta ){
 	let self = this;
 
 	let audio = new AudioPlayer();
-	audio.add('intro','./proto/audio/party/speech-finale-intro.mp3');
-	audio.add('last','./proto/audio/party/speech-finale-last.mp3');
-	audio.add('second-to-last','./proto/audio/party/speech-finale-second-to-last.mp3');
-	audio.add('middle','./proto/audio/party/speech-finale-middle.mp3');
-	audio.add('third','./proto/audio/party/speech-finale-third.mp3');
-	audio.add('second','./proto/audio/party/speech-finale-second.mp3');
-	audio.add('winner','./proto/audio/party/speech-finale-first.mp3');
+	audio.add('intro','./proto/audio/party/speech-finale-intro.mp3',0.5);
+	audio.add('last','./proto/audio/party/speech-finale-last.mp3',0.5);
+	audio.add('second-to-last','./proto/audio/party/speech-finale-second-to-last.mp3',0.5);
+	audio.add('middle','./proto/audio/party/speech-finale-middle.mp3',0.5);
+	audio.add('third','./proto/audio/party/speech-finale-third.mp3',0.5);
+	audio.add('second','./proto/audio/party/speech-finale-second.mp3',0.5);
+	audio.add('winner','./proto/audio/party/speech-finale-first.mp3',0.5);
+	audio.add('reward','./proto/audio/party/speech-finale-reward.mp3',0.5);
 	audio.add('outro','./proto/audio/party/music-outro.mp3',0.3);
+	audio.add('music','./proto/audio/party/music-awards.mp3',0.25);
+	audio.add('reveal','./proto/audio/party/music-reveal.mp3',0.5);
+	audio.add('explode','./proto/audio/party/sfx-explode.mp3',0.4);
+	audio.add('woosh','./proto/audio/party/sfx-woosh.mp3',0.1);
+	audio.add('fall','./proto/audio/party/sfx-fall.mp3',0.3);
 
 	const SEQUENCE = [
 		undefined,
@@ -135,7 +214,8 @@ window.FinaleSequence = function( playersMeta ){
 			})
 		}
 
-		doIntro();
+		audio.play('music');
+		setTimeout( doIntro, 2000);
 	}
 
 	function doIntro(){
@@ -151,6 +231,8 @@ window.FinaleSequence = function( playersMeta ){
 	function doNextPlace(){
 		nSequence++;
 
+		audio.play('woosh',true);
+
 		$(cube.transform).animate({x:[0,W*0.5][nSequence%2],rz:[-30,30][nSequence%2],ry:[10,-10][nSequence%2]},500);
 
 		let id = SEQUENCE[meeps.length][nSequence];
@@ -165,30 +247,87 @@ window.FinaleSequence = function( playersMeta ){
 			setTimeout(hideMeep,(duration+1)*1000);
 			setTimeout(doNextPlace,(duration+2)*1000);
 		} else {
+
 			setTimeout(doUltimateReward,(duration+2)*1000);
 		}
 	}
 
 	function doUltimateReward(){
+		say('reward');
+		let duration = audio.getDuration('reward');
+		setTimeout(doWubWub,(duration+1)*1000);
+	}
 
-		audio.play('outro');
+	function doWubWub(){
 
-		$(cube.transform).animate({x:W*0.25,y:W*2,rz:720,ry:0},2000);
+		setTimeout(function(){
+			audio.play('reveal');
+		},2000);
+		
+		
+		setTimeout(function(){
+			audio.stop('music');
+		},3000);
 
-		$('<hudfinalbg>').insertBefore(meeps[nSequence].$el).css({
+		$(cube.transform).animate({x:W*0.25,y:W*2,rz:720,ry:0},4000);
+
+		$('<finalevortex>').insertBefore(meeps[nSequence].$el).css({
 			opacity:0,
 		}).animate({
 			opacity:1,
-		},2000);
+		},4000);
 
 		meeps[nSequence].$el.css({
-			bottom: '300px',
+			bottom: '250px',
 			left: 1.5*W+'px',
 			transform: 'scale(1.5)',
 		});
+
+		setTimeout(doReveal,7000);
+	}
+
+	function doReveal(){
+
+		meeps[nSequence].$el.hide();
+
+		let size = W * 0.3;
+		let transform = {
+			w:size,h:size,d:size,
+			x:W*0.25,
+			y:-W/2,
+			altitude:size/2 + 450,
+			rx:0,
+			ry:0,
+			rz:0,
+			open: 0,
+		}
+
+		let cube = new BoxPartyCube(0,transform,undefined);
+		cube.$el.appendTo($platform);
+		cube.$el.find('partycube3Dsurface').css({
+			'background': 'url(./proto/img/party/bg-cosmos.jpg)',
+		    'background-size': 'cover',
+		    'background-position': 'center',
+		    'border':'10px solid white',
+		})
+		cube.redraw();
+
+		$platform.appendTo($game).css({
+			background: 'none',
+		})
+
+		new FinaleExplosion(size,'white').$el.appendTo($game).css({
+			top: '50%',
+			left: '50%',
+		})
+
+		audio.play('explode');
+
 	}
 
 	function showMeep() {
+
+		audio.play('woosh',true);
 
 		meeps[nSequence].$el.find('partymeepeye').show();
 		meeps[nSequence].$el.find('partymeepmouth').show();
@@ -206,6 +345,9 @@ window.FinaleSequence = function( playersMeta ){
 	}
 
 	function hideMeep() {
+
+		audio.play('fall',true);
+
 		meeps[nSequence].$el.css({
 			bottom: '-500px',
 			left: [W*2,W][nSequence%2]+'px',
