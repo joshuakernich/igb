@@ -357,10 +357,12 @@ window.FinaleSequence = function( playersMeta ){
 		$(cube.transform).delay(3000).animate({
 			altitude: 2000,
 			rz:360,
-
 		},{
 			duration:1000,
 			step:cube.redraw,
+			start:function(){
+				audio.play('woosh');
+			}
 		})
 
 	}
