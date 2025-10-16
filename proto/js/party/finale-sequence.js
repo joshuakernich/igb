@@ -355,7 +355,7 @@ window.FinaleSequence = function( playersMeta ){
 		audio.play('explode');
 
 		$(cube.transform).delay(3000).animate({
-			altitude: 1000,
+			altitude: 2000,
 			rz:360,
 
 		},{
