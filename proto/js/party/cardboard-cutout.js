@@ -7,7 +7,7 @@ window.CardboardCutoutGame = function( playersMeta ){
 	const CUTTER = {W:50,H:200};
 	const TIME = 60;
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
 
 	function toPath(arr){
@@ -469,7 +469,7 @@ window.CardboardCutoutGame = function( playersMeta ){
 	let queue = [];
 	const CutoutBox = function(n,pattern){
 
-		let audio = new AudioContext();
+		let audio = new AudioPlayer();
 		audio.add('buzz','./proto/audio/party/sfx-buzz.mp3',0.3,true);
 		audio.add('blip','./proto/audio/party/sfx-select.mp3',0.3);
 		audio.add('incorrect','./proto/audio/party/sfx-incorrect.mp3',0.3);

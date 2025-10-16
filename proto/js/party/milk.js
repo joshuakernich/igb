@@ -261,7 +261,7 @@ window.MilkGame = function( playersMeta ){
 
 		let n = Math.floor( Math.random()*SEG );
 
-		let audio = new AudioContext();
+		let audio = new AudioPlayer();
 		audio.add('squirt','./proto/audio/milk-squirt.mp3',0.3,false);
 		audio.add('pour','./proto/audio/milk-pour.mp3',0.3,false);
 
@@ -700,7 +700,7 @@ window.MilkGame = function( playersMeta ){
 		`);
 	}
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('music','./proto/audio/milk-music.mp3',0.3,true);
 
 	let self = this;

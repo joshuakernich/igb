@@ -10,7 +10,7 @@ window.RouletteRunnerGame = function(){
 	const SEGS = [0,2,0,2,0,2,0,2,1];
 
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('blip','./proto/audio/party/sfx-select.mp3',0.3);
 	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
 	audio.add('music','./proto/audio/party/music-creeping.mp3',0.3,true);

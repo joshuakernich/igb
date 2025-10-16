@@ -6,7 +6,7 @@ window.BowlingGame = function( playersMeta ){
 	const BALLS_PER_TURN = 2;
 	const YSCALE = 1;
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('tick','./proto/audio/party/sfx-select.mp3',0.3);
 	audio.add('music','./proto/audio/party/music-sport.mp3',0.2,true);
 	audio.add('roll','./proto/audio/party/sfx-bowling-ball.mp3',0.3,true);

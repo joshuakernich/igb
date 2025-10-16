@@ -214,7 +214,7 @@ window.PlummetPanicGame = function(playersMeta) {
 		`)
 	}
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('music','./proto/audio/party/music-creeping.mp3',0.3,true);
 	audio.add('crush','./proto/audio/party/sfx-crush.mp3',0.3);
 

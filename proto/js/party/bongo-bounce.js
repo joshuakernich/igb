@@ -195,7 +195,7 @@ window.BongoBounceGame = function( playersMeta ){
 		let nDrum = map.nDrum;
 		self.$el = $(`<drumball n=${nDrum}>`);
 
-		let audio = new AudioContext();
+		let audio = new AudioPlayer();
 		audio.add('correct','./proto/audio/party/sfx-drum-big.mp3',0.5);
 		audio.add('fail','./proto/audio/party/sfx-knock.mp3',0.5);
 
@@ -465,7 +465,7 @@ window.BongoBounceGame = function( playersMeta ){
 	let hud = new PartyHUD();
 	hud.$el.appendTo($game);
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 
 	function step(){
 

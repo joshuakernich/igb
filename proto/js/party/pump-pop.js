@@ -3,7 +3,7 @@ window.PumpMeepSingle = function(n){
 
 	self.score = 0;
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
     audio.add('pump','./proto/audio/pump-balloon.mp3',0.3);
     audio.add('pop','./proto/audio/party/sfx-pop.mp3',0.3);
 
@@ -179,7 +179,7 @@ window.PumpPopGame = function(){
 			</style>`);
 	}
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
     audio.add('music','./proto/audio/party/music-cartoon.mp3',0.3,true);
 
 	let self = this;

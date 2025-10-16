@@ -121,10 +121,16 @@ window.GAMES = {
 		bg:'gray',
 	},
 	
-	
 	'Final Frenzy':{
 		name:'',
 		game:window.MazeGame,
+		color:'white',
+		bg:'url(./proto/img/party/bg-cosmos.gif) center / cover'
+	},
+
+	'Finale Sequence':{
+		name:'',
+		game:window.FinaleSequence,
 		color:'white',
 		bg:'url(./proto/img/party/bg-cosmos.gif) center / cover'
 	},

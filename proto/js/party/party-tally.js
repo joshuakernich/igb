@@ -28,7 +28,7 @@ window.PartyTally = function(players){
 
 				partytallyrow{
 					display: block;
-					background: rgba(255,255,255,0.7);
+					background: rgba(255,255,255,0.9);
 					
 					width: 560px;
 					height: 80px;
@@ -160,7 +160,7 @@ window.PartyTally = function(players){
 		`)
 	}
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('woosh','./proto/audio/party/sfx-woosh.mp3',0.1);
 	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
 
@@ -199,7 +199,7 @@ window.PartyTally = function(players){
 
 window.PartyTallyRow = function(n,player){
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('woosh','./proto/audio/party/sfx-woosh.mp3',0.05);
 	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
 

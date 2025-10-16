@@ -5,7 +5,7 @@ window.ClawChaosGame = function(countInit){
 	const FPS = 50;
 	const COIN = 80;
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
 	audio.add('fall','./proto/audio/party/sfx-fall.mp3',0.3);
 	audio.add('music','./proto/audio/party/music-creeping.mp3',0.3,true);

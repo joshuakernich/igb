@@ -11,7 +11,7 @@ window.FinalFrenzyGame = function(){
 	const COIN = 70;
 	const ANIMAL = 250;
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('music','./proto/audio/party/music-cosmic-frenzy.mp3',0.3,true);
 	audio.add('reload','./proto/audio/sfx-reload.mp3',0.1);
 	audio.add('throw','./proto/audio/sfx-throw.mp3',0.1);

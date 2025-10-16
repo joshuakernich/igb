@@ -281,7 +281,7 @@ window.ClawGame = function(){
 	$('<clawbar>').appendTo($game);
 	let $anchor = $('<clawanchor>').appendTo($game);
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('machine','./proto/audio/party/sfx-machine.mp3',0.1,true);
 
 	const YCLAW = 0.12;

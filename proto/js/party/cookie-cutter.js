@@ -203,7 +203,7 @@ window.CookieCutterGame = function( playersMeta ){
 			</style>`);
 	}
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('music','./proto/audio/party/music-creeping.mp3',0.3,true);
 	audio.add('squish','./proto/audio/party/sfx-squish.mp3',0.3);
 

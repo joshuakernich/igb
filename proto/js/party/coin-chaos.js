@@ -353,7 +353,7 @@ window.CoinChaosGame = function( playersMeta ){
 	let $platform = $('<coinchaosplatform>').appendTo($game);
 	let $center = $('<coinchaoscenter>').appendTo($platform);
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
     audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
     audio.add('pickup','./proto/audio/party/sfx-pickup.mp3',0.3);

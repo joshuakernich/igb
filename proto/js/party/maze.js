@@ -614,7 +614,7 @@ window.MazeGame = function( playersMeta ){
 	let self = this;
 	self.$el = $('<igb>');
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('music','./proto/audio/party/music-cosmic-frenzy.mp3',0.2,true);
 	audio.add('fall','./proto/audio/party/sfx-fall.mp3',0.3);
 	audio.add('blip','./proto/audio/party/sfx-select.mp3',0.1);

@@ -1,5 +1,9 @@
 window.AvatarEntryPlayer = function(nPlayer,nSlot,human,callback){
 
+	let audio = new AudioPlayer();
+	audio.add('blip','./proto/audio/party/sfx-select.mp3',0.3);
+	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
+
 	const SHIRTS = [
 		{url:'./proto/img/party/avatar-shirt-skeleton.png'},
 		{url:'./proto/img/party/avatar-shirt-overall.png'},
@@ -57,6 +61,8 @@ window.AvatarEntryPlayer = function(nPlayer,nSlot,human,callback){
 			'background-color':`var(--n${nPlayer})`,
 		}).click(function(){
 			
+			audio.play('blip',true);
+
 			$left.find('avatarbutton').removeClass('selected');
 			$(this).addClass('selected');
 
@@ -91,6 +97,8 @@ window.AvatarEntryPlayer = function(nPlayer,nSlot,human,callback){
 	for(let f in FEATURES){
 		let $btn = $('<avatarbutton>').appendTo($right).click(function(){
 
+			audio.play('blip',true);
+
 			$right.find('avatarbutton').removeClass('selected');
 			$(this).addClass('selected');
 
@@ -112,6 +120,7 @@ window.AvatarEntryPlayer = function(nPlayer,nSlot,human,callback){
 	$('<nameentrybutton class="done">').appendTo( self.$el ).click(onComplete);
 
 	function onComplete() {
+		audio.play('correct');
 		// body...
 		let $letter = $(this);
 		$letter.addClass('tapped');
@@ -130,7 +139,7 @@ window.AvatarEntryPlayer = function(nPlayer,nSlot,human,callback){
 
 		let x = [human.z,human.x,-human.z][nSlot];
 		meep.$el.css({
-			left: 50 * x + '%'
+			left: 50 * x*0.3 + '%'
 		})
 	}
 
@@ -141,6 +150,10 @@ window.NameEntryPlayer = function(nPlayer, nSlot, human, callback){
 
 	const ALPHABET = 'qwertyuiop|asdfghjkl|zxcvbnm';
 
+	let audio = new AudioPlayer();
+	audio.add('blip','./proto/audio/party/sfx-select.mp3',0.3);
+	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
+
 	let self = this;
 	self.$el = $('<nameentryplayer>').attr('n',nPlayer);
 	let $input = $('<nameentryinput>').appendTo(self.$el).text('Enter your name');
@@ -148,7 +161,7 @@ window.NameEntryPlayer = function(nPlayer, nSlot, human, callback){
 	self.nPlayer = nPlayer;
 	self.text = '';
 	function onLetter(){
-
+		audio.play('blip',true);
 		let $letter = $(this);
 
 		let letter = $letter.attr('letter');
@@ -164,6 +177,7 @@ window.NameEntryPlayer = function(nPlayer, nSlot, human, callback){
 	}
 
 	function onBackspace(){
+		audio.play('blip',true);
 		self.text = self.text.substr(0,self.text.length-1);
 		$input.text(self.text);
 
@@ -173,6 +187,7 @@ window.NameEntryPlayer = function(nPlayer, nSlot, human, callback){
 	}
 
 	function onComplete() {
+		audio.play('correct');
 		// body...
 		let $letter = $(this);
 		$letter.addClass('tapped');
@@ -225,7 +240,7 @@ window.NameEntryPlayer = function(nPlayer, nSlot, human, callback){
 
 		let x = [human.z,human.x,-human.z][nSlot];
 		meep.$el.css({
-			left: 50 * x + '%'
+			left: 50 * x*0.3 + '%'
 		})
 	}
 }
@@ -362,7 +377,10 @@ window.NameEntry = function( playersMeta, callback ){
 					transition: none;
 					background: white;
 					color: #5F01FF;
+				}
 
+				nameentrybutton.tapped:after{
+					border-color: #5F01FF;
 				}
 
 				nameentryinput{
@@ -390,8 +408,10 @@ window.NameEntry = function( playersMeta, callback ){
 			</style>`);
 	}
 
-	
-	
+
+	let audio = new AudioPlayer();
+	audio.add('name-entry','./proto/audio/party/speech-name-entry.mp3',0.3);
+	audio.add('avatar-entry','./proto/audio/party/speech-avatar-entry.mp3',0.3);
 
 	let self = this;
 	self.$el = $('<igb class="nameentry">');
@@ -421,7 +441,12 @@ window.NameEntry = function( playersMeta, callback ){
 		slots[nSlot].$el.appendTo($sides[nSlot]);
 	}
 
+	let isFirstNameEntry = true;
 	function onNameEntryComplete( entry ){
+
+		if(isFirstNameEntry) audio.play('avatar-entry');
+		isFirstNameEntry = false;
+
 		let nSlot = slots.indexOf(entry);
 		slots[nSlot].$el.remove();
 
@@ -450,7 +475,7 @@ window.NameEntry = function( playersMeta, callback ){
 	}
 
 	let interval = setInterval(function(){
-		for(var s in slots) slots[s].redraw();
+		for(var s in slots) if(slots[s]) slots[s].redraw();
  	})
 
 	if(!playersMeta) playersMeta = [{},{},{},{},{},{}];
@@ -458,6 +483,10 @@ window.NameEntry = function( playersMeta, callback ){
 
 
 	while(slots.length<Math.min(3,playersMeta.length)) doNextEntry();
+
+	setTimeout(function(){
+		audio.play('name-entry');
+	},500);
 
 	self.setPlayers = function(p){
 		for(var h in humans){

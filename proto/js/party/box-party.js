@@ -154,7 +154,7 @@ BoxPartyCube = function(nCube,transform,game){
 
 	let self = this;
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
     audio.add('reveal','./proto/audio/riddler-perfect.mp3',0.3);
     audio.add('rumble','./proto/audio/party/sfx-rumble.mp3',0.1,true);
 
@@ -283,7 +283,7 @@ BoxPartyCube = function(nCube,transform,game){
 
 BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbackExitBox){
     
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
     audio.add('rumble','./proto/audio/party/sfx-rumble.mp3',0.1);
     audio.add('reveal','./proto/audio/party/sfx-correct-echo.mp3',0.3);
 	audio.add('woosh-long','./proto/audio/party/sfx-woosh-long.mp3',0.1);
@@ -416,7 +416,9 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
             	font-size: 40px;
             	color: white;
             	white-space: normal;
-    			font-weight: 900;
+    			font-weight: normal;
+    			line-height: 40px;
+				font-family: "Knewave", system-ui;
             }
 
             boxface{
@@ -1015,6 +1017,11 @@ BoxPartyGame = function(){
 
     hud.addDebug('SKIP LOCATION',doSkipLocation);
     hud.addDebug('SKIP MINIGAME',doSkipMinigame);
+    hud.addDebug('ADD SOME COINS',function(){
+    	resultsPending = [];
+    	while(resultsPending.length<players.length) resultsPending.push( 2 + Math.floor(Math.random()*10));
+    	doPendingTally();
+    });
 
 	
 	let $overlay = $('<boxpartyoverlay>').appendTo(self.$el);
@@ -1057,8 +1064,6 @@ BoxPartyGame = function(){
 	let resultsPending;
 	function doCompleteGame(results){
 
-
-		
 		if(liveModule.fini) liveModule.fini();
 
 		resultsPending = results;
@@ -1067,17 +1072,14 @@ BoxPartyGame = function(){
 		liveModule.$el.remove();
 		scene.doCompleteBox();
 
-
 		liveModule = undefined;
 		window.doPartyGameComplete = undefined;
 	}
 
+	
 	function doExitGame(){
-		doShowTally();
-		setTimeout(doPendingResults,2000);
-		setTimeout(doResolveResults,4000);
-		setTimeout(doHideTally,6000);
-
+		doPendingTally();
+		
 		let isLevelComplete = scene.getLevelComplete();
 	
 		isLevelComplete = true;
@@ -1089,7 +1091,14 @@ BoxPartyGame = function(){
 		}
 	}
 
-	function doPendingResults(){
+	function doPendingTally(){
+		doShowTally();
+		setTimeout(doShowResults,2000);
+		setTimeout(doResolveResults,4000);
+		setTimeout(doHideTally,6000);
+	}
+
+	function doShowResults(){
 		tally.showResults(resultsPending);
 	}
 

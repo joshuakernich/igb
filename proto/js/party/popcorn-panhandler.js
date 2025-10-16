@@ -15,7 +15,7 @@ window.PopcornGame = function( playersMeta ){
 
 	const TIME = 120;
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
     audio.add('pop','./proto/audio/party/sfx-popcorn.mp3',0.5);
     audio.add('kernel','./proto/audio/party/sfx-kernel.mp3',0.3);

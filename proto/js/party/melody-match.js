@@ -9,7 +9,7 @@ window.MelodyMatchGame = function( playersMeta ){
 	const BPS = BPM / 60;
 	const BPB = 3;
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
 	audio.add('incorrect','./proto/audio/party/sfx-incorrect.mp3',0.2);
 	audio.add('notes','./proto/audio/party/sfx-glockenspiel.mp3',0.3);
@@ -87,7 +87,7 @@ window.MelodyMatchGame = function( playersMeta ){
 
 	const MelodyMeep = function(n){
 
-		let audioNotes = new AudioContext();
+		let audioNotes = new AudioPlayer();
 		audioNotes.add('notes','./proto/audio/party/sfx-glockenspiel.mp3',0.3);
 
 		let self = this;

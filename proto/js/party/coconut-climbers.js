@@ -8,7 +8,7 @@ window.CoconutClimbersGame = function(playersMeta){
 	const THICC = 70;
 	const COCONUT = 100;
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('music','./proto/audio/party/music-calypso.mp3',0.2,true);
 	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
 	audio.add('coconut','./proto/audio/party/sfx-coconut.mp3',0.3);

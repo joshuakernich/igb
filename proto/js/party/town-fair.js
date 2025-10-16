@@ -123,7 +123,7 @@ window.TownFairGame = function( playersMeta ){
 
 	
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
 	audio.add('pig','./proto/audio/party/sfx-pig.mp3',0.5);
 	audio.add('cow','./proto/audio/party/sfx-cow.mp3',0.5);

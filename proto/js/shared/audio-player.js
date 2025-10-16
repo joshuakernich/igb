@@ -1,4 +1,4 @@
-AudioContext = function(){
+AudioPlayer = function(){
     let self = this;
     self.$el = $('<div>');
    let audio = {};
@@ -34,5 +34,29 @@ AudioContext = function(){
 
     self.stop = function(id){
         audio[id].pause();
+    }
+
+     self.getDuration = function(id){
+        return audio[id].duration;
+    }
+
+    self.initAnalyser = function(id){
+        
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        console.log(audioCtx);
+        const analyser = audioCtx.initAnalyser();
+
+        const source = audioCtx.createMediaElementSource(audio[id]);
+        source.connect(analyser);
+        analyser.connect(distortion);
+        distortion.connect(audioCtx.destination);
+
+        analyser.fftSize = 2048;
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        return analyser;
+
+        
     }
 }

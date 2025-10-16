@@ -50,7 +50,7 @@ window.PainterPanicGame = function( playersMeta ){
 		],
 	]
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
 	audio.add('tutorial','./proto/audio/party/tutorial-painter.mp3',0.5);
 
@@ -457,7 +457,7 @@ window.PainterPanicGame = function( playersMeta ){
 	let queue = [];
 	const PainterBox = function(n,path,texture){
 
-		let audio = new AudioContext();
+		let audio = new AudioPlayer();
 		audio.add('buzz','./proto/audio/party/sfx-buzz.mp3',0.1,true);
 		audio.add('blip','./proto/audio/party/sfx-select.mp3',0.3);
 		audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);

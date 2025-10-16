@@ -12,7 +12,7 @@ window.CuppingBallsGame = function () {
 		2.25,2.65
 	];
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('music','./proto/audio/party/music-sport.mp3',0.2,true);
 
 	if( !CuppingBallsGame.init ){

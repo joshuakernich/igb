@@ -27,7 +27,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	const GRAY = '#333';
 	const THICC = 40;
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('tick','./proto/audio/party/sfx-tick.mp3',0.3);
 	audio.add('tock','./proto/audio/party/sfx-tock.mp3',0.3);
 	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);

@@ -86,7 +86,7 @@ window.MysteryMazeGame = function(playersMeta){
 	const PX_CELLH = 150; //pixel height for each cell
 	const SAFE_GY = 2; // grid height for safe zones
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('fall','./proto/audio/party/sfx-fall.mp3',0.3);
 	audio.add('blip','./proto/audio/party/sfx-select.mp3',0.3);
 	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);

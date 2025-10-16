@@ -6,7 +6,7 @@ window.BoomChainGame = function(){
 	const BALL = 100;
 	const ASPLODE = 500;
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
 
 	if( !BoomChainGame.init ){

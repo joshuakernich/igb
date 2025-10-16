@@ -241,7 +241,7 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 		let $net = $('<headersnet>').appendTo($field);
 	}
 	
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('music','./proto/audio/party/music-sport.mp3',0.3,true);
 	audio.add('bounce','./proto/audio/party/sfx-bounce.mp3',0.3);
 	audio.add('cheer','./proto/audio/party/sfx-cheer.mp3',0.6);

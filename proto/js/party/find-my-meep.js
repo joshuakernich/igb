@@ -210,7 +210,7 @@ window.FindMyMeepGame = function( playersMeta ){
 		}
 	}
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('music','./proto/audio/party/music-creeping.mp3',0.3,true);
 	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
 	audio.add('complete','./proto/audio/party/sfx-correct-echo.mp3',0.3);

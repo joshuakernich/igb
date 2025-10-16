@@ -11,7 +11,7 @@ window.ClawChaos3DGame = function( playersMeta ){
 	const ALTITUDE = 250;
 	const ROUNDS = 2;
 
-	let audio = new AudioContext();
+	let audio = new AudioPlayer();
 	audio.add('music','./proto/audio/party/music-creeping.mp3',0.3,true,true);
 	audio.add('purse','./proto/audio/party/sfx-purse.mp3',0.3);
 	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
