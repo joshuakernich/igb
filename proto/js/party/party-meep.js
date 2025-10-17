@@ -349,8 +349,8 @@ window.PartyMeep = function(n){
 		})
 
 		self.$body.css({
-			top:'80px',
-			'transform':'rotate(15deg) translate(10px)',
+			top:'120px',
+			'transform':'rotate(15deg)',
 		})
 
 		self.$legs.css({
