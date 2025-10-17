@@ -701,7 +701,7 @@ window.MilkGame = function( playersMeta ){
 	}
 
 	let audio = new AudioPlayer();
-	audio.add('music','./proto/audio/milk-music.mp3',0.3,true);
+	audio.add('music','./proto/audio/party/music-farm.mp3',0.3,true);
 
 	let self = this;
 	self.$el = $('<igb>');

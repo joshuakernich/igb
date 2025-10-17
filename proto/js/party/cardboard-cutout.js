@@ -8,7 +8,7 @@ window.CardboardCutoutGame = function( playersMeta ){
 	const TIME = 60;
 
 	let audio = new AudioPlayer();
-	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
+	audio.add('music','./proto/audio/party/music-creative.mp3',0.3,true);
 
 	function toPath(arr){
 		let path = [];

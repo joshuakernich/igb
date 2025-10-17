@@ -12,7 +12,7 @@ window.ClawChaos3DGame = function( playersMeta ){
 	const ROUNDS = 2;
 
 	let audio = new AudioPlayer();
-	audio.add('music','./proto/audio/party/music-creeping.mp3',0.3,true,true);
+	audio.add('music','./proto/audio/party/music-heist.mp3',0.3,true,true);
 	audio.add('purse','./proto/audio/party/sfx-purse.mp3',0.3);
 	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
 	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
@@ -669,25 +669,7 @@ window.ClawChaos3DGame = function( playersMeta ){
 
 		if(iRound==0){
 			hud.initPlayers(meeps);
-		}
-		
-		hud.initRound(iRound,ROUNDS);
 
-		setTimeout(function(){
-			hud.finiBanner();
-		},2000);
-
-		setTimeout(function(){
-			hud.initBanner('Present 10% of your coins');
-			audio.play('music',false,(iRound==ROUNDS-1)?1.5:1);
-		},4000);
-
-		setTimeout(function(){
-			hud.finiBanner();
-		},7000);
-		
-
-		setTimeout(function(){
 			for(let m=0; m<meeps.length; m++){
 
 				let count = Math.floor(3 + Math.random()*20);
@@ -706,22 +688,21 @@ window.ClawChaos3DGame = function( playersMeta ){
 				}
 				
 			}
-		},5000);
-
-		
-		for(var i=0; i<3; i++){
-			let item = new Claw3DItem(-1,1 + Math.floor(Math.random()*4));
-			item.$el.appendTo($platform);
-			items.push(item);
-
-
-			item.altitude = 1;
-			$(item).animate({altitude:0},200+Math.random()*200);
 		}
+		
+
+		setTimeout(function(){
+			hud.initRound(iRound,ROUNDS);
+			audio.play('music',false,(iRound==ROUNDS-1)?1.5:1);
+		},2000);
+
+		setTimeout(function(){
+			hud.finiBanner();
+		},4000);
 
 		setTimeout( function(){
 			initClaw(0);
-		}, meeps.length*200 + 20000 );
+		}, 6000 );
 	}
 
 	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });

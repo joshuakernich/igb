@@ -91,7 +91,7 @@ window.MysteryMazeGame = function(playersMeta){
 	audio.add('blip','./proto/audio/party/sfx-select.mp3',0.3);
 	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
 	audio.add('sequence','./proto/audio/party/sfx-sequence.mp3',0.3);
-	audio.add('music','./proto/audio/party/music-creeping.mp3',0.3,true);
+	audio.add('music','./proto/audio/party/music-run.mp3',0.3,true);
 
 	if( !MysteryMazeGame.init ){
 		MysteryMazeGame.init = true;

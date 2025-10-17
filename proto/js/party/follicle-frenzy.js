@@ -275,7 +275,7 @@ window.FollicleFrenzyGame = function( playersMeta ){
 
 
 	let audio = new AudioPlayer();
-	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
+	audio.add('music','./proto/audio/party/music-creative.mp3',0.3,true);
 	audio.add('shaver','./proto/audio/party/sfx-shaver.mp3',0,true);
 	audio.add('sequence','./proto/audio/party/sfx-sequence.mp3',0.3);
 	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);

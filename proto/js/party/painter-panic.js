@@ -51,7 +51,7 @@ window.PainterPanicGame = function( playersMeta ){
 	]
 
 	let audio = new AudioPlayer();
-	audio.add('music','./proto/audio/party/music-playroom.mp3',0.3,true);
+	audio.add('music','./proto/audio/party/music-creative.mp3',0.3,true);
 	audio.add('tutorial','./proto/audio/party/tutorial-painter.mp3',0.5);
 
 	if( !PainterPanicGame.init ){

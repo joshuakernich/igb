@@ -204,7 +204,7 @@ window.CookieCutterGame = function( playersMeta ){
 	}
 
 	let audio = new AudioPlayer();
-	audio.add('music','./proto/audio/party/music-creeping.mp3',0.3,true);
+	audio.add('music','./proto/audio/party/music-chase.mp3',0.3,true);
 	audio.add('squish','./proto/audio/party/sfx-squish.mp3',0.3);
 
 	const CookieMeep = function(n){
