@@ -573,7 +573,7 @@ window.ClawChaos3DGame = function( playersMeta ){
 
 		window.shuffleArray(turnOrder);
 
-		setTimeout( initPlay, 1000);
+		setTimeout( initTutorial, 1000);
 	}
 
 	let slots = [];
@@ -607,6 +607,8 @@ window.ClawChaos3DGame = function( playersMeta ){
 		hud.initTutorial('Claw Chaos',
 			{x:1.5, y:0.45, msg:'Move around the box<br>to position the claw', icon:'around'},
 		);
+
+		
 
 		hud.initTimer(30,finiTutorial);
 	}
