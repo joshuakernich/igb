@@ -15,8 +15,29 @@ window.PopcornGame = function( playersMeta ){
 
 	const TIME = 120;
 
+
+
+	const PATTERN = [
+		{time:3,wall:0,ax:0.8},
+		{time:6,wall:0,ax:0.8},
+		{time:3,wall:0,ax:0.8},
+	]
+
+	const ROUNDS = [
+		undefined,
+		undefined,
+		[{time:60,cohorts:[[0,1]],timeSpawn:3},{time:60,cohorts:[[0,1]],timeSpawn:2}],
+		[{time:45,cohorts:[[0,1],[1,2],[0,2]],timeSpawn:3},{time:45,cohorts:[[0,1],[1,2],[0,2]],timeSpawn:2}],
+		[{time:45,cohorts:[[0,1],[2,3]],timeSpawn:3},{time:45,cohorts:[[0,1],[2,3]],timeSpawn:2}],
+		[{time:45,cohorts:[[0,1],[2,3],[4,0],[1,2],[3,4]],timeSpawn:2.5}],
+		[{time:45,cohorts:[[0,1],[2,3],[4,5]],timeSpawn:3},{time:45,cohorts:[[0,1],[2,3],[4,5]],timeSpawn:2}],
+	]
+
 	let audio = new AudioPlayer();
 	audio.add('music','./proto/audio/party/music-run.mp3',0.3,true);
+    audio.add('notify-a','./proto/audio/party/sfx-notify-a.mp3',0.15);
+    audio.add('notify-b','./proto/audio/party/sfx-notify-b.mp3',0.1);
+    audio.add('notify-c','./proto/audio/party/sfx-notify-c.mp3',0.1);
     audio.add('pop','./proto/audio/party/sfx-popcorn.mp3',0.5);
     audio.add('kernel','./proto/audio/party/sfx-kernel.mp3',0.3);
     audio.add('score','./proto/audio/party/sfx-pickup.mp3',0.1);
@@ -148,7 +169,7 @@ window.PopcornGame = function( playersMeta ){
 
 		let $pan = $('<popcornpan>').appendTo(self.$el);
 
-		let $score = $('<popcornscore>').appendTo(self.$el).text(0);
+		let $score = $('<popcornscore>').appendTo(self.$el).text('+1').css({opacity:0})
 
 		self.step = function(){
 
@@ -183,7 +204,7 @@ window.PopcornGame = function( playersMeta ){
 
 			if(kernel.isPopped){
 				self.score++;
-				$score.text(self.score).stop(true,false).animate({opacity:1,bottom:450},100).animate({opacity:0.5,bottom:380},100);
+				$score.stop(true,false).animate({opacity:1,bottom:450},100).animate({opacity:0,bottom:380},300);
 				audio.play('score',true);
 			} else {
 				audio.play('kernel',true);
@@ -394,6 +415,20 @@ window.PopcornGame = function( playersMeta ){
 					text-align: center;
 					
 				}
+
+				popocornwarning{
+					display: block;
+					position: absolute;
+					top: 100px;
+					transform: translateX(-50%);
+					width: 100px;
+					height: 100px;
+					background: url(./proto/img/party/icon-warning.png);
+					background-size: 100%;
+				}
+
+				
+
 			</style>
 		`)
 	}
@@ -444,35 +479,128 @@ window.PopcornGame = function( playersMeta ){
 			fires[i].$el.appendTo($game);
 		}
 
-		audio.play('music');
+
+		initTutorial();
+	}
+
+	let intervalSpawn = undefined;
+	let nCohort = -1;
+	let nRound = 0;
+
+	function initTutorial(){
+		hud.initTutorial('Popcorn Panhandlers',
+			{x:1.5,y:0.45,msg:'Move side to side<br> to catch and roast popcorn kernels', icon:'side-to-side'},
+			{x:0.75, y:0.5, msg:'Touch any wall<br>to switch walls', icon:'touch'},
+		)
+
+		for(var m in meeps){
+			meeps[m].$el.show();
+			meeps[m].isActive = true;
+		}
+
+		intervalSpawn = setInterval(spawnKernels,5000);
+
+		hud.initTimer(30,finiTutorial);
+	}
+
+	function finiTutorial(){
+		for(var m in meeps){
+			meeps[m].$el.hide();
+			meeps[m].isActive = false;
+		}
+
+		for(var k in kernels){
+			kernels[k].$el.hide();
+		}
+
+		kernels.length = 0;
+
+		clearInterval(intervalSpawn);
+
+		hud.finiTimer();
+		hud.finiTutorial();
+		setTimeout(initPlay,1000);
+	}
+
+	function initPlay(){
+		hud.initPlayers(meeps);
+		setTimeout(initNextCohort,2000);
+	}
+
+	function initNextCohort(){
 		
+		nCohort++;
+		if(!ROUNDS[meeps.length][nRound].cohorts[nCohort]){
+			nCohort = 0;
+			nRound++;
+		}
 
-		//setInterval(spawnKernels,5000);
+		if(!ROUNDS[meeps.length][nRound]){
+			finiGame();
+			return
+		}
 
-		initNextPlayer();
+		let delay = 0;
+		if(nCohort==0){
+			audio.play('music');
+			hud.initRound(nRound,ROUNDS[meeps.length].length);
 
-		intervalQueue = setInterval(doNextRound,timeQueue*1000);
+			setTimeout(function(){
+				hud.finiBanner();
+			},delay += 2000);
+		}
 
-		hud.initTimer(TIME,finiGame);
 
-		doNextRound();
+
+		let round = ROUNDS[meeps.length][nRound];
+		let cohort = round.cohorts[nCohort];
+
+		for(var c in cohort){
+			let m = cohort[c];
+			meeps[m].$el.show();
+			meeps[m].wall = 1;
+			meeps[m].isActive = true;
+		}
+
+		setTimeout(function(){
+			hud.revealTimer(round.time);
+			hud.summonPlayers(cohort);
+		},delay += 2000);
+
+		setTimeout(function(){
+			hud.finiBanner();
+		},delay += 2000);
+
+		setTimeout(function(){
+			intervalSpawn = setInterval(spawnKernels,round.timeSpawn*1000);
+			hud.initTimer(round.time,finiRound);
+		},delay += 2000);
+
+		
+		
 	}
 
-	function doNextRound(){
-		initNextPlayer();
-		setTimeout(spawnKernels,timeQueue/5*1*1000);
-		setTimeout(spawnKernels,timeQueue/5*2*1000);
-		setTimeout(spawnKernels,timeQueue/5*3*1000);
+	function finiRound(){
+
+		hud.finiTimer();
+
+		for(var m in meeps){
+			meeps[m].$el.hide();
+			meeps[m].isActive = false;
+		}
+
+		for(var k in kernels){
+			kernels[k].$el.hide();
+		}
+
+		kernels.length = 0;
+
+		clearInterval(intervalSpawn);
+
+		setTimeout(initNextCohort,2000);
 	}
 
-	let nPlayer = -1;
-	function initNextPlayer(){
-		nPlayer++;
-		meeps[(nPlayer-2+meeps.length)%meeps.length].hide();
-		meeps[nPlayer%meeps.length].show();
-
-		if(nPlayer>=meeps.length) clearInterval(intervalQueue);
-	}
+	
 
 	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
 	else hud.initPlayerCount(initGame);
@@ -488,15 +616,36 @@ window.PopcornGame = function( playersMeta ){
 		kernels.push(kernel);
 	}
 
+	let audios = ['notify-a','notify-b','notify-c'];
+	let queue = [];
 	function spawnKernels(){
 
-		let wall = Math.floor( Math.random()*3 );
-		let ax = 0.2 + Math.random() * 0.6;
-	
-		for(var i=0; i<5; i++){
-			let px = ax - 0.025 + Math.random()*0.05;
-			spawnKernel(wall,px,Math.floor(Math.random()*FPS));
+		if(!queue.length){
+			queue = [0,1,2];
+			shuffleArray(queue);
 		}
+
+		let wall = queue.pop();
+		let ax = 0.2 + Math.random() * 0.6;
+
+		audio.play(audios[wall],true);
+
+		let $warning = $('<popocornwarning>').appendTo($game).css({
+			left: (wall+ax)*W+'px',
+		})
+		
+		setTimeout(function(){
+			for(var i=0; i<5; i++){
+				let px = ax - 0.025 + Math.random()*0.05;
+				spawnKernel(wall,px,Math.floor(Math.random()*FPS));
+			}
+		},500);
+
+		setTimeout(function(){
+			$warning.hide();
+		},1000);
+	
+		
 	}
 
 	function step(){
@@ -545,6 +694,7 @@ window.PopcornGame = function( playersMeta ){
 
 		}
 
+		hud.updatePlayers(meeps);
 		resize();
 	}
 
@@ -574,21 +724,18 @@ window.PopcornGame = function( playersMeta ){
 
 	function finiGame(){
 
-		for(var m in meeps){
-			meeps[m].show(true);
-			meeps[m].wall = 1;
-			meeps[m].redraw();
-		}
+		audio.stop('music');
+		let scores = [];
+		for(var m in meeps) scores[m] = meeps[m].score;
 
-		clearInterval(interval);
-		hud.initBanner('Finish!');
+		let rewards = window.scoresToRewards(scores);
+
+		hud.showFinalScores(scores,rewards)
 		
 		setTimeout(function(){
-			let scores = [];
-			for(var m in meeps) scores[m] = meeps[m].score;
-			window.doPartyGameComplete(scores);
 			self.fini();
-		},3000)
+			window.doPartyGameComplete(scores);
+		},5000)
 
 		
 	}
