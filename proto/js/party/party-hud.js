@@ -483,30 +483,30 @@ window.PartyHUD = function( colour='#40B0ED' ){
 				hudmessage{
 					display: block;
 					position: absolute;
-					color: white;
+					color: ${GRAY};
 					font-size: 30px;
 					
 					white-space: normal;
 					text-align: center;
 					font-weight: 100;
 
-					transform: translate(-50%, -50%);
+					transform: translate(-50%, -50%) rotate(3deg);
 
-					
+					background: rgba(253, 240, 140, 0.95);
+					width: 300px;
+					height: 300px;
+					padding: 20px;
+					box-sizing: border-box;
+					box-shadow: 5px 25px rgba(0,0,0,0.3);
+					opacity: 0.8;
 				}
 
-				hudmessage:before{
-					content:"";
-					position: absolute;
-					display: block;
-					inset: -150px -100px 0px -100px;
-					background: radial-gradient(${GRAY}, transparent, transparent);
-					z-index: -1;
-					opacity: 0.5;
-				}
+				
 
 				hudmessage img{
 					margin-top: 20px;
+					filter: invert(1);
+					width: 260px;
 				}
 
 				hudplatforms{
@@ -1020,15 +1020,19 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	}
 
 	let TutorialMessage = function(bean) {
+
+		let msg = bean.msg.replace(/<br\s*\/?>/gi, ' ');
+
 		let self = this;
 		self.$el = $('<hudmessage>').css({
 			left:bean.x * 100/3 + '%',
 			top:bean.y * 100 + '%',
-		}).html(bean.msg);
+		}).text(msg);
+
 
 		if(bean.icon){
 			self.$el.append('<br>');
-			$(`<img width=400 src="./proto/img/party/tutorial-${bean.icon}.png">`).appendTo(self.$el);
+			$(`<img src="./proto/img/party/tutorial-${bean.icon}.png">`).appendTo(self.$el);
 		}
 	}
 

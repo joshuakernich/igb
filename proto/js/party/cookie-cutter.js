@@ -2,41 +2,190 @@ window.CookieCutterGame = function( playersMeta ){
 
 	const W = 1600;
 	const H = 1000;
+	const CUTTER = 1500;
 	const FPS = 20;
-	const GRIDSIZE = 400;
-	const TRACKLENGTH = 200;
-	const SCORE_MAX = 15;
 
-	const GRID = {W:W/GRIDSIZE,H:TRACKLENGTH};
+	function toArr(arr){
+		let path = [];
+		for(var i=0; i<arr.length/2; i++){
+			path[i] = [ arr[i*2], arr[i*2+1] ];
+		}
+		return path;
+	}
 
+	let SHAPES = [];
+	for(var s in SHAPE_LIBRARY) SHAPES[s] = toArr(SHAPE_LIBRARY[s]);
+
+
+	function toPath(arr){
+		let d = '';
+		for(var a=0; a<arr.length; a++) d = d + (a==0?'M':'L') + (arr[a][0]) + ',' + (arr[a][1]);
+		return d;
+	}
+
+	let CookieComposition = function( ...shapes ){
+		let self = this;
+		self.$el = $('<cookiecomposition>');
+		let $svg = $(`<svg viewBox='0 0 ${CUTTER} ${CUTTER}' xmlns="http://www.w3.org/2000/svg">`).appendTo(self.$el);
+
+		let d = `M0,0 L${CUTTER},0 L${CUTTER},${CUTTER} L0,${CUTTER}`
+		let $path = $(`<path d=${d}>`).appendTo($svg);
+
+		self.holes = [];
+
+		function inside(point, vs, buffer=0) {
+		    // ray-casting algorithm based on
+		    // https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html
+		    
+		    var x = point[0], y = point[1];
+		    
+		    var inside = false;
+		    for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+		        var xi = vs[i][0], yi = vs[i][1];
+		        var xj = vs[j][0], yj = vs[j][1];
+		        
+		        var intersect = ((yi > y) != (yj > y))
+		            && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+		        if (intersect) inside = !inside;
+		    }
+
+		    if(inside && buffer>0){
+		    	let dist = pointToPolygonDistance(point,vs);
+		    	if(dist<buffer) inside = false;
+		    }
+		    
+		    return inside;
+		};
+
+		self.isInHole = function( x,y ){
+
+			x = (x+W/2)/W*CUTTER;
+			y = (y+W/2)/W*CUTTER;
+
+			let b = false;
+			for(var h in self.holes) if( inside([x,y], self.holes[h]) ) b = true;
+			return b;
+		}
+
+		self.add = function( x, y, nShape, size ){
+
+			size = CUTTER/500 * size;
+			
+			x = x * CUTTER;
+			y = y * CUTTER;
+
+			let arr = [];
+
+			for(var p in SHAPES[nShape]){
+				arr[p] = [
+					SHAPES[nShape][p][0]*size+x,
+					SHAPES[nShape][p][1]*size+y,
+				]
+			}
+
+			self.holes.push(arr);
+
+			let arrReverse = arr.concat().reverse();
+			d = d + toPath(arrReverse);
+		}
+
+		for(var s in shapes) self.add(shapes[s].x,shapes[s].y,shapes[s].n,shapes[s].size);
+
+		$path.attr('d',d);
+		$svg.html($svg.html());
+	}
+
+	
+
+	let COMPOSITIONS = [
+
+		new CookieComposition({x:0,y:0,n:1,size:1}), // star
+		new CookieComposition({x:0,y:0,n:1,size:0.5},{x:0.5,y:0.5,n:1,size:0.5}), // stars
+		new CookieComposition({x:0,y:0,n:10,size:1}), // heart
+		new CookieComposition({x:0.5,y:0,n:1,size:0.5},{x:0,y:0.5,n:10,size:0.5}), // star and heart
+		new CookieComposition({x:1/3,y:0,n:10,size:1/3},{x:0,y:1/3,n:10,size:1/3},{x:2/3,y:1/3,n:10,size:1/3},{x:1/3,y:2/3,n:10,size:1/3}), // hearts
+
+		new CookieComposition({x:0,y:0,n:8,size:1}), // stair
+		new CookieComposition({x:0,y:0,n:8,size:0.5},{x:0.5,y:0.5,n:8,size:0.5}), // stairs
+		new CookieComposition({x:0,y:0,n:9,size:1}), // crescent
+		new CookieComposition({x:1/3,y:1/3,n:9,size:2/3},{x:1/3,y:1/3,n:10,size:1/3}), // heart and crescent
+		new CookieComposition({x:1/3,y:0,n:9,size:1/3},{x:0,y:1/3,n:8,size:1/3},{x:2/3,y:1/3,n:9,size:1/3},{x:1/3,y:2/3,n:8,size:1/3}), // stairs and crescent
+
+		new CookieComposition({x:0,y:0,n:4,size:1}), // pentagon
+		new CookieComposition({x:0,y:0,n:4,size:0.5},{x:0.5,y:0.5,n:1,size:0.5}), // pentagon and star
+		new CookieComposition({x:0,y:0,n:3,size:1}), // spark
+		new CookieComposition({x:0,y:0,n:3,size:0.5},{x:0.5,y:0.5,n:3,size:0.5}), // star and spark
+		new CookieComposition({x:0,y:0,n:3,size:1/3},{x:2/3,y:0,n:4,size:1/3},{x:1/3,y:1/3,n:1,size:1/3},{x:0,y:2/3,n:4,size:1/3},{x:2/3,y:2/3,n:3,size:1/3}), // stars, sparks, and pentagons
+
+		new CookieComposition({x:0,y:0,n:7,size:1}), // cross
+		new CookieComposition({x:1/4,y:0,n:7,size:1/2},{x:1/4,y:1/2,n:7,size:1/2}), // crosses
+		new CookieComposition({x:0,y:0,n:5,size:1}), // peanut
+		new CookieComposition({x:0.5,y:0,n:5,size:0.5},{x:0.5,y:0.5,n:5,size:0.5}), // peanuts
+		new CookieComposition({x:0,y:0,n:10,size:1/3},{x:2/3,y:0,n:10,size:1/3},{x:1/3,y:1/3,n:10,size:1/3},{x:0,y:2/3,n:10,size:1/3},{x:2/3,y:2/3,n:10,size:1/3}), // hearts
+
+		new CookieComposition({x:0,y:0,n:6,size:1}), // tri-peanut
+		new CookieComposition({x:0,y:0,n:6,size:0.5},{x:0,y:0.5,n:6,size:0.5}), // tri-peanuts
+		new CookieComposition({x:0,y:0,n:11,size:1}), // face
+		new CookieComposition({x:0,y:1/4,n:11,size:1/2},{x:1/2,y:1/4,n:11,size:1/2}), // faces
+		new CookieComposition({x:1/3,y:0,n:1,size:1/3},{x:0,y:1/3,n:1,size:1/3},{x:2/3,y:1/3,n:1,size:1/3},{x:1/3,y:2/3,n:1,size:1/3}), // stars
+
+		
+	]
+
+	let sets = [];
+	for(var i=0; i<5; i++){
+		sets[i] = COMPOSITIONS.slice(i*5,(i+1)*5);
+	}
+
+	let first = COMPOSITIONS.slice(0,9);
+	let last = COMPOSITIONS.slice(COMPOSITIONS.length-10,COMPOSITIONS.length-1);
+	
 
 	const STRUCTURE = [
 		undefined,
 		undefined,
 		[
-			{players:[0,1],levels:5},
-			{players:[0,1],levels:10}
+			{ cohorts:[{players:[0,1],levels:sets[0],timeMax:2000, timeMin:1500}] },
+			{ cohorts:[{players:[0,1],levels:sets[1],timeMax:1500, timeMin:1000}] },
+			{ cohorts:[{players:[0,1],levels:sets[3],timeMax:1000, timeMin:500}] },
+			{ cohorts:[{players:[0,1],levels:sets[4],timeMax:500, timeMin:500}] },
 		],
 		[
-			{players:[0,1,2],levels:5},
-			{players:[0,1,2],levels:10}
+			{ cohorts:[{players:[0,1,2],levels:sets[0],timeMax:2000, timeMin:1500}] },
+			{ cohorts:[{players:[0,1,2],levels:sets[1],timeMax:1500, timeMin:1000}] },
+			{ cohorts:[{players:[0,1,2],levels:sets[3],timeMax:1000, timeMin:500}] },
+			{ cohorts:[{players:[0,1,2],levels:sets[4],timeMax:500, timeMin:500}] },
 		],
 		[
-			{players:[0,1,2,3],levels:5},
-			{players:[0,1,2,3],levels:10}
+			{ cohorts:[{players:[0,1,2,3],levels:sets[0],timeMax:2000, timeMin:1500}] },
+			{ cohorts:[{players:[0,1,2,3],levels:sets[1],timeMax:1500, timeMin:1000}] },
+			{ cohorts:[{players:[0,1,2,3],levels:sets[3],timeMax:1000, timeMin:500}] },
+			{ cohorts:[{players:[0,1,2,3],levels:sets[4],timeMax:500, timeMin:500}] },
 		],
 		[
-			{players:[0,1,2],levels:10},
-			{players:[3,4,0],levels:10},
-			{players:[1,2,3],levels:10},
-			{players:[4,0,1],levels:10},
-			{players:[2,3,4],levels:10},
+			{ 
+				cohorts:[
+					{players:[0,1,2],levels:sets[0],timeMax:1500, timeMin:500},
+					{players:[3,4,0],levels:sets[1],timeMax:1500, timeMin:500},
+					{players:[1,2,3],levels:sets[2],timeMax:1500, timeMin:500},
+					{players:[4,0,1],levels:sets[3],timeMax:1500, timeMin:500},
+					{players:[2,3,4],levels:sets[4],timeMax:1500, timeMin:500},
+				]
+			}
 		],
 		[
-			{players:[0,1,2],levels:5},
-			{players:[3,4,5],levels:5},
-			{players:[0,2,4],levels:10},
-			{players:[1,3,5],levels:10},
+			{ 
+				cohorts:[
+					{players:[0,1,2],levels:sets[0],timeMax:1500, timeMin:1000},
+					{players:[3,4,5],levels:sets[1],timeMax:1500, timeMin:1000},
+				]
+			},
+			{
+				cohorts:[
+					{players:[0,2,4],levels:sets[3],timeMax:1000, timeMin:500},
+					{players:[1,3,5],levels:sets[4],timeMax:1000, timeMin:500},
+				]
+			}
 		],
 
 	]
@@ -55,8 +204,9 @@ window.CookieCutterGame = function( playersMeta ){
 					
 					perspective: ${W}px;
 
-					background: url(./proto/img/party/bg-bakery.png);
-					background-size: 100%;
+					background: url(./proto/img/party/bg-box-factory.png);
+					background-size: 100% 110%;
+					background-position: bottom center;
 
 				}
 
@@ -80,7 +230,7 @@ window.CookieCutterGame = function( playersMeta ){
 					transform: rotateX(70deg);
 					z-index: 10;
 					transform-style:preserve-3d;
-					border-radius: 400px;
+					border-radius: 100px;
 
 		
 					background: url(./proto/img/party/texture-wood.png);
@@ -106,14 +256,31 @@ window.CookieCutterGame = function( playersMeta ){
 					
 					transform: translateZ(${H}px);
 					transform-style:preserve-3d;
-					border-radius: 400px;
+					border-radius: 100px;
 					display: block;
 					white-space: normal;
 					overflow: hidden;
-					border-radius: 400px;
+					border-radius: 100px;
 					transition: all 0.5s;
 					border-bottom: 50px solid black;
 					box-shadow: inset 0px 0px 100px white;
+				}
+
+				cookiecomposition{
+					display: block;
+					position: absolute;
+					
+					width: ${W}px;
+					height: ${W}px;
+				}
+
+				cookiecomposition path{
+					fill: #ddd;
+					fill-rule: evenodd;
+				}
+
+				cookieshadow cookiecomposition path{
+					fill: black;
 				}
 
 				cookiecorner{
@@ -166,7 +333,7 @@ window.CookieCutterGame = function( playersMeta ){
 					top: ${-W/2}px;
 					
 					transform-style:preserve-3d;
-					border-radius: 400px;
+					border-radius: 100px;
 					
 					opacity: 0;
 
@@ -204,8 +371,13 @@ window.CookieCutterGame = function( playersMeta ){
 	}
 
 	let audio = new AudioPlayer();
-	audio.add('music','./proto/audio/party/music-chase.mp3',0.3,true);
+	audio.add('music','./proto/audio/party/music-run.mp3',0.3,true);
 	audio.add('squish','./proto/audio/party/sfx-squish.mp3',0.3);
+	audio.add('woosh','./proto/audio/party/sfx-woosh.mp3',0.1);
+	audio.add('woosh-long','./proto/audio/party/sfx-woosh-long.mp3',0.1);
+	audio.add('incorrect','./proto/audio/party/sfx-incorrect.mp3',0.3);
+	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
+	audio.add('correct-echo','./proto/audio/party/sfx-correct-echo.mp3',0.3);
 
 	const CookieMeep = function(n){
 		let self = this;
@@ -223,7 +395,7 @@ window.CookieCutterGame = function( playersMeta ){
 
 		self.addScore = function(score){
 			self.score += score;
-			$score.text(self.score)
+			$score.text('+1')
 			.stop(false,false)
 			.css({
 				opacity:1,
@@ -244,92 +416,141 @@ window.CookieCutterGame = function( playersMeta ){
 	let $game = $('<cookiegame>').appendTo(self.$el);
 	let $world = $('<cookieworld>').appendTo($game);
 	let $center = $('<cookiecenter>').appendTo($world);
-	
-	let iRound = -1;
-	let meeps = [];
-	function initGame(PLAYER_COUNT){
-
-		
-		scoreMult = Math.floor( SCORE_MAX / PLAYER_COUNT );
-
-		for(var i=0; i<PLAYER_COUNT; i++){
-
-			meeps[i] = new CookieMeep(i);
-			meeps[i].isActive = false;
-			meeps[i].$el.appendTo($center).hide();
-			
-		}
-
-		audio.play('music');
-
-		initNextRound();
-	}
-
-	function getNonPlayers(players){
-		let arr = [];
-		for(var m=0; m<meeps.length; m++) if(players.indexOf(m)==-1) arr.push(m);
-		return arr;
-	}
-
-	function initNextRound(){
-
-		iRound++;
-
-		for(var m in meeps) meeps[m].isActive = false;
-
-		for(var p in STRUCTURE[meeps.length][iRound].players){
-
-			let m = STRUCTURE[meeps.length][iRound].players[p];
-
-			meeps[m].$el.show();
-			meeps[m].isActive = true;
-			meeps[m].isDead = false;
-		}
-
-		setTimeout(function(){
-			hud.initRound(iRound, STRUCTURE[meeps.length].length);
-		},2000);
-
-		setTimeout(function(){
-			hud.finiBanner();
-		},4000);
-
-		setTimeout(function(){
-			hud.summonPlayers(STRUCTURE[meeps.length][iRound].players,getNonPlayers(STRUCTURE[meeps.length][iRound].players));
-		},6000);
-
-		setTimeout(function(){
-			hud.finiBanner();
-		},8000);
-
-		setTimeout(function(){
-			hud.initBanner('Dodge the Cookie Cutter!');
-		},10000);
-
-		setTimeout(function(){
-			hud.finiBanner();
-			doUnstamp();
-		},12000);
-	}
-	
 
 	let $shadow = $('<cookieshadow>').appendTo($center);
 	let $stamper = $('<cookiestamper>').appendTo($center);
-	$('<cookiestamperbar>').appendTo($stamper);
-
-	for(var i=0; i<4; i++){
-		let $corner =  $('<cookiecorner>').appendTo($stamper);
-		let $shape = $('<cookieshape n='+i+'>').appendTo($corner);
-
-		let $cornerShadow =  $('<cookiecorner>').appendTo($shadow);
-		let $shapeShadow = $('<cookieshape n='+i+'>').appendTo($cornerShadow);
-	}
 
 	let hud = new PartyHUD('#71A4A2');
 	hud.$el.appendTo($game);
 
 	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
 	else hud.initPlayerCount(initGame);
+	
+	let isTutorial = false;
+	let nRound = 0;
+	let nCohort = -1;
+	let cohort;
+	let meeps = [];
+	function initGame(PLAYER_COUNT){
+
+		for(var i=0; i<PLAYER_COUNT; i++){
+			meeps[i] = new CookieMeep(i);
+			meeps[i].isActive = false;
+			meeps[i].$el.appendTo($center).hide();
+			
+		}
+
+		initTutorial();
+	}
+
+	function initTutorial(){
+
+		isTutorial = true;
+
+		hud.initTutorial('Cookie Cutter',
+		{x:1.75,y:0.45,msg:'Move around the box<br>to stand in safe spaces',icon:'around'},
+		)
+
+		for(var m in meeps){
+			meeps[m].$el.show();
+			meeps[m].isActive = true;
+			meeps[m].isDead = false;
+		}
+
+		cohort = {
+			timeMin: 2000,
+			timeMax: 2000,
+			levels:[ COMPOSITIONS[0], COMPOSITIONS[5], COMPOSITIONS[10], COMPOSITIONS[15] ]
+		}
+
+		setTimeout( doNewStamp, 8000 );
+
+		hud.initTimer(30,finiTutorial);
+	}
+
+	function finiTutorial(){
+
+		for(var m in meeps){
+			meeps[m].$el.hide();
+			meeps[m].isActive = false;
+			meeps[m].score = 0;
+		}
+
+		hud.finiTutorial();
+		hud.finiTimer();
+
+		setTimeout(initPlay,1000);
+	}
+
+
+	function initPlay(){
+		isTutorial = false;
+		hud.initPlayers(meeps);
+		setTimeout(initNextCohort,1000);
+	}
+
+
+	function initNextCohort(){
+
+		nCohort++;
+
+		if(!STRUCTURE[meeps.length][nRound].cohorts[nCohort]){
+			nCohort = 0;
+			nRound++;
+		}
+
+		if(!STRUCTURE[meeps.length][nRound]){
+			finiGame();
+			return;
+		}
+
+		audio.play('music');
+
+		let round = STRUCTURE[meeps.length][nRound];
+		cohort = round.cohorts[nCohort];
+
+		nStamp = -1;
+		
+		for(var p in cohort.players){
+			let m = cohort.players[p];
+
+			meeps[m].$el.show();
+			meeps[m].isActive = true;
+			meeps[m].isDead = false;
+		}
+
+		let delay = 0;
+
+		if( nCohort==0 ){
+			setTimeout(function(){
+				hud.initRound(nRound, STRUCTURE[meeps.length].length);
+			},delay+=2000);
+
+			setTimeout(function(){
+				hud.finiBanner();
+			},delay+=2000);
+		}
+
+		setTimeout(function(){
+			hud.summonPlayers(cohort.players);
+		},delay+=2000);
+
+		setTimeout(function(){
+			hud.finiBanner();
+			doUnstamp();
+		},delay+=2000);
+	}
+
+	function finiCohort(){
+
+		for(var m in meeps){
+			meeps[m].$el.hide();
+			meeps[m].isActive = false;
+		}
+
+		setTimeout(initNextCohort,1000);
+	}
+	
 
 	let timer;
 	let scale = 1;
@@ -354,34 +575,34 @@ window.CookieCutterGame = function( playersMeta ){
 	}
 
 	const MAX = W/2-150;
-	const STAMPS = [
-		[1,1,1,1],
-		[1,0,1,1],
-		[1,0,0,1],
-		[0,0,1,0],
-		[0,1,0,0],
-		[0,1,1,0],
-		[0,0,0,1],
-		[1,0,0,0],
-		[0,1,0,0],
-		[0,0,1,0],
-	]
 
 	let nStamp = -1;
 
 	function doNewStamp(){
 		nStamp++;
-		let stamp = STAMPS[nStamp%STAMPS.length];
 
-		for(var i=0; i<stamp.length; i++){
-			let shape = stamp[i];
-			self.$el.find(`cookieshape[n=${i}]`).css({ width:MAX*shape, height:MAX*shape });
+		$stamper.empty();
+		$shadow.empty();
+		
+		if(!cohort.levels[nStamp]){
+
+			if(isTutorial) return;
+
+			audio.play('correct-echo');
+			finiCohort();
+			return;
 		}
+
+		cohort.levels[nStamp].$el.appendTo($stamper);
+		cohort.levels[nStamp].$el.clone().appendTo($shadow);
 
 		doStampReveal();
 	}
 
 	function doStampReveal(){
+
+		audio.play('woosh');
+
 		$stamper.css({
 			'transform':'translateZ(600px)',
 		})
@@ -390,13 +611,18 @@ window.CookieCutterGame = function( playersMeta ){
 			'opacity':'0.5',
 		})
 
-		let time = 1500 - nStamp*100;
-		if(nStamp == 0) time = 2000; // always take 2 seconds for the first stamp
+		let nth = nStamp/(cohort.levels.length-1);
+		
+		let time = cohort.timeMax - (cohort.timeMax-cohort.timeMin) * nth;
+
 
 		setTimeout(doStamp,Math.max(500, time));
 	}
 
 	function doStamp() {
+		
+		audio.play('woosh-long');
+
 		$stamper.css({
 			'transform':'translateZ(30px)',
 		})
@@ -412,21 +638,13 @@ window.CookieCutterGame = function( playersMeta ){
 	let countSquish = 0;
 
 	function doCrush(){
-		let stamp = STAMPS[nStamp%STAMPS.length];
+
 		for(var m in meeps){
 			if(meeps[m].isActive){
-				let isLeft = meeps[m].x < 0;
-				let isTop = meeps[m].y < 0;
+				
+				let isInHole = cohort.levels[nStamp].isInHole(meeps[m].x,meeps[m].y);
 
-				let isMiddle = ( Math.abs( meeps[m].x ) < 75 ) || ( Math.abs( meeps[m].y ) < 75 );
-				let isEdge = ( Math.abs( meeps[m].x ) > (W/2-75) ) || ( Math.abs( meeps[m].y ) > (W/2-75) );
-
-				let iQuadrant = 0;
-				if( !isLeft && isTop ) iQuadrant = 1;
-				if( isLeft && !isTop ) iQuadrant = 2;
-				if( !isLeft && !isTop ) iQuadrant = 3;
-
-				if(!meeps[m].isDead && (isMiddle || isEdge || stamp[iQuadrant]==0)){
+				if(!meeps[m].isDead && !isInHole){
 					meeps[m].$el.hide();
 					meeps[m].isDead = true;
 					audio.play('squish',true);
@@ -442,26 +660,26 @@ window.CookieCutterGame = function( playersMeta ){
 		let countAlive = 0;
 		for(var m in meeps) if(!meeps[m].isDead && meeps[m].isActive) countAlive++;
 
-		if(countAlive<=1){
+		if(!isTutorial && countAlive==0){
 
+			audio.play('incorrect');
 			for(var m in meeps) if(!meeps[m].isDead && meeps[m].isActive) meeps[m].addScore( STAMPS.length-nStamp-1 );
 
 			clearTimeout(timer);
 			setTimeout( function(){ doUnstamp(false) }, 1000 );
 			$stamper.stop(false);
-			hud.initBanner(countAlive==1?'Winner!':'Finish!');
 
-			setTimeout( hud.finiBanner, 3000 );
-
-			if(STRUCTURE[meeps.length][iRound+1]){
-				setTimeout( initNextRound, 3500 );
-			} else {
-				setTimeout( finiGame, 3500 );
-			}
+			setTimeout( finiCohort, 3000 );
+		} else {
+			audio.play('correct');
 		}
+
+		hud.updatePlayers(meeps);
 	}
 
 	function finiGame(){
+		audio.stop('music');
+
 		let scores = [];
 		for(var m in meeps){
 			meeps[m].isActive = false;
@@ -473,12 +691,14 @@ window.CookieCutterGame = function( playersMeta ){
 		hud.showFinalScores(scores,rewards);
 
 		setTimeout(function(){
-			self.fini();	
+			clearInterval(interval);
 			window.doPartyGameComplete(rewards);
-		},3000);
+		},5000);
 	}
 
 	function doUnstamp( doNextStamp=true ) {
+		audio.play('woosh-long',true);
+
 		$stamper.css({
 			'transform':'translateZ('+H+'px)',
 		})
@@ -487,6 +707,14 @@ window.CookieCutterGame = function( playersMeta ){
 			'opacity':'0',
 		})
 
+		if(isTutorial) setTimeout(function(){
+			for(var m in meeps){
+				meeps[m].$el.show();
+				meeps[m].isDead = false;
+				meeps[m].isActive = true;
+			}
+		},100);
+
 		if( doNextStamp ) setTimeout(doNewStamp,1000);
 	}
 
@@ -494,10 +722,8 @@ window.CookieCutterGame = function( playersMeta ){
 
 	self.setPlayers = function(p){
 		for(var m in meeps){
-
 			meeps[m].x = p[m].x*(W/2);
 			meeps[m].y = -p[m].z*(W/2);
-		
 		}
 	}
 
