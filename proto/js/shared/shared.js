@@ -21,11 +21,11 @@ window.scoresToRewards = function(scores){
   const SCORES = [
     undefined,
     undefined,
-    [20,10],
-    [20,10,5],
-    [20,10,5,2],
-    [20,15,10,5,2],
-    [20,17,12,10,5,2],
+    [10,7],
+    [10,6,2],
+    [10,8,6,4],
+    [10,8,6,4,2],
+    [10,8,6,4,2,1],
   ];
 
   let standings = [];

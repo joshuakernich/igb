@@ -489,7 +489,8 @@ window.PopcornGame = function( playersMeta ){
 
 	function initTutorial(){
 		hud.initTutorial('Popcorn Panhandlers',
-			{x:1.5,y:0.45,msg:'Move side to side<br> to catch and roast popcorn kernels', icon:'side-to-side'},
+			{x:1.2,y:0.55,msg:'Move side to side<br> to catch the kernels', icon:'side-to-side'},
+			{x:1.5,y:0.45,msg:'Align yourself with a fire<br>to make popcorn', icon:'align'},
 			{x:0.75, y:0.5, msg:'Touch any wall<br>to switch walls', icon:'touch'},
 		)
 
