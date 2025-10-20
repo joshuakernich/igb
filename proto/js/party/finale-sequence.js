@@ -63,17 +63,9 @@ window.FinaleSequence = function( playersMeta ){
 					background: black;
 					perspective: ${W*3}px;
 
-					background: url(./proto/img/party/bg-cosmos.jpg);
+					background: url(./proto/img/party/bg-rainbow.png);
 	                background-size: 100%;
 	                background-position: center;
-				}
-
-				finalesequence:before{
-					content:"";
-					display:block;
-					position: absolute;
-					inset: 0px;
-					background: linear-gradient(to top, blue, transparent, transparent);
 				}
 
 				finaleplatform{
@@ -198,9 +190,10 @@ window.FinaleSequence = function( playersMeta ){
 	})
 	cube.redraw();
 	cube.$el.find('boxpartyshadow').hide();
+	
+	$platform.hide();
 
 	let $face = cube.$el.find('.partycube3D-front');
-
 	let $mouth = $('<finalemouth>').appendTo($face).hide();
 
 	let meeps = [];
@@ -225,7 +218,7 @@ window.FinaleSequence = function( playersMeta ){
 			})
 
 			meeps[i].name = names[i];
-			meeps[i].score = (count-i)*10;
+			meeps[i].score = (count-i)*5;
 			meeps[i].$el.hide();
 		}
 
@@ -246,7 +239,7 @@ window.FinaleSequence = function( playersMeta ){
 
 	let resultsPending = [];
 	function doShortFinale(){
-		while(resultsPending.length<meeps.length) resultsPending.push(Math.floor(2 + Math.random() * 5));
+		while(resultsPending.length<meeps.length) resultsPending.push(Math.floor(2 + Math.random() * 25));
 
 		tally.showRows();
 
@@ -260,28 +253,24 @@ window.FinaleSequence = function( playersMeta ){
 			tally.resolveResults();
 		},4000);
 
-		setTimeout(function(){
+		/*setTimeout(function(){
 			tally.hideRows();
-		},7000);
+		},7000);*/
 
 		setTimeout(function(){
 			doShortReward();
-		},8000);
+		},7000);
 	}
 
 	function doShortReward(){
-		say('reward');
-		let duration = audio.getDuration('reward');
+		say('winner');
+		let duration = audio.getDuration('winner');
 
-		$('<finaleoverlay>').appendTo($game).css({
-			opacity:0
-		}).delay((duration-1)*1000).animate({
-			opacity:1,
-		},4000);
+		
 
-		$(cube.transform).delay((duration-1)*1000).animate({x:W*0.25,y:W*2,rz:720,ry:0},4000);
+		//$(cube.transform).delay((duration-1)*1000).animate({x:W*0.25,y:W*2,rz:720,ry:0},4000);
 
-		let vol = {volume:1};
+		/*let vol = {volume:1};
 		$(vol).delay((duration+1)*1000).animate({
 			volume:0
 		},{
@@ -289,7 +278,45 @@ window.FinaleSequence = function( playersMeta ){
 			step:function(n){
 				audio.setVolume( 'music', n*0.52 );
 			}
-		})
+		})*/
+
+		setTimeout(function(){
+			audio.stop('music');
+			audio.play('reveal');
+
+			meeps[0].$el.css({
+				'left': 1.6*W+'px',
+				'transform':'scale(2)',
+				'filter':'none',
+				'bottom':'-800px',
+				'transition': 'all 2s',
+			})
+
+			audio.play('woosh',true);
+
+			meeps[0].isAnimating = true;
+			meeps[0].toFlyer();
+			meeps[0].$el.show();
+
+
+			meeps[0].$el.find('partymeepeye').show();
+			meeps[0].$el.find('partymeepmouth').show();
+
+			setTimeout(function(){
+				meeps[0].$el.css({
+					bottom: '100px',
+				});
+			},3000);
+
+			$('<finaleoverlay>').appendTo($game).css({
+				opacity:0
+			}).delay(7000).animate({
+				opacity:1,
+			},1000);
+
+		},(duration-1)*1000);
+		
+
 	}
 
 

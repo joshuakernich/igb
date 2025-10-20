@@ -24,6 +24,7 @@ window.PartyTally = function(players){
 					display: inline-block;
 					color: gray;
 					font-size: 40px;
+					position: relative;
 				}
 
 				partytallyrow{
@@ -33,14 +34,17 @@ window.PartyTally = function(players){
 					width: 560px;
 					height: 80px;
 					text-align: left;
-					position: relative;
-					margin: 20px;
+					position: absolute;
+					
 					box-shadow: 0px 2px 20px black;
 
 					left: -800px;
 					opacity: 0;
 					line-height: 80px;
 					font-weight: bold;
+					
+
+					position: absolute;
 				}
 
 				partytallycontent{
@@ -168,20 +172,31 @@ window.PartyTally = function(players){
 	self.$el = $(`<partytallymodal>`);
 	let $table = $(`<partytallytable>`).appendTo(self.$el);
 
+	self.rerank = function(){
+		for(var p in players){
+			players[p].rank = 0;
+			for(var p2 in players){
+				if( players[p2].score > players[p].score ) players[p].rank ++;
+			}
+		}
+	}
+
 	let rows = [];
 	for(var i=0; i<players.length; i++){
 		rows[i] = new PartyTallyRow(i,players[i]);
 		rows[i].$el.appendTo($table);
+		rows[i].$el.css({
+			left: 0,
+			top: 100 * i,
+		})
 	}
 
 	self.showRow = function (r) {
-		console.log('show row');
 		audio.play('woosh',true);
 		rows[r].$el.animate({left:0, opacity:1});
 	}
 
 	self.hideRow = function (r) {
-		console.log('hide row');
 		audio.play('woosh',true);
 		rows[r].$el.animate({left:-800, opacity:0.5});
 	}
@@ -195,7 +210,6 @@ window.PartyTally = function(players){
 	}
 
 	self.showRows = function(){
-		console.log(rows);
 		for(var r in rows) rows[r].$el.delay(r*100).animate({left:0, opacity:1},{start:function(){audio.play('woosh',true);}});
 	}
 
@@ -206,11 +220,51 @@ window.PartyTally = function(players){
 	}
 
 	self.resolveResults = function(){
+
 		for(var r in rows) rows[r].resolveResult(r*100);
+
+		setTimeout(function(){
+			self.showRank(true);
+		}, r*100 + 500);
 	}
+
+	self.showRank = function(doAnim=false){
+
+		self.rerank();
+
+
+		let nPos = -1;
+		for(var n=0; n<6; n++){
+			for(var p in players){
+				if(players[p].rank == n){
+					nPos++;
+					rows[p].nPosWas = rows[p].nPos;
+					rows[p].nPos = nPos;
+					rows[p].$el.css({top:nPos*100});
+					rows[p].redraw();
+				}
+			}
+		}
+
+		if(doAnim){
+			for(var r in rows){
+				
+
+				let dir = 0;
+				if(rows[r].nPos > rows[r].nPosWas) dir = 1;
+				if(rows[r].nPos < rows[r].nPosWas) dir = -1;
+
+				rows[r].$el.css({top:rows[r].nPosWas*100}).animate({left:dir*100}).animate({top:rows[r].nPos*100}).animate({left:0});
+			}
+		}
+ 	}
+
+ 	self.showRank();
 }
 
 window.PartyTallyRow = function(n,player){
+
+	const RANKS = ['1st','2nd','3rd','4th','5th','6th'];
 
 	let audio = new AudioPlayer();
 	audio.add('woosh','./proto/audio/party/sfx-woosh.mp3',0.05);
@@ -220,7 +274,7 @@ window.PartyTallyRow = function(n,player){
 	self.$el = $(`
 		<partytallyrow n=${n}>
 			<partytallycontent>
-				<partytallypos>1st</partytallypos>
+				<partytallypos>${RANKS[player.rank]}</partytallypos>
 				
 				<partymeephead n=${n}>
 					<partymeephat></partymeephat>
@@ -240,6 +294,7 @@ window.PartyTallyRow = function(n,player){
 
 	self.redraw = function(){
 		self.$el.find('partytallyscore').text(Math.floor(player.score));
+		self.$el.find('partytallypos').text(RANKS[player.rank]);
 	}
 
 	self.showResult = function(result,delay=0){
