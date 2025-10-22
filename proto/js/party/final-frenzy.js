@@ -52,14 +52,12 @@ window.FinalFrenzyGame = function( playersMeta ){
 			'0110',
 		],
 		[
-			'1000',
-			'0100',
 			'0010',
-			'0001',
-			'0001',
+			'0011',
 			'0010',
 			'0100',
-			'1000',
+			'1100',
+			'0100',
 		],
 		[
 			'0011',
@@ -223,7 +221,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 	}
 
 
-	const TUTORIAL = generateLevelMap(1);
+	const TUTORIAL = generateLevelMap(3);
 	
 
 	// reverse the maps so they render as displayed above
@@ -263,6 +261,8 @@ window.FinalFrenzyGame = function( playersMeta ){
 			[{speed:FAST,players:[0,1,2],map:generateLevelMap(4)},{speed:FAST,players:[3,4,5],map:generateLevelMap(4)}],
 		],
 	]
+
+	console.log(STRUCTURE);
 
 	if(!FinalFrenzyGame.didInit){
 		FinalFrenzyGame.didInit = true;
