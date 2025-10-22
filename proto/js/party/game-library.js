@@ -123,7 +123,7 @@ window.GAMES = {
 	
 	'Final Frenzy':{
 		name:'',
-		game:window.MazeGame,
+		game:window.FinalFrenzyGame,
 		color:'white',
 		bg:'url(./proto/img/party/bg-cosmos.gif) center / cover'
 	},
