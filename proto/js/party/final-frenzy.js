@@ -541,6 +541,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 	audio.add('explode','./proto/audio/party/sfx-explode.mp3',0.3);
 	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
 	audio.add('spawn','./proto/audio/party/sfx-sequence.mp3',0.3);
+	audio.add('correct-echo','./proto/audio/party/sfx-correct-echo.mp3',0.3);
 
 	let $game = $('<mazegame>').appendTo(self.$el);
 	let $world = $('<mazeworld>').appendTo($game);
@@ -602,7 +603,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 			isGoTime = true;
 		},2000);
 
-		hud.initTimer(30,finiTutorial);
+		hud.initTimer(20,finiTutorial);
 	}
 
 	function finiTutorial(){
@@ -619,7 +620,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 
 		$platform.empty();
 
-		initPlay();
+		setTimeout(initPlay,1000);
 	}
 
 	function initPlay() {
@@ -913,14 +914,14 @@ window.FinalFrenzyGame = function( playersMeta ){
 
 	function finiScroll(){
 		isGoTime = false;
-		hud.initBanner('Finish!');
+		//hud.initBanner('Finish!');
 
-		
+		audio.play('correct-echo');
 
 		setTimeout(function(){
-			hud.finiBanner();
+			//hud.finiBanner();
 			finiRound();
-		},3000);
+		},2000);
 	}
 
 	function finiGame(){
