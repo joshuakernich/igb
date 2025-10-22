@@ -21,6 +21,17 @@ $("head").append(`
 		}
 	<style>`);
 
+window.PartyMeepScore = function(score){
+	let self = this;
+	self.$el = $('<partymeepscore>');
+
+	let $inner = $('<partymeepscoreinner>').appendTo(self.$el).text(score>=0?'+'+score:score);
+
+	let dir = Math.random()>0.5?1:-1;
+	let dx = 50 + Math.random()*50;
+	$inner.css({top:0,left:0}).animate({top:-200,left:dx/2*dir},200).animate({top:Math.random()*100,left:dx*dir,opacity:0},500);
+}
+
 window.PartyMeepHead = function(n) {
 	let self = this;
 	self.n = n;
@@ -53,6 +64,25 @@ window.PartyMeep = function(n){
 				partymeep{
 					display:block;
 					position: absolute;	
+				}
+
+				partymeepscore{
+					display: block;
+					position: absolute;
+				}
+
+				partymeepscoreinner{
+					display: block;
+					position: absolute;
+					width: 150px;
+					height: 150px;
+	
+					color: white;
+					text-shadow: 0px 5px rgba(0,0,0,0.5);
+					transform: translate(-50%,-50%);
+					font-size: 150px;
+					line-height: 150px;
+					text-align: center;
 				}
 
 				partymeepshadow{

@@ -1,3 +1,5 @@
+
+
 window.PartyPlayerHUD = function(n,meep,type){
  
 	let self = this;

@@ -744,6 +744,12 @@ window.FinalFrenzyGame = function( playersMeta ){
 
 	function finiRound(){
 
+		for(var c in coins){
+			coins[c].$el.hide();
+		}
+
+		coins.length = 0;
+
 		for(var m in meeps){
 			meeps[m].$el.hide();
 			meeps[m].dead = true;
@@ -875,6 +881,11 @@ window.FinalFrenzyGame = function( playersMeta ){
 					coins[c].$shadow.hide();
 					coins[c].isCollected = true;
 					meeps[m].score++;
+
+					let score = new PartyMeepScore(1);
+					score.$el.css('bottom','350px');
+					meeps[m].$el.append( score.$el );
+
 					audio.play('coin',true);
 				}
 			}
