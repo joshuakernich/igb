@@ -568,9 +568,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 			});
 		}
 
-		
-
-		initNextRound();
+		initTutorial();
 	}
 
 
@@ -621,8 +619,11 @@ window.FinalFrenzyGame = function( playersMeta ){
 
 		$platform.empty();
 
-		hud.initPlayers(meeps);
+		initPlay();
+	}
 
+	function initPlay() {
+		hud.initPlayers(meeps);
 		setTimeout(initNextRound,1000);
 	}
 
