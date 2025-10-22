@@ -630,6 +630,9 @@ window.FinalFrenzyGame = function( playersMeta ){
 
 
 	function initMaze(map){
+
+		coins.length = 0;
+		
 		let n = -1;
 		for(var y=0; y<map.length; y++){
 			let $row = $('<mazerow>').prependTo($platform);
@@ -682,6 +685,8 @@ window.FinalFrenzyGame = function( playersMeta ){
 	}
 
 	function initNextRound(){
+
+		
 
 		iCohort++;
 
@@ -744,11 +749,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 
 	function finiRound(){
 
-		for(var c in coins){
-			coins[c].$el.hide();
-		}
 
-		coins.length = 0;
 
 		for(var m in meeps){
 			meeps[m].$el.hide();
