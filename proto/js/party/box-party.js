@@ -155,7 +155,7 @@ BoxPartyCube = function(nCube,transform,game){
 	let self = this;
 
 	let audio = new AudioPlayer();
-    audio.add('reveal','./proto/audio/riddler-perfect.mp3',0.3);
+    audio.add('reveal','./proto/audio/party/sfx-reveal.mp3',0.3);
     audio.add('rumble','./proto/audio/party/sfx-rumble.mp3',0.1,true);
 
 	self.game = game;
