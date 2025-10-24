@@ -13,15 +13,17 @@ window.PlummetPanicGame = function(playersMeta) {
 		undefined,
 		[
 			{players:[0,1],levels:10},
-			{players:[0,1],levels:30}
+			{players:[0,1],levels:20},
+			{players:[0,1],levels:30},
 		],
 		[
 			{players:[0,1,2],levels:10},
-			{players:[0,1,2],levels:30}
+			{players:[0,1,2],levels:20},
+			{players:[0,1,2],levels:30},
 		],
 		[
 			{players:[0,1,2,3],levels:10},
-			{players:[0,1,2,3],levels:30}
+			{players:[0,1,2,3],levels:30},
 		],
 		[
 			{players:[0,1,2],levels:10},

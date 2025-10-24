@@ -59,8 +59,8 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 	const MATCHUPS = [
 		undefined,
 		undefined,
-		['01'],
-		['01','12','02'],
+		['01','01'],
+		['01','12','02','01','12','02'],
 		['01','23'],
 		['01','23','40','12','34'],
 		['01','23','45'],
@@ -70,7 +70,7 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 		undefined,
 		undefined,
 		90,
-		30,
+		45,
 		45,
 		25,
 		30,
@@ -118,9 +118,10 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 					position: absolute;
 					width: ${BALLR*2}px;
 					height: ${BALLR*2}px;
-					background: white;
+					background-image: url(./proto/img/party/actor-football.png);
+					background-size: 100%;
 					transform: translate(-50%,-50%);
-					border-radius: 100%;
+					
 				}
 
 				headersline{
@@ -251,7 +252,7 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 	let hud = new PartyHUD();
 	hud.$el.appendTo($game);
 
-	function doScore(nScore){
+	function doScore(nScore,ball){
 
 		if(!isTutorial){
 			meepsActive[nScore].score++;
@@ -260,7 +261,9 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 			hud.updatePlayers(meeps);
 		}
 
-		iTimeout = setTimeout(finiBall,1000);
+		iTimeout = setTimeout(function(){
+			finiBall(ball);
+		},1000);
 	}
 
 	function step(){
@@ -287,7 +290,8 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 			})
 		}
 
-		if(ball){
+		for(var b in balls){
+			let ball = balls[b];
 			ball.step();
 
 			if(typeGame=='volley'){
@@ -339,10 +343,12 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 					if(isAbove){
 						ball.dead = true;
 						ball.floor = 350;
-						iTimeout = setTimeout(finiBall,1000);
+						iTimeout = setTimeout(function(){
+							finiBall(ball);
+						},1000);
 					} else if(isBelow) {
 						ball.dead = true;
-						doScore((ball.px > W/2)?0:1);
+						doScore((ball.px > W/2)?0:1, ball);
 					} else {
 						// isCrossbar
 						ball.px = W/2 + dir * (W/2-120);
@@ -362,7 +368,7 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 
 				if(typeGame=='volley' && !ball.dead){
 					ball.dead = true;
-					doScore((ball.px > W/2)?0:1);
+					doScore((ball.px > W/2)?0:1, ball);
 				}
 
 				if(ball.dead){
@@ -396,15 +402,23 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 		resize();
 	}
 
-	let ball;
+	let balls = [];
 	function initBall(){
-		if(ball) ball.$el.remove();
-		ball = new Ball(BALLR,W,H);
+		//if(ball) ball.$el.remove();
+		let ball = new Ball(BALLR,W,H);
 		ball.$el.appendTo($field);
+
+		balls.push(ball);
 	}
 
 	let iTimeout;
-	function finiBall(){
+	function finiBall(ball){
+
+		let nBall = balls.indexOf(ball);
+		balls.splice(nBall,1);
+
+		ball.$el.remove();
+
 		iTimeout = setTimeout( initBall, 1000 );
 	}
 
@@ -470,9 +484,11 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 
 		isTutorial = false;
 		clearInterval(iTimeout);
-		ball.dead = true;
-		ball.$el.remove();
-		ball = undefined;
+		for(var b in balls){
+			balls[b].dead = true;
+			balls[b].$el.remove();
+		}
+		balls.length = 0;
 
 		hud.finiTutorial();
 		hud.finiTimer();
@@ -494,9 +510,11 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 		hud.finiTimer();
 
 		clearTimeout(iTimeout);
-		ball.dead = true;
-		ball.$el.hide();
-		ball = undefined;
+		for(var b in balls){
+			balls[b].dead = true;
+			balls[b].$el.remove();
+		}
+		balls.length = 0;
 		hud.initBanner('Finish!');
 
 		for(var m in meeps) meeps[m].$el.hide();
@@ -565,7 +583,9 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 		setTimeout(function(){
 			hud.initTimer(ROUND_TIMES[meeps.length],finiMatchup);
 		},7000);
+
 		setTimeout(initBall,8000);
+		if( (meeps.length == 2 && iMatchup > 0) || (meeps.length == 3 && iMatchup > 2) ) setTimeout(initBall,9000);
 	}
 
 	if( playersMeta ) setTimeout( function(){ initGame(playersMeta.length); });
