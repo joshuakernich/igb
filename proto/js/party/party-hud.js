@@ -390,17 +390,29 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 				}
 
+				hudmeeprank{
+					display: block;
+					position: absolute; 
+					line-height: 100px;
+					font-size: 70px;
+					top: 0px;
+					left: 0px;
+					right: 0px;
+					color: #999;
+				}
+
 				hudmeepscore{
 					display: block;
 					position: absolute; 
-					bottom: 350px;
-					left: -100px;
-					right: -100px;
+					top: 100px;
+					left: 0px;
+					right: 0px;
 					text-align: center;
-					color: white;
-					line-height: 150px;
+					color: #ddd;
+					line-height: 50px;
 					font-size: 50px;
 				}
+
 
 				hudmeepreward{
 					display: block;
@@ -707,7 +719,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 	self.initRound = function(n,max,msg=undefined){
 		if(msg==undefined){
-			msg = 'Round '+(n+1);
+			msg = `Round ${(n+1)} of ${max}`;
 			if(n==(max-1)) msg = 'Final Round';
 		}
 
@@ -799,6 +811,10 @@ window.PartyHUD = function( colour='#40B0ED' ){
 		for(let r=0; r<rewards.length; r++){
 			let meep = new PlatformMeep(r,rewards[r],rewards[r]/max);
 			meep.$el.appendTo($platforms);
+
+			let text = scores[r];
+			let $rank = $('<hudmeeprank>').appendTo(meep.$el).text('1st');
+			let $score = $('<hudmeepscore>').appendTo(meep.$el).text(text);
 		}
 
 		return;
@@ -810,7 +826,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 			
 			let text = (rewards[s] == max )?'Winner!':'';
 
-			let $score = $('<hudmeepscore>').appendTo(meep.$el).text(text);
+			
 			let $reward = $('<hudmeepreward>').appendTo(meep.$el).text('+'+rewards[s]).hide();
 			let $coin = $('<hudmeeprewardcoin>').appendTo($reward);
 

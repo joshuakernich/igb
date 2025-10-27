@@ -87,7 +87,49 @@ window.FindMyMeepGame = function( playersMeta ){
 					right: -100px;
 					text-align: center;
 				}
+
+				finditem{
+					display: block;
+					position: absolute;
+					background: url(./proto/img/party/actor-animals.png);
+					background-size: 600%;	
+					width: 300px;
+					height: 300px;
+					bottom: 50px;
+					left: -250px;
+				}
+
+				findobstacle{
+					display: block;
+					position: absolute;
+					width: ${W/4}px;
+					height: ${H}px;
+					background-size: 100%;
+					background-position: bottom center;
+					background-repeat: no-repeat;
+					background-image: url(./proto/img/party/actor-tree.png);
+					transform: translate(-50%, -100%);
+					pointer-events: none;
+				}	
+
+				findobstacle.boulder{
+					background-image: url(./proto/img/party/actor-boulder.png);
+				}	
+
 			</style>`);
+	}
+
+	function FindObstacle(n,x,y){
+		let self = this;
+		self.$el = $('<findobstacle>');
+
+		if(n==1) self.$el.addClass('boulder');
+
+		self.$el.css({
+			'left':x + 'px',
+			'top':y + 'px',
+			'z-index':Math.floor(y),
+		});
 	}
 
 	function FindMeep(n) {
@@ -101,6 +143,7 @@ window.FindMyMeepGame = function( playersMeta ){
 
 		self.sx = 0;
 		self.sy = 0;
+		self.sequence = [];
 
 		self.$el = $('<findmeep>');
 
@@ -108,6 +151,8 @@ window.FindMyMeepGame = function( playersMeta ){
 
 		if(n==-1) self.$el.css({'pointer-events':'none'});
 		self.range = {};
+
+		let ducking = {h:350};
 
 		let meep = new PartyMeep(n);
 		meep.$el.appendTo(self.$el);
@@ -125,6 +170,8 @@ window.FindMyMeepGame = function( playersMeta ){
 			self.$el.css({
 				'pointer-events':'none',
 			})
+
+			self.setDucking(false);
 		}
 
 		self.reset = function(){
@@ -143,21 +190,24 @@ window.FindMyMeepGame = function( playersMeta ){
 			let xTarget = self.range.xMin + Math.random() * (self.range.xMax - self.range.xMin);
 			let yTarget = self.range.yMin + Math.random() * (self.range.yMax - self.range.yMin);
 
+
 			let dx = self.x - xTarget;
 			let dy = self.y - yTarget;
 			let dist = Math.sqrt(dx*dx+dy*dy);
 
-			$(self).delay(500).animate({
+			$(self).delay(self.isDucking?1000:500).animate({
 				x:xTarget,
 				y:yTarget,
 			},{
 				duration: dist * 5 * (1/self.speed),
 				start:function(){
 					self.initShuffle();
+					if(self.isDucking) self.setDucking(false);
 				},
 				complete:function(){
 					self.finiShuffle();
 					self.isMoving = false;
+					if(self.isDucking) self.setDucking(true);
 				}
 			});
 		}
@@ -202,11 +252,28 @@ window.FindMyMeepGame = function( playersMeta ){
 				'left':self.x + 'px',
 				'top':self.y + 'px',
 				'z-index':Math.floor(self.y),
-			})
+			});
+
+			meep.setHeight(ducking.h);
 		}
 
 		self.setScore = function(score) {
 			$score.text('+'+score).css({bottom:300}).animate({bottom:350},200);
+		}
+
+		self.setDucking = function(b){
+			$(ducking).animate({h:b?250:350});
+		}
+
+
+		self.addCarryItem = function(nItem){
+			meep.$handLeft.css({left:'-120px',top:'50%'});
+			meep.$handRight.css({left:'-30px',top:'65%'});
+
+			let item = $('<finditem>').css({
+				'background-position-x':-nItem*100+'%',
+			})
+			item.appendTo(self.$el);
 		}
 	}
 
@@ -253,8 +320,12 @@ window.FindMyMeepGame = function( playersMeta ){
 		{count:6, speed:0.5},
 		{count:12, speed:0.5},
 		{count:24, speed:1},
+		{count:9, speed:1, isDucking:true, boulders:2},
+		{count:24, speed:1, isDucking:true, trees:2, boulders:1},
+		{count:24, speed:1, isDucking:true, trees:2, boulders:3},
 	]
 	let nRound = -1;
+	nRound = 5;
 
 	let meeps = [];
 	let cntCorrect = 0;
@@ -262,6 +333,8 @@ window.FindMyMeepGame = function( playersMeta ){
 	const CENTER = [0.55, 1.5, 2.45];
 
 	function populateLevel(){
+
+		$meeps.empty();
 
 		cntCorrect = 0;
 		meeps.length = 0;
@@ -278,19 +351,27 @@ window.FindMyMeepGame = function( playersMeta ){
 
 		let spacing = Math.min( (W*0.8)/countPerWall, 200 );
 
+		
+
 		for(var i=0; i<COUNT; i++){
 
 			let nWall = Math.floor(i/countPerWall);
 			let nMeep = (i%countPerWall);
 
+			let o = [0.1,1,1.9][nWall];
+
 			let meep = new FindMeep(order[i]);
 			meep.wall = nWall;
+			//meep.addCarryItem(i);
 			
 			meep.$el.appendTo($meeps);
 			
-			meep.x = CENTER[nWall]*W + (-(countPerWall-1)/2 + nMeep)*spacing;
-			meep.y = H - 150 - i%2 * 80;
+			//meep.x = CENTER[nWall]*W + (-(countPerWall-1)/2 + nMeep)*spacing;
+			meep.x = (o+(1/(countPerWall+1))*(nMeep+1))*W;
+			//meep.y = H - 150 - i%2 * 80;
+			meep.y = H - 155;
 			meep.speed = ROUNDS[nRound].speed;
+			meep.isDucking = ROUNDS[nRound].isDucking;
 			
 			meep.range = { 
 				xMin:(CENTER[nWall]-0.35)*W,
@@ -303,6 +384,28 @@ window.FindMyMeepGame = function( playersMeta ){
 
 			meep.callback = onMeep;
 		}
+
+		let treePerWall = ROUNDS[nRound].trees;
+		let boulderPerWall = ROUNDS[nRound].boulders;
+
+		for(var w=0; w<3; w++){
+			let o = [0.1,1,1.9][w];
+			for(var t=0; t<treePerWall; t++){
+				new FindObstacle(
+					0,
+					(o+(1/(treePerWall+1))*(t+1))*W,
+					H-150-40).$el.appendTo($meeps);
+			}
+
+			for(var b=0; b<boulderPerWall; b++){
+				new FindObstacle(
+					1,
+					(o+(1/(boulderPerWall+1))*(b+1))*W,
+					H-140).$el.appendTo($meeps);
+			}
+		}
+
+		
 	}
 
 	function onMeep(meep){
@@ -385,7 +488,7 @@ window.FindMyMeepGame = function( playersMeta ){
 		while(self.scores.length<playerCount) self.scores.push({score:0});
 
 		self.playerCount = playerCount;
-		setTimeout(initTutorial,1000);
+		setTimeout(initPlay,1000);
 	}
 
 	function initTutorial(){
