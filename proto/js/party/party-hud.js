@@ -30,6 +30,8 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	const THICC = 40;
 
 	let audio = new AudioPlayer();
+	audio.add('charge','./proto/audio/party/sfx-charge.mp3',0.3);
+	audio.add('blip','./proto/audio/party/sfx-select.mp3',0.3);
 	audio.add('tick','./proto/audio/party/sfx-tick.mp3',0.3);
 	audio.add('tock','./proto/audio/party/sfx-tock.mp3',0.3);
 	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
@@ -394,17 +396,17 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					display: block;
 					position: absolute; 
 					line-height: 100px;
-					font-size: 70px;
+					font-size: 50px;
 					top: 0px;
 					left: 0px;
 					right: 0px;
-					color: #999;
+					color: #bbb;
 				}
 
 				hudmeepscore{
 					display: block;
 					position: absolute; 
-					top: 100px;
+					bottom: 0px;
 					left: 0px;
 					right: 0px;
 					text-align: center;
@@ -753,20 +755,18 @@ window.PartyHUD = function( colour='#40B0ED' ){
 		setBanner(false);
 	}
 
-	var PlatformMeep = function(n,reward,height){
 
-		let h = 130 + 350*height;
-		let time = 500 + 500*height;
+	let cntCharging = 0;
+	var PlatformMeep = function(n,score,rank,reward,height){
+
+
+
+		height += 0.2;
+		let h = 350*height;
+		let time = height * 4000;
 
 		let self = this;
-		self.$el = $('<hudplatformmeep>').css({
-			height:h+'px',
-			top:(400+h)+'px',
-		}).delay(500).animate({
-			top:-50 + 'px',
-		},time).animate({
-			top:0 + 'px',
-		},100);
+		self.$el = $('<hudplatformmeep>');
 
 		$('<hudplatform>').appendTo(self.$el);
 
@@ -778,18 +778,50 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 		let $reward = $('<hudmeepreward>').appendTo(self.$el).text('+'+reward);
 		let $coin = $('<hudmeeprewardcoin>').appendTo($reward);
+		let $rank = $('<hudmeeprank>').appendTo(self.$el).text(RANK[rank]);
+
+		
+		self.$el.css({
+			height:h+'px',
+			top:h+'px',
+		}).delay(500).animate({
+			top:0 + 'px',
+		},{
+			duration:time,
+			easing:'linear',
+			start:function(){
+				audio.play('charge');
+				cntCharging++;
+			},
+			step:function(n,b){
+				$rank.text(Math.floor(b.pos*score));
+			},
+			complete:function () {
+				setTimeout(function(){
+					audio.play('blip',true);
+					$rank.text(RANK[rank]).css({'color':'#9A62E7'});
+					cntCharging--;
+					if(cntCharging==0) audio.stop('charge');
+				},100);
+			}
+		});
 
 		$reward.css({
 			opacity:0,
 			top: '-200px',
-		}).delay(time+2000).animate({
+		}).delay(7000+height*800).animate({
 			opacity:1,
 			top: '-250px',
+			
+		},{
+			duration: 200,
 			start:function(){
 				audio.play('coin',true);
 			}
-		},200)
+		})
 	}
+
+	const RANK = ['1st','2nd','3rd','4th','5th','6th'];
 
 	self.showFinalScores = function(scores,rewards){
 
@@ -799,7 +831,10 @@ window.PartyHUD = function( colour='#40B0ED' ){
 			opacity:1,
 		},1000);
 
-		audio.play('outro',true);
+		setTimeout(function(){
+			audio.play('outro',true);
+		},5000);
+
 
 		for(var h in huds) huds[h].setActive(true);
 
@@ -808,13 +843,21 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 		let $platforms = $('<hudplatforms>').appendTo($mg);
 
+		let ranks = [];
+		for(var a in rewards){
+			ranks[a] = 0;
+			for(var b in rewards){
+				if(rewards[a] < rewards[b]) ranks[a]++;
+			}
+		}
+
 		for(let r=0; r<rewards.length; r++){
-			let meep = new PlatformMeep(r,rewards[r],rewards[r]/max);
+			let meep = new PlatformMeep(r,scores[r],ranks[r],rewards[r],rewards[r]/max);
 			meep.$el.appendTo($platforms);
 
-			let text = scores[r];
-			let $rank = $('<hudmeeprank>').appendTo(meep.$el).text('1st');
-			let $score = $('<hudmeepscore>').appendTo(meep.$el).text(text);
+			//let text = scores[r];
+			//let $rank = $('<hudmeeprank>').appendTo(meep.$el).text(RANK[ranks[r]]);
+			//let $score = $('<hudmeepscore>').appendTo(meep.$el).text(text);
 		}
 
 		return;

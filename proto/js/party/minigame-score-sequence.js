@@ -14,10 +14,27 @@ window.MinigameScoreSequence = function( ){
 	let hud = new PartyHUD();
 	hud.$el.appendTo(self.$el);
 
-	hud.initPlayerCount(function(){
-		let scores = [5,10,15,20,25,30];
+
+	let scores = [5,10,20,20,35,30];
+
+	hud.initPlayerCount(function(count){
+
+		scores.length = count;
+
+		
+		let meeps = [];
+		for(var s in scores){
+			meeps[s] = {score:scores[s]};
+		}
+
+		//hud.initPlayers(meeps)
+
 		let rewards = window.scoresToRewards(scores);
-		hud.showFinalScores(scores,rewards);
+
+		setTimeout(function(){
+			hud.showFinalScores(scores,rewards);
+		})
+		
 	});
 
 	setInterval(resize,1000/FPS);
