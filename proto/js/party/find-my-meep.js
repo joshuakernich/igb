@@ -325,7 +325,6 @@ window.FindMyMeepGame = function( playersMeta ){
 		{count:24, speed:1, isDucking:true, trees:2, boulders:3},
 	]
 	let nRound = -1;
-	nRound = 5;
 
 	let meeps = [];
 	let cntCorrect = 0;
@@ -488,7 +487,7 @@ window.FindMyMeepGame = function( playersMeta ){
 		while(self.scores.length<playerCount) self.scores.push({score:0});
 
 		self.playerCount = playerCount;
-		setTimeout(initPlay,1000);
+		setTimeout(initTutorial,1000);
 	}
 
 	function initTutorial(){

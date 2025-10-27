@@ -759,9 +759,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	let cntCharging = 0;
 	var PlatformMeep = function(n,score,rank,reward,height){
 
-
-
-		height += 0.2;
+		height += 0.3;
 		let h = 350*height;
 		let time = height * 4000;
 
@@ -778,9 +776,8 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 		let $reward = $('<hudmeepreward>').appendTo(self.$el).text('+'+reward);
 		let $coin = $('<hudmeeprewardcoin>').appendTo($reward);
-		let $rank = $('<hudmeeprank>').appendTo(self.$el).text(RANK[rank]);
+		let $rank = $('<hudmeeprank>').appendTo(self.$el);
 
-		
 		self.$el.css({
 			height:h+'px',
 			top:h+'px',
@@ -794,7 +791,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 				cntCharging++;
 			},
 			step:function(n,b){
-				$rank.text(Math.floor(b.pos*score));
+				//$rank.text(Math.floor(b.pos*score));
 			},
 			complete:function () {
 				setTimeout(function(){
@@ -852,7 +849,10 @@ window.PartyHUD = function( colour='#40B0ED' ){
 		}
 
 		for(let r=0; r<rewards.length; r++){
-			let meep = new PlatformMeep(r,scores[r],ranks[r],rewards[r],rewards[r]/max);
+
+			let h = (rewards.length-ranks[r]-1)/(rewards.length-1);
+
+			let meep = new PlatformMeep(r,scores[r],ranks[r],rewards[r],h);
 			meep.$el.appendTo($platforms);
 
 			//let text = scores[r];

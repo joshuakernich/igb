@@ -219,7 +219,6 @@ window.PlummetPanicGame = function(playersMeta) {
 	let audio = new AudioPlayer();
 	audio.add('music','./proto/audio/party/music-run.mp3',0.3,true);
 	audio.add('crush','./proto/audio/party/sfx-crush.mp3',0.3);
-
 	const PlummetLevel = function(nLevel,isFloor){
 
 		let self = this;
@@ -336,7 +335,7 @@ window.PlummetPanicGame = function(playersMeta) {
 			transform: 'scale(0.32)',
 		})
 
-		let $score = $('<plummetscore>').appendTo(self.$el).text('');
+		
 
 
 		meep.$shadow.hide();
@@ -387,18 +386,12 @@ window.PlummetPanicGame = function(playersMeta) {
 
 		self.doScoreUp = function(){
 			self.score++;
-			$score.show().stop(false,false).text('+1').css({
-				opacity:1,
-				bottom:150,
-			}).delay(200).animate({
-				opacity:0,
-				bottom:100,
-			})
+			
+			meep.doScore();
 		}
 
 		self.showScore = function(b){
-			if(b) $score.show().text(self.score).css({opacity:1});
-			else $score.hide();
+			
 		}
 
 		self.redraw();

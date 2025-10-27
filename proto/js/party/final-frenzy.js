@@ -632,7 +632,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 	function initMaze(map){
 
 		coins.length = 0;
-		
+
 		let n = -1;
 		for(var y=0; y<map.length; y++){
 			let $row = $('<mazerow>').prependTo($platform);
@@ -886,7 +886,6 @@ window.FinalFrenzyGame = function( playersMeta ){
 					let score = new PartyMeepScore(1);
 					score.$el.css('bottom','350px');
 					meeps[m].$el.append( score.$el );
-
 					audio.play('coin',true);
 				}
 			}

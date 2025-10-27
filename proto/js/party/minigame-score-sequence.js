@@ -27,7 +27,7 @@ window.MinigameScoreSequence = function( ){
 			meeps[s] = {score:scores[s]};
 		}
 
-		//hud.initPlayers(meeps)
+		hud.initPlayers(meeps);
 
 		let rewards = window.scoresToRewards(scores);
 

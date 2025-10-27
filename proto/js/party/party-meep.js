@@ -2,6 +2,17 @@ const PLAYER_COLORS = [
 	'red','blue','limegreen','#dd00ff','#ff6600','#ffbb00',
 ]
 
+const audioMeeps = new AudioPlayer();
+audioMeeps.add('point-c','./proto/audio/party/sfx-point-c.mp3',0.1);
+audioMeeps.add('point-d','./proto/audio/party/sfx-point-d.mp3',0.1);
+audioMeeps.add('point-e','./proto/audio/party/sfx-point-e.mp3',0.1);
+audioMeeps.add('point-g','./proto/audio/party/sfx-point-g.mp3',0.1);
+audioMeeps.add('point-a','./proto/audio/party/sfx-point-a.mp3',0.1);
+
+const points = ['point-c','point-d','point-e','point-g','point-a']
+let nPoint = 0;
+
+
 $("head").append(`
 	<style>
 		body{
@@ -30,6 +41,9 @@ window.PartyMeepScore = function(score){
 	let dir = Math.random()>0.5?1:-1;
 	let dx = 50 + Math.random()*50;
 	$inner.css({top:0,left:0}).animate({top:-200,left:dx/2*dir},200).animate({top:Math.random()*100,left:dx*dir,opacity:0},500);
+
+	nPoint++;
+	audioMeeps.play( points[nPoint%points.length], true );
 }
 
 window.PartyMeepHead = function(n) {
@@ -326,6 +340,9 @@ window.PartyMeep = function(n){
 	self.$footRight = self.$el.find('partymeepfoot').last();
 
 	self.setHeight = function(h){
+
+		self.h = h;
+
 		self.$el.find('partymeepavatar').height(h);
 
 		let scale = Math.max(0,Math.min(1,H/h));
@@ -434,6 +451,12 @@ window.PartyMeep = function(n){
 			'transform':'translate(-40%) rotate(-15deg)',
 		})
 
+	}
+
+	self.doScore = function(s=1){
+		let score = new PartyMeepScore(s);
+		score.$el.css({'bottom':self.h});
+		score.$el.appendTo(self.$el);
 	}
 
 }
