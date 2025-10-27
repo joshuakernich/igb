@@ -36,7 +36,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	audio.add('tock','./proto/audio/party/sfx-tock.mp3',0.3);
 	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
 	audio.add('music','./proto/audio/party/music-tutorial.mp3',0.3);
-	audio.add('outro','./proto/audio/party/music-outro.mp3',0.3);
+	audio.add('outro','./proto/audio/party/music-drumroll.mp3',0.3);
 	audio.add('woosh','./proto/audio/party/sfx-woosh.mp3',0.05);
 	audio.add('woosh-long','./proto/audio/party/sfx-woosh-long.mp3',0.05);
 	audio.add('5','./proto/audio/party/speech-5.mp3',0.3);
@@ -787,7 +787,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 			duration:time,
 			easing:'linear',
 			start:function(){
-				audio.play('charge');
+				
 				cntCharging++;
 			},
 			step:function(n,b){
@@ -798,7 +798,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					audio.play('blip',true);
 					$rank.text(RANK[rank]).css({'color':'#9A62E7'});
 					cntCharging--;
-					if(cntCharging==0) audio.stop('charge');
+					
 				},100);
 			}
 		});
@@ -828,9 +828,9 @@ window.PartyHUD = function( colour='#40B0ED' ){
 			opacity:1,
 		},1000);
 
-		setTimeout(function(){
-			audio.play('outro',true);
-		},5000);
+		
+
+		audio.play('outro',true);
 
 
 		for(var h in huds) huds[h].setActive(true);
