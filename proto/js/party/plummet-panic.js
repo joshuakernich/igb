@@ -8,35 +8,69 @@ window.PlummetPanicGame = function(playersMeta) {
 	const PLAYERS_PER_ROUND = 3;
 	const STOMPS_PER_SWAP = 5;
 
+	const PATTERN = [
+			'_ ______',
+			'______ _',
+			'___ ____',
+			'_ _____ ',
+			'_____ __',
+			' _______',
+			'______ _',
+			'___ ____',
+			' _____ _',
+			'____ ___',
+			'_ ____ _',
+			'____ ___',
+			' _______',
+			'_______ ',
+			'__ _____',
+			' ______ ',
+			'__ _ ___',
+			'______ _',
+			'___ ____',
+			'_ ______',
+			'___ ____',
+			'_____ __',
+			'___ ____',
+			' ______ ',
+			'_____ __',
+			'_ ______',
+			'____ ___',
+			'_ ____ _',
+			'___ ____',
+			'_______ ',
+	]
+
+
 	const STRUCTURE = [
 		undefined,
 		undefined,
 		[
-			{players:[0,1],levels:10},
-			{players:[0,1],levels:20},
-			{players:[0,1],levels:30},
+			{players:[0,1],levels:10,timeMax:1.5,timeMin:1},
+			{players:[0,1],levels:20,timeMax:1.2,timeMin:0.7},
+			{players:[0,1],levels:30,timeMax:1,timeMin:0.5},
 		],
 		[
-			{players:[0,1,2],levels:10},
-			{players:[0,1,2],levels:20},
-			{players:[0,1,2],levels:30},
+			{players:[0,1,2],levels:10,timeMax:1.5,timeMin:1},
+			{players:[0,1,2],levels:20,timeMax:1.2,timeMin:0.7},
+			{players:[0,1,2],levels:30,timeMax:1,timeMin:0.5},
 		],
 		[
-			{players:[0,1,2,3],levels:10},
-			{players:[0,1,2,3],levels:30},
+			{players:[0,1,2,3],levels:10,timeMax:1.5,timeMin:1},
+			{players:[0,1,2,3],levels:30,timeMax:1.2,timeMin:0.5},
 		],
 		[
-			{players:[0,1,2],levels:10},
-			{players:[3,4,0],levels:10},
-			{players:[1,2,3],levels:10},
-			{players:[4,0,1],levels:10},
-			{players:[2,3,4],levels:10},
+			{players:[0,1,2],levels:10,timeMax:1.2,timeMin:0.5},
+			{players:[3,4,0],levels:10,timeMax:1.2,timeMin:0.5},
+			{players:[1,2,3],levels:10,timeMax:1.2,timeMin:0.5},
+			{players:[4,0,1],levels:10,timeMax:1.2,timeMin:0.5},
+			{players:[2,3,4],levels:10,timeMax:1.2,timeMin:0.5},
 		],
 		[
-			{players:[0,1,2],levels:10},
-			{players:[3,4,5],levels:10},
-			{players:[0,2,4],levels:20},
-			{players:[1,3,5],levels:20},
+			{players:[0,1,2],levels:10,timeMax:1.2,timeMin:0.7},
+			{players:[3,4,5],levels:10,timeMax:1.2,timeMin:0.7},
+			{players:[0,2,4],levels:20,timeMax:1,timeMin:0.5},
+			{players:[1,3,5],levels:20,timeMax:1,timeMin:0.5},
 		],
 
 	]
@@ -219,6 +253,9 @@ window.PlummetPanicGame = function(playersMeta) {
 	let audio = new AudioPlayer();
 	audio.add('music','./proto/audio/party/music-run.mp3',0.3,true);
 	audio.add('crush','./proto/audio/party/sfx-crush.mp3',0.3);
+
+
+
 	const PlummetLevel = function(nLevel,isFloor){
 
 		let self = this;
@@ -226,18 +263,23 @@ window.PlummetPanicGame = function(playersMeta) {
 		self.iLevel = nLevel;
 		self.isPummeled = false;
 
+
+
 		let map = [];
 		let $segs = [];
 		let isGappy = false;
 
-		let nGapA = Math.floor( Math.random() * (LEVEL.SEG-2) );
-		let nGapB = nGapA + 1 + Math.floor( Math.random() * (LEVEL.SEG-nGapA-1) );
+		let nGapA = PATTERN[nLevel].indexOf(' ');
+		let nGapB = PATTERN[nLevel].lastIndexOf(' ');
+
+		//let nGapA = Math.floor( Math.random() * (LEVEL.SEG-2) );
+		//let nGapB = nGapA + 1 + Math.floor( Math.random() * (LEVEL.SEG-nGapA-1) );
 
 		if(isFloor) nGapA = nGapB = -1;
-		if(Math.random()>0.5){
+		/*if(Math.random()>0.5){
 			if(Math.random()>0.5) nGapB = -1;
 			else nGapA = -1;
-		}
+		}*/
 
 		for(var i=0; i<LEVEL.SEG; i++){
 
@@ -414,7 +456,7 @@ window.PlummetPanicGame = function(playersMeta) {
 	else hud.initPlayerCount(initGame);
 
 	let meeps = [];
-	let scrollSpeed = 0;
+	let timePerLevel = 0;
 	let scroll = 0;
 	let isGoTime = false;
 	let iStomp = -1;
@@ -444,7 +486,7 @@ window.PlummetPanicGame = function(playersMeta) {
 			meeps[m] = new PlummetMeep(m);
 		}
 
-		initTutorial();
+		initPlay();
 	}
 
 
@@ -470,7 +512,7 @@ window.PlummetPanicGame = function(playersMeta) {
 	}
 
 	function finiTutorial(){
-		$blur.hide();
+		
 		hud.finiTimer();
 		hud.finiTutorial();
 		isGoTime = false;
@@ -482,8 +524,14 @@ window.PlummetPanicGame = function(playersMeta) {
 
 		tower.$el.remove();
 
-		hud.initPlayers(meeps);
+		
 
+		initPlay();
+	}
+
+	function initPlay(){
+		$blur.hide();
+		hud.initPlayers(meeps);
 		setTimeout(initNextRound,1000);
 	}
 
@@ -579,8 +627,11 @@ window.PlummetPanicGame = function(playersMeta) {
 
 	
 	function stomp(){
-		scrollSpeed = 0;
+		timePerLevel = 0;
 		iStomp++;
+
+		let timePause = round.timeMax - (round.timeMax-round.timeMin) * (iStomp/round.levels);
+
 		$foot.animate({
 			top: scrollDiff
 		},{
@@ -592,7 +643,7 @@ window.PlummetPanicGame = function(playersMeta) {
 				screenshake();
 			}
 		})
-		.delay(Math.max(500,1000-iStomp*50))
+		.delay( timePause*1000/2 )
 		.animate({
 			top: -500,
 		},{
@@ -622,7 +673,8 @@ window.PlummetPanicGame = function(playersMeta) {
 	}
 
 	function initScroll(){
-		if(!isRoundComplete) scrollSpeed = Math.min( LEVEL.H/10, 1 + iStomp*0.2 );
+		//if(!isRoundComplete) scrollSpeed = Math.min( LEVEL.H/10, 1 + iStomp*0.2 );
+		if(!isRoundComplete) timePerLevel = round.timeMax - (round.timeMax-round.timeMin) * (iStomp/round.levels);
 	}
 
 	let scrollDiff = 0;
@@ -632,8 +684,8 @@ window.PlummetPanicGame = function(playersMeta) {
 
 		if(!tower) return;
 
-		if(!isRoundComplete && scrollSpeed){
-			scroll += scrollSpeed;
+		if(!isRoundComplete && timePerLevel){
+			scroll += LEVEL.H * (1/timePerLevel/FPS);
 			let iScroll = Math.floor( scroll/LEVEL.H );
 			if(iScroll>=round.levels){
 				initFinale('Finish!');	
@@ -684,7 +736,7 @@ window.PlummetPanicGame = function(playersMeta) {
 	function initFinale(message){
 		isGoTime = false;
 		isRoundComplete = true;
-		scrollSpeed = 0;
+		timePerLevel = 0;
 		hud.initBanner(message);
 
 		for(var p in STRUCTURE[meeps.length][iRound].players){

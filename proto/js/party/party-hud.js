@@ -854,62 +854,9 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 			let meep = new PlatformMeep(r,scores[r],ranks[r],rewards[r],h);
 			meep.$el.appendTo($platforms);
-
-			//let text = scores[r];
-			//let $rank = $('<hudmeeprank>').appendTo(meep.$el).text(RANK[ranks[r]]);
-			//let $score = $('<hudmeepscore>').appendTo(meep.$el).text(text);
 		}
 
-		return;
-		for(let s=0; s<scores.length; s++){
-			let meep = new PartyMeep(s);
-			meep.$el.appendTo($mg);
-			let p = 0.15 + 0.7/(scores.length-1) * s;
-			let pos = (100/3) + (100/3)*p;
-			
-			let text = (rewards[s] == max )?'Winner!':'';
-
-			
-			let $reward = $('<hudmeepreward>').appendTo(meep.$el).text('+'+rewards[s]).hide();
-			let $coin = $('<hudmeeprewardcoin>').appendTo($reward);
-
-			let ySign = [340,360][s%2];
-			let yHand = [0,-20][s%2];
-
-			meep.$el.css({
-				left: 100/3 + (100/3)*p + '%',
-				bottom: '-400px',
-			}).delay(s*200).animate({
-				bottom: (THICC+100)+'px',
-			},300).animate({
-				bottom: THICC+'px',
-			},{duration:200,complete:function(){
-				meep.setHeight(300);
-				setTimeout(function(){
-					meep.setHeight(350);
-				},200);
-
-				setTimeout(function(){
-					$score.hide();
-				},2000);
-
-				setTimeout(function(){
-					
-					$reward.show().animate({bottom:(ySign+30)+'px'},300).animate({bottom:ySign+'px'},100);
-					audio.play('coin',true);
-				},2000);
-			}})
-
-			meep.$handLeft.delay(s*200 + 2500).animate({
-				top: (yHand-30)+'px',
-			},300).animate({top:(yHand)+'px'},100);
-
-			meep.$handRight.delay(s*200 + 2500).animate({
-				top: (yHand-30)+'px',
-			},300).animate({top:(yHand)+'px'},100);
-
-			meep.$shadow.hide();
-		}
+		
 	}
 
 	self.addDebug = function(name,fn){
@@ -918,36 +865,6 @@ window.PartyHUD = function( colour='#40B0ED' ){
 		});
 	}
 
-	/*for(var i=0; i<3; i++){
-		$(`
-		<partyhudframe>
-			<partyhudborder style='border-width:${THICC}px'></partyhudborder>
-			<partyhudborder style='border-color:${colour};border-width:${THICC}px'></partyhudborder>
-			<partyhudborder style='border-width:${THICC}px'></partyhudborder>
-
-			<svg width='${THICC*2}px' height='${THICC*2}px' style='position:absolute;top:0px;left:0px;'>
-				<path d='M0,0 L${THICC},${THICC} L${THICC*1.2},${THICC}' fill='rgba(0,0,0,0.4)'/>
-				<path d='M0,0 L${THICC},${THICC} L${THICC},${THICC*1.2}' fill='rgba(255,255,255,0.3)'/>
-			</svg>
-
-			<svg width='${THICC*2}px' height='${THICC*2}px' style='position:absolute;top:0px;right:0px;transform:scaleX(-1)'>
-				<path d='M0,0 L${THICC},${THICC} L${THICC*1.2},${THICC}' fill='rgba(0,0,0,0.4)'/>
-				<path d='M0,0 L${THICC},${THICC} L${THICC},${THICC*1.2}' fill='rgba(255,255,255,0.3)'/>
-			</svg>
-
-			<svg width='${THICC*2}px' height='${THICC*2}px' style='position:absolute;bottom:0px;right:0px;transform:scale(-1)'>
-				<path d='M0,0 L${THICC},${THICC} L${THICC*1.2},${THICC}' fill='rgba(0,0,0,0.4)'/>
-				<path d='M0,0 L${THICC},${THICC} L${THICC},${THICC*1.2}' fill='rgba(255,255,255,0.3)'/>
-			</svg>
-
-			<svg width='${THICC*2}px' height='${THICC*2}px' style='position:absolute;bottom:0px;left:0px;transform:scaleY(-1)'>
-				<path d='M0,0 L${THICC},${THICC} L${THICC*1.2},${THICC}' fill='rgba(0,0,0,0.4)'/>
-				<path d='M0,0 L${THICC},${THICC} L${THICC},${THICC*1.2}' fill='rgba(255,255,255,0.3)'/>
-			</svg>
-
-		<partyhudframe>
-		`).appendTo(self.$el);
-	}*/
 
 	let $baseline = $('<partyhudbaseline>').appendTo(self.$el);
 	let $stream = $(`
