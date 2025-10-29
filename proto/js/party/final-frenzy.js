@@ -1,7 +1,7 @@
 window.FinalFrenzyGame = function( playersMeta ){
 	const W = 1600;
 	const H = 1000;
-	const FPS = 20;
+	const FPS = 50;
 	let PLAYER_COUNT = 6;
 	let SCORE_MAX = 15;
 	const GRIDSIZE = 400;
@@ -95,13 +95,13 @@ window.FinalFrenzyGame = function( playersMeta ){
 		[
 			'0000',
 			'0   ',
-			'0011',
+			'011 ',
 			'0   ',
 		],
 		[
 			'0000',
 			'   0',
-			'1100',
+			' 110',
 			'   0',
 		],
 		[
@@ -216,7 +216,6 @@ window.FinalFrenzyGame = function( playersMeta ){
 		}
 
 		let arr = queues[type].pop().reverse();
-		console.log('getType',type,arr);
 		return arr;
 	}
 
@@ -228,9 +227,9 @@ window.FinalFrenzyGame = function( playersMeta ){
 	//for(var m in MAPS) MAPS[m].reverse();
 	//TUTORIAL.reverse();
 
-	const SLOW = 0.05;
-	const MED = 0.06;
-	const FAST = 0.07;
+	const SLOW = 1; //0.05;
+	const MED = 1.1; //0.06;
+	const FAST = 1.2; //0.07;
 
 	const STRUCTURE = [
 		undefined,
@@ -410,16 +409,27 @@ window.FinalFrenzyGame = function( playersMeta ){
 					left: 0px;
 					right: 0px;
 					margin: 0px auto;
-					width: 200px;
-					height: 200px;
-					background: white;
-					border-radius: 100%;
+					width: 150px;
+					height: 150px;
+					
+				}
+
+				mazeprojectile[type='*']{
 					background-size: 100%;
 					background-image: url(./proto/img/volleyball.png);
 				}
 
-				mazeprojectile[type='0']{
-					background: url(./proto/img/football.png);
+				mazeprojectile[type='1']{
+					
+					background-image: url(./proto/img/party/sprite-coin.png);
+					
+					background-size: 900%;
+					background-position-y: 100%;
+
+					animation: coinspin;
+					animation-iteration-count: infinite;
+					animation-duration: 1s;
+					animation-timing-function: steps(9);
 				}
 
 				mazesmoke{
@@ -535,7 +545,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 	self.$el = $('<igb>');
 
 	let audio = new AudioPlayer();
-	audio.add('music','./proto/audio/party/music-cosmic-frenzy.mp3',0.2,true);
+	audio.add('music','./proto/audio/party/music-apocalypse.mp3',0.3,true);
 	audio.add('fall','./proto/audio/party/sfx-fall.mp3',0.3);
 	audio.add('blip','./proto/audio/party/sfx-select.mp3',0.1);
 	audio.add('explode','./proto/audio/party/sfx-explode.mp3',0.3);
@@ -592,7 +602,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 			{x:1.8, y:0.45, msg:"Don't fall off!", icon:undefined},
 		);
 
-		round = {map:TUTORIAL,speed:0.03};
+		round = {map:TUTORIAL,speed:1};
 		initMaze(round.map);
 
 		setTimeout(function(){
@@ -654,7 +664,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 				let $content = $('<mazeblockcontent>')
 				.appendTo($block);
 
-				if(map[y][x]=='1'){
+				if(map[y][x]=='2'){
 
 					let $shadow = $(`<mazeshadow>`).appendTo($block).css({opacity:0.3,width:COIN,height:COIN});
 
@@ -678,7 +688,9 @@ window.FinalFrenzyGame = function( playersMeta ){
 					y:y,
 					$el:$block,
 					$content:$content,
-					type:map[y][x]
+					type:map[y][x],
+					yTrigger:(map[y][x] == '*')?(y-5):(y-2-Math.random()*3),
+					isTrigger: (map[y][x] == '*' || map[y][x] == '1'),
 				};
 			}
 		}
@@ -786,7 +798,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 		
 		if(isGoTime){
 		
-			yProgress += round.speed;
+			yProgress += round.speed * (1/FPS);
 
 			if(yProgress>(round.map.length-4)){
 				yProgress = round.map.length-4;
@@ -798,41 +810,67 @@ window.FinalFrenzyGame = function( playersMeta ){
 
 				if(blocks[b].type == '3' && blocks[b].y < (yProgress+4) && blocks[b].y > yProgress) cntCheckpoint++;
 
-				if(blocks[b].y<(yProgress+4) && blocks[b].type=='*' && !blocks[b].isActive){
+
+				let isTriggered = (!blocks[b].isActive && blocks[b].yTrigger<yProgress && blocks[b].isTrigger);
+
+
+				if( isTriggered ){
 					blocks[b].isActive = true;
 					//
 
+					let offset = (Math.random()>0.5?W:-W);
+
 					let $shadow = $('<mazeshadow>').appendTo(blocks[b].$el).css({
 						width:'0px', height: '0px', opacity: 0.1,
-						left: '200px',
+						left: offset,
 					}).animate({
 						width:'200px', height: '200px', opacity: 0.7,
 						left:'0px',
-					},1000)
+					},{
+						duration:round.speed*2*1000,
+						easing:'linear',
+					})
 
-					$('<mazeprojectile>').appendTo(blocks[b].$content)
+					$('<mazeprojectile>').attr('type',blocks[b].type).appendTo(blocks[b].$content)
 					.css({
-						left: '200px',
-						bottom: '1000px',
+						left: offset,
+						bottom: '500px',
 					}).animate({
 						bottom: '0px',
 						left:'0px',
 					},{
 						easing: 'linear',
-						duration: 1000,
+						duration: round.speed*2*1000,
 						complete:function(){
 
-							$shadow.hide();
+							
 							$(this).hide();
 
-							blocks[b].isDead = true;
-							blocks[b].$el.attr('absent','true');
+							if(blocks[b].type=='*'){
+								$shadow.hide();
+								blocks[b].isDead = true;
+								blocks[b].$el.attr('absent','true');
 
-							new MazeExplosion(GRIDSIZE/2,'white').$el.appendTo(blocks[b].$content).css({
-								left: '50%', bottom: '100px',
-							})
+								new MazeExplosion(GRIDSIZE/2,'white').$el.appendTo(blocks[b].$content).css({
+									left: '50%', bottom: '100px',
+								})
 
-							audio.play('explode',true);
+								audio.play('explode',true);
+							} else {
+								let $coin = $(`
+									<mazecoin>
+										<mazecoinbody>
+										</mazecoinbody>
+									</mazecoin>
+									`).appendTo(blocks[b].$el);
+
+									coins.push({
+										x:blocks[b].x + 0.5,
+										y:blocks[b].y + 0.5,
+										$el:$coin,
+										$shadow:$shadow,
+									});
+							}
 						}
 					})
 				}

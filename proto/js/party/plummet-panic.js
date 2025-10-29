@@ -66,13 +66,12 @@ window.PlummetPanicGame = function(playersMeta) {
 			{players:[4,0,1],levels:10,timeMax:1.2,timeMin:0.5},
 			{players:[2,3,4],levels:10,timeMax:1.2,timeMin:0.5},
 		],
-		[
+		[ 
 			{players:[0,1,2],levels:10,timeMax:1.2,timeMin:0.7},
 			{players:[3,4,5],levels:10,timeMax:1.2,timeMin:0.7},
 			{players:[0,2,4],levels:20,timeMax:1,timeMin:0.5},
 			{players:[1,3,5],levels:20,timeMax:1,timeMin:0.5},
 		],
-
 	]
 
 	const LEVEL = {
@@ -486,7 +485,7 @@ window.PlummetPanicGame = function(playersMeta) {
 			meeps[m] = new PlummetMeep(m);
 		}
 
-		initPlay();
+		initTutorial();
 	}
 
 
