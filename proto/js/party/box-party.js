@@ -290,7 +290,7 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 	audio.add('explode','./proto/audio/party/sfx-explode.mp3',0.3);
 	audio.add('saber','./proto/audio/party/sfx-saber.mp3',1);
 	audio.add('saber-ignition','./proto/audio/party/sfx-saber-ignition.mp3',0.3);
-	audio.add('music','./proto/audio/party/music-adventure.mp3',0.2,true,true);
+	audio.add('music','./proto/audio/party/music-quest.mp3',0.2,true,true);
 
     const W = 1600;
     const H = 1000;

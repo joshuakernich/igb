@@ -325,42 +325,35 @@ window.FinalFrenzyGame = function( playersMeta ){
 				mazeblock{
 					width: ${GRIDSIZE}px;
 					height: ${GRIDSIZE}px;
-					background: rgba(150,105,50,1);
-					display: inline-block;
-					box-shadow: inset -10px -20px 0px rgba(0,0,0,0.1), inset 10px 20px 0px rgba(255,255,255,0.1);
 					
-					border-radius:30px;
+					display: inline-block;
+					
+					
+					
+					
 					position: relative;
 
 					transform-style:preserve-3d;
 				}
 
-				mazeblock:before{
-					content:"";
+				mazeblockinner{
 					display: block;
 					position: absolute;
 					inset: 0px;
-					background: radial-gradient( transparent, rgba(0,0,0,0.5) );
-					display: none;
+					opacity: 0.8;
+					border-radius:0px;
 				}
 
-				mazeblock:after{
-					content:"";
+				mazeblocksquare{
 					display: block;
 					position: absolute;
-					
-					height: 80px;
-					bottom: 0px;
-					background: gray;
-					transform: rotateX(90deg);
-					transform-style:preserve-3d;
-					transform-origin: bottom center;
-					border-radius:30px 30px 0px 0px;
-					left: 0px;
-					right: 0px;
-					background: radial-gradient( gray, black );
-					display: none;
+					inset: 30px;
+					box-sizing: border-box;
+					border: 30px solid black;
+					border-radius: 30px;
 				}
+
+				
 
 				mazeblock[absent='true']{
 					background: none !important;
@@ -655,11 +648,15 @@ window.FinalFrenzyGame = function( playersMeta ){
 				if( map[y][x]=='3') colours = grays;
 
 				let $block = $('<mazeblock>')
-				.css({'background-color':colours[n%colours.length]})
 				.appendTo($row)
 				.attr('absent',map[y][x]==' '?'true':'false')
 				.attr('x',x)
 				.attr('y',y);
+
+				if(map[y][x]!=' '){
+					$('<mazeblockinner>').appendTo($block).css({'background-color':colours[n%colours.length]});
+					$('<mazeblocksquare>').appendTo($block).css({'border-color':colours[n%colours.length]});
+				}
 
 				let $content = $('<mazeblockcontent>')
 				.appendTo($block);
@@ -689,7 +686,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 					$el:$block,
 					$content:$content,
 					type:map[y][x],
-					yTrigger:(map[y][x] == '*')?(y-5):(y-3-Math.random()*3),
+					yTrigger:(map[y][x] == '*')?(y-5):(y-4),
 					isTrigger: (map[y][x] == '*' || map[y][x] == '1'),
 				};
 			}
@@ -818,7 +815,8 @@ window.FinalFrenzyGame = function( playersMeta ){
 					blocks[b].isActive = true;
 					//
 
-					let offset = (Math.random()>0.5?W:-W);
+					//let offset = (Math.random()>0.5?W:-W);
+					let offset = blocks[b].x > 1?W:-W;
 
 					let $shadow = $('<mazeshadow>').appendTo(blocks[b].$el).css({
 						width:'0px', height: '0px', opacity: 0.1,
