@@ -190,8 +190,8 @@ window.CookieCutterGame = function( playersMeta ){
 
 	]
 
-	if(!MazeGame.didInit){
-		MazeGame.didInit = true;
+	if(!CookieCutterGame.didInit){
+		CookieCutterGame.didInit = true;
 
 		$("head").append(`
 			<style>
