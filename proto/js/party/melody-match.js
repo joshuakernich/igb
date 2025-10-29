@@ -5,7 +5,7 @@ window.MelodyMatchGame = function( playersMeta ){
 	const FPS = 50;
 	const KEYS = 4;
 	const KEYW = 0.06;
-	const BPM = 90;
+	const BPM = 120;
 	const BPS = BPM / 60;
 	const BPB = 3;
 
