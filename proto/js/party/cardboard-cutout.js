@@ -61,7 +61,7 @@ window.CardboardCutoutGame = function( playersMeta ){
 					background-size: 100%;
 					background-position: bottom 120px center;
 
-					perspective: ${W*3}px;
+					perspective: ${W}px;
 				}
 
 				cutoutcanvas{
@@ -332,6 +332,9 @@ window.CardboardCutoutGame = function( playersMeta ){
 					padding: 0px 20px;
 
 					background: #333;
+
+					transform-origin: bottom center;
+					transform: rotateX(-45deg);
 				}
 
 				cutoutheader:before{
@@ -554,7 +557,7 @@ window.CardboardCutoutGame = function( playersMeta ){
 					let length = polygonLength(history);
 					let dist = pointToPolygonDistance(history[history.length-1], pattern);
 					self.drift = dist;
-					self.isOnLine = self.drift < 20;
+					self.isOnLine = self.drift < 40;
 
 					$score.text( Math.floor(progress*100) + '%');
 
@@ -625,9 +628,9 @@ window.CardboardCutoutGame = function( playersMeta ){
 				transform: 'scale('+self.scale+') rotateX('+self.spin+'deg) rotateY('+self.twist+'deg)',
 			});
 
-			self.meep.$el.css({
+			/*self.meep.$el.css({
 				transform: 'rotateX('+(-self.spin)+'deg)',
-			})
+			})*/
 
 			$scoreHeader.text(self.countup.toFixed(1));
 
@@ -724,7 +727,7 @@ window.CardboardCutoutGame = function( playersMeta ){
 			meeps[m] = new CutterMeep(m);
 		}
 
-		initTutorial();
+		initPlay();
 	}
 
 	function initTutorial(){
@@ -765,6 +768,7 @@ window.CardboardCutoutGame = function( playersMeta ){
 	}
 
 	function initPlay(){
+		$blur.hide();
 		hud.initPlayers(meeps,1);
 		setTimeout(initNextRound,1000);
 	}
@@ -844,8 +848,8 @@ window.CardboardCutoutGame = function( playersMeta ){
 				x:2 - (nSlot+1) * SPACING,
 				y:0.5,
 				scale:1,
-				spin:20,
-				twist:5 - nSlot*10,
+				spin:45,
+				twist:0,//-5 + nSlot*10,
 			},{
 				duration:500,
 				complete:function(){
