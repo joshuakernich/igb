@@ -689,7 +689,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 					$el:$block,
 					$content:$content,
 					type:map[y][x],
-					yTrigger:(map[y][x] == '*')?(y-5):(y-2-Math.random()*3),
+					yTrigger:(map[y][x] == '*')?(y-5):(y-3-Math.random()*3),
 					isTrigger: (map[y][x] == '*' || map[y][x] == '1'),
 				};
 			}
