@@ -483,8 +483,9 @@ window.CardboardCutoutGame = function( playersMeta ){
 		self.y = 0.5;
 		self.x = 0.5;
 		self.scale = 0.5;
-		self.spin = 80;
+		self.spin = 85;
 		self.twist = 0;
+		self.rotate = 0;
 		self.score = 0;
 		self.isOnLine = true;
 		self.drift = 0;
@@ -625,7 +626,7 @@ window.CardboardCutoutGame = function( playersMeta ){
 			self.$el.css({
 				left: self.x*W + (self.isOnLine?0:-10 + Math.random()*20) + 'px',
 				top: self.y*H + (self.isOnLine?0:-10 + Math.random()*20) +'px',
-				transform: 'scale('+self.scale+') rotateX('+self.spin+'deg) rotateY('+self.twist+'deg)',
+				transform: 'scale('+self.scale+') rotateX('+self.spin+'deg) rotateY('+self.twist+'deg) rotateZ('+self.rotate+'deg)',
 			});
 
 			/*self.meep.$el.css({
@@ -796,7 +797,8 @@ window.CardboardCutoutGame = function( playersMeta ){
 			box.$el.appendTo($canvas);
 			box.bindMeep(meeps[m]);
 			box.x = 0.75 + m%2 * 0.02;
-			box.y = -0.1;
+			box.y = -0.2;
+			
 			box.redraw();
 			boxes[m] = box;
 			box.setForeground(false);
@@ -850,6 +852,7 @@ window.CardboardCutoutGame = function( playersMeta ){
 				scale:1,
 				spin:45,
 				twist:0,//-5 + nSlot*10,
+				rotate:0,
 			},{
 				duration:500,
 				complete:function(){
