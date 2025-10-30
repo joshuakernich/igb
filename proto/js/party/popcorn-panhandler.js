@@ -167,7 +167,14 @@ window.PopcornGame = function( playersMeta ){
 		meep.$handLeft.css({top:'190px'});
 		meep.$handRight.css({top:'190px'});
 
-		let $pan = $('<popcornpan>').appendTo(self.$el);
+		let $pan = $(`
+			<popcornpan>
+				<popcornpanhandle></popcornpanhandle>
+				<popcornpanbody></popcornpanbody>
+				<popcornpanbottom></popcornpanbottom>
+				<popcornpantop></popcornpantop>
+			</popcornpan>
+		`).appendTo(self.$el);
 
 		let $score = $('<popcornscore>').appendTo(self.$el).text('+1').css({opacity:0})
 
@@ -342,7 +349,7 @@ window.PopcornGame = function( playersMeta ){
 					z-index: 1;
 				}
 
-				popcornpan:before{
+				popcornpanhandle{
 					content: "";
 					width: 20px;
 					height: 80px;
@@ -355,20 +362,45 @@ window.PopcornGame = function( playersMeta ){
 					border-radius: 10px;
 				}
 
-				popcornpan:after{
-					content: "";
+				popcornpantop{
 					display: block;
 					position: absolute;
 					width: ${PAN}px;
 					height: ${PAN/3}px;
 					background: #999;
-					
 					border-radius: 100%;
 					border: 5px solid white;
 					box-sizing: border-box;
-					box-shadow: 0px 20px 0px white;
 					left: ${-PAN/2}px;
 					top: ${-PAN/3/2}px;
+					background: linear-gradient(to right, #555, #777);
+				}
+
+				popcornpanbottom{
+					display: block;
+					position: absolute;
+					width: ${PAN}px;
+					height: ${PAN/3}px;
+					background: #777;
+					border-radius: 100%;
+					
+					box-sizing: border-box;
+					left: ${-PAN/2}px;
+					top: 15px;
+					background: linear-gradient(to right, white, #777);
+				}
+
+				popcornpanbody{
+					display: block;
+					position: absolute;
+					width: ${PAN}px;
+					height: 40px;
+					background: #777;
+					
+					box-sizing: border-box;
+					left: ${-PAN/2}px;
+					top: 0px;
+					background: linear-gradient(to right, white, #777);
 				}
 
 			
