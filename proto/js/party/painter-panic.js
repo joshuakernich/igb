@@ -872,8 +872,8 @@ window.PainterPanicGame = function( playersMeta ){
 	function initTutorial(){
 
 		hud.initTutorial('Painter Panic',
-			{x:1.2, y:0.5, msg:'Align yourself<br>with your canvas',icon:'align'},
-			{x:1.8, y:0.5, msg:'Move around to paint<br>within the lines',icon:'around'},
+			{x:1.2, y:0.5, msg:'Align yourself with your canvas',icon:'align'},
+			{x:1.8, y:0.5, msg:'Move forward, back, and sideways to paint within the lines',icon:'around'},
 		);
 
 		for(var b=0; b<meeps.length; b++){
@@ -895,7 +895,7 @@ window.PainterPanicGame = function( playersMeta ){
 			audio.play('tutorial');
 		},2000)
 
-		hud.initTimer(20,finiTutorial);
+		hud.initTimer(25,finiTutorial);
 	}
 
 	function finiTutorial(){
