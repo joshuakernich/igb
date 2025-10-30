@@ -621,7 +621,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 			});
 		}
 
-		initPlay();
+		initTutorial();
 	}
 
 
