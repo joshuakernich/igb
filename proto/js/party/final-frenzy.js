@@ -353,8 +353,20 @@ window.FinalFrenzyGame = function( playersMeta ){
 					position: absolute;
 					inset: 30px;
 					box-sizing: border-box;
-					border: 30px solid black;
+					border: 10px solid black;
 					border-radius: 30px;
+					
+				}
+
+				mazeblocksquare:after{
+					content:"";
+					display: block;
+					position: absolute;
+					inset: 30px;
+					background: url(./proto/img/party/texture-spots.png);
+					background-size: 100%;
+					filter: invert(1);
+					opacity: 0.5;
 				}
 
 				
@@ -870,7 +882,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 
 					//let offset = (Math.random()>0.5?W:-W);
 					let offset = blocks[b].x > 1?W*2:-W*2;
-					let time =round.speed*(1.5+Math.random()*1)*1000
+					let time =round.speed*(2+Math.random()*0.5)*1000
 
 					let $shadow = $('<mazeshadow>').appendTo(blocks[b].$el).css({
 						width:'0px', height: '0px', opacity: 0.1,
