@@ -53,7 +53,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 		$("head").append(`
 			<style>
 
-				@import url('https://fonts.googleapis.com/css2?family=Paytone+One&display=swap');
+				@import url('https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
 				@import url('https://fonts.googleapis.com/css2?family=Knewave&display=swap');
 
 				blurlayer{
@@ -77,7 +77,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 					pointer-events: none;
 					
-  					font-family: "Paytone One";
+  					 font-family: "Rubik", sans-serif;
 				}
 
 				partyhudbaseline{
@@ -186,7 +186,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					color: ${GRAY};
 					font-family: "Knewave", system-ui;
 					text-shadow: 0px 2px white;
-					font-weight: 100;
+					font-weight: 200;
 				}
 
 				partyplayerhud{
@@ -198,6 +198,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					color: white;
 					vertical-align: top;
 					overflow: hidden;
+					font-weight: 600;
 				}
 
 				partyhudtimer{
@@ -234,7 +235,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					box-sizing: border-box;
 					font-size: ${THICC*0.9}px;
 					line-height: ${THICC*2}px;
-					font-weight: 100;
+					font-weight: 600;
 
 				}
 
@@ -345,7 +346,6 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					font-weight: 100;
 
 					color:white;
-					text-shadow: 5px 5px 0px ${GRAY}, 5px -5px 0px ${GRAY}, -5px -5px 0px ${GRAY}, -5px 5px 0px ${GRAY}, 0px 10px 0px ${GRAY};
 					transform: rotate(-3deg);
 				
 				}
@@ -367,7 +367,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 					border: 5px solid ${GRAY};
 
-					box-shadow: 5px 10px 0px ${GRAY};
+					box-shadow: 0px 10px ${GRAY};
 				}
 
 				partyhudpip[fill='true']{
@@ -485,6 +485,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					display: block;
 					color: white;
 					-webkit-text-stroke: 5px ${GRAY};
+					text-shadow: 0px 10px ${GRAY};
 				}
 
 				hudtutorial{
@@ -504,7 +505,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 					
 					white-space: normal;
 					text-align: center;
-					font-weight: 100;
+					font-weight: 400;
 
 					transform: translate(-50%, -50%) rotate(3deg);
 
