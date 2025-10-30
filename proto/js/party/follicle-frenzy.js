@@ -346,11 +346,11 @@ window.FollicleFrenzyGame = function( playersMeta ){
 				follicleshaver{
 					display: block;
 					position: absolute;
-					width: 20px;
+					width: 30px;
 					height: 180px;
 					background: red;
 					bottom: 0px;
-					left: -10px;
+					left: -15px;
 					border-radius: 15px 15px 0px 0px;
 					box-sizing: border-box;
 					transform-style: preserve-3d;
@@ -374,8 +374,8 @@ window.FollicleFrenzyGame = function( playersMeta ){
 					content:"";
 					display: block;
 					position: absolute;
-					left: -20px;
-					right: -20px;
+					left: -10px;
+					right: -10px;
 					bottom: 0px;
 					height: 20px;
 					background:white;
@@ -477,7 +477,8 @@ window.FollicleFrenzyGame = function( playersMeta ){
 					position: absolute;
 					inset: 20%;
 					border-radius: 100%;
-					
+					border-top: 2px solid white;
+					box-shadow: 2px 2px 5px black;
 				}
 
 				
