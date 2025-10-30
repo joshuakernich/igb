@@ -68,7 +68,7 @@ window.PainterPanicGame = function( playersMeta ){
 					background-size: 100%;
 					background-position: bottom 120px center;
 
-					perspective: ${W*3}px;
+					perspective: ${W}px;
 				}
 
 				paintercanvas{
@@ -382,6 +382,8 @@ window.PainterPanicGame = function( playersMeta ){
 					padding: 0px 20px;
 
 					background: #333;
+					transform-origin: bottom center;
+					transform: rotateX(-45deg);
 				}
 
 				painterheader:before{
@@ -884,7 +886,7 @@ window.PainterPanicGame = function( playersMeta ){
 			boxes[b] = box;
 			box.setForeground(true);
 			box.scale = 1;
-			box.spin = 30;
+			box.spin = 45;
 			box.twist = 0;
 			box.toPracticeMode();
 		}
@@ -893,7 +895,7 @@ window.PainterPanicGame = function( playersMeta ){
 			audio.play('tutorial');
 		},2000)
 
-		hud.initTimer(30,finiTutorial);
+		hud.initTimer(20,finiTutorial);
 	}
 
 	function finiTutorial(){
@@ -990,8 +992,8 @@ window.PainterPanicGame = function( playersMeta ){
 					x:2 - (nSlot+1) * SPACING,
 					y:0.5,
 					scale:1,
-					spin:20,
-					twist:-5 + nSlot*10,
+					spin:45,
+					twist:0,
 				},
 				{
 					duration:500,
