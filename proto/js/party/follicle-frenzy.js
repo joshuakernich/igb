@@ -294,7 +294,7 @@ window.FollicleFrenzyGame = function( playersMeta ){
 					background-image: url(./proto/img/party/bg-box-factory.png);
 					background-size: 100% 100%;
 					background-position: center;
-					perspective: ${W*2}px;
+					perspective: ${W}px;
 				}
 
 				folliclegame:before{
@@ -326,6 +326,9 @@ window.FollicleFrenzyGame = function( playersMeta ){
 					left: 0px;
 					width: 0px;
 					height: 0px;
+					transform: rotateX(-90deg);
+					transform-style: preserve-3d;
+					
 				}
 
 				folliclefist{
@@ -337,24 +340,53 @@ window.FollicleFrenzyGame = function( playersMeta ){
 					height: 100px;
 					background: white;
 					border-radius: 40px;
+					display: none;
 				}
 
 				follicleshaver{
 					display: block;
 					position: absolute;
-					width: 50px;
+					width: 20px;
 					height: 180px;
 					background: red;
-					top: 0px;
-					left: -25px;
-					border-radius: 0px 0px 15px 15px;
+					bottom: 0px;
+					left: -10px;
+					border-radius: 15px 15px 0px 0px;
 					box-sizing: border-box;
+					transform-style: preserve-3d;
+					border-right: 5px solid black;
+					
+				}
 
-					border-top: 10px groove white;
+				follicleshaver:before{
+					content: "";
+					display: block;
+					position: absolute;
+					inset: 0px;
+					transform-origin: bottom right;
+					background: linear-gradient(to top, black, transparent);
+					opacity: 0.5;
+					transform-style: preserve-3d;
+					transform: rotateX(90deg) rotateZ(20deg);
+				}
+
+				follicleshaver:after{
+					content:"";
+					display: block;
+					position: absolute;
+					left: -20px;
+					right: -20px;
+					bottom: 0px;
+					height: 20px;
+					background:white;
+					box-sizing: border-box;
+					border: 5px solid black;
+					border-radius: 100% 100% 0px 0px;
 				}
 
 				folliclerow{
 					display: block;
+					line-height:0px;
 				}
 
 				folliclecell{
@@ -378,11 +410,22 @@ window.FollicleFrenzyGame = function( playersMeta ){
 					transform: scale(0.7) rotateX(0deg);
 					transform-origin: top center;
 					transition: transform 1s;
+					transform-style: preserve-3d;
+				}
+
+				folliclemeep.foreground follicleface{
+					transform: rotateX(45deg)
 				}
 
 				folliclemeep.foreground{
-					transform: scale(1) rotateX(45deg);
+					transform: scale(1);
 				}
+
+				folliclemeep.foreground folliclebody, folliclemeep.foreground folliclelegs{
+					transform: translateY(-50px);
+				}
+
+
 
 				folliclebody{
 					display: block;
@@ -393,6 +436,7 @@ window.FollicleFrenzyGame = function( playersMeta ){
 					height: 25%;
 					top: 100%;	
 					left: 20%;	
+					transition: transform 0.5s;
 				}
 
 				folliclelegs{
@@ -406,6 +450,7 @@ window.FollicleFrenzyGame = function( playersMeta ){
 					box-sizing: border-box;
 					border-left: 30px solid white;
 					border-right: 30px solid white;
+					transition: transform 0.5s;
 				}
 
 				follicleface{
@@ -413,11 +458,13 @@ window.FollicleFrenzyGame = function( playersMeta ){
 					background: white;
 					border-radius: 240px;
 					position: relative;
+					transition: transform 0.5s;
+					transform-style: preserve-3d;
 				}
 
 				folliclehair{
-					width: 100%;
-					height: 100%;
+					width: 102%;
+					height: 102%;
 					display:block;
 					position: relative;
 				}
@@ -428,8 +475,9 @@ window.FollicleFrenzyGame = function( playersMeta ){
 					background: gray;
 					display:block;
 					position: absolute;
-					inset: 0px;
+					inset: 20%;
 					border-radius: 100%;
+					
 				}
 
 				
@@ -544,7 +592,11 @@ window.FollicleFrenzyGame = function( playersMeta ){
 
 				if(isUnshaved) state[y][x] = (MAP[y][x] != ' ');
 				
-				if( state[y][x] ) $('<folliclehair>').appendTo($cell).attr('dir',(x>=MAP[y].length/2)?1:-1).attr('x',x).attr('y',y).css({'z-index':10+y});
+				if( state[y][x] ){
+					$('<folliclehair>').appendTo($cell).attr('dir',(x>=MAP[y].length/2)?1:-1).attr('x',x).attr('y',y).css({
+						transform: `translate(${-2+Math.random()*4}px,${-2+Math.random()*4}px)`
+					})
+				}
 			}
 		}
 
@@ -557,7 +609,7 @@ window.FollicleFrenzyGame = function( playersMeta ){
 					let dx = Math.abs(gx-x);
 					let dy = Math.abs(gy-y);
 					let d = Math.sqrt(dx*dx + dy*dy);
-					if(d<2.5){
+					if(d < 2.5){
 						if(state[y][x]){
 							state[y][x] = false;
 							let rx = - 100 + Math.random()*200;
@@ -617,7 +669,7 @@ window.FollicleFrenzyGame = function( playersMeta ){
 				<follicleshaver></follicleshaver>
 				<folliclefist></folliclefist>
 			</folliclehand>
-		`).appendTo(self.$el).hide();
+		`).appendTo(face.$el).hide();
 
 		self.redraw = function(){
 
@@ -639,8 +691,8 @@ window.FollicleFrenzyGame = function( playersMeta ){
 				$hand.css({
 					left: ox*W + 'px',
 					top: oy*H + 'px',
-					'z-index':20 + Math.floor(oy/GRIDSIZE),
-					transform: 'rotate('+r+'deg)',
+					//'z-index':20 + Math.floor(oy/GRIDSIZE),
+					//transform: 'rotate('+r+'deg)',
 				});
 
 				face.shaveAt(ox,oy);
@@ -661,7 +713,7 @@ window.FollicleFrenzyGame = function( playersMeta ){
 
 		self.setScale = function(scale) {
 			self.$el.css({
-				transform: 'scale('+scale+') rotateX(30deg)'
+				transform: 'scale('+scale+')'
 			});
 		}
 
@@ -834,7 +886,7 @@ window.FollicleFrenzyGame = function( playersMeta ){
 			setTimeout( meeps[c].initHop, c * 50 );
 
 			$(meeps[c]).delay(delay).animate({
-				ax:0.75 - 0.5*c - 0.1,
+				ax:0.7 - 0.4*c - 0.1,
 			},2000);
 		}
 
