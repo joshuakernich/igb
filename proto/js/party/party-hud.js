@@ -723,7 +723,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	self.initRound = function(n,max,msg=undefined){
 		if(msg==undefined){
 			msg = `Round ${(n+1)} of ${max}`;
-			if(n==(max-1)) msg = 'Final Round';
+			//if(n==(max-1)) msg = 'Final Round';
 		}
 
 		setBanner(true,true);
