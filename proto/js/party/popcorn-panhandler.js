@@ -427,7 +427,50 @@ window.PopcornGame = function( playersMeta ){
 					background-size: 100%;
 				}
 
-				
+				popcornwall{
+					display: inline-block;
+					width: 33.3%;
+					height: 100%;
+					position: relative;
+
+					opacity: 0.5;
+					
+				}
+
+				popcornwall:after{
+					content:"";
+					display: block;
+					position: absolute;
+					inset: 50px;
+					box-sizing: border-box;
+					border: 15px solid white;
+					background-color: rgba(255,255,255,0.3);
+					background-image: url(./proto/img/party/icon-hand.png);
+					background-size: 300px;
+					background-position: left center;
+					animation: popcornscroll;
+					animation-iteration-count: infinite;
+					animation-duration: 5s;
+					animation-timing-function: linear;
+					background-repeat: rep
+
+				}
+
+				popcornwall[occupied='true']{
+					opacity: 0;
+				}
+
+				@keyframes popcornscroll{
+					0%{
+						background-position-x: 0px;
+						background-position-y: 0px;
+					}
+
+					100%{
+						background-position-x: 300px;
+						background-position-y: 300px;
+					}
+				}
 
 			</style>
 		`)
@@ -437,6 +480,11 @@ window.PopcornGame = function( playersMeta ){
 	self.$el = $('<igb>');
 
 	let $game = $('<popcorngame>').appendTo(self.$el);
+
+	let $walls = [];
+	for(var i=0; i<3; i++){
+		$walls[i] = $('<popcornwall>').appendTo($game);
+	}
 
 	$game.click(function(e){
 
@@ -659,10 +707,14 @@ window.PopcornGame = function( playersMeta ){
 			kernels[k].step();
 		}
 
+		for(var w in $walls) $walls[w].attr('occupied','false');
+
 		for(var m in meeps){
 			meeps[m].step();
 
 			if(meeps[m].isActive){
+
+				 $walls[meeps[m].wall].attr('occupied','true');
 
 				for(var k in kernels){
 					if(!kernels[k].inPan && kernels[k].wall == meeps[m].wall && kernels[k].sy>0){
