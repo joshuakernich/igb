@@ -71,7 +71,7 @@ window.PopcornGame = function( playersMeta ){
 
 				if(self.delay<=0){
 
-					self.sy += GRAVITY;
+					self.sy += GRAVITY/2;
 					self.px += self.sx;
 					self.py += self.sy;
 
@@ -92,8 +92,8 @@ window.PopcornGame = function( playersMeta ){
 		self.pop = function(){
 			self.isPopped = true;
 			self.inPan = false;
-			self.sy = -0.025 + Math.random() * 0.01;
-			self.sx = -0.002 + Math.random() * 0.004;
+			self.sy = -0.015 + Math.random() * 0.01;
+			self.sx = -0.001 + Math.random() * 0.002;
 			$sprite.addClass('popped').css({
 				'background':'',
 			})
@@ -366,7 +366,7 @@ window.PopcornGame = function( playersMeta ){
 					border-radius: 100%;
 					border: 5px solid white;
 					box-sizing: border-box;
-					box-shadow: 0px 10px 0px white;
+					box-shadow: 0px 20px 0px white;
 					left: ${-PAN/2}px;
 					top: ${-PAN/3/2}px;
 				}
