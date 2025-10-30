@@ -9,6 +9,16 @@ window.FinalFrenzyGame = function( playersMeta ){
 
 	const GRID = {W:W/GRIDSIZE};
 
+	//   empty 
+	// 0 static 
+	// 1 coin (fly-in)
+	// 2 finish (with coin)
+	// 3 checkpoint
+	// 4 coin (static)
+	// 5 coin (slide left-right)
+	// 6 coin (slide up-down)
+	// 7 coin ring 
+
 
 	const START_BLOCKS = [[
 		'0000',
@@ -34,36 +44,40 @@ window.FinalFrenzyGame = function( playersMeta ){
 	// 8 coins for each
 	const COIN_BLOCKS = [
 		[
-			'1010',
-			'0101',
-			'1010',
-			'0101',
-		],
-		[
 			'1001',
-			'0110',
-			'0110',
+			'0000',
+			'0000',
 			'1001',
 		],
 		[
-			'0110',
-			'1001',
-			'1001',
-			'0110',
-		],
-		[
+			'1000',
+			'0100',
 			'0010',
-			'0011',
+			'0001',
+		],
+		[
+			'0001',
 			'0010',
 			'0100',
-			'1100',
-			'0100',
+			'1000',
 		],
 		[
-			'0011',
-			'0110',
-			'0110',
-			'1100',
+			'7000', // top left corner of circle
+			'0000',
+			'0000',
+			'0000',
+		],
+		[
+			'5000',
+			'5000',
+			'5000',
+			'5000',
+		],
+		[
+			'6666',
+			'0000',
+			'0000',
+			'0000',
 		],
 	]
 
@@ -71,97 +85,89 @@ window.FinalFrenzyGame = function( playersMeta ){
 		[
 			'0000',
 			'0  0',
-			'1  1',
+			'4  4',
 			'0  0',
 		],
 		[
 			'0000',
 			'0 0 ',
-			'1001',
+			'4004',
 			' 0 0',
 		],
 		[
 			'0000',
 			'0  0',
-			'1001',
+			'4004',
 			' 00 ',
 		],
 		[
 			'0000',
-			'0   ',
-			'1001',
+			' 0  ',
+			' 404',
 			'   0',
 		],
 		[
 			'0000',
 			'0   ',
-			'011 ',
+			'044 ',
 			'0   ',
 		],
 		[
 			'0000',
 			'   0',
-			' 110',
+			' 440',
 			'   0',
 		],
 		[
 			'0000',
 			'0  0',
 			'0000',
-			'11 0',
+			'44 0',
 			'   0',
 		],
 		[
 			'0000',
 			'0  0',
 			'0000',
-			'0 11',
+			'0 44',
 			'0   ',
 		],
 	]
 
 	const DEATH_BLOCKS = [
 		[
-			'0000',
-			'1  1',
+			'4  4',
 			'0  0',
 			'0**0',
 		],
 		[
-			'0000',
 			'0**0',
-			'0110',
+			'0440',
 			'*00*',
 		],
 		[
-			'0000',
 			'*00*',
-			'1001',
+			'4004',
 			'0**0',
 		],
 		[
+			'04**',
 			'0000',
-			'10**',
+			'**40',
 			'0000',
-			'**01',
-			'0000',
-			'10**',
+			'00**',
 		],
 		[
-			'0000',
 			'0  0',
-			'1  1',
 			'0**0',
-			'0000',
+			'0440',
 			'*00*',
 		],
 		[
-			'0000',
 			'0  0',
-			'1  1',
 			'0000',
 			'*00*',
-			'1001',
+			'4004',
 			'0**0',
 		],
 	]
@@ -215,7 +221,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 			shuffleArray(queues[type]);
 		}
 
-		let arr = queues[type].pop().reverse();
+		let arr = queues[type].pop().concat().reverse();
 		return arr;
 	}
 
@@ -246,18 +252,18 @@ window.FinalFrenzyGame = function( playersMeta ){
 		],
 		[
 			[{speed:SLOW,players:[0,1],map:generateLevelMap(2)},{speed:SLOW,players:[2,3],map:generateLevelMap(2)}],
-			[{speed:MED,players:[0,1],map:generateLevelMap(3)},{speed:MED,players:[2,3],map:generateLevelMap(3)}],
-			[{speed:FAST,players:[0,1],map:generateLevelMap(4)},{speed:FAST,players:[2,3],map:generateLevelMap(4)}],
+			[{speed:MED,players:[0,1],map:generateLevelMap(2)},{speed:MED,players:[2,3],map:generateLevelMap(2)}],
+			[{speed:FAST,players:[0,1],map:generateLevelMap(2)},{speed:FAST,players:[2,3],map:generateLevelMap(2)}],
 		],
 		[
 			[{speed:SLOW,players:[0,1,2],map:generateLevelMap(2)},{speed:SLOW,players:[3,4],map:generateLevelMap(2)}],
-			[{speed:MED,players:[0,2,4],map:generateLevelMap(3)},{speed:MED,players:[1,3],map:generateLevelMap(3)}],
-			[{speed:FAST,players:[1,3,4],map:generateLevelMap(4)},{speed:FAST,players:[0,2],map:generateLevelMap(4)}],
+			[{speed:MED,players:[0,2,4],map:generateLevelMap(2)},{speed:MED,players:[1,3],map:generateLevelMap(2)}],
+			[{speed:FAST,players:[1,3,4],map:generateLevelMap(2)},{speed:FAST,players:[0,2],map:generateLevelMap(2)}],
 		],
 		[
 			[{speed:SLOW,players:[0,1,2],map:generateLevelMap(2)},{speed:SLOW,players:[3,4,5],map:generateLevelMap(2)}],
-			[{speed:SLOW,players:[0,1,2],map:generateLevelMap(3)},{speed:SLOW,players:[3,4,5],map:generateLevelMap(3)}],
-			[{speed:FAST,players:[0,1,2],map:generateLevelMap(4)},{speed:FAST,players:[3,4,5],map:generateLevelMap(4)}],
+			[{speed:SLOW,players:[0,1,2],map:generateLevelMap(2)},{speed:SLOW,players:[3,4,5],map:generateLevelMap(2)}],
+			[{speed:FAST,players:[0,1,2],map:generateLevelMap(2)},{speed:FAST,players:[3,4,5],map:generateLevelMap(2)}],
 		],
 	]
 
@@ -328,9 +334,6 @@ window.FinalFrenzyGame = function( playersMeta ){
 					
 					display: inline-block;
 					
-					
-					
-					
 					position: relative;
 
 					transform-style:preserve-3d;
@@ -341,7 +344,8 @@ window.FinalFrenzyGame = function( playersMeta ){
 					position: absolute;
 					inset: 0px;
 					opacity: 0.8;
-					border-radius:0px;
+					border-radius:50px;
+					box-shadow: inset -10px -15px rgba(0,0,0,0.5), inset 10px 10px white;
 				}
 
 				mazeblocksquare{
@@ -354,13 +358,8 @@ window.FinalFrenzyGame = function( playersMeta ){
 				}
 
 				
-
-				mazeblock[absent='true']{
-					background: none !important;
-					box-shadow: none;
-				}
-
-				mazeblock[absent='true']:before, mazeblock[absent='true']:after{
+				mazeblock[absent='true'] mazeblockinner,
+				mazeblock[absent='true'] mazeblocksquare{
 					display: none;
 				}
 
@@ -447,13 +446,18 @@ window.FinalFrenzyGame = function( playersMeta ){
 					opacity: 0.9;
 				}
 
+				mazecoinwrapper{
+					position: absolute;
+					display: block;
+					transform-style: preserve-3d;
+				}
+
 				mazecoin{
 					position: absolute;
 					display: block;
 					transform-style: preserve-3d;
-
-					top: 50%;
-					left: 50%;
+					top: 0px;
+					left: 0px;
 				}
 
 				mazecoinbody{
@@ -531,6 +535,51 @@ window.FinalFrenzyGame = function( playersMeta ){
 		}
 	}
 
+	const MazeCoin = function(type,x,y){
+		let self = this;
+		self.$el = $('<mazecoinwrapper>');
+
+		let $shadow = $(`<mazeshadow>`).appendTo(self.$el).css({opacity:0.3,width:COIN,height:COIN,left:-COIN/2,top:-COIN/2});
+
+		let $coin = $(`
+		<mazecoin>
+			<mazecoinbody>
+			</mazecoinbody>
+		</mazecoin>
+		`).appendTo(self.$el);
+
+		self.x = self.ox = x;
+		self.y = self.oy = y;
+		self.type = type;
+		self.r = 0;
+
+		self.step = function () {
+
+			if(type=='5'){
+				self.r += 0.02;
+				self.x = self.ox + 1.5 + Math.cos(self.r + self.y) * 1.5;
+			}
+
+			if(type=='6'){
+				self.r += 0.02;
+				self.y = self.oy - 1.5 - Math.cos(self.r + self.x) * 1.5;
+			}
+
+			if(type=='7'){
+				self.r += 0.02;
+				self.x = self.ox + Math.cos(self.r) * 1.5;
+				self.y = self.oy + Math.sin(self.r) * 1.5;
+			}
+		}
+
+		self.redraw = function() {
+			self.$el.css({
+				left: self.x * GRIDSIZE + 'px',
+				bottom: self.y * GRIDSIZE + 'px',
+			})
+		}
+	}
+
 	
 	let isGoTime = false;
 
@@ -572,7 +621,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 			});
 		}
 
-		initTutorial();
+		initPlay();
 	}
 
 
@@ -661,23 +710,27 @@ window.FinalFrenzyGame = function( playersMeta ){
 				let $content = $('<mazeblockcontent>')
 				.appendTo($block);
 
-				if(map[y][x]=='2'){
+				if(
+					map[y][x]=='2' || 
+					map[y][x]=='4' || 
+					map[y][x]=='5' || 
+					map[y][x]=='6'
+				){
 
-					let $shadow = $(`<mazeshadow>`).appendTo($block).css({opacity:0.3,width:COIN,height:COIN});
+					let coin = new MazeCoin(map[y][x],x+0.5,y+0.5);
+					coin.$el.appendTo($platform);
+					coins.push(coin);
+					coin.redraw();
+				}
 
-					let $coin = $(`
-					<mazecoin>
-						<mazecoinbody>
-						</mazecoinbody>
-					</mazecoin>
-					`).appendTo($block);
-
-					coins.push({
-						x:x + 0.5,
-						y:y + 0.5,
-						$el:$coin,
-						$shadow:$shadow,
-					});
+				if(map[y][x] == '7'){
+					for(var i=0; i<4; i++){
+						let coin = new MazeCoin(map[y][x],x+2,y-1);
+						coin.$el.appendTo($platform);
+						coin.r = 1/4 * i * Math.PI*2;
+						coins.push(coin);
+						coin.redraw();
+					}
 				}
 
 				blocks[n] = {
@@ -816,7 +869,8 @@ window.FinalFrenzyGame = function( playersMeta ){
 					//
 
 					//let offset = (Math.random()>0.5?W:-W);
-					let offset = blocks[b].x > 1?W:-W;
+					let offset = blocks[b].x > 1?W*2:-W*2;
+					let time =round.speed*(1.5+Math.random()*1)*1000
 
 					let $shadow = $('<mazeshadow>').appendTo(blocks[b].$el).css({
 						width:'0px', height: '0px', opacity: 0.1,
@@ -825,7 +879,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 						width:'200px', height: '200px', opacity: 0.7,
 						left:'0px',
 					},{
-						duration:round.speed*2*1000,
+						duration:time,
 						easing:'linear',
 					})
 
@@ -838,14 +892,15 @@ window.FinalFrenzyGame = function( playersMeta ){
 						left:'0px',
 					},{
 						easing: 'linear',
-						duration: round.speed*2*1000,
+						duration: time,
 						complete:function(){
 
 							
 							$(this).hide();
+							$shadow.hide();
 
 							if(blocks[b].type=='*'){
-								$shadow.hide();
+								
 								blocks[b].isDead = true;
 								blocks[b].$el.attr('absent','true');
 
@@ -855,19 +910,11 @@ window.FinalFrenzyGame = function( playersMeta ){
 
 								audio.play('explode',true);
 							} else {
-								let $coin = $(`
-									<mazecoin>
-										<mazecoinbody>
-										</mazecoinbody>
-									</mazecoin>
-									`).appendTo(blocks[b].$el);
 
-									coins.push({
-										x:blocks[b].x + 0.5,
-										y:blocks[b].y + 0.5,
-										$el:$coin,
-										$shadow:$shadow,
-									});
+								let coin = new MazeCoin(4,blocks[b].x + 0.5,blocks[b].y + 0.5);
+								coin.$el.appendTo($platform);
+								coins.push(coin);
+								coin.redraw();
 							}
 						}
 					})
@@ -915,7 +962,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 
 				if(d<0.5){
 					coins[c].$el.hide();
-					coins[c].$shadow.hide();
+
 					coins[c].isCollected = true;
 					meeps[m].score++;
 
@@ -923,7 +970,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 					score.$el.css('bottom','350px');
 					meeps[m].$el.append( score.$el );
 					audio.play('coin',true);
-				}
+				} 
 			}
 
 			gx = Math.floor(gx);
@@ -944,6 +991,13 @@ window.FinalFrenzyGame = function( playersMeta ){
 					'transition':'1s all',
 					'transform':'translateZ(-1500px)'
 				})
+			}
+		}
+
+		for(var c in coins){
+			if(!coins[c].isCollected) {
+				coins[c].step();
+				coins[c].redraw();
 			}
 		}
 

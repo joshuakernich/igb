@@ -294,7 +294,7 @@ window.FollicleFrenzyGame = function( playersMeta ){
 					background-image: url(./proto/img/party/bg-box-factory.png);
 					background-size: 100% 100%;
 					background-position: center;
-					perspective: ${W*3}px;
+					perspective: ${W*2}px;
 				}
 
 				folliclegame:before{
@@ -381,7 +381,7 @@ window.FollicleFrenzyGame = function( playersMeta ){
 				}
 
 				folliclemeep.foreground{
-					transform: scale(1) rotateX(30deg);
+					transform: scale(1) rotateX(45deg);
 				}
 
 				folliclebody{
@@ -424,28 +424,15 @@ window.FollicleFrenzyGame = function( playersMeta ){
 
 				folliclehair:after{
 					content:"";
-					width: 160%;
-					height: 300%;
+				
 					background: gray;
 					display:block;
 					position: absolute;
-					top: -20%;
-					left: -30%;
-					border-radius: 100% 100% 100% 0px;
-					box-sizing: border-box;
+					inset: 0px;
+					border-radius: 100%;
 				}
 
-				folliclehair[dir='-1']{
-					transform: rotate(30deg);
-				}
-
-				folliclehair[dir='1']{
-					transform: rotate(-30deg);
-				}
-
-				folliclehair[dir='1']:after{
-					border-radius: 100% 100% 0px 100%;
-				}
+				
 
 				folliclemouth{
 					width: 70px;
@@ -613,6 +600,7 @@ window.FollicleFrenzyGame = function( playersMeta ){
 		self.n = n;
 		self.ax = 0.5;
 		self.ay = 0.5;
+		self.oy = 0;
 		self.isEnabled = false;
 
 		self.$el = $('<folliclemeep>').attr('n',n);
@@ -635,7 +623,7 @@ window.FollicleFrenzyGame = function( playersMeta ){
 
 			self.$el.css({
 				left: W*self.wall + self.ax*W + 'px',
-				top: self.ay*H + 'px',
+				top: (self.ay+self.oy)*H + 'px',
 			});
 
 			if(self.wall==1 && self.isEnabled){
@@ -738,7 +726,7 @@ window.FollicleFrenzyGame = function( playersMeta ){
 			players[i] = {score:0, tally:0};
 		}
 
-		setTimeout(initTutorial,1000);
+		setTimeout(initPlay,1000);
 	}
 
 
@@ -762,7 +750,9 @@ window.FollicleFrenzyGame = function( playersMeta ){
 			meeps[p].bindPlayer(players[p]);
 			meeps[p].wall = 1;
 			meeps[p].ax = 0.08 + 0.65 * (1/(players.length-1))*p;
-			meeps[p].ay = 0.65;
+			meeps[p].ay = 0.3;
+			meeps[p].oy = 0.3;
+
 			meeps[p].$el.appendTo($game);
 			
 			meeps[p].redraw();
@@ -770,7 +760,7 @@ window.FollicleFrenzyGame = function( playersMeta ){
 			meeps[p].setScale(0.5);
 		}
 
-		hud.initTimer(30,finiTutorial);
+		hud.initTimer(20,finiTutorial);
 	}
 
 	function finiTutorial(){

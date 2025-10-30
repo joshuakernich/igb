@@ -728,7 +728,7 @@ window.CardboardCutoutGame = function( playersMeta ){
 			meeps[m] = new CutterMeep(m);
 		}
 
-		initPlay();
+		initTutorial();
 	}
 
 	function initTutorial(){
@@ -753,7 +753,7 @@ window.CardboardCutoutGame = function( playersMeta ){
 			{x:1.8, y:0.5, msg:'Move around to cut<br>along the line',icon:'around'},
 		);
 
-		hud.initTimer(30, finiTutorial);
+		hud.initTimer(20, finiTutorial);
 	}
 
 	function finiTutorial(){

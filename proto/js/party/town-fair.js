@@ -11,13 +11,26 @@ window.TownFairGame = function( playersMeta ){
 		],
 		options:[
 			{i:1},
-			{i:0,isCorrect:true},
-			{i:2},
+			{i:0},
+			{i:2,isCorrect:true},
 			{i:3},
 		]
 	};
 
 	const QUESTIONS = [
+		{
+			q:"What colour was the meep?",
+			type:'meep',
+			parade:[
+				{m:2,i:0},
+			],
+			options:[
+				{m:0},
+				{m:2},
+				{m:1,isCorrect:true},
+				{m:3},
+			]
+		},
 		{
 			q:"What colour was the second meep?",
 			type:'meep',
