@@ -760,8 +760,6 @@ window.FinalFrenzyGame = function( playersMeta ){
 
 	function initNextRound(){
 
-		
-
 		iCohort++;
 
 		if(!STRUCTURE[meeps.length][iRound][iCohort]){
@@ -822,8 +820,6 @@ window.FinalFrenzyGame = function( playersMeta ){
 	}
 
 	function finiRound(){
-
-
 
 		for(var m in meeps){
 			meeps[m].$el.hide();

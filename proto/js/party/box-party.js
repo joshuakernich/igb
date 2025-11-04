@@ -150,7 +150,7 @@ PartyCube3D = function(transform,color,surfaces){
     }
 }
 
-BoxPartyCube = function(nCube,transform,game){
+BoxPartyCube = function(nCube,transform,game,dir){
 
 	let self = this;
 
@@ -170,6 +170,9 @@ BoxPartyCube = function(nCube,transform,game){
 		width: transform.w + 'px',
 		height: transform.d + 'px',
 	})
+
+	let $message = $('<boxpartymessage>').appendTo(self.$el).text('High Energy');
+	
 
 	let palette = ['#37CCDA','#8DE968','#FEE955','#FEB850','#FD797B'];
 
@@ -192,16 +195,22 @@ BoxPartyCube = function(nCube,transform,game){
 	});
 	box.$el.appendTo(self.$el);
 
+	let $front = box.$el.find('.partycube3D-front partycube3Dsurface');
+
 	let $face = $(`
 		<boxface>
 			<boxeye></boxeye>
 			<boxeye></boxeye>
 			<boxmouth></boxmouth>
-
 		</boxface>
-		`).appendTo(box.$el.find('.partycube3D-front partycube3Dsurface'));
+		`).appendTo($front);
 
-	
+	let $flag = $(`
+		<boxpartyflag>
+			<boxpartyflagtext>High Energy</boxpartyflagtext>
+		</boxpartyflag>
+	`).appendTo($front);
+
 
 	self.redraw = function(){
 
@@ -231,6 +240,12 @@ BoxPartyCube = function(nCube,transform,game){
 			right: 20 - self.openX * 20 + '%',
 		})
 
+		$message.css({
+			left: (dir==1?`${self.transform.w/2}px`:'auto'),
+			right: (dir==-1?`${self.transform.w/2}px`:'auto'),
+			transform: `translateY(${-self.transform.d/2}px) translateZ(${self.transform.altitude-self.transform.d/2}px) rotateX(-90deg)`,
+		});
+
 		box.redraw(); 
 	}
 
@@ -247,6 +262,8 @@ BoxPartyCube = function(nCube,transform,game){
 		$('<boxheader>').appendTo(box.$el.find('.partycube3D-front partycube3Dsurface')).text(game.name);
 
 		if(!showFace) $face.find('boxeye').hide();
+
+		$flag.appendTo(box.$el.find('.partycube3D-front partycube3Dsurface'));
 	}
 
 	
@@ -323,6 +340,42 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
         		inset: 0px;
         		background: linear-gradient( to bottom, black, transparent, blue, blue );
         	}
+
+    		boxpartymessage{
+    			display: block;
+    			position: absolute;
+    			top: 0px;
+    			left: 0px;
+    			padding: 50px;
+    			color: white;
+    			background: red;
+    			transform: rotateX(-90deg) translateY(-200px);
+    			transform-origin: bottom center;
+    			font-size: 50px;
+    			background: radial-gradient(black, transparent, transparent);
+    		}
+
+    		boxpartyflag{
+    			display: block;
+    			position: absolute;
+    			inset: 0px;
+    			overflow: hidden;
+    		}
+
+    		boxpartyflagtext{
+    			display: block;
+    			position: absolute;
+    			background: white;
+    			font-size: 30px;
+    			padding: 20px 0px;
+    			color: black;
+    			width: 150%;
+    			text-align: center;
+    			transform: rotate(-45deg);
+    			transform-origin: bottom left;
+    			left: 0px;
+    			bottom: 0px;
+    		}
 
     		boxpartymountains{
         		content:"";
@@ -568,7 +621,9 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
 	    		transform.rz = 10;
 	    	}
 
-    		let box = new BoxPartyCube(nCube++,transform,queue[i][n]);
+	    	let dir = (n<(queue[i].length-1))?-1:1;
+
+    		let box = new BoxPartyCube(nCube++,transform,queue[i][n],dir);
    			box.$el.appendTo($plane);
    			box.iLevel = i;
    			box.nBox = n;

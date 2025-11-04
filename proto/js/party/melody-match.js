@@ -13,7 +13,8 @@ window.MelodyMatchGame = function( playersMeta ){
 	audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.3);
 	audio.add('incorrect','./proto/audio/party/sfx-incorrect.mp3',0.2);
 	audio.add('notes','./proto/audio/party/sfx-glockenspiel.mp3',0.3);
-	audio.add('music','./proto/audio/party/music-ambient.mp3',0.3,true);
+	//audio.add('music','./proto/audio/party/music-ambient.mp3',0.3,true);
+	audio.add('music','./proto/audio/party/music-jazz-120.mp3',0.1,true);
 	audio.add('woosh','./proto/audio/party/sfx-woosh.mp3',0.2);
 
 	const MELODIES = [
