@@ -469,16 +469,31 @@ window.FollicleFrenzyGame = function( playersMeta ){
 					position: relative;
 				}
 
-				folliclehair:after{
+				folliclehair:before{
 					content:"";
-				
 					background: gray;
 					display:block;
 					position: absolute;
-					inset: 20%;
+					inset: -20%;
 					border-radius: 100%;
-					border-top: 2px solid white;
-					box-shadow: 2px 2px 5px black;
+				}
+
+				folliclehair:after{
+					content:"";
+					
+					display:block;
+					position: absolute;
+					top: 0px;
+					left: 0px;
+					width: 25px;
+					height: 25px;
+
+					
+				
+					border-radius: 100%;
+					border-top-width: 10px;
+					border-right-width: 10px;
+					border-color: black;
 				}
 
 				
@@ -512,12 +527,12 @@ window.FollicleFrenzyGame = function( playersMeta ){
 					right: 28%;
 				}
 
-				folliclemeep[n='0'] folliclehair:after { background:red; }
-				folliclemeep[n='1'] folliclehair:after { background:blue; }
-				folliclemeep[n='2'] folliclehair:after { background:#33CD32; }
-				folliclemeep[n='3'] folliclehair:after { background:#DD00FF; }
-				folliclemeep[n='4'] folliclehair:after { background:#FF6600; }
-				folliclemeep[n='5'] folliclehair:after { background:#FFBB00; }
+				folliclemeep[n='0'] folliclehair:before { background:red; }
+				folliclemeep[n='1'] folliclehair:before { background:blue; }
+				folliclemeep[n='2'] folliclehair:before { background:#33CD32; }
+				folliclemeep[n='3'] folliclehair:before { background:#DD00FF; }
+				folliclemeep[n='4'] folliclehair:before { background:#FF6600; }
+				folliclemeep[n='5'] folliclehair:before { background:#FFBB00; }
 
 				folliclemeep[n='0'] follicleshaver { background:red; }
 				folliclemeep[n='1'] follicleshaver { background:blue; }
@@ -779,7 +794,7 @@ window.FollicleFrenzyGame = function( playersMeta ){
 			players[i] = {score:0, tally:0};
 		}
 
-		setTimeout(initTutorial,1000);
+		setTimeout(initPlay,1000);
 	}
 
 
