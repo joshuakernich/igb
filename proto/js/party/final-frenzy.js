@@ -634,7 +634,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 			});
 		}
 
-		initPlay();
+		initTutorial();
 	}
 
 
@@ -712,6 +712,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 				let $block = $('<mazeblock>')
 				.appendTo($row)
 				.attr('absent',map[y][x]==' '?'true':'false')
+				.attr('type',map[y][x])
 				.attr('x',x)
 				.attr('y',y);
 
@@ -724,7 +725,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 				.appendTo($block);
 
 				if(
-					map[y][x]=='2' || 
+					//map[y][x]=='2' || 
 					map[y][x]=='4' || 
 					map[y][x]=='5' || 
 					map[y][x]=='6'
@@ -833,6 +834,8 @@ window.FinalFrenzyGame = function( playersMeta ){
 	}
 
 	function finiRound(){
+
+		hud.finiTimer();
 
 		for(var m in meeps){
 			meeps[m].$el.hide();
@@ -1046,12 +1049,26 @@ window.FinalFrenzyGame = function( playersMeta ){
 		isGoTime = false;
 		//hud.initBanner('Finish!');
 
+		$('mazeblock[type="2"] mazeblockinner').css('background-color','rgb(250, 0, 255, 0.7)');
+		$('mazeblock[type="2"] mazeblocksquare').css('border-color','rgb(250, 0, 255, 1)');
+
 		audio.play('correct-echo');
 
-		setTimeout(function(){
-			//hud.finiBanner();
-			finiRound();
-		},2000);
+
+		for(var y=0; y<round.map.length; y++){
+			for(var x=0; x<round.map[y].length; x++){
+				if(round.map[y][x]==2){
+					let coin = new MazeCoin(round.map[y][x],x+0.5,y+0.5);
+					coin.$el.appendTo($platform);
+					coins.push(coin);
+					coin.redraw();
+				}
+			}
+		}
+
+		hud.initTimer(5,finiRound);
+
+		
 	}
 
 	function finiGame(){

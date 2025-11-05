@@ -794,7 +794,7 @@ window.FollicleFrenzyGame = function( playersMeta ){
 			players[i] = {score:0, tally:0};
 		}
 
-		setTimeout(initPlay,1000);
+		setTimeout(initTutorial,1000);
 	}
 
 
