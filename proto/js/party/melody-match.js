@@ -34,6 +34,17 @@ window.MelodyMatchGame = function( playersMeta ){
 		[{melody:MELODIES[1]},{melody:MELODIES[2]}],
 	]
 
+	const LAYOUT = [
+		undefined,
+		undefined,
+		[{wall:1,ax:0.3},{wall:1,ax:0.8}],
+		[{wall:0,ax:0.5},{wall:1,ax:0.5},{wall:2,ax:0.5}],
+		[{wall:0,ax:0.5},{wall:1,ax:0.3},{wall:1,ax:0.7},{wall:2,ax:0.5}],
+		[{wall:0,ax:0.4},{wall:0,ax:0.8},{wall:1,ax:0.5},{wall:2,ax:0.2},{wall:2,ax:0.6}],
+		[{wall:0,ax:0.4},{wall:0,ax:0.8},{wall:1,ax:0.3},{wall:1,ax:0.7},{wall:2,ax:0.2},{wall:2,ax:0.6}],
+
+	]
+
 	const MelodyMap = function(map){
 		let self = this;
 		self.$el = $('<melodymap>').css({
@@ -138,7 +149,11 @@ window.MelodyMatchGame = function( playersMeta ){
 
 			if(iBounceWas == undefined) iBounceStart = iBounceWas = Math.ceil(bounce) + (self.isFirst?melody.length-0.5:0.5);
 
-			let dx = Math.min( KEYW*KEYS/2-KEYW/2, Math.max( -KEYW*KEYS/2+KEYW/2, self.px - self.ax ));
+			let px = self.px;
+			if(self.wall==0) px = 1-self.py;
+			if(self.wall==2) px = self.py;
+
+			let dx = Math.min( KEYW*KEYS/2-KEYW/2, Math.max( -KEYW*KEYS/2+KEYW/2, px - self.ax ));
 			
 			$board.css({
 				left:dx*W+'px',
@@ -405,24 +420,23 @@ window.MelodyMatchGame = function( playersMeta ){
 	let iPlayer = -1;
 	let map;
 	let melody;
-	let slots = [];
 
 	function initTutorial(){
 		for(var m=0; m<meeps.length; m++){
 			meepsLive[m] = meeps[m];
 			meepsLive[m].initMelody('freeplay');
-			meepsLive[m].ax = 0.15 + 0.7/(meeps.length-1) * m;
+			meepsLive[m].wall = LAYOUT[meeps.length][m].wall;
+			meepsLive[m].ax = LAYOUT[meeps.length][m].ax;
 			meepsLive[m].$el.css({
-				'bottom':[0,-20][m%2]+'px',
-				'left': W + meepsLive[m].ax*W + 'px',
-				'transform':'scale(0.5)',
+				'bottom':'-100px',
+				'left': W*meepsLive[m].wall + meepsLive[m].ax*W + 'px',
 			})
 		}
 
 		hud.initTutorial(
 			'Melody Match',
-			{x:1.15, y:0.45, msg:'Align yourself<br>to your avatar',icon:'align'},
-			{x:1.7, y:0.45, msg:'Move left & right<br>to play the target melody',icon:'side-to-side'},
+			{x:1.2, y:0.45, msg:'Align yourself<br>to your avatar',icon:'align'},
+			{x:1.8, y:0.45, msg:'Move left & right<br>to play the target melody',icon:'side-to-side'},
 		);
 
 		isRoundLive = true;
@@ -466,8 +480,21 @@ window.MelodyMatchGame = function( playersMeta ){
 			'top':'30%',
 		})
 
-		initNextPlayer();
-		initNextPlayer();
+
+		for(var m=0; m<meeps.length; m++){
+			meepsLive[m] = meeps[m];
+			meepsLive[m].wall = LAYOUT[meeps.length][m].wall;
+			meepsLive[m].initMelody(melody,true);
+			meepsLive[m].ax = LAYOUT[meeps.length][m].ax;
+			meepsLive[m].$el.appendTo($game).show().css({
+				left: W*meepsLive[m].wall + meepsLive[m].ax*W + 'px',
+				'transform':'',
+			}).animate({
+				bottom: '-100px',
+			});
+		}
+		
+		iPlayer = meeps.length;
 
 		setTimeout(function(){
 			hud.initRound( iRound, ROUNDS[countMeep].length );

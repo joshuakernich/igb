@@ -207,9 +207,9 @@ BoxPartyCube = function(nCube,transform,game,dir){
 
 	let $flag = $(`
 		<boxpartyflag>
-			<boxpartyflagtext>High Energy</boxpartyflagtext>
+			<boxpartyflagtext>${game?game.note:''}</boxpartyflagtext>
 		</boxpartyflag>
-	`).appendTo($front);
+	`);
 
 
 	self.redraw = function(){
@@ -263,7 +263,9 @@ BoxPartyCube = function(nCube,transform,game,dir){
 
 		if(!showFace) $face.find('boxeye').hide();
 
-		$flag.appendTo(box.$el.find('.partycube3D-front partycube3Dsurface'));
+		if(self.game.note){
+			$flag.appendTo(box.$el.find('.partycube3D-front partycube3Dsurface'));
+		} 
 	}
 
 	
@@ -353,12 +355,13 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
     			transform-origin: bottom center;
     			font-size: 50px;
     			background: radial-gradient(black, transparent, transparent);
+    			display: none;
     		}
 
     		boxpartyflag{
     			display: block;
     			position: absolute;
-    			inset: 0px;
+    			inset: -20px;
     			overflow: hidden;
     		}
 

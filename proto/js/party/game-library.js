@@ -14,7 +14,8 @@ window.GAMES = {
 		name:'Coconut Climbers',
 		game:window.CoconutClimbersGame,
 		color:'white',
-		bg:'url(./proto/img/party/cube/cube-coconut.png) center / cover'
+		bg:'url(./proto/img/party/cube/cube-coconut.png) center / cover',
+		note:'HIGH ENERGY',
 	},
 
 	'Soccer Heads':{
@@ -47,7 +48,8 @@ window.GAMES = {
 		name:'Coin Chaos',
 		game:window.CoinChaosGame,
 		color:'white',
-		bg:'url(./proto/img/party/icon-coin-chaos.png) center / cover'
+		bg:'url(./proto/img/party/icon-coin-chaos.png) center / cover',
+		note:'HIGH ENERGY',
 	},
 
 	'Stubble Trouble':{
@@ -73,7 +75,8 @@ window.GAMES = {
 		name:'Milkers',
 		game:window.MilkGame,
 		color:'#40B0ED',
-		bg:'url(./proto/img/icon-milk.png) center / cover'
+		bg:'url(./proto/img/icon-milk.png) center / cover',
+		note:'HIGH ENERGY',
 	},
 	'Popcorn Panhandlers':{
 		name:'Popcorn Panhandlers',
@@ -126,6 +129,7 @@ window.GAMES = {
 		game:window.FinalFrenzyGame,
 		color:'white',
 		bg:'url(./proto/img/party/bg-cosmos.gif) center / cover'
+
 	},
 
 	'Finale Sequence':{
