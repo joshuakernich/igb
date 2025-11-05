@@ -361,23 +361,32 @@ BoxPartyScene3D = function(queue, callbackShowOverlay, callbackEnterBox, callbac
     		boxpartyflag{
     			display: block;
     			position: absolute;
-    			inset: -20px;
+    			bottom: 0px;
+    			left: 0px;
     			overflow: hidden;
+    			padding: 10px;
     		}
 
     		boxpartyflagtext{
-    			display: block;
-    			position: absolute;
+    			display: inline-block;
     			background: white;
-    			font-size: 30px;
-    			padding: 20px 0px;
+    			font-size: 20px;
+    			padding: 10px;
+    			padding-right: 15px;
+
     			color: black;
-    			width: 150%;
-    			text-align: center;
-    			transform: rotate(-45deg);
-    			transform-origin: bottom left;
-    			left: 0px;
-    			bottom: 0px;
+    			border-radius: 20px;
+    		}
+
+    		boxpartyflagtext:before{
+    			content:"!";
+    			width: 25px;
+    			height: 25px;
+    			border-radius: 100%;
+    			background: #333;
+    			display: inline-block;
+    			color: white;
+    			margin-right: 10px;
     		}
 
     		boxpartymountains{
