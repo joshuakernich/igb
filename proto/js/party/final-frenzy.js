@@ -320,6 +320,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 					bottom: 0px;
 					margin: auto;
 					transform-style:preserve-3d;
+
 				}
 
 				mazerow{
@@ -633,7 +634,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 			});
 		}
 
-		initTutorial();
+		initPlay();
 	}
 
 
@@ -780,10 +781,22 @@ window.FinalFrenzyGame = function( playersMeta ){
 
 		initMaze(round.map);
 
-		yProgress = round.map.length;
-		$({p:yProgress}).animate({p:0},{duration:5000,step:function(a){
+		yProgress = round.map.length-4;
+		$({p:yProgress}).delay(1500).animate({p:0},{duration:5000,step:function(a){
 			yProgress = a;
 		}});
+
+		$platform.css({
+			'transition':'transform 0s',
+			'transform':'translateZ(1500px)',
+		});
+
+		setTimeout(function(){
+			$platform.css({
+				'transition':'transform 0.9s',
+				'transform':'translateZ(0px)',
+			});
+		},100);
 
 		setTimeout(function(){
 			if(iCohort==0){
@@ -826,9 +839,17 @@ window.FinalFrenzyGame = function( playersMeta ){
 			meeps[m].dead = true;
 		}
 
-		$({p:yProgress}).animate({p:-10},{duration:2000,step:function(a){
+		/*$({p:yProgress}).animate({p:-10},{duration:2000,step:function(a){
 			yProgress = a;
-		}});
+		}});*/
+
+		
+
+		setTimeout(function(){
+			$platform.css({
+				'transform':'translateZ(-2000px)',
+			});
+		},1000);
 
 		setTimeout(initNextRound,2500);
 	}
@@ -997,7 +1018,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 
 				meeps[m].$el.css({
 					'transition':'1s all',
-					'transform':'translateZ(-1500px)'
+					'transform':'translateZ(-2000px)'
 				})
 			}
 		}
