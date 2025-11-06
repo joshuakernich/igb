@@ -579,7 +579,7 @@ window.PopcornGame = function( playersMeta ){
 			meeps[m].isActive = true;
 		}
 
-		intervalSpawn = setInterval(spawnKernels,5000);
+		intervalSpawn = setInterval(spawnKernels,3000);
 
 		hud.initTimer(30,finiTutorial);
 	}

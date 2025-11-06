@@ -61,7 +61,7 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 		undefined,
 		['01','01'],
 		['01','12','02','01','12','02'],
-		['01','23'],
+		['01','23','02','13'],
 		['01','23','40','12','34'],
 		['01','23','45'],
 	]
@@ -71,7 +71,7 @@ window.HeadersGame = function( playersMeta, typeGame='volley' ){
 		undefined,
 		90,
 		45,
-		45,
+		30,
 		25,
 		30,
 	]
