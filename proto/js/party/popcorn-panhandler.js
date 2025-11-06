@@ -38,6 +38,7 @@ window.PopcornGame = function( playersMeta ){
     audio.add('notify-a','./proto/audio/party/sfx-notify-a.mp3',0.15);
     audio.add('notify-b','./proto/audio/party/sfx-notify-b.mp3',0.1);
     audio.add('notify-c','./proto/audio/party/sfx-notify-c.mp3',0.1);
+    audio.add('vocal','./proto/audio/party/sfx-vocal.mp3',0.05);
     audio.add('pop','./proto/audio/party/sfx-popcorn.mp3',0.5);
     audio.add('kernel','./proto/audio/party/sfx-kernel.mp3',0.3);
     audio.add('score','./proto/audio/party/sfx-pickup.mp3',0.1);
@@ -451,12 +452,22 @@ window.PopcornGame = function( playersMeta ){
 				popocornwarning{
 					display: block;
 					position: absolute;
-					top: 100px;
+					top: 0px;
 					transform: translateX(-50%);
 					width: 100px;
-					height: 100px;
-					background: url(./proto/img/party/icon-warning.png);
-					background-size: 100%;
+					bottom: ${FLOOR}px;
+					background: linear-gradient(to bottom, rgba(255,255,0,0.5), transparent);
+				}
+
+				popocornwarning:after{
+					content:"";
+					position: absolute;
+					width: 100px;
+					height: 30px;
+					border-radius: 100%;
+					background: rgba(255,255,0,0.2);
+					left: 0px;
+					bottom: -15px;
 				}
 
 				popcornwall{
@@ -464,29 +475,46 @@ window.PopcornGame = function( playersMeta ){
 					width: 33.3%;
 					height: 100%;
 					position: relative;
-
-					opacity: 0.5;
-					
 				}
 
-				popcornwall:after{
+				popcornwall:before{
 					content:"";
 					display: block;
 					position: absolute;
 					inset: 50px;
-					box-sizing: border-box;
-					border: 15px solid white;
-					background-color: rgba(255,255,255,0.3);
-					background-image: url(./proto/img/party/icon-hand.png);
-					background-size: 300px;
-					background-position: left center;
-					animation: popcornscroll;
-					animation-iteration-count: infinite;
-					animation-duration: 5s;
-					animation-timing-function: linear;
-					background-repeat: rep
-
+					box-shadow: inset 150px 0px 100px white;
+					opacity: 0.5;
 				}
+
+				popcornwall:after{
+					content:"Touch wall to move";
+					display: block;
+					position: absolute;
+					
+					width: 300px;
+					height: 300px;
+					
+					box-shadow: 0px 0px 100px white;
+					top: 0px;
+					left: 300px;
+					bottom: 0px;
+					margin: auto;
+					border-radius: 100%;
+					color: rgba(255,255,255,0.7);
+					font-size: 40px;
+					text-align: center;
+					box-sizing: border-box;
+					padding: 110px 40px;
+					white-space: normal;
+				}
+
+				popcornwall:nth-of-type(1):before{ box-shadow: inset -50px 0px 100px white; }
+				popcornwall:nth-of-type(2):before{ box-shadow: inset 0px 0px 100px white; }
+				popcornwall:nth-of-type(3):before{ box-shadow: inset 50px 0px 100px white; }
+
+				popcornwall:nth-of-type(1):after{ left:auto; right:300px; }
+				popcornwall:nth-of-type(2):after{ left:0px; right:0px; }
+				popcornwall:nth-of-type(3):after{ left:300px; right:auto; }
 
 				popcornwall[occupied='true']{
 					opacity: 0;
@@ -578,6 +606,7 @@ window.PopcornGame = function( playersMeta ){
 			meeps[m].$el.show();
 			meeps[m].isActive = true;
 		}
+
 
 		intervalSpawn = setInterval(spawnKernels,3000);
 
@@ -710,21 +739,24 @@ window.PopcornGame = function( playersMeta ){
 		let ax = 0.2 + Math.random() * 0.6;
 
 		audio.play(audios[wall],true);
+		audio.play('vocal',true);
 
 		let $warning = $('<popocornwarning>').appendTo($game).css({
 			left: (wall+ax)*W+'px',
-		})
+		}).delay(2000).animate({opacity:0},1000);
 		
-		setTimeout(function(){
-			for(var i=0; i<5; i++){
+		
+
+		for(var i=0; i<10; i++){
+			setTimeout(function(){
 				let px = ax - 0.025 + Math.random()*0.05;
 				spawnKernel(wall,px,Math.floor(Math.random()*FPS));
-			}
-		},500);
+			},500+i*200)
+		}
 
 		setTimeout(function(){
 			$warning.hide();
-		},1000);
+		},3000);
 	
 		
 	}

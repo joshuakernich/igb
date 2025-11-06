@@ -241,7 +241,7 @@ window.TownFairGame = function( playersMeta ){
 					transform-origin: top left;
 					background: gray;
 					background-position: bottom 120px center;
-					perspective: ${W*3}px;
+					perspective: ${W}px;
 
 
 					transition: background-size 1s;
