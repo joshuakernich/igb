@@ -323,6 +323,23 @@ window.FinalFrenzyGame = function( playersMeta ){
 
 				}
 
+				mazeplatform:before{
+					content:"END ZONE";
+					display: block;
+					position: absolute;
+					top: ${GRIDSIZE}px;
+					left: 0px;
+					right: 0px;
+					font-size: ${GRIDSIZE}px;
+					line-height: ${GRIDSIZE}px;
+					color: white;
+					text-align: center;
+					white-space: normal;
+					z-index: 1;
+					-webkit-text-stroke: 10px #222;
+					opacity: 0.8;
+				}
+
 				mazerow{
 					display: block;
 					height: ${GRIDSIZE}px;
@@ -608,6 +625,12 @@ window.FinalFrenzyGame = function( playersMeta ){
 	audio.add('spawn','./proto/audio/party/sfx-sequence.mp3',0.3);
 	audio.add('correct-echo','./proto/audio/party/sfx-correct-echo.mp3',0.3);
 
+	audio.add('tutorial-final-frenzy','./proto/audio/party/tutorial-frenzy.mp3',0.5);
+	audio.add('tutorial-end-zone','./proto/audio/party/tutorial-end-zone.mp3',0.5);
+	audio.add('tutorial-end-zone-approach','./proto/audio/party/tutorial-end-zone-approach.mp3',0.5);
+	audio.add('tutorial-end-zone-coins','./proto/audio/party/tutorial-end-zone-coins.mp3',0.5);
+	audio.add('tutorial-checkpoint','./proto/audio/party/tutorial-checkpoint.mp3',0.5);
+
 	let $game = $('<mazegame>').appendTo(self.$el);
 	let $world = $('<mazeworld>').appendTo($game);
 	let $platform = $('<mazeplatform>').appendTo($world);
@@ -667,6 +690,9 @@ window.FinalFrenzyGame = function( playersMeta ){
 			}
 			isGoTime = true;
 		},2000);
+
+
+		audio.play('tutorial-final-frenzy');
 
 		hud.initTimer(20,finiTutorial);
 	}
@@ -760,6 +786,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 		}
 	}
 
+	let isFirstRound = false;
 	function initNextRound(){
 
 		iCohort++;
@@ -783,9 +810,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 		initMaze(round.map);
 
 		yProgress = round.map.length-4;
-		$({p:yProgress}).delay(1500).animate({p:0},{duration:5000,step:function(a){
-			yProgress = a;
-		}});
+		
 
 		$platform.css({
 			'transition':'transform 0s',
@@ -799,12 +824,28 @@ window.FinalFrenzyGame = function( playersMeta ){
 			});
 		},100);
 
+
+		isFirstRound = (iRound==0 && iCohort==0);
+
+		if(isFirstRound){
+			setTimeout(function(){
+				audio.play('tutorial-end-zone');
+			},1000);
+		}
+
+
+		let delay = isFirstRound?5000:0;
+
+		$({p:yProgress}).delay(delay+1500).animate({p:0},{duration:5000,step:function(a){
+			yProgress = a;
+		}});
+
 		setTimeout(function(){
 			if(iCohort==0){
 				hud.initRound(iRound,STRUCTURE[meeps.length].length);
 				audio.play('music',false,(iRound==STRUCTURE[meeps.length].length-1)?1.25:1);
 			}
-		},1000);
+		},delay+1500);
 
 		setTimeout(function(){
 			for(var p in round.players){
@@ -818,19 +859,19 @@ window.FinalFrenzyGame = function( playersMeta ){
 				})
 			}
 			hud.finiBanner();
-		},6000);
+		},delay+6000);
 
 		setTimeout(function(){
 			hud.summonPlayers(round.players);
-		},8000);
+		},delay+8000);
 
 		setTimeout(function(){
 			hud.finiBanner();
-		},10000);
+		},delay+10000);
 
 		setTimeout(function(){
 			isGoTime = true;
-		},11000);
+		},delay+11000);
 	}
 
 	function finiRound(){
@@ -869,6 +910,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 
 	let scoreMult = 1;
 	let countDead = 0;
+	let thingsSaid = {};
 
 	function step(){
 		resize();
@@ -888,9 +930,11 @@ window.FinalFrenzyGame = function( playersMeta ){
 			}
 
 			let cntCheckpoint = 0;
+			let cntEndZone = 0;
 			for(let b in blocks){
 
 				if(blocks[b].type == '3' && blocks[b].y < (yProgress+4) && blocks[b].y > yProgress) cntCheckpoint++;
+				if(blocks[b].type == '2' && blocks[b].y < (yProgress+4) && blocks[b].y > yProgress) cntEndZone++;
 
 
 				let isTriggered = (!blocks[b].isActive && blocks[b].yTrigger<yProgress && blocks[b].isTrigger);
@@ -951,6 +995,21 @@ window.FinalFrenzyGame = function( playersMeta ){
 						}
 					})
 				}
+			}
+
+			if(isFirstRound && cntCheckpoint==8 && !thingsSaid.checkpoint){
+				thingsSaid.checkpoint = true;
+				audio.play('tutorial-checkpoint',true);
+			}
+
+			if(isFirstRound && cntEndZone==4 && !thingsSaid.approach){
+				thingsSaid.approach = true;
+				audio.play('tutorial-end-zone-approach',true);
+			}
+
+			if(isFirstRound && cntEndZone==16 && !thingsSaid.coins){
+				thingsSaid.coins = true;
+				audio.play('tutorial-end-zone-coins',true);
 			}
 
 			if(cntCheckpoint == 16){
@@ -1066,7 +1125,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 			}
 		}
 
-		hud.initTimer(5,finiRound);
+		hud.initTimer(5,finiRound,!isFirstRound);
 
 		
 	}

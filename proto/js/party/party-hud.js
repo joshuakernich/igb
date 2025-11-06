@@ -613,7 +613,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 		$streamTimer.animate({top:'10px'},400).animate({top:'0px'},100);
 	}
 
-	self.initTimer = function(seconds,callback){
+	self.initTimer = function(seconds,callback,announceTime=true){
 		
 		self.revealTimer(seconds);
 
@@ -630,7 +630,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 				if(secondsRemaining==0) audio.play('tock',true);
 				else{
 					audio.play('tick',true);
-					audio.play(secondsRemaining,true);
+					if(announceTime) audio.play(secondsRemaining,true);
 				}
 			}
 
