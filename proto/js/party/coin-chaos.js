@@ -357,6 +357,8 @@ window.CoinChaosGame = function( playersMeta ){
 	audio.add('music','./proto/audio/party/music-heist.mp3',0.3,true);
     audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
     audio.add('pickup','./proto/audio/party/sfx-pickup.mp3',0.3);
+    audio.add('tutorial-intro','./proto/audio/party/tutorial-coin-chaos-intro.mp3',0.5);
+    audio.add('tutorial','./proto/audio/party/tutorial-coin-chaos.mp3',0.5);
 
 
     let isGameAlive = false;
@@ -447,17 +449,32 @@ window.CoinChaosGame = function( playersMeta ){
 		}
 
 		
+		initIntro();
+	}
+
+	function initIntro(){
+		hud.initIntro('Coin Chaos',playersMeta?playersMeta:meeps);
+		audio.play('tutorial-intro');
+
+		setTimeout(finiIntro,20000);
+	}
+
+	function finiIntro() {
+		hud.finiIntro();
 		initTutorial();
 	}
 
 	function initTutorial(){
-		
+
+		setTimeout( function(){
+			audio.play('tutorial');
+		},3000);
+
 		$platform.css({
 			'bottom':"50px",
 			'transform':'scale(1) rotateX(80deg)'
 		})
-
-		hud.initTutorial('Coin Chaos',
+		hud.initTutorial('',
 			{x:1.25, y:0.45, msg:"Move around the box<br>and steal opponent's coins", icon:"around"},
 			{x:1.75, y:0.4, msg:"Return stolen coins<br>to your safe zone", icon:"align"},
 		);

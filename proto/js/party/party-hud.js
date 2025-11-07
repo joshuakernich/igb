@@ -36,6 +36,7 @@ window.PartyHUD = function( colour='#40B0ED' ){
 	audio.add('tock','./proto/audio/party/sfx-tock.mp3',0.3);
 	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
 	audio.add('music','./proto/audio/party/music-tutorial.mp3',0.3);
+	audio.add('music-drama','./proto/audio/party/music-drama.mp3',0.3);
 	audio.add('outro','./proto/audio/party/music-drumroll.mp3',0.3);
 	audio.add('woosh','./proto/audio/party/sfx-woosh.mp3',0.05);
 	audio.add('woosh-long','./proto/audio/party/sfx-woosh-long.mp3',0.05);
@@ -562,7 +563,10 @@ window.PartyHUD = function( colour='#40B0ED' ){
 
 	//let $frame = $('<partyframelayer>').appendTo(self.$el);
 
+	
+	let $intro = $(`<hudtutorial>`).appendTo(self.$el);
 	let $tutorial = $(`<hudtutorial>`).appendTo(self.$el);
+
 	let $banner = $(`<partyhudbanner style="background:${colour};">`).appendTo(self.$el);
 	let $debugRight = $('<partydebug>').appendTo(self.$el);
 	let $mg = $('<partyhudlayer>').appendTo(self.$el);
@@ -817,6 +821,46 @@ window.PartyHUD = function( colour='#40B0ED' ){
 				audio.play('coin',true);
 			}
 		})
+	}
+
+
+	self.initIntro = function(name,players){
+
+		audio.play('music-drama',true);
+
+		$('<hudfinalbg>').appendTo($intro).delay(19000).animate({
+			opacity:0,
+		})
+
+		setTimeout(function(){
+			let header = new FancyHeader(name,100);
+			header.$el.appendTo($tutorial).css({
+				position:'absolute',
+				left:'0px',
+				right:'0px',
+				top:'12%',
+			});
+		},2000);
+		
+
+		let tally = new PartyTally(players);
+		
+		tally.$el.appendTo($intro).css({
+			left: '42%',
+			top: '250px',
+		}).delay(18000).animate({
+			opacity:0,
+		})
+
+
+
+		setTimeout(tally.showRows,6000);
+		
+
+	}
+
+	self.finiIntro = function(){
+		$intro.empty();
 	}
 
 	const RANK = ['1st','2nd','3rd','4th','5th','6th'];
