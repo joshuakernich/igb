@@ -625,7 +625,8 @@ window.FinalFrenzyGame = function( playersMeta ){
 	audio.add('spawn','./proto/audio/party/sfx-sequence.mp3',0.3);
 	audio.add('correct-echo','./proto/audio/party/sfx-correct-echo.mp3',0.3);
 
-	audio.add('tutorial-final-frenzy','./proto/audio/party/tutorial-frenzy.mp3',0.5);
+	audio.add('tutorial-final-frenzy-intro','./proto/audio/party/tutorial-final-frenzy-intro.mp3',0.5);
+	audio.add('tutorial-final-frenzy','./proto/audio/party/tutorial-final-frenzy.mp3',0.5);
 	audio.add('tutorial-end-zone','./proto/audio/party/tutorial-end-zone.mp3',0.5);
 	audio.add('tutorial-end-zone-approach','./proto/audio/party/tutorial-end-zone-approach.mp3',0.5);
 	audio.add('tutorial-end-zone-coins','./proto/audio/party/tutorial-end-zone-coins.mp3',0.5);
@@ -657,7 +658,7 @@ window.FinalFrenzyGame = function( playersMeta ){
 			});
 		}
 
-		initTutorial();
+		initIntro();
 	}
 
 
@@ -674,8 +675,19 @@ window.FinalFrenzyGame = function( playersMeta ){
 	let blocks = [];
 	let coins = [];
 
+	function initIntro(){
+		hud.initIntro('Final Frenzy',playersMeta?playersMeta:meeps);
+		setTimeout(finiIntro,20000);
+		audio.play('tutorial-final-frenzy-intro');
+	}
+
+	function finiIntro(){
+		hud.finiIntro();
+		initTutorial();
+	}
+
 	function initTutorial(){
-		hud.initTutorial('Final Frenzy',
+		hud.initTutorial('',
 			{x:1.2, y:0.45, msg:'Move around the box<br>to collect coins', icon:'around'},
 			{x:1.8, y:0.45, msg:"Don't fall off!", icon:undefined},
 		);
