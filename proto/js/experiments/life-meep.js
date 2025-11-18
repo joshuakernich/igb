@@ -1,6 +1,3 @@
-const PLAYER_COLORS = [
-	'red','blue','limegreen','#dd00ff','#ff6600','#ffbb00',
-]
 
 $("head").append(`
 	<style>
@@ -326,6 +323,6 @@ window.LifeMeep = function(n){
 
 	self.setHeight(H);
 
-	
+
 
 }
