@@ -4,11 +4,12 @@ window.PlummetPanicGame = function(playersMeta) {
 	const H = 1000;
 	const FPS = 50;
 	const MAXCOIN = 15;
+	const COIN = 60;
 
 	const PLAYERS_PER_ROUND = 3;
 	const STOMPS_PER_SWAP = 5;
 
-	const PATTERN = [
+	/*const PATTERN = [
 			'_ ______',
 			'______ _',
 			'___ ____',
@@ -39,6 +40,39 @@ window.PlummetPanicGame = function(playersMeta) {
 			'_ ____ _',
 			'___ ____',
 			'_______ ',
+	]*/
+
+	const PATTERN = [
+			'_ 1___1_',
+			'1___1_ _',
+			'___ 1__1',
+			'_ 1__1_ ',
+			'1____ 1_',
+			' ___1__1',
+			'__1_1_ _',
+			'___ 1__1',
+			' 1__1_ _',
+			'__1_ 1__',
+			'_ 1__1 _',
+			'1___ __1',
+			' 1_____1',
+			'1_____1 ',
+			'__ 1___1',
+			' 1____1 ',
+			'_1 _ 1__',
+			'1____1 _',
+			'___ 1__1',
+			'_ 1____1',
+			'1_1 ____',
+			'1___1 __',
+			'___ 1__1',
+			' 1____1 ',
+			'____1 _1',
+			'_ 1____1',
+			'1__1 ___',
+			'_ 1__1 _',
+			'1__ ___1',
+			'1_____1 ',
 	]
 
 
@@ -116,6 +150,16 @@ window.PlummetPanicGame = function(playersMeta) {
 					background: #A8793B;
 					border-left: 50px solid #CB9247;
 					border-right: 50px solid #CB9247;
+				}
+
+				plummetlevel.checkpoint:before{
+					content:"";
+					display: block;
+					position: absolute;
+					inset: 0px;
+					opacity: 0.1;
+					background: url(./proto/img/party/texture-flag.jpg);
+					background-size: 33%;
 				}
 
 				plummetlevel:last-of-type:before{
@@ -245,6 +289,36 @@ window.PlummetPanicGame = function(playersMeta) {
 					z-index: 1;
 				}
 
+				plummetcoin{
+					display: block;
+					position: absolute;
+					width: ${COIN}px;
+					height: ${COIN}px;
+
+					background-image: url(./proto/img/party/sprite-coin.png);
+					background-size: 900%;
+					background-position-x: -100%;
+					background-position-y: 100%;
+					transform: translateX(-50%);
+					bottom: 0px;
+
+					animation: plummetcoinspin;
+					animation-duration: 1s;
+					animation-iteration-count: infinite;
+
+					animation-timing-function: steps(9);
+				}
+
+				@keyframes plummetcoinspin{
+					0%{
+						background-position-x: 0%;
+					}
+
+					100%{
+						background-position-x: -900%;
+					}
+				}
+
 			</style>
 		`)
 	}
@@ -252,8 +326,8 @@ window.PlummetPanicGame = function(playersMeta) {
 	let audio = new AudioPlayer();
 	audio.add('music','./proto/audio/party/music-run.mp3',0.3,true);
 	audio.add('crush','./proto/audio/party/sfx-crush.mp3',0.3);
-
-
+	audio.add('checkpoint','./proto/audio/party/sfx-sequence.mp3',0.3);
+	audio.add('coin','./proto/audio/party/sfx-coin.mp3',0.3);
 
 	const PlummetLevel = function(nLevel,isFloor){
 
@@ -262,10 +336,13 @@ window.PlummetPanicGame = function(playersMeta) {
 		self.iLevel = nLevel;
 		self.isPummeled = false;
 
+		self.coins = [];
 
+		if(nLevel%5==0 && nLevel!=0) self.$el.addClass('checkpoint');
 
 		let map = [];
 		let $segs = [];
+		
 		let isGappy = false;
 
 		let nGapA = PATTERN[nLevel].indexOf(' ');
@@ -285,6 +362,16 @@ window.PlummetPanicGame = function(playersMeta) {
 			let $seg = $('<plummetseg>').appendTo(self.$el);
 			$segs[i] = $seg;
 			map[i] = (i==nGapA || i==nGapB)?false:true;
+
+			if(PATTERN[nLevel][i]=='1'){
+				let $coin = $('<plummetcoin>').appendTo(self.$el).css({
+					'left': (i+0.5)*(LEVEL.W/LEVEL.SEG) + 'px',
+					'bottom':'20px',
+					'animation-delay':-Math.random() + 's',
+				})
+
+				self.coins.push({$el:$coin,x:(i+0.5),level:nLevel});
+			}
 		}
 
 		self.add = function(meep){
@@ -411,7 +498,9 @@ window.PlummetPanicGame = function(playersMeta) {
 
 			x = Math.max( 0.2, Math.min( 0.8, x )) - 0.15;
 
-			self.iSeg = Math.floor( x/0.7*LEVEL.SEG );
+			self.x = x/0.7*LEVEL.SEG;
+
+			self.iSeg = Math.floor( self.x );
 
 			self.$el.css({
 				left: x * W + 'px',
@@ -455,6 +544,7 @@ window.PlummetPanicGame = function(playersMeta) {
 	else hud.initPlayerCount(initGame);
 
 	let meeps = [];
+	
 	let timePerLevel = 0;
 	let scroll = 0;
 	let isGoTime = false;
@@ -485,7 +575,7 @@ window.PlummetPanicGame = function(playersMeta) {
 			meeps[m] = new PlummetMeep(m);
 		}
 
-		initTutorial();
+		initPlay();
 	}
 
 
@@ -507,7 +597,7 @@ window.PlummetPanicGame = function(playersMeta) {
 
 		for(var l in tower.levels) tower.levels[l].revealGaps();
 
-		hud.initTimer(30,finiTutorial);
+		hud.initTimer(20,finiTutorial);
 	}
 
 	function finiTutorial(){
@@ -552,6 +642,7 @@ window.PlummetPanicGame = function(playersMeta) {
 
 		round = STRUCTURE[meeps.length][iRound];
 		tower = new PlummetTower(round.levels);
+		
 
 		for(var p in round.players){
 			let m = round.players[p];
@@ -599,7 +690,6 @@ window.PlummetPanicGame = function(playersMeta) {
 			meeps[m].isLive = false;
 			meeps[m].pxRigged = meeps[m].px;
 			
-
 			let dx = Math.abs(meeps[m].pxRigged - 0.8);
 
 			$(meeps[m]).animate({
@@ -674,9 +764,27 @@ window.PlummetPanicGame = function(playersMeta) {
 	function initScroll(){
 		//if(!isRoundComplete) scrollSpeed = Math.min( LEVEL.H/10, 1 + iStomp*0.2 );
 		if(!isRoundComplete) timePerLevel = round.timeMax - (round.timeMax-round.timeMin) * (iStomp/round.levels);
+
+		
+		if(iScroll%5==3){
+			let iCheckpointLevel = iScroll+2;
+			if(iCheckpointLevel < (round.levels-1)){
+				for(var m in meeps ){
+					if(meeps[m].isLive && meeps[m].diedAtLevel > -1){
+						audio.play('checkpoint',true);
+						meeps[m].diedAtLevel = -1;
+						tower.add(meeps[m],iCheckpointLevel);
+
+					}
+				}
+			}
+		}
+
+
 	}
 
 	let scrollDiff = 0;
+	let iScroll = 0;
 
 	self.step = function(){
 		resize();
@@ -685,7 +793,7 @@ window.PlummetPanicGame = function(playersMeta) {
 
 		if(!isRoundComplete && timePerLevel){
 			scroll += LEVEL.H * (1/timePerLevel/FPS);
-			let iScroll = Math.floor( scroll/LEVEL.H );
+			iScroll = Math.floor( scroll/LEVEL.H );
 			if(iScroll>=round.levels){
 				initFinale('Finish!');	
 			} else if(iScroll>iStomp){
@@ -704,13 +812,30 @@ window.PlummetPanicGame = function(playersMeta) {
 		for(var m in meeps) meeps[m].step();
 		for(var m in meeps){
 			// test for plummet
+
+			if(meeps[m].isLive && meeps[m].diedAtLevel==-1 && meeps[m].level != undefined && meeps[m].altitude < 0.1){
+
+				let coins = meeps[m].level.coins;
+
+				for(var c in coins){
+					let dx = coins[c].x - meeps[m].x;
+					
+					if(!coins[c].isCollected && Math.abs(dx)<0.3){
+						coins[c].$el.hide();
+						coins[c].isCollected = true;
+						audio.play('coin',true);
+						meeps[m].doScoreUp();
+					}
+				}
+			}
+
 			if( meeps[m].isLive && meeps[m].diedAtLevel==-1 && meeps[m].altitude == 0 && meeps[m].level ){
 
 				let isSegSolid = meeps[m].level.isSegSolid( meeps[m].iSeg );
 				if(!isSegSolid){
 					let iLevel = meeps[m].level.iLevel; 
 					tower.add(meeps[m], iLevel+1);
-					meeps[m].doScoreUp();
+					
 				} else {
 					meeps[m].sy = 0;
 				}
