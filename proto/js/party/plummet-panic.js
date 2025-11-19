@@ -295,18 +295,28 @@ window.PlummetPanicGame = function(playersMeta) {
 					width: ${COIN}px;
 					height: ${COIN}px;
 
-					background-image: url(./proto/img/party/sprite-coin.png);
+					transform: translateX(-50%);
+
+					border-radius: 100%;
+					box-sizing: border-box;
+					background: var(--pink);
+					border: 4px solid white;
+					line-height: ${COIN-8}px;
+					font-size: ${COIN/2}px;
+					color: white;
+
+					/*background-image: url(./proto/img/party/sprite-coin.png);
 					background-size: 900%;
 					background-position-x: -100%;
 					background-position-y: 100%;
-					transform: translateX(-50%);
-					bottom: 0px;
-
 					animation: plummetcoinspin;
 					animation-duration: 1s;
 					animation-iteration-count: infinite;
+					animation-timing-function: steps(9);*/
+				}
 
-					animation-timing-function: steps(9);
+				plummetcoin:after{
+					content:"+1";
 				}
 
 				@keyframes plummetcoinspin{
