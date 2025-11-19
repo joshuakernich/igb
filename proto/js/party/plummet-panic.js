@@ -569,13 +569,12 @@ window.PlummetPanicGame = function(playersMeta) {
 
 	function initGame(count){
 
-		
 
 		for(var m=0; m<count; m++){
 			meeps[m] = new PlummetMeep(m);
 		}
 
-		initPlay();
+		initTutorial();
 	}
 
 
