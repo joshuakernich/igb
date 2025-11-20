@@ -870,7 +870,7 @@ window.PlummetPanicGame = function(playersMeta) {
 		isGoTime = false;
 		isRoundComplete = true;
 		timePerLevel = 0;
-		hud.initBanner(message);
+		//hud.initBanner(message);
 
 		for(var p in STRUCTURE[meeps.length][iRound].players){
 			let m = STRUCTURE[meeps.length][iRound].players[p];
@@ -878,7 +878,7 @@ window.PlummetPanicGame = function(playersMeta) {
 		}
 
 		if(STRUCTURE[meeps.length][iRound+1]){
-			setTimeout( hud.finiBanner, 2000 );
+			//setTimeout( hud.finiBanner, 2000 );
 			setTimeout( initNextRound, 4000 );
 		} else {
 			setTimeout( doFinalScores, 2000 );
