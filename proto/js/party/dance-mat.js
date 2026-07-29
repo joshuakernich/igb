@@ -121,6 +121,7 @@ window.DanceMatGame = function( playersMeta ){
 		self.ax = ax;
 		self.px = 0;
 		self.ox = 0;
+		self.wall = 1;
 
 		let $score = $('<dancescore>').appendTo(self.$el).text(0);
 
@@ -138,9 +139,9 @@ window.DanceMatGame = function( playersMeta ){
 		})
 
 		self.update = function(){
-			self.ox = ( self.px - self.ax ) * 12;
+			self.ox = 0;//( self.px - self.ax ) * 12;
 
-			if(self.ox<-1) self.ox = -1;
+			/*if(self.ox<-1) self.ox = -1;
 			if(self.ox>1) self.ox = 1;
 
 			$ring.css({
@@ -151,15 +152,20 @@ window.DanceMatGame = function( playersMeta ){
 				'left':-50 + self.ox*20+'px',
 				'top':'20px',
 				transform:'rotate('+self.ox*(RADRANGE/8)+'rad)',
-			})
+			})*/
 
 			let x = self.wall==1?self.px:self.pz;
 			let z = self.wall==1?(1-self.pz):self.px;
+
+
 
 			if(self.wall==2){
 				x = 1-x;
 				z = 1-z;
 			}
+
+			self.x = x;
+			self.y = z;
 
 			self.$el.css({
 				left: W*self.wall + x * W + 'px',
@@ -169,7 +175,7 @@ window.DanceMatGame = function( playersMeta ){
 
 		self.doCorrect = function(b){
 			if(b) self.score ++;
-			$score.text(b?'+1':'Oops!').css({opacity:0.5}).delay(100).animate({opacity:0});
+			$score.text(b?'+1':'Oops!').css({opacity:1}).delay(500).animate({opacity:0});
 		}
 		
 	}
@@ -182,7 +188,7 @@ window.DanceMatGame = function( playersMeta ){
 
 		let audio = new AudioPlayer();
 		audio.add('correct','./proto/audio/party/sfx-correct.mp3',0.2);
-		audio.add('fail','./proto/audio/party/sfx-knock.mp3',0.5);
+		audio.add('fail','./proto/audio/party/sfx-incorrect.mp3',0.2);
 
 		
 		let $pad = $('<dancepad>').appendTo(self.$el).attr('n',meep.n)
@@ -200,6 +206,8 @@ window.DanceMatGame = function( playersMeta ){
 		self.sx = 0;
 		self.sy = 0;
 
+		const RANGE = 0.2;
+
 		self.step = function(beat){
 			let pos = (beat - map.beat);
 
@@ -210,13 +218,26 @@ window.DanceMatGame = function( playersMeta ){
 			if(self.py>0 && !bHit){
 				bHit = true;
 
-				let nSelect = (meep.ox>0)?0:1;
+				let nSelect = -1;
+
+				let ox = (meep.wall + meep.x) - (hotspot.wall + hotspot.x);
+				let oy = (meep.y) - (hotspot.y);
+
+				if( Math.abs(ox) > RANGE || Math.abs(oy) > RANGE ){
+					nSelect = -1;
+				} else if( Math.abs(ox) > Math.abs(oy) ){
+					nSelect = (ox>0)?1:3;
+				} else {
+					nSelect = (oy>0)?2:0;
+				}
+
+				if(meep.n==0) console.log(nDrum,nSelect);
 
 				self.sy = -0.03;
 				self.sx = nSelect?0.003:-0.003;
 				
 				let bCorrect = (nDrum == nSelect);
-				bCorrect = true;
+
 				audio.play(bCorrect?'correct':'fail',true);
 				meep.doCorrect(bCorrect);
 			}
@@ -291,12 +312,13 @@ window.DanceMatGame = function( playersMeta ){
 				dancescore{
 					display: block;
 					position: absolute;
-					bottom: ${RINGR/2}px;
+					bottom: ${300}px;
 					width: ${W}px;
 					left: ${-W/2}px;
 					font-size: 100px;
 					text-align: center;
 					opacity: 0;
+					color: white;
 				}
 
 				danceball{
@@ -479,7 +501,7 @@ window.DanceMatGame = function( playersMeta ){
 		audio.add(
 			round.song.track,
 			round.song.track,
-			1);
+			0.5);
 
 		for(var p=0; p<round.players.length; p++){
 			let m = round.players[p];
@@ -540,7 +562,7 @@ window.DanceMatGame = function( playersMeta ){
 			[3,4,5],
 			[1,2,0],
 			[6,7,8],
-			[0,3,6],
+			[0,3,8],
 		]
 
 
