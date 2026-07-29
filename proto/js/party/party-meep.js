@@ -328,6 +328,8 @@ window.PartyMeep = function(n){
 	`);
 
 	self.$head = self.$el.find('partymeephead');
+	self.$eyes = self.$el.find('partymeepeye');
+	self.$mouth = self.$el.find('partymeepmouth');
 	self.$handLeft = self.$el.find('partymeephand').first();
 	self.$handRight = self.$el.find('partymeephand').last();
 	self.$shadow = self.$el.find('partymeepshadow');

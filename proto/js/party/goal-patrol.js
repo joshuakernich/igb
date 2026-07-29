@@ -113,25 +113,25 @@ window.GoalPatrolGame = function( playersMeta ){
 		undefined,
 		[
 			[
-				{cohort:[0,1], seconds:30, queue: generateQueue(30,[0,1],4) },
+				{cohort:[0,1], seconds:40, queue: generateQueue(30,[0,1],5) },
 			],
 			[
-				{cohort:[0,1], seconds:30, queue: generateQueue(30,[0,1],7) },
+				{cohort:[0,1], seconds:40, queue: generateQueue(30,[0,1],8) },
 			],
 			[
-				{cohort:[0,1], seconds:30, queue: generateQueue(30,[0,1],9) },
+				{cohort:[0,1], seconds:40, queue: generateQueue(30,[0,1],12) },
 			],
 		],
 		[
 			[
-				{cohort:[0,1], seconds:30, queue: generateQueue(30,[0,1],5)},
-				{cohort:[1,2], seconds:30, queue: generateQueue(30,[1,2],5)},
-				{cohort:[0,2], seconds:30, queue: generateQueue(30,[0,2],5)},
+				{cohort:[0,1], seconds:25, queue: generateQueue(25,[0,1],5)},
+				{cohort:[1,2], seconds:25, queue: generateQueue(25,[1,2],5)},
+				{cohort:[0,2], seconds:25, queue: generateQueue(25,[0,2],5)},
 			],
 			[
-				{cohort:[0,1], seconds:30, queue: generateQueue(30,[0,1],10)},
-				{cohort:[1,2], seconds:30, queue: generateQueue(30,[1,2],10)},
-				{cohort:[0,2], seconds:30, queue: generateQueue(30,[0,2],10)},
+				{cohort:[0,1], seconds:25, queue: generateQueue(25,[0,1],8)},
+				{cohort:[1,2], seconds:25, queue: generateQueue(25,[1,2],8)},
+				{cohort:[0,2], seconds:25, queue: generateQueue(25,[0,2],8)},
 			]
 			
 		],
