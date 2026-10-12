@@ -61,9 +61,9 @@
  *   show.slam(ctx, text, x, y, size, age, style)   a title crashing in
  *   show.text(ctx, text, x, y, size, style)        the show's big caption type
  *   show.onWalls(ctx, fn)  fn(ctx, wall) once per wall, (0, 0) its top-left
- *   the clock          the show runs it: it starts the moment the clock
- *                      intro settles it in place (or when the show skips past
- *                      the intro) and runs through every beat until
+ *   the clock          the show runs it: it starts at 10:00 as the clock
+ *                      intro sends it flying up to its place (or when the show
+ *                      skips past the intro) and runs through every beat until
  *                      it hits zero, when the show goes to 'timeup'. It ticks
  *                      the last ten seconds.
  *   show.label(text)   the line under the corner clock ('ROUND 2')
@@ -105,8 +105,7 @@ window.Showtime = function (stage, opts) {
 		youHave: 0.7,          // 2. "YOU HAVE", in it, above the middle (while it's still lighting up)
 		number: 1.1,           // 3. the "10", in the middle
 		unit: 1.5,             // 4. "MINUTES", under it
-		settle: [3.6, 4.5],    // the 10 becomes the clock and flies up to its place at the top of every wall
-		runAfter: 0,           // and starts counting down this long after it lands (straight away)
+		settle: [3.6, 4.5],    // the 10 becomes the clock (10:00, already counting down) and flies up to its place at the top of every wall
 		length: 5.0,
 		radius: 390,           // the dial's outer edge
 		size: 300,             // the big number
@@ -1037,9 +1036,9 @@ window.Showtime = function (stage, opts) {
 
 	// The clock reveal, a piece at a time out of the dark: the dial, its
 	// ticks charging round, and the words slamming into place inside it while
-	// it lights up: YOU HAVE, the 10, MINUTES. Then the 10 turns into the clock and
-	// flies up to its place at the top of every wall, and starts counting
-	// down the moment it lands.
+	// it lights up: YOU HAVE, the 10, MINUTES. Then the 10 turns into the
+	// clock, at 10:00 and already counting down, and flies up to its place at
+	// the top of every wall.
 	beatsLib.clockIntro = function (extra) {
 		const C = CLOCK_INTRO;
 		const minutes = SECONDS >= 60;
@@ -1060,9 +1059,11 @@ window.Showtime = function (stage, opts) {
 				if (self.cue(C.youHave + C.slam)) { self.sfx.hit(0.7); self.shake = 0.45; }
 				if (self.cue(C.number + 0.26)) { self.sfx.boom(1); self.shake = 0.8; self.flash = 0.5; }
 				if (self.cue(C.unit + C.slam)) { self.sfx.hit(0.8); self.play('reveal'); self.shake = 0.9; self.flash = 0.4; }
-				if (self.cue(C.settle[0])) self.play('wooshLong');
+				// the 10 becomes the clock at 10:00 and starts counting (and ticking) as
+				// it flies up; the corner clock takes over once it lands
+				if (self.cue(C.settle[0])) { self.play('wooshLong'); startClock(0); clock.shown = false; }
 				if (bt > C.settle[0]) self.blackout = INTRO_DIM * (1 - between(bt, C.settle[0], C.settle[1] + 0.3));
-				if (self.cue(C.settle[1])) { startClock(C.runAfter); self.sfx.hit(); }
+				if (self.cue(C.settle[1])) { clock.shown = true; self.sfx.hit(); }
 			},
 			draw(ctx, bt) {
 				if (bt >= C.settle[1]) return;
@@ -1104,7 +1105,7 @@ window.Showtime = function (stage, opts) {
 						c.translate(cx, cy);
 						c.scale(s, s);
 						c.globalAlpha = clamp(age / 0.15, 0, 1);
-						if (fly > 0) clockPill(c, 0, 0, size, SECONDS, fly, fly * (cy + 20) / s);   // reaching up to the top edge as it lands
+						if (fly > 0) clockPill(c, 0, 0, size, clock.left, fly, fly * (cy + 20) / s);   // already counting, reaching up to the top edge as it lands
 						self.text(c, number, 0, size * 0.04, size, { fill: theme.gold, glow: '#ff7a3d', alpha: 1 - fly });
 						c.restore();
 					}
