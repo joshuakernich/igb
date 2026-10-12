@@ -203,8 +203,8 @@ igb-folder .app {
 	display: inline-block;
 	position: relative;
 	vertical-align: top;
-	width: 220px;
-	margin: 24px 24px 72px;
+	width: 200px;
+	margin: 24px 18px 72px;   /* six to a row on the front wall */
 	color: white;
 	text-align: center;
 	text-decoration: none;
@@ -213,14 +213,14 @@ igb-folder .app {
 
 igb-icon {
 	display: block;
-	width: 220px;
-	height: 220px;
-	border-radius: 44px;
+	width: 200px;
+	height: 200px;
+	border-radius: 40px;
 	background: #999 center / cover;
 	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 	color: rgba(255, 255, 255, 0.8);
-	font-size: 80px;
-	line-height: 220px;
+	font-size: 72px;
+	line-height: 200px;
 }
 
 igb-label {
