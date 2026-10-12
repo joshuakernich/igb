@@ -531,8 +531,7 @@ window.Showtime = function (stage, opts) {
 			size, font: FONT, weight: 400, fill: 'white',
 			outline: theme.ink, outlineWidth: Math.max(4, size * 0.07),
 			drop: 'rgba(0,0,0,0.55)', dropY: size * 0.09,
-			shadow: { color: style.glow || theme.accent, blur: size * 0.35 },
-		}, style));
+		}, style, { shadow: null }));   // no glows on the text (style.glow is ignored)
 	};
 
 	// A title crashing in: big and see-through, slamming down to size with a
@@ -781,7 +780,7 @@ window.Showtime = function (stage, opts) {
 		}).appendTo(stage.$ui);
 		$('<div>').text('HOW MANY PLAYERS?').css({
 			fontSize: '110px', letterSpacing: '2px', lineHeight: 1,
-			textShadow: `0 9px 0 rgba(0,0,0,0.5), 0 0 40px ${theme.accent}`,
+			textShadow: '0 9px 0 rgba(0,0,0,0.5)',
 			WebkitTextStroke: `7px ${theme.ink}`, paintOrder: 'stroke fill',
 			transform: 'scale(0.6)', opacity: 0, transition: 'transform 0.45s cubic-bezier(.2,1.6,.4,1), opacity 0.3s',
 		}).appendTo($pick);
@@ -2016,7 +2015,7 @@ window.Showtime = function (stage, opts) {
 
 		const big = (text, size = 110) => $('<div>').text(text).css({
 			fontSize: size + 'px', letterSpacing: '2px', lineHeight: 1, textAlign: 'center',
-			textShadow: `0 9px 0 rgba(0,0,0,0.5), 0 0 40px ${theme.accent}`,
+			textShadow: '0 9px 0 rgba(0,0,0,0.5)',
 			WebkitTextStroke: `7px ${theme.ink}`, paintOrder: 'stroke fill',
 		});
 		const small = (text) => $('<div>').text(text).css({ fontSize: '46px', color: theme.gold, letterSpacing: '2px', WebkitTextStroke: `4px ${theme.ink}`, paintOrder: 'stroke fill' });
