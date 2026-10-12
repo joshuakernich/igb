@@ -110,7 +110,7 @@ window.Showtime = function (stage, opts) {
 		count: 2.0,            // the clock starts counting down, still in the dial
 		settle: [4.3, 5.2],    // after two ticks it flies up, still counting, to its place at the top of every wall
 		length: 5.7,
-		radius: 390,           // the dial's outer edge
+		radius: 420,           // the dial's outer edge
 		size: 300,             // the big number
 		words: [100, 112],     // YOU HAVE, MINUTES
 		slam: 0.18,            // seconds for a word to crash down into place
@@ -917,7 +917,8 @@ window.Showtime = function (stage, opts) {
 
 	// up: how far the pill reaches up past its top (the corner clock hangs
 	// from the top edge of the wall)
-	function clockPill(ctx, x, y, size, left, alpha = 1, up = 0) {
+	// box: how much of the pill itself shows (the digits always do)
+	function clockPill(ctx, x, y, size, left, alpha = 1, up = 0, box = 1) {
 		const urgent = left <= CLOCK.urgent;
 		const pulse = urgent ? 1 + 0.06 * Math.max(0, Math.cos((left % 1) * Math.PI * 2)) : 1;
 		const w = size * 3.3;
@@ -925,7 +926,7 @@ window.Showtime = function (stage, opts) {
 		ctx.globalAlpha *= alpha;
 		ctx.translate(x, y);
 		ctx.scale(pulse, pulse);
-		art.roundRect(ctx, -w / 2, -size * 0.66 - up, w, size * 1.32 + up, size * 0.66, { fill: 'rgba(12,4,30,0.78)', stroke: urgent ? '#ff3d6a' : theme.accent, lineWidth: size * 0.07 });
+		if (box > 0) art.roundRect(ctx, -w / 2, -size * 0.66 - up, w, size * 1.32 + up, size * 0.66, { fill: 'rgba(12,4,30,0.78)', stroke: urgent ? '#ff3d6a' : theme.accent, lineWidth: size * 0.07, alpha: box });
 		// its digits at a step of the scale, sized with the pill by scaling
 		const ref = self.size(CLOCK.size);
 		ctx.scale(size / ref, size / ref);
@@ -936,7 +937,9 @@ window.Showtime = function (stage, opts) {
 	function drawClock(ctx) {
 		const left = clock.left;
 		self.onWalls(ctx, function (c) {
-			clockPill(c, W / 2, CLOCK.y, CLOCK.size, left, 1, CLOCK.y + 20);   // hung from the top edge
+			// hung from the top edge; its pill fades in round the digits once they've docked
+			const box = clock.shownAt === undefined ? 1 : clamp((showTime - clock.shownAt) / 0.25, 0, 1);
+			clockPill(c, W / 2, CLOCK.y, CLOCK.size, left, 1, CLOCK.y + 20, box);
 			// the last ten seconds loom, huge and faint, over every wall
 			if (left > 0 && left <= CLOCK.final) {
 				const k = 1 - (left % 1 || 1);
@@ -1111,6 +1114,7 @@ window.Showtime = function (stage, opts) {
 				clock.shown = false;
 				clock.running = false;
 				clock.started = false;
+				clock.shownAt = undefined;
 				clock.left = SECONDS;
 				self.blackout = INTRO_DIM;
 			},
@@ -1125,7 +1129,7 @@ window.Showtime = function (stage, opts) {
 				if (self.cue(C.count)) { startClock(0); clock.shown = false; }   // counting (and ticking) in the dial
 				if (self.cue(C.settle[0])) self.fx('clockFly');
 				if (bt > C.settle[0]) self.blackout = INTRO_DIM * (1 - between(bt, C.settle[0], C.settle[1] + 0.3));
-				if (self.cue(C.settle[1])) { clock.shown = true; self.fx('clockDock'); }
+				if (self.cue(C.settle[1])) { clock.shown = true; clock.shownAt = showTime; self.fx('clockDock'); }
 			},
 			draw(ctx, bt) {
 				if (bt >= C.settle[1]) return;
@@ -1162,17 +1166,17 @@ window.Showtime = function (stage, opts) {
 						const age = bt - C.number;
 						const s = age < 0.26 ? lerp(2.4, 0.9, (age / 0.26) ** 2) : 0.9 + 0.1 * easeOut((age - 0.26) / 0.18);
 						const cy = lerp(C.y, CLOCK.y, fly);
-						const size = lerp(C.size, CLOCK.size, fly);
 						c.save();
 						c.translate(cx, cy);
 						c.scale(s, s);
 						c.globalAlpha = clamp(age / 0.15, 0, 1);
-						if (fly > 0) clockPill(c, 0, 0, size, clock.left, fly, fly * (cy + 20) / s);   // already counting, reaching up to the top edge as it lands
 						// the clock's size is a step of the scale that fits 10:00 (its widest), so it
-						// keeps its size as it counts; it shrinks as it flies by scaling, not resizing
-						const ts = self.fitSize(c, mmss(SECONDS), C.size, C.radius * 1.5);
-						c.scale(size / C.size, size / C.size);
-						self.text(c, mmss(clock.left), 0, ts * 0.04, ts, look({ alpha: 1 - fly, fit: 99999 }));
+						// keeps its size as it counts; it flies up shrinking (by scaling) to the corner
+						// clock's digits, where the corner clock takes over, its pill then appearing
+						const ts = self.fitSize(c, mmss(SECONDS), C.size, C.radius * 1.62);
+						const k = lerp(1, CLOCK.size / ts, fly);
+						c.scale(k, k);
+						self.text(c, mmss(clock.left), 0, ts * 0.04, ts, look({ fit: 99999 }));
 						c.restore();
 					}
 					// 4. MINUTES, just under the 10
