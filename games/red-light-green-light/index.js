@@ -89,7 +89,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	// Jump pads and cash
 	const PAD = { rx: 95, rf: 40, every: 420 };   // a pad's half-width and half-depth; one every so far up the track (field units)
-	const CASH = { every: 300, reach: 46 };       // cash every so far up each wall; how close to walk to pick it up
+	const CASH = { every: 300, reach: 60, size: 1.8, float: 50, bob: 22 };   // every so far up each wall; how close to grab it; its size, float height and bob
 	const EDGE_AT = 0.1;        // a pad's centre, as a share of the wall from the corner
 	const HOP = 0.5;            // seconds to skip across a corner onto the next wall
 	const WALL_NAMES = ['LEFT', 'FRONT', 'RIGHT'];
@@ -1317,14 +1317,15 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		show.text(ctx, WALL_NAMES[p.to], p.x, back.y - 26, 28, { fill: 'white', alpha: appear });
 	}
 
-	// A wad of cash: a little stack of green notes with a paper band, sitting
-	// on the sand, bobbing gently.
+	// A wad of cash: a stack of green notes with a paper band, floating above
+	// the sand and bobbing up and down, its shadow shrinking as it rises.
 	function drawCash(ctx, m) {
 		const p = at(m.x, m.f);
-		const s = p.s;
-		const bob = Math.sin(m.spin * 3) * 3 * s;
-		art.ellipse(ctx, p.x, p.y, 30 * s, 9 * s, { fill: 'rgba(0,0,0,0.22)' });
-		art.with(ctx, { x: p.x, y: p.y - 12 * s + bob, scale: s, rotate: Math.sin(m.spin) * 0.08 }, function (c) {
+		const s = p.s * CASH.size;
+		const rise = 0.5 + 0.5 * Math.sin(m.spin * 2.4);
+		const lift = (CASH.float + CASH.bob * rise) * p.s;
+		art.ellipse(ctx, p.x, p.y, 30 * s * (1 - 0.25 * rise), 9 * s * (1 - 0.25 * rise), { fill: 'rgba(0,0,0,0.22)', alpha: 1 - 0.35 * rise });
+		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: Math.sin(m.spin * 1.3) * 0.12 }, function (c) {
 			for (let i = 2; i >= 0; i--) art.roundRect(c, -26 + i * 2, -14 - i * 6, 52, 20, 3, { fill: i % 2 ? '#2f9e57' : '#3cbf6a' });
 			art.rect(c, -6, -27, 12, 22, { fill: '#f3ead2' });
 			art.circle(c, 0, -16, 5, { fill: '#2f9e57' });
