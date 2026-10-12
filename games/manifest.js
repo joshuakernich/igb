@@ -148,3 +148,8 @@ IGB.manifest = [
 // The only games the menu shows (in their folders above); the rest stay
 // playable by #id. Remove this (or set it to null) to show everything.
 IGB.menu = ['red-light-green-light', 'mingle', 'backrooms', 'gwi-ma-showdown', 'roll-call', 'show-debug'];
+
+// The music, on or off everywhere: every music-*.mp3, the show's music, and
+// the synthesised tunes (the doll's song, Mingle's waltz). Sound effects and
+// voices stay either way. Off for now.
+IGB.music = false;

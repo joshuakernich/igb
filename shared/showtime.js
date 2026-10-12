@@ -309,7 +309,7 @@ window.Showtime = function (stage, opts) {
 	// (music: false leaves out the music: the drama under the titles, the
 	// drumroll and the replay's beat; the effects stay)
 	const MUSIC = ['drama', 'drumroll', 'replay'];
-	self.play = (id, speed) => (opts.music === false && MUSIC.includes(id) ? undefined : audio.play(id, true, speed));
+	self.play = (id, speed) => ((opts.music === false || IGB.music === false) && MUSIC.includes(id) ? undefined : audio.play(id, true, speed));
 	self.stop = (id) => audio.stop(id);
 
 	// Synthesised hits, booms, roars and alarms, on one AudioContext made

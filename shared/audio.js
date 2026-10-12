@@ -38,6 +38,8 @@ window.AudioPlayer = function () {
 	self.play = function (id, restart, speed) {
 		const el = audio[id];
 		if (!el) { console.warn('AudioPlayer: no sound called', id); return; }
+		// music off (IGB.music = false, in games/manifest.js): every music-*.mp3 stays quiet
+		if (window.IGB && IGB.music === false && /(^|\/)music-[^\/]*$/.test(el.getAttribute('src') || '')) return;
 		if (muted || (owner && (owner.leaving || owner.stopped))) return;
 		if (restart) el.currentTime = 0;
 		if (speed) el.playbackRate = speed;

@@ -61,6 +61,7 @@ export function createSound() {
 
 	// Start or stop the waltz; tempo in beats per second.
 	sound.music = function (on, beatsPerSecond) {
+		if (window.IGB && IGB.music === false) on = false;   // music off (games/manifest.js)
 		if (beatsPerSecond) tempo = beatsPerSecond;
 		if (on && !playing) {
 			sound.resume();
@@ -87,6 +88,7 @@ export function createSound() {
 
 	// The music box winding down as the carousel stops.
 	sound.windDown = function () {
+		if (window.IGB && IGB.music === false) return;   // music off (games/manifest.js)
 		const t = ctx.currentTime + 0.01;
 		[79, 76, 72, 67].forEach(function (m, i) {
 			const at = t + i * (0.22 + i * 0.08);

@@ -243,6 +243,7 @@ export function createSound() {
 
 	// Start or stop the tune; rate is notes per second.
 	sound.music = function (on, notesPerSecond) {
+		if (window.IGB && IGB.music === false) on = false;   // music off (games/manifest.js)
 		if (notesPerSecond) rate = notesPerSecond;
 		if (on && !playing) {
 			sound.resume();
