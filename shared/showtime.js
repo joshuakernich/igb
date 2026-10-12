@@ -172,7 +172,7 @@ window.Showtime = function (stage, opts) {
 	/* ---------- tuning: the corner clock ---------- */
 
 	const CLOCK = {
-		y: 62,                 // where it sits, top centre of every wall
+		y: 44,                 // where its digits sit, top centre of every wall (it hangs from the top edge)
 		size: 64,
 		urgent: 30,            // it turns red with this many seconds left
 		final: 10,             // and the last ten loom huge, ticking
@@ -853,7 +853,9 @@ window.Showtime = function (stage, opts) {
 		}
 	}
 
-	function clockPill(ctx, x, y, size, left, alpha = 1) {
+	// up: how far the pill reaches up past its top (the corner clock hangs
+	// from the top edge of the wall)
+	function clockPill(ctx, x, y, size, left, alpha = 1, up = 0) {
 		const urgent = left <= CLOCK.urgent;
 		const pulse = urgent ? 1 + 0.06 * Math.max(0, Math.cos((left % 1) * Math.PI * 2)) : 1;
 		const w = size * 3.3;
@@ -861,7 +863,7 @@ window.Showtime = function (stage, opts) {
 		ctx.globalAlpha *= alpha;
 		ctx.translate(x, y);
 		ctx.scale(pulse, pulse);
-		art.roundRect(ctx, -w / 2, -size * 0.66, w, size * 1.32, size * 0.66, { fill: 'rgba(12,4,30,0.78)', stroke: urgent ? '#ff3d6a' : theme.accent, lineWidth: size * 0.07 });
+		art.roundRect(ctx, -w / 2, -size * 0.66 - up, w, size * 1.32 + up, size * 0.66, { fill: 'rgba(12,4,30,0.78)', stroke: urgent ? '#ff3d6a' : theme.accent, lineWidth: size * 0.07 });
 		self.text(ctx, mmss(left), 0, size * 0.04, size, { fill: urgent ? '#ff5470' : 'white', glow: urgent ? '#ff3d6a' : theme.accent });
 		ctx.restore();
 	}
@@ -869,7 +871,7 @@ window.Showtime = function (stage, opts) {
 	function drawClock(ctx) {
 		const left = clock.left;
 		self.onWalls(ctx, function (c) {
-			clockPill(c, W / 2, CLOCK.y, CLOCK.size, left);
+			clockPill(c, W / 2, CLOCK.y, CLOCK.size, left, 1, CLOCK.y + 20);   // hung from the top edge
 			if (clock.label) self.text(c, clock.label, W / 2, CLOCK.y + 70, 30, { fill: theme.gold, outlineWidth: 4, glow: 'transparent' });
 			// the last ten seconds loom, huge and faint, over every wall
 			if (left > 0 && left <= CLOCK.final) {
@@ -1091,7 +1093,7 @@ window.Showtime = function (stage, opts) {
 						c.translate(cx, cy);
 						c.scale(s, s);
 						c.globalAlpha = clamp(age / 0.15, 0, 1);
-						if (fly > 0) clockPill(c, 0, 0, size, SECONDS, fly);
+						if (fly > 0) clockPill(c, 0, 0, size, SECONDS, fly, fly * (cy + 20) / s);   // reaching up to the top edge as it lands
 						self.text(c, number, 0, size * 0.04, size, { fill: theme.gold, glow: '#ff7a3d', alpha: 1 - fly });
 						c.restore();
 					}
