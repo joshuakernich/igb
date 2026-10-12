@@ -35,7 +35,7 @@ igb {
 }
 
 igb.home {
-	background: #0f3a78;   /* blueprint blue, under the office drawing (core/home-bg.js) */
+	background: #0f3a78;   /* blueprint blue, under the empty floor drawing (core/home-bg.js) */
 }
 
 /* World units: 4800 x 1000, scaled by the launcher. */
@@ -68,7 +68,7 @@ igb.vuplex igb-seam {
 	display: none;
 }
 
-/* ---------- the home screen's blueprint office (core/home-bg.js) ---------- */
+/* ---------- the home screen's blueprint floor (core/home-bg.js) ---------- */
 
 igb-home-bg {
 	display: block;

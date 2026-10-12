@@ -1,10 +1,10 @@
 /*
- * The home screen's backdrop: an open-plan office drawn as a blueprint, in
- * 3D, wrapping round all three walls. White linework on blueprint blue,
- * fading into the distance, drawn in from the nearest lines outward each
- * time the menu appears, with the view swaying gently.
+ * The home screen's backdrop: a vast, empty office floor drawn as a
+ * blueprint, in 3D, wrapping round all three walls. White linework on
+ * blueprint blue, fading into the distance, drawn in from the nearest lines
+ * outward each time the menu appears, with the view swaying gently.
  *
- * One camera rig stands in the middle of the office floor; each wall gets
+ * One camera rig stands in the middle of the floor; each wall gets
  * its own camera turned 90 degrees from the next, so the three views meet
  * seamlessly at the corners. It only renders while the menu is showing.
  */
@@ -30,7 +30,7 @@ $(function () {
 	$bg.append(titleBlock());
 
 	const scene = new THREE.Scene();
-	scene.fog = new THREE.Fog(BLUE, 5, 30);
+	scene.fog = new THREE.Fog(BLUE, 8, 75);
 
 	const ink = new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity: 0.85, fog: true });
 	const faint = new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity: 0.22, fog: true });
@@ -45,7 +45,7 @@ $(function () {
 	scene.add(rig);
 	const fov = 2 * Math.atan(Math.tan(Math.PI / 4) / (W / H)) * 180 / Math.PI;   // 90 degrees across
 	const cams = [Math.PI / 2, 0, -Math.PI / 2].map((yaw) => {
-		const cam = new THREE.PerspectiveCamera(fov, W / H, 0.1, 60);
+		const cam = new THREE.PerspectiveCamera(fov, W / H, 0.1, 200);
 		cam.rotation.y = yaw;
 		rig.add(cam);
 		return cam;
@@ -98,7 +98,7 @@ $(function () {
 
 /* ---------- the plan ---------- */
 
-// Line segments for the whole office, sorted nearest first so drawing in
+// Line segments for the whole floor: grids, the shell and its windows, sorted nearest first so drawing in
 // spreads outward from the viewer. Units are metres; y is up, the front
 // wall is toward -z.
 function build() {
@@ -124,77 +124,9 @@ function build() {
 		}
 	}
 
-	// a cylinder: rings top and bottom, a few uprights
-	function cyl(cx, y0, cz, r, h, n = 16, ups = 4, out = ink) {
-		const ring = (y) => {
-			for (let i = 0; i < n; i++) {
-				const a = i / n * Math.PI * 2;
-				const b = (i + 1) / n * Math.PI * 2;
-				seg(out, [cx + Math.cos(a) * r, y, cz + Math.sin(a) * r], [cx + Math.cos(b) * r, y, cz + Math.sin(b) * r]);
-			}
-		};
-		ring(y0);
-		ring(y0 + h);
-		for (let i = 0; i < ups; i++) {
-			const a = i / ups * Math.PI * 2;
-			seg(out, [cx + Math.cos(a) * r, y0, cz + Math.sin(a) * r], [cx + Math.cos(a) * r, y0 + h, cz + Math.sin(a) * r]);
-		}
-	}
-
-	const turn = (cx, cz, yaw) => (x, z) => [cx + x * Math.cos(yaw) + z * Math.sin(yaw), cz - x * Math.sin(yaw) + z * Math.cos(yaw)];
-
-	// a desk with its monitor and chair, the sitter facing +z before turning
-	function desk(cx, cz, yaw) {
-		const at = turn(cx, cz, yaw);
-		const [tx, tz] = at(0, 0);
-		box(tx, 0.72, tz, 1.5, 0.04, 0.75, yaw);
-		for (const [lx, lz] of [[-0.7, -0.33], [0.7, -0.33], [-0.7, 0.33], [0.7, 0.33]]) {
-			const [x, z] = at(lx, lz);
-			seg(ink, [x, 0, z], [x, 0.72, z]);
-		}
-		const [mx, mz] = at(0, -0.2);
-		box(mx, 0.98, mz, 0.6, 0.36, 0.03, yaw);
-		seg(ink, [mx, 0.76, mz], [mx, 0.98, mz]);
-		const [kx, kz] = at(0, 0.1);
-		box(kx, 0.76, kz, 0.45, 0.02, 0.15, yaw);
-		// the chair, pulled out a little
-		const [cx2, cz2] = at(0.05, 0.75);
-		box(cx2, 0.45, cz2, 0.5, 0.06, 0.48, yaw);
-		const [bx, bz] = at(0.05, 0.98);
-		box(bx, 0.55, bz, 0.46, 0.5, 0.05, yaw);
-		seg(ink, [cx2, 0.08, cz2], [cx2, 0.45, cz2]);
-		for (let i = 0; i < 5; i++) {
-			const a = i / 5 * Math.PI * 2;
-			seg(ink, [cx2, 0.08, cz2], [cx2 + Math.cos(a) * 0.3, 0.03, cz2 + Math.sin(a) * 0.3]);
-		}
-	}
-
-	// a bank of desks, two facing rows with a low screen between
-	function bank(cx, cz, n, yaw = 0) {
-		const at = turn(cx, cz, yaw);
-		for (let i = 0; i < n; i++) {
-			const x = (i - (n - 1) / 2) * 1.6;
-			const [ax, az] = at(x, 0.42);
-			desk(ax, az, yaw);
-			const [bx, bz] = at(x, -0.42);
-			desk(bx, bz, yaw + Math.PI);
-		}
-		const [sx, sz] = at(0, 0);
-		box(sx, 0.72, sz, n * 1.6, 0.45, 0.04, yaw);
-	}
-
-	function plant(x, z, h = 1.1) {
-		cyl(x, 0, z, 0.22, 0.4, 12, 4);
-		const leaves = new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(0.42, 1));
-		const p = leaves.attributes.position.array;
-		for (let i = 0; i < p.length; i += 6) {
-			seg(ink, [x + p[i], 0.4 + h * 0.5 + p[i + 1] * 1.2, z + p[i + 2]], [x + p[i + 3], 0.4 + h * 0.5 + p[i + 4] * 1.2, z + p[i + 5]]);
-		}
-	}
-
-	const X = 16;      // half the floor, across
-	const Z = 15;      // half the floor, deep
-	const TALL = 3.2;
+	const X = 60;      // half the floor, across
+	const Z = 60;      // half the floor, deep
+	const TALL = 6;
 
 	// floor and ceiling grids
 	for (let i = -X; i <= X; i++) seg(i % 5 ? faint : ink, [i, 0, -Z], [i, 0, Z]);
@@ -207,58 +139,12 @@ function build() {
 
 	// windows along the front and the sides: sill, head, mullions
 	const glazing = (from, to, fixed, along) => {
-		for (const y of [0.9, 2.7]) seg(ink, along(from, y, fixed), along(to, y, fixed));
-		for (let u = from; u <= to + 1e-6; u += 1.5) seg(ink, along(u, 0.9, fixed), along(u, 2.7, fixed));
+		for (const y of [1.0, 5.2]) seg(ink, along(from, y, fixed), along(to, y, fixed));
+		for (let u = from; u <= to + 1e-6; u += 3) seg(ink, along(u, 1.0, fixed), along(u, 5.2, fixed));
 	};
-	glazing(-X + 1, X - 1, -Z, (u, y, f) => [u, y, f]);
-	glazing(-Z + 1, Z - 6, -X, (u, y, f) => [f, y, u]);
-	glazing(-Z + 1, Z - 6, X, (u, y, f) => [f, y, u]);
-
-	// structural columns
-	for (const x of [-8, 0, 8]) for (const z of [-7.5, 0, 7.5]) if (!(x === 0 && z === 0)) box(x, 0, z, 0.5, TALL, 0.5);
-
-	// ceiling light panels
-	for (let x = -12; x <= 12; x += 4) for (let z = -12; z <= 12; z += 4) box(x, TALL - 0.04, z, 1.2, 0.04, 0.6);
-
-	// desk banks
-	bank(-4, -4, 3);
-	bank(4, -4, 3);
-	bank(-4, 4, 3);
-	bank(4, 4, 3);
-	bank(12, -10, 2, Math.PI / 2);
-	bank(12, 2, 2, Math.PI / 2);
-
-	// the meeting room on the left: glass walls, a door gap, a table and chairs
-	const mr = { x: -11.5, z: -6, w: 7, d: 6 };
-	box(mr.x, 0, mr.z, mr.w, TALL, mr.d);
-	for (let u = -mr.d / 2; u <= mr.d / 2; u += 1) seg(faint, [mr.x + mr.w / 2, 0, mr.z + u], [mr.x + mr.w / 2, TALL, mr.z + u]);
-	box(mr.x, 0.72, mr.z, 3.6, 0.05, 1.4);
-	for (const sx of [-1.2, 0, 1.2]) for (const sz of [-1, 1]) {
-		box(mr.x + sx, 0.45, mr.z + sz * 1.1, 0.48, 0.06, 0.48);
-		box(mr.x + sx, 0.5, mr.z + sz * 1.33, 0.46, 0.45, 0.05);
-	}
-	box(mr.x - mr.w / 2 + 0.05, 1.0, mr.z, 0.05, 1.1, 2.0);   // the screen on its wall
-
-	// the kitchen on the right: counter, island, stools, fridge
-	box(X - 0.35, 0, 9, 0.7, 0.9, 6);
-	box(X - 0.35, 1.5, 9, 0.4, 0.7, 6);
-	box(11, 0, 10, 2.6, 0.95, 1.1);
-	for (let i = 0; i < 3; i++) cyl(10.1 + i * 0.9, 0, 11.1, 0.18, 0.7, 10, 3);
-	box(X - 0.45, 0, 13.4, 0.9, 2.0, 0.8);
-
-	// the back: lift lobby doors and storage
-	for (const x of [-3, 3]) {
-		box(x, 0, Z - 0.05, 1.8, 2.4, 0.1);
-		seg(ink, [x, 0, Z - 0.1], [x, 2.4, Z - 0.1]);
-	}
-	for (let i = 0; i < 5; i++) box(-12 + i * 1.0, 0, Z - 0.4, 0.9, 1.3, 0.6);
-
-	// a breakout corner: sofa, coffee table, rug
-	box(-11, 0, 8, 3, 0.45, 1, 0);
-	box(-11, 0.45, 8.45, 3, 0.4, 0.15);
-	box(-11, 0, 6.6, 1.4, 0.38, 0.7);
-	box(-11, 0.005, 7.3, 4, 0.01, 3, 0, faint);
-	for (const [x, z] of [[-14.8, -13.8], [14.8, -13.8], [-6.5, 9.5], [0, -9], [7.2, 9.5], [-14.8, 2]]) plant(x, z);
+	glazing(-X + 2, X - 2, -Z, (u, y, f) => [u, y, f]);
+	glazing(-Z + 2, Z - 2, -X, (u, y, f) => [f, y, u]);
+	glazing(-Z + 2, Z - 2, X, (u, y, f) => [f, y, u]);
 
 	// nearest first, from where the camera stands
 	const eye = new THREE.Vector3(0, EYE, 2);
@@ -276,7 +162,7 @@ function build() {
 function titleBlock() {
 	return $('<igb-title-block>').html(
 		'<b>IMMERSIVE GAMEBOX</b>' +
-		'<span>OPEN-PLAN OFFICE &middot; LEVEL 1</span>' +
-		'<span><i>SCALE</i> 1:50</span><span><i>SHEET</i> A-101</span>'
+		'<span>OPEN FLOOR &middot; LEVEL 1</span>' +
+		'<span><i>SCALE</i> 1:500</span><span><i>SHEET</i> A-101</span>'
 	);
 }
