@@ -60,9 +60,9 @@
  *   show.slam(ctx, text, x, y, size, age, style)   a title crashing in
  *   show.text(ctx, text, x, y, size, style)        the show's big caption type
  *   show.onWalls(ctx, fn)  fn(ctx, wall) once per wall, (0, 0) its top-left
- *   the clock          the show runs it: it starts a moment after the clock
- *                      intro settles it in place (or straight away if the show
- *                      skips past the intro) and runs through every beat until
+ *   the clock          the show runs it: it starts the moment the clock
+ *                      intro settles it in place (or when the show skips past
+ *                      the intro) and runs through every beat until
  *                      it hits zero, when the show goes to 'timeup'. It ticks
  *                      the last ten seconds.
  *   show.label(text)   the line under the corner clock ('ROUND 2')
@@ -105,7 +105,7 @@ window.Showtime = function (stage, opts) {
 		number: 2.8,           // 3. the "10", in it
 		unit: 3.6,             // 4. "MINUTES", under it
 		settle: [5.2, 6.1],    // the 10 becomes the clock and flies up to its place at the top of every wall
-		runAfter: 0.8,         // and starts counting down this long after it lands
+		runAfter: 0,           // and starts counting down this long after it lands (straight away)
 		length: 6.6,
 		size: 230,             // the big number
 		y: 520,                // the dial's centre
@@ -658,7 +658,7 @@ window.Showtime = function (stage, opts) {
 		const end = beats.findIndex((b) => b.id === 'timeup');
 		const at = beats.indexOf(next);
 		if (!clock.started && intro >= 0 && at > intro && (end < 0 || at < end)) startClock(0);
-		clock.held = !!next.holdClock;   // (the visor check stops the clock)
+		clock.held = !!next.holdClock;   // (a beat can stop the clock)
 		if (beat && beat.exit) beat.exit();
 		showSkip(next.id);
 		beat = next;
@@ -1016,8 +1016,8 @@ window.Showtime = function (stage, opts) {
 	// The clock reveal, a piece at a time out of the dark: the dial, its
 	// ticks charging round under a drumroll; YOU HAVE above it; the 10 in the
 	// middle of it; MINUTES under it. Then the 10 turns into the clock and
-	// flies up to its place at the top of every wall, and a moment later
-	// starts counting down.
+	// flies up to its place at the top of every wall, and starts counting
+	// down the moment it lands.
 	beatsLib.clockIntro = function (extra) {
 		const C = CLOCK_INTRO;
 		const minutes = SECONDS >= 60;
@@ -1098,7 +1098,7 @@ window.Showtime = function (stage, opts) {
 	// colour per player, in player order), then everyone into the middle of
 	// the room for a wiggle, each visor ticked off as it's seen there. A
 	// visor beyond the squad that's moving about is flagged, with what to
-	// swap it for. The clock holds still through it. Visor n is tracker slot
+	// swap it for. The clock keeps running. Visor n is tracker slot
 	// n (IGB.players.list); it's in play when it moves.
 	beatsLib.visors = function (extra) {
 		const V = VISORS;
@@ -1118,7 +1118,6 @@ window.Showtime = function (stage, opts) {
 		return extend({
 			id: 'visors',
 			length: V.length,
-			holdClock: true,
 			done: (bt) => allSetAt >= 0 && bt > allSetAt + V.allSet,
 			enter() {
 				motion = []; last = []; held = []; ticked = []; wrongSince = [];

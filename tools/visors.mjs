@@ -1,5 +1,5 @@
 // Checks the shared visor check (Showtime's 'visors' beat), in Gwi-Ma
-// Showdown: the squad's visors are shown, the clock holds still, a visor
+// Showdown: the squad's visors are shown, the clock keeps running, a visor
 // beyond the squad that moves is flagged with what to swap it for, squad
 // visors wiggling in the middle of the room are ticked off one by one, and
 // once all are in and the wrong one is gone it says ALL SET and moves on.
@@ -72,7 +72,7 @@ await sleep(3600);
 s = await visors();
 check('all set', s.visors.allSet && !s.visors.wrong.length, JSON.stringify(s.visors));
 await shot('5-all-set.png');
-check('clock held through it', s.clock === left0, `${left0} -> ${s.clock}`);
+check('clock runs through it', s.clock < left0, `${left0} -> ${s.clock}`);
 for (let i = 0; i < 40 && s.beat === 'visors'; i++) { await sleep(100); s = await visors(); }
 check('moves on', s.beat === 'controls', s.beat);
 
