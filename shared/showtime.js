@@ -105,9 +105,9 @@ window.Showtime = function (stage, opts) {
 		youHave: 0.7,          // 2. "YOU HAVE", in it, above the middle (while it's still lighting up)
 		number: 1.1,           // 3. the clock, at 10:00, in the middle
 		unit: 1.5,             // 4. "MINUTES", under it
-		count: 2.2,            // the clock starts counting down (and ticking), still in the dial
-		settle: [3.6, 4.5],    // then, still counting, it flies up to its place at the top of every wall
-		length: 5.0,
+		count: 2.0,            // the clock starts counting down, still in the dial
+		settle: [4.3, 5.2],    // after two ticks it flies up, still counting, to its place at the top of every wall
+		length: 5.7,
 		radius: 390,           // the dial's outer edge
 		size: 300,             // the big number
 		words: [100, 112],     // YOU HAVE, MINUTES
@@ -854,7 +854,8 @@ window.Showtime = function (stage, opts) {
 		// its first few seconds tick out loud, fading to nothing
 		const ran = clock.ran;
 		clock.ran += dt;
-		for (let s = 0; s < CLOCK.startTicks; s++) if (ran <= s && clock.ran > s) self.sfx.tick(CLOCK.tickVolume * Math.pow(1 - s / CLOCK.startTicks, 2));
+		// (a tick each time the seconds go over, the first at 9:59)
+		for (let s = 1; s <= CLOCK.startTicks; s++) if (ran < s && clock.ran >= s) self.sfx.tick(CLOCK.tickVolume * Math.pow(1 - (s - 1) / CLOCK.startTicks, 2));
 		const whole = Math.ceil(clock.left);
 		if (whole <= CLOCK.final && whole < clock.said && whole > 0) self.play('tick');
 		clock.said = whole;
@@ -1107,11 +1108,11 @@ window.Showtime = function (stage, opts) {
 						c.scale(s, s);
 						c.globalAlpha = clamp(age / 0.15, 0, 1);
 						if (fly > 0) clockPill(c, 0, 0, size, clock.left, fly, fly * (cy + 20) / s);   // already counting, reaching up to the top edge as it lands
-						self.text(c, mmss(clock.left), 0, size * 0.04, size, { fill: theme.gold, glow: '#ff7a3d', alpha: 1 - fly, fit: C.radius * 1.5 });
+						self.text(c, mmss(clock.left), 0, size * 0.04, size, { alpha: 1 - fly, fit: C.radius * 1.5 });
 						c.restore();
 					}
 					// 4. MINUTES, just under the 10
-					self.slam(c, unit, cx, C.y + C.radius * 0.57, C.words[1], bt - C.unit, { fill: theme.gold, glow: '#ff7a3d', alpha: fade, fit: C.radius * 1.15, dur: C.slam, from: 3.2 });
+					self.slam(c, unit, cx, C.y + C.radius * 0.57, C.words[1], bt - C.unit, { alpha: fade, fit: C.radius * 1.15, dur: C.slam, from: 3.2 });
 				});
 			},
 		}, extra);
