@@ -1220,39 +1220,81 @@ window.Showtime = function (stage, opts) {
 				c.save();
 				c.translate(x, y);
 				c.scale(pop * bounce, pop * bounce);
-				visor(c, colour(i), done || bt <= V.show ? 1 : 0.55);
+				visor(c, colour(i), done || bt <= V.show ? 1 : 0.55, bt * (done ? 3.2 : 1.4) + i * 0.8);   // turning; quicker once ticked
 				c.restore();
 				self.text(c, self.nameOf(i), x, y + 108, 42, { fill: lit(i), alpha: Math.min(1, appear * 4) });
 				if (done) self.text(c, '✓', x + 70, y - 60, 70, { fill: theme.gold, glow: theme.gold });
 			}
 		}
 
-		// a sports visor from the front: the band round the head, the peak
-		function visor(c, fill, alpha) {
+		// A little 3D sports visor, turned `yaw` about its upright axis and
+		// seen from a touch above: a headband all the way round and a peak
+		// sticking out the front, built from flat faces drawn back to front,
+		// each shaded by which way it faces (the inside of the band darker).
+		function visor(c, fill, alpha, yaw) {
+			const R = 64;           // the headband's radius
+			const BAND = 26;        // and its height
+			const PEAK = 118;       // how far the peak reaches, at its tip
+			const PITCH = 0.42;     // looking down on it this much
+			const D = 700;          // the eye's distance, for a touch of perspective
+			const N = 28;           // faces round the band
+			const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(PITCH), sp = Math.sin(PITCH);
+			// model space: y down, the front of the visor toward +z
+			const view = function (x, y, z) {
+				const x1 = x * cy + z * sy;
+				const z1 = -x * sy + z * cy;
+				const f = D / (D - z1 * cp);
+				return { x: x1 * f, y: (y * cp + z1 * sp) * f, z: z1 };
+			};
+			const faces = [];
+			// the band: N upright strips round a circle
+			for (let i = 0; i < N; i++) {
+				const a0 = i / N * Math.PI * 2;
+				const a1 = (i + 1) / N * Math.PI * 2;
+				const p = [[a0, -BAND / 2], [a1, -BAND / 2], [a1, BAND / 2], [a0, BAND / 2]].map(([a, y]) => view(Math.sin(a) * R, y, Math.cos(a) * R));
+				// the strip's outward normal, turned the same way, says whether we see its outside
+				const am = (a0 + a1) / 2;
+				const nz = -Math.sin(am) * sy + Math.cos(am) * cy;
+				const out = nz > -0.05;   // (facing us)
+				faces.push({ p, z: p.reduce((s, q) => s + q.z, 0) / 4, shade: out ? 0.15 - 0.25 * nz : 0.55 });
+			}
+			// the peak: a curved sheet across the front, sloping a little down
+			const M = 12;
+			for (let i = 0; i < M; i++) {
+				const a0 = (-0.5 + i / M) * Math.PI;
+				const a1 = (-0.5 + (i + 1) / M) * Math.PI;
+				const reach = (a) => R + (PEAK - R) * Math.cos(a) ** 1.5;   // longest straight ahead
+				const p = [
+					view(Math.sin(a0) * R, BAND / 2, Math.cos(a0) * R),
+					view(Math.sin(a1) * R, BAND / 2, Math.cos(a1) * R),
+					view(Math.sin(a1) * reach(a1), BAND / 2 + 14, Math.cos(a1) * reach(a1)),
+					view(Math.sin(a0) * reach(a0), BAND / 2 + 14, Math.cos(a0) * reach(a0)),
+				];
+				faces.push({ p, z: p.reduce((s, q) => s + q.z, 0) / 4 + 2, shade: 0.05 });
+			}
+			faces.sort((a, b) => a.z - b.z);
 			c.save();
 			c.globalAlpha *= alpha;
-			c.lineCap = 'round';
-			c.strokeStyle = 'rgba(0,0,0,0.45)';
-			c.lineWidth = 34;
+			// its shadow on the floor
+			c.fillStyle = 'rgba(0,0,0,0.3)';
 			c.beginPath();
-			c.ellipse(0, 6, 80, 46, 0, Math.PI * 1.05, Math.PI * 1.95);
-			c.stroke();
-			c.strokeStyle = fill;
-			c.lineWidth = 26;
-			c.beginPath();
-			c.ellipse(0, 0, 80, 46, 0, Math.PI * 1.05, Math.PI * 1.95);
-			c.stroke();
-			c.fillStyle = fill;
-			c.beginPath();
-			c.moveTo(-86, -6);
-			c.quadraticCurveTo(0, 70, 86, -6);
-			c.quadraticCurveTo(0, 22, -86, -6);
+			c.ellipse(0, 70, PEAK * 0.9, 20, 0, 0, Math.PI * 2);
 			c.fill();
-			c.globalAlpha *= 0.35;
-			c.fillStyle = 'white';
-			c.beginPath();
-			c.ellipse(-30, -38, 26, 6, -0.2, 0, Math.PI * 2);
-			c.fill();
+			c.lineJoin = 'round';
+			for (const face of faces) {
+				c.beginPath();
+				face.p.forEach((q, i) => (i ? c.lineTo(q.x, q.y) : c.moveTo(q.x, q.y)));
+				c.closePath();
+				c.fillStyle = fill;
+				c.strokeStyle = fill;
+				c.lineWidth = 1.5;   // (hides the seams between faces)
+				c.fill();
+				c.stroke();
+				if (face.shade > 0) {
+					c.fillStyle = `rgba(0,0,0,${Math.min(0.7, face.shade)})`;
+					c.fill();
+				}
+			}
 			c.restore();
 		}
 
