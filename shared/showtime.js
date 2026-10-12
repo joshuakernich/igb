@@ -100,15 +100,17 @@ window.Showtime = function (stage, opts) {
 	/* ---------- tuning: the clock intro ---------- */
 
 	const CLOCK_INTRO = {
-		dial: 0.4,             // 1. the dial, out of the dark
-		charge: [0.4, 2.0],    //    its ticks light up round, under the drumroll
-		youHave: 2.0,          // 2. "YOU HAVE", above it
-		number: 2.8,           // 3. the "10", in it
-		unit: 3.6,             // 4. "MINUTES", under it
-		settle: [5.2, 6.1],    // the 10 becomes the clock and flies up to its place at the top of every wall
+		dial: 0.3,             // 1. the dial, out of the dark
+		charge: [0.3, 1.6],    //    its ticks light up round, under the drumroll
+		youHave: 0.7,          // 2. "YOU HAVE", in it, above the middle (while it's still lighting up)
+		number: 1.1,           // 3. the "10", in the middle
+		unit: 1.5,             // 4. "MINUTES", under it
+		settle: [3.6, 4.5],    // the 10 becomes the clock and flies up to its place at the top of every wall
 		runAfter: 0,           // and starts counting down this long after it lands (straight away)
-		length: 6.6,
-		size: 190,             // the big number
+		length: 5.0,
+		radius: 390,           // the dial's outer edge
+		size: 300,             // the big number
+		words: [100, 112],     // YOU HAVE, MINUTES
 		y: 520,                // the dial's centre
 	};
 
@@ -1061,8 +1063,8 @@ window.Showtime = function (stage, opts) {
 						for (let i = 0; i < 60; i++) {
 							const a = i / 60 * Math.PI * 2 - Math.PI / 2;
 							const on = i / 60 < charged;
-							const r0 = (i % 5 ? 232 : 214) * grow;
-							const r1 = 258 * grow;
+							const r0 = (i % 5 ? 0.9 : 0.83) * C.radius * grow;
+							const r1 = C.radius * grow;
 							c.save();
 							c.globalAlpha = fade * (on ? 1 : 0.22) * clamp((bt - C.dial) * 4, 0, 1);
 							c.strokeStyle = on ? (i % 5 ? theme.accent : theme.gold) : 'white';
@@ -1074,10 +1076,10 @@ window.Showtime = function (stage, opts) {
 							c.stroke();
 							c.restore();
 						}
-						if (charged >= 1) art.circle(c, cx, C.y, 290, { fill: art.radial(c, cx, C.y, 100, 300, [[0, 'rgba(255,79,216,0)'], [0.7, 'rgba(255,79,216,0.25)'], [1, 'rgba(255,79,216,0)']]), alpha: fade });
+						if (charged >= 1) art.circle(c, cx, C.y, C.radius * 1.12, { fill: art.radial(c, cx, C.y, C.radius * 0.4, C.radius * 1.16, [[0, 'rgba(255,79,216,0)'], [0.7, 'rgba(255,79,216,0.25)'], [1, 'rgba(255,79,216,0)']]), alpha: fade });
 					}
 					// 2. YOU HAVE, inside the dial just above the 10
-					self.slam(c, 'YOU HAVE', cx, C.y - 140, 60, bt - C.youHave, { alpha: fade, fit: 300 });
+					self.slam(c, 'YOU HAVE', cx, C.y - C.radius * 0.55, C.words[0], bt - C.youHave, { alpha: fade, fit: C.radius * 1.2 });
 					// 3. the 10, in the dial; it becomes the clock and flies up to its corner
 					if (bt > C.number) {
 						const age = bt - C.number;
@@ -1093,7 +1095,7 @@ window.Showtime = function (stage, opts) {
 						c.restore();
 					}
 					// 4. MINUTES, just under the 10
-					self.slam(c, unit, cx, C.y + 145, 68, bt - C.unit, { fill: theme.gold, glow: '#ff7a3d', alpha: fade, fit: 290 });
+					self.slam(c, unit, cx, C.y + C.radius * 0.57, C.words[1], bt - C.unit, { fill: theme.gold, glow: '#ff7a3d', alpha: fade, fit: C.radius * 1.15 });
 				});
 			},
 		}, extra);
