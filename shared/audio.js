@@ -36,12 +36,13 @@ window.AudioPlayer = function () {
 		return ac;
 	}
 
-	// id, src, volume (0..1, default 1), loop, autoplay
+	// id, src, volume (0..1, default 1), loop, autoplay. src 'sfx:<name>' is a
+	// generated sound (shared/sfx.js) rather than a file.
 	self.add = function (id, src, volume, loop, autoplay) {
 		const el = new Audio();
-		el.preload = 'auto';
 		el.loop = !!loop;
-		el.src = src;
+		if (String(src).startsWith('sfx:')) el.dataset.sfx = src;
+		else { el.preload = 'auto'; el.src = src; }
 		el.volume = volume ? volume : 1;
 		audio[id] = el;
 		if (autoplay) self.play(id);
@@ -58,7 +59,8 @@ window.AudioPlayer = function () {
 		if (window.IGB && IGB.music === false && /(^|\/)music-[^\/]*$/.test(el.getAttribute('src') || '')) return;
 		if (muted || (owner && (owner.leaving || owner.stopped))) return;
 		// a recorded effect with a generated version (shared/sfx.js) plays that instead
-		const gen = !el.loop && window.SFX && !(window.IGB && IGB.generatedSfx === false) && SFX.nameOf(el.getAttribute('src'));
+		const gen = window.SFX && (el.dataset.sfx ? SFX.nameOf(el.dataset.sfx)
+			: !el.loop && !(window.IGB && IGB.generatedSfx === false) && SFX.nameOf(el.getAttribute('src')));
 		if (gen) {
 			const c = context();
 			if (c) SFX.play(c, c.destination, gen, el.volume, speed || 1);

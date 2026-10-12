@@ -488,7 +488,7 @@ IGB.register('backrooms', function BackroomsGame(stage, playersMeta) {
 		camY = eyeY(floorN);
 		sound.hum(Math.min(level, 3) / 3);
 		callout = null;
-		show.sfx.boom(0.6);
+		show.fx('thud', 0.8);
 		setPhase('ready', READY);
 	}
 
@@ -504,7 +504,7 @@ IGB.register('backrooms', function BackroomsGame(stage, playersMeta) {
 		showFloors(floorN, to);
 		callout = null;
 		if (kind === 'descend') sound.rumble(DESCENT);
-		else { sound.crackle(); show.play('wooshLong'); }
+		else { sound.crackle(); show.fx('rewind'); }
 		setPhase(kind, kind === 'descend' ? DESCENT : REWIND);
 	}
 
@@ -523,11 +523,10 @@ IGB.register('backrooms', function BackroomsGame(stage, playersMeta) {
 		callout = null;
 		if (found === diffs.length) {
 			show.mark(t);
-			show.sfx.sting(0.2);
-			show.play('correct');
+			show.fx('roundClear');
 		} else if (!found) {
 			sound.crackle();
-			show.sfx.boom(0.7);
+			show.fx('roundFail');
 			show.shake = 0.4;
 		} else {
 			sound.crackle();
@@ -636,7 +635,7 @@ IGB.register('backrooms', function BackroomsGame(stage, playersMeta) {
 
 	function enterStep(i) {
 		Object.assign(practice, { i, age: 0, done: false, doneAge: 0, moved: 0, wronged: false, tape: CONTROLS.tape, nextDemo: 0.6, demoN: 0 });
-		if (CONTROLS.steps[i]) { show.play('woosh'); show.sfx.hit(0.35); }
+		if (CONTROLS.steps[i]) show.fx('stepIn');
 	}
 
 	// The practice chair, on the front wall's side of the room, somewhere
@@ -748,8 +747,7 @@ IGB.register('backrooms', function BackroomsGame(stage, playersMeta) {
 		}
 		if (!practice.done && practice.age >= step.min && achieved(step)) {
 			practice.done = true;
-			show.sfx.sting(0.15);
-			show.play('correct');
+			show.fx('nice');
 		}
 		if (practice.done) practice.doneAge += dt;
 		if ((practice.done && practice.doneAge >= CONTROLS.nice) || practice.age >= step.max) enterStep(practice.i + 1);
@@ -1327,7 +1325,7 @@ IGB.register('backrooms', function BackroomsGame(stage, playersMeta) {
 				camY = eyeY(0);
 				showFloors(0);
 				sound.hum(0.8);
-				show.sfx.riser(ENTITY.focus, 0.25);
+				show.fx('riser', 0.4, 1, ENTITY.focus);
 			},
 			update(dt, bt) {
 				const E = ENTITY;
@@ -1342,8 +1340,8 @@ IGB.register('backrooms', function BackroomsGame(stage, playersMeta) {
 					push.z = -(R + E.depth) * ease(k);
 					darkSides = 0.85 * between(bt, E.push[0], E.push[0] + 1.5);
 				}
-				if (show.cue(E.focus)) { show.sfx.hit(0.3); sound.crackle(); }
-				if (show.cue(E.out)) { removeFigure(); sound.duck(1); sound.thud(0.8); show.sfx.boom(0.5); }
+				if (show.cue(E.focus)) { show.fx('glint', 0.5, 0.7); sound.crackle(); }
+				if (show.cue(E.out)) { removeFigure(); sound.duck(1); sound.thud(0.8); show.fx('thud', 0.7); }
 				if (bt >= E.out && bt < E.back) show.blackout = 0.94;
 				if (show.cue(E.back)) {
 					show.blackout = 0;
@@ -1353,7 +1351,7 @@ IGB.register('backrooms', function BackroomsGame(stage, playersMeta) {
 					sound.hum(0);
 					sound.crackle();
 				}
-				if (show.cue(E.title)) { show.sfx.boom(1); show.play('reveal'); show.shake = 0.8; show.flash = 0.35; sound.say('level zero'); }
+				if (show.cue(E.title)) { show.fx('villainReveal'); show.shake = 0.8; show.flash = 0.35; sound.say('level zero'); }
 			},
 			draw(ctx, bt) {
 				const E = ENTITY;

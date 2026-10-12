@@ -142,17 +142,17 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 	const audio = stage.audio();
 	audio.add('music', 'assets/shared/music-run.mp3', 0.25, true);
 	audio.add('tutorial', 'assets/shared/music-tutorial.mp3', 0.2, true);
-	audio.add('catch', 'assets/shared/sfx-bounce.mp3', 0.4);
-	audio.add('pop', 'assets/shared/sfx-point-e.mp3', 0.25);
-	audio.add('wound', 'assets/shared/sfx-explode.mp3', 0.4);
-	audio.add('fizz', 'assets/shared/sfx-pickup.mp3', 0.35);
-	audio.add('lock', 'assets/shared/sfx-select.mp3', 0.4);
-	audio.add('summon', 'assets/shared/sfx-reveal.mp3', 0.5);
-	audio.add('slash', 'assets/shared/sfx-woosh.mp3', 0.5);
-	audio.add('win', 'assets/shared/sfx-cheer.mp3', 0.5);
-	audio.add('nice', 'assets/shared/sfx-correct.mp3', 0.4);
-	audio.add('charge', 'assets/shared/sfx-charge.mp3', 0.5);
-	audio.add('zap', 'assets/shared/sfx-explode.mp3', 0.5);
+	audio.add('catch', 'sfx:deflect', 0.5);
+	audio.add('pop', 'sfx:demonPop', 0.5);
+	audio.add('wound', 'sfx:bossHit', 0.6);
+	audio.add('fizz', 'sfx:fizzle', 0.5);
+	audio.add('lock', 'sfx:joinWall', 0.5);
+	audio.add('summon', 'sfx:summon', 0.6);
+	audio.add('slash', 'sfx:swordSwish', 0.5);
+	audio.add('win', 'sfx:banish', 0.6);
+	audio.add('nice', 'sfx:nice', 0.5);
+	audio.add('charge', 'sfx:attackWarn', 0.6);
+	audio.add('zap', 'sfx:vineStrike', 0.6);
 
 
 	let hunters = [];
@@ -350,7 +350,7 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 			if (boss.modeT >= BRACE) {
 				boss.mode = 'dash';
 				boss.modeT = 0;
-				show.play('wooshLong');
+				show.fx('bossDash');
 			}
 		} else if (boss.held === null && boss.mode === 'dash') {
 			// ...then a lunge across the seam into the next wall
@@ -360,7 +360,7 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 			if (k >= 1) {
 				boss.mode = 'walk';
 				boss.squish = 1;
-				show.sfx.boom();
+				show.fx('stomp');
 				show.shake = Math.max(show.shake, 0.5);
 			}
 		} else if (boss.held === null) {
@@ -381,7 +381,7 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 					boss.modeT = 0;
 					boss.dashFrom = boss.x;
 					boss.dashTo = boss.dir > 0 ? next * W + half : (next + 1) * W - half;
-					show.sfx.riser(BRACE, 0.3);
+					show.fx('riser', 0.5, 1, BRACE);
 				}
 			}
 			boss.nextPause -= dt;
@@ -556,9 +556,7 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 		teamBonus += ROUND.bonus * round;
 		show.mark(t);
 		audio.play('win', true);
-		show.play('explode');
-		show.sfx.boom(1);
-		show.sfx.roar(1.2, 0.5);
+		show.fx('bossDefeat');
 		show.flash = 0.7;
 		show.shake = 1;
 		slowmo = 1;
@@ -615,8 +613,8 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 		attack = { kind, phase: 'warn', t: 0, wall, x: x === null ? 0 : clamp(x, wall * W + half, (wall + 1) * W - half), said: 4 };
 		attack.vines = growVines(attack);
 		audio.play('charge', true);
-		show.sfx.riser(LIGHTNING[kind].warn, 0.4);
-		if (kind === 'wall') show.sfx.alarm();
+		show.fx('riser', 0.6, 1, LIGHTNING[kind].warn);
+		if (kind === 'wall') show.fx('alarm');
 	}
 
 	// A vine from his feet to a run of goals down the floor: a zigzag of
@@ -690,7 +688,7 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 		if (attack.phase === 'warn') {
 			if (attack.kind === 'wall') {
 				const left = Math.ceil(L.warn - attack.t);
-				if (left < attack.said && left > 0) { attack.said = left; show.sfx.drum(); }
+				if (left < attack.said && left > 0) { attack.said = left; show.fx('countdown'); }
 			}
 			if (attack.t >= L.warn) strike();
 		} else if (attack.t >= L.strike) {
@@ -701,7 +699,7 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 	function strike() {
 		attack.phase = 'strike';
 		attack.t = 0;
-		show.sfx.boom(1);
+		show.fx('boom');
 		audio.play('zap', true);
 		show.flash = attack.kind === 'wall' ? 0.45 : 0.3;
 		show.shake = attack.kind === 'wall' ? 1 : 0.6;
@@ -1326,7 +1324,7 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 		balls = [];
 		walkers = [];
 		const step = CONTROLS.steps[i];
-		if (step) { show.play('woosh'); show.sfx.hit(0.35); }
+		if (step) show.fx('stepIn');
 	}
 
 	function achieved(step) {
@@ -1363,7 +1361,6 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 		if (!practice.done && practice.age >= step.min && achieved(step)) {
 			practice.done = true;
 			audio.play('nice', true);
-			show.sfx.sting(0.15);
 			for (const h of hunters) pop('NICE!', PLAYER_COLORS[h.n], h.x, h.y - 40);
 		}
 		if (practice.done) practice.doneAge += dt;
@@ -1485,8 +1482,8 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 				walkers = [];
 				Object.assign(boss, { x: WIDTH / 2, dir: 1, gone: false, rise: 0, fade: 0, size: 1, pace: 1, bar: false, squish: 0, pause: 0, roar: 0 });
 				show.camera.move({ x: WIDTH / 2, y: 330, z: 1.7 }, E.rise[0]);
-				show.play('rumble');
-				show.sfx.riser(E.face);
+				show.fx('rumble');
+				show.fx('riser', 0.7, 1, E.face);
 			},
 			update(dt, bt) {
 				const E = ENTRANCE;
@@ -1496,16 +1493,16 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 				if (bt > E.rise[0] && bt < E.face) show.shake = Math.max(show.shake, 0.1 + 0.35 * boss.rise);
 				if (show.cue(E.face)) {
 					show.camera.move({ x: boss.x, y: 190, z: E.faceZoom }, 0.22);
-					show.sfx.roar(2.4);
+					show.fx('roar', 1, 1, 2.4);
 					show.stop('rumble');
 					boss.roar = 1;
 					show.flash = 0.5;
 					show.shake = 1;
 				}
-				if (show.cue(E.name)) { show.play('explode'); show.sfx.boom(1); show.shake = 0.8; }
-				if (show.cue(E.pull)) { show.camera.wide(E.pullFor); show.play('wooshLong'); }
+				if (show.cue(E.name)) { show.fx('villainReveal'); show.shake = 0.8; }
+				if (show.cue(E.pull)) { show.camera.wide(E.pullFor); show.fx('whooshLong', 0.6); }
 				if (show.cue(E.pull + E.pullFor * 0.7)) boss.bar = true;
-				if (show.cue(E.fight)) { show.sfx.boom(1); show.play('reveal'); show.shake = 0.7; show.flash = 0.4; }
+				if (show.cue(E.fight)) { show.fx('fight'); show.shake = 0.7; show.flash = 0.4; }
 			},
 			draw(ctx, bt) {
 				const E = ENTRANCE;
@@ -1544,8 +1541,7 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 					if (clearing <= 0) {
 						startRound(retrying ? round : round + 1);
 						retrying = false;
-						show.sfx.roar(1.3, 0.45);
-						show.play('rumble');
+						show.fx('roar', 0.5, 1, 1.3);
 					}
 				}
 			},
@@ -1573,7 +1569,7 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 			update(dt, bt) {
 				stepWorld(dt * show.timeScale);
 				boss.fade = between(bt, 1.0, 3.0);
-				if (show.cue(1.0)) show.sfx.roar(1.6, 0.4);
+				if (show.cue(1.0)) show.fx('roar', 0.4, 1, 1.6);
 			},
 		}),
 

@@ -67,15 +67,15 @@ IGB.register('roll-call', function RollCallGame(stage, playersMeta) {
 
 	const audio = stage.audio();
 	audio.add('music', 'assets/box-party/music-quest.mp3', 0.12, true);
-	audio.add('wake', 'assets/shared/sfx-select.mp3', 0.4);
-	audio.add('pop', 'assets/shared/sfx-bounce.mp3', 0.4);
-	audio.add('lock', 'assets/shared/sfx-pickup.mp3', 0.4);
-	audio.add('correct', 'assets/shared/sfx-correct.mp3', 0.35);
-	audio.add('cheer', 'assets/shared/sfx-cheer.mp3', 0.35);
-	audio.add('reveal', 'assets/shared/sfx-reveal.mp3', 0.3);
-	audio.add('woosh', 'assets/shared/sfx-woosh.mp3', 0.2);
-	audio.add('tick', 'assets/shared/sfx-tick.mp3', 0.3);
-	audio.add('hint', 'assets/shared/sfx-point-g.mp3', 0.3);
+	audio.add('wake', 'sfx:wake', 0.5);
+	audio.add('pop', 'sfx:pop', 0.5);
+	audio.add('lock', 'sfx:lockIn', 0.5);
+	audio.add('correct', 'sfx:correct', 0.45);
+	audio.add('cheer', 'sfx:crowd', 0.45);
+	audio.add('reveal', 'sfx:reveal', 0.45);
+	audio.add('woosh', 'sfx:whoosh', 0.35);
+	audio.add('tick', 'sfx:clockTick', 0.5);
+	audio.add('hint', 'sfx:hint', 0.45);
 
 	const hud = new HUD('#7538D4');
 	hud.$el.appendTo(stage.$ui);

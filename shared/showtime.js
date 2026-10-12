@@ -75,7 +75,9 @@
  *   show.timeScale     slows to 0 during TIME!; step your world by dt * timeScale
  *   show.confetti(n) / show.burst(x, y, colour)   celebrations
  *   show.play(id) / show.stop(id)   the shared sounds (see SOUNDS), and
- *   show.sfx.boom() .drum() .roar() .alarm() .riser(s) .sting() .hit()   synthesised ones
+ *   show.fx(name, volume, rate, extra)   a generated sound for a moment (shared/sfx.js:
+ *                      'wordSlam', 'visorLock', 'fanfare', 'villainReveal'...)
+ *   show.sfx.boom() .drum() .roar() .alarm() .riser(s) .sting() .hit()   older synthesised ones
  *   show.state()       the beat, the beats seen in order, and so on, for tests
  *   show.fini()        closes the show's AudioContext (also done when the stage stops)
  *
@@ -216,7 +218,7 @@ window.Showtime = function (stage, opts) {
 	const TEAM = {
 		fade: [0.2, 0.9],      // the rankings, as they were left: all but the scores fade away
 		fly: [1.1, 2.0],       // the scores fly together
-		count: [2.2, 4.0],     // smooshed, the total counts up
+		count: [2.2, 4.0],     // smooshed, the total shows whole; the party starts after
 		bonus: [4.4, 5.5],     // the bonus is added
 		length: 10.4,
 		y: 450,
@@ -378,6 +380,12 @@ window.Showtime = function (stage, opts) {
 		src.start(t0);
 		src.stop(t0 + len + 0.05);
 	}
+	// A generated effect for a moment (shared/sfx.js), on the show's own context.
+	self.fx = function (name, vol = 1, rate = 1, extra) {
+		const c = context();
+		if (c && window.SFX) SFX.play(c, master, name, vol, rate, extra);
+	};
+
 	self.sfx = {
 		boom(vol = 0.9) {                       // a deep impact under a slam
 			tone('sine', 0, 1.1, 110, 28, vol);
@@ -801,7 +809,7 @@ window.Showtime = function (stage, opts) {
 				opacity: 0, transition: 'opacity 0.4s',
 			}).appendTo(stage.$ui).on('click', function (e) {
 				e.stopPropagation();
-				self.sfx.hit();
+				self.fx('skip');
 				self.go('play');
 			});
 			stage.timeout(() => $skip && $skip.css({ opacity: 0.9 }), 30);
@@ -841,7 +849,7 @@ window.Showtime = function (stage, opts) {
 				.on('mouseleave', function () { $(this).css({ transform: 'scale(1)' }); })
 				.on('click', function () {
 					const count = parseInt($(this).attr('count'), 10);
-					self.sfx.hit();
+					self.fx('pick');
 					$(this).css({ transform: 'scale(1.35)', transitionDelay: '0s' });
 					$pick.css({ transition: 'opacity 0.35s', opacity: 0, pointerEvents: 'none' });
 					stage.timeout(() => $pick.remove(), 400);
@@ -896,9 +904,9 @@ window.Showtime = function (stage, opts) {
 		const ran = clock.ran;
 		clock.ran += dt;
 		// (a tick each time the seconds go over, the first at 9:59)
-		for (let s = 1; s <= CLOCK.startTicks; s++) if (ran < s && clock.ran >= s) self.sfx.tick(CLOCK.tickVolume * Math.pow(1 - (s - 1) / CLOCK.startTicks, 2));
+		for (let s = 1; s <= CLOCK.startTicks; s++) if (ran < s && clock.ran >= s) self.fx('clockTick', CLOCK.tickVolume * Math.pow(1 - (s - 1) / CLOCK.startTicks, 2));
 		const whole = Math.ceil(clock.left);
-		if (whole <= CLOCK.final && whole < clock.said && whole > 0) self.play('tick');
+		if (whole <= CLOCK.final && whole < clock.said && whole > 0) self.fx('lastSeconds', 0.8);
 		clock.said = whole;
 		if (clock.left <= 0) {
 			clock.running = false;
@@ -1037,13 +1045,13 @@ window.Showtime = function (stage, opts) {
 			},
 			update(dt, bt) {
 				self.blackout = Math.min(INTRO_DIM, bt / T.dark * INTRO_DIM);   // the game's scene still showing behind
-				if (self.cue(T.first - T.riser)) self.sfx.riser(T.riser, 0.35);
+				if (self.cue(T.first - T.riser)) self.fx('riser', 0.7, 1, T.riser);
 				lands.forEach(function (times, li) {
 					times.forEach(function (t0, i) {
-						if (lines[li].text[i] !== ' ' && self.cue(t0 + T.fall)) { self.sfx.hit(); self.shake = Math.max(self.shake, 0.18); }
+						if (lines[li].text[i] !== ' ' && self.cue(t0 + T.fall)) { self.fx('letter', 0.8); self.shake = Math.max(self.shake, 0.18); }
 					});
 				});
-				if (self.cue(lastLand)) { self.sfx.boom(1); self.play('reveal'); self.shake = 0.9; self.flash = 0.6; }
+				if (self.cue(lastLand)) { self.fx('titleLand'); self.shake = 0.9; self.flash = 0.6; }
 			},
 			draw(ctx, bt) {
 				const fade = 1 - between(bt, out, length);
@@ -1107,15 +1115,16 @@ window.Showtime = function (stage, opts) {
 			},
 			update(dt, bt) {
 				// each word lands with a hit and a shake; the 10 with a boom (no drums)
-				if (self.cue(C.youHave + C.slam)) { self.sfx.hit(0.7); self.shake = 0.45; }
-				if (self.cue(C.number + 0.26)) { self.sfx.boom(1); self.shake = 0.8; self.flash = 0.5; }
-				if (self.cue(C.unit + C.slam)) { self.sfx.hit(0.8); self.play('reveal'); self.shake = 0.9; self.flash = 0.4; }
+				if (self.cue(C.dial)) self.fx('dialCharge', 0.8, 1, C.charge[1] - C.charge[0]);
+				if (self.cue(C.youHave + C.slam)) { self.fx('wordSlam'); self.shake = 0.45; }
+				if (self.cue(C.number + 0.26)) { self.fx('timeSlam'); self.shake = 0.8; self.flash = 0.5; }
+				if (self.cue(C.unit + C.slam)) { self.fx('wordSlam', 1, 0.85); self.shake = 0.9; self.flash = 0.4; }
 				// the 10:00 in the dial starts counting down (and ticking), then flies up
 				// to its place; the corner clock takes over once it lands
 				if (self.cue(C.count)) { startClock(0); clock.shown = false; }   // counting (and ticking) in the dial
-				if (self.cue(C.settle[0])) self.play('wooshLong');
+				if (self.cue(C.settle[0])) self.fx('clockFly');
 				if (bt > C.settle[0]) self.blackout = INTRO_DIM * (1 - between(bt, C.settle[0], C.settle[1] + 0.3));
-				if (self.cue(C.settle[1])) { clock.shown = true; self.sfx.hit(); }
+				if (self.cue(C.settle[1])) { clock.shown = true; self.fx('clockDock'); }
 			},
 			draw(ctx, bt) {
 				if (bt >= C.settle[1]) return;
@@ -1216,19 +1225,18 @@ window.Showtime = function (stage, opts) {
 						if (inZone(p) && motion[i] > V.wiggle) held[i] = (held[i] || 0) + dt;
 						if (held[i] >= V.hold) {
 							ticked[i] = bt;
-							self.play('correct');
+							self.fx('visorLock', 0.9, 1, i);
 						}
 					}
 				});
 				// a wrong visor, newly in play: the alarm
 				const bad = wrong();
-				for (const i of bad) if (wrongSince[i] === undefined) { wrongSince[i] = bt; self.sfx.alarm(0.8, 0.3); self.shake = 0.3; }
+				for (const i of bad) if (wrongSince[i] === undefined) { wrongSince[i] = bt; self.fx('wrongVisor'); self.shake = 0.3; }
 				wrongSince = wrongSince.map((t, i) => (bad.includes(i) ? t : undefined));
 				clearFor = !missing().length && !bad.length ? clearFor + dt : 0;
 				if (allSetAt < 0 && clearFor >= V.clear) {
 					allSetAt = bt;
-					self.sfx.boom(0.8);
-					self.play('reveal');
+					self.fx('allSet');
 					self.flash = 0.4;
 				}
 			},
@@ -1244,8 +1252,8 @@ window.Showtime = function (stage, opts) {
 						drawVisorRow(c, cx, V.y, n, bt);
 						return;
 					}
-					// the instructions on one line: the step under way lit, the
-					// one done gold, the ones to come dim
+					// the instructions on one line, all white: the steps under way (and
+					// done) bright, the ones to come dim
 					const steps = [
 						{ text: 'PUT ON A VISOR', done: asking, now: !asking },
 						{ text: 'STAND IN THE CENTRE', now: asking },
@@ -1268,7 +1276,7 @@ window.Showtime = function (stage, opts) {
 							x += gap * k;
 						}
 						self.text(c, s.text, x + widths[i] * k / 2, 165, SIZE * k, {
-							fill: s.done ? theme.gold : 'white', alpha: alpha * (s.now || s.done ? 1 : 0.4),
+							fill: 'white', alpha: alpha * (s.now || s.done ? 1 : 0.4),
 							glow: s.now ? theme.accent : 'transparent', fit: 9999,
 						});
 						x += widths[i] * k;
@@ -1505,15 +1513,14 @@ window.Showtime = function (stage, opts) {
 				clock.left = 0;
 				clock.running = false;
 				clock.delay = -1;
-				self.sfx.alarm();
-				self.play('buzz');
+				self.fx('timeUp');
 				self.flash = 0.7;
 				self.shake = 0.6;
 				camera.move({ x: camera.view().x, y: H / 2, z: 1.12 }, 2.4);
 			},
 			update(dt, bt) {
 				self.timeScale = 1 - easeOut(between(bt, 0, TIME_UP.slow));
-				if (self.cue(TIME_UP.title)) { self.sfx.boom(1); self.shake = 1; }
+				if (self.cue(TIME_UP.title)) { self.fx('boom', 0.8); self.shake = 1; }
 				if (self.cue(1.3)) self.stop('buzz');
 				self.blackout = 0.96 * between(bt, TIME_UP.dark[0], TIME_UP.dark[1]);
 				if (bt > TIME_UP.dark[0]) clock.shown = false;
@@ -1566,15 +1573,15 @@ window.Showtime = function (stage, opts) {
 				self.timeScale = 1;
 				camera.wide();
 				self.play('drama');
-				self.play('wooshLong');
+				self.fx('whooshLong', 0.6);
 				shown = scores().map(() => 0);
 			},
 			update(dt, bt) {
 				const k = easeOut(between(bt, SCORES.count[0], SCORES.count[1]));
 				const before = shown.join();
 				shown = scores().map((s) => Math.round(s * k));
-				if (shown.join() !== before && Math.floor(bt * 12) % 2 === 0) self.play('tick');
-				if (self.cue(SCORES.count[1])) { self.sfx.drum(); self.play('coin'); self.shake = 0.3; }
+				if (shown.join() !== before && Math.floor(bt * 12) % 2 === 0) self.fx('scoreTick');
+				if (self.cue(SCORES.count[1])) { self.fx('scoresIn'); self.shake = 0.3; }
 			},
 			draw(ctx, bt) {
 				const n = count();
@@ -1623,18 +1630,18 @@ window.Showtime = function (stage, opts) {
 			},
 			update(dt, bt) {
 				const n = count();
-				if (self.cue(RANK.move[0])) self.play('wooshLong');
+				if (self.cue(RANK.move[0])) self.fx('slide');
 				for (let p = 0; p < n; p++) {
 					if (!self.cue(reveal[p])) continue;
 					if (place[p] === 0) {
-						self.sfx.boom(1);
-						self.sfx.sting();
-						self.play('cheer');
+						self.fx('placeReveal', 1, 1, 1);
+						self.fx('fanfare');
+						self.fx('crowd', 0.8);
 						self.flash = 0.4;
 						self.shake = 0.6;
 						self.confetti(200);
 					} else {
-						self.sfx.drum();
+						self.fx('placeReveal', 0.9, 1, 1 - place[p] / Math.max(1, n - 1));
 						self.shake = 0.2;
 					}
 				}
@@ -1694,16 +1701,13 @@ window.Showtime = function (stage, opts) {
 			},
 			update(dt, bt) {
 				const sum = scores().reduce((a, b) => a + b, 0);
-				const before = shown;
-				shown = Math.round(sum * easeOut(between(bt, TEAM.count[0], TEAM.count[1])) + bonus() * easeOut(between(bt, TEAM.bonus[0], TEAM.bonus[1])));
-				if (shown !== before && Math.floor(bt * 14) % 2 === 0) self.play('tick');
-				if (self.cue(TEAM.fly[0])) self.play('wooshLong');
-				if (self.cue(TEAM.fly[1])) { self.sfx.boom(1); self.shake = 0.8; self.flash = 0.4; }
-				if (bonus() > 0 && self.cue(TEAM.bonus[0])) { self.sfx.drum(); self.play('coin'); }
+				// the whole total the moment the scores combine; the bonus lands on it whole too
+				shown = (bt >= TEAM.fly[1] ? sum : 0) + (bt >= TEAM.bonus[0] ? bonus() : 0);
+				if (self.cue(TEAM.fly[0])) self.fx('gather');
+				if (self.cue(TEAM.fly[1])) { self.fx('smoosh'); self.shake = 0.8; self.flash = 0.4; }
+				if (bonus() > 0 && self.cue(TEAM.bonus[0])) self.fx('bonus');
 				if (self.cue(partyAt)) {
-					self.sfx.sting();
-					self.play('cheer');
-					self.play('explode');
+					self.fx('party');
 					self.shake = 0.7;
 					self.flash = 0.5;
 					self.confetti(400);
@@ -1802,7 +1806,7 @@ window.Showtime = function (stage, opts) {
 				board = makeBoard();
 				board.rows.forEach((row, i) => { row.y = BOARD.top + i * BOARD.row; });
 				board.us.y = BOARD.top + BOARD.teams * BOARD.row + 120;
-				self.play('wooshLong');
+				self.fx('whooshLong', 0.5);
 			},
 			update(dt, bt) {
 				const climbed = clamp(Math.floor((bt - BOARD.enter - 0.6) / BOARD.climb) + 1, 0, passes());
@@ -1812,12 +1816,11 @@ window.Showtime = function (stage, opts) {
 					row.y += (want - row.y) * Math.min(1, dt * 14);
 				});
 				if (bt > BOARD.enter) board.us.y += (BOARD.top + slot * BOARD.row - board.us.y) * Math.min(1, dt * 14);
-				for (let k = 1; k <= passes(); k++) if (self.cue(BOARD.enter + 0.6 + (k - 1) * BOARD.climb)) self.play('tick');
-				if (self.cue(BOARD.enter)) self.play('woosh');
+				for (let k = 1; k <= passes(); k++) if (self.cue(BOARD.enter + 0.6 + (k - 1) * BOARD.climb)) self.fx('climb', 0.8, 1 + k * 0.06);
+				if (self.cue(BOARD.enter)) self.fx('rowIn');
 				if (self.cue(landAt())) {
-					self.sfx.boom(1);
-					self.sfx.sting();
-					self.play('cheer');
+					self.fx('fanfare');
+					self.fx('crowd', 0.8);
 					self.flash = 0.5;
 					self.shake = 0.7;
 					self.confetti(300);
@@ -1967,10 +1970,10 @@ window.Showtime = function (stage, opts) {
 				self.stop('drama');
 				self.stop('cheer');
 				self.play('replay', 1.25);
-				self.play('wooshLong');
+				self.fx('rewind');
 			},
 			update(dt, bt) {
-				if (self.cue(REPLAY.intro + REPLAY.play)) { self.stop('replay'); self.sfx.hit(); self.sfx.sting(0.15); }
+				if (self.cue(REPLAY.intro + REPLAY.play)) { self.stop('replay'); self.fx('tapeStop'); }
 			},
 			draw(ctx, bt) {
 				const n = count();
@@ -2101,7 +2104,7 @@ window.Showtime = function (stage, opts) {
 			fontFamily: font, fontSize: '40px', letterSpacing: '1px', cursor: 'pointer', pointerEvents: 'auto',
 			transition: 'transform 0.15s',
 		}, extraCss));
-		const tap = ($b, fn) => $b.on('click', function (e) { e.stopPropagation(); self.sfx.hit(); fn(); });
+		const tap = ($b, fn) => $b.on('click', function (e) { e.stopPropagation(); self.fx('tap'); fn(); });
 
 		// Every wall shows the same thing; any wall's tap counts for all.
 		function render() {
@@ -2128,7 +2131,7 @@ window.Showtime = function (stage, opts) {
 				const $b = $('<button>').attr({ rating: i + 1, title: f.label }).css({
 					display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px',
 					width: '230px', padding: 0, border: 'none', background: 'none', cursor: 'pointer', pointerEvents: 'auto',
-					fontFamily: font, color: 'white', fontSize: '40px', letterSpacing: '1px',
+					fontFamily: font, color: 'white', fontSize: '28px', letterSpacing: '1px',
 				}).appendTo($row);
 				$('<div>').html(face(i)).css({ width: '200px', height: '200px' }).appendTo($b);
 				$('<div>').text(f.label).css({ WebkitTextStroke: `5px ${theme.ink}`, paintOrder: 'stroke fill', whiteSpace: 'nowrap' }).appendTo($b);
@@ -2173,6 +2176,7 @@ window.Showtime = function (stage, opts) {
 
 		function go(next) {
 			part = next;
+			if (next === 'thanks') self.fx('thanks');
 			partAt = self.bt;
 			render();
 		}
@@ -2181,7 +2185,7 @@ window.Showtime = function (stage, opts) {
 			if (feedback) return;   // one rating for the group: the first tap
 			const f = R.faces[rating - 1];
 			feedback = { rating, label: f.label, reasons: [], again: null };
-			self.play(rating >= 4 ? 'correct' : 'coin');
+			self.fx(rating >= 4 ? 'rateHigh' : 'rateLow');
 			console.log('Rating:', rating, f.label);
 			if (IGB.log) IGB.log(`Rated ${f.label} (${rating})`);
 			go(rating <= R.low ? 'reasons' : 'again');

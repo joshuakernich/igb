@@ -512,7 +512,7 @@ IGB.register('mingle', function MingleGame(stage, playersMeta) {
 		lit = 1;
 		bulbs = 1;
 		number = pickNumber(r);
-		show.sfx.drum();
+		show.fx('roundStart');
 		setPhase('board', ROUND_GAP.board);
 	}
 
@@ -628,10 +628,9 @@ IGB.register('mingle', function MingleGame(stage, playersMeta) {
 		verdictRound = round;
 		if (survivors) {
 			show.mark(t);
-			show.sfx.sting(0.2);
-			show.play('cheer');
+			show.fx('roundClear');
 		} else {
-			show.sfx.boom(0.7);
+			show.fx('roundFail');
 		}
 		setPhase('verdict', ROUND_GAP.verdict);
 	}
@@ -1131,8 +1130,7 @@ IGB.register('mingle', function MingleGame(stage, playersMeta) {
 		Object.assign(practice, { i, age: 0, done: false, doneAge: 0 });
 		const step = CONTROLS.steps[i];
 		if (!step) return;
-		show.play('woosh');
-		show.sfx.hit(0.35);
+		show.fx('stepIn');
 		for (const c of contestants) c.seen = false;
 		if (step.id === 'carousel') {
 			speed = CONTROLS.roll;
@@ -1174,15 +1172,14 @@ IGB.register('mingle', function MingleGame(stage, playersMeta) {
 				if (c.seen || Math.max(...c.vis) < 0.9) continue;
 				c.seen = true;
 				popOver(c, 'THERE YOU ARE!', PLAYER_COLORS[c.n]);
-				show.play('coin');
+				show.fx('visorLock', 0.8, 1, c.n);
 			}
 		}
 		if (!practice.done && practice.age >= step.min && achieved(step)) {
 			practice.done = true;
 			stepsDone.push(step.id);
 			sound.ding();
-			show.play('correct');
-			show.sfx.sting(0.15);
+			show.fx('nice');
 		}
 		if (practice.done) practice.doneAge += dt;
 		if ((practice.done && practice.doneAge >= CONTROLS.nice) || practice.age >= step.max) enterStep(practice.i + 1);
@@ -1277,27 +1274,26 @@ IGB.register('mingle', function MingleGame(stage, playersMeta) {
 				carousel.spin.rotation.y = 0;
 				show.camera.wide();
 				hallZoom = HOST.zoom;
-				show.play('rumble');
-				show.sfx.riser(HOST.name);
+				show.fx('rumble');
+				show.fx('riser', 0.7, 1, HOST.name);
 			},
 			update(dt, bt) {
 				const E = HOST;
 				stepWorld(dt);
 				show.blackout = 0.85 * (1 - between(bt, E.bulbs[0], E.bulbs[1] + 0.4));
 				bulbs = between(bt, E.bulbs[0], E.bulbs[1]);
-				for (let i = 0; i < 6; i++) if (show.cue(E.bulbs[0] + i * (E.bulbs[1] - E.bulbs[0]) / 6)) show.sfx.hit(0.2);
+				for (let i = 0; i < 6; i++) if (show.cue(E.bulbs[0] + i * (E.bulbs[1] - E.bulbs[0]) / 6)) show.fx('glint', 0.4, 1 + i * 0.12);
 				guards.forEach(function (g, i) {
 					if (show.cue(E.guards + i * 0.22)) {
 						guardsUp = true;
 						g.root.visible = true;
-						show.sfx.drum(0.6);
+						show.fx('beat', 0.7);
 						show.shake = Math.max(show.shake, 0.2);
 					}
 				});
 				if (show.cue(E.name)) {
 					show.stop('rumble');
-					show.play('explode');
-					show.sfx.boom(1);
+					show.fx('villainReveal');
 					show.shake = 0.9;
 					show.flash = 0.5;
 					lit = 1;
@@ -1305,17 +1301,17 @@ IGB.register('mingle', function MingleGame(stage, playersMeta) {
 					sound.music(true, 2.6);
 				}
 				if (bt > E.name && bt < E.leave) speed = E.speed * between(bt, E.name, E.name + 1.5);
-				if (show.cue(E.pull)) show.play('wooshLong');
+				if (show.cue(E.pull)) show.fx('whooshLong', 0.6);
 				hallZoom = Math.exp(Math.log(E.zoom) * (1 - show.ease(between(bt, E.pull, E.pull + E.pullFor))));
-				if (show.cue(E.rule)) { show.sfx.drum(); show.shake = 0.3; }
+				if (show.cue(E.rule)) { show.fx('beat'); show.shake = 0.3; }
 				if (show.cue(E.leave)) {
 					guardsUp = false;
-					show.play('woosh');
+					show.fx('whoosh', 0.6);
 					sound.music(false);
 					sound.windDown();
 					beginStop();
 				}
-				if (show.cue(E.go)) { show.sfx.boom(1); show.play('reveal'); show.shake = 0.5; show.flash = 0.3; }
+				if (show.cue(E.go)) { show.fx('fight'); show.shake = 0.5; show.flash = 0.3; }
 			},
 			draw(ctx, bt) {
 				const E = HOST;

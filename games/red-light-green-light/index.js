@@ -472,7 +472,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			// her face to the players while ROUND N comes up, then she turns
 			head.yaw = head.from = head.to = 0;
 			setPhase('ready', ROUND_GAP.ready);
-			show.sfx.drum();
+			show.fx('roundStart');
 		}
 	}
 
@@ -512,7 +512,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		setPhase('dash', settings.dash);
 		layZones();
 		say(finalDash ? 'Run for the line!' : 'Get to a safe zone!', '#ffd23f');
-		show.sfx.hit();
+		show.fx('go');
 	}
 
 	// Her head is coming round...
@@ -550,10 +550,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		cleared = { round, made: survivors.length };
 		if (survivors.length) {
 			show.mark(t);
-			show.sfx.sting(0.2);
-			show.play('cheer');
+			show.fx('roundClear');
 		} else {
-			show.sfx.boom(0.7);
+			show.fx('roundFail');
 		}
 		turnHead(0, 1);
 		setPhase('cleared', survivors.length ? ROUND_GAP.cleared : ROUND_GAP.quick);
@@ -1678,8 +1677,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		setPhase('drill');
 		const step = CONTROLS.steps[i];
 		if (!step) return;
-		show.play('woosh');
-		show.sfx.hit(0.35);
+		show.fx('stepIn');
 		// a practice circle each, kept for its player, away from them
 		if (step.id === 'zone') {
 			for (const c of contestants) {
@@ -1731,7 +1729,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			c.hop = { t: 0, x0: c.x, f0: c.f };
 			c.wall = z.edge;
 			c.drill++;
-			show.play('woosh');
+			show.fx('joinWall');
 			popOver(c, WALL_NAMES[c.wall] + ' WALL!', PLAYER_COLORS[c.n]);
 		}
 	}
@@ -1779,8 +1777,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		if (!practice.done && practice.age >= step.min && achieved(step)) {
 			practice.done = true;
 			sound.ding();
-			show.play('correct');
-			show.sfx.sting(0.15);
+			show.fx('nice');
 		}
 		if (practice.done) practice.doneAge += dt;
 		if ((practice.done && practice.doneAge >= CONTROLS.nice) || practice.age >= step.max) enterStep(practice.i + 1);
@@ -1886,22 +1883,22 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				head.t = head.dur = 0;
 				glare = 0;
 				show.camera.cut(Object.assign(dollFace(), { z: ENTRANCE.zoom }));
-				show.play('rumble');
-				show.sfx.riser(ENTRANCE.name);
+				show.fx('rumble');
+				show.fx('riser', 0.7, 1, ENTRANCE.name);
 			},
 			update(dt, bt) {
 				const E = ENTRANCE;
 				stepWorld(dt);
 				if (bt < E.name) show.shake = Math.max(show.shake, 0.08 + 0.3 * bt / E.name);
 				glare = bt < E.eyes ? 0 : bt < E.turn ? 0.75 + 0.25 * Math.sin(bt * 10) : Math.max(0, 1 - (bt - E.turn) * 2);
-				[0, 1, 2].forEach((k) => { if (show.cue(E.shapes + k * 0.22)) show.sfx.drum(0.6); });
-				if (show.cue(E.eyes)) { show.sfx.hit(0.6); show.flash = 0.25; }
-				if (show.cue(E.name)) { show.stop('rumble'); show.play('explode'); show.sfx.boom(1); show.shake = 0.9; show.flash = 0.5; }
+				[0, 1, 2].forEach((k) => { if (show.cue(E.shapes + k * 0.22)) show.fx('beat', 0.7); });
+				if (show.cue(E.eyes)) { show.fx('glint'); show.flash = 0.25; }
+				if (show.cue(E.name)) { show.fx('villainReveal'); show.shake = 0.9; show.flash = 0.5; }
 				if (show.cue(E.turn)) turnHead(Math.PI, E.turnFor);
-				if (show.cue(E.pull)) { show.camera.wide(E.pullFor); show.play('wooshLong'); }
+				if (show.cue(E.pull)) { show.camera.wide(E.pullFor); show.fx('whooshLong', 0.6); }
 				// back down the field to the contestants at the start line
 				if (bt > E.fly[0]) cam = introCam() * (1 - ease(between(bt, E.fly[0], E.fly[1])));
-				if (show.cue(E.go)) { say('Green light', '#27d96b'); callout = null; show.sfx.boom(1); show.play('reveal'); show.shake = 0.6; show.flash = 0.3; }
+				if (show.cue(E.go)) { say('Green light', '#27d96b'); callout = null; show.fx('fight'); show.shake = 0.6; show.flash = 0.3; }
 			},
 			draw(ctx, bt) {
 				const E = ENTRANCE;
