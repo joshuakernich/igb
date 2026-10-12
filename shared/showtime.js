@@ -108,7 +108,7 @@ window.Showtime = function (stage, opts) {
 		settle: [5.2, 6.1],    // the 10 becomes the clock and flies up to its place at the top of every wall
 		runAfter: 0,           // and starts counting down this long after it lands (straight away)
 		length: 6.6,
-		size: 230,             // the big number
+		size: 190,             // the big number
 		y: 520,                // the dial's centre
 	};
 
@@ -1076,8 +1076,8 @@ window.Showtime = function (stage, opts) {
 						}
 						if (charged >= 1) art.circle(c, cx, C.y, 290, { fill: art.radial(c, cx, C.y, 100, 300, [[0, 'rgba(255,79,216,0)'], [0.7, 'rgba(255,79,216,0.25)'], [1, 'rgba(255,79,216,0)']]), alpha: fade });
 					}
-					// 2. YOU HAVE, above the dial
-					self.slam(c, 'YOU HAVE', cx, C.y - 340, 96, bt - C.youHave, { alpha: fade });
+					// 2. YOU HAVE, inside the dial just above the 10
+					self.slam(c, 'YOU HAVE', cx, C.y - 140, 60, bt - C.youHave, { alpha: fade, fit: 300 });
 					// 3. the 10, in the dial; it becomes the clock and flies up to its corner
 					if (bt > C.number) {
 						const age = bt - C.number;
@@ -1092,8 +1092,8 @@ window.Showtime = function (stage, opts) {
 						self.text(c, number, 0, size * 0.04, size, { fill: theme.gold, glow: '#ff7a3d', alpha: 1 - fly });
 						c.restore();
 					}
-					// 4. MINUTES, under it
-					self.slam(c, unit, cx, C.y + 350, 120, bt - C.unit, { fill: theme.gold, glow: '#ff7a3d', alpha: fade });
+					// 4. MINUTES, just under the 10
+					self.slam(c, unit, cx, C.y + 145, 68, bt - C.unit, { fill: theme.gold, glow: '#ff7a3d', alpha: fade, fit: 290 });
 				});
 			},
 		}, extra);
