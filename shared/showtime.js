@@ -101,7 +101,7 @@ window.Showtime = function (stage, opts) {
 
 	const CLOCK_INTRO = {
 		dial: 0.3,             // 1. the dial, out of the dark
-		charge: [0.3, 1.6],    //    its ticks light up round, under the drumroll
+		charge: [0.3, 1.6],    //    its ticks light up round
 		youHave: 0.7,          // 2. "YOU HAVE", in it, above the middle (while it's still lighting up)
 		number: 1.1,           // 3. the "10", in the middle
 		unit: 1.5,             // 4. "MINUTES", under it
@@ -111,6 +111,7 @@ window.Showtime = function (stage, opts) {
 		radius: 390,           // the dial's outer edge
 		size: 300,             // the big number
 		words: [100, 112],     // YOU HAVE, MINUTES
+		slam: 0.18,            // seconds for a word to crash down into place
 		y: 520,                // the dial's centre
 	};
 
@@ -531,11 +532,12 @@ window.Showtime = function (stage, opts) {
 
 	// A title crashing in: big and see-through, slamming down to size with a
 	// little bounce. age is how long since it started; nothing before 0.
+	// style.dur (seconds to land) and style.from (the size it starts at) tune it.
 	self.slam = function (ctx, str, x, y, size, age, style = {}) {
 		if (age < 0) return;
 		const dur = style.dur || 0.26;
 		const k = clamp(age / dur, 0, 1);
-		const s = age < dur ? lerp(2.4, 0.9, k * k) : 0.9 + 0.1 * easeOut((age - dur) / 0.18);
+		const s = age < dur ? lerp(style.from || 2.4, 0.9, k * k) : 0.9 + 0.1 * easeOut((age - dur) / 0.18);
 		ctx.save();
 		ctx.translate(x, y);
 		ctx.scale(s, s);
@@ -1021,8 +1023,8 @@ window.Showtime = function (stage, opts) {
 	};
 
 	// The clock reveal, a piece at a time out of the dark: the dial, its
-	// ticks charging round under a drumroll; YOU HAVE above it; the 10 in the
-	// middle of it; MINUTES under it. Then the 10 turns into the clock and
+	// ticks charging round, and the words slamming into place inside it while
+	// it lights up: YOU HAVE, the 10, MINUTES. Then the 10 turns into the clock and
 	// flies up to its place at the top of every wall, and starts counting
 	// down the moment it lands.
 	beatsLib.clockIntro = function (extra) {
@@ -1039,13 +1041,12 @@ window.Showtime = function (stage, opts) {
 				clock.started = false;
 				clock.left = SECONDS;
 				self.blackout = INTRO_DIM;
-				self.play('drumroll');
 			},
 			update(dt, bt) {
-				if (self.cue(C.dial)) { self.sfx.boom(0.6); self.shake = 0.4; }
-				if (self.cue(C.youHave)) { self.sfx.drum(); self.shake = 0.3; }
-				if (self.cue(C.number)) { self.stop('drumroll'); self.sfx.boom(1); self.shake = 0.8; self.flash = 0.5; }
-				if (self.cue(C.unit)) { self.sfx.boom(1); self.play('reveal'); self.shake = 0.9; self.flash = 0.6; }
+				// each word lands with a hit and a shake; the 10 with a boom (no drums)
+				if (self.cue(C.youHave + C.slam)) { self.sfx.hit(0.7); self.shake = 0.45; }
+				if (self.cue(C.number + 0.26)) { self.sfx.boom(1); self.shake = 0.8; self.flash = 0.5; }
+				if (self.cue(C.unit + C.slam)) { self.sfx.hit(0.8); self.play('reveal'); self.shake = 0.9; self.flash = 0.4; }
 				if (self.cue(C.settle[0])) self.play('wooshLong');
 				if (bt > C.settle[0]) self.blackout = INTRO_DIM * (1 - between(bt, C.settle[0], C.settle[1] + 0.3));
 				if (self.cue(C.settle[1])) { startClock(C.runAfter); self.sfx.hit(); }
@@ -1079,7 +1080,7 @@ window.Showtime = function (stage, opts) {
 						if (charged >= 1) art.circle(c, cx, C.y, C.radius * 1.12, { fill: art.radial(c, cx, C.y, C.radius * 0.4, C.radius * 1.16, [[0, 'rgba(255,79,216,0)'], [0.7, 'rgba(255,79,216,0.25)'], [1, 'rgba(255,79,216,0)']]), alpha: fade });
 					}
 					// 2. YOU HAVE, inside the dial just above the 10
-					self.slam(c, 'YOU HAVE', cx, C.y - C.radius * 0.55, C.words[0], bt - C.youHave, { alpha: fade, fit: C.radius * 1.2 });
+					self.slam(c, 'YOU HAVE', cx, C.y - C.radius * 0.55, C.words[0], bt - C.youHave, { alpha: fade, fit: C.radius * 1.2, dur: C.slam, from: 3.2 });
 					// 3. the 10, in the dial; it becomes the clock and flies up to its corner
 					if (bt > C.number) {
 						const age = bt - C.number;
@@ -1095,7 +1096,7 @@ window.Showtime = function (stage, opts) {
 						c.restore();
 					}
 					// 4. MINUTES, just under the 10
-					self.slam(c, unit, cx, C.y + C.radius * 0.57, C.words[1], bt - C.unit, { fill: theme.gold, glow: '#ff7a3d', alpha: fade, fit: C.radius * 1.15 });
+					self.slam(c, unit, cx, C.y + C.radius * 0.57, C.words[1], bt - C.unit, { fill: theme.gold, glow: '#ff7a3d', alpha: fade, fit: C.radius * 1.15, dur: C.slam, from: 3.2 });
 				});
 			},
 		}, extra);
