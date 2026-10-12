@@ -214,10 +214,11 @@ window.Showtime = function (stage, opts) {
 	/* ---------- tuning: the team total ---------- */
 
 	const TEAM = {
-		fly: [0.6, 1.6],       // the scores fly together
-		count: [1.8, 3.6],     // smooshed, the total counts up
-		bonus: [4.0, 5.1],     // the bonus is added
-		length: 10,
+		fade: [0.2, 0.9],      // the rankings, as they were left: all but the scores fade away
+		fly: [1.1, 2.0],       // the scores fly together
+		count: [2.2, 4.0],     // smooshed, the total counts up
+		bonus: [4.4, 5.5],     // the bonus is added
+		length: 10.4,
 		y: 450,
 	};
 
@@ -1549,7 +1550,7 @@ window.Showtime = function (stage, opts) {
 		if (opts.place) self.text(c, opts.place, x0 + 110, y + 2, h * 0.5, Object.assign({ fill: 'white' }, ink));
 		avatar(c, p, x0 + 250, y + h * 0.42, h / 170, opts.pose || 'stand');
 		self.text(c, self.nameOf(p), x0 + 330, y + 2, h * 0.42, Object.assign({ fill: lit(p), align: 'left' }, ink));
-		self.text(c, String(score), x0 + LIST.width - 60, y + 2, h * 0.6, Object.assign({ fill: 'white', align: 'right' }, ink));
+		if (!opts.noScore) self.text(c, String(score), x0 + LIST.width - 60, y + 2, h * 0.6, Object.assign({ fill: 'white', align: 'right' }, ink));
 		c.restore();
 	}
 
@@ -1674,8 +1675,10 @@ window.Showtime = function (stage, opts) {
 		}, extra);
 	};
 
-	// The team total: every score flies to the middle, they smoosh into one
-	// number that counts up, the bonus lands on top, and the room erupts.
+	// The team total: it opens on the rankings as they were left; all but the
+	// scores fade away, the scores fly from where they sat to the middle and
+	// smoosh into one number that counts up, the bonus lands on top, and the
+	// room erupts.
 	beatsLib.team = function (extra) {
 		let shown = 0;
 		let partyAt = 0;
@@ -1715,39 +1718,54 @@ window.Showtime = function (stage, opts) {
 			draw(ctx, bt) {
 				const n = count();
 				const s = scores();
+				const fade = between(bt, TEAM.fade[0], TEAM.fade[1]);
 				const fly = easeIn(between(bt, TEAM.fly[0], TEAM.fly[1]));
 				const merged = bt >= TEAM.fly[1];
+				// the rankings' rows, by rank, as the last screen left them
+				const order = [];
+				for (let i = 0; i < n; i++) order.push(i);
+				order.sort((a, b) => s[b] - s[a] || a - b);
+				const SUFFIX = ['1ST', '2ND', '3RD', '4TH', '5TH', '6TH'];
 				self.onWalls(ctx, function (c) {
-					self.slam(c, 'TEAM TOTAL', W / 2, 150, 110, bt - 0.1, { fill: theme.gold });
-					for (let i = 0; i < n; i++) {
-						const x = rowX(i, n);
-						if (!merged) {
-							// each score flies in to the middle, stretching as it goes
-							const fx = lerp(x, W / 2, fly);
-							const fy = lerp(400, TEAM.y, fly);
-							c.save();
-							c.translate(fx, fy);
-							c.scale(1 + fly * 0.6, 1 - fly * 0.25);
-							self.text(c, String(s[i]), 0, 0, 110, { fill: lit(i) });
-							c.restore();
-						}
-					}
-					if (merged) {
-						// smooshed: a squash and bounce, then the number
-						const age = bt - TEAM.fly[1];
-						const sq = Math.exp(-age * 5) * Math.cos(age * 22);
-						const party = bt > partyAt ? 1 + 0.06 * Math.sin(bt * 10) : 1;
+					if (bt > TEAM.fade[1]) self.slam(c, 'TEAM TOTAL', W / 2, 150, 110, bt - TEAM.fade[1], { fill: theme.gold });
+					if (merged) return drawTotal(c, bt);
+					const gap = Math.min(LIST.row, LIST.height / Math.max(1, n));
+					const size = self.size(gap * 0.82 * 0.6);
+					const right = W / 2 + LIST.width / 2 - 60;
+					order.forEach(function (p, r) {
+						const y = listY(r, n);
+						const place = s.filter((w) => w > s[p]).length;
+						const winner = place === 0;
+						// everything but the score fades
+						if (fade < 1) listRow(c, p, y, '', { place: SUFFIX[place], winner, pose: winner ? 'win' : 'cheer', alpha: 1 - fade, noScore: true });
+						// the score: from where it sat, flying in to the middle, stretching as it goes
+						const w = measure(c, String(s[p]), size);
+						const x0 = right - w / 2;
+						const fx = lerp(x0, W / 2, fly);
+						const fy = lerp(y + 2, TEAM.y, fly);
+						const grow = lerp(1, 1.4, fly);
 						c.save();
-						c.translate(W / 2, TEAM.y);
-						c.scale((1 + 0.45 * sq) * party, (1 - 0.4 * sq) * party);
-						art.circle(c, 0, 0, 280, { fill: art.radial(c, 0, 0, 0, 280, [[0, 'rgba(255,225,77,0.45)'], [1, 'rgba(255,225,77,0)']]) });
-						self.text(c, String(shown), 0, 0, 280, { fill: theme.gold, glow: '#ff7a3d' });
+						c.translate(fx, fy);
+						c.scale(grow * (1 + fly * 0.6), grow * (1 - fly * 0.25));
+						self.text(c, String(s[p]), 0, 0, size, { fill: winner && fade < 0.5 ? TYPE.colours.ink : TYPE.colours.white });
 						c.restore();
-						if (bonus() > 0) self.slam(c, '+' + bonus() + ' ' + (opts.bonusLabel || 'BONUS'), W / 2, 665, 64, bt - TEAM.bonus[0], { fill: 'white', alpha: 1 - between(bt, TEAM.length - 1, TEAM.length) });
-					}
+					});
 				});
 			},
 		}, extra);
+
+		// smooshed: a squash and bounce, then the total counting up
+		function drawTotal(c, bt) {
+			const age = bt - TEAM.fly[1];
+			const sq = Math.exp(-age * 5) * Math.cos(age * 22);
+			const party = bt > partyAt ? 1 + 0.06 * Math.sin(bt * 10) : 1;
+			c.save();
+			c.translate(W / 2, TEAM.y);
+			c.scale((1 + 0.45 * sq) * party, (1 - 0.4 * sq) * party);
+			self.text(c, String(shown), 0, 0, 220, { fill: theme.gold });
+			c.restore();
+			if (bonus() > 0) self.slam(c, '+' + bonus() + ' ' + (opts.bonusLabel || 'BONUS'), W / 2, 665, 56, bt - TEAM.bonus[0], { fill: 'white', alpha: 1 - between(bt, TEAM.length - 1, TEAM.length) });
+		}
 	};
 
 	// The leaderboard: today's other teams (made up, seeded from the game
