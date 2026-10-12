@@ -213,7 +213,6 @@ window.Showtime = function (stage, opts) {
 	/* ---------- tuning: the team total ---------- */
 
 	const TEAM = {
-		shrink: 0.6,           // the avatars step back
 		fly: [0.6, 1.6],       // the scores fly together
 		count: [1.8, 3.6],     // smooshed, the total counts up
 		bonus: [4.0, 5.1],     // the bonus is added
@@ -1659,15 +1658,12 @@ window.Showtime = function (stage, opts) {
 			draw(ctx, bt) {
 				const n = count();
 				const s = scores();
-				const back = easeOut(between(bt, 0, TEAM.shrink));
 				const fly = easeIn(between(bt, TEAM.fly[0], TEAM.fly[1]));
 				const merged = bt >= TEAM.fly[1];
 				self.onWalls(ctx, function (c) {
 					self.slam(c, 'TEAM TOTAL', W / 2, 150, 110, bt - 0.1, { fill: theme.gold });
 					for (let i = 0; i < n; i++) {
 						const x = rowX(i, n);
-						const party = bt > partyAt;
-						avatar(c, i, x, lerp(SCORES.y, 965, back) - (party ? Math.abs(Math.sin(bt * 7 + i)) * 40 : 0), lerp(SCORES.scale, 1.6, back), party ? 'win' : 'stand');
 						if (!merged) {
 							// each score flies in to the middle, stretching as it goes
 							const fx = lerp(x, W / 2, fly);
