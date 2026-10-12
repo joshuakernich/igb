@@ -1175,22 +1175,37 @@ window.Showtime = function (stage, opts) {
 						drawVisorRow(c, cx, V.y, n, bt);
 						return;
 					}
-					// the full instructions, all at once and numbered: the step under
-					// way lit, the one done ticked, the ones to come dim
+					// the instructions on one line: the step under way lit, the
+					// one done gold, the ones to come dim
 					const steps = [
-						{ y: 165, text: n === 1 ? 'PUT ON THIS VISOR' : 'PUT ON A VISOR: ONE EACH, THESE ' + n + ' COLOURS', done: asking, now: !asking },
-						{ y: 490, text: 'STAND IN THE GLOWING CIRCLE', done: false, now: asking },
-						{ y: 552, text: 'WIGGLE TILL YOUR VISOR GETS A TICK', done: false, now: asking },
+						{ text: 'PUT ON A VISOR', done: asking, now: !asking },
+						{ text: 'STAND IN THE CENTRE', now: asking },
+						{ text: 'WIGGLE ABOUT', now: asking },
 					];
+					const SIZE = 58;
+					const GAP = '  >  ';
+					c.save();
+					c.font = `400 ${SIZE}px "${FONT}", sans-serif`;
+					const widths = steps.map((s) => c.measureText(s.text).width);
+					const gap = c.measureText(GAP).width;
+					c.restore();
+					const total = widths.reduce((a, b) => a + b, 0) + gap * (steps.length - 1);
+					const k = Math.min(1, (W - 120) / total);   // shrink to fit the wall
+					let x = cx - total * k / 2;
 					steps.forEach(function (s, i) {
-						const appear = clamp((bt - i * 0.25) * 3, 0, 1);
-						self.text(c, (s.done ? '✓ ' : (i + 1) + '. ') + s.text, cx, s.y, s.now ? 56 : 48, {
-							fill: s.done ? theme.gold : 'white', alpha: appear * (s.now || s.done ? 1 : 0.45),
-							glow: s.now ? theme.accent : 'transparent',
+						const alpha = clamp((bt - i * 0.25) * 3, 0, 1);
+						if (i) {
+							self.text(c, '>', x + gap * k / 2, 165, SIZE * k, { fill: 'white', alpha: alpha * 0.5, glow: 'transparent', fit: 9999 });
+							x += gap * k;
+						}
+						self.text(c, s.text, x + widths[i] * k / 2, 165, SIZE * k, {
+							fill: s.done ? theme.gold : 'white', alpha: alpha * (s.now || s.done ? 1 : 0.4),
+							glow: s.now ? theme.accent : 'transparent', fit: 9999,
 						});
+						x += widths[i] * k;
 					});
 					drawVisorRow(c, cx, V.y, n, bt);
-					drawFloor(c, bad.length ? cx - 430 : cx, 650, 960, n, bt);   // (aside, to make room for a flag)
+					drawFloor(c, bad.length ? cx - 430 : cx, 600, 960, n, bt);   // (aside, to make room for a flag)
 					// a wrong visor: flagged, with what to swap it for
 					if (bad.length) {
 						const i = bad[0];
