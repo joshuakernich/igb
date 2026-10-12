@@ -113,6 +113,7 @@ window.Showtime = function (stage, opts) {
 		radius: 420,           // the dial's outer edge
 		size: 300,             // the big number
 		words: [100, 112],     // YOU HAVE, MINUTES
+		gap: 0.36,             // how far above and below the time they sit (a share of the dial's radius)
 		slam: 0.18,            // seconds for a word to crash down into place
 		y: 520,                // the dial's centre
 	};
@@ -1160,7 +1161,7 @@ window.Showtime = function (stage, opts) {
 						if (charged >= 1) art.circle(c, cx, C.y, C.radius * 1.12, { fill: art.radial(c, cx, C.y, C.radius * 0.4, C.radius * 1.16, [[0, 'rgba(255,79,216,0)'], [0.7, 'rgba(255,79,216,0.25)'], [1, 'rgba(255,79,216,0)']]), alpha: fade });
 					}
 					// 2. YOU HAVE, inside the dial just above the 10
-					self.slam(c, 'YOU HAVE', cx, C.y - C.radius * 0.55, C.words[0], bt - C.youHave, look({ alpha: fade, fit: C.radius * 1.2, dur: C.slam, from: 3.2 }));
+					self.slam(c, 'YOU HAVE', cx, C.y - C.radius * C.gap, C.words[0], bt - C.youHave, look({ alpha: fade, fit: C.radius * 1.45, dur: C.slam, from: 3.2 }));
 					// 3. the 10, in the dial; it becomes the clock and flies up to its corner
 					if (bt > C.number) {
 						const age = bt - C.number;
@@ -1180,7 +1181,7 @@ window.Showtime = function (stage, opts) {
 						c.restore();
 					}
 					// 4. MINUTES, just under the 10
-					self.slam(c, unit, cx, C.y + C.radius * 0.57, C.words[1], bt - C.unit, look({ alpha: fade, fit: C.radius * 1.15, dur: C.slam, from: 3.2 }));
+					self.slam(c, unit, cx, C.y + C.radius * C.gap * 1.03, C.words[1], bt - C.unit, look({ alpha: fade, fit: C.radius * 1.4, dur: C.slam, from: 3.2 }));
 				});
 			},
 		}, extra);
