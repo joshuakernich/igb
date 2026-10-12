@@ -1042,7 +1042,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// (while the view is up the field, before a round, the contestants wait
 		// unseen at the start)
 		const waiting = cam > 1 && (show.beat === 'doll' || (show.beat === 'play' && phase === 'ready'));
-		if (contestants.length && !waiting) drawPlayArea(ctx);
 		if (!waiting) for (const z of zones) drawZone(ctx, z);
 
 		// Everything standing on the plane, far to near.
@@ -1383,27 +1382,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// A fat arrow pointing right, its tail at the origin's left.
 	function swapArrow() {
 		return [[-44, -9], [4, -9], [4, -24], [36, 0], [4, 24], [4, 9], [-44, 9]];
-	}
-
-	// A safe zone: a glowing white ring painted on the sand, flat on the
-	// plane. Free ones pulse (faster as she's about to turn); a held one
-	// stays white and steady, with a band of its holder's colour inside. An
-	// edge zone has chevrons pointing round the corner to the wall it leads to.
-	// Where the contestants can go: on every wall, right across it, from the
-	// near edge of play to as far up the field as stepping toward the wall
-	// takes them. A pale strip of sand, edged front and back, moving with the field.
-	function drawPlayArea(ctx) {
-		const near = at(0, cam + BACK);
-		const far = at(0, cam + BACK + DEPTH);
-		const pulse = 0.85 + 0.15 * Math.sin(clock * 2);
-		for (let w = 0; w < 3; w++) {
-			const x0 = w * W + LANE;
-			const x1 = (w + 1) * W - LANE;
-			art.rect(ctx, x0, far.y, x1 - x0, near.y - far.y, { fill: 'rgba(255,248,228,0.22)', alpha: pulse });
-			for (const [p, k] of [[near, 1], [far, 0.7]]) {
-				for (let x = x0; x < x1; x += 60) art.rect(ctx, x, p.y - 2, 34, 4, { fill: 'rgba(255,255,255,0.75)', alpha: k * pulse });
-			}
-		}
 	}
 
 	function drawZone(ctx, z) {
