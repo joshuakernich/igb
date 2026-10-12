@@ -1045,6 +1045,16 @@ window.Showtime = function (stage, opts) {
 		const C = CLOCK_INTRO;
 		const minutes = SECONDS >= 60;
 		const unit = minutes ? (Math.round(SECONDS / 60) === 1 ? 'MINUTE' : 'MINUTES') : 'SECONDS';
+		// all three lines in one style (only their sizes differ)
+		const look = (extra) => Object.assign({ fill: 'white', glow: theme.accent }, extra);
+		// the clock's size, set by 10:00 (its widest) so it keeps its size as it counts
+		const timeSize = function (c, size) {
+			c.save();
+			c.font = `400 ${size}px "${FONT}", sans-serif`;
+			const wide = c.measureText(mmss(SECONDS)).width;
+			c.restore();
+			return Math.min(size, size * C.radius * 1.5 / wide);
+		};
 		return extend({
 			id: 'clock',
 			length: C.length,
@@ -1096,7 +1106,7 @@ window.Showtime = function (stage, opts) {
 						if (charged >= 1) art.circle(c, cx, C.y, C.radius * 1.12, { fill: art.radial(c, cx, C.y, C.radius * 0.4, C.radius * 1.16, [[0, 'rgba(255,79,216,0)'], [0.7, 'rgba(255,79,216,0.25)'], [1, 'rgba(255,79,216,0)']]), alpha: fade });
 					}
 					// 2. YOU HAVE, inside the dial just above the 10
-					self.slam(c, 'YOU HAVE', cx, C.y - C.radius * 0.55, C.words[0], bt - C.youHave, { alpha: fade, fit: C.radius * 1.2, dur: C.slam, from: 3.2 });
+					self.slam(c, 'YOU HAVE', cx, C.y - C.radius * 0.55, C.words[0], bt - C.youHave, look({ alpha: fade, fit: C.radius * 1.2, dur: C.slam, from: 3.2 }));
 					// 3. the 10, in the dial; it becomes the clock and flies up to its corner
 					if (bt > C.number) {
 						const age = bt - C.number;
@@ -1108,11 +1118,12 @@ window.Showtime = function (stage, opts) {
 						c.scale(s, s);
 						c.globalAlpha = clamp(age / 0.15, 0, 1);
 						if (fly > 0) clockPill(c, 0, 0, size, clock.left, fly, fly * (cy + 20) / s);   // already counting, reaching up to the top edge as it lands
-						self.text(c, mmss(clock.left), 0, size * 0.04, size, { alpha: 1 - fly, fit: C.radius * 1.5 });
+						const ts = timeSize(c, size);
+						self.text(c, mmss(clock.left), 0, ts * 0.04, ts, look({ alpha: 1 - fly, fit: 99999 }));
 						c.restore();
 					}
 					// 4. MINUTES, just under the 10
-					self.slam(c, unit, cx, C.y + C.radius * 0.57, C.words[1], bt - C.unit, { alpha: fade, fit: C.radius * 1.15, dur: C.slam, from: 3.2 });
+					self.slam(c, unit, cx, C.y + C.radius * 0.57, C.words[1], bt - C.unit, look({ alpha: fade, fit: C.radius * 1.15, dur: C.slam, from: 3.2 }));
 				});
 			},
 		}, extra);
