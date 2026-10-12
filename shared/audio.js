@@ -8,6 +8,9 @@
  *
  * Shared components (HUD, meep, tally) make their own with new AudioPlayer();
  * those still go quiet when the game that made them stops (IGB.owner).
+ *
+ * The recorded effects (assets/shared/sfx-*.mp3) play as generated sounds
+ * instead (shared/sfx.js; IGB.generatedSfx = false for the recordings).
  */
 window.AudioPlayer = function () {
 
@@ -19,6 +22,19 @@ window.AudioPlayer = function () {
 
 	const owner = window.IGB && IGB.owner && IGB.owner();
 	if (owner) owner.own(() => self.mute());
+
+	// the generated effects play on this player's own AudioContext, made on
+	// first use and closed with the player
+	let ac = null;
+	function context() {
+		if (!ac) {
+			const AC = window.AudioContext || window.webkitAudioContext;
+			if (!AC) return null;
+			ac = new AC();
+		}
+		if (ac.state === 'suspended') ac.resume().catch(() => {});
+		return ac;
+	}
 
 	// id, src, volume (0..1, default 1), loop, autoplay
 	self.add = function (id, src, volume, loop, autoplay) {
@@ -41,6 +57,13 @@ window.AudioPlayer = function () {
 		// music off (IGB.music = false, in games/manifest.js): every music-*.mp3 stays quiet
 		if (window.IGB && IGB.music === false && /(^|\/)music-[^\/]*$/.test(el.getAttribute('src') || '')) return;
 		if (muted || (owner && (owner.leaving || owner.stopped))) return;
+		// a recorded effect with a generated version (shared/sfx.js) plays that instead
+		const gen = !el.loop && window.SFX && !(window.IGB && IGB.generatedSfx === false) && SFX.nameOf(el.getAttribute('src'));
+		if (gen) {
+			const c = context();
+			if (c) SFX.play(c, c.destination, gen, el.volume, speed || 1);
+			return;
+		}
 		if (restart) el.currentTime = 0;
 		if (speed) el.playbackRate = speed;
 		const p = el.play();
@@ -63,6 +86,7 @@ window.AudioPlayer = function () {
 	self.mute = function () {
 		muted = true;
 		self.stopAll();
+		if (ac && ac.state !== 'closed') ac.close().catch(() => {});
 	};
 
 	self.setVolume = function (id, volume) {
