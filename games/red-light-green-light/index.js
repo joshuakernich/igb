@@ -138,7 +138,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			{ id: 'move', caption: 'MOVE LEFT AND RIGHT', min: 2.5, max: 5 },
 			{ id: 'step', caption: 'STEP FORWARD AND BACK', min: 2.5, max: 5 },
 			{ id: 'zone', caption: 'REACH A WHITE CIRCLE', min: 2.5, max: 9 },
-			{ id: 'freeze', caption: 'FREEZE ON RED', min: 5.6, max: 6.5 },
+			{ id: 'freeze', caption: 'FREEZE ON RED LIGHT', min: 5.6, max: 6.5 },
 			{ id: 'corner', caption: 'CORNER CIRCLES SWITCH YOUR WALL', min: 3, max: 18 },
 		],
 		nice: 1.1,            // the NICE! once a step is done, before the next
@@ -163,8 +163,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		pull: 5.0,            // the camera pulls back from her face
 		pullFor: 1.1,
 		fly: [5.5, 8.5],      // then flies back down the field to the contestants
-		go: 8.4,              // GREEN LIGHT!
-		length: 9.8,
+		round: 8.6,           // ROUND 1, once the view is back at the start...
+		go: 9.8,              // ...and only then GREEN LIGHT!
+		length: 11.2,
 	};
 
 	/* ---------- the view ---------- */
@@ -1038,8 +1039,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		lineAt(START_F, '#f6f1e6', 7);
 		lineAt(finishF, '#d7262e', 10);
 		for (const s of splats) drawSplat(ctx, s);
-		if (contestants.length) drawPlayArea(ctx);
-		for (const z of zones) drawZone(ctx, z);
+		// (while the view is up the field, before a round, the contestants wait
+		// unseen at the start)
+		const waiting = cam > 1 && (show.beat === 'doll' || (show.beat === 'play' && phase === 'ready'));
+		if (contestants.length && !waiting) drawPlayArea(ctx);
+		if (!waiting) for (const z of zones) drawZone(ctx, z);
 
 		// Everything standing on the plane, far to near.
 		const things = [];
@@ -1051,7 +1055,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (const b of blocks) add(b.f - b.r * 0.6, (c) => drawBlock(c, b));
 		for (const m of movers) add(m.f, (c) => (m.kind === 'guard' ? drawGuardOn(c, m.x, m.f, m.mask, false, m.phase, 0) : drawMarble(c, m)));
 		for (const g of sentries) if (dollShown || !g.doll) add(g.f, (c) => drawGuardOn(c, g.x, g.f, g.mask, true, 0, g.flash));
-		for (const c of contestants) add(c.f, (cx) => drawContestant(cx, c));
+		if (!waiting) for (const c of contestants) add(c.f, (cx) => drawContestant(cx, c));
 		things.sort((a, b) => b.f - a.f);
 		for (const thing of things) thing.fn(ctx);
 		for (const c of contestants) if (c.alive && footApart(c) && onView(footOf(c).f)) drawFoot(ctx, c);
@@ -1872,7 +1876,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				if (!step) return;
 				show.onWalls(ctx, function (c) {
 					// the practice red light takes over the caption while it lasts
-					if (phase === 'drill-red') show.slam(c, 'RED LIGHT!', W / 2, 200, 130, phaseT, { fill: '#ff3640', glow: '#ff3640' });
+					if (phase === 'drill-red') {
+						show.slam(c, 'RED LIGHT!', W / 2, 200, 130, phaseT, { fill: '#ff3640' });
+						show.slam(c, 'FREEZE', W / 2, 330, 80, phaseT - 0.15, {});
+					}
 					else show.slam(c, step.caption, W / 2, 200, step.caption.length > 24 ? 80 : 96, practice.red === 2 ? phaseT : practice.age, { fill: 'white' });
 					// which step this is, as pips
 					CONTROLS.steps.forEach(function (s, i) {
@@ -1925,7 +1932,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					show.slam(c, 'YOUNG-HEE', W / 2, 470, 220, bt - E.name, { fill: PINK, glow: PINK, alpha: out });
 					show.slam(c, 'SHE SEES EVERYTHING', W / 2, 610, 56, bt - E.name - 0.4, { fill: 'white', alpha: out });
 					const go = 1 - between(bt, E.length - 0.4, E.length);
-					show.slam(c, 'ROUND 1', W / 2, 330, 90, bt - E.go + 0.2, { fill: PINK, alpha: go });
+					show.slam(c, 'ROUND 1', W / 2, 330, 90, bt - E.round, { fill: PINK, alpha: go });
 					show.slam(c, 'GREEN LIGHT!', W / 2, 500, 200, bt - E.go, { fill: '#27d96b', glow: '#27d96b', rotate: -0.05, alpha: go });
 				});
 			},
