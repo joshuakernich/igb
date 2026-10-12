@@ -198,13 +198,13 @@ while (Date.now() - started < 400000) {
 	await sleep(40);
 }
 
-const EXPECT = ['squad', 'title', 'clock', 'controls', 'host', 'play', 'timeup', 'scores', 'rank', 'team', 'board', 'replay', 'end'];
+const EXPECT = ['squad', 'title', 'clock', 'visors', 'controls', 'host', 'play', 'timeup', 'scores', 'rank', 'team', 'board', 'replay', 'end'];
 const results = ['scores', 'rank', 'team', 'board', 'replay', 'end'];
 const checks = {
 	order: JSON.stringify(s && s.seen) === JSON.stringify(EXPECT),
 	allSteps: ['carousel', 'reveal', 'room', 'lock'].every((k) => stepsDone.has(k) || (s && s.stepsDone.includes(k))),
 	noPracticeShots: practiceDeaths === 0,
-	hallBehindIntros: ['title', 'clock', 'controls', 'host', 'play', 'timeup'].every((b) => glIn[b] !== false) && Object.keys(glIn).length >= 9,
+	hallBehindIntros: ['title', 'clock', 'visors', 'controls', 'host', 'play', 'timeup'].every((b) => glIn[b] !== false) && Object.keys(glIn).length >= 9,
 	hallHiddenInResults: results.every((b) => glIn[b] === false),
 	wipedRoundReplayed: replayed,
 	recorded: !!(s && s.samples > 10),

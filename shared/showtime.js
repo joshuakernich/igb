@@ -27,6 +27,7 @@
  *       { id: 'squad', length: Infinity, draw(ctx, bt) {} },   // a game beat
  *       show.beats.titleDrop({ lines: [{ text: 'GAME', fill }], tagline }),
  *       show.beats.clockIntro(),
+ *       show.beats.visors(),               // visors on, a wiggle in the middle; wrong ones flagged
  *       { id: 'play', update(dt, bt) {}, draw(ctx, bt) {} },
  *       show.beats.timeUp({ update(dt, bt) {} }),   // a generic beat, extended
  *       show.beats.scores(), show.beats.rank(), show.beats.team(),
@@ -35,15 +36,16 @@
  *   ]);
  *   self.draw = (ctx, time) => show.frame(ctx, dt, drawWorld);
  *
- * A beat is { id, length (seconds, or a function), world, enter(),
- * update(dt, bt), draw(ctx, bt), done(bt) }. bt is the time into the beat.
- * The show moves on when bt passes length or done() says so; show.go(id)
- * jumps anywhere (tests use it to skip the intros). world: false beats are
- * drawn on the show's own backdrop; the others draw the game's world
- * (drawWorld) through the camera first. draw() is for overlays and is never
- * zoomed. show.cue(s) is true once, the frame bt passes s: hang one-shot
- * events (a slam, a sound) on it. Generic beats take an extension object
- * whose enter/update/draw run after theirs and whose length/world/done win.
+ * A beat is { id, length (seconds, or a function), world, holdClock, enter(),
+ * update(dt, bt), draw(ctx, bt), done(bt) }. bt is the time into the beat;
+ * holdClock stops the clock while it runs. The show moves on when bt passes
+ * length or done() says so; show.go(id) jumps anywhere (tests use it to skip
+ * the intros). world: false beats are drawn on the show's own backdrop; the
+ * others draw the game's world (drawWorld) through the camera first. draw()
+ * is for overlays and is never zoomed. show.cue(s) is true once, the frame bt
+ * passes s: hang one-shot events (a slam, a sound) on it. Generic beats take
+ * an extension object whose enter/update/draw run after theirs and whose
+ * length/world/done win.
  *
  * Also:
  *   show.camera        .cut(shot) .move(shot, seconds) .follow(fn) .wide(seconds)
@@ -96,19 +98,35 @@ window.Showtime = function (stage, opts) {
 	/* ---------- tuning: the clock intro ---------- */
 
 	const CLOCK_INTRO = {
-		slam: 0.5,             // the clock slams in, out of the dark
-		charge: [0.5, 2.4],    // its dial lights up round, under the drumroll
-		youHave: 2.4,          // "YOU HAVE"
-		minutes: 3.0,          // "10 MINUTES"
-		settle: [4.6, 5.5],    // it flies up to its place at the top of every wall
+		dial: 0.4,             // 1. the dial, out of the dark
+		charge: [0.4, 2.0],    //    its ticks light up round, under the drumroll
+		youHave: 2.0,          // 2. "YOU HAVE", above it
+		number: 2.8,           // 3. the "10", in it
+		unit: 3.6,             // 4. "MINUTES", under it
+		settle: [5.2, 6.1],    // the 10 becomes the clock and flies up to its place at the top of every wall
 		runAfter: 0.8,         // and starts counting down this long after it lands
-		length: 6.0,
-		size: 250,             // the big clock
-		y: 340,
+		length: 6.6,
+		size: 230,             // the big number
+		y: 520,                // the dial's centre
 	};
 
 	// The intros dim the game's scene behind their titles, never black it out.
 	const INTRO_DIM = 0.45;
+
+	/* ---------- tuning: the visor check ---------- */
+
+	const VISORS = {
+		show: 4.0,             // just the visors to put on, before the wiggle is asked for
+		zone: { px: 0.5, pz: 0.5, r: 0.2 },   // where to stand: the middle of the room (floor 0..1)
+		settle: 0.8,           // seconds over which a visor's movement is averaged
+		moving: 0.08,          // speed (raw units a second, averaged) that says a visor is in play
+		wiggle: 0.2,           // and that says it's wiggling
+		hold: 0.6,             // seconds of wiggling in the zone to tick a visor off
+		clear: 1.0,            // everyone ticked and no wrong visors for this long: all set
+		allSet: 1.8,           // "ALL SET!" holds this long, then on
+		length: 45,            // and on regardless after this long
+		y: 330,                // the row of visors
+	};
 
 	/* ---------- tuning: the title drop ---------- */
 
@@ -619,6 +637,7 @@ window.Showtime = function (stage, opts) {
 		const end = beats.findIndex((b) => b.id === 'timeup');
 		const at = beats.indexOf(next);
 		if (!clock.started && intro >= 0 && at > intro && (end < 0 || at < end)) startClock(0);
+		clock.held = !!next.holdClock;   // (the visor check stops the clock)
 		showSkip(next.id);
 		beat = next;
 		bt = 0;
@@ -787,6 +806,7 @@ window.Showtime = function (stage, opts) {
 
 	// The clock runs itself: through the intros and the rounds, to TIME!.
 	function stepClock(dt) {
+		if (clock.held) return;
 		if (clock.delay > 0) {
 			clock.delay -= dt;
 			if (clock.delay <= 0) clock.running = true;
@@ -971,12 +991,16 @@ window.Showtime = function (stage, opts) {
 		}, Object.assign({}, extra, { lines: undefined, tagline: undefined }));
 	};
 
-	// The clock reveal: the room dark, the clock slams in, its dial charges
-	// round under a drumroll, YOU HAVE / 10 MINUTES, then it flies up to its
-	// place at the top of every wall, and a moment later starts counting down.
+	// The clock reveal, a piece at a time out of the dark: the dial, its
+	// ticks charging round under a drumroll; YOU HAVE above it; the 10 in the
+	// middle of it; MINUTES under it. Then the 10 turns into the clock and
+	// flies up to its place at the top of every wall, and a moment later
+	// starts counting down.
 	beatsLib.clockIntro = function (extra) {
 		const C = CLOCK_INTRO;
-		const minutes = SECONDS >= 60 ? Math.round(SECONDS / 60) + ' MINUTES' : SECONDS + ' SECONDS';
+		const minutes = SECONDS >= 60;
+		const number = String(minutes ? Math.round(SECONDS / 60) : SECONDS);
+		const unit = minutes ? (number === '1' ? 'MINUTE' : 'MINUTES') : 'SECONDS';
 		return extend({
 			id: 'clock',
 			length: C.length,
@@ -989,58 +1013,248 @@ window.Showtime = function (stage, opts) {
 				self.play('drumroll');
 			},
 			update(dt, bt) {
-				if (self.cue(C.slam)) { self.sfx.boom(); self.shake = 0.7; self.flash = 0.5; }
+				if (self.cue(C.dial)) { self.sfx.boom(0.6); self.shake = 0.4; }
 				if (self.cue(C.youHave)) { self.sfx.drum(); self.shake = 0.3; }
-				if (self.cue(C.minutes)) { self.stop('drumroll'); self.sfx.boom(1); self.play('reveal'); self.shake = 0.9; self.flash = 0.6; }
+				if (self.cue(C.number)) { self.stop('drumroll'); self.sfx.boom(1); self.shake = 0.8; self.flash = 0.5; }
+				if (self.cue(C.unit)) { self.sfx.boom(1); self.play('reveal'); self.shake = 0.9; self.flash = 0.6; }
 				if (self.cue(C.settle[0])) self.play('wooshLong');
 				if (bt > C.settle[0]) self.blackout = INTRO_DIM * (1 - between(bt, C.settle[0], C.settle[1] + 0.3));
 				if (self.cue(C.settle[1])) { startClock(C.runAfter); self.sfx.hit(); }
 			},
 			draw(ctx, bt) {
-				const fly = ease(between(bt, C.settle[0], C.settle[1]));
 				if (bt >= C.settle[1]) return;
+				const fly = ease(between(bt, C.settle[0], C.settle[1]));
 				const fade = 1 - between(bt, C.settle[0], C.settle[0] + 0.4);
 				self.onWalls(ctx, function (c) {
 					const cx = W / 2;
-					const cy = lerp(C.y, CLOCK.y, fly);
-					// the dial, its ticks lighting round one by one
+					// 1. the dial, its ticks lighting round one by one
 					const charged = between(bt, C.charge[0], C.charge[1]);
-					if (bt > C.slam) {
+					if (bt > C.dial) {
+						const grow = easeOut((bt - C.dial) / 0.35);
 						for (let i = 0; i < 60; i++) {
 							const a = i / 60 * Math.PI * 2 - Math.PI / 2;
 							const on = i / 60 < charged;
-							const r0 = i % 5 ? 232 : 214;
+							const r0 = (i % 5 ? 232 : 214) * grow;
+							const r1 = 258 * grow;
 							c.save();
-							c.globalAlpha = fade * (on ? 1 : 0.22) * clamp((bt - C.slam) * 4, 0, 1);
+							c.globalAlpha = fade * (on ? 1 : 0.22) * clamp((bt - C.dial) * 4, 0, 1);
 							c.strokeStyle = on ? (i % 5 ? theme.accent : theme.gold) : 'white';
 							c.lineWidth = i % 5 ? 8 : 14;
 							c.lineCap = 'round';
 							c.beginPath();
 							c.moveTo(cx + Math.cos(a) * r0, C.y + Math.sin(a) * r0);
-							c.lineTo(cx + Math.cos(a) * 258, C.y + Math.sin(a) * 258);
+							c.lineTo(cx + Math.cos(a) * r1, C.y + Math.sin(a) * r1);
 							c.stroke();
 							c.restore();
 						}
 						if (charged >= 1) art.circle(c, cx, C.y, 290, { fill: art.radial(c, cx, C.y, 100, 300, [[0, 'rgba(255,79,216,0)'], [0.7, 'rgba(255,79,216,0.25)'], [1, 'rgba(255,79,216,0)']]), alpha: fade });
 					}
-					// the clock itself, slamming in, then flying up and shrinking to its corner size
-					const size = lerp(C.size, CLOCK.size, fly);
-					if (bt > C.slam) {
-						const age = bt - C.slam;
+					// 2. YOU HAVE, above the dial
+					self.slam(c, 'YOU HAVE', cx, C.y - 340, 96, bt - C.youHave, { alpha: fade });
+					// 3. the 10, in the dial; it becomes the clock and flies up to its corner
+					if (bt > C.number) {
+						const age = bt - C.number;
 						const s = age < 0.26 ? lerp(2.4, 0.9, (age / 0.26) ** 2) : 0.9 + 0.1 * easeOut((age - 0.26) / 0.18);
+						const cy = lerp(C.y, CLOCK.y, fly);
+						const size = lerp(C.size, CLOCK.size, fly);
 						c.save();
 						c.translate(cx, cy);
 						c.scale(s, s);
 						c.globalAlpha = clamp(age / 0.15, 0, 1);
 						if (fly > 0) clockPill(c, 0, 0, size, SECONDS, fly);
-						self.text(c, mmss(SECONDS), 0, size * 0.04, size, { alpha: 1 - fly });
+						self.text(c, number, 0, size * 0.04, size, { fill: theme.gold, glow: '#ff7a3d', alpha: 1 - fly });
 						c.restore();
 					}
-					self.slam(c, 'YOU HAVE', cx, 690, 90, bt - C.youHave, { alpha: fade });
-					self.slam(c, minutes, cx, 840, 170, bt - C.minutes, { fill: theme.gold, glow: '#ff7a3d', alpha: fade });
+					// 4. MINUTES, under it
+					self.slam(c, unit, cx, C.y + 350, 120, bt - C.unit, { fill: theme.gold, glow: '#ff7a3d', alpha: fade });
 				});
 			},
 		}, extra);
+	};
+
+	// The visor check, straight after the clock: the visors to put on (one
+	// colour per player, in player order), then everyone into the middle of
+	// the room for a wiggle, each visor ticked off as it's seen there. A
+	// visor beyond the squad that's moving about is flagged, with what to
+	// swap it for. The clock holds still through it. Visor n is tracker slot
+	// n (IGB.players.list); it's in play when it moves.
+	beatsLib.visors = function (extra) {
+		const V = VISORS;
+		let motion = [];      // per slot: averaged movement
+		let last = [];        // per slot: the last position seen
+		let held = [];        // per slot: seconds wiggled in the zone
+		let ticked = [];      // per slot: when it was ticked off (or undefined)
+		let wrongSince = [];  // per slot: when it was first flagged
+		let clearFor = 0;
+		let allSetAt = -1;
+		const inZone = (p) => Math.hypot(p.px - V.zone.px, p.pz - V.zone.pz) < V.zone.r;
+		const slots = () => (IGB.players && IGB.players.list) || [];
+		const wrong = () => slots().map((p, i) => i).filter((i) => i >= count() && motion[i] > V.moving);
+		const missing = () => Array.from({ length: count() }, (_, i) => i).filter((i) => ticked[i] === undefined);
+		self.visorState = () => ({ ticked: ticked.map((t) => t !== undefined), wrong: wrong(), missing: missing(), allSet: allSetAt >= 0 });
+
+		return extend({
+			id: 'visors',
+			length: V.length,
+			holdClock: true,
+			done: (bt) => allSetAt >= 0 && bt > allSetAt + V.allSet,
+			enter() {
+				motion = []; last = []; held = []; ticked = []; wrongSince = [];
+				clearFor = 0;
+				allSetAt = -1;
+				self.blackout = INTRO_DIM;
+			},
+			update(dt, bt) {
+				self.blackout = INTRO_DIM;
+				const k = Math.exp(-dt / V.settle);
+				slots().forEach(function (p, i) {
+					if (!p || p.X === undefined) return;
+					const moved = last[i] ? Math.hypot(p.X - last[i].X, p.Y - last[i].Y, p.Z - last[i].Z) : 0;
+					last[i] = { X: p.X, Y: p.Y, Z: p.Z };
+					motion[i] = (motion[i] || 0) * k + moved / Math.max(dt, 1e-3) * (1 - k);   // speed, raw units a second
+					// tick off a squad visor once it's wiggled in the zone a moment
+					if (bt > V.show && i < count() && ticked[i] === undefined) {
+						if (inZone(p) && motion[i] > V.wiggle) held[i] = (held[i] || 0) + dt;
+						if (held[i] >= V.hold) {
+							ticked[i] = bt;
+							self.play('correct');
+							self.burst(W + W / 2, V.y, colour(i));
+						}
+					}
+				});
+				// a wrong visor, newly in play: the alarm
+				const bad = wrong();
+				for (const i of bad) if (wrongSince[i] === undefined) { wrongSince[i] = bt; self.sfx.alarm(0.8, 0.3); self.shake = 0.3; }
+				wrongSince = wrongSince.map((t, i) => (bad.includes(i) ? t : undefined));
+				clearFor = !missing().length && !bad.length ? clearFor + dt : 0;
+				if (allSetAt < 0 && clearFor >= V.clear) {
+					allSetAt = bt;
+					self.sfx.boom(0.8);
+					self.play('reveal');
+					self.flash = 0.4;
+				}
+			},
+			draw(ctx, bt) {
+				const n = count();
+				const bad = wrong();
+				const lost = missing();
+				self.onWalls(ctx, function (c) {
+					const cx = W / 2;
+					if (allSetAt >= 0) {
+						self.slam(c, 'ALL SET!', cx, 640, 190, bt - allSetAt, { fill: theme.gold, glow: '#ff7a3d' });
+						drawVisorRow(c, cx, V.y, n, bt);
+						return;
+					}
+					// the headline: what to do now
+					const asking = bt > V.show;
+					self.slam(c, asking ? 'STAND IN THE MIDDLE' : 'PUT ON YOUR VISORS', cx, 150 + 20, 96, asking ? bt - V.show : bt);
+					if (asking) self.slam(c, 'AND WIGGLE!', cx, 555, 80, bt - V.show - 0.4, { fill: theme.gold });
+					else self.slam(c, n === 1 ? 'THIS COLOUR' : 'ONE EACH, THESE ' + n + ' COLOURS', cx, 555, 54, bt - 0.6, { fill: theme.gold });
+					drawVisorRow(c, cx, V.y, n, bt);
+					if (asking) drawRoomMap(c, bad.length ? cx - 400 : cx, 745, 240, n, bt);   // (aside, to make room for a flag)
+					// a wrong visor: flagged, with what to swap it for
+					if (bad.length) {
+						const i = bad[0];
+						const flash = 0.75 + 0.25 * Math.sin(bt * 12);
+						const w = asking ? 820 : 1100;          // beside the map, or centred under the visors
+						const fx = asking ? cx + 230 : cx;
+						art.roundRect(c, fx - w / 2, 625, w, 240, 40, { fill: 'rgba(40,0,8,0.9)', stroke: '#ff3d6a', lineWidth: 10, alpha: flash });
+						self.text(c, 'WRONG VISOR!', fx, 684, 76, { fill: '#ff5470', glow: '#ff3d6a', fit: w - 60 });
+						self.text(c, self.nameOf(i) + ' ISN\'T PLAYING', fx, 762, 50, { fill: lit(i), fit: w - 60 });
+						self.text(c, lost.length ? 'SWAP IT FOR ' + self.nameOf(lost[0]) : 'TAKE IT OFF', fx, 828, 50, { fill: lost.length ? lit(lost[0]) : 'white', fit: w - 60 });
+					}
+				});
+			},
+		}, extra);
+
+		// the squad's visors in a row, each with its colour's name; ticked
+		// ones bounce and get a gold tick, the rest pulse while they're awaited
+		function drawVisorRow(c, cx, y, n, bt) {
+			const gap = Math.min(250, (W - 200) / Math.max(1, n));
+			for (let i = 0; i < n; i++) {
+				const x = cx + (i - (n - 1) / 2) * gap;
+				const appear = bt - 0.3 - i * 0.18;
+				if (appear <= 0) continue;
+				const pop = appear < 0.3 ? easeOut(appear / 0.3) * 1.15 : 1 + 0.15 * Math.max(0, 1 - (appear - 0.3) / 0.2);
+				const done = ticked[i] !== undefined;
+				const bounce = done ? 1 + 0.25 * Math.max(0, 1 - (bt - ticked[i]) / 0.35) : bt > V.show ? 1 + 0.05 * Math.sin(bt * 6 + i) : 1;
+				c.save();
+				c.translate(x, y);
+				c.scale(pop * bounce, pop * bounce);
+				visor(c, colour(i), done || bt <= V.show ? 1 : 0.55);
+				c.restore();
+				self.text(c, self.nameOf(i), x, y + 108, 42, { fill: lit(i), alpha: Math.min(1, appear * 4) });
+				if (done) self.text(c, '✓', x + 70, y - 60, 70, { fill: theme.gold, glow: theme.gold });
+			}
+		}
+
+		// a sports visor from the front: the band round the head, the peak
+		function visor(c, fill, alpha) {
+			c.save();
+			c.globalAlpha *= alpha;
+			c.lineCap = 'round';
+			c.strokeStyle = 'rgba(0,0,0,0.45)';
+			c.lineWidth = 34;
+			c.beginPath();
+			c.ellipse(0, 6, 80, 46, 0, Math.PI * 1.05, Math.PI * 1.95);
+			c.stroke();
+			c.strokeStyle = fill;
+			c.lineWidth = 26;
+			c.beginPath();
+			c.ellipse(0, 0, 80, 46, 0, Math.PI * 1.05, Math.PI * 1.95);
+			c.stroke();
+			c.fillStyle = fill;
+			c.beginPath();
+			c.moveTo(-86, -6);
+			c.quadraticCurveTo(0, 70, 86, -6);
+			c.quadraticCurveTo(0, 22, -86, -6);
+			c.fill();
+			c.globalAlpha *= 0.35;
+			c.fillStyle = 'white';
+			c.beginPath();
+			c.ellipse(-30, -38, 26, 6, -0.2, 0, Math.PI * 2);
+			c.fill();
+			c.restore();
+		}
+
+		// the room from above, front wall at the top: the circle to stand in,
+		// and every visor in play where it is
+		function drawRoomMap(c, cx, cy, size, n, bt) {
+			const x0 = cx - size / 2;
+			const y0 = cy - size / 2;
+			art.rect(c, x0, y0, size, size, { fill: 'rgba(12,4,30,0.72)' });
+			c.save();
+			c.strokeStyle = 'rgba(255,255,255,0.85)';
+			c.lineWidth = 8;
+			c.beginPath();
+			c.moveTo(x0, y0 + size);
+			c.lineTo(x0, y0);
+			c.lineTo(x0 + size, y0);
+			c.lineTo(x0 + size, y0 + size);
+			c.stroke();
+			c.setLineDash([14, 12]);
+			c.lineWidth = 3;
+			c.beginPath();
+			c.moveTo(x0, y0 + size);
+			c.lineTo(x0 + size, y0 + size);
+			c.stroke();
+			// the circle, pulsing
+			c.setLineDash([18, 10]);
+			c.lineDashOffset = -bt * 30;
+			c.strokeStyle = theme.gold;
+			c.lineWidth = 7;
+			c.beginPath();
+			c.arc(x0 + V.zone.px * size, y0 + (1 - V.zone.pz) * size, V.zone.r * size * (1 + 0.04 * Math.sin(bt * 5)), 0, Math.PI * 2);
+			c.stroke();
+			c.restore();
+			self.text(c, 'FRONT', cx, y0 - 26, 30, { fill: 'white', outlineWidth: 4, glow: 'transparent' });
+			slots().forEach(function (p, i) {
+				if (!p || !(motion[i] > V.moving || ticked[i] !== undefined)) return;
+				const px = x0 + clamp(p.px, 0, 1) * size;
+				const py = y0 + (1 - clamp(p.pz, 0, 1)) * size;
+				art.circle(c, px, py, 17, { fill: colour(i), stroke: i < n ? 'white' : '#ff3d6a', lineWidth: i < n ? 4 : 7 });
+			});
+		}
 	};
 
 	// TIME!: an alarm, everything slows to a stop, a giant TIME!, then the
@@ -1618,6 +1832,7 @@ window.Showtime = function (stage, opts) {
 			beat: self.beat, bt, seen: seen.slice(), camera: v, timeScale: self.timeScale,
 			clockShown: clock.shown, samples: track.length, marks: marks.slice(),
 			board: board ? { rank: board.rank, total: board.total } : null,
+			visors: self.visorState ? self.visorState() : null,
 		};
 	};
 

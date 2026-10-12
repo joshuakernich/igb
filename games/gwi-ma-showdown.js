@@ -1431,6 +1431,11 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 			update(dt) { stepWorld(dt); },
 		}),
 
+		// the visors on, in the right colours, and a wiggle in the middle of the room
+		show.beats.visors({
+			update(dt) { stepWorld(dt); },
+		}),
+
 		// 3. the controls, one at a time, the camera in close on the hunters; no Gwi-Ma yet
 		{
 			id: 'controls',
@@ -1612,7 +1617,7 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 	};
 
 	// For tests and the console.
-	const ORDER = ['squad', 'clock', 'controls', 'gwima', 'play'];
+	const ORDER = ['squad', 'clock', 'visors', 'controls', 'gwima', 'play'];
 	self.state = function () {
 		const beat = show.beat;
 		return Object.assign(show.state(), {

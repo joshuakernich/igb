@@ -1266,7 +1266,7 @@ IGB.register('backrooms', function BackroomsGame(stage, playersMeta) {
 
 	/* ---------- the beats ---------- */
 
-	const INTROS = ['squad', 'title', 'clock', 'controls', 'entity'];
+	const INTROS = ['squad', 'title', 'clock', 'visors', 'controls', 'entity'];
 
 	show.sequence([
 		// 1. how many players: the office, dimmed, and the picker; nothing else
@@ -1287,6 +1287,11 @@ IGB.register('backrooms', function BackroomsGame(stage, playersMeta) {
 
 		// 2. the ten-minute clock; it starts counting a moment after it lands
 		show.beats.clockIntro({
+			draw(ctx) { camcorder(ctx); },
+		}),
+
+		// the visors on, in the right colours, and a wiggle in the middle of the room
+		show.beats.visors({
 			draw(ctx) { camcorder(ctx); },
 		}),
 

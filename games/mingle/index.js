@@ -1229,6 +1229,11 @@ IGB.register('mingle', function MingleGame(stage, playersMeta) {
 			update(dt) { stepWorld(dt); },
 		}),
 
+		// the visors on, in the right colours, and a wiggle in the middle of the room
+		show.beats.visors({
+			update(dt) { stepWorld(dt); },
+		}),
+
 		// 3. the controls, one at a time, live in the hall
 		{
 			id: 'controls',
@@ -1469,7 +1474,7 @@ IGB.register('mingle', function MingleGame(stage, playersMeta) {
 	}
 
 	// Test hooks: jump to any beat (skipping the intros), wind the clock on.
-	const INTROS = ['squad', 'title', 'clock', 'controls', 'host'];
+	const INTROS = ['squad', 'title', 'clock', 'visors', 'controls', 'host'];
 	self.test = {
 		skipTo(id) {
 			if (!contestants.length) initGame(playersMeta ? playersMeta.length : 3);

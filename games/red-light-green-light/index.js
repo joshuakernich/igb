@@ -1836,6 +1836,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			update(dt) { stepWorld(dt); },
 		}),
 
+		// the visors on, in the right colours, and a wiggle in the middle of the room
+		show.beats.visors({
+			update(dt) { stepWorld(dt); },
+		}),
+
 		// 3. the controls, one at a time, the camera in close on the contestants; no doll yet
 		{
 			id: 'controls',
@@ -2059,7 +2064,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	};
 
 	// Test hooks: jump to any beat (skipping the intros), wind the clock on.
-	const INTROS = ['squad', 'clock', 'controls', 'doll'];
+	const INTROS = ['squad', 'clock', 'visors', 'controls', 'doll'];
 	self.test = {
 		// no block walls this round or after (tests that steer straight to zones)
 		clearBlocks() { blocks = []; noBlocks = true; },
