@@ -154,6 +154,7 @@ window.Showtime = function (stage, opts) {
 		],
 		notAgain: ['show-debug'],   // games never offered to play again
 		wait: { faces: 45, reasons: 40, again: 40 },   // each part moves on after this long untouched
+		picked: 1.4,           // the face picked stays up this long before what comes next
 		thanks: 2.4,           // THANK YOU! holds this long
 	};
 
@@ -2128,10 +2129,13 @@ window.Showtime = function (stage, opts) {
 			small('TAP A FACE').appendTo($wall);
 			const $row = $('<div>').css({ display: 'flex', gap: '34px', marginTop: '20px' }).appendTo($wall);
 			R.faces.forEach(function (f, i) {
+				// once rated, the chosen face grows and the rest fade back
+				const chosen = feedback && feedback.rating === i + 1;
 				const $b = $('<button>').attr({ rating: i + 1, title: f.label }).css({
 					display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px',
 					width: '230px', padding: 0, border: 'none', background: 'none', cursor: 'pointer', pointerEvents: 'auto',
 					fontFamily: font, color: 'white', fontSize: '28px', letterSpacing: '1px',
+					opacity: feedback && !chosen ? 0.25 : 1, transform: chosen ? 'scale(1.25)' : 'none', transition: 'transform 0.2s, opacity 0.2s',
 				}).appendTo($row);
 				$('<div>').html(face(i)).css({ width: '200px', height: '200px' }).appendTo($b);
 				$('<div>').text(f.label).css({ WebkitTextStroke: `5px ${theme.ink}`, paintOrder: 'stroke fill', whiteSpace: 'nowrap' }).appendTo($b);
@@ -2188,7 +2192,9 @@ window.Showtime = function (stage, opts) {
 			self.fx(rating >= 4 ? 'rateHigh' : 'rateLow');
 			console.log('Rating:', rating, f.label);
 			if (IGB.log) IGB.log(`Rated ${f.label} (${rating})`);
-			go(rating <= R.low ? 'reasons' : 'again');
+			// a moment to see the face picked, then on
+			render();
+			stage.timeout(() => { if ($layer && part === 'faces') go(rating <= R.low ? 'reasons' : 'again'); }, R.picked * 1000);
 		}
 
 		function finish() {
