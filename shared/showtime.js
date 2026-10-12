@@ -173,6 +173,8 @@ window.Showtime = function (stage, opts) {
 
 	const CLOCK = {
 		y: 44,                 // where its digits sit, top centre of every wall (it hangs from the top edge)
+		startTicks: 5,         // it ticks out loud for its first seconds...
+		tickVolume: 0.6,       // starting this loud and fading to nothing
 		size: 64,
 		urgent: 30,            // it turns red with this many seconds left
 		final: 10,             // and the last ten loom huge, ticking
@@ -384,6 +386,10 @@ window.Showtime = function (stage, opts) {
 		hit(vol = 0.5) {                        // a short bright hit
 			tone('triangle', 0, 0.25, 900, 300, vol);
 			noise(0, 0.1, 'highpass', 3000, 6000, vol * 0.4);
+		},
+		tick(vol = 0.5) {                       // a clock's tick: a dry little click
+			tone('square', 0, 0.035, 2400, 1700, vol * 0.45);
+			noise(0, 0.03, 'highpass', 4000, 8000, vol * 0.6);
 		},
 		roar(len = 2.2, vol = 0.7) {            // a monster's roar: growling saws and breath
 			const c = context();
@@ -811,7 +817,7 @@ window.Showtime = function (stage, opts) {
 
 	/* ---------- the corner clock ---------- */
 
-	const clock = { left: SECONDS, label: '', shown: false, said: Infinity, running: false, delay: -1, started: false };
+	const clock = { left: SECONDS, label: '', shown: false, said: Infinity, running: false, delay: -1, started: false, ran: 0 };
 	const mmss = (s) => { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 	self.mmss = mmss;
 
@@ -831,6 +837,7 @@ window.Showtime = function (stage, opts) {
 	function startClock(after) {
 		clock.shown = true;
 		clock.started = true;
+		clock.ran = 0;
 		if (after > 0) clock.delay = after;
 		else clock.running = true;
 	}
@@ -844,6 +851,10 @@ window.Showtime = function (stage, opts) {
 		}
 		if (!clock.running) return;
 		clock.left = Math.max(0, clock.left - dt);
+		// its first few seconds tick out loud, fading to nothing
+		const ran = clock.ran;
+		clock.ran += dt;
+		for (let s = 0; s < CLOCK.startTicks; s++) if (ran <= s && clock.ran > s) self.sfx.tick(CLOCK.tickVolume * Math.pow(1 - s / CLOCK.startTicks, 2));
 		const whole = Math.ceil(clock.left);
 		if (whole <= CLOCK.final && whole < clock.said && whole > 0) self.play('tick');
 		clock.said = whole;
