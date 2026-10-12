@@ -151,6 +151,26 @@ igb-title-block i {
 	opacity: 0.6;
 }
 
+/* The launcher's log, in the title block's last row while the menu is up. */
+igb-block-log {
+	display: block;
+	grid-column: 1 / -1;
+	min-height: 3.9em;
+	padding: 10px 16px;
+	border-top: 2px solid rgba(220, 239, 255, 0.45);
+	font-size: 17px;
+	line-height: 1.3;
+	text-transform: uppercase;
+}
+
+igb-block-log div:not(:first-child) {
+	opacity: 0.55;
+}
+
+igb.home igb-log {
+	display: none;
+}
+
 /* ---------- menu (on the front wall, in world units) ---------- */
 
 /* Centred on the front wall, both ways. */

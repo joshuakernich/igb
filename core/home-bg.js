@@ -17,6 +17,7 @@ const INK = 0xdcefff;           // the lines
 const EYE = 1.6;                // camera height, metres
 const DRAW_IN = 2.6;            // seconds to draw the plan in
 const SWAY = { yaw: 0.07, period: 46, drift: 0.6 };   // radians, seconds, metres
+const LOG_LINES = 3;            // the latest log lines shown in the title block
 
 $(function () {
 	const $igb = $('igb');
@@ -26,8 +27,22 @@ $(function () {
 	const renderer = new THREE.WebGLRenderer({ antialias: true });
 	renderer.setClearColor(BLUE);
 	$bg.append(renderer.domElement);
-	for (let wall = 0; wall < 3; wall++) $("<igb-sheet>").css({ left: wall * W + 28 }).appendTo($bg);
-	$bg.append(titleBlock());
+	for (let wall = 0; wall < 3; wall++) $('<igb-sheet>').css({ left: wall * W + 28 }).appendTo($bg);
+	const $block = titleBlock().appendTo($bg);
+
+	// The launcher's log, written into the title block while the menu is up
+	// (its usual corner of the screen is hidden then).
+	const $log = $block.find('igb-block-log');
+	const source = document.querySelector('igb-log');
+	const copyLog = () => {
+		const lines = source.innerHTML.split(/<br\s*\/?>/i).map((l) => $('<div>').html(l).text()).filter(Boolean).slice(0, LOG_LINES);
+		$log.empty();
+		for (const line of lines) $('<div>').text(line).appendTo($log);
+	};
+	if (source) {
+		new MutationObserver(copyLog).observe(source, { childList: true, characterData: true, subtree: true });
+		copyLog();
+	}
 
 	const scene = new THREE.Scene();
 	scene.fog = new THREE.Fog(BLUE, 8, 75);
@@ -163,6 +178,7 @@ function titleBlock() {
 	return $('<igb-title-block>').html(
 		'<b>IMMERSIVE GAMEBOX</b>' +
 		'<span>OPEN FLOOR &middot; LEVEL 1</span>' +
-		'<span><i>SCALE</i> 1:500</span><span><i>SHEET</i> A-101</span>'
+		'<span><i>SCALE</i> 1:500</span><span><i>SHEET</i> A-101</span>' +
+		'<igb-block-log></igb-block-log>'
 	);
 }
