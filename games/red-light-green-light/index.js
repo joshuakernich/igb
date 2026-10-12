@@ -1384,6 +1384,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		return [[-44, -9], [4, -9], [4, -24], [36, 0], [4, 24], [4, 9], [-44, 9]];
 	}
 
+	// A safe zone: a glowing white ring painted on the sand, flat on the
+	// plane. Free ones pulse (faster as she's about to turn); a held one
+	// stays white and steady, with a band of its holder's colour inside. An
+	// edge zone has chevrons pointing round the corner to the wall it leads to.
 	function drawZone(ctx, z) {
 		const f = zoneF(z);
 		if (!onView(f)) return;
