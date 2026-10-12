@@ -86,60 +86,49 @@ igb-menu {
 	white-space: normal;
 }
 
-igb-folder h1,
+/* No panels: the folders melt away, and the apps from every folder flow
+   together, big, straight on the background. */
 igb-folder {
-	text-align: center;
-}
-
-igb-folder {
-	display: inline-block;
-	vertical-align: top;
-	margin: 5px;
-	padding: 5px 5px 40px;
-	border-radius: 15px;
-	background: rgba(0, 0, 0, 0.3);
-	backdrop-filter: blur(10px);
+	display: contents;
 }
 
 igb-folder h1 {
-	margin: 10px;
-	padding: 0;
-	color: white;
-	font-size: 15px;
-	font-weight: normal;
+	display: none;
 }
 
 igb-folder .app {
 	display: inline-block;
 	position: relative;
 	vertical-align: top;
-	width: 96px;
-	margin: 5px;
+	width: 220px;
+	margin: 24px 24px 72px;
 	color: white;
 	text-align: center;
 	text-decoration: none;
-	font-size: 14px;
+	font-size: 26px;
 }
 
 igb-icon {
 	display: block;
-	width: 96px;
-	height: 96px;
-	border-radius: 15px;
+	width: 220px;
+	height: 220px;
+	border-radius: 44px;
 	background: #999 center / cover;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 	color: rgba(255, 255, 255, 0.8);
-	font-size: 36px;
-	line-height: 96px;
+	font-size: 80px;
+	line-height: 220px;
 }
 
 igb-label {
 	display: block;
 	position: absolute;
-	left: -6px;
-	right: -6px;
-	margin-top: 8px;
-	font-weight: normal;
+	left: -12px;
+	right: -12px;
+	margin-top: 14px;
+	font-weight: 600;
 	white-space: normal;
+	text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
 }
 
 /* ---------- controls and log ---------- */
