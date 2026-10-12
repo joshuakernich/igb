@@ -125,7 +125,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	const POINTS = { hold: 1, finish: 10 };   // a red light survived in a zone; crossing the line
 	const ROUND_GAP = {
-		ready: 2.2,           // ROUND N, her face to the players, before GREEN LIGHT
+		look: 1.4,            // each round opens on the doll, facing the players: ROUND N...
+		sweep: 2.0,           // ...then the view scrolls back down the field to the start
 		cleared: 3.2,         // the banner after a round
 		quick: 2.6,           // ...or, when nobody made it, before the same round starts again
 	};
@@ -466,9 +467,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			head.yaw = head.from = head.to = Math.PI;
 			greenLight(true);
 		} else {
-			// her face to the players while ROUND N comes up, then she turns
+			// the view on her, her face to the players, while ROUND N comes up; then
+			// it scrolls back to the start, and she turns away
 			head.yaw = head.from = head.to = 0;
-			setPhase('ready', ROUND_GAP.ready);
+			cam = introCam();
+			setPhase('ready', ROUND_GAP.look + ROUND_GAP.sweep);
 			show.fx('roundStart');
 		}
 	}
@@ -793,7 +796,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		phaseT += dt;
 		switch (phase) {
 		case 'ready':
-			// ROUND N: she faces the players, then turns away
+			// ROUND N on her, the view scrolling back to the start, then she turns away
+			cam = introCam() * (1 - ease(between(phaseT, ROUND_GAP.look, ROUND_GAP.look + ROUND_GAP.sweep)));
 			if (phaseT >= phaseDur) turnAway();
 			break;
 
@@ -887,6 +891,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	function updateContestant(c, dt) {
 		if (!c.alive) return;
+
+		// while the view sweeps back to the start before a round, everyone rides
+		// along with it, clear of the field
+		if (phase === 'ready' && show.beat === 'play') {
+			c.x = xOf(c);
+			c.f = bandF(c);
+			return;
+		}
 
 		if (c.glue) {
 			// Feet stay put; the body bends toward where the player has moved.
