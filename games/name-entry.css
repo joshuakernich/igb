@@ -1,0 +1,166 @@
+/*
+ * Name Entry: the on-screen keyboard and the avatar picker. They are
+ * interactive controls, so they stay DOM; the panels' colour wash and the
+ * meep previews are canvas (games/name-entry.js).
+ *
+ * The old layout was in vw; the world spans the window's width, so
+ * 1vw = 48 world px.
+ */
+
+/* The name entry overlays whatever is behind it (Box Party's scene). */
+igb-stage[game="name-entry"] {
+	background: transparent;
+}
+
+/* The old igb.nameentry root. */
+igb-stage[game="name-entry"] nameentry {
+	display: block;
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	color: white;
+	line-height: 120px;
+	font-size: 72px;
+	text-align: center;
+	font-weight: 700;
+}
+
+igb-stage[game="name-entry"] igbside {
+	display: inline-block;
+	white-space: normal;
+	height: 100%;
+	width: 33.3%;
+	position: relative;
+	vertical-align: top;
+	box-sizing: border-box;
+}
+
+igb-stage[game="name-entry"] nameentryplayer {
+	display: block;
+	width: 100%;
+	height: 100%;
+	position: relative;
+	padding: 24px;
+	box-sizing: border-box;
+	background: transparent;
+	pointer-events: auto;
+}
+
+/* The panel's canvas (its colour wash and meep preview), under its
+   controls the way the old background and meep were, and faded with them. */
+igb-stage[game="name-entry"] nameentryplayer > canvas.surface {
+	position: absolute;
+	left: 0;
+	top: 0;
+}
+
+igb-stage[game="name-entry"] igbside:first-of-type nameentryplayer {
+	padding-left: 168px;
+}
+
+igb-stage[game="name-entry"] igbside:last-of-type nameentryplayer {
+	padding-right: 168px;
+}
+
+igb-stage[game="name-entry"] avatarbuttonset {
+	display: block;
+	width: 50%;
+	position: absolute;
+	top: 50%;
+	line-height: 0px;
+	text-align: center;
+	transform: translateY(-50%);
+}
+
+igb-stage[game="name-entry"] avatarbuttonset:first-of-type {
+	left: 0px;
+}
+
+igb-stage[game="name-entry"] avatarbuttonset:last-of-type {
+	right: 0px;
+}
+
+igb-stage[game="name-entry"] avatarbutton {
+	display: inline-block;
+	width: 144px;
+	height: 144px;
+	margin: 24px;
+	background: white;
+	border-radius: 25%;
+	background-size: 100%;
+	position: relative;
+}
+
+igb-stage[game="name-entry"] avatarbutton.selected {
+	outline: 9.6px solid black;
+}
+
+igb-stage[game="name-entry"] avatarfeature {
+	position: absolute;
+	display: block;
+	inset: -50%;
+	background-size: 100%;
+}
+
+igb-stage[game="name-entry"] nameentrybutton {
+	display: inline-block;
+	width: 120px;
+	height: 120px;
+	background: rgba(255, 255, 255, 0.1);
+	margin: 19.2px 4.8px;
+	font: inherit;
+	font-weight: inherit;
+	transition: all 1s;
+	position: relative;
+	vertical-align: middle;
+}
+
+igb-stage[game="name-entry"] nameentrybutton.done {
+	font-size: 38.4px;
+	width: 288px;
+	border-radius: 60px;
+	bottom: 168px;
+	right: 96px;
+	position: absolute;
+}
+
+igb-stage[game="name-entry"] nameentrybutton.done:before {
+	content: "DONE";
+}
+
+igb-stage[game="name-entry"] nameentrybutton.done:after {
+	content: "";
+	width: 19.2px;
+	height: 33.6px;
+	border-right: 9.6px solid white;
+	border-bottom: 9.6px solid white;
+	display: inline-block;
+	box-sizing: border-box;
+	transform: rotate(45deg) translateY(-4.8px);
+	margin-left: 24px;
+}
+
+igb-stage[game="name-entry"] nameentrybutton.tapped {
+	transition: none;
+	background: white;
+	color: #5F01FF;
+}
+
+igb-stage[game="name-entry"] nameentrybutton.tapped:after {
+	border-color: #5F01FF;
+}
+
+igb-stage[game="name-entry"] nameentryinput {
+	display: block;
+	height: 120px;
+	background: rgba(255, 255, 255, 0.1);
+	width: 960px;
+	margin: 4.8px auto 24px;
+	vertical-align: middle;
+	position: relative;
+}
+
+igb-stage[game="name-entry"] nameentryinput.complete {
+	background: none;
+}

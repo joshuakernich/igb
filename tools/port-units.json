@@ -1,0 +1,639 @@
+[
+ {
+  "stem": "minecraft",
+  "ids": [
+   "minecraft"
+  ],
+  "files": [
+   "experiments/minecraft.js"
+  ],
+  "notes": "",
+  "assets": {
+   "proto/img/experiments/minecraft-cube.png": "assets/minecraft/minecraft-cube.png",
+   "proto/img/experiments/minecraft-grass.png": "assets/minecraft/minecraft-grass.png"
+  }
+ },
+ {
+  "stem": "life",
+  "ids": [
+   "life"
+  ],
+  "files": [
+   "experiments/life.js",
+   "experiments/life-meep.js"
+  ],
+  "notes": "Fold life-meep.js (LifeMeep, LifeMeepHead) into games/life.js as local constructors; nothing else uses them.",
+  "assets": {
+   "proto/img/party/life-head.png": "assets/life/life-head.png",
+   "proto/img/party/texture-eye.jpg": "assets/life/texture-eye.jpg"
+  }
+ },
+ {
+  "stem": "ball-spin",
+  "ids": [
+   "ball-spin"
+  ],
+  "files": [
+   "party/ball-spin.js"
+  ],
+  "notes": "",
+  "assets": {
+   "proto/img/bball-arm.png": "assets/ball-spin/bball-arm.png",
+   "proto/img/bball-neon.png": "assets/ball-spin/bball-neon.png",
+   "proto/img/bball-pattern.jpeg": "assets/ball-spin/bball-pattern.jpeg"
+  }
+ },
+ {
+  "stem": "dance-mat",
+  "ids": [
+   "dance-mat"
+  ],
+  "files": [
+   "party/dance-mat.js"
+  ],
+  "notes": "The old working tree has an uncommitted change to this file; port the file as it is on disk now. Its rhythm is driven by audio.getTime() of the song.",
+  "assets": {
+   "proto/audio/party/music-beats-120-short.mp3": "assets/shared/music-beats-120-short.mp3",
+   "proto/audio/party/music-beats-120.mp3": "assets/shared/music-beats-120.mp3",
+   "proto/audio/party/music-beats-90-short.mp3": "assets/shared/music-beats-90-short.mp3",
+   "proto/audio/party/music-beats-90.mp3": "assets/shared/music-beats-90.mp3",
+   "proto/audio/party/sfx-correct.mp3": "assets/shared/sfx-correct.mp3",
+   "proto/audio/party/sfx-incorrect.mp3": "assets/shared/sfx-incorrect.mp3",
+   "proto/img/bg-kpop-stage.png": "assets/dance-mat/bg-kpop-stage.png"
+  }
+ },
+ {
+  "stem": "name-entry",
+  "ids": [
+   "name-entry"
+  ],
+  "files": [
+   "party/name-entry.js"
+  ],
+  "notes": "Box Party starts this with IGB.start(\"name-entry\", $parent, players, callback): keep the old (playersMeta, callback) behaviour as (stage, playersMeta, callback), calling callback when names are done. It is an interactive on-screen keyboard and avatar picker: keep the buttons as DOM in stage.$ui (pointer-events: auto) and convert its vw units to world px (1vw = 48 world px, since the world spans the window width). The meep previews can be MeepView (DOM) or canvas. Its CSS goes in games/name-entry.css (manifest already says css: true).",
+  "assets": {
+   "proto/audio/party/sfx-correct.mp3": "assets/shared/sfx-correct.mp3",
+   "proto/audio/party/sfx-select.mp3": "assets/shared/sfx-select.mp3",
+   "proto/audio/party/speech-avatar-entry.mp3": "assets/name-entry/speech-avatar-entry.mp3",
+   "proto/audio/party/speech-name-entry.mp3": "assets/name-entry/speech-name-entry.mp3",
+   "proto/img/party/avatar-accessory-belt.png": "assets/name-entry/avatar-accessory-belt.png",
+   "proto/img/party/avatar-accessory-bowtie.png": "assets/name-entry/avatar-accessory-bowtie.png",
+   "proto/img/party/avatar-accessory-bust.png": "assets/name-entry/avatar-accessory-bust.png",
+   "proto/img/party/avatar-accessory-chain.png": "assets/name-entry/avatar-accessory-chain.png",
+   "proto/img/party/avatar-accessory-sash.png": "assets/name-entry/avatar-accessory-sash.png",
+   "proto/img/party/avatar-accessory-skirt.png": "assets/name-entry/avatar-accessory-skirt.png",
+   "proto/img/party/avatar-shirt-bear.png": "assets/name-entry/avatar-shirt-bear.png",
+   "proto/img/party/avatar-shirt-jocks.png": "assets/name-entry/avatar-shirt-jocks.png",
+   "proto/img/party/avatar-shirt-overall.png": "assets/name-entry/avatar-shirt-overall.png",
+   "proto/img/party/avatar-shirt-skeleton.png": "assets/name-entry/avatar-shirt-skeleton.png",
+   "proto/img/party/avatar-shirt-stripes.png": "assets/name-entry/avatar-shirt-stripes.png",
+   "proto/img/party/avatar-shirt-vest.png": "assets/name-entry/avatar-shirt-vest.png"
+  }
+ },
+ {
+  "stem": "minigame-score",
+  "ids": [
+   "minigame-score"
+  ],
+  "files": [
+   "party/minigame-score-sequence.js"
+  ],
+  "notes": "A tiny HUD demo of the final-score podium.",
+  "assets": {}
+ },
+ {
+  "stem": "mystery-maze",
+  "ids": [
+   "mystery-maze"
+  ],
+  "files": [
+   "party/mystery-maze.js"
+  ],
+  "notes": "",
+  "assets": {
+   "proto/audio/party/music-run.mp3": "assets/shared/music-run.mp3",
+   "proto/audio/party/sfx-correct.mp3": "assets/shared/sfx-correct.mp3",
+   "proto/audio/party/sfx-fall.mp3": "assets/shared/sfx-fall.mp3",
+   "proto/audio/party/sfx-select.mp3": "assets/shared/sfx-select.mp3",
+   "proto/audio/party/sfx-sequence.mp3": "assets/shared/sfx-sequence.mp3",
+   "proto/img/party/bg-mountains-clouds.png": "assets/shared/bg-mountains-clouds.png"
+  }
+ },
+ {
+  "stem": "heads",
+  "ids": [
+   "volley-heads",
+   "soccer-heads"
+  ],
+  "files": [
+   "party/headers.js"
+  ],
+  "notes": "One file, two games: register \"volley-heads\" (HeadersGame, typeGame \"volley\") and \"soccer-heads\" (HeadersFootballGame, typeGame \"football\") from games/heads.js. Smoke-test both ids.",
+  "assets": {
+   "proto/audio/party/music-sport.mp3": "assets/shared/music-sport.mp3",
+   "proto/audio/party/sfx-bounce.mp3": "assets/shared/sfx-bounce.mp3",
+   "proto/audio/party/sfx-cheer.mp3": "assets/shared/sfx-cheer.mp3",
+   "proto/img/goal.png": "assets/heads/goal.png",
+   "proto/img/party/actor-football.png": "assets/shared/actor-football.png",
+   "proto/img/party/bg-stadium.jpg": "assets/shared/bg-stadium.jpg",
+   "proto/img/volleyball-net.png": "assets/heads/volleyball-net.png"
+  }
+ },
+ {
+  "stem": "bongo-bounce",
+  "ids": [
+   "bongo-bounce"
+  ],
+  "files": [
+   "party/bongo-bounce.js"
+  ],
+  "notes": "",
+  "assets": {
+   "proto/audio/party/music-beats-120-short.mp3": "assets/shared/music-beats-120-short.mp3",
+   "proto/audio/party/music-beats-120.mp3": "assets/shared/music-beats-120.mp3",
+   "proto/audio/party/music-beats-90-short.mp3": "assets/shared/music-beats-90-short.mp3",
+   "proto/audio/party/music-beats-90.mp3": "assets/shared/music-beats-90.mp3",
+   "proto/audio/party/sfx-drum-big.mp3": "assets/bongo-bounce/sfx-drum-big.mp3",
+   "proto/audio/party/sfx-knock.mp3": "assets/bongo-bounce/sfx-knock.mp3",
+   "proto/img/party/bg-village.png": "assets/shared/bg-village.png"
+  }
+ },
+ {
+  "stem": "melody-match",
+  "ids": [
+   "melody-match"
+  ],
+  "files": [
+   "party/melody-match.js"
+  ],
+  "notes": "",
+  "assets": {
+   "proto/audio/party/music-ambient.mp3": "assets/melody-match/music-ambient.mp3",
+   "proto/audio/party/music-jazz-120.mp3": "assets/melody-match/music-jazz-120.mp3",
+   "proto/audio/party/sfx-correct.mp3": "assets/shared/sfx-correct.mp3",
+   "proto/audio/party/sfx-glockenspiel.mp3": "assets/melody-match/sfx-glockenspiel.mp3",
+   "proto/audio/party/sfx-incorrect.mp3": "assets/shared/sfx-incorrect.mp3",
+   "proto/audio/party/sfx-woosh.mp3": "assets/shared/sfx-woosh.mp3",
+   "proto/img/party/bg-village.png": "assets/shared/bg-village.png"
+  }
+ },
+ {
+  "stem": "coin-chaos",
+  "ids": [
+   "coin-chaos"
+  ],
+  "files": [
+   "party/coin-chaos.js"
+  ],
+  "notes": "The old file defines its own local `Meep` constructor (not the shared one): rename it (e.g. CoinMeep) so it does not shadow the shared Meep.",
+  "assets": {
+   "proto/audio/party/music-heist.mp3": "assets/shared/music-heist.mp3",
+   "proto/audio/party/sfx-coin.mp3": "assets/shared/sfx-coin.mp3",
+   "proto/audio/party/sfx-pickup.mp3": "assets/shared/sfx-pickup.mp3",
+   "proto/audio/party/tutorial-coin-chaos-intro.mp3": "assets/coin-chaos/tutorial-coin-chaos-intro.mp3",
+   "proto/audio/party/tutorial-coin-chaos.mp3": "assets/coin-chaos/tutorial-coin-chaos.mp3",
+   "proto/img/party/bg-floorboards.jpg": "assets/coin-chaos/bg-floorboards.jpg",
+   "proto/img/party/bg-mountains-clouds.png": "assets/shared/bg-mountains-clouds.png"
+  }
+ },
+ {
+  "stem": "painter-panic",
+  "ids": [
+   "painter-panic"
+  ],
+  "files": [
+   "party/painter-panic.js",
+   "party/painting-library.js"
+  ],
+  "notes": "Inline PAINTING_LIBRARY (from painting-library.js) into games/painter-panic.js as a local const, with its image keys rewritten to the new paths. The game already paints on canvases; keep that logic.",
+  "assets": {
+   "proto/audio/party/music-creative.mp3": "assets/shared/music-creative.mp3",
+   "proto/audio/party/sfx-buzz.mp3": "assets/shared/sfx-buzz.mp3",
+   "proto/audio/party/sfx-correct.mp3": "assets/shared/sfx-correct.mp3",
+   "proto/audio/party/sfx-incorrect.mp3": "assets/shared/sfx-incorrect.mp3",
+   "proto/audio/party/sfx-select.mp3": "assets/shared/sfx-select.mp3",
+   "proto/audio/party/tutorial-painter.mp3": "assets/painter-panic/tutorial-painter.mp3",
+   "proto/img/party/bg-box-factory.png": "assets/shared/bg-box-factory.png",
+   "proto/img/party/painting/painting0001.png": "assets/painter-panic/painting0001.png",
+   "proto/img/party/painting/painting0002.png": "assets/painter-panic/painting0002.png",
+   "proto/img/party/painting/painting0003.png": "assets/painter-panic/painting0003.png",
+   "proto/img/party/painting/painting0004.png": "assets/painter-panic/painting0004.png",
+   "proto/img/party/painting/painting0005.png": "assets/painter-panic/painting0005.png",
+   "proto/img/party/painting/painting0006.png": "assets/painter-panic/painting0006.png",
+   "proto/img/party/painting/painting0007.png": "assets/painter-panic/painting0007.png",
+   "proto/img/party/painting/painting0008.png": "assets/painter-panic/painting0008.png",
+   "proto/img/party/painting/painting0009.png": "assets/painter-panic/painting0009.png",
+   "proto/img/party/painting/painting0010.png": "assets/painter-panic/painting0010.png",
+   "proto/img/party/painting/painting0011.png": "assets/painter-panic/painting0011.png",
+   "proto/img/party/painting/painting0012.png": "assets/painter-panic/painting0012.png",
+   "proto/img/party/texture-canvas.jpg": "assets/painter-panic/texture-canvas.jpg"
+  }
+ },
+ {
+  "stem": "cardboard-cutout",
+  "ids": [
+   "cardboard-cutout"
+  ],
+  "files": [
+   "party/cardboard-cutout.js"
+  ],
+  "notes": "Uses SHAPE_LIBRARY (shared/shapes.js, unchanged). Already uses canvases for some art; keep that logic.",
+  "assets": {
+   "proto/audio/party/music-creative.mp3": "assets/shared/music-creative.mp3",
+   "proto/audio/party/sfx-buzz.mp3": "assets/shared/sfx-buzz.mp3",
+   "proto/audio/party/sfx-correct.mp3": "assets/shared/sfx-correct.mp3",
+   "proto/audio/party/sfx-incorrect.mp3": "assets/shared/sfx-incorrect.mp3",
+   "proto/audio/party/sfx-select.mp3": "assets/shared/sfx-select.mp3",
+   "proto/img/party/bg-box-factory.png": "assets/shared/bg-box-factory.png",
+   "proto/img/party/texture-cardboard.avif": "assets/cardboard-cutout/texture-cardboard.avif"
+  }
+ },
+ {
+  "stem": "stubble-trouble",
+  "ids": [
+   "stubble-trouble"
+  ],
+  "files": [
+   "party/follicle-frenzy.js"
+  ],
+  "notes": "Menu name is Stubble Trouble; the old file is follicle-frenzy.js (FollicleFrenzyGame).",
+  "assets": {
+   "proto/audio/party/music-creative.mp3": "assets/shared/music-creative.mp3",
+   "proto/audio/party/sfx-correct.mp3": "assets/shared/sfx-correct.mp3",
+   "proto/audio/party/sfx-sequence.mp3": "assets/shared/sfx-sequence.mp3",
+   "proto/audio/party/sfx-shaver.mp3": "assets/stubble-trouble/sfx-shaver.mp3",
+   "proto/img/party/bg-box-factory.png": "assets/shared/bg-box-factory.png"
+  }
+ },
+ {
+  "stem": "milkers",
+  "ids": [
+   "milkers"
+  ],
+  "files": [
+   "party/milk.js"
+  ],
+  "notes": "Touch input: the old click handler converts e.pageX with the old scale; use IGB.toWorld(e) on stage.$el instead.",
+  "assets": {
+   "proto/audio/milk-pour.mp3": "assets/milkers/milk-pour.mp3",
+   "proto/audio/milk-squirt.mp3": "assets/milkers/milk-squirt.mp3",
+   "proto/audio/party/music-farm.mp3": "assets/shared/music-farm.mp3",
+   "proto/img/party/bg-farm.png": "assets/shared/bg-farm.png",
+   "proto/img/party/icon-alert.webp": "assets/milkers/icon-alert.webp"
+  }
+ },
+ {
+  "stem": "popcorn-panhandlers",
+  "ids": [
+   "popcorn-panhandlers"
+  ],
+  "files": [
+   "party/popcorn-panhandler.js"
+  ],
+  "notes": "Touch input: the old click handler uses e.pageX / $(document).innerWidth() and e.offsetX / W; use IGB.toWorld(e) on stage.$el instead. Has several intervals.",
+  "assets": {
+   "proto/audio/party/music-run.mp3": "assets/shared/music-run.mp3",
+   "proto/audio/party/sfx-kernel.mp3": "assets/popcorn-panhandlers/sfx-kernel.mp3",
+   "proto/audio/party/sfx-notify-a.mp3": "assets/popcorn-panhandlers/sfx-notify-a.mp3",
+   "proto/audio/party/sfx-notify-b.mp3": "assets/popcorn-panhandlers/sfx-notify-b.mp3",
+   "proto/audio/party/sfx-notify-c.mp3": "assets/popcorn-panhandlers/sfx-notify-c.mp3",
+   "proto/audio/party/sfx-pickup.mp3": "assets/shared/sfx-pickup.mp3",
+   "proto/audio/party/sfx-popcorn.mp3": "assets/popcorn-panhandlers/sfx-popcorn.mp3",
+   "proto/audio/party/sfx-vocal.mp3": "assets/popcorn-panhandlers/sfx-vocal.mp3",
+   "proto/img/party/bg-camping.png": "assets/popcorn-panhandlers/bg-camping.png",
+   "proto/img/party/sprite-fire.png": "assets/popcorn-panhandlers/sprite-fire.png"
+  }
+ },
+ {
+  "stem": "plummet-panic",
+  "ids": [
+   "plummet-panic"
+  ],
+  "files": [
+   "party/plummet-panic.js"
+  ],
+  "notes": "",
+  "assets": {
+   "proto/audio/party/music-run.mp3": "assets/shared/music-run.mp3",
+   "proto/audio/party/sfx-coin.mp3": "assets/shared/sfx-coin.mp3",
+   "proto/audio/party/sfx-crush.mp3": "assets/plummet-panic/sfx-crush.mp3",
+   "proto/audio/party/sfx-sequence.mp3": "assets/shared/sfx-sequence.mp3",
+   "proto/img/party/actor-foot.png": "assets/plummet-panic/actor-foot.png",
+   "proto/img/party/bg-cityscape.png": "assets/shared/bg-cityscape.png",
+   "proto/img/party/sprite-coin.png": "assets/shared/sprite-coin.png",
+   "proto/img/party/texture-flag.jpg": "assets/plummet-panic/texture-flag.jpg"
+  }
+ },
+ {
+  "stem": "cookie-cutter",
+  "ids": [
+   "cookie-cutter"
+  ],
+  "files": [
+   "party/cookie-cutter.js"
+  ],
+  "notes": "Uses SHAPE_LIBRARY (shared/shapes.js, unchanged).",
+  "assets": {
+   "proto/audio/party/music-run.mp3": "assets/shared/music-run.mp3",
+   "proto/audio/party/sfx-correct-echo.mp3": "assets/shared/sfx-correct-echo.mp3",
+   "proto/audio/party/sfx-correct.mp3": "assets/shared/sfx-correct.mp3",
+   "proto/audio/party/sfx-incorrect.mp3": "assets/shared/sfx-incorrect.mp3",
+   "proto/audio/party/sfx-squish.mp3": "assets/cookie-cutter/sfx-squish.mp3",
+   "proto/audio/party/sfx-woosh-long.mp3": "assets/shared/sfx-woosh-long.mp3",
+   "proto/audio/party/sfx-woosh.mp3": "assets/shared/sfx-woosh.mp3",
+   "proto/img/party/bg-box-factory.png": "assets/shared/bg-box-factory.png",
+   "proto/img/party/texture-wood.png": "assets/shared/texture-wood.png"
+  }
+ },
+ {
+  "stem": "the-claw",
+  "ids": [
+   "the-claw"
+  ],
+  "files": [
+   "party/claw-chaos-3d.js"
+  ],
+  "notes": "A CSS 3D scene (ClawChaos3DGame). Read the \"Real 3D scenes\" section of the guide closely and choose deliberately; explain the choice in renderApproach.",
+  "assets": {
+   "proto/audio/party/music-heist.mp3": "assets/shared/music-heist.mp3",
+   "proto/audio/party/sfx-coin.mp3": "assets/shared/sfx-coin.mp3",
+   "proto/audio/party/sfx-correct.mp3": "assets/shared/sfx-correct.mp3",
+   "proto/audio/party/sfx-incorrect.mp3": "assets/shared/sfx-incorrect.mp3",
+   "proto/audio/party/sfx-machine.mp3": "assets/the-claw/sfx-machine.mp3",
+   "proto/audio/party/sfx-purse.mp3": "assets/the-claw/sfx-purse.mp3",
+   "proto/audio/party/sfx-woosh.mp3": "assets/shared/sfx-woosh.mp3",
+   "proto/img/party/bg-mountains-clouds.png": "assets/shared/bg-mountains-clouds.png",
+   "proto/img/party/sprite-coin.png": "assets/shared/sprite-coin.png",
+   "proto/img/party/texture-hessian-fg.png": "assets/the-claw/texture-hessian-fg.png",
+   "proto/img/party/texture-hessian.jpg": "assets/the-claw/texture-hessian.jpg",
+   "proto/img/party/texture-wood.png": "assets/shared/texture-wood.png"
+  }
+ },
+ {
+  "stem": "find-my-meep",
+  "ids": [
+   "find-my-meep"
+  ],
+  "files": [
+   "party/find-my-meep.js"
+  ],
+  "notes": "Players tap their own meep: keep the click handling working (canvas hit-testing via IGB.toWorld, or DOM).",
+  "assets": {
+   "proto/audio/party/music-run.mp3": "assets/shared/music-run.mp3",
+   "proto/audio/party/sfx-correct-echo.mp3": "assets/shared/sfx-correct-echo.mp3",
+   "proto/audio/party/sfx-correct.mp3": "assets/shared/sfx-correct.mp3",
+   "proto/audio/party/sfx-curtain.mp3": "assets/shared/sfx-curtain.mp3",
+   "proto/audio/party/sfx-yay.mp3": "assets/find-my-meep/sfx-yay.mp3",
+   "proto/img/party/actor-animals.png": "assets/shared/actor-animals.png",
+   "proto/img/party/actor-boulder.png": "assets/find-my-meep/actor-boulder.png",
+   "proto/img/party/actor-tree.png": "assets/find-my-meep/actor-tree.png",
+   "proto/img/party/bg-village.png": "assets/shared/bg-village.png",
+   "proto/img/party/texture-curtain.avif": "assets/shared/texture-curtain.avif"
+  }
+ },
+ {
+  "stem": "town-fair",
+  "ids": [
+   "town-fair"
+  ],
+  "files": [
+   "party/town-fair.js"
+  ],
+  "notes": "",
+  "assets": {
+   "proto/audio/party/music-farm.mp3": "assets/shared/music-farm.mp3",
+   "proto/audio/party/sfx-chicken.mp3": "assets/town-fair/sfx-chicken.mp3",
+   "proto/audio/party/sfx-correct.mp3": "assets/shared/sfx-correct.mp3",
+   "proto/audio/party/sfx-cow.mp3": "assets/town-fair/sfx-cow.mp3",
+   "proto/audio/party/sfx-curtain.mp3": "assets/shared/sfx-curtain.mp3",
+   "proto/audio/party/sfx-goat.mp3": "assets/town-fair/sfx-goat.mp3",
+   "proto/audio/party/sfx-incorrect.mp3": "assets/shared/sfx-incorrect.mp3",
+   "proto/audio/party/sfx-pig.mp3": "assets/town-fair/sfx-pig.mp3",
+   "proto/audio/party/sfx-sheep.mp3": "assets/town-fair/sfx-sheep.mp3",
+   "proto/img/party/actor-animals.png": "assets/shared/actor-animals.png",
+   "proto/img/party/bg-cityscape.png": "assets/shared/bg-cityscape.png",
+   "proto/img/party/bg-farm.png": "assets/shared/bg-farm.png",
+   "proto/img/party/texture-curtain.avif": "assets/shared/texture-curtain.avif",
+   "proto/img/party/texture-grass.jpg": "assets/town-fair/texture-grass.jpg",
+   "proto/img/party/texture-wood.png": "assets/shared/texture-wood.png"
+  }
+ },
+ {
+  "stem": "goal-patrol",
+  "ids": [
+   "goal-patrol"
+  ],
+  "files": [
+   "party/goal-patrol.js"
+  ],
+  "notes": "The old file guards its injected CSS with `if (!HeadersGame.init)`, a copy-paste slip from headers.js (it made Goal Patrol's styles vanish if Volley Heads had run first). With the art on canvas there is no injected CSS, so the guard simply goes; note it under bugFixes. Its tutorial table is a local TUTORIALS const, unrelated to the old global.",
+  "assets": {
+   "proto/audio/party/music-sport.mp3": "assets/shared/music-sport.mp3",
+   "proto/audio/party/sfx-boo.mp3": "assets/goal-patrol/sfx-boo.mp3",
+   "proto/audio/party/sfx-bounce.mp3": "assets/shared/sfx-bounce.mp3",
+   "proto/audio/party/sfx-cheer.mp3": "assets/shared/sfx-cheer.mp3",
+   "proto/audio/party/sfx-incorrect.mp3": "assets/shared/sfx-incorrect.mp3",
+   "proto/img/goal-inside.png": "assets/goal-patrol/goal-inside.png",
+   "proto/img/party/actor-football.png": "assets/shared/actor-football.png",
+   "proto/img/party/bg-stadium.jpg": "assets/shared/bg-stadium.jpg"
+  }
+ },
+ {
+  "stem": "bowling-bonanza",
+  "ids": [
+   "bowling-bonanza"
+  ],
+  "files": [
+   "party/bowling.js"
+  ],
+  "notes": "Menu name is Bowling Bonanza (BowlingGame).",
+  "assets": {
+   "proto/audio/party/music-sport.mp3": "assets/shared/music-sport.mp3",
+   "proto/audio/party/sfx-bowling-ball.mp3": "assets/bowling-bonanza/sfx-bowling-ball.mp3",
+   "proto/audio/party/sfx-pin.mp3": "assets/bowling-bonanza/sfx-pin.mp3",
+   "proto/audio/party/sfx-select.mp3": "assets/shared/sfx-select.mp3",
+   "proto/img/party/bg-village.png": "assets/shared/bg-village.png"
+  }
+ },
+ {
+  "stem": "final-frenzy",
+  "ids": [
+   "final-frenzy"
+  ],
+  "files": [
+   "party/final-frenzy.js"
+  ],
+  "notes": "Uses the animated bg-cosmos.gif somewhere: animated GIFs must stay DOM (stage.$bg).",
+  "assets": {
+   "proto/audio/party/music-apocalypse.mp3": "assets/final-frenzy/music-apocalypse.mp3",
+   "proto/audio/party/sfx-coin.mp3": "assets/shared/sfx-coin.mp3",
+   "proto/audio/party/sfx-correct-echo.mp3": "assets/shared/sfx-correct-echo.mp3",
+   "proto/audio/party/sfx-explode.mp3": "assets/shared/sfx-explode.mp3",
+   "proto/audio/party/sfx-fall.mp3": "assets/shared/sfx-fall.mp3",
+   "proto/audio/party/sfx-select.mp3": "assets/shared/sfx-select.mp3",
+   "proto/audio/party/sfx-sequence.mp3": "assets/shared/sfx-sequence.mp3",
+   "proto/audio/party/tutorial-checkpoint.mp3": "assets/final-frenzy/tutorial-checkpoint.mp3",
+   "proto/audio/party/tutorial-end-zone-approach.mp3": "assets/final-frenzy/tutorial-end-zone-approach.mp3",
+   "proto/audio/party/tutorial-end-zone-coins.mp3": "assets/final-frenzy/tutorial-end-zone-coins.mp3",
+   "proto/audio/party/tutorial-end-zone.mp3": "assets/final-frenzy/tutorial-end-zone.mp3",
+   "proto/audio/party/tutorial-final-frenzy-intro.mp3": "assets/final-frenzy/tutorial-final-frenzy-intro.mp3",
+   "proto/audio/party/tutorial-final-frenzy.mp3": "assets/final-frenzy/tutorial-final-frenzy.mp3",
+   "proto/img/party/bg-cosmos.gif": "assets/shared/bg-cosmos.gif",
+   "proto/img/party/sprite-coin.png": "assets/shared/sprite-coin.png",
+   "proto/img/party/texture-spots.png": "assets/final-frenzy/texture-spots.png",
+   "proto/img/volleyball.png": "assets/final-frenzy/volleyball.png"
+  }
+ },
+ {
+  "stem": "finale-sequence",
+  "ids": [
+   "finale-sequence"
+  ],
+  "files": [
+   "party/finale-sequence.js"
+  ],
+  "notes": "The old file calls `new BoxPartyGame()` only to get Box Party's CSS injected (it also starts a hidden Box Party with its music). Drop that: shared/cube.js and cube.css now provide BoxCube and its styles. Note it under bugFixes. Uses BoxCube and Tally.",
+  "assets": {
+   "proto/audio/party/music-awards.mp3": "assets/finale-sequence/music-awards.mp3",
+   "proto/audio/party/music-outro.mp3": "assets/finale-sequence/music-outro.mp3",
+   "proto/audio/party/music-reveal.mp3": "assets/finale-sequence/music-reveal.mp3",
+   "proto/audio/party/sfx-explode.mp3": "assets/shared/sfx-explode.mp3",
+   "proto/audio/party/sfx-fall.mp3": "assets/shared/sfx-fall.mp3",
+   "proto/audio/party/sfx-woosh.mp3": "assets/shared/sfx-woosh.mp3",
+   "proto/audio/party/speech-finale-intro.mp3": "assets/finale-sequence/speech-finale-intro.mp3",
+   "proto/audio/party/speech-finale-last.mp3": "assets/finale-sequence/speech-finale-last.mp3",
+   "proto/audio/party/speech-finale-middle.mp3": "assets/finale-sequence/speech-finale-middle.mp3",
+   "proto/audio/party/speech-finale-reward.mp3": "assets/finale-sequence/speech-finale-reward.mp3",
+   "proto/audio/party/speech-finale-second-to-last.mp3": "assets/finale-sequence/speech-finale-second-to-last.mp3",
+   "proto/audio/party/speech-finale-second.mp3": "assets/finale-sequence/speech-finale-second.mp3",
+   "proto/audio/party/speech-finale-third.mp3": "assets/finale-sequence/speech-finale-third.mp3",
+   "proto/audio/party/speech-finale-winner.mp3": "assets/finale-sequence/speech-finale-winner.mp3",
+   "proto/img/party/bg-cosmic-cube.jpeg": "assets/finale-sequence/bg-cosmic-cube.jpeg",
+   "proto/img/party/bg-cosmos-rainbow.webp": "assets/finale-sequence/bg-cosmos-rainbow.webp",
+   "proto/img/party/bg-rainbow.png": "assets/shared/bg-rainbow.png",
+   "proto/img/party/bg-vortex.gif": "assets/finale-sequence/bg-vortex.gif"
+  }
+ },
+ {
+  "stem": "soft-serve",
+  "ids": [
+   "soft-serve"
+  ],
+  "files": [
+   "party/soft-serve.js"
+  ],
+  "notes": "In the Rejects folder; port it all the same.",
+  "assets": {
+   "proto/img/party/bg-diner.webp": "assets/soft-serve/bg-diner.webp"
+  }
+ },
+ {
+  "stem": "platform",
+  "ids": [
+   "platform"
+  ],
+  "files": [
+   "party/platform.js"
+  ],
+  "notes": "In the Rejects folder; port it all the same.",
+  "assets": {
+   "proto/img/party/bg-mountains-clouds.png": "assets/shared/bg-mountains-clouds.png"
+  }
+ },
+ {
+  "stem": "pump-pop",
+  "ids": [
+   "pump-pop"
+  ],
+  "files": [
+   "party/pump-pop.js"
+  ],
+  "notes": "In the Rejects folder; port it all the same.",
+  "assets": {
+   "proto/audio/party/music-cartoon.mp3": "assets/pump-pop/music-cartoon.mp3",
+   "proto/audio/party/sfx-pop.mp3": "assets/pump-pop/sfx-pop.mp3",
+   "proto/audio/pump-balloon.mp3": "assets/pump-pop/pump-balloon.mp3",
+   "proto/img/party/bg-carnival.webp": "assets/pump-pop/bg-carnival.webp"
+  }
+ },
+ {
+  "stem": "boom-chain",
+  "ids": [
+   "boom-chain"
+  ],
+  "files": [
+   "party/boom-chain.js"
+  ],
+  "notes": "In the Rejects folder; port it all the same. Balls are clicked: keep that working.",
+  "assets": {
+   "proto/audio/party/music-playroom.mp3": "assets/boom-chain/music-playroom.mp3",
+   "proto/img/party/bg-village.png": "assets/shared/bg-village.png"
+  }
+ },
+ {
+  "stem": "cupping-balls",
+  "ids": [
+   "cupping-balls"
+  ],
+  "files": [
+   "party/cupping-balls.js"
+  ],
+  "notes": "In the Rejects folder; port it all the same. Meeps are clicked: keep that working.",
+  "assets": {
+   "proto/audio/party/music-sport.mp3": "assets/shared/music-sport.mp3",
+   "proto/img/party/bg-village.png": "assets/shared/bg-village.png"
+  }
+ },
+ {
+  "stem": "roulette-runner",
+  "ids": [
+   "roulette-runner"
+  ],
+  "files": [
+   "party/roulette-runner.js"
+  ],
+  "notes": "In the Rejects folder; port it all the same.",
+  "assets": {
+   "proto/audio/party/music-creeping.mp3": "assets/roulette-runner/music-creeping.mp3",
+   "proto/audio/party/sfx-correct.mp3": "assets/shared/sfx-correct.mp3",
+   "proto/audio/party/sfx-select.mp3": "assets/shared/sfx-select.mp3",
+   "proto/img/party/bg-village.png": "assets/shared/bg-village.png",
+   "proto/img/party/texture-wood.png": "assets/shared/texture-wood.png"
+  }
+ },
+ {
+  "stem": "box-party",
+  "ids": [
+   "box-party"
+  ],
+  "files": [
+   "party/box-party.js",
+   "party/game-library.js"
+  ],
+  "notes": "Box Party is the metagame: a CSS 3D flyover of mystery boxes, then name entry, then each box launches a minigame and the coin tally updates. It must drive the other ported games through the new platform:\n- QUEUE used window.GAMES (game-library.js) entries. Use manifest entries instead: IGB.find(id), whose .name and .box ({ color, bg, note, name }) are the cube skin. The queue becomes [['coconut-climbers','mystery-maze'],['soccer-heads','volley-heads'],['bongo-bounce','melody-match'],['coin-chaos'],['painter-panic','cardboard-cutout','stubble-trouble'],['milkers','popcorn-panhandlers'],['plummet-panic','cookie-cutter'],['coin-chaos'],['find-my-meep','town-fair'],['goal-patrol','bowling-bonanza'],['final-frenzy']]. (The old library pointed Goal Patrol at GoalieGame from goalie.js, which was never loaded, so that box was broken; goal-patrol is the right game. List it under bugFixes.)\n- Launch a minigame with IGB.start(entry.id, $minigame, players) (it returns a promise of the instance), and catch its completion with const restore = IGB.handleComplete(doCompleteGame) instead of setting window.doPartyGameComplete. On completion (and on SKIP MINIGAME) stop it with IGB.stop(instance), which runs its fini and removes its stage, then restore() the handler.\n- Name entry: IGB.start('name-entry', <container>, players, finiNameEntry); stop it with IGB.stop when done.\n- setPlayers forwards to the scene and to the live minigame, as before.\n- The 3D world (partyScene3D, partyWorld3D, partyPlane3D, the track SVG, mountains, pop explosions) is a genuine CSS 3D scene: keep it DOM in stage.$bg with its CSS in games/box-party.css (manifest already has css: true), every selector scoped under igb-stage[game=\"box-party\"]. PartyCube3D and BoxPartyCube now live in shared/cube.js as Cube3D and BoxCube (read it; BoxCube takes a manifest entry as its game). The old rule `partyScene3D partycube3DSurface { border: 10px solid #ffdd00; box-sizing: border-box }` becomes a scoped rule on cube-surface. Meeps standing on the 3D plane become MeepView (DOM) with the same CSS transforms.\n- Layering, as in the old DOM: the minigame container sits below Box Party's HUD (its debug buttons stay visible over a running minigame) and above the scene; the white overlay flash and the name entry sit on top. A suggested arrangement: stage.$bg holds [$minigame, scene]; stage.$ui holds [hud, tally, overlay, name entry]. The scene is hidden while a minigame runs, as before.\n- Box Party has no canvas art of its own unless you find some worth moving; its draw can be omitted.\n- Its intervals (scene step at 30 fps, resize loop) become stage.interval; the resize loop goes entirely.\n- For the end-to-end check, run box-party with --speed=4 and enough seconds to reach the first minigame launch; confirm the minigame starts inside Box Party, and use the HUD's SKIP MINIGAME debug button (button text) via --eval to confirm the tally updates and play moves on. Other games may still be mid-port in parallel when you run; a game whose file is missing just fails to launch, so note it rather than chase it.",
+  "assets": {
+   "proto/audio/party/music-quest.mp3": "assets/box-party/music-quest.mp3",
+   "proto/audio/party/sfx-correct-echo.mp3": "assets/shared/sfx-correct-echo.mp3",
+   "proto/audio/party/sfx-explode.mp3": "assets/shared/sfx-explode.mp3",
+   "proto/audio/party/sfx-reveal.mp3": "assets/shared/sfx-reveal.mp3",
+   "proto/audio/party/sfx-rumble.mp3": "assets/shared/sfx-rumble.mp3",
+   "proto/audio/party/sfx-saber-ignition.mp3": "assets/box-party/sfx-saber-ignition.mp3",
+   "proto/audio/party/sfx-saber.mp3": "assets/box-party/sfx-saber.mp3",
+   "proto/audio/party/sfx-woosh-long.mp3": "assets/shared/sfx-woosh-long.mp3",
+   "proto/audio/party/speech-zero.mp3": "assets/box-party/speech-zero.mp3",
+   "proto/img/icon-milk.png": "assets/box-party/icon-milk.png",
+   "proto/img/party/bg-cosmic-swirl.gif": "assets/box-party/bg-cosmic-swirl.gif",
+   "proto/img/party/bg-cosmos.gif": "assets/shared/bg-cosmos.gif",
+   "proto/img/party/bg-cosmos.jpg": "assets/box-party/bg-cosmos.jpg",
+   "proto/img/party/bg-mountains.png": "assets/box-party/bg-mountains.png",
+   "proto/img/party/cube/cube-coconut.png": "assets/box-party/cube-coconut.png",
+   "proto/img/party/cube/cube-mystery.png": "assets/box-party/cube-mystery.png",
+   "proto/img/party/cube/cube-popcorn.png": "assets/box-party/cube-popcorn.png",
+   "proto/img/party/cube/cube-soccer.png": "assets/box-party/cube-soccer.png",
+   "proto/img/party/cube/cube-volleyball.png": "assets/box-party/cube-volleyball.png",
+   "proto/img/party/icon-coin-chaos.png": "assets/box-party/icon-coin-chaos.png",
+   "proto/img/party/icon-cookie-cutter.jpg": "assets/box-party/icon-cookie-cutter.jpg",
+   "proto/img/party/icon-drum.png": "assets/box-party/icon-drum.png"
+  }
+ }
+]

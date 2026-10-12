@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<!-- Drives the HUD into a named state (#count, #round, #summon, ...) for visual checks. -->
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Knewave&family=Rubik:wght@300..900&display=swap">
+<link rel="stylesheet" href="../../core/stage.css"><link rel="stylesheet" href="../../shared/meep.css"><link rel="stylesheet" href="../../shared/hud.css"><link rel="stylesheet" href="../../shared/tally.css">
+<base href="../../">
+<script src="lib/jquery.min.js"></script><script src="lib/jquery-ui.min.js"></script>
+<script src="core/igb.js"></script><script src="core/stage.js"></script><script src="core/art.js"></script>
+<script src="shared/util.js"></script><script src="shared/audio.js"></script><script src="shared/meep.js"></script><script src="shared/hud.js"></script><script src="shared/tally.js"></script>
+<style>body{margin:0;background:black} #igb{position:fixed;inset:0;overflow:hidden} #w{position:absolute;width:4800px;height:1000px;transform-origin:top left} igb-stage{background:#4a8}</style>
+</head><body><div id=igb><div id=w></div></div><script>
+const scale = innerWidth / 4800;
+$('#w').css('transform', 'scale(' + scale + ')');
+IGB.setScale(scale);
+const stage = new IGB.Stage('hud-test');
+stage.$el.appendTo('#w');
+window.worldEl = stage.$ui[0];
+window.mountHUD = c => { const h = new HUD(c); h.$el.appendTo(stage.$ui); return h; };
+</script><script src="tools/pages/hud-driver.js"></script><script>runHUD(location.hash.slice(1));</script></body></html>

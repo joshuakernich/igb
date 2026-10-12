@@ -1,0 +1,76 @@
+/*
+ * A running game's stage: a DOM layer, the world canvas, and a UI layer,
+ * all covering the 4800 x 1000 world. See core/stage.js.
+ *
+ * Player colours are available everywhere as custom properties. Any element
+ * with a player="n" attribute gets --player set to that player's colour.
+ */
+
+:root {
+	--wall: 1600px;
+	--world-w: 4800px;
+	--world-h: 1000px;
+
+	--player-0: red;
+	--player-1: blue;
+	--player-2: limegreen;
+	--player-3: #dd00ff;
+	--player-4: #ff6600;
+	--player-5: #ffbb00;
+}
+
+[player="0"] { --player: var(--player-0); }
+[player="1"] { --player: var(--player-1); }
+[player="2"] { --player: var(--player-2); }
+[player="3"] { --player: var(--player-3); }
+[player="4"] { --player: var(--player-4); }
+[player="5"] { --player: var(--player-5); }
+
+igb-stage {
+	display: block;
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: var(--world-w);
+	height: var(--world-h);
+	overflow: hidden;
+	background: #222;
+	white-space: nowrap;
+	font-family: "Rubik", sans-serif;
+	font-weight: 600;
+	/* The old launcher inherited 0.7vw here, which is about 14px on a
+	   desk-sized window. Inline layouts (the tally, the podiums) sit on
+	   this line height, so it is pinned to match. */
+	font-size: 14px;
+}
+
+igb-layer {
+	display: block;
+	position: absolute;
+	inset: 0;
+}
+
+/* The UI layer lets clicks through; interactive pieces opt back in. */
+igb-layer.ui {
+	pointer-events: none;
+}
+
+igb-stage > canvas.world {
+	display: block;
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: var(--world-w);
+	height: var(--world-h);
+	pointer-events: none;
+}
+
+canvas.surface {
+	display: block;
+}
+
+/* Hosts that cap images at their container's width (the artifact viewer
+   does) would squash game images; games size their own. */
+igb-stage img {
+	max-width: none;
+}
