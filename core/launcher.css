@@ -35,7 +35,7 @@ igb {
 }
 
 igb.home {
-	background: #0b0716 url(../assets/box-party/bg-cosmos.jpg) center / cover;
+	background: #0f3a78;   /* blueprint blue, under the office drawing (core/home-bg.js) */
 }
 
 /* World units: 4800 x 1000, scaled by the launcher. */
@@ -66,6 +66,89 @@ igb-seam {
 
 igb.vuplex igb-seam {
 	display: none;
+}
+
+/* ---------- the home screen's blueprint office (core/home-bg.js) ---------- */
+
+igb-home-bg {
+	display: block;
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 4800px;
+	height: 1000px;
+	overflow: hidden;
+	pointer-events: none;
+}
+
+igb:not(.home) igb-home-bg {
+	display: none;
+}
+
+igb-home-bg canvas {
+	display: block;
+}
+
+/* Squared drafting paper over the drawing, and a border round each wall's sheet. */
+igb-home-bg:after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background:
+		linear-gradient(rgba(220, 239, 255, 0.07) 2px, transparent 2px) 0 0 / 200px 200px,
+		linear-gradient(90deg, rgba(220, 239, 255, 0.07) 2px, transparent 2px) 0 0 / 200px 200px,
+		linear-gradient(rgba(220, 239, 255, 0.04) 1px, transparent 1px) 0 0 / 40px 40px,
+		linear-gradient(90deg, rgba(220, 239, 255, 0.04) 1px, transparent 1px) 0 0 / 40px 40px;
+}
+
+igb-sheet {
+	position: absolute;
+	top: 28px;
+	bottom: 28px;
+	width: 1544px;
+	border: 3px solid rgba(220, 239, 255, 0.45);
+	z-index: 1;
+}
+
+igb-title-block {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	position: absolute;
+	right: 28px;
+	bottom: 28px;
+	width: 520px;
+	border: 3px solid rgba(220, 239, 255, 0.7);
+	background: rgba(15, 58, 120, 0.85);
+	color: #dcefff;
+	font-family: "Courier New", monospace;
+	font-size: 22px;
+	letter-spacing: 2px;
+	z-index: 2;
+}
+
+igb-title-block b,
+igb-title-block span {
+	padding: 10px 16px;
+	border-top: 2px solid rgba(220, 239, 255, 0.45);
+}
+
+igb-title-block b {
+	grid-column: 1 / -1;
+	border-top: none;
+	font-size: 30px;
+}
+
+igb-title-block span:nth-of-type(1) {
+	grid-column: 1 / -1;
+}
+
+igb-title-block span:nth-of-type(3) {
+	border-left: 2px solid rgba(220, 239, 255, 0.45);
+}
+
+igb-title-block i {
+	font-style: normal;
+	opacity: 0.6;
 }
 
 /* ---------- menu (on the front wall, in world units) ---------- */
