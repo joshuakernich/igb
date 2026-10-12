@@ -113,7 +113,7 @@ window.Showtime = function (stage, opts) {
 		radius: 420,           // the dial's outer edge
 		size: 300,             // the big number
 		words: [100, 112],     // YOU HAVE, MINUTES
-		gap: 0.36,             // how far above and below the time they sit (a share of the dial's radius)
+		gap: 0.42,             // how far above and below the time they sit (a share of the dial's radius)
 		slam: 0.18,            // seconds for a word to crash down into place
 		y: 520,                // the dial's centre
 	};
