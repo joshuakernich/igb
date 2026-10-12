@@ -64,7 +64,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const GAME_SECONDS = 600;
 	const M = 55;               // field units per metre (about the front wall's pixels per metre too)
 	const BACK = 70;            // a player at the back of the room stands this far up from the near edge
-	const DEPTH = 800;          // and right up at the front wall, this much further
+	const DEPTH = 500;          // and right up at the front wall, this much further
 	const MOVE_LIMIT = 0.07;    // how far a player may drift on red light, as a share of the wall, before they're out
 	const GRACE = 0.2;          // seconds after RED LIGHT before movement counts (tracking lag)
 	const TURN_AWAY = 0.8;      // seconds her head takes to turn away after a red light, before GREEN LIGHT
