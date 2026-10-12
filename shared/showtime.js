@@ -1,0 +1,1643 @@
+/*
+ * Showtime — the choreographed show around a timed team game: a dramatic
+ * clock reveal, the game's own intros and rounds, then TIME!, everyone's
+ * scores, a last-to-first ranking onto a podium, the team total smooshed
+ * together, a (fake) leaderboard climb, and a fast-forward replay of where
+ * everyone ran. Everything is drawn on the world canvas, frame by frame,
+ * from one explicit list of beats, so the order and timing are easy to tune.
+ *
+ *   const show = new Showtime(stage, {
+ *       id: 'gwi-ma-showdown',            // seeds the fake leaderboard
+ *       seconds: 600,                     // the game clock (for the intro and fake replays)
+ *       players: () => 3,                 // how many players (a number or a function)
+ *       scores: () => [12, 40, 7],        // each player's score
+ *       bonus: () => 300,                 // optional team-only points, added to the total
+ *       bonusLabel: 'ROUND BONUS',
+ *       drawAvatar(ctx, n, x, y, scale, pose) {},   // optional: the game's own character,
+ *                                         // feet at (x, y), scale 1 about 120 units tall;
+ *                                         // pose 'stand' | 'cheer' | 'win'
+ *       theme: { accent, accent2, gold, ink, sky: [top, bottom], font,
+ *                panel, floor, glow },     // (the results' panels, the podium floor, the backdrop's glow)
+ *       backdrop(ctx, time) {},           // optional: drawn over the results backdrop, once per wall
+ *       rivals: ['Team names', ...],      // optional names for the fake leaderboard
+ *       sounds: { drama: ['assets/...mp3', 0.3, true] },   // optional overrides
+ *   });
+ *
+ *   show.sequence([                       // the running order
+ *       { id: 'squad', length: Infinity, draw(ctx, bt) {} },   // a game beat
+ *       show.beats.titleDrop({ lines: [{ text: 'GAME', fill }], tagline }),
+ *       show.beats.clockIntro(),
+ *       { id: 'play', update(dt, bt) {}, draw(ctx, bt) {} },
+ *       show.beats.timeUp({ update(dt, bt) {} }),   // a generic beat, extended
+ *       show.beats.scores(), show.beats.rank(), show.beats.team(),
+ *       show.beats.board(), show.beats.replay(),
+ *       show.beats.end({ enter() { IGB.complete(...) } }),
+ *   ]);
+ *   self.draw = (ctx, time) => show.frame(ctx, dt, drawWorld);
+ *
+ * A beat is { id, length (seconds, or a function), world, enter(),
+ * update(dt, bt), draw(ctx, bt), done(bt) }. bt is the time into the beat.
+ * The show moves on when bt passes length or done() says so; show.go(id)
+ * jumps anywhere (tests use it to skip the intros). world: false beats are
+ * drawn on the show's own backdrop; the others draw the game's world
+ * (drawWorld) through the camera first. draw() is for overlays and is never
+ * zoomed. show.cue(s) is true once, the frame bt passes s: hang one-shot
+ * events (a slam, a sound) on it. Generic beats take an extension object
+ * whose enter/update/draw run after theirs and whose length/world/done win.
+ *
+ * Also:
+ *   show.camera        .cut(shot) .move(shot, seconds) .follow(fn) .wide(seconds)
+ *                      a shot is { x, y, z }: the world point at the centre
+ *                      of the screen and the zoom. The view never shows past
+ *                      the world's edges.
+ *   the skip button    "SKIP ▶▶" on the front wall through every beat between
+ *                      the squad picker and 'play'; it jumps to 'play'
+ *   show.pickPlayers(fn)   the squad picker, in the show's own style: buttons
+ *                      2-6 on the front wall; fn(count) once one is picked
+ *   show.slam(ctx, text, x, y, size, age, style)   a title crashing in
+ *   show.text(ctx, text, x, y, size, style)        the show's big caption type
+ *   show.onWalls(ctx, fn)  fn(ctx, wall) once per wall, (0, 0) its top-left
+ *   the clock          the show runs it: it starts a moment after the clock
+ *                      intro settles it in place (or straight away if the show
+ *                      skips past the intro) and runs through every beat until
+ *                      it hits zero, when the show goes to 'timeup'. It ticks
+ *                      the last ten seconds.
+ *   show.label(text)   the line under the corner clock ('ROUND 2')
+ *   show.timeLeft()    seconds left; show.setTimeLeft(s) for tests
+ *   show.setClock(secondsLeft, label)  set both by hand
+ *   show.record(t, [{ px, pz } | null, ...])   feed every tick; sampled for the replay
+ *   show.mark(t)       a moment worth marking on the replay timeline (a round won)
+ *   show.shake / show.flash / show.blackout   0..1, settable; shake and flash decay
+ *   show.timeScale     slows to 0 during TIME!; step your world by dt * timeScale
+ *   show.confetti(n) / show.burst(x, y, colour)   celebrations
+ *   show.play(id) / show.stop(id)   the shared sounds (see SOUNDS), and
+ *   show.sfx.boom() .drum() .roar() .alarm() .riser(s) .sting() .hit()   synthesised ones
+ *   show.state()       the beat, the beats seen in order, and so on, for tests
+ *   show.fini()        closes the show's AudioContext (also done when the stage stops)
+ *
+ * It runs entirely off the frames it is given, so it stops with the game;
+ * its sounds come from stage.audio().
+ */
+window.Showtime = function (stage, opts) {
+
+	const self = this;
+	const { W, H, WIDTH } = IGB;
+	const art = IGB.art;
+	const theme = Object.assign({}, Showtime.THEME, opts.theme);
+	const FONT = theme.font;
+	const SECONDS = opts.seconds || 600;
+
+	/* ---------- tuning: the camera ---------- */
+
+	const CAMERA = {
+		follow: 3.5,           // how quickly a following camera catches up (per second)
+	};
+
+	/* ---------- tuning: the clock intro ---------- */
+
+	const CLOCK_INTRO = {
+		slam: 0.5,             // the clock slams in, out of the dark
+		charge: [0.5, 2.4],    // its dial lights up round, under the drumroll
+		youHave: 2.4,          // "YOU HAVE"
+		minutes: 3.0,          // "10 MINUTES"
+		settle: [4.6, 5.5],    // it flies up to its place at the top of every wall
+		runAfter: 0.8,         // and starts counting down this long after it lands
+		length: 6.0,
+		size: 250,             // the big clock
+		y: 340,
+	};
+
+	// The intros dim the game's scene behind their titles, never black it out.
+	const INTRO_DIM = 0.45;
+
+	/* ---------- tuning: the title drop ---------- */
+
+	const TITLE = {
+		dark: 0.4,             // the room goes dark
+		riser: 1.6,            // a rushing build
+		first: 1.5,            // the first letter drops
+		each: 0.075,           // the gap between letters
+		lineGap: 0.35,         // and before the next line starts
+		fall: 0.32,            // how long a letter takes to land
+		tagline: 0.5,          // after the last letter
+		hold: 1.6,             // then it holds
+		out: 0.5,              // and fades
+		size: 210,
+	};
+
+	/* ---------- tuning: the corner clock ---------- */
+
+	const CLOCK = {
+		y: 62,                 // where it sits, top centre of every wall
+		size: 64,
+		urgent: 30,            // it turns red with this many seconds left
+		final: 10,             // and the last ten loom huge, ticking
+	};
+
+	/* ---------- tuning: time up ---------- */
+
+	const TIME_UP = {
+		slow: 1.3,             // the world slows to a stop over this long
+		title: 0.15,           // TIME! slams in
+		dark: [3.4, 4.6],      // then the room goes dark
+		length: 5.0,
+	};
+
+	/* ---------- tuning: all scores ---------- */
+
+	const SCORES = {
+		count: [0.8, 3.0],     // the scores count up
+		length: 4.4,
+		scale: 2.6,            // the avatars in the team total, this many times their game size
+		y: 830,                // and where they stand
+	};
+	const LIST = {
+		top: 190,              // the list of players, a row each
+		height: 760,
+		row: 150,              // at most this tall a row
+		width: 1100,
+	};
+	const RANK = {
+		move: [0.5, 1.7],      // the rows slide into rank order
+		reveal: 2.2,           // then the places show, last first
+		each: 0.65,            // between reveals, each on a drum hit
+		hold: 3.2,             // the winner's moment
+	};
+
+	/* ---------- tuning: the team total ---------- */
+
+	const TEAM = {
+		shrink: 0.6,           // the avatars step back
+		fly: [0.6, 1.6],       // the scores fly together
+		count: [1.8, 3.6],     // smooshed, the total counts up
+		bonus: [4.0, 5.1],     // the bonus is added
+		length: 10,
+		y: 450,
+	};
+
+	/* ---------- tuning: the leaderboard ---------- */
+
+	const BOARD = {
+		drop: 0.1,             // the other teams' rows drop in, one after another
+		enter: 1.9,            // your row slides in at the bottom
+		climb: 0.42,           // and climbs past each team above it
+		hold: 4.5,
+		top: 175,
+		row: 70,
+		teams: 10,
+	};
+
+	/* ---------- tuning: the replay ---------- */
+
+	const REPLAY = {
+		sample: 0.5,           // record everyone's position this often (game seconds)
+		intro: 1.0,
+		play: 12,              // the whole game, replayed in this long
+		outro: 2.0,
+		trail: 30,             // samples of trail behind each player
+	};
+
+	/* ---------- helpers ---------- */
+
+	const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+	const lerp = (a, b, k) => a + (b - a) * k;
+	const ease = (k) => { k = clamp(k, 0, 1); return k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; };
+	const easeOut = (k) => 1 - Math.pow(1 - clamp(k, 0, 1), 3);
+	const easeIn = (k) => { k = clamp(k, 0, 1); return k * k * k; };
+	const between = (x, a, b) => clamp((x - a) / (b - a), 0, 1);
+	self.ease = ease;
+	self.easeOut = easeOut;
+	self.between = between;
+
+	const NAMES = ['RED', 'BLUE', 'GREEN', 'PURPLE', 'ORANGE', 'GOLD'];
+	const count = () => (typeof opts.players === 'function' ? opts.players() : opts.players) || 0;
+	const scores = () => (opts.scores ? opts.scores() : []).map((s) => Math.round(s || 0));
+	const bonus = () => Math.round(opts.bonus ? opts.bonus() : 0);
+	const colour = (n) => PLAYER_COLORS[n] || 'white';
+	// A player colour lifted toward white, so text in it reads on the dark (pure blue doesn't).
+	const mixer = document.createElement('canvas').getContext('2d');
+	const lit = function (n, k = 0.45) {
+		mixer.fillStyle = '#000';
+		mixer.fillStyle = colour(n);
+		const hex = mixer.fillStyle;
+		if (hex[0] !== '#') return colour(n);
+		const v = parseInt(hex.slice(1), 16);
+		const up = (c) => Math.round(c + (255 - c) * k);
+		return `rgb(${up(v >> 16)},${up((v >> 8) & 255)},${up(v & 255)})`;
+	};
+	self.lit = lit;
+	self.nameOf = (n) => NAMES[n] || 'P' + (n + 1);
+	self.teamTotal = () => scores().reduce((a, b) => a + b, 0) + bonus();
+
+	// A little seeded random, so the fake leaderboard is the same each time
+	// for the same game and total.
+	function seeded(str) {
+		let a = 2166136261;
+		for (let i = 0; i < str.length; i++) a = Math.imul(a ^ str.charCodeAt(i), 16777619);
+		return function () {
+			a |= 0; a = (a + 0x6D2B79F5) | 0;
+			let t = Math.imul(a ^ (a >>> 15), 1 | a);
+			t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+			return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+		};
+	}
+
+	/* ---------- sound ---------- */
+
+	const SOUNDS = {
+		drumroll: ['assets/shared/music-drumroll.mp3', 0.5],
+		rumble: ['assets/shared/sfx-rumble.mp3', 0.7],
+		reveal: ['assets/shared/sfx-reveal.mp3', 0.5],
+		explode: ['assets/shared/sfx-explode.mp3', 0.5],
+		wooshLong: ['assets/shared/sfx-woosh-long.mp3', 0.4],
+		woosh: ['assets/shared/sfx-woosh.mp3', 0.4],
+		cheer: ['assets/shared/sfx-cheer.mp3', 0.6],
+		tick: ['assets/shared/sfx-tick.mp3', 0.4],
+		tock: ['assets/shared/sfx-tock.mp3', 0.5],
+		coin: ['assets/shared/sfx-coin.mp3', 0.35],
+		buzz: ['assets/shared/sfx-buzz.mp3', 0.5],
+		correct: ['assets/shared/sfx-correct.mp3', 0.4],
+		charge: ['assets/shared/sfx-charge.mp3', 0.4],
+		drama: ['assets/shared/music-drama.mp3', 0.3, true],
+		replay: ['assets/shared/music-beats-120-short.mp3', 0.35, true],
+	};
+	Object.assign(SOUNDS, opts.sounds);
+	const audio = stage.audio();
+	for (const id in SOUNDS) audio.add(id, SOUNDS[id][0], SOUNDS[id][1], !!SOUNDS[id][2]);
+	self.audio = audio;
+	self.play = (id, speed) => audio.play(id, true, speed);
+	self.stop = (id) => audio.stop(id);
+
+	// Synthesised hits, booms, roars and alarms, on one AudioContext made
+	// the first time one is needed.
+	let ac = null;
+	let master = null;
+	let noiseBuf = null;
+	function context() {
+		if (ac === false || stage.stopped) return null;
+		if (!ac) {
+			const AC = window.AudioContext || window.webkitAudioContext;
+			try { ac = new AC(); } catch (e) { ac = false; return null; }
+			master = ac.createGain();
+			master.gain.value = 0.55;
+			master.connect(ac.destination);
+			noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
+			const d = noiseBuf.getChannelData(0);
+			for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+		}
+		if (ac.state === 'suspended') ac.resume().catch(() => {});
+		return ac.state === 'closed' ? null : ac;
+	}
+	function envelope(g, t0, attack, peak, len) {
+		g.gain.setValueAtTime(0.0001, t0);
+		g.gain.exponentialRampToValueAtTime(peak, t0 + attack);
+		g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+	}
+	function tone(type, delay, len, f0, f1, vol, attack = 0.005) {
+		const c = context();
+		if (!c) return;
+		const t0 = c.currentTime + delay;
+		const o = c.createOscillator();
+		const g = c.createGain();
+		o.type = type;
+		o.frequency.setValueAtTime(f0, t0);
+		o.frequency.exponentialRampToValueAtTime(f1, t0 + len);
+		envelope(g, t0, attack, vol, len);
+		o.connect(g).connect(master);
+		o.start(t0);
+		o.stop(t0 + len + 0.05);
+	}
+	function noise(delay, len, kind, f0, f1, vol, attack = 0.005, q = 1) {
+		const c = context();
+		if (!c) return;
+		const t0 = c.currentTime + delay;
+		const src = c.createBufferSource();
+		src.buffer = noiseBuf;
+		src.loop = true;
+		const f = c.createBiquadFilter();
+		f.type = kind;
+		f.Q.value = q;
+		f.frequency.setValueAtTime(f0, t0);
+		f.frequency.exponentialRampToValueAtTime(f1, t0 + len);
+		const g = c.createGain();
+		envelope(g, t0, attack, vol, len);
+		src.connect(f).connect(g).connect(master);
+		src.start(t0);
+		src.stop(t0 + len + 0.05);
+	}
+	self.sfx = {
+		boom(vol = 0.9) {                       // a deep impact under a slam
+			tone('sine', 0, 1.1, 110, 28, vol);
+			noise(0, 0.6, 'lowpass', 1200, 60, vol * 0.7);
+		},
+		drum(vol = 0.8) {                       // a big tom and snare, for reveals
+			tone('sine', 0, 0.45, 170, 55, vol);
+			noise(0, 0.22, 'bandpass', 2600, 900, vol * 0.6, 0.002, 0.7);
+		},
+		hit(vol = 0.5) {                        // a short bright hit
+			tone('triangle', 0, 0.25, 900, 300, vol);
+			noise(0, 0.1, 'highpass', 3000, 6000, vol * 0.4);
+		},
+		roar(len = 2.2, vol = 0.7) {            // a monster's roar: growling saws and breath
+			const c = context();
+			if (!c) return;
+			const t0 = c.currentTime;
+			const f = c.createBiquadFilter();
+			f.type = 'lowpass';
+			f.frequency.setValueAtTime(300, t0);
+			f.frequency.exponentialRampToValueAtTime(1800, t0 + 0.35);
+			f.frequency.exponentialRampToValueAtTime(250, t0 + len);
+			const g = c.createGain();
+			envelope(g, t0, 0.12, vol, len);
+			const trem = c.createGain();
+			trem.gain.value = 0.6;
+			const lfo = c.createOscillator();
+			const depth = c.createGain();
+			lfo.frequency.value = 23;
+			depth.gain.value = 0.4;
+			lfo.connect(depth).connect(trem.gain);
+			f.connect(trem).connect(g).connect(master);
+			for (const [base, detune] of [[62, 0], [66, 7], [124, -5]]) {
+				const o = c.createOscillator();
+				o.type = 'sawtooth';
+				o.detune.value = detune;
+				o.frequency.setValueAtTime(base * 1.3, t0);
+				o.frequency.exponentialRampToValueAtTime(base, t0 + 0.4);
+				o.frequency.exponentialRampToValueAtTime(base * 0.7, t0 + len);
+				o.connect(f);
+				o.start(t0);
+				o.stop(t0 + len + 0.05);
+			}
+			lfo.start(t0);
+			lfo.stop(t0 + len + 0.05);
+			noise(0, len, 'bandpass', 500, 300, vol * 0.8, 0.1, 0.8);
+		},
+		alarm(len = 1.6, vol = 0.35) {          // a two-tone siren
+			for (let i = 0; i * 0.2 < len; i++) tone('square', i * 0.2, 0.19, i % 2 ? 660 : 880, i % 2 ? 650 : 870, vol, 0.01);
+		},
+		riser(len = 2.5, vol = 0.4) {           // rushing noise, building
+			const c = context();
+			if (!c) return;
+			const t0 = c.currentTime;
+			const src = c.createBufferSource();
+			src.buffer = noiseBuf;
+			src.loop = true;
+			const f = c.createBiquadFilter();
+			f.type = 'bandpass';
+			f.frequency.setValueAtTime(150, t0);
+			f.frequency.exponentialRampToValueAtTime(3500, t0 + len);
+			const g = c.createGain();
+			g.gain.setValueAtTime(0.0001, t0);
+			g.gain.exponentialRampToValueAtTime(vol, t0 + len);
+			g.gain.exponentialRampToValueAtTime(0.0001, t0 + len + 0.08);
+			src.connect(f).connect(g).connect(master);
+			src.start(t0);
+			src.stop(t0 + len + 0.1);
+		},
+		sting(vol = 0.25) {                     // a bright major chord, for celebrating
+			[523, 659, 784, 1047].forEach((f, i) => tone('triangle', i * 0.05, 1.4, f, f, vol, 0.01));
+		},
+	};
+
+	/* ---------- the camera ---------- */
+
+	// The world point at the centre of the screen, and the zoom. A shot
+	// eases from where the camera is; following tracks a moving target.
+	const camera = self.camera = {
+		x: WIDTH / 2, y: H / 2, z: 1,
+		shot: null,
+		target: null,
+		cut(to) { Object.assign(camera, { x: to.x, y: to.y, z: to.z, shot: null, target: null }); },
+		move(to, seconds) {
+			const from = camera.view();
+			camera.shot = { from, to, age: 0, dur: Math.max(0.01, seconds) };
+			camera.target = null;
+		},
+		follow(fn) { camera.target = fn; camera.shot = null; },
+		wide(seconds = 0) {
+			const to = { x: WIDTH / 2, y: H / 2, z: 1 };
+			if (seconds) camera.move(to, seconds); else camera.cut(to);
+		},
+		step(dt) {
+			if (camera.shot) {
+				const s = camera.shot;
+				s.age += dt;
+				const k = ease(s.age / s.dur);
+				camera.x = lerp(s.from.x, s.to.x, k);
+				camera.y = lerp(s.from.y, s.to.y, k);
+				camera.z = Math.exp(lerp(Math.log(s.from.z), Math.log(s.to.z), k));   // zooms feel even in log space
+				if (s.age >= s.dur) camera.shot = null;
+			} else if (camera.target) {
+				const to = camera.target();
+				const r = 1 - Math.exp(-dt * CAMERA.follow);
+				camera.x += (to.x - camera.x) * r;
+				camera.y += (to.y - camera.y) * r;
+				camera.z += (to.z - camera.z) * r;
+			}
+		},
+		// What's actually shown: never past the edges of the world.
+		view() {
+			const z = Math.max(1, camera.z);
+			const hw = WIDTH / 2 / z;
+			const hh = H / 2 / z;
+			return { x: clamp(camera.x, hw, WIDTH - hw), y: clamp(camera.y, hh, H - hh), z };
+		},
+		apply(ctx) {
+			const v = camera.view();
+			ctx.translate(WIDTH / 2, H / 2);
+			ctx.scale(v.z, v.z);
+			ctx.translate(-v.x, -v.y);
+		},
+	};
+
+	/* ---------- type ---------- */
+
+	// fn(ctx, wall) once per wall, its top-left at (0, 0), clipped to that wall
+	// so a title crashing in big never spills onto the next one.
+	self.onWalls = function (ctx, fn) {
+		art.eachWall(ctx, function (c, n) {
+			c.save();
+			c.beginPath();
+			c.rect(0, 0, W, H);
+			c.clip();
+			fn(c, n);
+			c.restore();
+		});
+	};
+
+	// The show's caption type: chunky, outlined, with a drop and a glow, to
+	// read across a dark room.
+	// It shrinks to fit inside a wall (or style.fit units across).
+	self.text = function (ctx, str, x, y, size, style = {}) {
+		const fit = style.fit || W - 140;
+		ctx.save();
+		ctx.font = `400 ${size}px "${FONT}", sans-serif`;
+		const wide = ctx.measureText(String(str)).width;
+		ctx.restore();
+		if (wide > fit) size *= fit / wide;
+		art.text(ctx, str, x, y, Object.assign({
+			size, font: FONT, weight: 400, fill: 'white',
+			outline: theme.ink, outlineWidth: Math.max(4, size * 0.07),
+			drop: 'rgba(0,0,0,0.55)', dropY: size * 0.09,
+			shadow: { color: style.glow || theme.accent, blur: size * 0.35 },
+		}, style));
+	};
+
+	// A title crashing in: big and see-through, slamming down to size with a
+	// little bounce. age is how long since it started; nothing before 0.
+	self.slam = function (ctx, str, x, y, size, age, style = {}) {
+		if (age < 0) return;
+		const dur = style.dur || 0.26;
+		const k = clamp(age / dur, 0, 1);
+		const s = age < dur ? lerp(2.4, 0.9, k * k) : 0.9 + 0.1 * easeOut((age - dur) / 0.18);
+		ctx.save();
+		ctx.translate(x, y);
+		ctx.scale(s, s);
+		if (style.rotate) ctx.rotate(style.rotate);
+		self.text(ctx, str, 0, 0, size, Object.assign({}, style, { alpha: (style.alpha === undefined ? 1 : style.alpha) * clamp(age / (dur * 0.6), 0, 1) }));
+		ctx.restore();
+	};
+
+	/* ---------- celebrations ---------- */
+
+	self.shake = 0;
+	self.flash = 0;
+	self.blackout = 0;
+	self.timeScale = 1;
+	let bits = [];
+	let bursts = [];
+	const CONFETTI = ['#ff4fd8', '#ffe14d', '#33e0ff', '#b45cff', '#7dff9e', '#ff7a3d', 'white'];
+
+	self.confetti = function (n = 200, x, y) {
+		for (let i = 0; i < n; i++) {
+			const from = x === undefined ? { x: Math.random() * WIDTH, y: -20 - Math.random() * 500 } : { x, y };
+			const a = Math.random() * Math.PI * 2;
+			const v = x === undefined ? 0 : 300 + Math.random() * 700;
+			bits.push({
+				x: from.x, y: from.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - (x === undefined ? 0 : 400),
+				spin: Math.random() * 6, vr: (Math.random() - 0.5) * 14, w: 10 + Math.random() * 12, h: 6 + Math.random() * 8,
+				c: CONFETTI[i % CONFETTI.length], wob: Math.random() * 6,
+			});
+		}
+	};
+
+	self.burst = function (x, y, c = theme.gold) {
+		bursts.push({ x, y, c, age: 0, spin: Math.random() * 6 });
+	};
+
+	function stepFx(dt) {
+		self.shake = Math.max(0, self.shake - dt * 1.8);
+		self.flash = Math.max(0, self.flash - dt * 2.2);
+		for (const b of bits) {
+			b.vx *= 1 - dt * 1.5;
+			b.vy = Math.min(260, b.vy + 700 * dt);
+			b.x += (b.vx + Math.sin(b.wob + b.y * 0.02) * 60) * dt;
+			b.y += b.vy * dt;
+			b.spin += b.vr * dt;
+		}
+		bits = bits.filter((b) => b.y < H + 40);
+		for (const b of bursts) b.age += dt;
+		bursts = bursts.filter((b) => b.age < 1.4);
+	}
+
+	// Light bursts go behind the captions, confetti in front.
+	function drawBursts(ctx) {
+		for (const b of bursts) {
+			const k = b.age / 1.4;
+			const r = 80 + 900 * easeOut(k);
+			ctx.save();
+			ctx.globalAlpha = (1 - k) * 0.4;
+			ctx.translate(b.x, b.y);
+			ctx.rotate(b.spin + k * 0.6);
+			ctx.fillStyle = b.c;
+			for (let i = 0; i < 14; i++) {
+				ctx.rotate(Math.PI * 2 / 14);
+				ctx.beginPath();
+				ctx.moveTo(0, 0);
+				ctx.lineTo(r, -r * 0.07);
+				ctx.lineTo(r, r * 0.07);
+				ctx.fill();
+			}
+			ctx.restore();
+			art.circle(ctx, b.x, b.y, r * 0.35, { stroke: 'white', lineWidth: 18 * (1 - k), alpha: 1 - k });
+		}
+	}
+
+	function drawConfetti(ctx) {
+		for (const b of bits) {
+			ctx.save();
+			ctx.translate(b.x, b.y);
+			ctx.rotate(b.spin);
+			ctx.scale(1, Math.abs(Math.cos(b.spin * 1.3)) + 0.15);
+			ctx.fillStyle = b.c;
+			ctx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h);
+			ctx.restore();
+		}
+	}
+
+	// The backdrop behind the results: deep sky, slowly turning light rays.
+	let showTime = 0;
+	function drawBackdrop(ctx) {
+		art.rect(ctx, 0, 0, WIDTH, H, { fill: art.linear(ctx, 0, 0, 0, H, [theme.sky[0], theme.sky[1]]) });
+		self.onWalls(ctx, function (c) {
+			c.save();
+			c.translate(W / 2, H + 120);
+			c.rotate(showTime * 0.08);
+			for (let i = 0; i < 18; i++) {
+				c.rotate(Math.PI * 2 / 18);
+				c.beginPath();
+				c.moveTo(0, 0);
+				c.lineTo(1500, -150);
+				c.lineTo(1500, 150);
+				c.fillStyle = i % 2 ? theme.accent : theme.accent2;
+				c.globalAlpha = 0.07;
+				c.fill();
+			}
+			c.restore();
+			art.circle(c, W / 2, H + 60, 700, { fill: art.radial(c, W / 2, H + 60, 0, 700, [[0, theme.glow], [1, theme.glow.replace(/[\d.]+\)$/, '0)')]]) });
+			if (opts.backdrop) opts.backdrop(c, showTime);
+		});
+	}
+
+	/* ---------- the running order ---------- */
+
+	let beats = [];
+	let beat = null;
+	let bt = 0;
+	let fired = new Set();
+	const seen = [];
+
+	self.sequence = function (list) {
+		beats = list;
+	};
+
+	self.go = function (id) {
+		const next = beats.find((b) => b.id === id);
+		if (!next) throw new Error('Showtime: no beat called ' + id);
+		// jumping past the clock intro (tests skip straight to play) starts the clock
+		const intro = beats.findIndex((b) => b.id === 'clock');
+		const end = beats.findIndex((b) => b.id === 'timeup');
+		const at = beats.indexOf(next);
+		if (!clock.started && intro >= 0 && at > intro && (end < 0 || at < end)) startClock(0);
+		showSkip(next.id);
+		beat = next;
+		bt = 0;
+		fired = new Set();
+		self.blackout = 0;   // each beat brings its own darkness (in enter or update), none carries over
+		seen.push(id);
+		if (beat.enter) beat.enter();
+	};
+
+	self.next = function () {
+		const i = beats.indexOf(beat);
+		if (i >= 0 && i < beats.length - 1) self.go(beats[i + 1].id);
+	};
+
+	// True once, on the frame the beat's clock passes s.
+	self.cue = function (s) {
+		if (bt >= s && !fired.has(s)) {
+			fired.add(s);
+			return true;
+		}
+		return false;
+	};
+
+	Object.defineProperty(self, 'beat', { get: () => (beat ? beat.id : null) });
+	Object.defineProperty(self, 'bt', { get: () => bt });
+
+	const lengthOf = (b) => (typeof b.length === 'function' ? b.length() : b.length === undefined ? Infinity : b.length);
+
+	// One frame: move the show on, then draw it.
+	self.frame = function (ctx, dt, drawWorld) {
+		showTime += dt;
+		stepClock(dt);
+		if (beat) {
+			const was = beat;
+			bt += dt;
+			if (beat.update) beat.update(dt, bt);
+			if (beat === was && (bt >= lengthOf(beat) || (beat.done && beat.done(bt)))) self.next();
+		}
+		camera.step(dt);
+		stepFx(dt);
+		draw(ctx, drawWorld);
+	};
+
+	function draw(ctx, drawWorld) {
+		ctx.save();
+		if (self.shake > 0.01) ctx.translate((Math.random() - 0.5) * 50 * self.shake, (Math.random() - 0.5) * 34 * self.shake);
+		if (!beat || beat.world !== false) {
+			ctx.save();
+			camera.apply(ctx);
+			drawWorld(ctx);
+			ctx.restore();
+		} else {
+			drawBackdrop(ctx);
+		}
+		if (self.blackout > 0) art.rect(ctx, -60, -60, WIDTH + 120, H + 120, { fill: '#030008', alpha: Math.min(1, self.blackout) });
+		drawBursts(ctx);
+		if (beat && beat.draw) beat.draw(ctx, bt);
+		// the clock, from the clock intro until TIME! (not over the results after it)
+		const timeup = beats.findIndex((b) => b.id === 'timeup');
+		if (clock.shown && !(timeup >= 0 && beats.indexOf(beat) > timeup)) drawClock(ctx);
+		drawConfetti(ctx);
+		if (self.flash > 0) art.rect(ctx, -60, -60, WIDTH + 120, H + 120, { fill: 'white', alpha: Math.min(1, self.flash) * 0.8 });
+		ctx.restore();
+	}
+
+	/* ---------- the skip button ---------- */
+
+	// Through the intros (after the squad is picked, before the first round)
+	// a button on the front wall skips straight to the play.
+	let $skip = null;
+	function showSkip(id) {
+		const play = beats.findIndex((b) => b.id === 'play');
+		const at = beats.findIndex((b) => b.id === id);
+		const intro = id !== 'squad' && play >= 0 && at >= 0 && at < play;
+		if (intro && !$skip) {
+			$skip = $('<button skip>').text('SKIP ▶▶').css({
+				position: 'absolute', left: (2 * W - 330) + 'px', top: '880px', zIndex: 5,
+				padding: '14px 34px', borderRadius: '40px', border: `5px solid ${theme.gold}`,
+				background: 'rgba(12,4,30,0.72)', color: 'white', cursor: 'pointer', pointerEvents: 'auto',
+				fontFamily: `"${FONT}", sans-serif`, fontSize: '44px', letterSpacing: '2px',
+				boxShadow: `0 0 24px ${theme.accent}`, opacity: 0, transition: 'opacity 0.4s',
+			}).appendTo(stage.$ui).on('click', function (e) {
+				e.stopPropagation();
+				self.sfx.hit();
+				self.go('play');
+			});
+			stage.timeout(() => $skip && $skip.css({ opacity: 0.9 }), 30);
+		} else if (!intro && $skip) {
+			$skip.remove();
+			$skip = null;
+		}
+	}
+
+	/* ---------- the squad picker ---------- */
+
+	// "HOW MANY PLAYERS?" and a row of big number buttons on the front wall,
+	// in the show's type and colours. (Buttons, not canvas, so a click or a
+	// tap on the wall picks: <button count="3">, as the HUD's picker had.)
+	self.pickPlayers = function (fn) {
+		const font = `"${FONT}", sans-serif`;
+		const $pick = $('<showtime-picker>').css({
+			position: 'absolute', left: W + 'px', top: 0, width: W + 'px', height: H + 'px',
+			display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '70px',
+			pointerEvents: 'auto', fontFamily: font, color: 'white',
+		}).appendTo(stage.$ui);
+		$('<div>').text('HOW MANY PLAYERS?').css({
+			fontSize: '110px', letterSpacing: '2px', lineHeight: 1,
+			textShadow: `0 9px 0 rgba(0,0,0,0.5), 0 0 40px ${theme.accent}`,
+			WebkitTextStroke: `7px ${theme.ink}`, paintOrder: 'stroke fill',
+			transform: 'scale(0.6)', opacity: 0, transition: 'transform 0.45s cubic-bezier(.2,1.6,.4,1), opacity 0.3s',
+		}).appendTo($pick);
+		const $row = $('<div>').css({ display: 'flex', gap: '44px' }).appendTo($pick);
+		for (let n = 2; n <= 6; n++) {
+			$('<button>').attr('count', n).text(n).css({
+				width: '190px', height: '190px', borderRadius: '50%', border: `10px solid ${theme.gold}`,
+				background: `radial-gradient(circle at 40% 30%, ${theme.accent}, ${theme.accent2})`,
+				color: 'white', fontFamily: font, fontSize: '110px', lineHeight: '1', cursor: 'pointer', padding: 0,
+				boxShadow: `0 14px 0 rgba(0,0,0,0.45), 0 0 50px ${theme.accent}`,
+				textShadow: `0 6px 0 ${theme.ink}`,
+				transform: 'scale(0)', transition: `transform 0.4s cubic-bezier(.2,1.6,.4,1) ${0.25 + (n - 2) * 0.08}s`,
+			}).appendTo($row)
+				.on('mouseenter', function () { $(this).css({ transform: 'scale(1.12)', transitionDelay: '0s' }); })
+				.on('mouseleave', function () { $(this).css({ transform: 'scale(1)' }); })
+				.on('click', function () {
+					const count = parseInt($(this).attr('count'), 10);
+					self.sfx.hit();
+					$(this).css({ transform: 'scale(1.35)', transitionDelay: '0s' });
+					$pick.css({ transition: 'opacity 0.35s', opacity: 0, pointerEvents: 'none' });
+					stage.timeout(() => $pick.remove(), 400);
+					fn(count);
+				});
+		}
+		// in: the question pops, the numbers pop in after it
+		stage.timeout(function () {
+			$pick.children().first().css({ transform: 'scale(1)', opacity: 1 });
+			$row.children().css({ transform: 'scale(1)' });
+		}, 30);
+		return $pick;
+	};
+
+	/* ---------- the corner clock ---------- */
+
+	const clock = { left: SECONDS, label: '', shown: false, said: Infinity, running: false, delay: -1, started: false };
+	const mmss = (s) => { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+	self.mmss = mmss;
+
+	self.setClock = function (left, label = '') {
+		clock.left = left;
+		clock.label = label;
+	};
+	self.label = function (text) {
+		clock.label = text || '';
+	};
+	self.timeLeft = () => clock.left;
+	self.setTimeLeft = function (left) {
+		clock.left = left;
+		clock.said = Math.ceil(left);
+	};
+
+	function startClock(after) {
+		clock.shown = true;
+		clock.started = true;
+		if (after > 0) clock.delay = after;
+		else clock.running = true;
+	}
+
+	// The clock runs itself: through the intros and the rounds, to TIME!.
+	function stepClock(dt) {
+		if (clock.delay > 0) {
+			clock.delay -= dt;
+			if (clock.delay <= 0) clock.running = true;
+		}
+		if (!clock.running) return;
+		clock.left = Math.max(0, clock.left - dt);
+		const whole = Math.ceil(clock.left);
+		if (whole <= CLOCK.final && whole < clock.said && whole > 0) self.play('tick');
+		clock.said = whole;
+		if (clock.left <= 0) {
+			clock.running = false;
+			if (beats.some((b) => b.id === 'timeup') && self.beat !== 'timeup') self.go('timeup');
+		}
+	}
+
+	function clockPill(ctx, x, y, size, left, alpha = 1) {
+		const urgent = left <= CLOCK.urgent;
+		const pulse = urgent ? 1 + 0.06 * Math.max(0, Math.cos((left % 1) * Math.PI * 2)) : 1;
+		const w = size * 3.3;
+		ctx.save();
+		ctx.globalAlpha *= alpha;
+		ctx.translate(x, y);
+		ctx.scale(pulse, pulse);
+		art.roundRect(ctx, -w / 2, -size * 0.66, w, size * 1.32, size * 0.66, { fill: 'rgba(12,4,30,0.78)', stroke: urgent ? '#ff3d6a' : theme.accent, lineWidth: size * 0.07 });
+		self.text(ctx, mmss(left), 0, size * 0.04, size, { fill: urgent ? '#ff5470' : 'white', glow: urgent ? '#ff3d6a' : theme.accent });
+		ctx.restore();
+	}
+
+	function drawClock(ctx) {
+		const left = clock.left;
+		self.onWalls(ctx, function (c) {
+			clockPill(c, W / 2, CLOCK.y, CLOCK.size, left);
+			if (clock.label) self.text(c, clock.label, W / 2, CLOCK.y + 70, 30, { fill: theme.gold, outlineWidth: 4, glow: 'transparent' });
+			// the last ten seconds loom, huge and faint, over every wall
+			if (left > 0 && left <= CLOCK.final) {
+				const k = 1 - (left % 1 || 1);
+				self.text(c, String(Math.ceil(left)), W / 2, 520, 420 * (1 + 0.25 * (1 - k)), { fill: '#ff5470', alpha: 0.45 * (1 - k * 0.7), glow: '#ff3d6a' });
+			}
+		});
+	}
+
+	/* ---------- the replay recorder ---------- */
+
+	let track = [];
+	let marks = [];
+	let nextSample = 0;
+	self.record = function (t, positions) {
+		if (t < nextSample) return;
+		nextSample = t + REPLAY.sample;
+		track.push({ t, p: positions.map((p) => (p && p.px !== undefined ? [clamp(p.px, 0, 1), clamp(p.pz === undefined ? 0.5 : p.pz, 0, 1)] : null)) });
+	};
+	self.mark = function (t) {
+		marks.push(t);
+	};
+
+	// Plausible wandering for when nothing was recorded (a test that skipped play).
+	function fakeTrack(n) {
+		const out = [];
+		const r = seeded('replay' + n);
+		const ph = [];
+		for (let i = 0; i < n; i++) ph.push([r() * 6, r() * 6, r() * 6, r() * 6, 0.05 + r() * 0.04, 0.03 + r() * 0.04]);
+		for (let t = 0; t <= SECONDS; t += REPLAY.sample) {
+			out.push({ t, p: ph.map(([a, b, c, d, f, g], i) => [
+				clamp(0.5 + 0.34 * Math.sin(t * f + a) + 0.1 * Math.sin(t * f * 3.1 + b) + (i - (n - 1) / 2) * 0.08, 0.04, 0.96),
+				clamp(0.45 + 0.3 * Math.sin(t * g + c) + 0.12 * Math.sin(t * g * 2.7 + d), 0.04, 0.96),
+			]) });
+		}
+		return out;
+	}
+
+	/* ---------- avatars ---------- */
+
+	function avatar(ctx, n, x, y, scale, pose, alpha = 1) {
+		ctx.save();
+		ctx.globalAlpha *= alpha;
+		if (opts.drawAvatar) opts.drawAvatar(ctx, n, x, y, scale, pose);
+		else {
+			art.roundRect(ctx, x - 22 * scale, y - 70 * scale, 44 * scale, 70 * scale, 18 * scale, { fill: colour(n) });
+			art.circle(ctx, x, y - 92 * scale, 26 * scale, { fill: colour(n) });
+		}
+		ctx.restore();
+	}
+
+	// A row of players across a wall, centred.
+	function rowX(i, n) {
+		const gap = Math.min(250, 1400 / Math.max(1, n));
+		return W / 2 + (i - (n - 1) / 2) * gap;
+	}
+
+	/* ---------- the generic beats ---------- */
+
+	function extend(base, extra) {
+		if (!extra) return base;
+		const b = Object.assign({}, base);
+		for (const k of ['enter', 'update', 'draw']) {
+			if (!extra[k]) continue;
+			const a = base[k];
+			const e = extra[k];
+			b[k] = a ? function (...args) { a(...args); e(...args); } : e;
+		}
+		for (const k of ['length', 'world', 'done', 'id']) if (extra[k] !== undefined) b[k] = extra[k];
+		return b;
+	}
+
+	const beatsLib = self.beats = {};
+
+	// The title drop: the room goes dark under a rushing build, then the
+	// game's title crashes in letter by letter, a line at a time, each letter
+	// a hit; a boom and a flash as the last lands, the tagline, a hold, and
+	// out. lines: [{ text, fill, glow }]; tagline: a smaller line under.
+	beatsLib.titleDrop = function (extra) {
+		const T = TITLE;
+		const lines = (extra && extra.lines) || [{ text: (opts.title || opts.id || '').toUpperCase() }];
+		const tagline = extra && extra.tagline;
+		// when each letter lands
+		const lands = [];
+		let at = T.first;
+		lines.forEach(function (line, li) {
+			lands.push([...line.text].map(function (ch) {
+				const t0 = at;
+				if (ch !== ' ') at += T.each;
+				return t0;
+			}));
+			at += T.lineGap;
+		});
+		const lastLand = at - T.lineGap - T.each + T.fall;
+		const length = lastLand + T.tagline + T.hold + T.out;
+		const out = length - T.out;
+		return extend({
+			id: 'title',
+			length,
+			enter() {
+				self.blackout = 0;
+				self.play('drama');
+			},
+			update(dt, bt) {
+				self.blackout = Math.min(INTRO_DIM, bt / T.dark * INTRO_DIM);   // the game's scene still showing behind
+				if (self.cue(T.first - T.riser)) self.sfx.riser(T.riser, 0.35);
+				lands.forEach(function (times, li) {
+					times.forEach(function (t0, i) {
+						if (lines[li].text[i] !== ' ' && self.cue(t0 + T.fall)) { self.sfx.hit(); self.shake = Math.max(self.shake, 0.18); }
+					});
+				});
+				if (self.cue(lastLand)) { self.sfx.boom(1); self.play('reveal'); self.shake = 0.9; self.flash = 0.6; }
+			},
+			draw(ctx, bt) {
+				const fade = 1 - between(bt, out, length);
+				const n = lines.length;
+				self.onWalls(ctx, function (c) {
+					lines.forEach(function (line, li) {
+						const size = T.size * (n > 1 ? 0.85 : 1);
+						const y = 470 + (li - (n - 1) / 2) * size * 1.05 - (tagline ? 50 : 0);
+						c.save();
+						c.font = `400 ${size}px "${FONT}", sans-serif`;
+						const chars = [...line.text];
+						const widths = chars.map((ch) => c.measureText(ch).width);
+						const total = widths.reduce((a, b) => a + b, 0);
+						const k = Math.min(1, (W - 140) / total);   // shrink to fit the wall
+						c.restore();
+						let x = W / 2 - total * k / 2;
+						chars.forEach(function (ch, i) {
+							const w = widths[i] * k;
+							const t0 = lands[li][i];
+							const age = bt - t0;
+							if (ch !== ' ' && age > 0) {
+								// falls from above, lands with a squash
+								const fall = clamp(age / T.fall, 0, 1);
+								const dy = -700 * (1 - fall) * (1 - fall);
+								const squash = fall >= 1 ? 1 - 0.18 * Math.max(0, 1 - (age - T.fall) / 0.2) : 1;
+								c.save();
+								c.translate(x + w / 2, y + dy);
+								c.scale(1 / squash, squash);
+								self.text(c, ch, 0, 0, size * k, { fill: line.fill || 'white', glow: line.glow || theme.accent, alpha: fade * clamp(age / 0.08, 0, 1), fit: 9999 });
+								c.restore();
+							}
+							x += w;
+						});
+					});
+					if (tagline) self.slam(c, tagline, W / 2, 470 + (n - 1) / 2 * T.size * 0.9 + 150, 64, bt - lastLand - T.tagline, { fill: theme.gold, alpha: fade });
+				});
+			},
+		}, Object.assign({}, extra, { lines: undefined, tagline: undefined }));
+	};
+
+	// The clock reveal: the room dark, the clock slams in, its dial charges
+	// round under a drumroll, YOU HAVE / 10 MINUTES, then it flies up to its
+	// place at the top of every wall, and a moment later starts counting down.
+	beatsLib.clockIntro = function (extra) {
+		const C = CLOCK_INTRO;
+		const minutes = SECONDS >= 60 ? Math.round(SECONDS / 60) + ' MINUTES' : SECONDS + ' SECONDS';
+		return extend({
+			id: 'clock',
+			length: C.length,
+			enter() {
+				clock.shown = false;
+				clock.running = false;
+				clock.started = false;
+				clock.left = SECONDS;
+				self.blackout = INTRO_DIM;
+				self.play('drumroll');
+			},
+			update(dt, bt) {
+				if (self.cue(C.slam)) { self.sfx.boom(); self.shake = 0.7; self.flash = 0.5; }
+				if (self.cue(C.youHave)) { self.sfx.drum(); self.shake = 0.3; }
+				if (self.cue(C.minutes)) { self.stop('drumroll'); self.sfx.boom(1); self.play('reveal'); self.shake = 0.9; self.flash = 0.6; }
+				if (self.cue(C.settle[0])) self.play('wooshLong');
+				if (bt > C.settle[0]) self.blackout = INTRO_DIM * (1 - between(bt, C.settle[0], C.settle[1] + 0.3));
+				if (self.cue(C.settle[1])) { startClock(C.runAfter); self.sfx.hit(); }
+			},
+			draw(ctx, bt) {
+				const fly = ease(between(bt, C.settle[0], C.settle[1]));
+				if (bt >= C.settle[1]) return;
+				const fade = 1 - between(bt, C.settle[0], C.settle[0] + 0.4);
+				self.onWalls(ctx, function (c) {
+					const cx = W / 2;
+					const cy = lerp(C.y, CLOCK.y, fly);
+					// the dial, its ticks lighting round one by one
+					const charged = between(bt, C.charge[0], C.charge[1]);
+					if (bt > C.slam) {
+						for (let i = 0; i < 60; i++) {
+							const a = i / 60 * Math.PI * 2 - Math.PI / 2;
+							const on = i / 60 < charged;
+							const r0 = i % 5 ? 232 : 214;
+							c.save();
+							c.globalAlpha = fade * (on ? 1 : 0.22) * clamp((bt - C.slam) * 4, 0, 1);
+							c.strokeStyle = on ? (i % 5 ? theme.accent : theme.gold) : 'white';
+							c.lineWidth = i % 5 ? 8 : 14;
+							c.lineCap = 'round';
+							c.beginPath();
+							c.moveTo(cx + Math.cos(a) * r0, C.y + Math.sin(a) * r0);
+							c.lineTo(cx + Math.cos(a) * 258, C.y + Math.sin(a) * 258);
+							c.stroke();
+							c.restore();
+						}
+						if (charged >= 1) art.circle(c, cx, C.y, 290, { fill: art.radial(c, cx, C.y, 100, 300, [[0, 'rgba(255,79,216,0)'], [0.7, 'rgba(255,79,216,0.25)'], [1, 'rgba(255,79,216,0)']]), alpha: fade });
+					}
+					// the clock itself, slamming in, then flying up and shrinking to its corner size
+					const size = lerp(C.size, CLOCK.size, fly);
+					if (bt > C.slam) {
+						const age = bt - C.slam;
+						const s = age < 0.26 ? lerp(2.4, 0.9, (age / 0.26) ** 2) : 0.9 + 0.1 * easeOut((age - 0.26) / 0.18);
+						c.save();
+						c.translate(cx, cy);
+						c.scale(s, s);
+						c.globalAlpha = clamp(age / 0.15, 0, 1);
+						if (fly > 0) clockPill(c, 0, 0, size, SECONDS, fly);
+						self.text(c, mmss(SECONDS), 0, size * 0.04, size, { alpha: 1 - fly });
+						c.restore();
+					}
+					self.slam(c, 'YOU HAVE', cx, 690, 90, bt - C.youHave, { alpha: fade });
+					self.slam(c, minutes, cx, 840, 170, bt - C.minutes, { fill: theme.gold, glow: '#ff7a3d', alpha: fade });
+				});
+			},
+		}, extra);
+	};
+
+	// TIME!: an alarm, everything slows to a stop, a giant TIME!, then the
+	// room goes dark. Step your world by dt * show.timeScale in extra.update.
+	beatsLib.timeUp = function (extra) {
+		return extend({
+			id: 'timeup',
+			length: TIME_UP.length,
+			enter() {
+				clock.left = 0;
+				clock.running = false;
+				clock.delay = -1;
+				self.sfx.alarm();
+				self.play('buzz');
+				self.flash = 0.7;
+				self.shake = 0.6;
+				camera.move({ x: camera.view().x, y: H / 2, z: 1.12 }, 2.4);
+			},
+			update(dt, bt) {
+				self.timeScale = 1 - easeOut(between(bt, 0, TIME_UP.slow));
+				if (self.cue(TIME_UP.title)) { self.sfx.boom(1); self.shake = 1; }
+				if (self.cue(1.3)) self.stop('buzz');
+				self.blackout = 0.96 * between(bt, TIME_UP.dark[0], TIME_UP.dark[1]);
+				if (bt > TIME_UP.dark[0]) clock.shown = false;
+			},
+			draw(ctx, bt) {
+				const out = 1 - between(bt, TIME_UP.dark[0] - 0.4, TIME_UP.dark[1]);
+				self.onWalls(ctx, function (c) {
+					const red = Math.floor(bt * 6) % 2 === 0 && bt < 1.6;
+					self.slam(c, 'TIME!', W / 2, 500, 400, bt - TIME_UP.title, { fill: red ? '#ff5470' : 'white', glow: '#ff3d6a', alpha: out, rotate: -0.05 });
+				});
+			},
+		}, extra);
+	};
+
+	// The players as a list: one row each, their avatar, their colour's name
+	// and their score. Row r of n sits at listY(r, n); rows have no podium.
+	function listY(r, n) {
+		const gap = Math.min(LIST.row, LIST.height / Math.max(1, n));
+		return LIST.top + (LIST.height - n * gap) / 2 + (r + 0.5) * gap;
+	}
+	function listRow(c, p, y, score, opts = {}) {
+		const n = count();
+		const gap = Math.min(LIST.row, LIST.height / Math.max(1, n));
+		const h = gap * 0.82;
+		const x0 = W / 2 - LIST.width / 2;
+		const gold = opts.winner;
+		c.save();
+		c.globalAlpha *= opts.alpha === undefined ? 1 : opts.alpha;
+		art.roundRect(c, x0, y - h / 2, LIST.width, h, h / 2, { fill: gold ? 'rgba(255,210,63,0.92)' : theme.panel, shadow: gold ? { color: theme.gold, blur: 40 } : undefined });
+		art.roundRect(c, x0, y - h / 2, 22, h, [h / 2, 0, 0, h / 2], { fill: colour(p) });
+		// the place, once revealed
+		// (dark, crisp type on a gold row; light, outlined type on the others)
+		const ink = gold ? { fill: theme.ink, glow: 'transparent', outlineWidth: 0, drop: 'transparent' } : { glow: 'transparent', outlineWidth: 4 };
+		if (opts.place) self.text(c, opts.place, x0 + 110, y + 2, h * 0.5, Object.assign({ fill: 'white' }, ink));
+		avatar(c, p, x0 + 250, y + h * 0.42, h / 170, opts.pose || 'stand');
+		self.text(c, self.nameOf(p), x0 + 330, y + 2, h * 0.42, Object.assign({ fill: lit(p), align: 'left' }, ink));
+		self.text(c, String(score), x0 + LIST.width - 60, y + 2, h * 0.6, Object.assign({ fill: 'white', align: 'right' }, ink));
+		c.restore();
+	}
+
+	// Everyone's score, a row each in player order, counting up.
+	beatsLib.scores = function (extra) {
+		let shown = [];
+		return extend({
+			id: 'scores',
+			length: SCORES.length,
+			world: false,
+			enter() {
+				self.blackout = 0;
+				self.timeScale = 1;
+				camera.wide();
+				self.play('drama');
+				self.play('wooshLong');
+				shown = scores().map(() => 0);
+			},
+			update(dt, bt) {
+				const k = easeOut(between(bt, SCORES.count[0], SCORES.count[1]));
+				const before = shown.join();
+				shown = scores().map((s) => Math.round(s * k));
+				if (shown.join() !== before && Math.floor(bt * 12) % 2 === 0) self.play('tick');
+				if (self.cue(SCORES.count[1])) { self.sfx.drum(); self.play('coin'); self.shake = 0.3; }
+			},
+			draw(ctx, bt) {
+				const n = count();
+				self.onWalls(ctx, function (c) {
+					self.slam(c, 'SCORES', W / 2, 110, 120, bt - 0.1, { fill: theme.gold });
+					for (let i = 0; i < n; i++) {
+						const enter = easeOut(between(bt, 0.1 + i * 0.1, 0.45 + i * 0.1));
+						c.save();
+						c.translate((1 - enter) * -W * 0.6, 0);
+						listRow(c, i, listY(i, n), shown[i], { alpha: enter });
+						c.restore();
+					}
+				});
+			},
+		}, extra);
+	};
+
+	// The ranking: the same list reorders, rows sliding past each other into
+	// place, then the places are revealed from last to first, each on a drum
+	// hit, and the winner's row lights up gold. Ties share a place.
+	beatsLib.rank = function (extra) {
+		let place = [];   // place[n]: 0 for first (ties share)
+		let slot = [];    // slot[n]: the row they end up in
+		let label = [];
+		let reveal = [];  // reveal[n]: when their place shows
+		let winnerAt = 0;
+		const SUFFIX = ['1ST', '2ND', '3RD', '4TH', '5TH', '6TH'];
+		return extend({
+			id: 'rank',
+			world: false,
+			length: () => winnerAt + RANK.hold,
+			enter() {
+				const s = scores();
+				const n = count();
+				const order = [];
+				for (let i = 0; i < n; i++) order.push(i);
+				order.sort((a, b) => s[b] - s[a] || a - b);   // first place first
+				slot = [];
+				order.forEach((p, r) => { slot[p] = r; });
+				place = s.map((v) => s.filter((w) => w > v).length);
+				label = place.map((k) => SUFFIX[k]);
+				// reveals from the bottom row up
+				reveal = [];
+				order.slice().reverse().forEach((p, k) => { reveal[p] = RANK.reveal + k * RANK.each; });
+				winnerAt = RANK.reveal + (n - 1) * RANK.each;
+			},
+			update(dt, bt) {
+				const n = count();
+				if (self.cue(RANK.move[0])) self.play('wooshLong');
+				for (let p = 0; p < n; p++) {
+					if (!self.cue(reveal[p])) continue;
+					if (place[p] === 0) {
+						self.sfx.boom(1);
+						self.sfx.sting();
+						self.play('cheer');
+						self.flash = 0.4;
+						self.shake = 0.6;
+						self.confetti(200);
+					} else {
+						self.sfx.drum();
+						self.shake = 0.2;
+					}
+				}
+			},
+			draw(ctx, bt) {
+				const n = count();
+				const s = scores();
+				const firsts = place.filter((k) => k === 0).length;
+				const winner = slot.indexOf(0);
+				self.onWalls(ctx, function (c) {
+					if (bt < winnerAt) self.slam(c, 'RANKINGS', W / 2, 110, 120, bt - 0.05, { fill: theme.gold });
+					else if (firsts > 1) self.slam(c, 'IT\'S A TIE!', W / 2, 110, 130, bt - winnerAt, { fill: theme.gold });
+					else self.slam(c, self.nameOf(winner) + ' WINS!', W / 2, 110, 130, bt - winnerAt, { fill: lit(winner), glow: colour(winner) });
+					// rows slide from player order into rank order, staggered
+					const rows = [];
+					for (let p = 0; p < n; p++) {
+						const k = ease(between(bt, RANK.move[0] + p * 0.08, RANK.move[1] + p * 0.08));
+						const y = lerp(listY(p, n), listY(slot[p], n), k);
+						const sway = Math.sin(Math.PI * k) * 60 * (slot[p] < p ? -1 : 1);   // passing each other
+						rows.push({ p, y, x: sway, shown: bt >= reveal[p] });
+					}
+					rows.sort((a, b) => b.y - a.y);   // the lower rows under the higher ones
+					for (const r of rows) {
+						const top = place[r.p] === 0 && r.shown;
+						c.save();
+						c.translate(r.x, 0);
+						if (r.shown && bt - reveal[r.p] < 0.3) {
+							const pop = 1 + 0.12 * Math.sin(Math.PI * (bt - reveal[r.p]) / 0.3);
+							c.translate(W / 2, r.y);
+							c.scale(pop, pop);
+							c.translate(-W / 2, -r.y);
+						}
+						listRow(c, r.p, r.y, s[r.p], { place: r.shown ? label[r.p] : '', winner: top, pose: top ? 'win' : r.shown ? 'cheer' : 'stand' });
+						c.restore();
+					}
+				});
+			},
+		}, extra);
+	};
+
+	// The team total: every score flies to the middle, they smoosh into one
+	// number that counts up, the bonus lands on top, and the room erupts.
+	beatsLib.team = function (extra) {
+		let shown = 0;
+		let partyAt = 0;
+		return extend({
+			id: 'team',
+			world: false,
+			length: TEAM.length,
+			enter() {
+				shown = 0;
+				partyAt = bonus() > 0 ? TEAM.bonus[1] + 0.3 : TEAM.count[1] + 0.3;
+				self.stop('drumroll');
+				self.play('drama');
+			},
+			update(dt, bt) {
+				const sum = scores().reduce((a, b) => a + b, 0);
+				const before = shown;
+				shown = Math.round(sum * easeOut(between(bt, TEAM.count[0], TEAM.count[1])) + bonus() * easeOut(between(bt, TEAM.bonus[0], TEAM.bonus[1])));
+				if (shown !== before && Math.floor(bt * 14) % 2 === 0) self.play('tick');
+				if (self.cue(TEAM.fly[0])) self.play('wooshLong');
+				if (self.cue(TEAM.fly[1])) { self.sfx.boom(1); self.shake = 0.8; self.flash = 0.4; }
+				if (bonus() > 0 && self.cue(TEAM.bonus[0])) { self.sfx.drum(); self.play('coin'); }
+				if (self.cue(partyAt)) {
+					self.sfx.sting();
+					self.play('cheer');
+					self.play('explode');
+					self.shake = 0.7;
+					self.flash = 0.5;
+					self.confetti(400);
+					for (let w = 0; w < 3; w++) { self.burst(w * W + W / 2, TEAM.y, theme.gold); self.burst(w * W + 250, 300, theme.accent); self.burst(w * W + 1350, 300, '#33e0ff'); }
+				}
+				// more light bursts, all round the room, while it celebrates
+				if (bt > partyAt && Math.floor((bt - dt) / 0.45) !== Math.floor(bt / 0.45) && bt < TEAM.length - 1.5) {
+					self.burst(Math.random() * WIDTH, 150 + Math.random() * 500, CONFETTI[Math.floor(Math.random() * 5)]);
+					self.confetti(30);
+				}
+			},
+			draw(ctx, bt) {
+				const n = count();
+				const s = scores();
+				const back = easeOut(between(bt, 0, TEAM.shrink));
+				const fly = easeIn(between(bt, TEAM.fly[0], TEAM.fly[1]));
+				const merged = bt >= TEAM.fly[1];
+				self.onWalls(ctx, function (c) {
+					self.slam(c, 'TEAM TOTAL', W / 2, 150, 110, bt - 0.1, { fill: theme.gold });
+					for (let i = 0; i < n; i++) {
+						const x = rowX(i, n);
+						const party = bt > partyAt;
+						avatar(c, i, x, lerp(SCORES.y, 965, back) - (party ? Math.abs(Math.sin(bt * 7 + i)) * 40 : 0), lerp(SCORES.scale, 1.6, back), party ? 'win' : 'stand');
+						if (!merged) {
+							// each score flies in to the middle, stretching as it goes
+							const fx = lerp(x, W / 2, fly);
+							const fy = lerp(400, TEAM.y, fly);
+							c.save();
+							c.translate(fx, fy);
+							c.scale(1 + fly * 0.6, 1 - fly * 0.25);
+							self.text(c, String(s[i]), 0, 0, 120 * (1 + fly * 0.5), { fill: lit(i), glow: colour(i) });
+							c.restore();
+						}
+					}
+					if (merged) {
+						// smooshed: a squash and bounce, then the number
+						const age = bt - TEAM.fly[1];
+						const sq = Math.exp(-age * 5) * Math.cos(age * 22);
+						const party = bt > partyAt ? 1 + 0.06 * Math.sin(bt * 10) : 1;
+						c.save();
+						c.translate(W / 2, TEAM.y);
+						c.scale((1 + 0.45 * sq) * party, (1 - 0.4 * sq) * party);
+						art.circle(c, 0, 0, 280, { fill: art.radial(c, 0, 0, 0, 280, [[0, 'rgba(255,225,77,0.45)'], [1, 'rgba(255,225,77,0)']]) });
+						self.text(c, String(shown), 0, 0, 280, { fill: theme.gold, glow: '#ff7a3d' });
+						c.restore();
+						if (bonus() > 0) self.slam(c, '+' + bonus() + ' ' + (opts.bonusLabel || 'BONUS'), W / 2, 665, 64, bt - TEAM.bonus[0], { fill: 'white', alpha: 1 - between(bt, TEAM.length - 1, TEAM.length) });
+					}
+				});
+			},
+		}, extra);
+	};
+
+	// The leaderboard: today's other teams (made up, seeded from the game
+	// and the total), then your team's row slides in at the bottom and climbs
+	// to its standing.
+	const RIVALS = opts.rivals || ['The Night Owls', 'Glow Getters', 'Team Turbo', 'Squad Goals', 'Thunder Buddies', 'The Wildcards',
+		'Pixel Pirates', 'Moonwalkers', 'High Fivers', 'The Comets', 'Big Energy', 'Rocket Club'];
+	let board = null;
+	function makeBoard() {
+		const total = self.teamTotal();
+		const r = seeded((opts.id || 'game') + ':' + total);
+		const names = RIVALS.slice();
+		for (let i = names.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [names[i], names[j]] = [names[j], names[i]]; }
+		const rank = 1 + Math.floor(r() * 4);   // where you land: always a podium-ish finish worth cheering
+		const gap = Math.max(3, Math.round(Math.max(total, 120) * 0.045));
+		const rows = [];
+		for (let i = 0; i < BOARD.teams; i++) {
+			const above = i < rank - 1;
+			const d = above ? rank - 1 - i : i - rank + 2;
+			const score = above ? total + d * gap + Math.floor(r() * gap * 0.8) + 1 : Math.max(0, total - d * gap - Math.floor(r() * gap * 0.8) - 1);
+			rows.push({ name: names[i % names.length], score, y: 0 });
+		}
+		rows.sort((a, b) => b.score - a.score);
+		return { rows, rank, us: { y: 0 }, total };
+	}
+	beatsLib.board = function (extra) {
+		const passes = () => (board ? BOARD.teams - (board.rank - 1) : 0);
+		const landAt = () => BOARD.enter + 0.6 + passes() * BOARD.climb;
+		return extend({
+			id: 'board',
+			world: false,
+			length: () => landAt() + BOARD.hold,
+			enter() {
+				board = makeBoard();
+				board.rows.forEach((row, i) => { row.y = BOARD.top + i * BOARD.row; });
+				board.us.y = BOARD.top + BOARD.teams * BOARD.row + 120;
+				self.play('wooshLong');
+			},
+			update(dt, bt) {
+				const climbed = clamp(Math.floor((bt - BOARD.enter - 0.6) / BOARD.climb) + 1, 0, passes());
+				const slot = BOARD.teams - climbed;
+				board.rows.forEach(function (row, i) {
+					const want = BOARD.top + (i >= slot ? i + 1 : i) * BOARD.row;
+					row.y += (want - row.y) * Math.min(1, dt * 14);
+				});
+				if (bt > BOARD.enter) board.us.y += (BOARD.top + slot * BOARD.row - board.us.y) * Math.min(1, dt * 14);
+				for (let k = 1; k <= passes(); k++) if (self.cue(BOARD.enter + 0.6 + (k - 1) * BOARD.climb)) self.play('tick');
+				if (self.cue(BOARD.enter)) self.play('woosh');
+				if (self.cue(landAt())) {
+					self.sfx.boom(1);
+					self.sfx.sting();
+					self.play('cheer');
+					self.flash = 0.5;
+					self.shake = 0.7;
+					self.confetti(300);
+					for (let w = 0; w < 3; w++) self.burst(w * W + W / 2, 520, theme.gold);
+				}
+			},
+			draw(ctx, bt) {
+				const land = landAt();
+				self.onWalls(ctx, function (c) {
+					self.slam(c, "TODAY'S TOP TEAMS", W / 2, 88, 84, bt - 0.05, { fill: theme.gold });
+					const x0 = 230;
+					const x1 = W - 230;
+					board.rows.forEach(function (row, i) {
+						const drop = easeOut(between(bt, 0.2 + i * BOARD.drop, 0.6 + i * BOARD.drop));
+						if (drop <= 0) return;
+						const y = row.y - (1 - drop) * 80;
+						const place = Math.round((row.y - BOARD.top) / BOARD.row) + 1;
+						art.roundRect(c, x0, y - BOARD.row / 2 + 5, x1 - x0, BOARD.row - 10, 16, { fill: theme.panel, alpha: drop });
+						self.text(c, String(place), x0 + 50, y, 40, { fill: 'rgba(255,255,255,0.6)', glow: 'transparent', outlineWidth: 3, alpha: drop });
+						self.text(c, row.name, x0 + 110, y, 42, { align: 'left', glow: 'transparent', outlineWidth: 3, alpha: drop });
+						self.text(c, String(row.score), x1 - 40, y, 42, { align: 'right', fill: 'rgba(255,255,255,0.85)', glow: 'transparent', outlineWidth: 3, alpha: drop });
+					});
+					// your row, glowing gold
+					if (bt > BOARD.enter - 0.4) {
+						const slide = easeOut(between(bt, BOARD.enter - 0.4, BOARD.enter));
+						const y = board.us.y;
+						const glow = bt > land ? 1 + 0.04 * Math.sin(bt * 9) : 1;
+						const place = clamp(Math.round((y - BOARD.top) / BOARD.row) + 1, 1, BOARD.teams + 1);
+						c.save();
+						c.translate(W / 2 + (1 - slide) * 1400, y);
+						c.scale(glow * 1.06, glow * 1.06);
+						art.roundRect(c, x0 - W / 2 - 20, -BOARD.row / 2, x1 - x0 + 40, BOARD.row, 20, { fill: art.linear(c, x0 - W / 2, 0, x1 - W / 2, 0, [[0, theme.gold], [1, '#ff9a3d']]), shadow: { color: theme.gold, blur: 40 } });
+						art.text(c, String(place), x0 - W / 2 + 40, 2, { size: 46, font: FONT, weight: 400, fill: theme.ink });
+						art.text(c, 'YOUR TEAM', x0 - W / 2 + 100, 2, { size: 48, font: FONT, weight: 400, fill: theme.ink, align: 'left' });
+						art.text(c, String(board.total), x1 - W / 2 - 30, 2, { size: 48, font: FONT, weight: 400, fill: theme.ink, align: 'right' });
+						c.restore();
+					}
+					if (bt > land) {
+						// the standing, slammed over the board clear of your own row
+						const by = board.us.y < 520 ? Math.max(board.us.y + 250, 600) : board.us.y - 250;
+						art.rect(c, 0, by - 125, W, 250, { fill: 'rgba(8,2,20,0.6)', alpha: Math.min(1, (bt - land) * 3) });
+						self.slam(c, '#' + board.rank + ' OF THE DAY!', W / 2, by, 170, bt - land, { fill: theme.gold, glow: '#ff7a3d', rotate: -0.04 });
+					}
+				});
+			},
+		}, extra);
+	};
+
+	// The replay: everyone's whole game, fast-forwarded, as a camera at the
+	// back of the gamebox would have filmed it: the room in perspective, the
+	// front wall glowing, and the players as people, seen from behind, walking
+	// where they walked.
+	const ROOM = {
+		f: 760,                // the camera's focal length, in wall pixels
+		centre: 380,           // where its line of sight meets the wall
+		eye: 0.95,             // its height: above the walls, looking down into the box
+		pitch: 22,             // degrees it tilts down
+		near: 0.45,            // the back of the room, this far in front of the camera
+		depth: 1,              // the room, back to front (and 1 wide)
+		height: 0.625,         // the walls are 16:10
+		person: 0.36,          // a person, in room units tall
+	};
+	const PITCH_SIN = Math.sin(ROOM.pitch * Math.PI / 180);
+	const PITCH_COS = Math.cos(ROOM.pitch * Math.PI / 180);
+	// A point in the room (x across from the middle, y up, z away from the
+	// camera) on the wall: [x, y, pixels per room unit there].
+	function roomPoint(x, y, z) {
+		const dy = y - ROOM.eye;
+		const v = dy * PITCH_COS + z * PITCH_SIN;
+		const d = -dy * PITCH_SIN + z * PITCH_COS;
+		return [W / 2 + ROOM.f * x / d, ROOM.centre - ROOM.f * v / d, ROOM.f / d];
+	}
+	// A player's spot in the room: px across, pz 1 at the front wall.
+	function roomSpot(q) {
+		return { x: q[0] - 0.5, z: ROOM.near + 0.12 + (1 - 0.12) * q[1] * ROOM.depth };
+	}
+
+	function drawRoom(c) {
+		const zf = ROOM.near + ROOM.depth;
+		const zn = ROOM.near;
+		const P = (x, y, z) => roomPoint(x, y, z).slice(0, 2);
+		const H0 = ROOM.height;
+		// the floor, the side walls, the front wall
+		art.poly(c, [P(-0.5, 0, zf), P(0.5, 0, zf), P(0.5, 0, zn), P(-0.5, 0, zn)], { fill: art.linear(c, 0, P(0, 0, zf)[1], 0, H, ['#2c2236', '#140e1c']) });
+		for (const side of [-0.5, 0.5]) {
+			art.poly(c, [P(side, 0, zf), P(side, H0, zf), P(side, H0, zn), P(side, 0, zn)], { fill: art.linear(c, side < 0 ? 0 : W, 0, W / 2, 0, [theme.accent2, '#1c1030']), alpha: 0.85 });
+		}
+		art.poly(c, [P(-0.5, 0, zf), P(0.5, 0, zf), P(0.5, H0, zf), P(-0.5, H0, zf)], { fill: art.linear(c, 0, P(0, H0, zf)[1], 0, P(0, 0, zf)[1], [theme.accent, theme.accent2]) });
+		// the tops of the walls, catching the light
+		art.line(c, [P(-0.5, H0, zn), P(-0.5, H0, zf), P(0.5, H0, zf), P(0.5, H0, zn)], { stroke: 'rgba(255,255,255,0.35)', lineWidth: 4, lineJoin: 'round' });
+		// glow off the walls onto the floor
+		const fc = P(0, 0, zf);
+		art.ellipse(c, fc[0], fc[1] + 40, 360, 90, { fill: art.radial(c, fc[0], fc[1] + 40, 0, 360, [[0, 'rgba(255,79,216,0.35)'], [1, 'rgba(255,79,216,0)']]) });
+		// floor lines receding
+		for (let g = 1; g < 5; g++) {
+			const z = zn + ROOM.depth * g / 5;
+			art.line(c, [P(-0.5, 0, z), P(0.5, 0, z)], { stroke: 'rgba(255,255,255,0.06)', lineWidth: 2 });
+		}
+	}
+
+	// A person seen from behind: their shirt in their player's colour.
+	const LOOKS = [['#2b1d14', '#e8b48c'], ['#e0b25c', '#f2cfae'], ['#121014', '#c98d64'], ['#7a3b1c', '#f0c6a0'], ['#3c3c44', '#8d5a3b'], ['#a85a2a', '#ecc09a']];
+	function person(c, p, x, y, s, stride) {
+		const [hair, skin] = LOOKS[p % LOOKS.length];
+		const shirt = colour(p);
+		const u = s * ROOM.person;   // their height, in pixels
+		const swing = Math.sin(stride) * 0.32;
+		art.ellipse(c, x, y, u * 0.2, u * 0.05, { fill: 'rgba(0,0,0,0.4)' });
+		// legs: jeans, swinging
+		for (const side of [-1, 1]) {
+			const lift = Math.max(0, Math.sin(stride) * side) * u * 0.04;
+			c.save();
+			c.translate(x + side * u * 0.05, y - u * 0.47);
+			c.rotate(side * swing);
+			art.roundRect(c, -u * 0.045, 0, u * 0.09, u * 0.47 - lift, u * 0.03, { fill: '#2b3a5c' });
+			art.roundRect(c, -u * 0.05, u * 0.44 - lift, u * 0.1, u * 0.04, u * 0.02, { fill: '#eeeeee' });
+			c.restore();
+		}
+		// arms, swinging the other way
+		for (const side of [-1, 1]) {
+			c.save();
+			c.translate(x + side * u * 0.12, y - u * 0.8);
+			c.rotate(-side * swing * 0.8);
+			art.roundRect(c, -u * 0.035, 0, u * 0.07, u * 0.33, u * 0.035, { fill: shirt });
+			art.circle(c, 0, u * 0.35, u * 0.035, { fill: skin });
+			c.restore();
+		}
+		// torso, shoulders, neck, head (the back of it: hair)
+		art.roundRect(c, x - u * 0.13, y - u * 0.84, u * 0.26, u * 0.4, u * 0.07, { fill: shirt });
+		art.roundRect(c, x - u * 0.13, y - u * 0.5, u * 0.26, u * 0.06, u * 0.03, { fill: 'rgba(0,0,0,0.18)' });
+		art.rect(c, x - u * 0.03, y - u * 0.9, u * 0.06, u * 0.07, { fill: skin });
+		art.ellipse(c, x, y - u * 0.96, u * 0.075, u * 0.09, { fill: hair });
+		for (const side of [-1, 1]) art.ellipse(c, x + side * u * 0.075, y - u * 0.95, u * 0.015, u * 0.025, { fill: skin });
+	}
+
+	beatsLib.replay = function (extra) {
+		let data = [];
+		let span = SECONDS;
+		return extend({
+			id: 'replay',
+			world: false,
+			length: REPLAY.intro + REPLAY.play + REPLAY.outro,
+			enter() {
+				const n = count();
+				data = track.length >= 20 ? track : fakeTrack(n);
+				span = Math.max(1, data[data.length - 1].t - data[0].t);
+				self.stop('drama');
+				self.stop('cheer');
+				self.play('replay', 1.25);
+				self.play('wooshLong');
+			},
+			update(dt, bt) {
+				if (self.cue(REPLAY.intro + REPLAY.play)) { self.stop('replay'); self.sfx.hit(); self.sfx.sting(0.15); }
+			},
+			draw(ctx, bt) {
+				const n = count();
+				const k = between(bt, REPLAY.intro, REPLAY.intro + REPLAY.play);
+				const at = k * (data.length - 1);
+				const i0 = Math.min(data.length - 1, Math.floor(at));
+				const i1 = Math.min(data.length - 1, i0 + 1);
+				const f = at - i0;
+				const gameT = data[0].t + k * span;
+				const speed = Math.round(span / REPLAY.play);
+				const out = 1 - between(bt, REPLAY.intro + REPLAY.play + REPLAY.outro - 0.6, REPLAY.intro + REPLAY.play + REPLAY.outro);
+				// where everyone is now, between samples, and how far they've walked (for their stride)
+				const people = [];
+				for (let p = 0; p < n; p++) {
+					const a = data[i0].p[p];
+					const b = data[i1].p[p] || a;
+					if (!a) continue;
+					const q = [lerp(a[0], b[0], f), lerp(a[1], b[1], f)];
+					let walked = 0;
+					for (let i = 1; i <= i0; i++) {
+						const u = data[i].p[p];
+						const v = data[i - 1].p[p];
+						if (u && v) walked += Math.hypot(u[0] - v[0], u[1] - v[1]);
+					}
+					walked += Math.hypot(q[0] - a[0], q[1] - a[1]);
+					const spot = roomSpot(q);
+					people.push({ p, q, spot, stride: walked * 28 });
+				}
+				people.sort((x, y) => y.spot.z - x.spot.z);   // far first
+				self.onWalls(ctx, function (c) {
+					c.save();
+					c.globalAlpha *= out;
+					drawRoom(c);
+					// each player's recent path, glowing faintly on the floor
+					for (const who of people) {
+						const pts = [];
+						for (let i = Math.max(0, i0 - REPLAY.trail); i <= i0; i++) {
+							const q = data[i].p[who.p];
+							if (!q) continue;
+							const sp = roomSpot(q);
+							pts.push(roomPoint(sp.x, 0, sp.z).slice(0, 2));
+						}
+						const here = roomPoint(who.spot.x, 0, who.spot.z);
+						pts.push(here.slice(0, 2));
+						if (pts.length > 1) art.line(c, pts, { stroke: colour(who.p), lineWidth: 6, alpha: 0.45, lineCap: 'round', lineJoin: 'round' });
+					}
+					for (const who of people) {
+						const [x, y, s] = roomPoint(who.spot.x, 0, who.spot.z);
+						person(c, who.p, x, y, s, who.stride);
+					}
+					self.slam(c, 'REPLAY', W / 2, 90, 100, bt - 0.05, { fill: theme.gold });
+					// ▶▶ ×N, blinking
+					if (k < 1 && Math.floor(bt * 3) % 2 === 0) {
+						c.save();
+						c.translate(1270, 90);
+						for (const dx of [0, 44]) art.poly(c, [[dx, -26], [dx + 40, 0], [dx, 26]], { fill: 'white' });
+						c.restore();
+						self.text(c, '×' + speed, 1420, 92, 64, { glow: theme.accent });
+					}
+					self.text(c, mmss(SECONDS - gameT), 200, 92, 64, { fill: 'white' });
+					// a REC dot, for the camera at the back
+					if (Math.floor(bt * 2) % 2 === 0) art.circle(c, 200 - 150, 92, 14, { fill: '#ff3a3a' });
+					// the timeline, with the big moments marked
+					const bx0 = 260;
+					const bx1 = W - 260;
+					const by = 935;
+					art.roundRect(c, bx0, by - 9, bx1 - bx0, 18, 9, { fill: 'rgba(255,255,255,0.15)' });
+					art.roundRect(c, bx0, by - 9, Math.max(18, (bx1 - bx0) * k), 18, 9, { fill: theme.accent });
+					for (const m of marks) {
+						const mk = (m - data[0].t) / span;
+						const past = mk <= k;
+						art.poly(c, star(bx0 + (bx1 - bx0) * mk, by, past ? 26 : 18), { fill: past ? theme.gold : 'rgba(255,255,255,0.4)' });
+					}
+					c.restore();
+				});
+			},
+		}, extra);
+	};
+
+	function star(x, y, r) {
+		const pts = [];
+		for (let i = 0; i < 10; i++) {
+			const a = -Math.PI / 2 + i * Math.PI / 5;
+			const rr = i % 2 ? r * 0.45 : r;
+			pts.push([x + Math.cos(a) * rr, y + Math.sin(a) * rr]);
+		}
+		return pts;
+	}
+
+	// The end: the room fades, and the game hands back (extra.enter is the
+	// place to call IGB.complete). It holds there until the game is stopped.
+	beatsLib.end = function (extra) {
+		return extend({
+			id: 'end',
+			world: false,
+			length: Infinity,
+			enter() { self.blackout = 0.5; },
+			draw(ctx, bt) {
+				self.onWalls(ctx, function (c) {
+					self.slam(c, opts.farewell || 'WELL PLAYED!', W / 2, 500, 150, bt - 0.1, { fill: theme.gold });
+				});
+			},
+		}, extra);
+	};
+
+	/* ---------- for tests ---------- */
+
+	self.state = function () {
+		const v = camera.view();
+		return {
+			beat: self.beat, bt, seen: seen.slice(), camera: v, timeScale: self.timeScale,
+			clockShown: clock.shown, samples: track.length, marks: marks.slice(),
+			board: board ? { rank: board.rank, total: board.total } : null,
+		};
+	};
+
+	self.fini = function () {
+		if (ac && ac.state !== 'closed') ac.close().catch(() => {});
+		ac = false;
+		audio.stopAll();
+	};
+	stage.own(self.fini);
+};
+
+// The default look: deep purple night, magenta and violet lights, gold.
+Showtime.THEME = {
+	accent: '#ff4fd8',
+	accent2: '#8a3dff',
+	gold: '#ffe14d',
+	ink: '#12052a',
+	sky: ['#0a0320', '#2a0d4a'],
+	font: 'Paytone One',
+	panel: 'rgba(30,12,60,0.85)',      // the leaderboard's rows and the replay's room
+	floor: 'rgba(8,2,20,0.7)',         // under the podium
+	glow: 'rgba(255,79,216,0.35)',     // rising from the foot of the backdrop (rgba)
+};

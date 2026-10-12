@@ -1,0 +1,343 @@
+/*
+ * The launcher's own chrome: the stage frame, the menu, the controls and
+ * the gamebox simulator. Game styles never live here.
+ */
+
+:root {
+	color-scheme: dark;
+	--igb-purple: #330357;
+	--igb-pink: #FF00B7;
+}
+
+body {
+	background: black;
+	margin: 0;
+	padding: 0;
+	width: 100vw;
+	height: 100vh;
+	overflow: hidden;
+	font-family: "Rubik", sans-serif;
+	font-weight: 600;
+}
+
+/* The three walls, side by side, filling the window's width. */
+igb {
+	display: block;
+	position: fixed;
+	left: 0;
+	right: 0;
+	top: 0;
+	bottom: 0;
+	width: 100vw;
+	margin: auto;
+	overflow: hidden;
+	background: #222;
+}
+
+igb.home {
+	background: #0b0716 url(../assets/box-party/bg-cosmos.jpg) center / cover;
+}
+
+/* World units: 4800 x 1000, scaled by the launcher. */
+igb-world {
+	display: block;
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 4800px;
+	height: 1000px;
+	transform-origin: top left;
+}
+
+/* Faint lines where the walls meet, so a desk preview reads as three walls.
+   Hidden in the gamebox itself (once Vuplex is there), where the real
+   corners do the job. */
+igb-seam {
+	display: block;
+	position: absolute;
+	top: 0;
+	width: 2px;
+	height: 1000px;
+	margin-left: -1px;
+	background: rgba(255, 255, 255, 0.22);
+	pointer-events: none;
+	z-index: 900;
+}
+
+igb.vuplex igb-seam {
+	display: none;
+}
+
+/* ---------- menu (on the front wall, in world units) ---------- */
+
+/* Centred on the front wall, both ways. */
+igb-menu {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-content: center;
+	position: absolute;
+	left: 1600px;
+	top: 0;
+	width: 1600px;
+	height: 1000px;
+	box-sizing: border-box;
+	padding: 72px;
+	white-space: normal;
+}
+
+igb-folder h1,
+igb-folder {
+	text-align: center;
+}
+
+igb-folder {
+	display: inline-block;
+	vertical-align: top;
+	margin: 5px;
+	padding: 5px 5px 40px;
+	border-radius: 15px;
+	background: rgba(0, 0, 0, 0.3);
+	backdrop-filter: blur(10px);
+}
+
+igb-folder h1 {
+	margin: 10px;
+	padding: 0;
+	color: white;
+	font-size: 15px;
+	font-weight: normal;
+}
+
+igb-folder .app {
+	display: inline-block;
+	position: relative;
+	vertical-align: top;
+	width: 96px;
+	margin: 5px;
+	color: white;
+	text-align: center;
+	text-decoration: none;
+	font-size: 14px;
+}
+
+igb-icon {
+	display: block;
+	width: 96px;
+	height: 96px;
+	border-radius: 15px;
+	background: #999 center / cover;
+	color: rgba(255, 255, 255, 0.8);
+	font-size: 36px;
+	line-height: 96px;
+}
+
+igb-label {
+	display: block;
+	position: absolute;
+	left: -6px;
+	right: -6px;
+	margin-top: 8px;
+	font-weight: normal;
+	white-space: normal;
+}
+
+/* ---------- controls and log ---------- */
+
+igb-controls {
+	display: block;
+	position: absolute;
+	right: 0;
+	top: 0;
+	margin: 2vw;
+	z-index: 1000;
+}
+
+igb-controls button {
+	display: block;
+	width: 2vw;
+	height: 2vw;
+	margin-bottom: 0.5vw;
+	padding: 0;
+	border: none;
+	border-radius: 1vw;
+	background: rgba(255, 255, 255, 0.5);
+	color: white;
+	font: inherit;
+	font-size: 1.5vw;
+	line-height: 1.8vw;
+	box-shadow: 0 1px 0 black;
+	text-shadow: 0 -1px black;
+	cursor: pointer;
+}
+
+igb-log {
+	display: block;
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	margin: 2vw;
+	color: white;
+	font-family: sans-serif;
+	font-weight: normal;
+	font-size: 0.7vw;
+	pointer-events: none;
+	z-index: 1000;
+}
+
+igb-ripple {
+	position: fixed;
+	width: 2vw;
+	height: 2vw;
+	transform: translate(-50%, -50%);
+	background: radial-gradient(transparent, transparent, var(--igb-pink), transparent, transparent);
+	border-radius: 100px;
+	pointer-events: none;
+	z-index: 2000;
+}
+
+/* ---------- gamebox simulator ---------- */
+
+igb-simulator {
+	display: block;
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 90px;
+	margin: auto;
+	width: 160px;
+	height: 100px;
+	z-index: 1000;
+}
+
+gamebox-simulator {
+	display: block;
+	width: 160px;
+	height: 100px;
+	perspective: 300px;
+}
+
+gamebox-box {
+	display: block;
+	position: absolute;
+	width: 160px;
+	height: 100px;
+	transform-style: preserve-3d;
+	transform: rotateX(-5deg);
+}
+
+gamebox-side {
+	display: block;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 160px;
+	height: 100px;
+	box-sizing: border-box;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	background: radial-gradient(transparent, transparent, rgba(255, 255, 255, 0.2));
+	transform-style: preserve-3d;
+}
+
+gamebox-side:hover {
+	background: rgba(255, 255, 255, 0.2);
+}
+
+/* The side walls stand at right angles to the front one, folded in to meet
+   the edges of the floor: a little three-walled box. */
+gamebox-side[wall="0"] {
+	transform: rotateY(-90deg);
+	transform-origin: left center;
+}
+
+gamebox-side[wall="2"] {
+	transform: rotateY(90deg);
+	transform-origin: right center;
+}
+
+gamebox-side.floor {
+	top: auto;
+	bottom: 0;
+	height: 160px;
+	transform: rotateX(-90deg);
+	transform-origin: bottom center;
+}
+
+gamebox-avatar {
+	display: block;
+	position: absolute;
+	transform-style: preserve-3d;
+	pointer-events: none;
+	--c: gray;
+}
+
+gamebox-avatar:before {
+	content: "";
+	display: block;
+	position: absolute;
+	left: -10px;
+	top: -10px;
+	width: 20px;
+	height: 20px;
+	box-sizing: border-box;
+	border: 2px solid var(--c);
+	border-radius: 100%;
+}
+
+gamebox-human {
+	display: block;
+	position: absolute;
+	bottom: 0;
+	left: -10px;
+	width: 20px;
+	height: 50px;
+	box-sizing: border-box;
+	border: 1px solid var(--c);
+	border-bottom: none;
+	border-radius: 10px 10px 0 0;
+	transform-origin: center bottom;
+	transform: rotateX(90deg);
+	transform-style: preserve-3d;
+}
+
+gamebox-avatar[n="0"] { --c: red; }
+gamebox-avatar[n="1"] { --c: blue; }
+gamebox-avatar[n="2"] { --c: limegreen; }
+gamebox-avatar[n="3"] { --c: #dd00ff; }
+gamebox-avatar[n="4"] { --c: #ff6600; }
+gamebox-avatar[n="5"] { --c: #ffbb00; }
+
+gamebox-avatar.selected gamebox-human {
+	border-width: 3px;
+}
+
+gamebox-panel {
+	display: block;
+	position: absolute;
+	top: 0;
+	left: 300px;
+	color: white;
+	font-family: monospace;
+	font-weight: normal;
+	white-space: nowrap;
+	line-height: 1.6;
+}
+
+gamebox-panel button {
+	display: block;
+	padding: 0;
+	border: none;
+	background: none;
+	color: white;
+	font: inherit;
+	cursor: pointer;
+}
+
+gamebox-panel button:before {
+	content: "> ";
+}
+
+gamebox-hint {
+	display: block;
+	opacity: 0.5;
+}

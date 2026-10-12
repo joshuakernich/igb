@@ -1,0 +1,41 @@
+/*
+ * DOM versions of the meep (shared/meep.js). The canvas Meep needs no CSS.
+ */
+
+/* Just the head: 100 x 150, placed by whoever uses it. */
+meep-head {
+	display: block;
+	position: absolute;
+	left: -50px;
+	top: 0;
+	width: 100px;
+	height: 150px;
+	border-radius: 50px;
+	background: white;
+	box-shadow: 0 10px 10px rgba(0, 0, 0, 0.2);
+	transform-origin: bottom center;
+}
+
+meep-head canvas {
+	display: block;
+	width: 100%;
+	height: 100%;
+	border-radius: inherit;
+}
+
+/* A whole meep: a point at its feet; the drawing hangs above it. */
+meep-view {
+	display: block;
+	position: absolute;
+	width: 0;
+	height: 0;
+}
+
+meep-view canvas {
+	pointer-events: none;
+}
+
+/* Hands overlap neighbouring DOM, like the CSS meep's z-index: 1 hands. */
+meep-view canvas.hands {
+	z-index: 1;
+}

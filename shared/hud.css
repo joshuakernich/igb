@@ -1,0 +1,429 @@
+/*
+ * HUD (shared/hud.js). Sizes are world pixels. --hud-colour is the theme
+ * colour passed to new HUD(colour).
+ */
+
+hud-root {
+	display: block;
+	position: absolute;
+	inset: 0;
+	z-index: 100;
+	text-align: center;
+	pointer-events: none;
+	font-family: "Rubik", sans-serif;
+	--hud-gray: #333;
+}
+
+hud-layer {
+	display: block;
+	position: absolute;
+	inset: 0;
+}
+
+hud-root button {
+	font: inherit;
+	font-size: 100px;
+	background: rgba(255, 255, 255, 0.2);
+	border: none;
+	padding: 20px 50px 40px;
+	margin: 0 10px;
+	color: white;
+	border-radius: 30px;
+	box-shadow: 0 5px rgba(0, 0, 0, 0.4);
+	text-shadow: 0 -3px black;
+	pointer-events: auto;
+	cursor: pointer;
+}
+
+/* ---------- banner ---------- */
+
+hud-banner {
+	display: block;
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 110%;
+	padding: 40px 0 50px;
+	background: var(--hud-colour);
+	box-shadow: 0 2px 20px black;
+	color: white;
+	font-size: 80px;
+	line-height: 80px;
+	text-shadow: 0 -3px black;
+}
+
+hud-banner.transparent {
+	background: transparent;
+	box-shadow: none;
+}
+
+hud-banner p {
+	margin: 0;
+	padding: 0;
+	color: var(--hud-gray);
+	font-family: "Knewave", system-ui;
+	font-weight: 200;
+	text-shadow: 0 2px white;
+}
+
+hud-spacer {
+	display: block;
+	height: 40px;
+}
+
+/* ---------- streams along the top ---------- */
+
+hud-topline {
+	display: inline-block;
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	margin: auto;
+	text-align: center;
+	white-space: nowrap;
+}
+
+hud-stream {
+	display: inline-block;
+	position: relative;
+	vertical-align: top;
+	height: 80px;
+	margin: 0 30px;
+	padding: 0;
+	white-space: nowrap;
+	background: var(--hud-colour);
+	box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+hud-stream.large {
+	height: 100px;
+	background: white;
+}
+
+hud-stream svg.end {
+	position: absolute;
+	top: 0;
+}
+
+hud-stream svg.left { left: -20px; }
+hud-stream svg.right { right: -20px; }
+hud-stream:not(.large) svg.left { transform: scaleY(-1); }
+hud-stream:not(.large) svg.right { transform: scale(-1); }
+hud-stream svg .fill { fill: var(--hud-colour); }
+
+hud-timer {
+	display: inline-block;
+	vertical-align: top;
+	min-width: 150px;
+	padding: 0 20px;
+	box-sizing: border-box;
+	color: var(--hud-gray);
+	font-size: 80px;
+	line-height: 88px;
+}
+
+hud-player {
+	display: inline-block;
+	position: relative;
+	vertical-align: top;
+	width: 190px;
+	height: 80px;
+	box-sizing: border-box;
+	overflow: hidden;
+	color: white;
+	font-weight: 600;
+}
+
+hud-player meep-head {
+	position: absolute;
+	top: 20px;
+	left: 30px;
+	transform: scale(0.6);
+	transform-origin: top left;
+}
+
+hud-score {
+	display: inline-block;
+	position: absolute;
+	left: 115px;
+	top: 0;
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+	color: white;
+	text-align: left;
+	font-size: 36px;
+	line-height: 80px;
+	font-weight: 600;
+}
+
+hud-player[type='before'] hud-score { padding-left: 50px; }
+hud-player[type='before'] meep-head { left: -10px; }
+hud-player[type='after'] hud-score { padding-right: 50px; }
+hud-player[type='after'] meep-head { right: -10px; }
+
+/* ---------- big text ---------- */
+
+hud-text {
+	display: block;
+	color: white;
+	font-family: "Knewave", system-ui;
+	font-weight: 400;
+	font-size: 200px;
+	-webkit-text-stroke: 5px var(--hud-gray);
+	text-shadow: 0 10px var(--hud-gray);
+}
+
+hud-text.flash {
+	text-shadow:
+		5px 5px 0 var(--hud-gray),
+		5px -5px 0 var(--hud-gray),
+		-5px -5px 0 var(--hud-gray),
+		-5px 5px 0 var(--hud-gray),
+		0 var(--drop, 10px) 0 var(--hud-gray);
+}
+
+hud-pips {
+	display: block;
+	position: relative;
+	top: 100px;
+}
+
+hud-pip {
+	display: inline-block;
+	width: 40px;
+	height: 40px;
+	margin: 0 10px;
+	background: white;
+	border: 5px solid var(--hud-gray);
+	border-radius: 100%;
+	box-shadow: 0 10px var(--hud-gray);
+	transform: scale(0.5);
+}
+
+hud-pip[highlight='true'] {
+	transform: scale(1);
+}
+
+/* ---------- step forward / step back / swap ---------- */
+
+hud-summon {
+	display: inline-block;
+	margin: 0 40px;
+	line-height: 80px;
+	text-align: center;
+}
+
+hud-summon meep-head {
+	position: relative;
+	left: auto;
+	display: inline-block;
+	vertical-align: -38px;
+	margin: 0 20px;
+}
+
+hud-summon.out meep-head {
+	margin: 0 -5px;
+	transform: scale(0.6);
+}
+
+hud-summon h2 {
+	display: block;
+	margin: 20px 0 0;
+	padding: 0;
+	color: white;
+	font-family: "Knewave", system-ui;
+	font-weight: 100;
+	font-size: 50px;
+	line-height: 50px;
+	transform: rotate(-3deg);
+}
+
+hud-swap {
+	display: inline-block;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	line-height: 80px;
+}
+
+hud-swap meep-head {
+	position: absolute;
+	left: auto;
+	display: inline-block;
+	transform: translate(-50%, -50%);
+}
+
+hud-swap h1 {
+	position: absolute;
+	left: -100px;
+	right: -100px;
+	top: 50px;
+	color: white;
+	font-size: 50px;
+	text-shadow:
+		5px 5px 0 var(--hud-gray),
+		5px -5px 0 var(--hud-gray),
+		-5px -5px 0 var(--hud-gray),
+		-5px 5px 0 var(--hud-gray),
+		0 10px 0 var(--hud-gray);
+}
+
+/* ---------- tutorials ---------- */
+
+hud-tutorial {
+	display: block;
+	position: absolute;
+	inset: 0;
+	color: white;
+	font-weight: normal;
+}
+
+hud-tutorial .title {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 12%;
+}
+
+/* A sticky note. */
+hud-note {
+	display: block;
+	position: absolute;
+	width: 300px;
+	height: 300px;
+	padding: 20px;
+	box-sizing: border-box;
+	background: rgba(253, 240, 140, 0.95);
+	box-shadow: 5px 25px rgba(0, 0, 0, 0.3);
+	color: var(--hud-gray);
+	font-size: 30px;
+	font-weight: 400;
+	text-align: center;
+	white-space: normal;
+	transform: translate(-50%, -50%) rotate(3deg);
+	opacity: 0.8;
+}
+
+hud-note img {
+	width: 260px;
+	margin-top: 20px;
+	filter: invert(1);
+}
+
+/* ---------- debug buttons (Box Party) ---------- */
+
+hud-debug {
+	display: inline-block;
+	position: absolute;
+	top: 350px;
+	right: 80px;
+}
+
+hud-debug button {
+	display: block;
+	font-size: 30px;
+	padding: 30px 30px 35px;
+	margin-bottom: 20px;
+}
+
+/* ---------- final scores ---------- */
+
+hud-final-bg {
+	display: block;
+	position: absolute;
+	inset: 0;
+	background: url(../assets/shared/bg-rainbow.png);
+	background-size: 100%;
+}
+
+/* font-size 0: the podiums stand on the very bottom edge, as in the old
+   quirks-mode page, with no line descent beneath them. */
+hud-podiums {
+	display: block;
+	font-size: 0;
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	text-align: center;
+}
+
+hud-podium {
+	display: inline-block;
+	position: relative;
+	width: 200px;
+	height: 500px;
+	background: linear-gradient(to top right, white, white, #ddd);
+	border-top: 40px solid #ccc;
+}
+
+hud-rank {
+	display: block;
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	color: #bbb;
+	font-size: 50px;
+	line-height: 100px;
+}
+
+hud-rank.ranked {
+	color: #9A62E7;
+}
+
+hud-reward {
+	display: block;
+	position: absolute;
+	top: 10px;
+	left: 10px;
+	right: 10px;
+	padding: 10px 20px 20px 0;
+	box-sizing: border-box;
+	background: #9B62E8;
+	border: 5px solid white;
+	border-radius: 10px;
+	color: white;
+	font-size: 50px;
+	line-height: 60px;
+	text-align: center;
+}
+
+/* A purple coin. */
+hud-coin {
+	display: inline-block;
+	position: absolute;
+	right: -20px;
+	top: -20px;
+	z-index: 1;
+	width: 50px;
+	height: 50px;
+	background: #9B62E8;
+	border-radius: 100%;
+	border-bottom: 5px solid rgba(255, 255, 255, 0.6);
+	box-shadow: 0 2px 10px black;
+}
+
+hud-coin:before {
+	content: "";
+	display: block;
+	position: absolute;
+	inset: 8px;
+	top: 6px;
+	bottom: 10px;
+	box-sizing: border-box;
+	border: 2px solid black;
+	border-radius: 100%;
+}
+
+hud-coin:after {
+	content: "";
+	display: block;
+	position: absolute;
+	inset: 8px;
+	box-sizing: border-box;
+	border: 2px solid #D8C0F7;
+	border-radius: 100%;
+}

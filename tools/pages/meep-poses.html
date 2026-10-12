@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<!-- Every meep pose and height side by side; used to check the canvas meep. -->
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@300..900&display=swap">
+<base href="../../">
+<script src="lib/jquery.min.js"></script>
+<script src="core/igb.js"></script>
+<script src="core/art.js"></script>
+<script src="shared/util.js"></script>
+<script src="shared/audio.js"></script>
+<script>IGB.setScale(1);</script>
+<script src="shared/meep.js"></script>
+<style>body{margin:0;background:#4a8} canvas{display:block}</style>
+</head><body><canvas id=c width=1600 height=600 style="width:1600px;height:600px"></canvas>
+<script>
+const ctx = document.getElementById('c').getContext('2d');
+const cases = [m => {}, m => m.setHeight(250), m => m.setHeight(500), m => m.setHeight(700), m => m.toRagdoll(), m => m.toSkydiver(), m => m.toFlyer()];
+const meeps = cases.map((fn, i) => { const m = new Meep(i % 6); m.x = 120 + i * 210; m.y = 520; fn(m); return m; });
+function draw() { ctx.clearRect(0, 0, 1600, 600); for (const m of meeps) m.draw(ctx); requestAnimationFrame(draw); }
+draw();
+</script></body></html>

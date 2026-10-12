@@ -1,0 +1,128 @@
+/*
+ * Box Party (games/box-party.js): the CSS 3D world, which stays DOM, and
+ * the layers around it. The boxes themselves are styled by shared/cube.css.
+ */
+
+/* The running minigame's stage. The old minigame's root was position:
+   fixed, a stacking context of its own, so its HUD stayed under ours. */
+igb-stage[game="box-party"] box-party-minigame {
+	display: block;
+	position: absolute;
+	inset: 0;
+	isolation: isolate;
+}
+
+/* The HUD and the tally. The old ones lived in boxpartygame, whose
+   transform kept the HUD's z-index under the white flash and name entry. */
+igb-stage[game="box-party"] box-party-front {
+	display: block;
+	position: absolute;
+	inset: 0;
+	isolation: isolate;
+}
+
+/* The white flash as a box swallows the room. */
+igb-stage[game="box-party"] box-party-overlay {
+	display: block;
+	position: absolute;
+	inset: 0;
+	background: white;
+	opacity: 0;
+	pointer-events: none;
+}
+
+/* ---------- the scene ---------- */
+
+igb-stage[game="box-party"] party-scene {
+	display: block;
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 4800px;
+	height: 1000px;
+	transform-origin: top left;
+	perspective: 1600px;
+	background: url(../assets/box-party/bg-cosmos.jpg);
+	background-size: 100%;
+	background-position: center;
+	pointer-events: none;
+}
+
+igb-stage[game="box-party"] party-scene::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	box-sizing: border-box;
+	background: linear-gradient(to bottom, black, transparent, blue, blue);
+}
+
+igb-stage[game="box-party"] party-mountains {
+	display: block;
+	position: absolute;
+	inset: 0;
+	box-sizing: border-box;
+	background: url(../assets/box-party/bg-mountains.png);
+	background-size: 100%;
+	background-position: center;
+}
+
+/* The ground, laid flat. */
+igb-stage[game="box-party"] party-world {
+	display: block;
+	position: absolute;
+	left: 50%;
+	bottom: 0;
+	width: 1600px;
+	transform-origin: bottom center;
+	transform: rotateX(90deg);
+	transform-style: preserve-3d;
+}
+
+/* Everything on the ground: the track, the boxes, the meeps, the pops.
+   Its left and bottom slide to travel along the road. */
+igb-stage[game="box-party"] party-plane {
+	display: block;
+	position: absolute;
+	left: 0;
+	bottom: 0;
+	width: 0;
+	transform-style: preserve-3d;
+}
+
+igb-stage[game="box-party"] party-plane svg {
+	position: absolute;
+	bottom: 0;
+	transform-origin: bottom center;
+	opacity: 0.2;
+}
+
+/* The boxes' faces, with the skin's colour as the border colour. */
+igb-stage[game="box-party"] party-scene cube-surface {
+	border: 10px solid #ffdd00;
+	box-sizing: border-box;
+}
+
+/* ---------- a box popping ---------- */
+
+igb-stage[game="box-party"] party-pop {
+	display: block;
+	position: absolute;
+}
+
+igb-stage[game="box-party"] party-pop-ball {
+	display: block;
+	position: absolute;
+	width: 200px;
+	height: 200px;
+	transform: translate(-50%, -50%);
+	background: white;
+	border-radius: 100%;
+}
+
+igb-stage[game="box-party"] party-smoke {
+	display: block;
+	position: absolute;
+	background: white;
+	border-radius: 100%;
+	transform: translate(-50%, -50%);
+}

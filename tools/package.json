@@ -1,0 +1,12 @@
+{
+  "name": "igb-proto-tools",
+  "private": true,
+  "type": "module",
+  "description": "Headless checks for the IGB prototype platform",
+  "scripts": {
+    "smoke": "node smoke.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "^1.64.0"
+  }
+}
