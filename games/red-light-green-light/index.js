@@ -1058,10 +1058,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		ctx.restore();
 
 		for (const p of pops) {
-			art.text(ctx, p.text, p.x, p.y - p.age * 120, {
-				size: 64, font: 'Paytone One', weight: 400, fill: p.colour, alpha: Math.min(1, 2 * (1.4 - p.age)),
-				drop: INK, dropY: 6,
-			});
+			show.text(ctx, p.text, p.x, p.y - p.age * 120, 56, { fill: p.colour, alpha: Math.min(1, 2 * (1.4 - p.age)) });
 		}
 	}
 
@@ -1078,10 +1075,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const pop = Math.min(1, callout.age / 0.15);
 			for (let w = 0; w < 3; w++) {
 				art.with(ctx, { x: w * W + W / 2, y: w === 1 ? 380 : 330, scale: (0.7 + 0.3 * pop) * (w === 1 ? 1 : 0.8), alpha: Math.max(0, a) }, function (c) {
-					art.text(c, callout.text.toUpperCase(), 0, 0, {
-						size: 120, font: 'Paytone One', weight: 400, fill: callout.colour,
-						drop: INK, dropY: 10,
-					});
+					show.text(c, callout.text.toUpperCase(), 0, 0, 110, { fill: callout.colour });
 				});
 			}
 		}
@@ -1340,7 +1334,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			art.with(ctx, { x: p.x + dir * (20 + nudge) * s, y: top - 22 * s, scale: s }, function (cx) {
 				art.with(cx, { y: 4, scaleX: dir }, (c2) => art.poly(c2, swapArrow(), { fill: 'rgba(0,0,0,0.35)' }));
 				art.with(cx, { scaleX: dir }, (c2) => art.poly(c2, swapArrow(), { fill: colour }));
-				art.text(cx, WALL_NAMES[c.swapTo], -dir * 20, -46, { size: 26, font: 'Paytone One', weight: 400, fill: 'white', drop: INK, dropY: 3 });
+				show.text(cx, WALL_NAMES[c.swapTo], -dir * 20, -46, 28, {});
 			});
 		} else {
 			art.poly(ctx, [[p.x - 14 * s, top - 14 * s], [p.x + 14 * s, top - 14 * s], [p.x, top + 4 * s]], { fill: colour, alpha });
@@ -1665,7 +1659,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			});
 		});
 		art.roundRect(ctx, x - 92, y + r - 6, 184, 40, 20, { fill: colour });
-		art.text(ctx, label, x, y + r + 14, { size: 22, font: 'Paytone One', weight: 400, fill: 'white' });
+		show.text(ctx, label, x, y + r + 14, 28, {});
 	}
 
 	/* ---------- the controls intro ---------- */

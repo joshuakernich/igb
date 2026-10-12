@@ -928,16 +928,13 @@ IGB.register('mingle', function MingleGame(stage, playersMeta) {
 				const left = Math.max(0, OFF_LIMIT - c.off);
 				art.with(ctx, { x: at.x, y: at.y }, function (g) {
 					art.roundRect(g, -150, -46, 300, 92, 46, { fill: '#ff3a5c', stroke: 'white', lineWidth: 6 });
-					art.text(g, round > 0 ? `GET ON! ${left.toFixed(1)}` : 'GET ON!', 0, 0, { size: 42, font: 'Paytone One', weight: 400, fill: 'white' });
+					show.text(g, round > 0 ? `GET ON! ${left.toFixed(1)}` : 'GET ON!', 0, 0, 40, {});
 				});
 			}
 		}
 
 		for (const p of pops) {
-			art.text(ctx, p.text, p.x, p.y - p.age * 120, {
-				size: 64, font: 'Paytone One', weight: 400, fill: p.colour, alpha: Math.min(1, 2 * (1.4 - p.age)),
-				outline: '#1a1a1a', outlineWidth: 7,
-			});
+			show.text(ctx, p.text, p.x, p.y - p.age * 120, 56, { fill: p.colour, alpha: Math.min(1, 2 * (1.4 - p.age)) });
 		}
 	}
 
@@ -1059,7 +1056,7 @@ IGB.register('mingle', function MingleGame(stage, playersMeta) {
 			art.roundRect(g, -88, -44, 176, 88, 44, { fill, stroke: 'white', lineWidth: 5 });
 			art.text(g, label, 0, 2, { size: 50, font: 'Paytone One', weight: 400, fill: 'white' });
 			if (!mod.locked && n === number && phase === 'rush') {
-				art.text(g, 'TAP TO LOCK', 0, 78, { size: 30, font: 'Paytone One', weight: 400, fill: 'white', outline: '#1a1a1a', outlineWidth: 5, alpha: 0.6 + 0.4 * Math.sin(clock * 8) });
+				show.text(g, 'TAP TO LOCK', 0, 78, 28, { alpha: 0.6 + 0.4 * Math.sin(clock * 8) });
 			}
 		});
 	}

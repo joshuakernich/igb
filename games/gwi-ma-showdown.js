@@ -959,7 +959,7 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 
 		for (const p of pops) {
 			const at = project(p.x, p.y, 80);
-			art.text(ctx, p.text, at.x, at.y - p.age * 60, { size: 40, font: FONT, weight: 400, fill: p.colour, alpha: 1 - p.age, outline: '#100822', outlineWidth: 4 });
+			show.text(ctx, p.text, at.x, at.y - p.age * 60, 40, { fill: p.colour, alpha: 1 - p.age });
 		}
 	}
 
@@ -1303,13 +1303,13 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 			ctx.globalAlpha *= 0.3;
 			drawFigure(ctx, h.n, h.x, feet.y, s, {});
 			ctx.restore();
-			art.text(ctx, 'KO', h.x, feet.y - 150 * s, { size: 40, font: FONT, weight: 400, fill: '#ff5470', outline: '#100822', outlineWidth: 5, alpha: 0.8 });
+			show.text(ctx, 'KO', h.x, feet.y - 150 * s, 40, { fill: '#ff5470', alpha: 0.8 });
 			return;
 		}
 		const bar = project(h.x, h.y, 30);
 		art.roundRect(ctx, h.x - PADDLE_W / 2, bar.y - 5, PADDLE_W, 10, 5, { fill: 'rgba(255,255,255,0.14)', stroke: c, lineWidth: 2, alpha: 0.5 + 0.5 * h.swish });
 		drawFigure(ctx, h.n, h.x, feet.y, s, { swish: h.swish, side: h.side });
-		art.text(ctx, String(h.score), h.x, feet.y - 140 * s, { size: 34, font: FONT, weight: 400, fill: c, outline: '#100822', outlineWidth: 5 });
+		show.text(ctx, String(h.score), h.x, feet.y - 140 * s, 40, { fill: c });
 	}
 
 	/* ---------- the controls intro ---------- */

@@ -127,6 +127,7 @@ window.Showtime = function (stage, opts) {
 		moving: 0.08,          // speed (raw units a second, averaged) that says a visor is in play
 		wiggle: 0.2,           // and that says it's wiggling
 		hold: 0.6,             // seconds of wiggling in the zone to tick a visor off
+		pulse: 0.9,            // the rings that pulse from a visor as it's ticked off
 		clear: 1.0,            // everyone ticked and no wrong visors for this long: all set
 		allSet: 1.8,           // "ALL SET!" holds this long, then on
 		length: 45,            // and on regardless after this long
@@ -261,6 +262,7 @@ window.Showtime = function (stage, opts) {
 	const colour = (n) => PLAYER_COLORS[n] || 'white';
 	// A player colour lifted toward white, so text in it reads on the dark (pure blue doesn't).
 	const mixer = document.createElement('canvas').getContext('2d');
+	const playerLits = new Set();   // (the text keeps these colours as they are)
 	const lit = function (n, k = 0.45) {
 		mixer.fillStyle = '#000';
 		mixer.fillStyle = colour(n);
@@ -268,7 +270,9 @@ window.Showtime = function (stage, opts) {
 		if (hex[0] !== '#') return colour(n);
 		const v = parseInt(hex.slice(1), 16);
 		const up = (c) => Math.round(c + (255 - c) * k);
-		return `rgb(${up(v >> 16)},${up((v >> 8) & 255)},${up(v & 255)})`;
+		const out = `rgb(${up(v >> 16)},${up((v >> 8) & 255)},${up(v & 255)})`;
+		playerLits.add(out);
+		return out;
 	};
 	self.lit = lit;
 	self.nameOf = (n) => NAMES[n] || 'P' + (n + 1);
@@ -517,21 +521,61 @@ window.Showtime = function (stage, opts) {
 		});
 	};
 
-	// The show's caption type: chunky, outlined, with a drop and a glow, to
-	// read across a dark room.
-	// It shrinks to fit inside a wall (or style.fit units across).
-	self.text = function (ctx, str, x, y, size, style = {}) {
-		const fit = style.fit || W - 140;
+	// The show's type: one style for every word on the walls, in a fixed set
+	// of sizes and colours (Showtime.TYPE). Whatever size is asked for snaps
+	// to the nearest step of the scale, and steps down the scale (rather than
+	// shrinking freely) to fit inside a wall, or style.fit units across. Any
+	// colour snaps to the nearest of the palette; players' colours stay
+	// theirs. The outline and drop are the same everywhere (none on dark ink).
+	const TYPE = Showtime.TYPE;
+	const snapSize = (size) => TYPE.sizes.reduce((best, s) => (Math.abs(Math.log(s / size)) < Math.abs(Math.log(best / size)) ? s : best), TYPE.sizes[0]);
+	const measure = function (ctx, str, size) {
 		ctx.save();
-		ctx.font = `400 ${size}px "${FONT}", sans-serif`;
+		ctx.font = `400 ${size}px "${TYPE.font}", sans-serif`;
 		const wide = ctx.measureText(String(str)).width;
 		ctx.restore();
-		if (wide > fit) size *= fit / wide;
-		art.text(ctx, str, x, y, Object.assign({
-			size, font: FONT, weight: 400, fill: 'white',
-			outline: theme.ink, outlineWidth: Math.max(4, size * 0.07),
-			drop: 'rgba(0,0,0,0.55)', dropY: size * 0.09,
-		}, style, { shadow: null }));   // no glows on the text (style.glow is ignored)
+		return wide;
+	};
+	// the largest standard size, no bigger than `size`, at which str fits in `fit`
+	self.fitSize = function (ctx, str, size, fit = W - 140) {
+		const sizes = TYPE.sizes.filter((s) => s <= snapSize(size)).reverse();
+		for (const s of sizes) if (measure(ctx, str, s) <= fit) return s;
+		return TYPE.sizes[0];
+	};
+	self.size = snapSize;
+	const rgbOf = function (colour) {
+		mixer.fillStyle = '#000';
+		mixer.fillStyle = colour;
+		const v = mixer.fillStyle;
+		if (v[0] === '#') { const n = parseInt(v.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
+		const m = /rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)/.exec(v);
+		return m ? [+m[1], +m[2], +m[3]] : [255, 255, 255];
+	};
+	const textColour = function (fill) {
+		if (typeof fill !== 'string') return fill;
+		if (playerLits.has(fill)) return fill;
+		const p = PLAYER_COLORS.indexOf(fill);
+		if (p >= 0) return lit(p);
+		const [r, g, b] = rgbOf(fill);
+		let best = TYPE.colours.white;
+		let bestD = Infinity;
+		for (const c of Object.values(TYPE.colours)) {
+			const [r2, g2, b2] = rgbOf(c);
+			const d = (r - r2) ** 2 + (g - g2) ** 2 + (b - b2) ** 2;
+			if (d < bestD) { bestD = d; best = c; }
+		}
+		return best;
+	};
+	self.text = function (ctx, str, x, y, size, style = {}) {
+		size = self.fitSize(ctx, str, size, style.fit || W - 140);
+		const fill = textColour(style.fill || TYPE.colours.white);
+		const dark = fill === TYPE.colours.ink;
+		art.text(ctx, str, x, y, {
+			size, font: TYPE.font, weight: 400, fill,
+			outline: dark ? null : TYPE.colours.ink, outlineWidth: dark ? 0 : Math.max(4, size * 0.07),
+			drop: dark ? 'transparent' : 'rgba(0,0,0,0.55)', dropY: size * 0.09,
+			alpha: style.alpha, align: style.align,
+		});
 	};
 
 	// A title crashing in: big and see-through, slamming down to size with a
@@ -750,10 +794,10 @@ window.Showtime = function (stage, opts) {
 		if (intro && !$skip) {
 			$skip = $('<button skip>').text('SKIP ▶▶').css({
 				position: 'absolute', left: (2 * W - 330) + 'px', top: '880px', zIndex: 5,
-				padding: '14px 34px', borderRadius: '40px', border: `5px solid ${theme.gold}`,
+				padding: '16px 36px', borderRadius: '40px', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
 				background: 'rgba(12,4,30,0.72)', color: 'white', cursor: 'pointer', pointerEvents: 'auto',
-				fontFamily: `"${FONT}", sans-serif`, fontSize: '44px', letterSpacing: '2px',
-				boxShadow: `0 0 24px ${theme.accent}`, opacity: 0, transition: 'opacity 0.4s',
+				fontFamily: `"${TYPE.font}", sans-serif`, fontSize: '40px', letterSpacing: '2px',
+				opacity: 0, transition: 'opacity 0.4s',
 			}).appendTo(stage.$ui).on('click', function (e) {
 				e.stopPropagation();
 				self.sfx.hit();
@@ -787,11 +831,9 @@ window.Showtime = function (stage, opts) {
 		const $row = $('<div>').css({ display: 'flex', gap: '44px' }).appendTo($pick);
 		for (let n = 2; n <= 6; n++) {
 			$('<button>').attr('count', n).text(n).css({
-				width: '190px', height: '190px', borderRadius: '50%', border: `10px solid ${theme.gold}`,
-				background: `radial-gradient(circle at 40% 30%, ${theme.accent}, ${theme.accent2})`,
-				color: 'white', fontFamily: font, fontSize: '110px', lineHeight: '1', cursor: 'pointer', padding: 0,
-				boxShadow: `0 14px 0 rgba(0,0,0,0.45), 0 0 50px ${theme.accent}`,
-				textShadow: `0 6px 0 ${theme.ink}`,
+				width: '190px', height: '190px', borderRadius: '50%', border: 'none',
+				background: TYPE.colours.gold, display: 'flex', alignItems: 'center', justifyContent: 'center',
+				color: TYPE.colours.ink, fontFamily: font, fontSize: '110px', lineHeight: '1', cursor: 'pointer', padding: 0,
 				transform: 'scale(0)', transition: `transform 0.4s cubic-bezier(.2,1.6,.4,1) ${0.25 + (n - 2) * 0.08}s`,
 			}).appendTo($row)
 				.on('mouseenter', function () { $(this).css({ transform: 'scale(1.12)', transitionDelay: '0s' }); })
@@ -874,7 +916,10 @@ window.Showtime = function (stage, opts) {
 		ctx.translate(x, y);
 		ctx.scale(pulse, pulse);
 		art.roundRect(ctx, -w / 2, -size * 0.66 - up, w, size * 1.32 + up, size * 0.66, { fill: 'rgba(12,4,30,0.78)', stroke: urgent ? '#ff3d6a' : theme.accent, lineWidth: size * 0.07 });
-		self.text(ctx, mmss(left), 0, size * 0.04, size, { fill: urgent ? '#ff5470' : 'white', glow: urgent ? '#ff3d6a' : theme.accent });
+		// its digits at a step of the scale, sized with the pill by scaling
+		const ref = self.size(CLOCK.size);
+		ctx.scale(size / ref, size / ref);
+		self.text(ctx, mmss(left), 0, ref * 0.04, ref, { fill: urgent ? TYPE.colours.red : TYPE.colours.white });
 		ctx.restore();
 	}
 
@@ -882,11 +927,15 @@ window.Showtime = function (stage, opts) {
 		const left = clock.left;
 		self.onWalls(ctx, function (c) {
 			clockPill(c, W / 2, CLOCK.y, CLOCK.size, left, 1, CLOCK.y + 20);   // hung from the top edge
-			if (clock.label) self.text(c, clock.label, W / 2, CLOCK.y + 70, 30, { fill: theme.gold, outlineWidth: 4, glow: 'transparent' });
 			// the last ten seconds loom, huge and faint, over every wall
 			if (left > 0 && left <= CLOCK.final) {
 				const k = 1 - (left % 1 || 1);
-				self.text(c, String(Math.ceil(left)), W / 2, 520, 420 * (1 + 0.25 * (1 - k)), { fill: '#ff5470', alpha: 0.45 * (1 - k * 0.7), glow: '#ff3d6a' });
+				// (the display size, blown up and pulsing: a backdrop more than text)
+				c.save();
+				c.translate(W / 2, 520);
+				c.scale(1.9 * (1 + 0.25 * (1 - k)), 1.9 * (1 + 0.25 * (1 - k)));
+				self.text(c, String(Math.ceil(left)), 0, 0, 220, { fill: TYPE.colours.red, alpha: 0.45 * (1 - k * 0.7) });
+				c.restore();
 			}
 		});
 	}
@@ -1000,14 +1049,14 @@ window.Showtime = function (stage, opts) {
 				const n = lines.length;
 				self.onWalls(ctx, function (c) {
 					lines.forEach(function (line, li) {
-						const size = T.size * (n > 1 ? 0.85 : 1);
+						const size = self.fitSize(c, line.text, T.size * (n > 1 ? 0.85 : 1), W - 140);   // a step of the scale that fits
 						const y = 470 + (li - (n - 1) / 2) * size * 1.05 - (tagline ? 50 : 0);
 						c.save();
-						c.font = `400 ${size}px "${FONT}", sans-serif`;
+						c.font = `400 ${size}px "${TYPE.font}", sans-serif`;
 						const chars = [...line.text];
 						const widths = chars.map((ch) => c.measureText(ch).width);
 						const total = widths.reduce((a, b) => a + b, 0);
-						const k = Math.min(1, (W - 140) / total);   // shrink to fit the wall
+						const k = 1;
 						c.restore();
 						let x = W / 2 - total * k / 2;
 						chars.forEach(function (ch, i) {
@@ -1045,14 +1094,6 @@ window.Showtime = function (stage, opts) {
 		const unit = minutes ? (Math.round(SECONDS / 60) === 1 ? 'MINUTE' : 'MINUTES') : 'SECONDS';
 		// all three lines in one style (only their sizes differ)
 		const look = (extra) => Object.assign({ fill: 'white', glow: theme.accent }, extra);
-		// the clock's size, set by 10:00 (its widest) so it keeps its size as it counts
-		const timeSize = function (c, size) {
-			c.save();
-			c.font = `400 ${size}px "${FONT}", sans-serif`;
-			const wide = c.measureText(mmss(SECONDS)).width;
-			c.restore();
-			return Math.min(size, size * C.radius * 1.5 / wide);
-		};
 		return extend({
 			id: 'clock',
 			length: C.length,
@@ -1116,7 +1157,10 @@ window.Showtime = function (stage, opts) {
 						c.scale(s, s);
 						c.globalAlpha = clamp(age / 0.15, 0, 1);
 						if (fly > 0) clockPill(c, 0, 0, size, clock.left, fly, fly * (cy + 20) / s);   // already counting, reaching up to the top edge as it lands
-						const ts = timeSize(c, size);
+						// the clock's size is a step of the scale that fits 10:00 (its widest), so it
+						// keeps its size as it counts; it shrinks as it flies by scaling, not resizing
+						const ts = self.fitSize(c, mmss(SECONDS), C.size, C.radius * 1.5);
+						c.scale(size / C.size, size / C.size);
 						self.text(c, mmss(clock.left), 0, ts * 0.04, ts, look({ alpha: 1 - fly, fit: 99999 }));
 						c.restore();
 					}
@@ -1172,7 +1216,6 @@ window.Showtime = function (stage, opts) {
 						if (held[i] >= V.hold) {
 							ticked[i] = bt;
 							self.play('correct');
-							self.burst(W + W / 2, V.y, colour(i));
 						}
 					}
 				});
@@ -1207,15 +1250,15 @@ window.Showtime = function (stage, opts) {
 						{ text: 'STAND IN THE CENTRE', now: asking },
 						{ text: 'WIGGLE ABOUT', now: asking },
 					];
-					const SIZE = 58;
 					const GAP = '  >  ';
+					const SIZE = self.fitSize(c, steps.map((s) => s.text).join(GAP), 56, W - 120);   // a step of the scale that fits
 					c.save();
-					c.font = `400 ${SIZE}px "${FONT}", sans-serif`;
+					c.font = `400 ${SIZE}px "${TYPE.font}", sans-serif`;
 					const widths = steps.map((s) => c.measureText(s.text).width);
 					const gap = c.measureText(GAP).width;
 					c.restore();
 					const total = widths.reduce((a, b) => a + b, 0) + gap * (steps.length - 1);
-					const k = Math.min(1, (W - 120) / total);   // shrink to fit the wall
+					const k = 1;
 					let x = cx - total * k / 2;
 					steps.forEach(function (s, i) {
 						const alpha = clamp((bt - i * 0.25) * 3, 0, 1);
@@ -1284,6 +1327,21 @@ window.Showtime = function (stage, opts) {
 				}
 				c.restore();
 				self.text(c, self.nameOf(i), x, y + 108, 42, { fill: wrong ? '#ff5470' : lit(i), alpha: Math.min(1, appear * 4) });
+				// locked in: rings pulse out from the visor itself, in its colour
+				if (done && bt - ticked[i] < V.pulse) {
+					for (const lag of [0, 0.18]) {
+						const k = clamp((bt - ticked[i] - lag) / (V.pulse - 0.18), 0, 1);
+						if (k <= 0 || k >= 1) continue;
+						c.save();
+						c.globalAlpha = 1 - k;
+						c.strokeStyle = colour(i);
+						c.lineWidth = 16 * (1 - k) + 2;
+						c.beginPath();
+						c.ellipse(x, y, 90 + 160 * easeOut(k), 60 + 100 * easeOut(k), 0, 0, Math.PI * 2);
+						c.stroke();
+						c.restore();
+					}
+				}
 				if (done) self.text(c, '✓', x + 70, y - 60, 70, { fill: theme.gold, glow: theme.gold });
 			});
 			return xs;
@@ -1483,7 +1541,7 @@ window.Showtime = function (stage, opts) {
 		const gold = opts.winner;
 		c.save();
 		c.globalAlpha *= opts.alpha === undefined ? 1 : opts.alpha;
-		art.roundRect(c, x0, y - h / 2, LIST.width, h, h / 2, { fill: gold ? 'rgba(255,210,63,0.92)' : theme.panel, shadow: gold ? { color: theme.gold, blur: 40 } : undefined });
+		art.roundRect(c, x0, y - h / 2, LIST.width, h, h / 2, { fill: gold ? 'rgba(255,210,63,0.92)' : theme.panel, shadow: undefined });
 		art.roundRect(c, x0, y - h / 2, 22, h, [h / 2, 0, 0, h / 2], { fill: colour(p) });
 		// the place, once revealed
 		// (dark, crisp type on a gold row; light, outlined type on the others)
@@ -1670,7 +1728,7 @@ window.Showtime = function (stage, opts) {
 							c.save();
 							c.translate(fx, fy);
 							c.scale(1 + fly * 0.6, 1 - fly * 0.25);
-							self.text(c, String(s[i]), 0, 0, 120 * (1 + fly * 0.5), { fill: lit(i), glow: colour(i) });
+							self.text(c, String(s[i]), 0, 0, 110, { fill: lit(i) });
 							c.restore();
 						}
 					}
@@ -2018,12 +2076,12 @@ window.Showtime = function (stage, opts) {
 			textShadow: '0 9px 0 rgba(0,0,0,0.5)',
 			WebkitTextStroke: `7px ${theme.ink}`, paintOrder: 'stroke fill',
 		});
-		const small = (text) => $('<div>').text(text).css({ fontSize: '46px', color: theme.gold, letterSpacing: '2px', WebkitTextStroke: `4px ${theme.ink}`, paintOrder: 'stroke fill' });
+		const small = (text) => $('<div>').text(text).css({ fontSize: '40px', color: TYPE.colours.gold, letterSpacing: '2px', WebkitTextStroke: `4px ${theme.ink}`, paintOrder: 'stroke fill' });
 		const pill = (text, on, extraCss) => $('<button>').text(text).css(Object.assign({
-			padding: '22px 40px', borderRadius: '60px', border: `7px solid ${on ? theme.gold : 'rgba(255,255,255,0.55)'}`,
-			background: on ? theme.gold : 'rgba(12,4,30,0.72)', color: on ? theme.ink : 'white',
-			fontFamily: font, fontSize: '42px', letterSpacing: '1px', cursor: 'pointer', pointerEvents: 'auto',
-			boxShadow: '0 10px 0 rgba(0,0,0,0.4)', transition: 'transform 0.15s',
+			padding: '22px 44px', borderRadius: '60px', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+			background: on ? TYPE.colours.gold : 'rgba(20,10,38,0.9)', color: on ? TYPE.colours.ink : TYPE.colours.white,
+			fontFamily: font, fontSize: '40px', letterSpacing: '1px', cursor: 'pointer', pointerEvents: 'auto',
+			transition: 'transform 0.15s',
 		}, extraCss));
 		const tap = ($b, fn) => $b.on('click', function (e) { e.stopPropagation(); self.sfx.hit(); fn(); });
 
@@ -2054,7 +2112,7 @@ window.Showtime = function (stage, opts) {
 					width: '230px', padding: 0, border: 'none', background: 'none', cursor: 'pointer', pointerEvents: 'auto',
 					fontFamily: font, color: 'white', fontSize: '40px', letterSpacing: '1px',
 				}).appendTo($row);
-				$('<div>').html(face(i)).css({ width: '200px', height: '200px', filter: 'drop-shadow(0 12px 0 rgba(0,0,0,0.45))' }).appendTo($b);
+				$('<div>').html(face(i)).css({ width: '200px', height: '200px' }).appendTo($b);
 				$('<div>').text(f.label).css({ WebkitTextStroke: `5px ${theme.ink}`, paintOrder: 'stroke fill', whiteSpace: 'nowrap' }).appendTo($b);
 				tap($b, () => rate(i + 1));
 			});
@@ -2071,7 +2129,7 @@ window.Showtime = function (stage, opts) {
 					render();
 				});
 			});
-			tap(pill('DONE ✓', true, { marginTop: '16px', fontSize: '50px', padding: '24px 70px' }).attr('done', '').appendTo($wall), () => finish());
+			tap(pill('DONE ✓', true, { marginTop: '16px', fontSize: '56px', padding: '24px 70px' }).attr('done', '').appendTo($wall), () => finish());
 		}
 
 		function again($wall) {
@@ -2082,15 +2140,14 @@ window.Showtime = function (stage, opts) {
 				const $b = $('<button>').attr('game', g.id).css({
 					display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px',
 					width: '220px', padding: 0, border: 'none', background: 'none', cursor: 'pointer', pointerEvents: 'auto',
-					fontFamily: font, color: 'white', fontSize: '30px', lineHeight: 1.1, whiteSpace: 'normal',
+					fontFamily: font, color: 'white', fontSize: '28px', lineHeight: 1.1, whiteSpace: 'normal',
 				}).appendTo($row);
 				$('<div>').css({
 					width: '180px', height: '180px', borderRadius: '36px', background: `#999 center / cover`,
 					backgroundImage: g.icon ? `url("${g.icon}")` : 'none',
-					border: g.id === opts.id ? `7px solid ${theme.gold}` : '7px solid transparent',
-					boxShadow: '0 12px 0 rgba(0,0,0,0.45)',
+					border: g.id === opts.id ? `7px solid ${TYPE.colours.gold}` : '7px solid transparent',
 				}).appendTo($b);
-				$('<div>').text(g.id === opts.id ? 'AGAIN!' : g.name.toUpperCase()).css({ WebkitTextStroke: `4px ${theme.ink}`, paintOrder: 'stroke fill', color: g.id === opts.id ? theme.gold : 'white' }).appendTo($b);
+				$('<div>').text(g.id === opts.id ? 'AGAIN!' : g.name.toUpperCase()).css({ WebkitTextStroke: `4px ${theme.ink}`, paintOrder: 'stroke fill', color: g.id === opts.id ? TYPE.colours.gold : 'white' }).appendTo($b);
 				tap($b, () => pick(g.id));
 			}
 			tap(pill('NO THANKS', false).attr('no', '').appendTo($wall), () => finish());
@@ -2206,6 +2263,21 @@ window.Showtime = function (stage, opts) {
 };
 
 // The default look: deep purple night, magenta and violet lights, gold.
+// The type every show uses: its sizes (world units) and colours. Text of any
+// other size or colour snaps to these; players' colours are kept.
+Showtime.TYPE = {
+	font: 'Paytone One',
+	sizes: [28, 40, 56, 80, 110, 160, 220],   // caption, small, body, large, heading, hero, display
+	colours: {
+		white: '#ffffff',
+		gold: '#ffd23f',       // highlights, winners
+		red: '#ff5470',        // warnings, losses
+		green: '#3cdc7a',      // go, success
+		dim: '#aab4cc',        // secondary lines
+		ink: '#140a26',        // dark text on a light panel (and every outline)
+	},
+};
+
 Showtime.THEME = {
 	accent: '#ff4fd8',
 	accent2: '#8a3dff',
