@@ -173,7 +173,7 @@ window.Showtime = function (stage, opts) {
 
 	const CLOCK = {
 		y: 44,                 // where its digits sit, top centre of every wall (it hangs from the top edge)
-		startTicks: 5,         // it ticks out loud for its first seconds...
+		startTicks: 10,        // it ticks out loud for its first seconds...
 		tickVolume: 0.6,       // starting this loud and fading to nothing
 		size: 64,
 		urgent: 30,            // it turns red with this many seconds left
