@@ -1017,7 +1017,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		c.lastF = c.f;
 		if (c.glue) return;
 		c.moving += (Math.min(1, speed / 60) - c.moving) * Math.min(1, dt * 8);
-		c.walk += dt * 11 * c.moving;
+		c.walk += dt * 20 * c.moving;   // (quick little steps)
 	}
 
 	/* ---------- drawing ---------- */
@@ -1433,7 +1433,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const TEAL = '#1f8a6e';
 		const PANTS = '#17705a';
 		const SKIN = '#f2c9a8';
-		const step = k.glue || k.fall ? 0 : Math.sin(k.walk) * 6 * k.moving;
+		const step = k.glue || k.fall ? 0 : Math.sin(k.walk) * 7 * k.moving;
+		// and the body bobs up off each step: twice a stride
+		const bob = k.glue || k.fall ? 0 : Math.abs(Math.sin(k.walk)) * 7 * k.moving;
 		// legs, with white stripes, and white trainers
 		for (const side of [-1, 1]) {
 			const lift = Math.max(0, side * step);
@@ -1441,6 +1443,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			art.line(c, [[side * 13, -42 - lift], [side * 13, -10 - lift]], { stroke: 'white', lineWidth: 2.5 });
 			art.roundRect(c, side * 8.5 - 8, -10 - lift, 16, 10, 4, { fill: '#f6f6f2' });
 		}
+		// everything above the legs rides the bob
+		c.save();
+		c.translate(0, -bob);
 		// arms, swinging as they walk
 		for (const side of [-1, 1]) {
 			const swing = -side * step * 0.7;
@@ -1461,6 +1466,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (const side of [-1, 1]) art.ellipse(c, side * 21, -110, 5, 7, { fill: SKIN });
 		art.circle(c, 0, -114, 22, { fill: '#1a1612' });
 		art.ellipse(c, -7, -124, 8, 4, { fill: 'rgba(255,255,255,0.15)' });
+		c.restore();
 	}
 
 	// A contestant facing the room, for the results: the same chibi in the
