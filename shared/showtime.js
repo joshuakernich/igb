@@ -2257,7 +2257,7 @@ window.Showtime = function (stage, opts) {
 			enter() { self.blackout = 0.5; },
 			draw(ctx, bt) {
 				self.onWalls(ctx, function (c) {
-					self.slam(c, opts.farewell || 'WELL PLAYED!', W / 2, 500, 150, bt - 0.1, { fill: theme.gold });
+					self.slam(c, 'THANKS FOR PLAYING!', W / 2, 500, 160, bt - 0.1, { fill: theme.gold });
 				});
 			},
 		}, extra);

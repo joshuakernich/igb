@@ -397,7 +397,6 @@ IGB.register('backrooms', function BackroomsGame(stage, playersMeta) {
 		rivals: ['Level 0 Wanderers', 'The No-Clippers', 'Almond Water Club', 'Fluorescent Hum', 'Damp Carpet Society',
 			'Exit Sign Seekers', 'Liminal Crew', 'Wallpaper Watchers', 'Buzzing Lights', 'Mono-Yellow',
 			'Ceiling Tile Counters', 'Lost Signal', 'Wrong Turn Again', 'Endless Hallway'],
-		farewell: 'END OF TAPE',
 	});
 
 	// A player in a hazmat suit in their colour: hood, dark visor, respirator,

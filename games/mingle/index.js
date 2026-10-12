@@ -467,7 +467,6 @@ IGB.register('mingle', function MingleGame(stage, playersMeta) {
 		backdrop: drawDoors,
 		rivals: ['Room For Two', 'Odd One Out', 'The Lockouts', 'Carousel Crew', 'Doorway Dashers', 'Perfect Pairs',
 			'Groups Of Three', 'Merry-Go-Round', 'Slam Squad', 'Last Room Left', 'Waltz Walkers', 'Head Count'],
-		farewell: 'WELL PLAYED, CONTESTANTS!',
 		sounds: { tutorial: ['assets/shared/music-tutorial.mp3', 0.2, true] },
 	});
 

@@ -215,7 +215,6 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 		theme: { accent: '#ff4fd8', accent2: '#8a3dff', gold: '#ffe14d', ink: '#12052a', sky: ['#0a0320', '#2a0d4a'] },
 		rivals: ['Neon Nightblades', 'The Grin Reapers', 'Fire Catchers', 'Sword & Sparkle', 'Banish Brigade', 'Midnight Encore',
 			'Demon Dusters', 'Glow Getters', 'Flame Tamers', 'Purple Panic', 'Honey Blades', 'Spirit Squad'],
-		farewell: 'WELL FOUGHT, HUNTERS!',
 	});
 
 	function initGame(count) {

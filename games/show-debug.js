@@ -41,7 +41,6 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		theme: { accent: '#3ad1ff', accent2: '#5a4dff', gold: '#ffd23f', ink: '#0b1022', sky: ['#070b18', '#16203f'] },
 		rivals: ['Stage Left', 'The Understudies', 'Cue Lights', 'Run Of Show', 'Places Please', 'Tech Week',
 			'Final Dress', 'House Open', 'Blackout Crew', 'The Blocking'],
-		farewell: 'THAT\'S THE SHOW!',
 		music: false,   // quiet while stepping through
 	});
 

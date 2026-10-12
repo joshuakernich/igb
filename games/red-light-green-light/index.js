@@ -412,7 +412,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		backdrop: drawShapes,
 		rivals: ['Dalgona Crew', 'Marble Masters', 'The Frozen Few', 'Statue Squad', 'Ddakji Slappers', 'Last Ones Moving',
 			'Tracksuit Titans', 'Sandy Sprinters', 'Still Standing', 'Circle Triangle Square', 'The Green Line', 'No Wobble Club'],
-		farewell: 'WELL PLAYED, CONTESTANTS!',
 		sounds: { tutorial: ['assets/shared/music-tutorial.mp3', 0.2, true] },
 	});
 
