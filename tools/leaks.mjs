@@ -33,12 +33,13 @@ if (!ids.length) ids = manifestIds();
 
 // Injected before anything loads: note where every timer, frame callback,
 // media element, audio context and utterance comes from, and log any that
-// fire (or start a sound) once window.__left is set.
+// fire (or start a sound) once window.__left is set. (The launcher's own
+// chrome is left out: the menu's blueprint backdrop runs once the menu is back.)
 function instrument() {
 	const leak = window.__leak = { fired: new Map(), sounds: new Map(), media: new Set(), contexts: [] };
 	const origin = function () {
 		const lines = (new Error().stack || '').split('\n').slice(2);
-		const line = lines.find((l) => /\/(games|shared|core)\//.test(l) && !/core\/(launcher|players|igb)\.js/.test(l));
+		const line = lines.find((l) => /\/(games|shared|core)\//.test(l) && !/core\/(launcher|players|igb|home-bg)\.js/.test(l));
 		return line ? line.trim().replace(/^at /, '').replace(/https?:\/\/[^/]+\//, '') : null;
 	};
 	const note = function (map, key) {

@@ -43,6 +43,8 @@ IGB.manifest = [
 			box: { color: '#ff3df0', bg: '#12051f', note: 'BOSS' } },
 		{ id: 'echo', name: 'Echo',
 			box: { color: '#3ad1ff', bg: '#0b1630', note: 'DODGE' } },
+		{ id: 'show-debug', name: 'Show Debug', icon: 'assets/icons/show-debug.png',
+			box: { color: '#3ad1ff', bg: '#0b1022', note: 'DEBUG' } },
 		{ id: 'template', name: 'Template', file: 'games/_template.js' },
 	] },
 
@@ -145,4 +147,4 @@ IGB.manifest = [
 
 // The only games the menu shows (in their folders above); the rest stay
 // playable by #id. Remove this (or set it to null) to show everything.
-IGB.menu = ['red-light-green-light', 'mingle', 'backrooms', 'gwi-ma-showdown', 'roll-call'];
+IGB.menu = ['red-light-green-light', 'mingle', 'backrooms', 'gwi-ma-showdown', 'roll-call', 'show-debug'];

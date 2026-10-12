@@ -1411,6 +1411,9 @@ IGB.register('mingle', function MingleGame(stage, playersMeta) {
 		show.beats.team(),
 		show.beats.board(),
 		show.beats.replay(),
+		// how was it? five faces to tap, sad to happy
+		show.beats.rate(),
+
 		show.beats.end({
 			enter() {
 				if (completed) return;

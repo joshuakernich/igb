@@ -165,7 +165,7 @@ while (Date.now() - started < 400000) {
 	await sleep(40);
 }
 
-const EXPECT = ['squad', 'title', 'clock', 'visors', 'controls', 'doll', 'play', 'timeup', 'scores', 'rank', 'team', 'board', 'replay', 'end'];
+const EXPECT = ['squad', 'title', 'clock', 'visors', 'controls', 'doll', 'play', 'timeup', 'scores', 'rank', 'team', 'board', 'replay', 'rate', 'end'];
 const checks = {
 	order: JSON.stringify(s && s.seen) === JSON.stringify(EXPECT),
 	allSteps: ['move', 'step', 'zone', 'freeze', 'corner'].every((k) => stepsShot.has(k)),

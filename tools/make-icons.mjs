@@ -241,6 +241,22 @@ const icons = await page.evaluate(() => {
 		rrect(ctx, 70, 236, 70, 8, 4, 'rgba(255,255,255,0.85)');
 	});
 
+
+	// Show Debug: the show's running order as a strip of beats, a playhead on it,
+	// and a skip-ahead mark.
+	make('show-debug', function (ctx) {
+		ctx.fillStyle = grad(ctx, 0, S, '#16203f', '#070b18');
+		ctx.fillRect(0, 0, S, S);
+		const beats = ['#3ad1ff', '#5a4dff', '#ffd23f', '#ff4fd8', '#3cbf5a', '#ff8a3d'];
+		beats.forEach((c, i) => rrect(ctx, 22 + i * 36, 150, 30, 46, 7, c));
+		ctx.fillStyle = 'white';
+		ctx.fillRect(127, 124, 6, 92);
+		poly(ctx, [[116, 112], [144, 112], [130, 130]], 'white');
+		// skip ahead: two triangles and a bar
+		poly(ctx, [[62, 46], [110, 78], [62, 110]], '#ffd23f');
+		poly(ctx, [[110, 46], [158, 78], [110, 110]], '#ffd23f');
+		rrect(ctx, 166, 46, 16, 64, 4, '#ffd23f');
+	});
 	return out;
 });
 

@@ -32,13 +32,14 @@
  *       show.beats.timeUp({ update(dt, bt) {} }),   // a generic beat, extended
  *       show.beats.scores(), show.beats.rank(), show.beats.team(),
  *       show.beats.board(), show.beats.replay(),
+ *       show.beats.rate(),                 // one rating for the group; then why, or play again
  *       show.beats.end({ enter() { IGB.complete(...) } }),
  *   ]);
  *   self.draw = (ctx, time) => show.frame(ctx, dt, drawWorld);
  *
  * A beat is { id, length (seconds, or a function), world, holdClock, enter(),
- * update(dt, bt), draw(ctx, bt), done(bt) }. bt is the time into the beat;
- * holdClock stops the clock while it runs. The show moves on when bt passes
+ * exit(), update(dt, bt), draw(ctx, bt), done(bt) }. bt is the time into the
+ * beat; holdClock stops the clock while it runs. The show moves on when bt passes
  * length or done() says so; show.go(id) jumps anywhere (tests use it to skip
  * the intros). world: false beats are drawn on the show's own backdrop; the
  * others draw the game's world (drawWorld) through the camera first. draw()
@@ -126,6 +127,26 @@ window.Showtime = function (stage, opts) {
 		allSet: 1.8,           // "ALL SET!" holds this long, then on
 		length: 45,            // and on regardless after this long
 		y: 330,                // the row of visors
+	};
+
+	/* ---------- tuning: the rating ---------- */
+
+	const RATE = {
+		faces: [                // sad to happy: mouth curve (negative frowns; 20+ opens a grin)
+			{ label: 'TERRIBLE', colour: '#e8463b', mouth: -16, brows: true },
+			{ label: 'NOT GREAT', colour: '#f28c38', mouth: -8 },
+			{ label: 'OKAY', colour: '#f5c632', mouth: 0 },
+			{ label: 'GOOD', colour: '#9bd14b', mouth: 12 },
+			{ label: 'EXCELLENT', colour: '#3cbf5a', mouth: 22 },
+		],
+		low: 3,                // a rating this low or lower asks what went wrong; higher offers another game
+		reasons: [             // what went wrong (tap any)
+			'HARD TO UNDERSTAND', 'CONTROLS DIDN\'T WORK', 'TOO HARD', 'TOO EASY',
+			'HARD TO SEE', 'TOO LONG', 'NOT MY KIND OF GAME', 'SOMETHING ELSE',
+		],
+		notAgain: ['show-debug'],   // games never offered to play again
+		wait: { faces: 45, reasons: 40, again: 40 },   // each part moves on after this long untouched
+		thanks: 2.4,           // THANK YOU! holds this long
 	};
 
 	/* ---------- tuning: the title drop ---------- */
@@ -638,6 +659,7 @@ window.Showtime = function (stage, opts) {
 		const at = beats.indexOf(next);
 		if (!clock.started && intro >= 0 && at > intro && (end < 0 || at < end)) startClock(0);
 		clock.held = !!next.holdClock;   // (the visor check stops the clock)
+		if (beat && beat.exit) beat.exit();
 		showSkip(next.id);
 		beat = next;
 		bt = 0;
@@ -1808,6 +1830,190 @@ window.Showtime = function (stage, opts) {
 		return pts;
 	}
 
+	// The rating, at the very end (before 'end', which tells the gamebox the
+	// game is over). One rating for the group: HOW WAS IT? and five faces on
+	// every wall, sad to happy; the first tap counts. Then, for a low rating
+	// (1-3), WHAT WENT WRONG? with reasons to tap (as many as fit) and DONE;
+	// for a high one (4-5), PLAY AGAIN? with the games to pick from, or NO
+	// THANKS. Picking a game starts it straight away. Each part gives up and
+	// moves on if nobody taps. self.feedback() is what was said.
+	beatsLib.rate = function (extra) {
+		const R = RATE;
+		let part = 'faces';     // 'faces' | 'reasons' | 'again' | 'thanks' | 'over'
+		let partAt = 0;
+		let feedback = null;    // { rating, label, reasons: [], again: id | null }
+		let $layer = null;
+		self.feedback = () => (feedback ? Object.assign({}, feedback, { reasons: feedback.reasons.slice() }) : null);
+		const font = `"${FONT}", sans-serif`;
+		const games = () => (IGB.menu || []).filter((id) => !R.notAgain.includes(id)).map((id) => IGB.find(id)).filter(Boolean)
+			// this game first
+			.sort((a, b) => (b.id === opts.id) - (a.id === opts.id));
+
+		function face(i) {
+			const f = R.faces[i];
+			const mouth = f.mouth >= 20
+				? `<path d="M30 60 Q50 ${60 + f.mouth * 1.6} 70 60 Z" fill="${theme.ink}"/>`
+				: `<path d="M30 ${66 - f.mouth / 3} Q50 ${66 + f.mouth} 70 ${66 - f.mouth / 3}" stroke="${theme.ink}" stroke-width="7" fill="none" stroke-linecap="round"/>`;
+			const brows = f.brows ? `<path d="M28 30 L42 36 M72 30 L58 36" stroke="${theme.ink}" stroke-width="6" stroke-linecap="round"/>` : '';
+			return `<svg viewBox="0 0 100 100" width="100%" height="100%"><circle cx="50" cy="50" r="46" fill="${f.colour}" stroke="${theme.ink}" stroke-width="5"/>`
+				+ `<circle cx="36" cy="42" r="6.5" fill="${theme.ink}"/><circle cx="64" cy="42" r="6.5" fill="${theme.ink}"/>${brows}${mouth}</svg>`;
+		}
+
+		const big = (text, size = 110) => $('<div>').text(text).css({
+			fontSize: size + 'px', letterSpacing: '2px', lineHeight: 1, textAlign: 'center',
+			textShadow: `0 9px 0 rgba(0,0,0,0.5), 0 0 40px ${theme.accent}`,
+			WebkitTextStroke: `7px ${theme.ink}`, paintOrder: 'stroke fill',
+		});
+		const small = (text) => $('<div>').text(text).css({ fontSize: '46px', color: theme.gold, letterSpacing: '2px', WebkitTextStroke: `4px ${theme.ink}`, paintOrder: 'stroke fill' });
+		const pill = (text, on, extraCss) => $('<button>').text(text).css(Object.assign({
+			padding: '22px 40px', borderRadius: '60px', border: `7px solid ${on ? theme.gold : 'rgba(255,255,255,0.55)'}`,
+			background: on ? theme.gold : 'rgba(12,4,30,0.72)', color: on ? theme.ink : 'white',
+			fontFamily: font, fontSize: '42px', letterSpacing: '1px', cursor: 'pointer', pointerEvents: 'auto',
+			boxShadow: '0 10px 0 rgba(0,0,0,0.4)', transition: 'transform 0.15s',
+		}, extraCss));
+		const tap = ($b, fn) => $b.on('click', function (e) { e.stopPropagation(); self.sfx.hit(); fn(); });
+
+		// Every wall shows the same thing; any wall's tap counts for all.
+		function render() {
+			if ($layer) $layer.remove();
+			$layer = $('<showtime-rating>').attr('part', part).css({ position: 'absolute', left: 0, top: 0, width: 3 * W + 'px', height: H + 'px', pointerEvents: 'none' }).appendTo(stage.$ui);
+			if (part === 'thanks' || part === 'over') return;
+			for (let wall = 0; wall < 3; wall++) {
+				const $wall = $('<div>').css({
+					position: 'absolute', left: wall * W + 'px', top: 0, width: W + 'px', height: H + 'px',
+					display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '40px',
+					fontFamily: font, color: 'white',
+				}).appendTo($layer);
+				if (part === 'faces') faces($wall);
+				else if (part === 'reasons') reasons($wall);
+				else if (part === 'again') again($wall);
+			}
+		}
+
+		function faces($wall) {
+			big('HOW WAS IT?').appendTo($wall);
+			small('TAP A FACE').appendTo($wall);
+			const $row = $('<div>').css({ display: 'flex', gap: '34px', marginTop: '20px' }).appendTo($wall);
+			R.faces.forEach(function (f, i) {
+				const $b = $('<button>').attr({ rating: i + 1, title: f.label }).css({
+					display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px',
+					width: '230px', padding: 0, border: 'none', background: 'none', cursor: 'pointer', pointerEvents: 'auto',
+					fontFamily: font, color: 'white', fontSize: '40px', letterSpacing: '1px',
+				}).appendTo($row);
+				$('<div>').html(face(i)).css({ width: '200px', height: '200px', filter: 'drop-shadow(0 12px 0 rgba(0,0,0,0.45))' }).appendTo($b);
+				$('<div>').text(f.label).css({ WebkitTextStroke: `5px ${theme.ink}`, paintOrder: 'stroke fill', whiteSpace: 'nowrap' }).appendTo($b);
+				tap($b, () => rate(i + 1));
+			});
+		}
+
+		function reasons($wall) {
+			big('WHAT WENT WRONG?', 96).appendTo($wall);
+			small('TAP ALL THAT APPLY').appendTo($wall);
+			const $grid = $('<div>').css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '22px', maxWidth: '1400px' }).appendTo($wall);
+			R.reasons.forEach(function (reason) {
+				const on = feedback.reasons.includes(reason);
+				tap(pill(reason, on).attr('reason', reason).appendTo($grid), function () {
+					feedback.reasons = on ? feedback.reasons.filter((r) => r !== reason) : feedback.reasons.concat(reason);
+					render();
+				});
+			});
+			tap(pill('DONE ✓', true, { marginTop: '16px', fontSize: '50px', padding: '24px 70px' }).attr('done', '').appendTo($wall), () => finish());
+		}
+
+		function again($wall) {
+			big('PLAY AGAIN?').appendTo($wall);
+			small('PICK A GAME').appendTo($wall);
+			const $row = $('<div>').css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '36px', maxWidth: '1450px' }).appendTo($wall);
+			for (const g of games()) {
+				const $b = $('<button>').attr('game', g.id).css({
+					display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px',
+					width: '220px', padding: 0, border: 'none', background: 'none', cursor: 'pointer', pointerEvents: 'auto',
+					fontFamily: font, color: 'white', fontSize: '30px', lineHeight: 1.1, whiteSpace: 'normal',
+				}).appendTo($row);
+				$('<div>').css({
+					width: '180px', height: '180px', borderRadius: '36px', background: `#999 center / cover`,
+					backgroundImage: g.icon ? `url("${g.icon}")` : 'none',
+					border: g.id === opts.id ? `7px solid ${theme.gold}` : '7px solid transparent',
+					boxShadow: '0 12px 0 rgba(0,0,0,0.45)',
+				}).appendTo($b);
+				$('<div>').text(g.id === opts.id ? 'AGAIN!' : g.name.toUpperCase()).css({ WebkitTextStroke: `4px ${theme.ink}`, paintOrder: 'stroke fill', color: g.id === opts.id ? theme.gold : 'white' }).appendTo($b);
+				tap($b, () => pick(g.id));
+			}
+			tap(pill('NO THANKS', false).attr('no', '').appendTo($wall), () => finish());
+		}
+
+		function go(next) {
+			part = next;
+			partAt = self.bt;
+			render();
+		}
+
+		function rate(rating) {
+			if (feedback) return;   // one rating for the group: the first tap
+			const f = R.faces[rating - 1];
+			feedback = { rating, label: f.label, reasons: [], again: null };
+			self.play(rating >= 4 ? 'correct' : 'coin');
+			console.log('Rating:', rating, f.label);
+			if (IGB.log) IGB.log(`Rated ${f.label} (${rating})`);
+			go(rating <= R.low ? 'reasons' : 'again');
+		}
+
+		function finish() {
+			if (feedback && feedback.reasons.length) {
+				console.log('Feedback:', feedback.reasons.join(', '));
+				if (IGB.log) IGB.log('Feedback: ' + feedback.reasons.join(', '));
+			}
+			go('thanks');
+		}
+
+		function pick(id) {
+			feedback.again = id;
+			console.log('Play again:', id);
+			if (IGB.log) IGB.log('Play again: ' + id);
+			go('thanks');
+			// the launcher switches games on a #id; in a box party, the party decides
+			stage.timeout(function () {
+				if (opts.onPlayAgain) opts.onPlayAgain(id);
+				else if (window.location.hash.slice(1) === id) $('[btn=refresh]').trigger('click');
+				else window.location.hash = id;
+			}, R.thanks * 1000 * 0.6);
+		}
+
+		function clear() {
+			if ($layer) $layer.remove();
+			$layer = null;
+		}
+
+		return extend({
+			id: 'rate',
+			world: false,
+			length: Infinity,
+			done: () => part === 'over',
+			enter() {
+				part = 'faces';
+				partAt = 0;
+				feedback = null;
+				self.blackout = 0.35;
+				render();
+			},
+			exit: clear,
+			update(dt, bt) {
+				const age = bt - partAt;
+				if (part === 'faces' && age > R.wait.faces) go('over');
+				if (part === 'reasons' && age > R.wait.reasons) finish();
+				if (part === 'again' && age > R.wait.again) finish();
+				if (part === 'thanks' && age > R.thanks) part = 'over';
+			},
+			draw(ctx, bt) {
+				if (part !== 'thanks') return;
+				self.onWalls(ctx, function (c) {
+					self.slam(c, 'THANK YOU!', W / 2, 470, 170, bt - partAt, { fill: theme.gold, glow: '#ff7a3d' });
+					if (feedback && feedback.again) self.text(c, 'NEXT UP: ' + (IGB.find(feedback.again) || { name: '' }).name.toUpperCase(), W / 2, 650, 60, { fill: 'white', alpha: clamp((bt - partAt - 0.4) * 3, 0, 1) });
+				});
+			},
+		}, extra);
+	};
+
 	// The end: the room fades, and the game hands back (extra.enter is the
 	// place to call IGB.complete). It holds there until the game is stopped.
 	beatsLib.end = function (extra) {
@@ -1833,6 +2039,7 @@ window.Showtime = function (stage, opts) {
 			clockShown: clock.shown, samples: track.length, marks: marks.slice(),
 			board: board ? { rank: board.rank, total: board.total } : null,
 			visors: self.visorState ? self.visorState() : null,
+			feedback: self.feedback ? self.feedback() : null,
 		};
 	};
 

@@ -1417,6 +1417,9 @@ IGB.register('backrooms', function BackroomsGame(stage, playersMeta) {
 		show.beats.team({ draw: tape }),
 		show.beats.board({ draw: tape }),
 		show.beats.replay({ draw: tape }),
+		// how was it? five faces to tap, sad to happy
+		show.beats.rate({ draw: tape }),
+
 		show.beats.end({
 			enter() {
 				sound.hum(0);
