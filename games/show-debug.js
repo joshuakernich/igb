@@ -42,6 +42,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		rivals: ['Stage Left', 'The Understudies', 'Cue Lights', 'Run Of Show', 'Places Please', 'Tech Week',
 			'Final Dress', 'House Open', 'Blackout Crew', 'The Blocking'],
 		farewell: 'THAT\'S THE SHOW!',
+		music: false,   // quiet while stepping through
 	});
 
 	function initGame(count) {

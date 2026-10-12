@@ -21,6 +21,7 @@
  *       backdrop(ctx, time) {},           // optional: drawn over the results backdrop, once per wall
  *       rivals: ['Team names', ...],      // optional names for the fake leaderboard
  *       sounds: { drama: ['assets/...mp3', 0.3, true] },   // optional overrides
+ *       music: false,                     // optional: no music, only the effects
  *   });
  *
  *   show.sequence([                       // the running order
@@ -126,7 +127,8 @@ window.Showtime = function (stage, opts) {
 		clear: 1.0,            // everyone ticked and no wrong visors for this long: all set
 		allSet: 1.8,           // "ALL SET!" holds this long, then on
 		length: 45,            // and on regardless after this long
-		y: 330,                // the row of visors
+		y: 300,                // the row of visors
+		floor: { far: 330, near: 620, wall: 70 },   // the floor panel: its far and near widths, the walls' height (near)
 	};
 
 	/* ---------- tuning: the rating ---------- */
@@ -304,7 +306,10 @@ window.Showtime = function (stage, opts) {
 	const audio = stage.audio();
 	for (const id in SOUNDS) audio.add(id, SOUNDS[id][0], SOUNDS[id][1], !!SOUNDS[id][2]);
 	self.audio = audio;
-	self.play = (id, speed) => audio.play(id, true, speed);
+	// (music: false leaves out the music: the drama under the titles, the
+	// drumroll and the replay's beat; the effects stay)
+	const MUSIC = ['drama', 'drumroll', 'replay'];
+	self.play = (id, speed) => (opts.music === false && MUSIC.includes(id) ? undefined : audio.play(id, true, speed));
 	self.stop = (id) => audio.stop(id);
 
 	// Synthesised hits, booms, roars and alarms, on one AudioContext made
@@ -1159,6 +1164,7 @@ window.Showtime = function (stage, opts) {
 				const n = count();
 				const bad = wrong();
 				const lost = missing();
+				const asking = bt > V.show;
 				self.onWalls(ctx, function (c) {
 					const cx = W / 2;
 					if (allSetAt >= 0) {
@@ -1166,23 +1172,32 @@ window.Showtime = function (stage, opts) {
 						drawVisorRow(c, cx, V.y, n, bt);
 						return;
 					}
-					// the headline: what to do now
-					const asking = bt > V.show;
-					self.slam(c, asking ? 'STAND IN THE MIDDLE' : 'PUT ON YOUR VISORS', cx, 150 + 20, 96, asking ? bt - V.show : bt);
-					if (asking) self.slam(c, 'AND WIGGLE!', cx, 555, 80, bt - V.show - 0.4, { fill: theme.gold });
-					else self.slam(c, n === 1 ? 'THIS COLOUR' : 'ONE EACH, THESE ' + n + ' COLOURS', cx, 555, 54, bt - 0.6, { fill: theme.gold });
+					// the full instructions, all at once and numbered: the step under
+					// way lit, the one done ticked, the ones to come dim
+					const steps = [
+						{ y: 165, text: n === 1 ? 'PUT ON THIS VISOR' : 'PUT ON A VISOR: ONE EACH, THESE ' + n + ' COLOURS', done: asking, now: !asking },
+						{ y: 490, text: 'STAND IN THE GLOWING CIRCLE', done: false, now: asking },
+						{ y: 552, text: 'WIGGLE TILL YOUR VISOR GETS A TICK', done: false, now: asking },
+					];
+					steps.forEach(function (s, i) {
+						const appear = clamp((bt - i * 0.25) * 3, 0, 1);
+						self.text(c, (s.done ? '✓ ' : (i + 1) + '. ') + s.text, cx, s.y, s.now ? 56 : 48, {
+							fill: s.done ? theme.gold : 'white', alpha: appear * (s.now || s.done ? 1 : 0.45),
+							glow: s.now ? theme.accent : 'transparent',
+						});
+					});
 					drawVisorRow(c, cx, V.y, n, bt);
-					if (asking) drawRoomMap(c, bad.length ? cx - 400 : cx, 745, 240, n, bt);   // (aside, to make room for a flag)
+					drawFloor(c, bad.length ? cx - 430 : cx, 650, 960, n, bt);   // (aside, to make room for a flag)
 					// a wrong visor: flagged, with what to swap it for
 					if (bad.length) {
 						const i = bad[0];
 						const flash = 0.75 + 0.25 * Math.sin(bt * 12);
-						const w = asking ? 820 : 1100;          // beside the map, or centred under the visors
-						const fx = asking ? cx + 230 : cx;
-						art.roundRect(c, fx - w / 2, 625, w, 240, 40, { fill: 'rgba(40,0,8,0.9)', stroke: '#ff3d6a', lineWidth: 10, alpha: flash });
-						self.text(c, 'WRONG VISOR!', fx, 684, 76, { fill: '#ff5470', glow: '#ff3d6a', fit: w - 60 });
-						self.text(c, self.nameOf(i) + ' ISN\'T PLAYING', fx, 762, 50, { fill: lit(i), fit: w - 60 });
-						self.text(c, lost.length ? 'SWAP IT FOR ' + self.nameOf(lost[0]) : 'TAKE IT OFF', fx, 828, 50, { fill: lost.length ? lit(lost[0]) : 'white', fit: w - 60 });
+						const w = 760;
+						const fx = cx + 260;
+						art.roundRect(c, fx - w / 2, 660, w, 240, 40, { fill: 'rgba(40,0,8,0.9)', stroke: '#ff3d6a', lineWidth: 10, alpha: flash });
+						self.text(c, 'WRONG VISOR!', fx, 719, 76, { fill: '#ff5470', glow: '#ff3d6a', fit: w - 60 });
+						self.text(c, self.nameOf(i) + ' ISN\'T PLAYING', fx, 797, 50, { fill: lit(i), fit: w - 60 });
+						self.text(c, lost.length ? 'SWAP IT FOR ' + self.nameOf(lost[0]) : 'TAKE IT OFF', fx, 863, 50, { fill: lost.length ? lit(lost[0]) : 'white', fit: w - 60 });
 					}
 				});
 			},
@@ -1238,42 +1253,78 @@ window.Showtime = function (stage, opts) {
 			c.restore();
 		}
 
-		// the room from above, front wall at the top: the circle to stand in,
-		// and every visor in play where it is
-		function drawRoomMap(c, cx, cy, size, n, bt) {
-			const x0 = cx - size / 2;
-			const y0 = cy - size / 2;
-			art.rect(c, x0, y0, size, size, { fill: 'rgba(12,4,30,0.72)' });
+		// The room's floor, tilted back in perspective: the front wall standing
+		// along its far edge, the side walls along its sides, the circle to
+		// stand in, and every visor in play where it is.
+		function drawFloor(c, cx, top, bottom, n, bt) {
+			const far = V.floor.far;
+			const near = V.floor.near;
+			// width at depth t (0 the front wall, 1 the back of the room): even
+			// steps in the room shrink toward the front, as they would to the eye
+			const widthAt = (t) => 1 / lerp(1 / far, 1 / near, t);
+			const at = function (px, pz) {
+				const w = widthAt(1 - pz);
+				return { x: cx + (px - 0.5) * w, y: top + (w - far) / (near - far) * (bottom - top), k: w / near };
+			};
+			const path = function (pts) {
+				c.beginPath();
+				pts.forEach((p, i) => (i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y)));
+			};
+			const corners = [at(0, 1), at(1, 1), at(1, 0), at(0, 0)];   // far left, far right, near right, near left
+			const up = (p, k) => ({ x: p.x, y: p.y - V.floor.wall * k });
 			c.save();
+			// the walls: front, then the sides
+			c.fillStyle = 'rgba(255,255,255,0.08)';
+			c.strokeStyle = 'rgba(255,255,255,0.6)';
+			c.lineWidth = 4;
+			for (const face of [
+				[corners[0], corners[1], up(corners[1], far / near), up(corners[0], far / near)],
+				[corners[0], corners[3], up(corners[3], 1), up(corners[0], far / near)],
+				[corners[1], corners[2], up(corners[2], 1), up(corners[1], far / near)],
+			]) {
+				path(face);
+				c.closePath();
+				c.fill();
+				c.stroke();
+			}
+			// the floor, with a grid across it
+			path(corners);
+			c.closePath();
+			c.fillStyle = 'rgba(12,4,30,0.8)';
+			c.fill();
+			c.strokeStyle = 'rgba(255,255,255,0.14)';
+			c.lineWidth = 2;
+			for (let g = 0.25; g < 1; g += 0.25) {
+				path([at(g, 0), at(g, 1)]);
+				c.stroke();
+				path([at(0, g), at(1, g)]);
+				c.stroke();
+			}
+			path(corners);
+			c.closePath();
 			c.strokeStyle = 'rgba(255,255,255,0.85)';
-			c.lineWidth = 8;
-			c.beginPath();
-			c.moveTo(x0, y0 + size);
-			c.lineTo(x0, y0);
-			c.lineTo(x0 + size, y0);
-			c.lineTo(x0 + size, y0 + size);
+			c.lineWidth = 5;
 			c.stroke();
-			c.setLineDash([14, 12]);
-			c.lineWidth = 3;
-			c.beginPath();
-			c.moveTo(x0, y0 + size);
-			c.lineTo(x0 + size, y0 + size);
-			c.stroke();
-			// the circle, pulsing
+			// the circle, pulsing, lying on the floor
+			const r = V.zone.r * (1 + 0.04 * Math.sin(bt * 5));
+			const ring = [];
+			for (let a = 0; a <= 48; a++) ring.push(at(V.zone.px + Math.cos(a / 48 * Math.PI * 2) * r, V.zone.pz + Math.sin(a / 48 * Math.PI * 2) * r));
+			path(ring);
+			c.fillStyle = 'rgba(255,210,63,0.12)';
+			c.fill();
 			c.setLineDash([18, 10]);
 			c.lineDashOffset = -bt * 30;
 			c.strokeStyle = theme.gold;
 			c.lineWidth = 7;
-			c.beginPath();
-			c.arc(x0 + V.zone.px * size, y0 + (1 - V.zone.pz) * size, V.zone.r * size * (1 + 0.04 * Math.sin(bt * 5)), 0, Math.PI * 2);
 			c.stroke();
 			c.restore();
-			self.text(c, 'FRONT', cx, y0 - 26, 30, { fill: 'white', outlineWidth: 4, glow: 'transparent' });
+			const label = up({ x: cx, y: top }, far / near * 0.5);
+			self.text(c, 'FRONT', label.x, label.y, 26, { fill: 'white', outlineWidth: 4, glow: 'transparent' });
+			// everyone in play, far ones smaller
 			slots().forEach(function (p, i) {
 				if (!p || !(motion[i] > V.moving || ticked[i] !== undefined)) return;
-				const px = x0 + clamp(p.px, 0, 1) * size;
-				const py = y0 + (1 - clamp(p.pz, 0, 1)) * size;
-				art.circle(c, px, py, 17, { fill: colour(i), stroke: i < n ? 'white' : '#ff3d6a', lineWidth: i < n ? 4 : 7 });
+				const q = at(clamp(p.px, 0, 1), clamp(p.pz, 0, 1));
+				art.circle(c, q.x, q.y, 20 * q.k, { fill: colour(i), stroke: i < n ? 'white' : '#ff3d6a', lineWidth: (i < n ? 4 : 7) * q.k });
 			});
 		}
 	};
