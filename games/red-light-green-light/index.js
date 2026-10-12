@@ -10,27 +10,28 @@
  * shot. Cross the red line at her feet to survive the round. Rounds keep
  * coming, each longer and meaner, for ten minutes of play.
  *
- * Scoring: a point for every red light survived in a safe zone, ten for
- * crossing the line. Anyone shot is back for the next round.
+ * Scoring: a point for every wad of cash picked up, ten for crossing the
+ * line. Anyone shot is back for the next round.
  *
  * The show, in order (see the beats at the bottom, and shared/showtime.js
  * for the generic ones): the squad picker over the dimmed field; the
  * ten-minute clock slamming in; the controls, one at a time, with the
- * camera in close on the contestants and no doll yet (a practice zone each,
- * a practice red light with no shooting, a practice corner skip and back);
+ * camera in close on the contestants and no doll yet (practice cash to grab,
+ * a practice red light with no shooting, practice jump pads there and back);
  * the doll, the camera tight on her face, YOUNG-HEE, her head turning away
  * and the camera pulling back down the field; GREEN LIGHT and the rounds;
  * TIME!; everyone's scores; the ranking onto a podium; the team total; the
  * day's leaderboard; and a fast-forward replay of where everyone ran.
  *
- * Safe zones: every green light a fresh set of glowing circles is painted
- * on the sand, exactly one per contestant still running, and each holds
- * only the first to step in. Anyone not in a zone of their own at RED
- * LIGHT is shot, so everyone has to dash to one. Some zones sit at the
- * corner end of a wall, marked with arrows: whoever survives in one skips
- * across the corner onto the next wall at the next green light, and plays
- * on there. Every contestant lives on a wall (left, front or right) and
- * plays along it 1:1, its depth the player's distance from that wall.
+ * Jump pads and cash: glowing pads sit at the corner ends of the walls all
+ * the way up the track, marked with arrows; step on one and you jump
+ * straight round the corner onto the next wall, and play on there. Little
+ * wads of cash lie all over the field, a point each to whoever walks over
+ * them. On the last leg the track stops short of the line, and there's a
+ * dash to cross it before her head comes round.
+ *
+ * Every contestant lives on a wall (left, front or right) and plays along
+ * it 1:1, its depth the player's distance from that wall.
  *
  * The field runs on across all three walls: blocks, patrolling guards and
  * rolling marbles on every wall, armed guards at the far ends.
@@ -48,7 +49,7 @@
  * along it and 1 - px how near; on the right wall 1 - pz along, px near.
  * On the desk simulator, clicking a wall of the box skips the selected
  * player's contestant onto that wall straight away (a testing control:
- * it skips the zone rules for that red light).
+ * it skips the line check for that red light).
  * An ES module (manifest: module: true) for the shared synthesised sound.
  */
 import { createSound } from '../../shared/squid-game/sound.js';
@@ -86,21 +87,16 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const DOLL_X = 1.5 * W;
 	const INSET = { x: 2 * W - 150, y: 125, r: 92 };   // the doll-head inset, top right of the front wall
 
-	// Safe zones
-	const ZONE_RX = 105;        // a zone's half-width across, world px
-	const ZONE_RF = 42;         // and half-depth up the field, field units
-	const ZONE_GAP = 220;       // zones on a wall at least this far apart (depth counts double)
-	const ZONE_CLEAR = 330;     // try to put zones at least this far from where anyone stands
-	const ZONE_SPREAD = 600;    // and as far as this from each other, across the walls too (the stronger pull)
-	const EDGE_AT = 0.1;        // an edge zone's centre, as a share of the wall from the corner
-	const EDGE_SHARE = [0.3, 0.5];   // the share of each green light's zones that are edge zones
-	const EDGE_STACK = 2;       // edge zones at one corner at most (stacked up the field)
+	// Jump pads and cash
+	const PAD = { rx: 95, rf: 40, every: 420 };   // a pad's half-width and half-depth; one every so far up the track (field units)
+	const CASH = { every: 300, reach: 46 };       // cash every so far up each wall; how close to walk to pick it up
+	const EDGE_AT = 0.1;        // a pad's centre, as a share of the wall from the corner
 	const HOP = 0.5;            // seconds to skip across a corner onto the next wall
 	const WALL_NAMES = ['LEFT', 'FRONT', 'RIGHT'];
 
 	// Each green light: the track scrolls a leg at a moderate pace (dodge the
-	// walls coming at you), stops, the zones appear, and there's just long
-	// enough to race to one before her head comes round. Each round is a
+	// blocks coming at you, grab the cash), stops, and her head comes round.
+	// On the last leg, there's a dash for the line first. Each round is a
 	// little longer, quicker, with less warning and more danger.
 	function settingsFor(r) {
 		const loops = Math.min(9, 3 + r);                 // green lights it should take
@@ -110,7 +106,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			loops,
 			speed: speed * M,                              // field units per second
 			leg: leg.map((m) => m * M),
-			dash: Math.max(2.6, 4.5 - 0.25 * r),           // seconds to race to a zone once it stops
+			dash: Math.max(2.6, 4.5 - 0.25 * r),           // on the last leg, seconds to race for the line once it stops
 			warning: Math.max(0.45, 1.5 - 0.15 * r),       // seconds her head takes to turn round
 			red: [2.5, 4.5],                               // seconds she watches
 			length: loops * (leg[0] + leg[1]) / 2 * M,
@@ -123,7 +119,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		};
 	}
 
-	const POINTS = { hold: 1, finish: 10 };   // a red light survived in a zone; crossing the line
+	const POINTS = { cash: 1, finish: 10 };   // a wad of cash; crossing the line
 	const ROUND_GAP = {
 		look: 1.4,            // each round opens on the doll, facing the players: ROUND N...
 		sweep: 2.0,           // ...then the view scrolls back down the field to the start
@@ -137,9 +133,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		steps: [
 			{ id: 'move', caption: 'MOVE LEFT AND RIGHT', min: 2.5, max: 5 },
 			{ id: 'step', caption: 'STEP FORWARD AND BACK', min: 2.5, max: 5 },
-			{ id: 'zone', caption: 'REACH A WHITE CIRCLE', min: 2.5, max: 9 },
+			{ id: 'cash', caption: 'GRAB THE CASH', min: 2.5, max: 10 },
 			{ id: 'freeze', caption: 'FREEZE ON RED LIGHT', min: 5.6, max: 6.5 },
-			{ id: 'corner', caption: 'CORNER CIRCLES SWITCH YOUR WALL', min: 3, max: 18 },
+			{ id: 'jump', caption: 'JUMP PADS SWITCH YOUR WALL', min: 3, max: 18 },
 		],
 		nice: 1.1,            // the NICE! once a step is done, before the next
 		zoom: [1.35, 2.3],    // how close the camera comes in on the contestants
@@ -148,8 +144,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		moved: 0.35,          // how far along their wall (per contestant) counts as moving
 		stepped: 0.3,         // and how far toward and away from it
 		red: [1.5, 5.0],      // the practice red light: on, then off (no shooting)
-		hopAfter: 0.4,        // seconds in a corner circle before the skip
-		perCorner: 2,         // practice corner circles at one corner at once
+		cashEvery: 160,       // practice cash, every so far up each wall
+		grab: 2,              // wads each player picks up to pass the cash step
 	};
 
 	/* ---------- tuning: the doll's entrance ---------- */
@@ -214,6 +210,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		movers = [];
 		sentries = [];
 		splats = [];
+		pads = [];
+		cash = [];
 
 		// Square blocks scattered in loose bands across every wall: on each wall,
 		// a few short runs of one to three blocks at odd places along it, each
@@ -267,6 +265,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			movers.push({ kind: 'marble', colour: MARBLE_COLOURS[i % MARBLE_COLOURS.length], lo, hi, x: lo + Math.random() * (hi - lo), f, dir: Math.random() < 0.5 ? -1 : 1, speed: settings.marbleSpeed * (0.8 + Math.random() * 0.4), r: 56, spin: 0 });
 		}
 
+		// Jump pads up the track, and cash all over it.
+		layPads(500, finishF - 150, PAD.every);
+		layCash(250, finishF - 60, CASH.every);
+
 		// Armed guards line the far ends of the side walls (out of the way
 		// of the contestants playing there), and two flank the doll.
 		let i = 0;
@@ -301,12 +303,12 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			lean: { x: 0, z: 0 },
 			fall: null,          // set when shot
 			wall: 1,             // the wall they play on: 0 left, 1 front, 2 right
-			zone: null,          // the safe zone they hold
-			swapTo: null,        // the wall they'll skip onto at the next green light
+			offPad: true,        // clear of the jump pads (they must step off one before another works)
+			grabbed: 0,          // wads of cash picked up in the controls intro
 			hop: null,           // { t, x0, f0 } while skipping across a corner
 			lift: 0,             // how high off the sand they are, mid-skip
-			pass: false,         // moved walls from the desk: let off the zone check until the next green light
-			drill: 0,            // corner skips made in the controls intro
+			pass: false,         // moved walls from the desk: let off the line check until the next green light
+			drill: 0,            // jumps made in the controls intro
 			warned: false,       // caught moving in the practice red light
 		};
 	}
@@ -333,8 +335,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		c.fall = null;
 		c.lean.x = c.lean.z = 0;
 		c.wall = 1;
-		c.zone = null;
-		c.swapTo = null;
+		c.offPad = true;
 		c.hop = null;
 		c.lift = 0;
 		c.pass = false;
@@ -458,7 +459,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		if (!first) buildField(r);
 		cam = 0;
 		for (const c of contestants) resetContestant(c);
-		zones.length = 0;
 		head.t = head.dur = 0;
 		glare = 0;
 		showInset = true;
@@ -491,31 +491,23 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (const c of contestants) {
 			c.glue = null;
 			c.pass = false;
-			// those who held an edge zone skip across the corner
-			if (c.alive && !c.safe && c.swapTo !== null) {
-				c.hop = { t: 0, x0: c.x, f0: c.f };
-				c.wall = c.swapTo;
-				c.swapTo = null;
-			}
-			c.zone = null;
 		}
+		finalDash = false;
 		sound.music(true, settings.music);
-		zones.length = 0;
 		scrollTo = Math.min(camEnd, cam + rand(settings.leg));
 		if (camEnd - scrollTo < settings.leg[0] * 0.5) scrollTo = camEnd;   // no stub of a last leg
 		setPhase('green', Infinity);
 	}
 
-	// The track stops: the zones appear (or, on the last leg, the line is in
-	// reach), and there's just long enough to race there.
+	// The track stops at the end of the last leg, the line in reach: just long
+	// enough to race for it before she turns.
 	let scrollTo = 0;
 	let finalDash = false;
 	function startDash() {
 		cam = scrollTo;
-		finalDash = cam >= camEnd - 1;
+		finalDash = true;
 		setPhase('dash', settings.dash);
-		layZones();
-		say(finalDash ? 'Run for the line!' : 'Get to a safe zone!', '#ffd23f');
+		say('Run for the line!', '#ffd23f');
 		show.fx('go');
 	}
 
@@ -531,7 +523,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		say('Red light', '#ff3640', 'FREEZE');
 		glare = 1;
 		freeze();
-		zonesChecked = false;
+		lineChecked = false;
 		blipAt = 0;
 		setPhase('red', rand(settings.red));
 	}
@@ -548,7 +540,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// (The clock keeps running through it.)
 	function endRound() {
 		sound.music(false);
-		zones.length = 0;
 		const survivors = contestants.filter((c) => c.alive);
 		callout = null;
 		cleared = { round, made: survivors.length };
@@ -584,157 +575,85 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		pops.push({ text, colour, x: p.x, y, age: 0 });
 	}
 
-	/* ---------- safe zones ---------- */
+	/* ---------- jump pads and cash ---------- */
 
-	// Painted circles on the sand, one per contestant still running, laid
-	// fresh at every green light. A zone sits at a fixed spot in the band
-	// the contestants play in, so it scrolls along with them; the first to
-	// step in holds it. An edge zone sits at the corner end of its wall, and
-	// whoever holds it through red light skips onto the wall round the corner.
-	const zones = [];           // { id, wall, u, near, x, edge (wall it leads to, or null), owner, age }
-	let zoneSerial = 0;
-	let zonesChecked = false;   // this red light's zone check is done
-	let zonePulse = 0;          // the zones' pulse, quickening as she's about to turn
+	// Along the track, at the corner ends of the walls: jump pads. Step on
+	// one and you're straight round the corner onto the next wall. And strewn
+	// all over the field: little wads of cash, a point each for whoever walks
+	// over them. Both are laid with the field and fixed to it, so they scroll.
+	let pads = [];              // { x, f, wall, to, age, practice }
+	let cash = [];              // { x, f, wall, spin, taken, practice }
+	let padPulse = 0;
+	let lineChecked = false;    // the last leg's check at the line is done
 
-	const zoneF = (z) => cam + BACK + z.near * DEPTH;
-	const inZone = (c, z, k = 1) => Math.pow((c.x - z.x) / ZONE_RX, 2) + Math.pow((c.f - zoneF(z)) / ZONE_RF, 2) < k * k;
+	const onPad = (c, p) => Math.pow((c.x - p.x) / PAD.rx, 2) + Math.pow((c.f - p.f) / PAD.rf, 2) < 1;
 
-	function layZones() {
-		zones.length = 0;
-		const live = contestants.filter((c) => c.alive && !c.safe);
-		// The last dash is for the line, not the zones.
-		if (!live.length || finalDash) return;
-		const endCam = cam;   // the track has stopped
-		const counts = [0, 1, 2].map((w) => live.filter((c) => c.wall === w).length);
+	// the corner ends of the walls: [the wall, the wall round that corner, the pad's x]
+	const CORNERS = [
+		[0, 1, W - EDGE_AT * W], [1, 0, W + EDGE_AT * W],
+		[1, 2, 2 * W - EDGE_AT * W], [2, 1, 2 * W + EDGE_AT * W],
+	];
 
-		// 30-50% of the zones are edge zones (at least one, with two or more
-		// zones), so wall changes are forced every green light. They're
-		// spread over the walls with players: the front wall has a corner at
-		// each end, a side wall only the one where it meets the front.
-		const n = live.length;
-		const lo = Math.ceil(n * EDGE_SHARE[0] - 1e-9);
-		const hi = Math.floor(n * EDGE_SHARE[1] + 1e-9);
-		let want = n >= 2 ? Math.max(1, lo + Math.floor(Math.random() * (Math.max(lo, hi) - lo + 1))) : 0;
-		const edgesOn = [[], [], []];                  // per wall, the walls its edge zones lead to
-		const ends = (wall) => (wall === 1 ? [0, 2] : [1]);
-		const room = (wall) => ends(wall).filter((to) => edgesOn[wall].filter((t) => t === to).length < EDGE_STACK);
-		while (want > 0) {
-			// a wall with players still short of edge zones, the emptiest of them first
-			const open = [0, 1, 2].filter((w) => edgesOn[w].length < counts[w] && room(w).length);
-			if (!open.length) break;
-			const least = Math.min(...open.map((w) => edgesOn[w].length / counts[w]));
-			const pick = open.filter((w) => edgesOn[w].length / counts[w] === least);
-			const wall = pick[Math.floor(Math.random() * pick.length)];
-			// from the front, toward the side wall with fewer players (and fewer already headed there)
-			const heading = (to) => counts[to] + edgesOn[1].filter((t) => t === to).length + Math.random() * 0.5;
-			const to = room(wall).sort((a, b) => heading(a) - heading(b))[0];
-			edgesOn[wall].push(to);
-			want--;
+	// Pads up the track every so often, at a corner picked at random (clear of blocks).
+	function layPads(fromF, toF, every, practice) {
+		for (let f = fromF; f < toF; f += every * (0.7 + Math.random() * 0.6)) {
+			const [wall, to, x] = CORNERS[Math.floor(Math.random() * CORNERS.length)];
+			if (blocks.some((b) => Math.abs(b.x - x) < b.r + PAD.rx && Math.abs(b.f - f) < b.r + PAD.rf)) continue;
+			pads.push({ x, f, wall, to, age: 0, practice });
 		}
+	}
 
+	// Cash all over every wall, here and there (clear of blocks).
+	function layCash(fromF, toF, every, practice, wallsOnly) {
 		for (let wall = 0; wall < 3; wall++) {
-			const k = counts[wall];
-			if (!k) continue;
-			const edges = edgesOn[wall];
-			// where everyone on this wall stands (those mid-skip, where they'll land)
-			const here = live.filter((c) => c.wall === wall).map((c) => ({ x: xOf(c), near: nearOf(wall, c.px, c.pz) }));
-			for (let i = 0; i < k; i++) zones.push(placeZone(wall, i < edges.length ? edges[i] : null, endCam, here));
-		}
-	}
-
-	// The best of many tries at a zone on a wall (an edge zone if `edge` is
-	// the wall it leads to): apart from the other zones, clear of the blocks
-	// where the view will be at endCam, and well away from where everyone
-	// stands (`here`) so it takes a dash.
-	function placeZone(wall, edge, endCam, here) {
-		let best = null;
-		let bestScore = -Infinity;
-		for (let k = 0; k < 120; k++) {
-			let u;
-			if (edge !== null) {
-				u = edge < wall ? EDGE_AT : 1 - EDGE_AT;      // the end that meets that wall
-				u += (Math.random() - 0.5) * 0.03;
-			} else {
-				u = 0.14 + Math.random() * 0.72;
-			}
-			const near = 0.1 + Math.random() * 0.8;
-			const x = wall * W + u * W;
-			const fEnd = endCam + BACK + near * DEPTH;
-			let score = 0;
-			// well apart from the other zones
-			for (const z of zones) if (z.wall === wall && Math.hypot(z.x - x, (z.near - near) * DEPTH * 2) < ZONE_GAP) score -= 2000;
-			// clear of the blocks where she'll turn round, and the rows the hazards roam
-			for (const b of blocks) if (Math.abs(b.x - x) < b.r + ZONE_RX * 0.7 && Math.abs(b.f - fEnd) < b.r + ZONE_RF + BODY) score -= 1500;
-			for (const m of movers) if (Math.floor(x / W) === 1 && Math.abs(m.f - fEnd) < m.r + ZONE_RF + BODY) score -= 400;
-			// and well away from where everyone stands now: a dash, across and in depth
-			let clear = Infinity;
-			for (const h of here) clear = Math.min(clear, Math.hypot(h.x - x, (h.near - near) * DEPTH * 0.8));
-			score += Math.min(clear, ZONE_CLEAR) + Math.random() * 40;
-			// spread out: as far as can be from every zone laid so far, whatever its wall
-			let apart = Infinity;
-			for (const z of zones) apart = Math.min(apart, Math.hypot(z.x - x, (z.near - near) * DEPTH));
-			score += Math.min(apart, ZONE_SPREAD) * 1.5;
-			if (score > bestScore) {
-				bestScore = score;
-				best = { id: ++zoneSerial, wall, u, near, x, edge, owner: null, age: 0 };
-			}
-		}
-		return best;
-	}
-
-	// The first to step into a free zone on their wall holds it, until they
-	// step (well) out of it again. (A practice zone is kept for one player.)
-	function claimZone(c) {
-		if (c.zone && !inZone(c, c.zone, 1.15)) {
-			c.zone.owner = null;
-			c.zone = null;
-		}
-		if (c.zone) return;
-		for (const z of zones) {
-			if (!z.owner && z.wall === c.wall && (z.for === undefined || z.for === c.n) && inZone(c, z)) {
-				z.owner = c;
-				z.claimed = 0;
-				c.zone = z;
-				sound.ding();
-				return;
+			if (wallsOnly && !wallsOnly.includes(wall)) continue;
+			for (let f = fromF + Math.random() * every; f < toF; f += every * (0.5 + Math.random())) {
+				const x = wall * W + LANE + 80 + Math.random() * (W - 2 * LANE - 160);
+				if (blocks.some((b) => Math.abs(b.x - x) < b.r + 50 && Math.abs(b.f - f) < b.r + 50)) continue;
+				cash.push({ x, f, wall, spin: Math.random() * 6, taken: false, practice });
 			}
 		}
 	}
 
-	// Just after RED LIGHT: anyone not in a zone of their own is out (and
-	// anyone in one scores). Those holding an edge zone are marked to skip
-	// walls at the next green light.
-	function checkZones() {
-		zonesChecked = true;
-		if (finalDash) {
-			for (const c of contestants) if (c.alive && !c.safe && !c.pass) eliminate(c, 'zone');
+	// Round the corner onto the next wall, straight away.
+	function jump(c, p) {
+		c.hop = { t: 0, x0: c.x, f0: c.f };
+		c.wall = p.to;
+		c.offPad = false;   // (no jumping on again until they've stepped off where they land)
+		c.drill++;
+		show.fx('joinWall');
+		popOver(c, WALL_NAMES[c.wall] + ' WALL!', PLAYER_COLORS[c.n]);
+	}
+
+	function touchPadsAndCash(c) {
+		const onAny = pads.some((p) => p.wall === c.wall && onPad(c, p));
+		if (!c.offPad) {
+			if (!onAny) c.offPad = true;
+		} else if (onAny) {
+			jump(c, pads.find((p) => p.wall === c.wall && onPad(c, p)));
 			return;
 		}
-		if (!zones.length) return;
-		for (const c of contestants) {
-			if (!c.alive || c.safe || c.pass) continue;
-			const z = c.zone;
-			if (z && z.owner === c && inZone(c, z, 1.15)) {
-				if (z.edge !== null) c.swapTo = z.edge;
-				c.score += POINTS.hold;
-				popOver(c, '+' + POINTS.hold, PLAYER_COLORS[c.n]);
-			} else {
-				eliminate(c, 'zone');
-			}
+		for (const m of cash) {
+			if (m.taken || m.wall !== c.wall || Math.abs(m.x - c.x) > CASH.reach || Math.abs(m.f - c.f) > CASH.reach * 0.7) continue;
+			m.taken = true;
+			c.score += POINTS.cash;
+			c.grabbed++;
+			popOver(c, '+' + POINTS.cash, '#3cdc7a');
+			show.fx('coin', 0.6);
 		}
 	}
 
-	function ageZones(dt) {
-		// quicker and quicker as green light runs out; frantic as she turns
-		const rate = phase === 'dash' ? 4 + 10 * Math.min(1, phaseT / Math.max(phaseDur, 0.1)) : phase === 'warning' ? 18 : phase === 'drill' ? 5 : 2.5;
-		zonePulse += dt * rate;
-		for (const z of zones) {
-			z.age += dt;
-			if (z.owner) {
-				z.claimed += dt;
-				if (!z.owner.alive || z.owner.safe) { z.owner.zone = null; z.owner = null; }
-			}
-		}
+	// Just after RED LIGHT on the last leg: anyone not across the line is out.
+	function checkLine() {
+		lineChecked = true;
+		if (!finalDash) return;
+		for (const c of contestants) if (c.alive && !c.safe && !c.pass) eliminate(c, 'line');
+	}
+
+	function agePads(dt) {
+		padPulse += dt * 4;
+		for (const p of pads) p.age += dt;
+		for (const m of cash) m.spin += dt;
 	}
 
 	/* ---------- eliminations ---------- */
@@ -809,7 +728,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		case 'green':
 			// scrolling: on to the next stop
 			cam = Math.min(scrollTo, cam + settings.speed * dt);
-			if (cam >= scrollTo) startDash();
+			// (at the end of a leg she turns; at the end of the last, a dash for the line first)
+			if (cam >= scrollTo) { cam = scrollTo; if (scrollTo >= camEnd - 1) startDash(); else warn(); }
 			break;
 
 		case 'dash':
@@ -824,7 +744,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			blipAt -= dt;
 			if (blipAt <= 0) { sound.blip(); blipAt = 0.45; }
 			glare = 0.7 + 0.3 * Math.sin(phaseT * 12);
-			if (!zonesChecked && phaseT > GRACE) checkZones();
+			if (!lineChecked && phaseT > GRACE) checkLine();
 			if (phaseT >= phaseDur) turnAway();
 			break;
 
@@ -836,7 +756,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	}
 
 	// Everything else that moves, in every beat: her head, the hazards, the
-	// zones, the contestants, the shots.
+	// pads and cash, the contestants, the shots.
 	function stepWorld(dt) {
 		clock += dt;
 		for (const c of contestants) if (c.shotAt !== undefined && clock >= c.shotAt) shoot(c);
@@ -848,7 +768,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		}
 
 		agePops(dt);
-		ageZones(dt);
+		agePads(dt);
 
 		const running = phase === 'green' || phase === 'dash' || phase === 'warning';
 		for (const m of movers) {
@@ -972,11 +892,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			return;
 		}
 
-		if (phase === 'dash' || phase === 'warning' || phase === 'drill') claimZone(c);
+		if (phase !== 'red' && phase !== 'drill-red') touchPadsAndCash(c);
+		if (c.hop) return;   // (just jumped)
 
 		if (!c.safe && c.f > finishF + 12) {
 			c.safe = true;
-			c.zone = null;
 			c.score += POINTS.finish;
 			sound.ding();
 			popOver(c, '+' + POINTS.finish, PLAYER_COLORS[c.n]);
@@ -1013,6 +933,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			return;
 		}
 		const speed = Math.hypot(c.x - c.lastX, c.f - c.lastF) / Math.max(dt, 1e-3);
+		// which way, and how hard, they're heading across: -1 left .. 1 right
+		const across = Math.max(-1, Math.min(1, (c.x - c.lastX) / Math.max(dt, 1e-3) / 300));
+		c.drift = (c.drift || 0) + (across - (c.drift || 0)) * Math.min(1, dt * 6);
 		c.lastX = c.x;
 		c.lastF = c.f;
 		if (c.glue) return;
@@ -1042,7 +965,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// (while the view is up the field, before a round, the contestants wait
 		// unseen at the start)
 		const waiting = cam > 1 && (show.beat === 'doll' || (show.beat === 'play' && phase === 'ready'));
-		if (!waiting) for (const z of zones) drawZone(ctx, z);
+		for (const p of pads) drawPad(ctx, p);
 
 		// Everything standing on the plane, far to near.
 		const things = [];
@@ -1052,6 +975,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			add(dollF, (c) => drawDoll(c));
 		}
 		for (const b of blocks) add(b.f - b.r * 0.6, (c) => drawBlock(c, b));
+		for (const m of cash) if (!m.taken) add(m.f, (c) => drawCash(c, m));
 		for (const m of movers) add(m.f, (c) => (m.kind === 'guard' ? drawGuardOn(c, m.x, m.f, m.mask, false, m.phase, 0) : drawMarble(c, m)));
 		for (const g of sentries) if (dollShown || !g.doll) add(g.f, (c) => drawGuardOn(c, g.x, g.f, g.mask, true, 0, g.flash));
 		if (!waiting) for (const c of contestants) add(c.f, (cx) => drawContestant(cx, c));
@@ -1344,21 +1268,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		});
 
 		if (!c.alive) return;
-		// over their head: a marker in their colour, or where they're skipping to
+		// over their head: a marker in their colour
 		const bob = Math.sin(clock * 4 + c.n) * 4;
 		const top = p.y - 175 * s + bob * s;
-		if (c.swapTo !== null) {
-			// off round the corner next green light: an arrow toward that wall, and its name
-			const dir = Math.sign(c.swapTo - c.wall);
-			const nudge = (0.5 + 0.5 * Math.sin(clock * 9)) * 14;
-			art.with(ctx, { x: p.x + dir * (20 + nudge) * s, y: top - 22 * s, scale: s }, function (cx) {
-				art.with(cx, { y: 4, scaleX: dir }, (c2) => art.poly(c2, swapArrow(), { fill: 'rgba(0,0,0,0.35)' }));
-				art.with(cx, { scaleX: dir }, (c2) => art.poly(c2, swapArrow(), { fill: colour }));
-				show.text(cx, WALL_NAMES[c.swapTo], -dir * 20, -46, 28, {});
-			});
-		} else {
-			art.poly(ctx, [[p.x - 14 * s, top - 14 * s], [p.x + 14 * s, top - 14 * s], [p.x, top + 4 * s]], { fill: colour, alpha });
-		}
+		art.poly(ctx, [[p.x - 14 * s, top - 14 * s], [p.x + 14 * s, top - 14 * s], [p.x, top + 4 * s]], { fill: colour, alpha });
 	}
 
 	// The coloured footprint is always where the player really is, even when
@@ -1379,53 +1292,42 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		art.ellipse(ctx, g.x, g.y, 40 * s, 13 * s, { fill: PLAYER_COLORS[c.n], alpha: fadeIn(foot.f) * 0.9 });
 	}
 
-	// A fat arrow pointing right, its tail at the origin's left.
-	function swapArrow() {
-		return [[-44, -9], [4, -9], [4, -24], [36, 0], [4, 24], [4, 9], [-44, 9]];
+	// A jump pad: a glowing ring painted on the sand at the corner end of a
+	// wall, pulsing, with chevrons pointing round the corner and the name of
+	// the wall it leads to.
+	function drawPad(ctx, p) {
+		if (!onView(p.f)) return;
+		const front = at(p.x, p.f - PAD.rf);
+		const back = at(p.x, p.f + PAD.rf);
+		const cy = (front.y + back.y) / 2;
+		const squash = (front.y - back.y) / 2 / PAD.rx;
+		const beat = 0.5 + 0.5 * Math.sin(padPulse + p.x * 0.01);
+		const appear = Math.min(1, p.age / 0.35);
+		const R = PAD.rx;
+		const GLOW = '#7df9ff';
+		const dir = Math.sign(p.to - p.wall);
+		art.with(ctx, { x: p.x, y: cy, scaleX: appear * (1 + 0.06 * beat), scaleY: appear * (1 + 0.06 * beat) * squash }, function (c) {
+			for (const k of [1.5, 1.3, 1.14]) art.circle(c, 0, 0, R * k, { fill: GLOW, alpha: (0.12 + 0.2 * beat) * 0.55 });
+			art.circle(c, 0, 0, R, { fill: GLOW });
+			art.circle(c, 0, 0, R * 0.8, { fill: '#1d6f86' });
+			art.with(c, { scaleX: dir }, function (c2) {
+				for (const ox of [-26, 22]) art.poly(c2, [[ox - 16, -40], [ox + 18, 0], [ox - 16, 40], [ox - 38, 40], [ox - 4, 0], [ox - 38, -40]], { fill: GLOW, alpha: 0.6 + 0.4 * beat });
+			});
+		});
+		show.text(ctx, WALL_NAMES[p.to], p.x, back.y - 26, 28, { fill: 'white', alpha: appear });
 	}
 
-	// A safe zone: a glowing white ring painted on the sand, flat on the
-	// plane. Free ones pulse (faster as she's about to turn); a held one
-	// stays white and steady, with a band of its holder's colour inside. An
-	// edge zone has chevrons pointing round the corner to the wall it leads to.
-	function drawZone(ctx, z) {
-		const f = zoneF(z);
-		if (!onView(f)) return;
-		const front = at(z.x, f - ZONE_RF);
-		const back = at(z.x, f + ZONE_RF);
-		const cy = (front.y + back.y) / 2;
-		const squash = (front.y - back.y) / 2 / ZONE_RX;
-		const appear = Math.min(1, z.age / 0.35);
-		const owner = z.owner;
-		const beat = 0.5 + 0.5 * Math.sin(zonePulse);
-		const grow = appear * (1 + 0.25 * Math.sin(appear * Math.PI)) * (owner ? 1 + 0.12 * Math.max(0, 1 - z.claimed / 0.25) : 1 + 0.07 * beat);
-		const edge = z.edge !== null;
-		const WHITE = '#fffaf0';
-		const R = ZONE_RX;
-		art.with(ctx, { x: z.x, y: cy, scaleX: grow, scaleY: grow * squash, alpha: fadeIn(f) }, function (c) {
-			// the glow round it
-			const glow = owner ? 0.14 : 0.16 + 0.26 * beat;
-			for (const k of [1.55, 1.35, 1.18]) art.circle(c, 0, 0, R * k, { fill: WHITE, alpha: glow * 0.55 });
-			// the painted ring, then the centre: pale while free, and once
-			// held, a band of the holder's colour
-			art.circle(c, 0, 0, R, { fill: WHITE });
-			art.circle(c, 0, 0, R * 0.8, { fill: '#d9b47f' });
-			art.circle(c, 0, 0, R * 0.8, { fill: WHITE, alpha: 0.28 + 0.14 * beat * (owner ? 0 : 1) });
-			if (owner) {
-				art.circle(c, 0, 0, R * 0.68, { fill: PLAYER_COLORS[owner.n] });
-				art.circle(c, 0, 0, R * 0.5, { fill: '#e4c493' });
-			} else if (z.for !== undefined) {
-				// a practice zone, kept for one player: a dot of their colour
-				art.circle(c, 0, 0, R * 0.3, { fill: PLAYER_COLORS[z.for] });
-			}
-			if (edge) {
-				// chevrons toward the next wall
-				const dir = Math.sign(z.edge - z.wall);
-				const ink = '#b8600a';
-				art.with(c, { scaleX: dir }, function (c2) {
-					for (const ox of [-26, 22]) art.poly(c2, [[ox - 16, -40], [ox + 18, 0], [ox - 16, 40], [ox - 38, 40], [ox - 4, 0], [ox - 38, -40]], { fill: ink });
-				});
-			}
+	// A wad of cash: a little stack of green notes with a paper band, sitting
+	// on the sand, bobbing gently.
+	function drawCash(ctx, m) {
+		const p = at(m.x, m.f);
+		const s = p.s;
+		const bob = Math.sin(m.spin * 3) * 3 * s;
+		art.ellipse(ctx, p.x, p.y, 30 * s, 9 * s, { fill: 'rgba(0,0,0,0.22)' });
+		art.with(ctx, { x: p.x, y: p.y - 12 * s + bob, scale: s, rotate: Math.sin(m.spin) * 0.08 }, function (c) {
+			for (let i = 2; i >= 0; i--) art.roundRect(c, -26 + i * 2, -14 - i * 6, 52, 20, 3, { fill: i % 2 ? '#2f9e57' : '#3cbf6a' });
+			art.rect(c, -6, -27, 12, 22, { fill: '#f3ead2' });
+			art.circle(c, 0, -16, 5, { fill: '#2f9e57' });
 		});
 	}
 
@@ -1446,12 +1348,22 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// everything above the legs rides the bob
 		c.save();
 		c.translate(0, -bob);
-		// arms, swinging as they walk
+		// and bends at the hips away from the way they're heading
+		const drift = k.glue || k.fall ? 0 : (k.drift || 0);
+		c.translate(0, -44);
+		c.rotate(-drift * 0.28);
+		c.translate(0, 44);
+		// arms, swinging as they walk, trailing out behind as they run: splayed
+		// back as they go, and swept away from the way they're heading
+		const run = k.glue || k.fall ? 0 : k.moving;
 		for (const side of [-1, 1]) {
 			const swing = -side * step * 0.7;
-			art.roundRect(c, side * 26 - 6, -86 + swing, 12, 38, 6, { fill: '#176f5b' });
-			art.line(c, [[side * 26 + side * 3, -82 + swing], [side * 26 + side * 3, -54 + swing]], { stroke: 'white', lineWidth: 2.5 });
-			art.circle(c, side * 26, -46 + swing, 6, { fill: SKIN });
+			const trail = drift * 0.7 - side * run * 0.35;
+			art.with(c, { x: side * 26, y: -86 + swing, rotate: trail }, function (a) {
+				art.roundRect(a, -6, 0, 12, 38, 6, { fill: '#176f5b' });
+				art.line(a, [[side * 3, 4], [side * 3, 32]], { stroke: 'white', lineWidth: 2.5 });
+				art.circle(a, 0, 40, 6, { fill: SKIN });
+			});
 		}
 		// the jacket: white trim down the sides and round the collar
 		art.roundRect(c, -22, -90, 44, 50, [13, 13, 7, 7], { fill: TEAL });
@@ -1681,20 +1593,22 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	function enterStep(i) {
 		Object.assign(practice, { i, age: 0, done: false, doneAge: 0, moved: 0, stepped: 0, red: 0 });
-		zones.length = 0;
-		for (const c of contestants) { c.zone = null; c.glue = null; c.drill = 0; }
+		pads = pads.filter((p) => !p.practice);
+		cash = cash.filter((m) => !m.practice);
+		for (const c of contestants) { c.glue = null; c.drill = 0; c.grabbed = 0; }
 		if (phase === 'drill-red') { glare = 0; }
 		setPhase('drill');
 		const step = CONTROLS.steps[i];
 		if (!step) return;
 		show.fx('stepIn');
-		// a practice circle each, kept for its player, away from them
-		if (step.id === 'zone') {
-			for (const c of contestants) {
-				const z = placeZone(c.wall, null, cam, contestants.filter((o) => o.wall === c.wall).map((o) => ({ x: o.x, near: nearOf(o.wall, o.px, o.pz) })));
-				z.for = c.n;
-				zones.push(z);
-			}
+		// practice cash on every wall with someone on it, just up the field from them
+		if (step.id === 'cash') {
+			const walls = [...new Set(contestants.map((c) => c.wall))];
+			layCash(cam + BACK + DEPTH * 0.25, cam + BACK + DEPTH * 0.9, CONTROLS.cashEvery, true, walls);
+		}
+		// a practice pad at every corner end, halfway up the play area
+		if (step.id === 'jump') {
+			for (const [wall, to, x] of CORNERS) pads.push({ x, f: cam + BACK + DEPTH * 0.5, wall, to, age: 0, practice: true });
 		}
 	}
 
@@ -1703,45 +1617,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		switch (step.id) {
 			case 'move': return practice.moved > CONTROLS.moved * n;
 			case 'step': return practice.stepped > CONTROLS.stepped * n;
-			case 'zone': return contestants.every((c) => c.zone);
+			case 'cash': return contestants.every((c) => c.grabbed >= CONTROLS.grab);
 			case 'freeze': return practice.red >= 2;
-			case 'corner': return contestants.every((c) => c.drill >= 2 && !c.hop);
+			case 'jump': return contestants.every((c) => c.drill >= 2 && !c.hop);
 		}
 		return false;
-	}
-
-	// Every contestant in the corner step gets a corner circle on their
-	// wall, kept for them: from the front, round the nearer corner (if it
-	// isn't already busy); from a side wall, back round to the front.
-	function cornerCircles() {
-		for (const c of contestants) {
-			if (c.drill >= 2 || c.hop || zones.some((z) => z.for === c.n)) continue;
-			const busy = (to) => zones.filter((z) => z.wall === c.wall && z.edge === to).length >= CONTROLS.perCorner;
-			let to = 1;
-			if (c.wall === 1) {
-				to = c.px < 0.5 ? 0 : 2;
-				if (busy(to)) to = 2 - to;
-			}
-			if (busy(to)) continue;
-			const z = placeZone(c.wall, to, cam, [{ x: xOf(c), near: nearOf(c.wall, c.px, c.pz) }]);
-			z.for = c.n;
-			zones.push(z);
-		}
-	}
-
-	// A moment in a corner circle, and they skip round onto that wall.
-	function cornerSkips() {
-		for (const c of contestants) {
-			const z = c.zone;
-			if (!z || z.edge === null || c.hop || z.claimed < CONTROLS.hopAfter) continue;
-			zones.splice(zones.indexOf(z), 1);
-			c.zone = null;
-			c.hop = { t: 0, x0: c.x, f0: c.f };
-			c.wall = z.edge;
-			c.drill++;
-			show.fx('joinWall');
-			popOver(c, WALL_NAMES[c.wall] + ' WALL!', PLAYER_COLORS[c.n]);
-		}
 	}
 
 	let lastSpot = [];
@@ -1779,10 +1659,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				for (const c of contestants) c.glue = null;
 				setPhase('drill');
 			}
-		}
-		if (step.id === 'corner') {
-			cornerSkips();
-			cornerCircles();
 		}
 		if (!practice.done && practice.age >= step.min && achieved(step)) {
 			practice.done = true;
@@ -1886,7 +1762,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			length: ENTRANCE.length,
 			enter() {
 				show.stop('tutorial');
-				zones.length = 0;
 				callout = null;
 				for (const c of contestants) resetContestant(c);
 				setPhase('waiting');
@@ -1951,7 +1826,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					if (phase === 'ready') {
 						show.slam(c, 'ROUND ' + (round + 1), W / 2, 470, 170, phaseT - 0.1, { fill: PINK, glow: PINK, alpha: 1 - between(phaseT, phaseDur - 0.4, phaseDur) });
 					}
-					// the dash: how long is left to reach a zone (or the line)
+					// the dash: how long is left to reach the line
 					if (phase === 'dash') {
 						const left = Math.max(0, 1 - phaseT / phaseDur);
 						const bw = 1000;
@@ -1977,7 +1852,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			enter() {
 				sound.music(false);
 				setPhase('over');
-				zones.length = 0;
 				showInset = false;
 				callout = null;
 				turnHead(0, 1);
@@ -2034,8 +1908,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// just there if the round hasn't started moving yet.
 	function deskSwitch(c, wall) {
 		if (!c.alive || c.safe || c.fall) return;
-		if (c.zone) { c.zone.owner = null; c.zone = null; }
-		c.swapTo = null;
 		c.glue = null;
 		c.over = 0;
 		c.pass = true;
@@ -2053,20 +1925,18 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			contestants: contestants.map((c) => ({
 				n: c.n, x: c.x, f: c.f, px: c.px, pz: c.pz, wall: c.wall, alive: c.alive, safe: c.safe, glued: !!c.glue,
 				lean: Math.hypot(c.lean.x, c.lean.z), score: c.score, drill: c.drill,
-				zone: c.zone ? c.zone.id : null, swapTo: c.swapTo, hopping: !!c.hop, why: c.alive ? null : c.why,
+				grabbed: c.grabbed, hopping: !!c.hop, why: c.alive ? null : c.why,
 			})),
-			// each zone, and where a player stands to be in the middle of it
-			zones: zones.map((z) => Object.assign({
-				id: z.id, wall: z.wall, x: z.x, f: zoneF(z), depth: z.near, edge: z.edge !== null, target: z.edge,
-				owner: z.owner ? z.owner.n : null, for: z.for === undefined ? null : z.for,
-			}, roomAt(z.wall, z.u, z.near))),
+			// the jump pads in play, and the cash still lying about
+			pads: pads.map((p) => ({ x: p.x, f: p.f, wall: p.wall, to: p.to, practice: !!p.practice })),
+			cash: cash.filter((m) => !m.taken).map((m) => ({ x: m.x, f: m.f, wall: m.wall })),
 		});
 	};
 
 	// Test hooks: jump to any beat (skipping the intros), wind the clock on.
 	const INTROS = ['squad', 'clock', 'visors', 'controls', 'doll'];
 	self.test = {
-		// no block walls this round or after (tests that steer straight to zones)
+		// no block walls this round or after (tests that steer players straight somewhere)
 		clearBlocks() { blocks = []; noBlocks = true; },
 		skipTo(id) {
 			if (!contestants.length) initGame(playersMeta ? playersMeta.length : 3);
@@ -2074,7 +1944,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				show.camera.wide();
 				gloom = 0;
 				callout = null;
-				zones.length = 0;
 				if (round < 0) begin();
 			}
 			show.go(id);

@@ -941,14 +941,14 @@ window.Showtime = function (stage, opts) {
 			// hung from the top edge; its pill fades in round the digits once they've docked
 			const box = clock.shownAt === undefined ? 1 : clamp((showTime - clock.shownAt) / 0.25, 0, 1);
 			clockPill(c, W / 2, CLOCK.y, CLOCK.size, left, 1, CLOCK.y + 20, box);
-			// the last ten seconds loom, huge and faint, over every wall
+			// the last ten seconds loom, big and solid, over every wall
 			if (left > 0 && left <= CLOCK.final) {
 				const k = 1 - (left % 1 || 1);
 				// (the display size, blown up and pulsing: a backdrop more than text)
 				c.save();
 				c.translate(W / 2, 520);
-				c.scale(1.9 * (1 + 0.25 * (1 - k)), 1.9 * (1 + 0.25 * (1 - k)));
-				self.text(c, String(Math.ceil(left)), 0, 0, 220, { fill: TYPE.colours.red, alpha: 0.45 * (1 - k * 0.7) });
+				c.scale(1.4 * (1 + 0.25 * (1 - k)), 1.4 * (1 + 0.25 * (1 - k)));
+				self.text(c, String(Math.ceil(left)), 0, 0, 220, { fill: TYPE.colours.red });
 				c.restore();
 			}
 		});
@@ -2185,7 +2185,6 @@ window.Showtime = function (stage, opts) {
 
 		function go(next) {
 			part = next;
-			if (next === 'thanks') self.fx('thanks');
 			partAt = self.bt;
 			render();
 		}
@@ -2207,14 +2206,14 @@ window.Showtime = function (stage, opts) {
 				console.log('Feedback:', feedback.reasons.join(', '));
 				if (IGB.log) IGB.log('Feedback: ' + feedback.reasons.join(', '));
 			}
-			go('thanks');
+			go('over');   // straight on to the end: THANKS FOR PLAYING!
 		}
 
 		function pick(id) {
 			feedback.again = id;
 			console.log('Play again:', id);
 			if (IGB.log) IGB.log('Play again: ' + id);
-			go('thanks');
+			go('over');
 			// the launcher switches games on a #id; in a box party, the party decides
 			stage.timeout(function () {
 				if (opts.onPlayAgain) opts.onPlayAgain(id);
@@ -2265,7 +2264,7 @@ window.Showtime = function (stage, opts) {
 			id: 'end',
 			world: false,
 			length: Infinity,
-			enter() { self.blackout = 0.5; },
+			enter() { self.blackout = 0.5; self.fx('thanks'); },
 			draw(ctx, bt) {
 				self.onWalls(ctx, function (c) {
 					self.slam(c, 'THANKS FOR PLAYING!', W / 2, 500, 160, bt - 0.1, { fill: theme.gold });
