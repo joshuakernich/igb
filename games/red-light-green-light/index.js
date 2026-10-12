@@ -67,6 +67,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const DEPTH = 800;          // and right up at the front wall, this much further
 	const MOVE_LIMIT = 0.07;    // how far a player may drift on red light, as a share of the wall, before they're out
 	const GRACE = 0.2;          // seconds after RED LIGHT before movement counts (tracking lag)
+	const TURN_AWAY = 0.8;      // seconds her head takes to turn away after a red light, before GREEN LIGHT
 	const BODY = 30;            // a contestant's radius on the plane
 	const LANE = 30;            // contestants keep this far inside their wall's ends
 	const WALL_ORDER = [1, 0, 2];             // hazards are shared out front, left, right, front...
@@ -344,9 +345,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	/* ---------- the game's state ---------- */
 
 	const sound = createSound();
-	sound.voicePitch = 0.4;   // the doll, deep and slow
 	sound.musicShift = -12;   // her song, an octave down
-	sound.voiceEcho = 2;      // her last word, echoing round the arena
 
 	let round = -1;
 	let phase = 'waiting';   // waiting, drill, drill-red, ready, green, warning, red, cleared, over
@@ -387,9 +386,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const between = (x, a, b) => clamp((x - a) / (b - a), 0, 1);
 	const introCam = () => dollF - 540;
 
-	function say(text, colour) {
-		sound.say(text);
-		callout = { text, colour, age: 0 };
+	// A call shown on every wall (no voice): the words, in a colour, and an
+	// optional line under them.
+	function say(text, colour, sub) {
+		callout = { text, colour, sub, age: 0 };
 	}
 
 	/* ---------- the show ---------- */
@@ -475,11 +475,15 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	// She turns her back and calls GREEN LIGHT: the field rolls on.
 	// (The first of the game was already called in her entrance.)
+	// After a red light (or ROUND N), she turns her head away; only once it's
+	// all the way round is it GREEN LIGHT and the field starts to scroll.
+	function turnAway() {
+		turnHead(Math.PI, TURN_AWAY);
+		setPhase('turning', TURN_AWAY);
+	}
+
 	function greenLight(firstOfGame) {
-		if (!firstOfGame) {
-			say('Green light', '#27d96b');
-			turnHead(Math.PI, 0.7);
-		}
+		if (!firstOfGame) say('Green light', '#27d96b');   // (her head's already turned away: see turnAway)
 		glare = 0;
 		for (const c of contestants) {
 			c.glue = null;
@@ -521,7 +525,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	// ...RED LIGHT: everyone's feet stick where they are.
 	function redLight() {
-		say('Red light', '#ff3640');
+		say('Red light', '#ff3640', 'FREEZE');
 		glare = 1;
 		freeze();
 		zonesChecked = false;
@@ -790,6 +794,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		switch (phase) {
 		case 'ready':
 			// ROUND N: she faces the players, then turns away
+			if (phaseT >= phaseDur) turnAway();
+			break;
+
+		case 'turning':
+			// her head coming all the way round, away from the players
 			if (phaseT >= phaseDur) greenLight(false);
 			break;
 
@@ -812,7 +821,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			if (blipAt <= 0) { sound.blip(); blipAt = 0.45; }
 			glare = 0.7 + 0.3 * Math.sin(phaseT * 12);
 			if (!zonesChecked && phaseT > GRACE) checkZones();
-			if (phaseT >= phaseDur) greenLight(false);
+			if (phaseT >= phaseDur) turnAway();
 			break;
 
 		case 'cleared':
@@ -1072,6 +1081,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			for (let w = 0; w < 3; w++) {
 				art.with(ctx, { x: w * W + W / 2, y: w === 1 ? 380 : 330, scale: (0.7 + 0.3 * pop) * (w === 1 ? 1 : 0.8), alpha: Math.max(0, a) }, function (c) {
 					show.text(c, callout.text.toUpperCase(), 0, 0, 110, { fill: callout.colour });
+					if (callout.sub) show.text(c, callout.sub, 0, 115, 80, {});
 				});
 			}
 		}
@@ -1752,7 +1762,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			// a practice red light: feet stuck, the lean shows, nobody shot
 			if (practice.red === 0 && practice.age >= CONTROLS.red[0]) {
 				practice.red = 1;
-				say('Red light', '#ff3640');
+				say('Red light', '#ff3640', 'FREEZE');
 				freeze();
 				setPhase('drill-red');
 			}
