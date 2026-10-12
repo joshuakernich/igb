@@ -1231,42 +1231,64 @@ window.Showtime = function (stage, opts) {
 						});
 						x += widths[i] * k;
 					});
-					drawVisorRow(c, cx, V.y, n, bt);
-					drawFloor(c, bad.length ? cx - 430 : cx, 600, 960, n, bt);   // (aside, to make room for a flag)
-					// a wrong visor: flagged, with what to swap it for
+					// any wrong visors join the row, after the squad's, marked
+					const xs = drawVisorRow(c, cx, V.y, n, bt, bad);
+					drawFloor(c, cx, 600, 960, n, bt);
+					// and the first gets the big flag underneath it, over everything
 					if (bad.length) {
 						const i = bad[0];
 						const flash = 0.75 + 0.25 * Math.sin(bt * 12);
 						const w = 760;
-						const fx = cx + 260;
-						art.roundRect(c, fx - w / 2, 660, w, 240, 40, { fill: 'rgba(40,0,8,0.9)', stroke: '#ff3d6a', lineWidth: 10, alpha: flash });
-						self.text(c, 'WRONG VISOR!', fx, 719, 76, { fill: '#ff5470', glow: '#ff3d6a', fit: w - 60 });
-						self.text(c, self.nameOf(i) + ' ISN\'T PLAYING', fx, 797, 50, { fill: lit(i), fit: w - 60 });
-						self.text(c, lost.length ? 'SWAP IT FOR ' + self.nameOf(lost[0]) : 'TAKE IT OFF', fx, 863, 50, { fill: lost.length ? lit(lost[0]) : 'white', fit: w - 60 });
+						const fx = clamp(xs[i], w / 2 + 30, W - w / 2 - 30);
+						const top = V.y + 175;
+						art.poly(c, [[xs[i] - 34, top + 4], [xs[i], top - 40], [xs[i] + 34, top + 4]], { fill: '#ff3d6a', alpha: flash });
+						art.roundRect(c, fx - w / 2, top, w, 250, 40, { fill: 'rgba(40,0,8,0.95)', stroke: '#ff3d6a', lineWidth: 10, alpha: flash });
+						self.text(c, 'WRONG VISOR!', fx, top + 62, 76, { fill: '#ff5470', glow: '#ff3d6a', fit: w - 60 });
+						self.text(c, self.nameOf(i) + ' ISN\'T PLAYING', fx, top + 140, 50, { fill: lit(i), fit: w - 60 });
+						self.text(c, lost.length ? 'SWAP IT FOR ' + self.nameOf(lost[0]) : 'TAKE IT OFF', fx, top + 206, 50, { fill: lost.length ? lit(lost[0]) : 'white', fit: w - 60 });
 					}
 				});
 			},
 		}, extra);
 
-		// the squad's visors in a row, each with its colour's name; ticked
-		// ones bounce and get a gold tick, the rest pulse while they're awaited
-		function drawVisorRow(c, cx, y, n, bt) {
-			const gap = Math.min(250, (W - 200) / Math.max(1, n));
-			for (let i = 0; i < n; i++) {
-				const x = cx + (i - (n - 1) / 2) * gap;
-				const appear = bt - 0.3 - i * 0.18;
-				if (appear <= 0) continue;
+		// The squad's visors in a row, each with its colour's name; ticked
+		// ones bounce and get a gold tick, the rest pulse while they're
+		// awaited. Wrong visors (bad: their slots) join the end of the row,
+		// struck through in red. Returns each drawn visor's x, by slot.
+		function drawVisorRow(c, cx, y, n, bt, bad = []) {
+			const row = Array.from({ length: n }, (_, i) => i).concat(bad);
+			const gap = Math.min(250, (W - 200) / Math.max(1, row.length));
+			const xs = {};
+			row.forEach(function (i, k) {
+				const x = cx + (k - (row.length - 1) / 2) * gap;
+				xs[i] = x;
+				const wrong = i >= n;
+				const appear = wrong ? bt - (wrongSince[i] || 0) : bt - 0.3 - k * 0.18;
+				if (appear <= 0) return;
 				const pop = appear < 0.3 ? easeOut(appear / 0.3) * 1.15 : 1 + 0.15 * Math.max(0, 1 - (appear - 0.3) / 0.2);
 				const done = ticked[i] !== undefined;
-				const bounce = done ? 1 + 0.25 * Math.max(0, 1 - (bt - ticked[i]) / 0.35) : bt > V.show ? 1 + 0.05 * Math.sin(bt * 6 + i) : 1;
+				const bounce = done ? 1 + 0.25 * Math.max(0, 1 - (bt - ticked[i]) / 0.35) : wrong ? 1 + 0.08 * Math.sin(bt * 12) : bt > V.show ? 1 + 0.05 * Math.sin(bt * 6 + i) : 1;
 				c.save();
 				c.translate(x, y);
 				c.scale(pop * bounce, pop * bounce);
-				visor(c, colour(i), done || bt <= V.show ? 1 : 0.55, bt * (done ? 3.2 : 1.4) + i * 0.8);   // turning; quicker once ticked
+				visor(c, colour(i), done || wrong || bt <= V.show ? 1 : 0.55, bt * (done ? 3.2 : 1.4) + i * 0.8);   // turning; quicker once ticked
+				if (wrong) {
+					// struck through
+					c.strokeStyle = '#ff3d6a';
+					c.lineWidth = 16;
+					c.lineCap = 'round';
+					c.beginPath();
+					c.moveTo(-80, -60);
+					c.lineTo(80, 60);
+					c.moveTo(80, -60);
+					c.lineTo(-80, 60);
+					c.stroke();
+				}
 				c.restore();
-				self.text(c, self.nameOf(i), x, y + 108, 42, { fill: lit(i), alpha: Math.min(1, appear * 4) });
+				self.text(c, self.nameOf(i), x, y + 108, 42, { fill: wrong ? '#ff5470' : lit(i), alpha: Math.min(1, appear * 4) });
 				if (done) self.text(c, '✓', x + 70, y - 60, 70, { fill: theme.gold, glow: theme.gold });
-			}
+			});
+			return xs;
 		}
 
 		// A little 3D sports visor, turned `yaw` about its upright axis and
