@@ -156,7 +156,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	const ENTRANCE = {
 		zoom: 3.4,            // the camera starts this tight on her face
-		shapes: 0.5,          // ○ △ □ slam in, one after another
 		eyes: 1.3,            // her ring eyes light up red
 		name: 1.7,            // YOUNG-HEE slams in
 		turn: 3.8,            // her head turns away
@@ -1910,7 +1909,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				stepWorld(dt);
 				if (bt < E.name) show.shake = Math.max(show.shake, 0.08 + 0.3 * bt / E.name);
 				glare = bt < E.eyes ? 0 : bt < E.turn ? 0.75 + 0.25 * Math.sin(bt * 10) : Math.max(0, 1 - (bt - E.turn) * 2);
-				[0, 1, 2].forEach((k) => { if (show.cue(E.shapes + k * 0.22)) show.fx('beat', 0.7); });
 				if (show.cue(E.eyes)) { show.fx('glint'); show.flash = 0.25; }
 				if (show.cue(E.name)) { show.fx('villainReveal'); show.shake = 0.9; show.flash = 0.5; }
 				if (show.cue(E.turn)) turnHead(Math.PI, E.turnFor);
@@ -1923,15 +1921,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				const E = ENTRANCE;
 				const out = 1 - between(bt, E.pull, E.pull + 0.5);
 				show.onWalls(ctx, function (c) {
-					// ○ △ □, then her name
-					SHAPES.forEach(function (kind, k) {
-						const age = bt - E.shapes - k * 0.22;
-						if (age < 0) return;
-						const s = age < 0.2 ? 2.2 - 1.2 * (age / 0.2) : 1;
-						art.with(c, { x: W / 2 + (k - 1) * 130, y: 160, scale: s, alpha: out * Math.min(1, age * 6) }, (c2) => shape(c2, kind, 38, k === 1 ? 'white' : PINK));
-					});
-					show.slam(c, 'YOUNG-HEE', W / 2, 840, 220, bt - E.name, { fill: PINK, glow: PINK, alpha: out });
-					show.slam(c, 'SHE SEES EVERYTHING', W / 2, 950, 56, bt - E.name - 0.4, { fill: 'white', alpha: out });
+					// her name, in the middle of the wall, over her
+					show.slam(c, 'YOUNG-HEE', W / 2, 470, 220, bt - E.name, { fill: PINK, glow: PINK, alpha: out });
+					show.slam(c, 'SHE SEES EVERYTHING', W / 2, 610, 56, bt - E.name - 0.4, { fill: 'white', alpha: out });
 					const go = 1 - between(bt, E.length - 0.4, E.length);
 					show.slam(c, 'ROUND 1', W / 2, 330, 90, bt - E.go + 0.2, { fill: PINK, alpha: go });
 					show.slam(c, 'GREEN LIGHT!', W / 2, 500, 200, bt - E.go, { fill: '#27d96b', glow: '#27d96b', rotate: -0.05, alpha: go });
