@@ -168,30 +168,25 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	/* ---------- the view ---------- */
 
-	// The plane, as in Gwi-Ma Showdown: plane y is H at the near edge (the
-	// bottom of the walls) and falls away up the field; things there are
-	// smaller and higher up the wall, in depth only (across stays 1:1). There
-	// is no horizon and no sky: the sand runs on up the wall as far as it
-	// reaches, and far things just get small. `cam` is the field distance at
-	// the near edge, and scrolls up the field.
-	const NEAR_Y = 1000;        // where the near edge meets the bottom of the walls
-	const RISE = 40;            // far, far away things shrink toward this height (never drawn)
-	const RECEDE = 1.2;         // how fast things shrink: one wall height (H units) up the field, 1 + RECEDE times smaller
-	const LIFT = NEAR_Y - RISE;
+	// The plane, flat on the wall with no perspective: one field unit is one
+	// unit up the wall, everything drawn at one size (SCALE). The field runs on
+	// up past the top of the walls; the doll and the obstacles further up the
+	// field are simply off the top until the field scrolls them down into view.
+	// `cam` is the field distance at the bottom of the walls, and scrolls up.
+	const SCALE = 0.75;         // the size of everything on the field
 	const INK = '#1a1a1a';     // for drop shadows on words
 
 	let cam = 0;
 
 	function project(x, y, up = 0) {
-		const z = 1 + (1 - y / H) * RECEDE;
-		const s = 1 / z;
-		return { x, y: RISE + LIFT * s - up * s, s };
+		return { x, y: y - up * SCALE, s: SCALE };
 	}
 	const planeY = (f) => H - (f - cam);
 	const at = (x, f, up = 0) => project(x, planeY(f), up);
-	// Too far off to matter, things fade out; behind the near edge, they're gone.
-	const fadeIn = (f) => Math.max(0, Math.min(1, (at(0, f).s - 0.05) / 0.04));
-	const onView = (f) => planeY(f) < H + 320 && at(0, f).s > 0.05;
+	// On the walls, or near enough to reach onto them (tall things standing
+	// just below the bottom edge, or above the top).
+	const fadeIn = () => 1;
+	const onView = (f) => planeY(f) < H + 320 && planeY(f) > -500;
 
 	/* ---------- the field ---------- */
 
@@ -349,6 +344,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	/* ---------- the game's state ---------- */
 
 	const sound = createSound();
+	sound.voicePitch = 0.4;   // the doll, deep and slow
+	sound.musicShift = -12;   // her song, an octave down
+	sound.voiceEcho = 2;      // her last word, echoing round the arena
 
 	let round = -1;
 	let phase = 'waiting';   // waiting, drill, drill-red, ready, green, warning, red, cleared, over
@@ -764,7 +762,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		let nearest = null;
 		let best = Infinity;
 		for (const g of sentries) {
-			if (at(0, g.f).s < 0.25 || planeY(g.f) > H + 40) continue;
+			if (planeY(g.f) < 0 || planeY(g.f) > H + 40) continue;   // (only guards on the walls)
 			const d = Math.abs(g.x - c.x) + Math.abs(g.f - c.f) * 2 + (Math.floor(g.x / W) === c.wall ? 0 : 1200);   // one on their own wall if there is one
 			if (d < best) { best = d; nearest = g; }
 		}
@@ -1064,7 +1062,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// RED LIGHT called out on every wall, and the white flash of a shot.
 	function drawCalls(ctx) {
 		if (showInset) {
-			if (at(0, dollF).s < 0.36) drawInset(ctx, INSET.x);   // while she's small and far off
+			if (planeY(dollF) < 250) drawInset(ctx, INSET.x);   // while she's off the top (or only just on)
 			drawInset(ctx, INSET.r + 60);                         // and always on the side walls, where she can't be seen
 			drawInset(ctx, WIDTH - INSET.r - 60);
 		}
@@ -1112,12 +1110,12 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	function drawArena(ctx) {
 		art.rect(ctx, -20, -20, WIDTH + 40, H + 40, { fill: art.linear(ctx, 0, 0, 0, H, ['#c0945e', '#d3ad79', '#e6c592']) });
 		// rake marks every couple of metres, so the scrolling shows: flat
-		// bands across, closer together further away
+		// bands across
 		const gap = 110;
 		for (let f = Math.ceil(cam / gap) * gap; f < cam + 6000; f += gap) {
 			const p = at(0, f);
-			if (p.s < 0.1) break;
-			art.rect(ctx, -20, p.y - 2 * p.s, WIDTH + 40, 4 * p.s, { fill: `rgba(120,80,40,${0.16 * p.s})` });
+			if (p.y < -20) break;
+			art.rect(ctx, -20, p.y - 2 * p.s, WIDTH + 40, 4 * p.s, { fill: 'rgba(120,80,40,0.12)' });
 		}
 		// a few pebbles, scrolling with the field
 		for (let k = Math.floor(cam / 90); k < (cam + 3000) / 90; k++) {

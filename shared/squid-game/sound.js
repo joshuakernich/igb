@@ -216,6 +216,8 @@ export function createSound() {
 
 	/* ---------- the music box, playing while her back is turned ---------- */
 
+	// (shift the whole tune by this many semitones: -12 is an octave down)
+	sound.musicShift = 0;
 	// An original pentatonic tune; null is a rest.
 	const TUNE = [
 		76, 79, 81, 79, 76, 74, 72, 74,
@@ -229,7 +231,7 @@ export function createSound() {
 	let step = 0;
 
 	function note(midi, at) {
-		const f = 440 * Math.pow(2, (midi - 69) / 12);
+		const f = 440 * Math.pow(2, (midi + sound.musicShift - 69) / 12);
 		for (const [mult, type, peak] of [[1, 'triangle', 0.16], [2, 'sine', 0.05], [4.01, 'sine', 0.015]]) {
 			const o = ctx.createOscillator();
 			o.type = type;
@@ -276,15 +278,25 @@ export function createSound() {
 		speechSynthesis.onvoiceschanged = pickVoice;
 	}
 
+	// the voice's pitch (0 to 2; set lower for a deeper voice), and its echo:
+	// the last word said again this many times, each quieter. (Speech can't be
+	// put through an audio effect, so the echo is the voice repeating itself.)
+	sound.voicePitch = 1.6;
+	sound.voiceEcho = 0;
 	sound.say = function (text) {
 		if (!window.speechSynthesis) return;
 		speechSynthesis.cancel();
-		const u = new SpeechSynthesisUtterance(text);
-		if (voice) u.voice = voice;
-		u.pitch = 1.6;
-		u.rate = 0.9;
-		u.volume = 1;
-		speechSynthesis.speak(u);
+		const line = function (words, volume, rate) {
+			const u = new SpeechSynthesisUtterance(words);
+			if (voice) u.voice = voice;
+			u.pitch = sound.voicePitch;
+			u.rate = rate;
+			u.volume = volume;
+			speechSynthesis.speak(u);   // (queued: each after the last)
+		};
+		line(text, 1, 0.9);
+		const last = String(text).trim().split(/\s+/).pop().replace(/[^\w']/g, '');
+		for (let i = 1; i <= sound.voiceEcho && last; i++) line(last, Math.pow(0.4, i), 1.05);
 	};
 
 	sound.close = function () {
