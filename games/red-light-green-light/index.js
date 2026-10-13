@@ -125,7 +125,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const ROUND_GAP = {
 		look: 1.4,            // each round opens on the doll, facing the players: ROUND N...
 		sweep: 2.0,           // ...then the view scrolls back down the field to the start
-		cleared: 3.2,         // the banner after a round
+		cleared: 5.2,         // the banner after a round (and everyone's totals)
 		payFrom: 0.7,         // then each survivor's ₩1,000 for completing it, from this long in...
 		payEach: 0.35,        // ...one after another
 		quick: 2.6,           // ...or, when nobody made it, before the same round starts again
