@@ -85,7 +85,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const START_F = H / 2;      // the white start line: halfway up the walls as each round starts
 	const FINISH_GAP = 90;      // from the red finish line to the doll's feet: she stands right behind it
 	const DOLL_X = 1.5 * W;
-	const INSET = { y: 200, r: 92 };   // the doll-head inset: top centre of every wall, just under the clock
+	const INSET = { x: 2 * W - 150, y: 125, r: 92 };   // the doll-head inset: top right of the front wall; on the side walls, a third of the way from the back
 
 	// Jump pads and cash
 	const PAD = { rx: 95, rf: 40, every: 420 };   // a pad's half-width and half-depth; one every so far up the track (field units)
@@ -1103,7 +1103,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// RED LIGHT called out on every wall, and the white flash of a shot.
 	function drawCalls(ctx) {
 		if (showInset) {
-			for (let w = 0; w < 3; w++) drawInset(ctx, w * W + W / 2);
+			if (planeY(dollF) < 250) drawInset(ctx, INSET.x);   // while she's off the top (or only just on)
+			drawInset(ctx, W / 3);                                // and always on the side walls, where she can't be seen,
+			drawInset(ctx, WIDTH - W / 3);                        // a third of the way along from the back of the room
 		}
 		if (callout && callout.age < 2 && show.beat !== 'controls') {   // (the controls say it in their caption)
 			const a = callout.age < 1.3 ? 1 : 1 - (callout.age - 1.3) / 0.7;
