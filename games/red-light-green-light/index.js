@@ -90,7 +90,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// Jump pads and cash
 	const PAD = { rx: 95, rf: 40, every: 420 };   // a pad's half-width and half-depth; one every so far up the track (field units)
 	const CASH = { every: 300, reach: 60, size: 1.8, float: 50, bob: 22 };   // every so far up each wall; how close to grab it; its size, float height and bob
-	const LASER = { hop: 0.8, follow: 6, wobble: 60, search: 260, rx: 240, rf: 95, glow: 50 };   // red light's target: seconds per contestant, how quickly it follows, its jitter, how far it searches round them, its half-width and half-depth, its glow
+	const LASER = { hop: 0.8, follow: 6, wobble: 60, search: 260, rx: 150, rf: 60, glow: 50 };   // red light's target: seconds per contestant, how quickly it follows, its jitter, how far it searches round them, its half-width and half-depth, its glow
 	const EDGE_AT = 0.1;        // a pad's centre, as a share of the wall from the corner
 	const HOP = 0.5;            // seconds to skip across a corner onto the next wall
 	const WALL_NAMES = ['LEFT', 'FRONT', 'RIGHT'];
@@ -727,11 +727,12 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const ry = (front.y - back.y) / 2;
 		const pulse = 1 + 0.06 * Math.sin(s.t * 14);
 		const sight = alpha * (0.75 + 0.25 * Math.random());   // (it flickers a little)
-		const glow = { color: RED, blur: LASER.glow };
-		art.ellipse(ctx, s.x, cy, LASER.rx * pulse * 1.15, ry * pulse * 1.15, { fill: RED, alpha: sight * 0.12, shadow: glow });
-		art.ellipse(ctx, s.x, cy, LASER.rx * pulse, ry * pulse, { fill: RED, alpha: sight * 0.2 });
-		art.ellipse(ctx, s.x, cy, LASER.rx * pulse, ry * pulse, { stroke: '#ff6a5a', lineWidth: 9, alpha: sight, shadow: glow });
-		art.ellipse(ctx, s.x, cy, LASER.rx * 0.55 * pulse, ry * 0.55 * pulse, { stroke: '#ff6a5a', lineWidth: 5, alpha: sight * 0.8, shadow: glow });
+		// (a hot centre, fading gradually out over well beyond its rim)
+		art.with(ctx, { x: s.x, y: cy, scaleY: ry / LASER.rx }, function (c) {
+			const R = LASER.rx * pulse;
+			art.circle(c, 0, 0, R * 1.9, { fill: art.radial(c, 0, 0, 0, R * 1.9, [[0, 'rgba(255,120,100,0.75)'], [0.2, 'rgba(255,60,50,0.5)'], [0.5, 'rgba(255,40,40,0.22)'], [0.8, 'rgba(255,30,30,0.07)'], [1, 'rgba(255,30,30,0)']]), alpha: sight });
+			art.circle(c, 0, 0, R, { stroke: '#ff6a5a', lineWidth: 4, alpha: sight * 0.6 });
+		});
 		// the beams, one from each eye, each flickering on its own and now
 		// and then cutting out altogether
 		for (const off of [-14, 14]) {
