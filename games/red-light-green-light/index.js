@@ -90,7 +90,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// Jump pads and cash
 	const PAD = { rx: 95, rf: 40, every: 420 };   // a pad's half-width and half-depth; one every so far up the track (field units)
 	const CASH = { every: 300, reach: 60, size: 1.8, float: 50, bob: 22 };   // every so far up each wall; how close to grab it; its size, float height and bob
-	const LASER = { hop: 1.3, follow: 5, wobble: 40 };   // red light's crosshair: seconds on each contestant, how quickly it follows, its jitter
+	const LASER = { hop: 1.3, follow: 4, wobble: 40, rx: 240, rf: 95 };   // red light's target: seconds on each contestant, how quickly it follows, its jitter, its half-width and half-depth
 	const EDGE_AT = 0.1;        // a pad's centre, as a share of the wall from the corner
 	const HOP = 0.5;            // seconds to skip across a corner onto the next wall
 	const WALL_NAMES = ['LEFT', 'FRONT', 'RIGHT'];
@@ -671,45 +671,42 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (const m of cash) m.spin += dt;
 	}
 
-	/* ---------- her lasers ---------- */
+	/* ---------- her laser ---------- */
 
-	// While she watches (red light), each wall is swept by a pair of red
-	// beams from her eyes, off the top of the field (on the side walls, from
-	// the corner nearest her), ending in a crosshair that hops from one
-	// contestant on that wall to the next, hunting; on an empty wall, it roams.
-	const scanners = [0, 1, 2].map((wall) => ({ wall, x: wall * W + W / 2, f: 0, t: 0 }));
+	// While she watches (red light), one laser sight sweeps the whole field:
+	// two red beams from her eyes, off the top of the field, to a big oval
+	// target lying flat on the sand. It roves across all three walls, hopping
+	// from one contestant to the next, hunting; with nobody left, it roams.
+	const scanner = { x: 1.5 * W, f: 0, t: 0 };
 
 	function aimLasers() {
-		for (const s of scanners) {
-			s.x = s.wall * W + W / 2;
-			s.f = cam + BACK + DEPTH * 0.5;
-			s.t = Math.random() * 3;
-		}
+		scanner.x = 1.5 * W;
+		scanner.f = cam + BACK + DEPTH * 0.5;
+		scanner.t = Math.random() * 3;
 	}
 
 	function stepLasers(dt) {
 		const on = phase === 'red' || phase === 'drill-red';
-		sound.buzz(on);   // (their buzz, for exactly as long as they show)
+		sound.buzz(on);   // (its buzz, for exactly as long as it shows)
 		if (!on) return;
-		for (const s of scanners) {
-			s.t += dt;
-			const here = contestants.filter((c) => c.alive && !c.safe && Math.floor(c.x / W) === s.wall);
-			let tx;
-			let tf;
-			if (here.length) {
-				const c = here[Math.floor(s.t / LASER.hop) % here.length];
-				tx = c.x;
-				tf = c.f + 40;
-			} else {
-				tx = s.wall * W + W / 2 + Math.sin(s.t * 0.9 + s.wall) * W * 0.35;
-				tf = cam + BACK + DEPTH * (0.5 + 0.3 * Math.sin(s.t * 0.7));
-			}
-			tx += Math.sin(s.t * 7 + s.wall) * LASER.wobble;
-			tf += Math.cos(s.t * 5 + s.wall) * LASER.wobble * 0.6;
-			const k = Math.min(1, dt * LASER.follow);
-			s.x += (tx - s.x) * k;
-			s.f += (tf - s.f) * k;
+		const s = scanner;
+		s.t += dt;
+		const live = contestants.filter((c) => c.alive && !c.safe);
+		let tx;
+		let tf;
+		if (live.length) {
+			const c = live[Math.floor(s.t / LASER.hop) % live.length];
+			tx = c.x;
+			tf = c.f;
+		} else {
+			tx = 1.5 * W + Math.sin(s.t * 0.5) * W * 1.3;
+			tf = cam + BACK + DEPTH * (0.5 + 0.3 * Math.sin(s.t * 0.7));
 		}
+		tx += Math.sin(s.t * 7) * LASER.wobble;
+		tf += Math.cos(s.t * 5) * LASER.wobble * 0.6;
+		const k = Math.min(1, dt * LASER.follow);
+		s.x += (tx - s.x) * k;
+		s.f += (tf - s.f) * k;
 	}
 
 	function drawLasers(ctx) {
@@ -717,24 +714,23 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const alpha = Math.min(1, phaseT / 0.3);
 		const eyes = dollFace().y;
 		const RED = '#ff2a2a';
-		for (const s of scanners) {
-			const sx = s.wall === 1 ? DOLL_X : s.wall === 0 ? W - 60 : 2 * W + 60;
-			const p = at(s.x, s.f);
-			for (const off of [-14, 14]) {
-				// each beam flickers on its own, now and then cutting out altogether
-				const flicker = Math.random() < 0.06 ? 0.1 : 0.6 + 0.4 * Math.random();
-				art.line(ctx, [[sx + off, eyes], [p.x, p.y]], { stroke: RED, lineWidth: 16, alpha: alpha * 0.22 * flicker });
-				art.line(ctx, [[sx + off, eyes], [p.x, p.y]], { stroke: RED, lineWidth: 3, alpha: alpha * flicker });
-			}
-			// the crosshair
-			const pulse = 1 + 0.08 * Math.sin(s.t * 14);
-			const r = 46 * pulse;
-			const sight = alpha * (0.75 + 0.25 * Math.random());   // (the crosshair flickers a little too)
-			art.circle(ctx, p.x, p.y, r, { stroke: RED, lineWidth: 5, alpha: sight });
-			art.circle(ctx, p.x, p.y, 8, { fill: RED, alpha: sight });
-			for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-				art.line(ctx, [[p.x + dx * r * 0.6, p.y + dy * r * 0.6], [p.x + dx * r * 1.4, p.y + dy * r * 1.4]], { stroke: RED, lineWidth: 5, alpha: sight });
-			}
+		const s = scanner;
+		// the target: a big oval flat on the sand, pulsing
+		const front = at(s.x, s.f - LASER.rf);
+		const back = at(s.x, s.f + LASER.rf);
+		const cy = (front.y + back.y) / 2;
+		const ry = (front.y - back.y) / 2;
+		const pulse = 1 + 0.06 * Math.sin(s.t * 14);
+		const sight = alpha * (0.75 + 0.25 * Math.random());   // (it flickers a little)
+		art.ellipse(ctx, s.x, cy, LASER.rx * pulse, ry * pulse, { fill: RED, alpha: sight * 0.18 });
+		art.ellipse(ctx, s.x, cy, LASER.rx * pulse, ry * pulse, { stroke: RED, lineWidth: 8, alpha: sight });
+		art.ellipse(ctx, s.x, cy, LASER.rx * 0.55 * pulse, ry * 0.55 * pulse, { stroke: RED, lineWidth: 4, alpha: sight * 0.7 });
+		// the beams, one from each eye, each flickering on its own and now
+		// and then cutting out altogether
+		for (const off of [-14, 14]) {
+			const flicker = Math.random() < 0.06 ? 0.1 : 0.6 + 0.4 * Math.random();
+			art.line(ctx, [[DOLL_X + off, eyes], [s.x + off * 2, cy]], { stroke: RED, lineWidth: 16, alpha: alpha * 0.22 * flicker });
+			art.line(ctx, [[DOLL_X + off, eyes], [s.x + off * 2, cy]], { stroke: RED, lineWidth: 3, alpha: alpha * flicker });
 		}
 	}
 
