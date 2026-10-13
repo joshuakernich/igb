@@ -27,8 +27,9 @@
  * the way up the track, marked with arrows; step on one and you jump
  * straight round the corner onto the next wall, and play on there. Little
  * wads of cash lie all over the field, ₩100 each to whoever walks over
- * them. On the last leg the track stops short of the line, and there's a
- * dash to cross it before her head comes round.
+ * them, and here and there a magnet: grab one and for a couple of seconds
+ * the cash on your wall slides to you. On the last leg the track stops short
+ * of the line, and there's a dash to cross it before her head comes round.
  *
  * Every contestant lives on a wall (left, front or right) and plays along
  * it 1:1, its depth the player's distance from that wall.
@@ -90,6 +91,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// Jump pads and cash
 	const PAD = { rx: 95, rf: 40, every: 420 };   // a pad's half-width and half-depth; one every so far up the track (field units)
 	const CASH = { every: 300, reach: 60, size: 1.8, float: 50, bob: 22 };   // every so far up each wall; how close to grab it; its size, float height and bob
+	const MAGNET = { every: 1400, time: 2.5, radius: 480, pull: 1200 };   // a magnet every so far up each wall; seconds it lasts; how far it reaches; how fast cash comes
 	const LASER = { hop: 1.2, follow: 20, wobble: 14, search: 50, rx: 150, rf: 60, glow: 50 };   // red light's target: seconds per contestant, how quickly it follows, its jitter, how far it searches round them, its half-width and half-depth, its glow
 	const EDGE_AT = 0.1;        // a pad's centre, as a share of the wall from the corner
 	const HOP = 0.5;            // seconds to skip across a corner onto the next wall
@@ -216,6 +218,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		splats = [];
 		pads = [];
 		cash = [];
+		magnets = [];
 
 		// Square blocks scattered in loose bands across every wall: on each wall,
 		// a few short runs of one to three blocks at odd places along it, each
@@ -272,6 +275,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// Jump pads up the track, and cash all over it.
 		layPads(START_F + 200, finishF - 150, PAD.every);
 		layCash(START_F + 80, finishF - 60, CASH.every);
+		layMagnets(START_F + 500, finishF - 200, MAGNET.every);
 
 		// Armed guards line the far ends of the side walls (out of the way
 		// of the contestants playing there), and two flank the doll.
@@ -309,6 +313,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			wall: 1,             // the wall they play on: 0 left, 1 front, 2 right
 			offPad: true,        // clear of the jump pads (they must step off one before another works)
 			grabbed: 0,          // wads of cash picked up in the controls intro
+			magnet: 0,           // seconds of magnet left: cash on their wall comes to them
 			hop: null,           // { t, x0, f0 } while skipping across a corner
 			lift: 0,             // how high off the sand they are, mid-skip
 			pass: false,         // moved walls from the desk: let off the line check until the next green light
@@ -340,6 +345,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		c.lean.x = c.lean.z = 0;
 		c.wall = 1;
 		c.offPad = true;
+		c.magnet = 0;
 		c.hop = null;
 		c.lift = 0;
 		c.pass = false;
@@ -610,6 +616,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// over them. Both are laid with the field and fixed to it, so they scroll.
 	let pads = [];              // { x, f, wall, to, age, practice }
 	let cash = [];              // { x, f, wall, spin, taken, practice }
+	let magnets = [];           // { x, f, wall, spin, taken }
 	let padPulse = 0;
 
 	const onPad = (c, p) => Math.pow((c.x - p.x) / PAD.rx, 2) + Math.pow((c.f - p.f) / PAD.rf, 2) < 1;
@@ -641,6 +648,17 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		}
 	}
 
+	// A few magnets, here and there up every wall (clear of blocks).
+	function layMagnets(fromF, toF, every) {
+		for (let wall = 0; wall < 3; wall++) {
+			for (let f = fromF + Math.random() * every; f < toF; f += every * (0.6 + Math.random() * 0.8)) {
+				const x = wall * W + LANE + 120 + Math.random() * (W - 2 * LANE - 240);
+				if (blocks.some((b) => Math.abs(b.x - x) < b.r + 60 && Math.abs(b.f - f) < b.r + 60)) continue;
+				magnets.push({ x, f, wall, spin: Math.random() * 6, taken: false });
+			}
+		}
+	}
+
 	// Round the corner onto the next wall, straight away.
 	function jump(c, p) {
 		c.hop = { t: 0, x0: c.x, f0: c.f };
@@ -651,13 +669,34 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		popOver(c, WALL_NAMES[c.wall] + ' WALL!', PLAYER_COLORS[c.n]);
 	}
 
-	function touchPadsAndCash(c) {
+	function touchPadsAndCash(c, dt) {
+		c.magnet = Math.max(0, (c.magnet || 0) - dt);
 		const onAny = pads.some((p) => p.wall === c.wall && onPad(c, p));
 		if (!c.offPad) {
 			if (!onAny) c.offPad = true;
 		} else if (onAny) {
 			jump(c, pads.find((p) => p.wall === c.wall && onPad(c, p)));
 			return;
+		}
+		// a magnet: picked up like cash; it pulls in the cash on their wall for a while
+		for (const g of magnets) {
+			if (g.taken || g.wall !== c.wall || Math.abs(g.x - c.x) > CASH.reach || Math.abs(g.f - c.f) > CASH.reach * 0.7) continue;
+			g.taken = true;
+			c.magnet = MAGNET.time;
+			popOver(c, 'MAGNET!', '#ff4d6d');
+			show.fx('lockIn', 0.8);
+		}
+		if (c.magnet > 0) {
+			for (const m of cash) {
+				if (m.taken || m.wall !== c.wall) continue;
+				const dx = c.x - m.x;
+				const df = c.f - m.f;
+				const d = Math.hypot(dx, df);
+				if (d > MAGNET.radius || d < 1) continue;
+				const step = Math.min(d, MAGNET.pull * dt * (1.5 - d / MAGNET.radius));   // (quicker as it nears)
+				m.x += dx / d * step;
+				m.f += df / d * step;
+			}
 		}
 		for (const m of cash) {
 			if (m.taken || m.wall !== c.wall || Math.abs(m.x - c.x) > CASH.reach || Math.abs(m.f - c.f) > CASH.reach * 0.7) continue;
@@ -673,6 +712,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		padPulse += dt * 4;
 		for (const p of pads) p.age += dt;
 		for (const m of cash) m.spin += dt;
+		for (const g of magnets) g.spin += dt;
 	}
 
 	/* ---------- her laser ---------- */
@@ -988,7 +1028,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			return;
 		}
 
-		if (phase !== 'red' && phase !== 'drill-red') touchPadsAndCash(c);
+		if (phase !== 'red' && phase !== 'drill-red') touchPadsAndCash(c, dt);
 		if (c.hop) return;   // (just jumped)
 
 		if (!c.safe && c.f > finishF + 12) {
@@ -1073,6 +1113,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		}
 		for (const b of blocks) add(b.f - b.r * 0.6, (c) => drawBlock(c, b));
 		for (const m of cash) if (!m.taken) add(m.f, (c) => drawCash(c, m));
+		for (const g of magnets) if (!g.taken) add(g.f, (c) => drawMagnet(c, g));
 		for (const m of movers) add(m.f, (c) => (m.kind === 'guard' ? drawGuardOn(c, m.x, m.f, m.mask, true, m.phase, m.flash || 0, m.dir) : drawMarble(c, m)));
 		for (const g of sentries) if (dollShown || !g.doll) add(g.f, (c) => drawGuardOn(c, g.x, g.f, g.mask, true, 0, g.flash, facing(g)));
 		if (!waiting) for (const c of contestants) add(c.f, (cx) => drawContestant(cx, c));
@@ -1362,6 +1403,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const air = 1 - c.lift / 300;        // the shadow shrinks under a skip
 		// a solid spot of their colour, always under the avatar
 		if (c.alive) art.ellipse(ctx, ground.x, ground.y, 40 * s * air, 13 * s * air, { fill: colour, alpha: alpha * 0.9 });
+		// magnetised: a ring of magnetic red pulsing out round their feet
+		if (c.alive && c.magnet > 0) {
+			const k = (clock * 2.5) % 1;
+			art.ellipse(ctx, ground.x, ground.y, (50 + 70 * k) * s, (16 + 22 * k) * s, { stroke: '#ff4d6d', lineWidth: 5, alpha: alpha * (1 - k) * Math.min(1, c.magnet * 2) });
+		}
 		art.ellipse(ctx, ground.x, ground.y, 27 * s * air, 8 * s * air, { fill: 'rgba(0,0,0,0.35)', alpha });
 
 		let rotate = 0;
@@ -1442,6 +1488,34 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			}
 			art.rect(c, -7, -34, 14, 36, { fill: '#f3ead2' });   // the paper band, over the top and down the front
 			art.circle(c, 0, -22, 6, { fill: '#2f9e57' });
+		});
+	}
+
+	// A magnet: a red horseshoe with silver tips, floating and turning a little,
+	// sparks crackling between its tips.
+	function drawMagnet(ctx, g) {
+		const p = at(g.x, g.f);
+		const s = p.s * CASH.size;
+		const rise = 0.5 + 0.5 * Math.sin(g.spin * 2.4);
+		const lift = (CASH.float + CASH.bob * rise) * p.s;
+		art.ellipse(ctx, p.x, p.y, 26 * s * (1 - 0.25 * rise), 8 * s * (1 - 0.25 * rise), { fill: 'rgba(0,0,0,0.22)', alpha: 1 - 0.35 * rise });
+		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: Math.sin(g.spin * 1.6) * 0.25 }, function (c) {
+			c.save();
+			c.lineCap = 'butt';
+			c.lineWidth = 12;
+			c.strokeStyle = '#e83a4e';
+			c.beginPath();
+			c.arc(0, -22, 15, Math.PI, 0, true);   // the bend, at the bottom, tips up
+			c.stroke();
+			c.beginPath();
+			c.moveTo(-15, -22);
+			c.lineTo(-15, -36);
+			c.moveTo(15, -22);
+			c.lineTo(15, -36);
+			c.stroke();
+			c.restore();
+			for (const side of [-1, 1]) art.rect(c, side * 15 - 6, -46, 12, 10, { fill: '#e6e9ef' });   // the tips
+			if (Math.sin(g.spin * 9) > 0.3) art.line(c, [[-12, -50], [-4, -56], [3, -49], [12, -55]], { stroke: '#ffe066', lineWidth: 2.5 });
 		});
 	}
 
