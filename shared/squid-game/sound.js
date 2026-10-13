@@ -299,6 +299,43 @@ export function createSound() {
 		for (let i = 1; i <= sound.voiceEcho && last; i++) line(last, Math.pow(0.4, i), 1.05);
 	};
 
+	// The laser sights' electric buzz, on or off (call as often as you like): a
+	// low saw and square through a narrow filter, its loudness jittering.
+	let buzzing = null;
+	sound.buzz = function (on) {
+		if (on && !buzzing) {
+			sound.resume();
+			const g = ctx.createGain();
+			g.gain.value = 0;
+			g.gain.setTargetAtTime(0.05, ctx.currentTime, 0.05);
+			const f = ctx.createBiquadFilter();
+			f.type = 'bandpass';
+			f.frequency.value = 900;
+			f.Q.value = 1.5;
+			const saw = ctx.createOscillator();
+			saw.type = 'sawtooth';
+			saw.frequency.value = 118;
+			const square = ctx.createOscillator();
+			square.type = 'square';
+			square.frequency.value = 236.7;
+			const lfo = ctx.createOscillator();   // the jitter
+			lfo.frequency.value = 23;
+			const depth = ctx.createGain();
+			depth.gain.value = 0.03;
+			lfo.connect(depth).connect(g.gain);
+			saw.connect(f);
+			square.connect(f);
+			f.connect(g).connect(master);
+			for (const o of [saw, square, lfo]) o.start();
+			buzzing = { g, oscillators: [saw, square, lfo] };
+		} else if (!on && buzzing) {
+			const b = buzzing;
+			buzzing = null;
+			b.g.gain.setTargetAtTime(0, ctx.currentTime, 0.03);
+			for (const o of b.oscillators) o.stop(ctx.currentTime + 0.25);
+		}
+	};
+
 	sound.close = function () {
 		playing = false;
 		if (window.speechSynthesis) speechSynthesis.cancel();

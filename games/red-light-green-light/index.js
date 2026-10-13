@@ -688,14 +688,16 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	}
 
 	function stepLasers(dt) {
-		if (phase !== 'red' && phase !== 'drill-red') return;
+		const on = phase === 'red' || phase === 'drill-red';
+		sound.buzz(on);   // (their buzz, for exactly as long as they show)
+		if (!on) return;
 		for (const s of scanners) {
 			s.t += dt;
-			const on = contestants.filter((c) => c.alive && !c.safe && Math.floor(c.x / W) === s.wall);
+			const here = contestants.filter((c) => c.alive && !c.safe && Math.floor(c.x / W) === s.wall);
 			let tx;
 			let tf;
-			if (on.length) {
-				const c = on[Math.floor(s.t / LASER.hop) % on.length];
+			if (here.length) {
+				const c = here[Math.floor(s.t / LASER.hop) % here.length];
 				tx = c.x;
 				tf = c.f + 40;
 			} else {
@@ -719,16 +721,19 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const sx = s.wall === 1 ? DOLL_X : s.wall === 0 ? W - 60 : 2 * W + 60;
 			const p = at(s.x, s.f);
 			for (const off of [-14, 14]) {
-				art.line(ctx, [[sx + off, eyes], [p.x, p.y]], { stroke: RED, lineWidth: 16, alpha: alpha * 0.22 });
-				art.line(ctx, [[sx + off, eyes], [p.x, p.y]], { stroke: RED, lineWidth: 3, alpha });
+				// each beam flickers on its own, now and then cutting out altogether
+				const flicker = Math.random() < 0.06 ? 0.1 : 0.6 + 0.4 * Math.random();
+				art.line(ctx, [[sx + off, eyes], [p.x, p.y]], { stroke: RED, lineWidth: 16, alpha: alpha * 0.22 * flicker });
+				art.line(ctx, [[sx + off, eyes], [p.x, p.y]], { stroke: RED, lineWidth: 3, alpha: alpha * flicker });
 			}
 			// the crosshair
 			const pulse = 1 + 0.08 * Math.sin(s.t * 14);
 			const r = 46 * pulse;
-			art.circle(ctx, p.x, p.y, r, { stroke: RED, lineWidth: 5, alpha });
-			art.circle(ctx, p.x, p.y, 8, { fill: RED, alpha });
+			const sight = alpha * (0.75 + 0.25 * Math.random());   // (the crosshair flickers a little too)
+			art.circle(ctx, p.x, p.y, r, { stroke: RED, lineWidth: 5, alpha: sight });
+			art.circle(ctx, p.x, p.y, 8, { fill: RED, alpha: sight });
 			for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-				art.line(ctx, [[p.x + dx * r * 0.6, p.y + dy * r * 0.6], [p.x + dx * r * 1.4, p.y + dy * r * 1.4]], { stroke: RED, lineWidth: 5, alpha });
+				art.line(ctx, [[p.x + dx * r * 0.6, p.y + dy * r * 0.6], [p.x + dx * r * 1.4, p.y + dy * r * 1.4]], { stroke: RED, lineWidth: 5, alpha: sight });
 			}
 		}
 	}
