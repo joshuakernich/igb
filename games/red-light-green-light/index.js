@@ -82,7 +82,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const hi = (wall + 1) * W - (wall === 2 ? SENTRY_END : margin);
 		return [lo, hi];
 	}
-	const START_F = 45;         // the white start line
+	const START_F = BACK + DEPTH + 60;   // the white start line: just beyond the play area, so every round starts behind it
 	const FINISH_GAP = DEPTH * 0.5 + 250;   // from the red finish line to the doll's feet (beyond anyone's reach)
 	const DOLL_X = 1.5 * W;
 	const INSET = { x: 2 * W - 150, y: 125, r: 92 };   // the doll-head inset, top right of the front wall
@@ -206,7 +206,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	let noBlocks = false;   // (tests only)
 	function buildField(r) {
 		settings = settingsFor(r);
-		finishF = 300 + settings.length;
+		finishF = START_F + 255 + settings.length;
 		dollF = finishF + FINISH_GAP;
 		camEnd = finishF - BACK - DEPTH * 0.45;   // the last stop: the finish line part way up the play area
 		blocks = [];
@@ -221,7 +221,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// run nudged up or down the field, so you weave rather than queue for a
 		// gap. The bands stay apart, leaving lanes for the guards and marbles.
 		const rows = Math.max(1, Math.round(settings.length / M / 12 * settings.blockDensity * 1.4));
-		const first = 650;
+		const first = START_F + 330;   // (nothing in the way until past the start line)
 		const last = finishF - 280;
 		const spacing = rows === 1 ? last - first : (last - first) / (rows - 1);
 		const nudge = Math.min(110, spacing * 0.2);
@@ -269,8 +269,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		}
 
 		// Jump pads up the track, and cash all over it.
-		layPads(500, finishF - 150, PAD.every);
-		layCash(250, finishF - 60, CASH.every);
+		layPads(START_F + 200, finishF - 150, PAD.every);
+		layCash(START_F + 80, finishF - 60, CASH.every);
 
 		// Armed guards line the far ends of the side walls (out of the way
 		// of the contestants playing there), and two flank the doll.
@@ -1865,6 +1865,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 							show.slam(c, 'NOBODY MADE IT', W / 2, 430, 140, phaseT - 0.1, { fill: '#ff3640', glow: '#ff3640', alpha: fade });
 							show.slam(c, 'ROUND ' + (cleared.round + 1) + ' AGAIN!', W / 2, 580, 80, phaseT - 0.5, { fill: 'white', alpha: fade });
 						}
+						// everyone's total so far, in won (ticking up as the bonuses land)
+						const gap = Math.min(270, (W - 160) / Math.max(1, contestants.length));
+						contestants.forEach(function (o, i) {
+							const x = W / 2 + (i - (contestants.length - 1) / 2) * gap;
+							const a = fade * between(phaseT, 0.5 + i * 0.08, 0.8 + i * 0.08);
+							show.text(c, show.nameOf(o.n), x, 720, 40, { fill: show.lit(o.n), alpha: a, fit: gap - 20 });
+							show.text(c, won(o.score), x, 790, 56, { alpha: a, fit: gap - 20 });
+						});
 					}
 				});
 			},
