@@ -10,8 +10,8 @@
  * shot. Cross the red line at her feet to survive the round. Rounds keep
  * coming, each longer and meaner, for ten minutes of play.
  *
- * Scoring: a point for every wad of cash picked up, ten for crossing the
- * line. Anyone shot is back for the next round.
+ * Scoring, in won (₩): ₩100 for every wad of cash picked up, and ₩1,000
+ * for completing a round (crossing the line). Anyone shot is back for the next round.
  *
  * The show, in order (see the beats at the bottom, and shared/showtime.js
  * for the generic ones): the squad picker over the dimmed field; the
@@ -26,7 +26,7 @@
  * Jump pads and cash: glowing pads sit at the corner ends of the walls all
  * the way up the track, marked with arrows; step on one and you jump
  * straight round the corner onto the next wall, and play on there. Little
- * wads of cash lie all over the field, a point each to whoever walks over
+ * wads of cash lie all over the field, ₩100 each to whoever walks over
  * them. On the last leg the track stops short of the line, and there's a
  * dash to cross it before her head comes round.
  *
@@ -119,7 +119,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		};
 	}
 
-	const POINTS = { cash: 1, finish: 10 };   // a wad of cash; crossing the line
+	const POINTS = { cash: 100, finish: 1000 };   // in won (₩): a wad of cash; completing a round (crossing the line)
+	const won = (n) => '₩' + n.toLocaleString('en-US');
 	const ROUND_GAP = {
 		look: 1.4,            // each round opens on the doll, facing the players: ROUND N...
 		sweep: 2.0,           // ...then the view scrolls back down the field to the start
@@ -400,6 +401,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const PINK = '#ff3d8b';
 	const TEAL = '#1fa58a';
 	const show = new Showtime(stage, {
+		score: won,   // scores are in won
 		id: 'red-light-green-light',
 		seconds: GAME_SECONDS,
 		players: () => contestants.length,
@@ -638,7 +640,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			m.taken = true;
 			c.score += POINTS.cash;
 			c.grabbed++;
-			popOver(c, '+' + POINTS.cash, '#3cdc7a');
+			popOver(c, '+' + won(POINTS.cash), '#3cdc7a');
 			show.fx('coin', 0.6);
 		}
 	}
@@ -899,7 +901,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			c.safe = true;
 			c.score += POINTS.finish;
 			sound.ding();
-			popOver(c, '+' + POINTS.finish, PLAYER_COLORS[c.n]);
+			popOver(c, '+' + won(POINTS.finish), PLAYER_COLORS[c.n]);
 			maybeEnd();
 		}
 	}

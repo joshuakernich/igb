@@ -13,6 +13,7 @@
  *       scores: () => [12, 40, 7],        // each player's score
  *       bonus: () => 300,                 // optional team-only points, added to the total
  *       bonusLabel: 'ROUND BONUS',
+ *       score: (n) => '₩' + n,         // optional: how a score reads (default, the plain number)
  *       drawAvatar(ctx, n, x, y, scale, pose) {},   // optional: the game's own character,
  *                                         // feet at (x, y), scale 1 about 120 units tall;
  *                                         // pose 'stand' | 'cheer' | 'win'
@@ -280,6 +281,9 @@ window.Showtime = function (stage, opts) {
 		return out;
 	};
 	self.lit = lit;
+	// how a score reads: as a number, or as the game's own (opts.score: e.g. n => '₩' + n)
+	const fmt = (n) => (opts.score ? opts.score(n) : String(n));
+	self.fmt = fmt;
 	self.nameOf = (n) => NAMES[n] || 'P' + (n + 1);
 	self.teamTotal = () => scores().reduce((a, b) => a + b, 0) + bonus();
 
@@ -1563,7 +1567,7 @@ window.Showtime = function (stage, opts) {
 		if (opts.place) self.text(c, opts.place, x0 + 110, y + 2, h * 0.5, Object.assign({ fill: 'white' }, ink));
 		avatar(c, p, x0 + 250, y + h * 0.42, h / 170, opts.pose || 'stand');
 		self.text(c, self.nameOf(p), x0 + 330, y + 2, h * 0.42, Object.assign({ fill: lit(p), align: 'left' }, ink));
-		if (!opts.noScore) self.text(c, String(score), x0 + LIST.width - 60, y + 2, h * 0.6, Object.assign({ fill: 'white', align: 'right' }, ink));
+		if (!opts.noScore) self.text(c, fmt(score), x0 + LIST.width - 60, y + 2, h * 0.6, Object.assign({ fill: 'white', align: 'right' }, ink));
 		c.restore();
 	}
 
@@ -1749,7 +1753,7 @@ window.Showtime = function (stage, opts) {
 						// everything but the score fades
 						if (fade < 1) listRow(c, p, y, '', { place: SUFFIX[place], winner, pose: winner ? 'win' : 'cheer', alpha: 1 - fade, noScore: true });
 						// the score: from where it sat, flying in to the middle, stretching as it goes
-						const w = measure(c, String(s[p]), size);
+						const w = measure(c, fmt(s[p]), size);
 						const x0 = right - w / 2;
 						const fx = lerp(x0, W / 2, fly);
 						const fy = lerp(y + 2, TEAM.y, fly);
@@ -1757,7 +1761,7 @@ window.Showtime = function (stage, opts) {
 						c.save();
 						c.translate(fx, fy);
 						c.scale(grow * (1 + fly * 0.6), grow * (1 - fly * 0.25));
-						self.text(c, String(s[p]), 0, 0, size, { fill: winner && fade < 0.5 ? TYPE.colours.ink : TYPE.colours.white });
+						self.text(c, fmt(s[p]), 0, 0, size, { fill: winner && fade < 0.5 ? TYPE.colours.ink : TYPE.colours.white });
 						c.restore();
 					});
 				});
@@ -1772,9 +1776,9 @@ window.Showtime = function (stage, opts) {
 			c.save();
 			c.translate(W / 2, TEAM.y);
 			c.scale((1 + 0.45 * sq) * party, (1 - 0.4 * sq) * party);
-			self.text(c, String(shown), 0, 0, 220, { fill: theme.gold });
+			self.text(c, fmt(shown), 0, 0, 220, { fill: theme.gold });
 			c.restore();
-			if (bonus() > 0) self.slam(c, '+' + bonus() + ' ' + (opts.bonusLabel || 'BONUS'), W / 2, 665, 56, bt - TEAM.bonus[0], { fill: 'white', alpha: 1 - between(bt, TEAM.length - 1, TEAM.length) });
+			if (bonus() > 0) self.slam(c, '+' + fmt(bonus()) + ' ' + (opts.bonusLabel || 'BONUS'), W / 2, 665, 56, bt - TEAM.bonus[0], { fill: 'white', alpha: 1 - between(bt, TEAM.length - 1, TEAM.length) });
 		}
 	};
 
@@ -1847,7 +1851,7 @@ window.Showtime = function (stage, opts) {
 						art.roundRect(c, x0, y - BOARD.row / 2 + 5, x1 - x0, BOARD.row - 10, 16, { fill: theme.panel, alpha: drop });
 						self.text(c, String(place), x0 + 50, y, 40, { fill: 'rgba(255,255,255,0.6)', glow: 'transparent', outlineWidth: 3, alpha: drop });
 						self.text(c, row.name, x0 + 110, y, 42, { align: 'left', glow: 'transparent', outlineWidth: 3, alpha: drop });
-						self.text(c, String(row.score), x1 - 40, y, 42, { align: 'right', fill: 'rgba(255,255,255,0.85)', glow: 'transparent', outlineWidth: 3, alpha: drop });
+						self.text(c, fmt(row.score), x1 - 40, y, 42, { align: 'right', fill: 'rgba(255,255,255,0.85)', glow: 'transparent', outlineWidth: 3, alpha: drop });
 					});
 					// your row, glowing gold
 					if (bt > BOARD.enter - 0.4) {
@@ -1861,7 +1865,7 @@ window.Showtime = function (stage, opts) {
 						art.roundRect(c, x0 - W / 2 - 20, -BOARD.row / 2, x1 - x0 + 40, BOARD.row, 20, { fill: art.linear(c, x0 - W / 2, 0, x1 - W / 2, 0, [[0, theme.gold], [1, '#ff9a3d']]), shadow: { color: theme.gold, blur: 40 } });
 						art.text(c, String(place), x0 - W / 2 + 40, 2, { size: 46, font: FONT, weight: 400, fill: theme.ink });
 						art.text(c, 'YOUR TEAM', x0 - W / 2 + 100, 2, { size: 48, font: FONT, weight: 400, fill: theme.ink, align: 'left' });
-						art.text(c, String(board.total), x1 - W / 2 - 30, 2, { size: 48, font: FONT, weight: 400, fill: theme.ink, align: 'right' });
+						art.text(c, fmt(board.total), x1 - W / 2 - 30, 2, { size: 48, font: FONT, weight: 400, fill: theme.ink, align: 'right' });
 						c.restore();
 					}
 					if (bt > land) {
