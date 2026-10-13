@@ -90,6 +90,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// Jump pads and cash
 	const PAD = { rx: 95, rf: 40, every: 420 };   // a pad's half-width and half-depth; one every so far up the track (field units)
 	const CASH = { every: 300, reach: 60, size: 1.8, float: 50, bob: 22 };   // every so far up each wall; how close to grab it; its size, float height and bob
+	const LASER = { hop: 1.3, follow: 5, wobble: 40 };   // red light's crosshair: seconds on each contestant, how quickly it follows, its jitter
 	const EDGE_AT = 0.1;        // a pad's centre, as a share of the wall from the corner
 	const HOP = 0.5;            // seconds to skip across a corner onto the next wall
 	const WALL_NAMES = ['LEFT', 'FRONT', 'RIGHT'];
@@ -528,6 +529,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		glare = 1;
 		freeze();
 		lineChecked = false;
+		aimLasers();
 		blipAt = 0;
 		setPhase('red', rand(settings.red));
 	}
@@ -669,6 +671,68 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (const m of cash) m.spin += dt;
 	}
 
+	/* ---------- her lasers ---------- */
+
+	// While she watches (red light), each wall is swept by a pair of red
+	// beams from her eyes, off the top of the field (on the side walls, from
+	// the corner nearest her), ending in a crosshair that hops from one
+	// contestant on that wall to the next, hunting; on an empty wall, it roams.
+	const scanners = [0, 1, 2].map((wall) => ({ wall, x: wall * W + W / 2, f: 0, t: 0 }));
+
+	function aimLasers() {
+		for (const s of scanners) {
+			s.x = s.wall * W + W / 2;
+			s.f = cam + BACK + DEPTH * 0.5;
+			s.t = Math.random() * 3;
+		}
+	}
+
+	function stepLasers(dt) {
+		if (phase !== 'red' && phase !== 'drill-red') return;
+		for (const s of scanners) {
+			s.t += dt;
+			const on = contestants.filter((c) => c.alive && !c.safe && Math.floor(c.x / W) === s.wall);
+			let tx;
+			let tf;
+			if (on.length) {
+				const c = on[Math.floor(s.t / LASER.hop) % on.length];
+				tx = c.x;
+				tf = c.f + 40;
+			} else {
+				tx = s.wall * W + W / 2 + Math.sin(s.t * 0.9 + s.wall) * W * 0.35;
+				tf = cam + BACK + DEPTH * (0.5 + 0.3 * Math.sin(s.t * 0.7));
+			}
+			tx += Math.sin(s.t * 7 + s.wall) * LASER.wobble;
+			tf += Math.cos(s.t * 5 + s.wall) * LASER.wobble * 0.6;
+			const k = Math.min(1, dt * LASER.follow);
+			s.x += (tx - s.x) * k;
+			s.f += (tf - s.f) * k;
+		}
+	}
+
+	function drawLasers(ctx) {
+		if (phase !== 'red' && phase !== 'drill-red') return;
+		const alpha = Math.min(1, phaseT / 0.3);
+		const eyes = dollFace().y;
+		const RED = '#ff2a2a';
+		for (const s of scanners) {
+			const sx = s.wall === 1 ? DOLL_X : s.wall === 0 ? W - 60 : 2 * W + 60;
+			const p = at(s.x, s.f);
+			for (const off of [-14, 14]) {
+				art.line(ctx, [[sx + off, eyes], [p.x, p.y]], { stroke: RED, lineWidth: 16, alpha: alpha * 0.22 });
+				art.line(ctx, [[sx + off, eyes], [p.x, p.y]], { stroke: RED, lineWidth: 3, alpha });
+			}
+			// the crosshair
+			const pulse = 1 + 0.08 * Math.sin(s.t * 14);
+			const r = 46 * pulse;
+			art.circle(ctx, p.x, p.y, r, { stroke: RED, lineWidth: 5, alpha });
+			art.circle(ctx, p.x, p.y, 8, { fill: RED, alpha });
+			for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+				art.line(ctx, [[p.x + dx * r * 0.6, p.y + dy * r * 0.6], [p.x + dx * r * 1.4, p.y + dy * r * 1.4]], { stroke: RED, lineWidth: 5, alpha });
+			}
+		}
+	}
+
 	/* ---------- eliminations ---------- */
 
 	// Out: they freeze, and a shot follows. Several caught at once are shot
@@ -782,6 +846,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 		agePops(dt);
 		agePads(dt);
+		stepLasers(dt);
 
 		const running = phase === 'green' || phase === 'dash' || phase === 'warning';
 		for (const m of movers) {
@@ -996,6 +1061,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		things.sort((a, b) => b.f - a.f);
 		for (const thing of things) thing.fn(ctx);
 		if (!waiting) for (const c of contestants) if (c.alive && onView(footOf(c).f)) drawFoot(ctx, c);
+		drawLasers(ctx);
 
 		for (const t of tracers) drawTracer(ctx, t);
 		if (show.beat === 'controls') drawAids(ctx);
@@ -1670,6 +1736,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				practice.red = 1;
 				say('Red light', '#ff3640', 'FREEZE');
 				freeze();
+				aimLasers();
 				setPhase('drill-red');
 			}
 			if (practice.red === 1) {
