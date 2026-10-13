@@ -775,13 +775,16 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	function fireAt(c, glance) {
 		let nearest = null;
 		let best = Infinity;
-		for (const g of sentries) {
+		// any guard on the walls: the ones at the edges, and the patrolling ones
+		const patrol = movers.filter((m) => m.kind === 'guard');
+		for (const g of sentries.concat(patrol)) {
 			if (planeY(g.f) < 0 || planeY(g.f) > H + 40) continue;   // (only guards on the walls)
 			const d = Math.abs(g.x - c.x) + Math.abs(g.f - c.f) * 2 + (Math.floor(g.x / W) === c.wall ? 0 : 1200);   // one on their own wall if there is one
 			if (d < best) { best = d; nearest = g; }
 		}
 		let from;
 		if (nearest) {
+			if (nearest.kind === 'guard') nearest.dir = c.x < nearest.x ? -1 : 1;   // (a patrolling guard turns to face them)
 			nearest.flash = 0.12;
 			from = gunTip(nearest);
 		} else {
@@ -891,6 +894,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (const c of contestants) animate(c, dt);
 
 		for (const g of sentries) g.flash = Math.max(0, g.flash - dt);
+		for (const m of movers) m.flash = Math.max(0, (m.flash || 0) - dt);
 		for (const s of splats) s.t += dt;
 		for (let i = tracers.length - 1; i >= 0; i--) {
 			tracers[i].age += dt;
@@ -1069,7 +1073,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		}
 		for (const b of blocks) add(b.f - b.r * 0.6, (c) => drawBlock(c, b));
 		for (const m of cash) if (!m.taken) add(m.f, (c) => drawCash(c, m));
-		for (const m of movers) add(m.f, (c) => (m.kind === 'guard' ? drawGuardOn(c, m.x, m.f, m.mask, true, m.phase, 0, m.dir) : drawMarble(c, m)));
+		for (const m of movers) add(m.f, (c) => (m.kind === 'guard' ? drawGuardOn(c, m.x, m.f, m.mask, true, m.phase, m.flash || 0, m.dir) : drawMarble(c, m)));
 		for (const g of sentries) if (dollShown || !g.doll) add(g.f, (c) => drawGuardOn(c, g.x, g.f, g.mask, true, 0, g.flash));
 		if (!waiting) for (const c of contestants) add(c.f, (cx) => drawContestant(cx, c));
 		things.sort((a, b) => b.f - a.f);
@@ -1286,7 +1290,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	function gunTip(g) {
 		const p = at(g.x, g.f);
 		const s = p.s * 1.45;
-		return { x: p.x + 36 * s, y: p.y - 100 * s };
+		return { x: p.x + 36 * s * (g.dir || 1), y: p.y - 100 * s };
 	}
 
 	function guard(c, mask, armed, walk, muzzle) {
