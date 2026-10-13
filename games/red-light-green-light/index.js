@@ -1368,7 +1368,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (const side of [-1, 1]) {
 			const swing = -side * step * 0.7;
 			// (in the squat, held out to the sides for balance)
-			const trail = (drift * 0.7 - side * run * 0.35) * (1 - squat) - side * 1.25 * squat;
+			const trail = (drift * 0.7 - side * run * 0.35) * (1 - squat) - side * 1.55 * squat;   // (straight out to the sides when frozen)
 			art.with(c, { x: side * 26, y: -86 + swing, rotate: trail }, function (a) {
 				art.roundRect(a, -6, 0, 12, 38, 6, { fill: '#176f5b' });
 				art.line(a, [[side * 3, 4], [side * 3, 32]], { stroke: 'white', lineWidth: 2.5 });
