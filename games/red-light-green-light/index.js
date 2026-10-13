@@ -938,6 +938,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		c.drift = (c.drift || 0) + (across - (c.drift || 0)) * Math.min(1, dt * 6);
 		c.lastX = c.x;
 		c.lastF = c.f;
+		// frozen, they sink into a squat; free, they straighten up again
+		c.squat = (c.squat || 0) + ((c.glue ? 1 : 0) - (c.squat || 0)) * Math.min(1, dt * 12);
 		if (c.glue) return;
 		c.moving += (Math.min(1, speed / 60) - c.moving) * Math.min(1, dt * 8);
 		c.walk += dt * 20 * c.moving;   // (quick little steps)
@@ -981,7 +983,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		if (!waiting) for (const c of contestants) add(c.f, (cx) => drawContestant(cx, c));
 		things.sort((a, b) => b.f - a.f);
 		for (const thing of things) thing.fn(ctx);
-		for (const c of contestants) if (c.alive && footApart(c) && onView(footOf(c).f)) drawFoot(ctx, c);
+		if (!waiting) for (const c of contestants) if (c.alive && onView(footOf(c).f)) drawFoot(ctx, c);
 
 		for (const t of tracers) drawTracer(ctx, t);
 		if (show.beat === 'controls') drawAids(ctx);
@@ -1249,7 +1251,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const s = p.s * 1.6;
 		const alpha = fadeIn(c.f);
 		const air = 1 - c.lift / 300;        // the shadow shrinks under a skip
-		if (c.alive && !footApart(c)) drawFoot(ctx, c);
+		// a solid spot of their colour, always under the avatar
+		if (c.alive) art.ellipse(ctx, ground.x, ground.y, 40 * s * air, 13 * s * air, { fill: colour, alpha: alpha * 0.9 });
 		art.ellipse(ctx, ground.x, ground.y, 27 * s * air, 8 * s * air, { fill: 'rgba(0,0,0,0.35)', alpha });
 
 		let rotate = 0;
@@ -1274,22 +1277,18 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		art.poly(ctx, [[p.x - 14 * s, top - 14 * s], [p.x + 14 * s, top - 14 * s], [p.x, top + 4 * s]], { fill: colour, alpha });
 	}
 
-	// The coloured footprint is always where the player really is, even when
-	// a block holds the avatar back or red light glues its feet: mid-skip it
-	// rides along under the avatar. Parted from the avatar, it's drawn over
-	// everything so a block can't hide it.
+	// Where the player really is, 1:1, even when a block holds the avatar back
+	// or red light glues its feet (mid-skip it rides along under the avatar):
+	// a ring of their colour, a little bigger than the spot under the avatar,
+	// drawn over everything so nothing hides it.
 	function footOf(c) {
 		return c.hop ? { x: c.x, f: c.f, air: 1 - c.lift / 300 } : { x: xOf(c), f: bandF(c), air: 1 };
-	}
-	function footApart(c) {
-		const foot = footOf(c);
-		return Math.abs(foot.x - c.x) > 40 || Math.abs(foot.f - c.f) > 40;   // (a nudge from a neighbour keeps it underfoot)
 	}
 	function drawFoot(ctx, c) {
 		const foot = footOf(c);
 		const g = at(foot.x, foot.f);
 		const s = g.s * 1.6 * foot.air;
-		art.ellipse(ctx, g.x, g.y, 40 * s, 13 * s, { fill: PLAYER_COLORS[c.n], alpha: fadeIn(foot.f) * 0.9 });
+		art.ellipse(ctx, g.x, g.y, 50 * s, 17 * s, { stroke: PLAYER_COLORS[c.n], lineWidth: 6, alpha: fadeIn(foot.f) });
 	}
 
 	// A jump pad: a glowing ring painted on the sand at the corner end of a
@@ -1339,16 +1338,21 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const step = k.glue || k.fall ? 0 : Math.sin(k.walk) * 7 * k.moving;
 		// and the body bobs up off each step: twice a stride
 		const bob = k.glue || k.fall ? 0 : Math.abs(Math.sin(k.walk)) * 7 * k.moving;
-		// legs, with white stripes, and white trainers
+		// frozen on red light: a little squat, feet apart, knees bent out
+		const squat = k.fall ? 0 : (k.squat || 0);
+		// legs (thigh and shin), with white stripes, and white trainers
 		for (const side of [-1, 1]) {
 			const lift = Math.max(0, side * step);
-			art.roundRect(c, side * 8.5 - 6.5, -44 - lift, 13, 38, 4, { fill: PANTS });
-			art.line(c, [[side * 13, -42 - lift], [side * 13, -10 - lift]], { stroke: 'white', lineWidth: 2.5 });
-			art.roundRect(c, side * 8.5 - 8, -10 - lift, 16, 10, 4, { fill: '#f6f6f2' });
+			const hip = [side * 8.5, -42 + 8 * squat - lift];
+			const knee = [side * (8.5 + 12 * squat), -24 + 2 * squat - lift];
+			const ankle = [side * (8.5 + 9 * squat), -6 - lift];
+			art.line(c, [hip, knee, ankle], { stroke: PANTS, lineWidth: 13, lineCap: 'round' });
+			art.line(c, [[hip[0] + side * 4.5, hip[1] + 2], [knee[0] + side * 4.5, knee[1]], [ankle[0] + side * 4.5, ankle[1] - 4]], { stroke: 'white', lineWidth: 2.5 });
+			art.roundRect(c, ankle[0] - 8, ankle[1] - 4, 16, 10, 4, { fill: '#f6f6f2' });
 		}
 		// everything above the legs rides the bob
 		c.save();
-		c.translate(0, -bob);
+		c.translate(0, -bob + 8 * squat);   // (lower in the squat)
 		// and bends at the hips away from the way they're heading
 		const drift = k.glue || k.fall ? 0 : (k.drift || 0);
 		c.translate(0, -44);
@@ -1359,7 +1363,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const run = k.glue || k.fall ? 0 : k.moving;
 		for (const side of [-1, 1]) {
 			const swing = -side * step * 0.7;
-			const trail = drift * 0.7 - side * run * 0.35;
+			// (in the squat, held out to the sides for balance)
+			const trail = (drift * 0.7 - side * run * 0.35) * (1 - squat) - side * 1.25 * squat;
 			art.with(c, { x: side * 26, y: -86 + swing, rotate: trail }, function (a) {
 				art.roundRect(a, -6, 0, 12, 38, 6, { fill: '#176f5b' });
 				art.line(a, [[side * 3, 4], [side * 3, 32]], { stroke: 'white', lineWidth: 2.5 });
