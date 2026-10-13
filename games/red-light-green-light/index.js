@@ -873,7 +873,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				const dx = m.x - b.x;
 				if (Math.abs(m.f - b.f) < b.r + m.r && Math.abs(dx) < b.r + m.r && Math.sign(dx) === -m.dir) m.dir = -m.dir;
 			}
-			if (m.kind === 'guard') m.phase += m.speed * dt / 14;
+			if (m.kind === 'guard') m.phase += dt * 20;   // (stepping like the contestants)
 			else m.spin += m.dir * m.speed * dt / m.r;
 		}
 
@@ -1069,7 +1069,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		}
 		for (const b of blocks) add(b.f - b.r * 0.6, (c) => drawBlock(c, b));
 		for (const m of cash) if (!m.taken) add(m.f, (c) => drawCash(c, m));
-		for (const m of movers) add(m.f, (c) => (m.kind === 'guard' ? drawGuardOn(c, m.x, m.f, m.mask, false, m.phase, 0) : drawMarble(c, m)));
+		for (const m of movers) add(m.f, (c) => (m.kind === 'guard' ? drawGuardOn(c, m.x, m.f, m.mask, true, m.phase, 0, m.dir) : drawMarble(c, m)));
 		for (const g of sentries) if (dollShown || !g.doll) add(g.f, (c) => drawGuardOn(c, g.x, g.f, g.mask, true, 0, g.flash));
 		if (!waiting) for (const c of contestants) add(c.f, (cx) => drawContestant(cx, c));
 		things.sort((a, b) => b.f - a.f);
@@ -1274,10 +1274,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	// A pink guard, facing the field: hood, black mask with a white shape,
 	// black belt and boots. The armed ones line the walls with rifles.
-	function drawGuardOn(ctx, x, f, mask, armed, walk, muzzle) {
+	// dir: which way they face (1 right, -1 left; the rifle points that way)
+	function drawGuardOn(ctx, x, f, mask, armed, walk, muzzle, dir = 1) {
 		const p = at(x, f);
 		const s = p.s * 1.45;
-		art.with(ctx, { x: p.x, y: p.y, scale: s, alpha: fadeIn(f) }, function (c) {
+		art.with(ctx, { x: p.x, y: p.y, scaleX: s * dir, scaleY: s, alpha: fadeIn(f) }, function (c) {
 			guard(c, mask, armed, walk, muzzle);
 		});
 	}
@@ -1290,7 +1291,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	function guard(c, mask, armed, walk, muzzle) {
 		const PINK = '#e5287a';
-		const step = walk ? Math.sin(walk) * 5 : 0;
+		// the same quick steps as the contestants, bobbing up off each one
+		const step = walk ? Math.sin(walk) * 7 : 0;
+		const bob = walk ? Math.abs(Math.sin(walk)) * 7 : 0;
 		art.ellipse(c, 0, 0, 28, 8, { fill: 'rgba(0,0,0,0.3)' });
 		// legs and boots
 		for (const side of [-1, 1]) {
@@ -1298,11 +1301,13 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			art.roundRect(c, side * 9 - 7, -44 - lift, 14, 36, 4, { fill: '#cf2470' });
 			art.roundRect(c, side * 9 - 8, -12 - lift, 16, 12, 4, { fill: INK });
 		}
+		c.save();
+		c.translate(0, -bob);
 		// body, belt
 		art.roundRect(c, -24, -94, 48, 56, [14, 14, 8, 8], { fill: PINK });
 		art.rect(c, -24, -52, 48, 7, { fill: INK });
-		// arms
-		for (const side of [-1, 1]) art.roundRect(c, side * 26 - 6, -90, 12, 38, 6, { fill: '#c41f66' });
+		// arms, swinging as they walk (less, with a rifle to hold)
+		for (const side of [-1, 1]) art.roundRect(c, side * 26 - 6, -90 - side * step * (armed ? 0.3 : 0.7), 12, 38, 6, { fill: '#c41f66' });
 		// hood and mask
 		art.circle(c, 0, -118, 26, { fill: '#f0458d' });
 		art.ellipse(c, 0, -115, 18, 20, { fill: '#111' });
@@ -1320,6 +1325,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				art.poly(c, star(36, -100, 22, 9, 8), { fill: '#ffe066' });
 			}
 		}
+		c.restore();
 	}
 
 	function star(x, y, r0, r1, n) {
