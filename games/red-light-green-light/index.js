@@ -90,7 +90,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// Jump pads and cash
 	const PAD = { rx: 95, rf: 40, every: 420 };   // a pad's half-width and half-depth; one every so far up the track (field units)
 	const CASH = { every: 300, reach: 60, size: 1.8, float: 50, bob: 22 };   // every so far up each wall; how close to grab it; its size, float height and bob
-	const LASER = { hop: 1.3, follow: 4, wobble: 40, rx: 240, rf: 95 };   // red light's target: seconds on each contestant, how quickly it follows, its jitter, its half-width and half-depth
+	const LASER = { hop: 0.8, follow: 6, wobble: 60, search: 260, rx: 240, rf: 95, glow: 50 };   // red light's target: seconds per contestant, how quickly it follows, its jitter, how far it searches round them, its half-width and half-depth, its glow
 	const EDGE_AT = 0.1;        // a pad's centre, as a share of the wall from the corner
 	const HOP = 0.5;            // seconds to skip across a corner onto the next wall
 	const WALL_NAMES = ['LEFT', 'FRONT', 'RIGHT'];
@@ -700,14 +700,15 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		let tf;
 		if (live.length) {
 			const c = live[Math.floor(s.t / LASER.hop) % live.length];
-			tx = c.x;
-			tf = c.f;
+			// (searching all round them, never quite still)
+			tx = c.x + Math.sin(s.t * 2.3) * LASER.search;
+			tf = c.f + Math.sin(s.t * 3.1 + 1) * LASER.search * 0.4;
 		} else {
 			tx = 1.5 * W + Math.sin(s.t * 0.5) * W * 1.3;
 			tf = cam + BACK + DEPTH * (0.5 + 0.3 * Math.sin(s.t * 0.7));
 		}
-		tx += Math.sin(s.t * 7) * LASER.wobble;
-		tf += Math.cos(s.t * 5) * LASER.wobble * 0.6;
+		tx += (Math.sin(s.t * 7) + Math.sin(s.t * 11.3) * 0.5) * LASER.wobble;
+		tf += (Math.cos(s.t * 5) + Math.cos(s.t * 9.7) * 0.5) * LASER.wobble * 0.6;
 		const k = Math.min(1, dt * LASER.follow);
 		s.x += (tx - s.x) * k;
 		s.f += (tf - s.f) * k;
@@ -726,15 +727,19 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const ry = (front.y - back.y) / 2;
 		const pulse = 1 + 0.06 * Math.sin(s.t * 14);
 		const sight = alpha * (0.75 + 0.25 * Math.random());   // (it flickers a little)
-		art.ellipse(ctx, s.x, cy, LASER.rx * pulse, ry * pulse, { fill: RED, alpha: sight * 0.18 });
-		art.ellipse(ctx, s.x, cy, LASER.rx * pulse, ry * pulse, { stroke: RED, lineWidth: 8, alpha: sight });
-		art.ellipse(ctx, s.x, cy, LASER.rx * 0.55 * pulse, ry * 0.55 * pulse, { stroke: RED, lineWidth: 4, alpha: sight * 0.7 });
+		const glow = { color: RED, blur: LASER.glow };
+		art.ellipse(ctx, s.x, cy, LASER.rx * pulse * 1.15, ry * pulse * 1.15, { fill: RED, alpha: sight * 0.12, shadow: glow });
+		art.ellipse(ctx, s.x, cy, LASER.rx * pulse, ry * pulse, { fill: RED, alpha: sight * 0.2 });
+		art.ellipse(ctx, s.x, cy, LASER.rx * pulse, ry * pulse, { stroke: '#ff6a5a', lineWidth: 9, alpha: sight, shadow: glow });
+		art.ellipse(ctx, s.x, cy, LASER.rx * 0.55 * pulse, ry * 0.55 * pulse, { stroke: '#ff6a5a', lineWidth: 5, alpha: sight * 0.8, shadow: glow });
 		// the beams, one from each eye, each flickering on its own and now
 		// and then cutting out altogether
 		for (const off of [-14, 14]) {
 			const flicker = Math.random() < 0.06 ? 0.1 : 0.6 + 0.4 * Math.random();
-			art.line(ctx, [[DOLL_X + off, eyes], [s.x + off * 2, cy]], { stroke: RED, lineWidth: 16, alpha: alpha * 0.22 * flicker });
-			art.line(ctx, [[DOLL_X + off, eyes], [s.x + off * 2, cy]], { stroke: RED, lineWidth: 3, alpha: alpha * flicker });
+			const beam = [[DOLL_X + off, eyes], [s.x + off * 2, cy]];
+			art.line(ctx, beam, { stroke: RED, lineWidth: 34, alpha: alpha * 0.12 * flicker, shadow: { color: RED, blur: LASER.glow } });
+			art.line(ctx, beam, { stroke: RED, lineWidth: 14, alpha: alpha * 0.3 * flicker, shadow: { color: RED, blur: LASER.glow * 0.6 } });
+			art.line(ctx, beam, { stroke: '#ffd0c8', lineWidth: 3.5, alpha: alpha * flicker, shadow: { color: RED, blur: 18 } });   // a white-hot core
 		}
 	}
 
