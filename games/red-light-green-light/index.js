@@ -1074,7 +1074,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (const b of blocks) add(b.f - b.r * 0.6, (c) => drawBlock(c, b));
 		for (const m of cash) if (!m.taken) add(m.f, (c) => drawCash(c, m));
 		for (const m of movers) add(m.f, (c) => (m.kind === 'guard' ? drawGuardOn(c, m.x, m.f, m.mask, true, m.phase, m.flash || 0, m.dir) : drawMarble(c, m)));
-		for (const g of sentries) if (dollShown || !g.doll) add(g.f, (c) => drawGuardOn(c, g.x, g.f, g.mask, true, 0, g.flash));
+		for (const g of sentries) if (dollShown || !g.doll) add(g.f, (c) => drawGuardOn(c, g.x, g.f, g.mask, true, 0, g.flash, facing(g)));
 		if (!waiting) for (const c of contestants) add(c.f, (cx) => drawContestant(cx, c));
 		things.sort((a, b) => b.f - a.f);
 		for (const thing of things) thing.fn(ctx);
@@ -1287,10 +1287,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		});
 	}
 
+	const GUN = { muzzle: [58, -82] };   // where a held rifle's muzzle is, on the guard (facing right)
+	// which way a guard faces: a patrolling one, the way it walks (or last
+	// turned); one at the edge, in toward the field
+	const facing = (g) => g.dir || (g.x < DOLL_X ? 1 : -1);
 	function gunTip(g) {
 		const p = at(g.x, g.f);
 		const s = p.s * 1.45;
-		return { x: p.x + 36 * s * (g.dir || 1), y: p.y - 100 * s };
+		return { x: p.x + GUN.muzzle[0] * s * facing(g), y: p.y + GUN.muzzle[1] * s };
 	}
 
 	function guard(c, mask, armed, walk, muzzle) {
@@ -1310,8 +1314,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// body, belt
 		art.roundRect(c, -24, -94, 48, 56, [14, 14, 8, 8], { fill: PINK });
 		art.rect(c, -24, -52, 48, 7, { fill: INK });
-		// arms, swinging as they walk (less, with a rifle to hold)
-		for (const side of [-1, 1]) art.roundRect(c, side * 26 - 6, -90 - side * step * (armed ? 0.3 : 0.7), 12, 38, 6, { fill: '#c41f66' });
+		// arms: swinging as they walk, or (armed) reaching forward to the rifle
+		if (!armed) for (const side of [-1, 1]) art.roundRect(c, side * 26 - 6, -90 - side * step * 0.7, 12, 38, 6, { fill: '#c41f66' });
 		// hood and mask
 		art.circle(c, 0, -118, 26, { fill: '#f0458d' });
 		art.ellipse(c, 0, -115, 18, 20, { fill: '#111' });
@@ -1320,14 +1324,17 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		else if (mask === 'triangle') art.poly(c, [[0, -125], [9, -108], [-9, -108]], sym);
 		else art.rect(c, -7.5, -123, 15, 15, sym);
 		if (armed) {
-			// a rifle held across the body, muzzle up and out
-			art.line(c, [[-24, -46], [36, -100]], { stroke: '#2b2b2b', lineWidth: 8, lineCap: 'round' });
-			art.line(c, [[-28, -40], [-14, -56]], { stroke: '#5a4332', lineWidth: 11, lineCap: 'round' });
-			art.circle(c, -14, -56, 6, { fill: '#f0458d' });
-			art.circle(c, 14, -76, 6, { fill: '#f0458d' });
-			if (muzzle > 0) {
-				art.poly(c, star(36, -100, 22, 9, 8), { fill: '#ffe066' });
-			}
+			// the rifle held out in front in both hands, pointing the way they face:
+			// the stock at the hip, the barrel out and a little up
+			const grip = [-2, -60];
+			const fore = [30, -70];
+			art.line(c, [[-22, -86], grip], { stroke: '#c41f66', lineWidth: 12 });   // the back arm, to the grip
+			art.line(c, [[-16, -52], GUN.muzzle], { stroke: '#2b2b2b', lineWidth: 8 });   // the barrel
+			art.line(c, [[-22, -48], [-6, -56]], { stroke: '#5a4332', lineWidth: 12 });     // the stock
+			art.line(c, [[22, -86], fore], { stroke: '#c41f66', lineWidth: 12 });      // the front arm, under the barrel
+			art.circle(c, grip[0], grip[1], 6, { fill: '#f0458d' });
+			art.circle(c, fore[0], fore[1], 6, { fill: '#f0458d' });
+			if (muzzle > 0) art.poly(c, star(GUN.muzzle[0], GUN.muzzle[1], 22, 9, 8), { fill: '#ffe066' });
 		}
 		c.restore();
 	}
