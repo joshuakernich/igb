@@ -83,7 +83,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		return [lo, hi];
 	}
 	const START_F = H / 2;      // the white start line: halfway up the walls as each round starts
-	const FINISH_GAP = 220;     // from the red finish line to the doll's feet: she looms just beyond it
+	const FINISH_GAP = 90;      // from the red finish line to the doll's feet: she stands right behind it
 	const DOLL_X = 1.5 * W;
 	const INSET = { x: 2 * W - 150, y: 125, r: 92 };   // the doll-head inset, top right of the front wall
 
