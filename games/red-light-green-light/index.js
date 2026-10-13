@@ -66,7 +66,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const M = 55;               // field units per metre (about the front wall's pixels per metre too)
 	const BACK = 70;            // a player at the back of the room stands this far up from the near edge
 	const DEPTH = 800;          // and right up at the front wall, this much further
-	const MOVE_LIMIT = 0.07;    // how far a player may drift on red light, as a share of the wall, before they're out
+	const MOVE_LIMIT = 0.04;    // how far a player may drift on red light, as a share of the wall, before they're out (the lean grows toward it)
 	const GRACE = 0.2;          // seconds after RED LIGHT before movement counts (tracking lag)
 	const TURN_AWAY = 0.8;      // seconds her head takes to turn away after a red light, before GREEN LIGHT
 	const BODY = 30;            // a contestant's radius on the plane
@@ -831,9 +831,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			if ((phase === 'red' || phase === 'drill-red') && phaseT > GRACE) {
 				if (Math.hypot(dx, dz) > MOVE_LIMIT) {
 					c.over += dt;
-					if (c.over > 0.08 && phase === 'red') eliminate(c, 'moved');
+					if (c.over > 0.05 && phase === 'red') eliminate(c, 'moved');
 					// in practice, only a warning: this is what gets you shot
-					if (c.over > 0.08 && phase === 'drill-red' && !c.warned) {
+					if (c.over > 0.05 && phase === 'drill-red' && !c.warned) {
 						c.warned = true;
 						popOver(c, 'TOO MUCH!', '#ff3640');
 						sound.blip();
@@ -1292,8 +1292,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	}
 
 	// A jump pad: a glowing ring painted on the sand at the corner end of a
-	// wall, pulsing, with chevrons pointing round the corner and the name of
-	// the wall it leads to.
+	// wall, pulsing, with chevrons pointing round the corner.
 	function drawPad(ctx, p) {
 		if (!onView(p.f)) return;
 		const front = at(p.x, p.f - PAD.rf);
@@ -1313,7 +1312,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				for (const ox of [-26, 22]) art.poly(c2, [[ox - 16, -40], [ox + 18, 0], [ox - 16, 40], [ox - 38, 40], [ox - 4, 0], [ox - 38, -40]], { fill: GLOW, alpha: 0.6 + 0.4 * beat });
 			});
 		});
-		show.text(ctx, WALL_NAMES[p.to], p.x, back.y - 26, 28, { fill: 'white', alpha: appear });
 	}
 
 	// A wad of cash: a stack of green notes with a paper band, floating above
@@ -1324,10 +1322,16 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const rise = 0.5 + 0.5 * Math.sin(m.spin * 2.4);
 		const lift = (CASH.float + CASH.bob * rise) * p.s;
 		art.ellipse(ctx, p.x, p.y, 30 * s * (1 - 0.25 * rise), 9 * s * (1 - 0.25 * rise), { fill: 'rgba(0,0,0,0.22)', alpha: 1 - 0.35 * rise });
-		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: Math.sin(m.spin * 1.3) * 0.12 }, function (c) {
-			for (let i = 2; i >= 0; i--) art.roundRect(c, -26 + i * 2, -14 - i * 6, 52, 20, 3, { fill: i % 2 ? '#2f9e57' : '#3cbf6a' });
-			art.rect(c, -6, -27, 12, 22, { fill: '#f3ead2' });
-			art.circle(c, 0, -16, 5, { fill: '#2f9e57' });
+		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: -0.35 + Math.sin(m.spin * 1.3) * 0.1 }, function (c) {
+			// seen at an angle: tipped back and skewed, a stack of notes with depth
+			c.transform(1, 0, -0.45, 0.72, 0, 0);
+			for (let i = 2; i >= 0; i--) {
+				const y = -14 - i * 7;
+				art.rect(c, -26, y + 14, 52, 7, { fill: '#1f7a43' });   // the stack's edge
+				art.roundRect(c, -26, y - 6, 52, 22, 3, { fill: i % 2 ? '#2f9e57' : '#3cbf6a' });
+			}
+			art.rect(c, -7, -34, 14, 36, { fill: '#f3ead2' });   // the paper band, over the top and down the front
+			art.circle(c, 0, -22, 6, { fill: '#2f9e57' });
 		});
 	}
 
