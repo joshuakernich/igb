@@ -1310,8 +1310,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			for (const k of [1.5, 1.3, 1.14]) art.circle(c, 0, 0, R * k, { fill: GLOW, alpha: (0.12 + 0.2 * beat) * 0.55 });
 			art.circle(c, 0, 0, R, { fill: GLOW });
 			art.circle(c, 0, 0, R * 0.8, { fill: '#1d6f86' });
-			art.with(c, { scaleX: dir }, function (c2) {
-				for (const ox of [-26, 22]) art.poly(c2, [[ox - 16, -40], [ox + 18, 0], [ox - 16, 40], [ox - 38, 40], [ox - 4, 0], [ox - 38, -40]], { fill: GLOW, alpha: 0.6 + 0.4 * beat });
+			// two small chevrons, centred in the ring, pointing round the corner
+			art.with(c, { scaleX: dir * 0.55, scaleY: 0.55 }, function (c2) {
+				for (const ox of [-8, 28]) art.poly(c2, [[ox - 16, -40], [ox + 18, 0], [ox - 16, 40], [ox - 38, 40], [ox - 4, 0], [ox - 38, -40]], { fill: GLOW, alpha: 0.6 + 0.4 * beat });
 			});
 		});
 	}
