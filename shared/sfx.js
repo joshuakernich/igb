@@ -204,6 +204,13 @@ window.SFX = (function () {
 		whoosh(c, o, v, r) { noise(c, o, 0, 0.35, 'bandpass', 500 * r, 3000 * r, v * 0.9, 0.12, 2); },
 		whooshLong(c, o, v, r) { noise(c, o, 0, 1.0, 'bandpass', 350 * r, 3500 * r, v * 0.9, 0.45, 2); },
 		hint(c, o, v, r) { metal(c, o, 1046 * r, 0.9, v * 0.25); },
+		kaching(c, o, v, r) {
+			// a cash register: the drawer's clunk, the bell, and a jingle of coins
+			noise(c, o, 0, 0.08, 'bandpass', 900, 500, v * 0.5, 0.002, 2);
+			metal(c, o, 2100 * r, 0.9, v * 0.5, 0.05);
+			for (let i = 0; i < 6; i++) tone(c, o, 'triangle', 0.1 + i * 0.045, 0.18, (2600 + (i % 3) * 420) * r, (2600 + (i % 3) * 420) * r, v * 0.18, 0.002);
+			noise(c, o, 0.1, 0.3, 'highpass', 6000, 9000, v * 0.25, 0.01);
+		},
 		coin(c, o, v, r) { notes(c, o, 'square', [988 * r, 1319 * r], 0.07, 0.25, v * 0.22); },
 		boom(c, o, v, r) { tone(c, o, 'sine', 0, 1.0, 110 * r, 30 * r, v); noise(c, o, 0, 0.6, 'lowpass', 1500, 60, v * 0.6, 0.003); },
 		rumble(c, o, v, r) { noise(c, o, 0, 1.4, 'lowpass', 160 * r, 60 * r, v * 1.2, 0.2); tone(c, o, 'sine', 0, 1.4, 55 * r, 40 * r, v * 0.5, 0.2); },

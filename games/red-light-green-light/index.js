@@ -125,6 +125,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		look: 1.4,            // each round opens on the doll, facing the players: ROUND N...
 		sweep: 2.0,           // ...then the view scrolls back down the field to the start
 		cleared: 3.2,         // the banner after a round
+		payFrom: 0.7,         // then each survivor's ₩1,000 for completing it, from this long in...
+		payEach: 0.35,        // ...one after another
 		quick: 2.6,           // ...or, when nobody made it, before the same round starts again
 	};
 
@@ -548,6 +550,15 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		if (survivors.length) {
 			show.mark(t);
 			show.fx('roundClear');
+			// then each survivor is paid for completing the round, one after another
+			survivors.forEach(function (c, i) {
+				stage.timeout(function () {
+					if (show.beat !== 'play') return;
+					c.score += POINTS.finish;
+					popOver(c, '+' + won(POINTS.finish), PLAYER_COLORS[c.n]);
+					show.fx('kaching', 0.7, 1 + i * 0.04);
+				}, (ROUND_GAP.payFrom + i * ROUND_GAP.payEach) * 1000);
+			});
 		} else {
 			show.fx('roundFail');
 		}
@@ -641,7 +652,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			c.score += POINTS.cash;
 			c.grabbed++;
 			popOver(c, '+' + won(POINTS.cash), '#3cdc7a');
-			show.fx('coin', 0.6);
+			show.fx('kaching', 0.6);
 		}
 	}
 
@@ -899,9 +910,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 		if (!c.safe && c.f > finishF + 12) {
 			c.safe = true;
-			c.score += POINTS.finish;
 			sound.ding();
-			popOver(c, '+' + won(POINTS.finish), PLAYER_COLORS[c.n]);
+			// (their ₩1,000 comes once the round is over: see endRound)
 			maybeEnd();
 		}
 	}
