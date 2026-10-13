@@ -354,7 +354,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	sound.musicShift = -12;   // her song, an octave down
 
 	let round = -1;
-	let phase = 'waiting';   // waiting, drill, drill-red, ready, green, warning, red, cleared, over
+	let phase = 'waiting';   // waiting, drill, drill-red, ready, turning, green, dash, closed, warning, red, cleared, over
 	let phaseT = 0;
 	let phaseDur = 0;
 	let shake = 0;
@@ -516,6 +516,19 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		show.fx('go');
 	}
 
+	// Time's up on the dash for the line: she turns, and anyone not across is
+	// shot, there and then (no RED LIGHT).
+	function lineCloses() {
+		sound.music(false);
+		callout = null;
+		turnHead(0, 0.4);
+		glare = 1;
+		setPhase('closed', Infinity);
+		const late = contestants.filter((c) => c.alive && !c.safe);
+		for (const c of late) eliminate(c, 'line');
+		if (!late.length) maybeEnd();   // (nobody to shoot: straight to the round's end)
+	}
+
 	// Her head is coming round...
 	function warn() {
 		sound.music(false);
@@ -528,7 +541,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		say('Red light', '#ff3640', 'FREEZE');
 		glare = 1;
 		freeze();
-		lineChecked = false;
 		aimLasers();
 		blipAt = 0;
 		setPhase('red', rand(settings.red));
@@ -599,7 +611,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	let pads = [];              // { x, f, wall, to, age, practice }
 	let cash = [];              // { x, f, wall, spin, taken, practice }
 	let padPulse = 0;
-	let lineChecked = false;    // the last leg's check at the line is done
 
 	const onPad = (c, p) => Math.pow((c.x - p.x) / PAD.rx, 2) + Math.pow((c.f - p.f) / PAD.rf, 2) < 1;
 
@@ -656,13 +667,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			popOver(c, '+' + won(POINTS.cash), '#3cdc7a');
 			show.fx('kaching', 0.6);
 		}
-	}
-
-	// Just after RED LIGHT on the last leg: anyone not across the line is out.
-	function checkLine() {
-		lineChecked = true;
-		if (!finalDash) return;
-		for (const c of contestants) if (c.alive && !c.safe && !c.pass) eliminate(c, 'line');
 	}
 
 	function agePads(dt) {
@@ -811,7 +815,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			break;
 
 		case 'dash':
-			if (phaseT >= phaseDur) warn();
+			if (phaseT >= phaseDur) lineCloses();
+			break;
+
+		case 'closed':
+			// the shots ring out; the round ends once they have (see eliminate)
 			break;
 
 		case 'warning':
@@ -822,7 +830,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			blipAt -= dt;
 			if (blipAt <= 0) { sound.blip(); blipAt = 0.45; }
 			glare = 0.7 + 0.3 * Math.sin(phaseT * 12);
-			if (!lineChecked && phaseT > GRACE) checkLine();
 			if (phaseT >= phaseDur) turnAway();
 			break;
 
