@@ -215,6 +215,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const vp = vanishOf(wall);
 		return { x: vp + (x - vp) * (s / SCALE), y: planeY(f) - up * s, s };
 	};
+	// The players (and what's theirs: their spots and rings, their pop-ups,
+	// the shots at them, the laser on them, their blood) stay 1:1 across
+	// wherever they are, curve or no curve: where their player stands.
+	const atPlayer = (x, f, up = 0) => Object.assign(at(x, f, up), { x });
 	// how much of a thing shows through the haze; and whether it's worth drawing
 	const fadeIn = (f) => 1 - Math.max(0, Math.min(1, (beyond(f) - VIEW.haze[0]) / (VIEW.haze[1] - VIEW.haze[0])));
 	const onView = (f) => planeY(f) < H + 320 && fadeIn(f) > 0;
@@ -850,7 +854,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	}
 
 	function popOver(c, text, colour) {
-		const p = at(c.x, c.f, 270);
+		const p = atPlayer(c.x, c.f, 270);
 		// stacked above any other fresh word close by, so they don't overlap
 		let y = p.y;
 		for (let k = 0; k < 4; k++) {
@@ -1014,8 +1018,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const RED = '#ff2a2a';
 		const s = scanner;
 		// the target: a big oval flat on the sand, pulsing
-		const front = at(s.x, s.f - LASER.rf);
-		const back = at(s.x, s.f + LASER.rf);
+		const front = atPlayer(s.x, s.f - LASER.rf);
+		const back = atPlayer(s.x, s.f + LASER.rf);
 		const cy = (front.y + back.y) / 2;
 		const ry = (front.y - back.y) / 2;
 		const pulse = 1 + 0.06 * Math.sin(s.t * 14);
@@ -1084,7 +1088,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		} else {
 			from = { x: c.x < DOLL_X ? 300 : WIDTH - 300, y: 300 };
 		}
-		const to = at(c.x, c.f, 75);
+		const to = atPlayer(c.x, c.f, 75);
 		tracers.push({ x0: from.x, y0: from.y, x1: to.x, y1: to.y, age: 0, glance, dir: Math.random() < 0.5 ? -1 : 1 });
 	}
 
@@ -1361,7 +1365,12 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			}
 		};
 		lineAt(START_F, '#f6f1e6', 7);
-		lineAt(finishF, '#d7262e', 10, dollShown);   // (never lost in the haze: it's where she stands)
+		// the finish line: one band, unbroken, right across all three walls (never lost in the haze: it's where she stands)
+		if (dollShown || onView(finishF)) {
+			const a = at(0, finishF + 10);
+			const b = at(0, finishF - 10);
+			art.rect(ctx, -20, a.y, WIDTH + 40, Math.max(1.5, b.y - a.y), { fill: '#d7262e', alpha: dollShown ? 1 : fadeIn(finishF) });
+		}
 		for (const s of splats) drawSplat(ctx, s);
 		// (while the view is up the field, before a round, the contestants wait
 		// unseen at the start)
@@ -1440,7 +1449,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (const c of contestants) {
 			if (c.hop) continue;
 			const colour = PLAYER_COLORS[c.n];
-			const p = at(c.x, c.f);
+			const p = atPlayer(c.x, c.f);
 			const s = p.s * 1.6;
 			if (step.id === 'move') {
 				for (const side of [-1, 1]) {
@@ -1495,7 +1504,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	function drawSplat(ctx, s) {
 		if (!onView(s.f)) return;
-		const p = at(s.x, s.f);
+		const p = atPlayer(s.x, s.f);
 		const k = Math.min(1, s.t / 0.35);
 		const g = 1 - Math.pow(1 - k, 3);
 		art.ellipse(ctx, p.x, p.y, 105 * p.s * g, 30 * p.s * g, { fill: '#b3001b' });
@@ -1540,6 +1549,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			art.ellipse(c, fr.x + 10, fr.y + 2, b.r * 1.15 * fr.s + 8, 12 * fr.s, { fill: 'rgba(0,0,0,0.22)' });
 			if (b.shape === 'square') {
 				art.poly(c, [[xb0, bk.y - hb], [xb1, bk.y - hb], [x1, fr.y - hf], [x0, fr.y - hf]], { fill: shade(1.25) });
+				// its sides, where the perspective turns one toward us: the side
+				// facing the vanishing point shows when the back edge sits beyond the front
+				if (xb1 > x1 + 0.5) art.poly(c, [[x1, fr.y], [x1, fr.y - hf], [xb1, bk.y - hb], [xb1, bk.y]], { fill: shade(0.78) });
+				if (xb0 < x0 - 0.5) art.poly(c, [[x0, fr.y], [x0, fr.y - hf], [xb0, bk.y - hb], [xb0, bk.y]], { fill: shade(0.78) });
 				art.poly(c, [[x0, fr.y - hf], [x1, fr.y - hf], [x1, fr.y], [x0, fr.y]], { fill: b.colour });
 			} else if (b.shape === 'circle') {
 				const cy = (fr.y + bk.y) / 2;
@@ -1675,8 +1688,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// player's drift; shot, they topple sideways.
 	function drawContestant(ctx, c) {
 		const colour = PLAYER_COLORS[c.n];
-		const ground = at(c.x, c.f);
-		const p = at(c.x, c.f, c.lift);      // off the sand, mid-skip
+		const ground = atPlayer(c.x, c.f);
+		const p = atPlayer(c.x, c.f, c.lift);      // off the sand, mid-skip
 		const s = p.s * 1.6;
 		const alpha = fadeIn(c.f);
 		const air = 1 - c.lift / 300;        // the shadow shrinks under a skip
@@ -1728,7 +1741,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	}
 	function drawFoot(ctx, c) {
 		const foot = footOf(c);
-		const g = at(foot.x, foot.f);
+		const g = atPlayer(foot.x, foot.f);
 		const s = g.s * 1.6 * foot.air;
 		art.ellipse(ctx, g.x, g.y, 50 * s, 17 * s, { stroke: PLAYER_COLORS[c.n], lineWidth: 6, alpha: fadeIn(foot.f) });
 	}
