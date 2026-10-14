@@ -146,7 +146,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			{ id: 'step', caption: 'STEP FORWARD AND BACK', min: 2.5, max: 5 },
 			{ id: 'cash', caption: 'GRAB THE CASH', min: 2.5, max: 10 },
 			{ id: 'freeze', caption: 'FREEZE ON RED LIGHT', min: 5.6, max: 6.5 },
-			{ id: 'jump', caption: 'JUMP PADS SWITCH YOUR WALL', min: 3, max: 18 },
+			{ id: 'jump', caption: 'JUMP PADS SWITCH YOUR WALL', min: 2, max: 8 },
 		],
 		nice: 1.1,            // the NICE! once a step is done, before the next
 		moved: 0.35,          // how far along their wall (per contestant) counts as moving
@@ -2080,10 +2080,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		if (!step) return;
 		show.fx('stepIn');
 		voice('step_' + step.id);
-		// practice cash on every wall with someone on it, just up the field from them
+		// practice cash on the front wall only, just up the field from them
 		if (step.id === 'cash') {
-			const walls = [...new Set(contestants.map((c) => c.wall))];
-			layCash(cam + BACK + DEPTH * 0.25, cam + BACK + DEPTH * 0.9, CONTROLS.cashEvery, true, walls);
+			layCash(cam + BACK + DEPTH * 0.25, cam + BACK + DEPTH * 0.9, CONTROLS.cashEvery, true, [1]);
 		}
 		// a practice pad at every corner end, halfway up the play area
 		if (step.id === 'jump') {
@@ -2098,7 +2097,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			case 'step': return practice.stepped > CONTROLS.stepped * n;
 			case 'cash': return contestants.every((c) => c.grabbed >= CONTROLS.grab);
 			case 'freeze': return practice.red >= 2;
-			case 'jump': return contestants.every((c) => c.drill >= 2 && !c.hop);
+			case 'jump': return contestants.every((c) => c.drill >= 1 && !c.hop);   // (one jump each is enough)
 		}
 		return false;
 	}
