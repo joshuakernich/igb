@@ -445,9 +445,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	}
 
 	// The soundtrack ("Way Back Then"), looping under everything from the
-	// squad's pick to the very end; it dips right down while her song plays
+	// squad's pick to the very end; it drops away to nothing while her song plays
 	// (green light), and a little under the voice.
-	const MUSIC = { level: 0.45, green: 0.18, voice: 0.6, ease: 2.5 };   // its volume, the share of it left under her song, under the voice, how fast it moves (per second)
+	const MUSIC = { level: 0.25, green: 0, voice: 0.6, ease: 2.5 };   // its volume, the share of it left under her song, under the voice, how fast it moves (per second)
 	let musicLevel = 0;
 	function duckMusic(dt) {
 		const el = show.audio.get('soundtrack');
