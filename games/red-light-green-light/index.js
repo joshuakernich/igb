@@ -444,6 +444,20 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		show.play(speaking);
 	}
 
+	// The soundtrack ("Way Back Then"), looping under everything from the
+	// squad's pick to the very end; it dips right down while her song plays
+	// (green light), and a little under the voice.
+	const MUSIC = { level: 0.45, green: 0.18, voice: 0.6, ease: 2.5 };   // its volume, the share of it left under her song, under the voice, how fast it moves (per second)
+	let musicLevel = 0;
+	function duckMusic(dt) {
+		const el = show.audio.get('soundtrack');
+		if (!el) return;
+		const playing = (id) => { const e = show.audio.get(id); return !!e && !e.paused && !e.ended; };
+		const want = MUSIC.level * (playing('dollSong') ? MUSIC.green : speaking && playing(speaking) ? MUSIC.voice : 1);
+		musicLevel += (want - musicLevel) * Math.min(1, dt * MUSIC.ease * 2);
+		el.volume = Math.max(0, Math.min(1, musicLevel));
+	}
+
 	// the piggy bank in the team total (see drawPiggy)
 	const PIGGY = {
 		y: 480,                 // its middle, on every wall
@@ -475,7 +489,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		team: { y: PIGGY.y, into: PIGGY.y, decor: drawPiggy },   // the team total: the scores fly into the piggy bank, the total right over it
 		rivals: ['Dalgona Crew', 'Marble Masters', 'The Frozen Few', 'Statue Squad', 'Ddakji Slappers', 'Last Ones Moving',
 			'Tracksuit Titans', 'Sandy Sprinters', 'Still Standing', 'Circle Triangle Square', 'The Green Line', 'No Wobble Club'],
-		sounds: Object.assign({ dollSong: ['assets/red-light-green-light/doll-song.wav', 0.8] }, VOICE_SOUNDS),   // her song, once through each green light, fitted to its length (the only music); the voice
+		sounds: Object.assign({
+			dollSong: ['assets/red-light-green-light/doll-song.wav', 0.8],
+			soundtrack: ['assets/red-light-green-light/soundtrack.mp3', MUSIC.level, true],
+		}, VOICE_SOUNDS),   // her song, once through each green light, fitted to its length (the only music); the voice
 	});
 
 	// The piggy bank, as in the show: a giant clear glass pig hung on a cable
@@ -665,6 +682,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		contestants = [];
 		for (let i = 0; i < count; i++) contestants.push(Contestant(i));
 		for (const c of contestants) resetContestant(c);
+		musicLevel = MUSIC.level;
+		show.play('soundtrack');
 		show.go('title');
 	}
 
@@ -2393,6 +2412,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		wallT += dt;
 		show.frame(ctx, dt, drawWorld);
 		sound.tick();
+		duckMusic(dt);
 		debugStatus();
 	};
 
