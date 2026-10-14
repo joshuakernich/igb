@@ -429,11 +429,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// The voice: a masked host, as in the show, introducing and reading out
 	// (made with ElevenLabs, each line put through a mask: lower, doubled,
 	// metallic, echoing; assets/red-light-green-light/vo). One line at a time.
-	const VOICE = ['title', 'clock', 'visors', 'step_move', 'step_step', 'step_cash', 'step_freeze', 'step_jump', 'good', 'doll',
-		'round1', 'round2', 'round3', 'round4', 'round5', 'round6', 'round7', 'round8', 'round9', 'round10',
-		'clear', 'nobody', 'timeup', 'scores', 'rankings', 'win0', 'win1', 'win2', 'win3', 'win4', 'win5', 'tie', 'team', 'board', 'thanks'];
+	// (each line says what's on the walls as it's said)
+	const upTo10 = (name) => Array.from({ length: 10 }, (_, i) => name + (i + 1));
+	const VOICE = ['title', 'clock', 'visors', 'allset', 'step_move', 'step_step', 'step_cash', 'step_freeze', 'step_jump', 'good', 'doll',
+		...upTo10('round'), ...upTo10('clear'), 'nobody', ...upTo10('again'), 'timeup', 'scores', 'rankings',
+		'win0', 'win1', 'win2', 'win3', 'win4', 'win5', 'tie', 'team', 'board', 'day1', 'day2', 'day3', 'day4', 'rate', 'thanks'];
 	const VOICE_SOUNDS = Object.fromEntries(VOICE.map((id) => ['vo_' + id, [`assets/red-light-green-light/vo/${id}.wav`, 1]]));
 	let speaking = null;
+	let saidAllSet = false;
 	function voice(id) {
 		if (!VOICE.includes(id)) return;
 		if (speaking) show.stop(speaking);
@@ -793,7 +796,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		if (survivors.length) {
 			show.mark(t);
 			show.fx('roundClear');
-			voice('clear');
+			voice('clear' + (round + 1));   // ROUND N CLEAR!
 			// then each survivor is paid for completing the round, one after another
 			survivors.forEach(function (c, i) {
 				stage.timeout(function () {
@@ -805,7 +808,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			});
 		} else {
 			show.fx('roundFail');
-			voice('nobody');
+			voice('nobody');   // NOBODY MADE IT, then ROUND N AGAIN!
+			const again = round + 1;
+			stage.timeout(() => { if (show.beat === 'play') voice('again' + again); }, 1700);
 		}
 		turnHead(0, 1);
 		setPhase('cleared', survivors.length ? ROUND_GAP.cleared : ROUND_GAP.quick);
@@ -2145,7 +2150,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			tagline: 'DON\'T GET CAUGHT MOVING',
 			update(dt) {
 				stepWorld(dt);
-				if (show.cue(0.05)) voice('title');   // (straight away: it's a long one)
+				if (show.cue(1.41)) voice('title');   // (RED LIGHT as its letters land, GREEN LIGHT, then the tagline)
 			},
 		}),
 
@@ -2155,15 +2160,19 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			enter() { gloom = 0.2; setPhase('waiting'); },
 			update(dt) {
 				stepWorld(dt);
-				if (show.cue(0.45)) voice('clock');
+				if (show.cue(0.6)) voice('clock');   // (with YOU HAVE)
 			},
 		}),
 
 		// the visors on, in the right colours, and a wiggle in the middle of the room
 		show.beats.visors({
+			enter() { saidAllSet = false; },
 			update(dt) {
 				stepWorld(dt);
 				if (show.cue(0.6)) voice('visors');
+				// ALL SET!, once
+				const v = show.visorState && show.visorState();
+				if (v && v.allSet && !saidAllSet) { saidAllSet = true; voice('allset'); }
 			},
 		}),
 
@@ -2228,7 +2237,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				glare = bt < E.eyes ? 0 : bt < E.turn ? 0.75 + 0.25 * Math.sin(bt * 10) : Math.max(0, 1 - (bt - E.turn) * 2);
 				if (show.cue(E.eyes)) { show.fx('glint'); show.flash = 0.25; }
 				if (show.cue(E.name)) { show.fx('villainReveal'); show.shake = 0.9; show.flash = 0.5; }
-				if (show.cue(E.name + 0.35)) voice('doll');
+				if (show.cue(E.name + 0.1)) voice('doll');
 				if (show.cue(E.round)) voice('round1');
 				if (show.cue(E.turn)) turnHead(Math.PI, E.turnFor);
 				if (show.cue(E.pull)) { show.camera.wide(E.pullFor); show.fx('whooshLong', 0.6); }
@@ -2316,13 +2325,13 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			},
 			update(dt) {
 				stepWorld(dt * show.timeScale);
-				if (show.cue(0.8)) voice('timeup');
+				if (show.cue(0.2)) voice('timeup');   // (as TIME! slams in)
 			},
 		}),
 
 		// 7–11. the scores, the ranking, the team total, the leaderboard, the replay
 		show.beats.scores({
-			update() { if (show.cue(0.3)) voice('scores'); },
+			update() { if (show.cue(0.15)) voice('scores'); },
 		}),
 		show.beats.rank({
 			update() {
@@ -2344,11 +2353,18 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			},
 		}),
 		show.beats.board({
-			update() { if (show.cue(0.2)) voice('board'); },
+			update() {
+				if (show.cue(0.1)) voice('board');
+				// #N OF THE DAY!, as your row lands (Showtime's BOARD: enter 1.2, climb 0.2 a team, ten teams)
+				const b = show.state().board;
+				if (b && b.rank <= 4 && show.cue(1.2 + 0.6 + (10 - (b.rank - 1)) * 0.2 + 0.05)) voice('day' + b.rank);
+			},
 		}),
 		show.beats.replay(),
 		// how was it? five faces to tap, sad to happy
-		show.beats.rate(),
+		show.beats.rate({
+			enter() { voice('rate'); },   // HOW WAS IT?
+		}),
 
 		show.beats.end({
 			enter() {
