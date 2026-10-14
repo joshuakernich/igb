@@ -124,7 +124,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			guardSpeed: (1.1 + 0.2 * r) * M,
 			marbles: Math.max(0, Math.min(4, r - 1)),      // rolling marbles (deadly), from round 3
 			marbleSpeed: (2.6 + 0.4 * r) * M,
-			music: 3 + 0.35 * r,                           // notes per second of her song
 		};
 	}
 
@@ -382,7 +381,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	/* ---------- the game's state ---------- */
 
 	const sound = createSound();
-	sound.musicShift = -12;   // her song, an octave down
 
 	let round = -1;
 	let phase = 'waiting';   // waiting, drill, drill-red, ready, turning, green, dash, closed, warning, red, cleared, over
@@ -449,7 +447,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		backdrop: drawShapes,
 		rivals: ['Dalgona Crew', 'Marble Masters', 'The Frozen Few', 'Statue Squad', 'Ddakji Slappers', 'Last Ones Moving',
 			'Tracksuit Titans', 'Sandy Sprinters', 'Still Standing', 'Circle Triangle Square', 'The Green Line', 'No Wobble Club'],
-		sounds: { tutorial: ['assets/shared/music-tutorial.mp3', 0.2, true] },
+		sounds: { dollSong: ['assets/red-light-green-light/doll-song.mp3', 0.8, true] },   // her song, looping through every green light (the only music)
 	});
 
 	// Big flat ○ △ □ drifting slowly up the results backdrop, pink and teal.
@@ -499,7 +497,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		head.t = head.dur = 0;
 		glare = 0;
 		showInset = true;
-		sound.music(false);
+		show.stop('dollSong');
 		if (first) {
 			head.yaw = head.from = head.to = Math.PI;
 			greenLight(true);
@@ -530,7 +528,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			c.pass = false;
 		}
 		finalDash = false;
-		sound.music(true, settings.music);
+		show.play('dollSong');   // (from the top, each green light)
 		scrollTo = Math.min(camEnd, cam + rand(settings.leg));
 		if (camEnd - scrollTo < settings.leg[0] * 0.5) scrollTo = camEnd;   // no stub of a last leg
 		setPhase('green', Infinity);
@@ -551,7 +549,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// Time's up on the dash for the line: she turns, and anyone not across is
 	// shot, there and then (no RED LIGHT).
 	function lineCloses() {
-		sound.music(false);
+		show.stop('dollSong');
 		callout = null;
 		turnHead(0, 0.4);
 		glare = 1;
@@ -563,7 +561,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	// Her head is coming round...
 	function warn() {
-		sound.music(false);
+		show.stop('dollSong');
 		turnHead(0, settings.warning);
 		setPhase('warning', settings.warning);
 	}
@@ -589,7 +587,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// Everyone is across or out: a short banner, and on to the next round.
 	// (The clock keeps running through it.)
 	function endRound() {
-		sound.music(false);
+		show.stop('dollSong');
 		const survivors = contestants.filter((c) => c.alive);
 		callout = null;
 		cleared = { round, made: survivors.length };
@@ -1977,7 +1975,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				gloom = 0;
 				cam = 0;
 				show.camera.follow(crewShot);
-				show.play('tutorial');
 				enterStep(0);
 			},
 			update(dt) {
@@ -2011,7 +2008,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			id: 'doll',
 			length: ENTRANCE.length,
 			enter() {
-				show.stop('tutorial');
 				callout = null;
 				for (const c of contestants) resetContestant(c);
 				setPhase('waiting');
@@ -2108,7 +2104,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// 6. TIME!: the world slows and stops, and she turns to look
 		show.beats.timeUp({
 			enter() {
-				sound.music(false);
+				show.stop('dollSong');
 				setPhase('over');
 				showInset = false;
 				callout = null;
