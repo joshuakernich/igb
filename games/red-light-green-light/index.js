@@ -447,7 +447,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		backdrop: drawShapes,
 		rivals: ['Dalgona Crew', 'Marble Masters', 'The Frozen Few', 'Statue Squad', 'Ddakji Slappers', 'Last Ones Moving',
 			'Tracksuit Titans', 'Sandy Sprinters', 'Still Standing', 'Circle Triangle Square', 'The Green Line', 'No Wobble Club'],
-		sounds: { dollSong: ['assets/red-light-green-light/doll-song.mp3', 0.8] },   // her song, once through each green light, fitted to its length (the only music)
+		sounds: { dollSong: ['assets/red-light-green-light/doll-song.wav', 0.8] },   // her song, once through each green light, fitted to its length (the only music)
 	});
 
 	// Big flat ○ △ □ drifting slowly up the results backdrop, pink and teal.
