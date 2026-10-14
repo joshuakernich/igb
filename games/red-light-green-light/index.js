@@ -88,11 +88,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const START_F = H / 2;      // the white start line: halfway up the walls as each round starts
 	const FINISH_GAP = 90;      // from the red finish line to the doll's feet: she stands right behind it
 	const DOLL_X = 1.5 * W;
-	// The clock on each wall, a capsule standing clear of the edges: on the
+	// The clock on each wall, a capsule hung from the top edge: on the
 	// front wall near the top left corner; on the side walls toward the back
 	// corner, a quarter of the wall in from it, with the doll-head inset under it.
-	const CLOCK_AT = [{ x: W / 4, y: 78 }, { x: 175, y: 78 }, { x: W * 3 / 4, y: 78 }];
-	const INSET = { x: 2 * W - 150, y: 125, r: 92, side: 262 };   // the doll-head inset: top right of the front wall; on the side walls (at y side), under the clock
+	const CLOCK_AT = [{ x: W / 4, y: 44, hang: true }, { x: 175, y: 44, hang: true }, { x: W * 3 / 4, y: 44, hang: true }];   // (hung from the top edge)
+	const INSET = { x: 2 * W - 150, y: 125, r: 92, side: 205 };   // the doll-head inset: top right of the front wall; on the side walls (at y side), under the clock
 
 	// Jump pads and cash
 	const PAD = { rx: 95, rf: 40, every: 420 };   // a pad's half-width and half-depth; one every so far up the track (field units)
