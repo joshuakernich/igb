@@ -426,6 +426,21 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	/* ---------- the show ---------- */
 
+	// The voice: a masked host, as in the show, introducing and reading out
+	// (made with ElevenLabs, each line put through a mask: lower, doubled,
+	// metallic, echoing; assets/red-light-green-light/vo). One line at a time.
+	const VOICE = ['title', 'clock', 'visors', 'step_move', 'step_step', 'step_cash', 'step_freeze', 'step_jump', 'good', 'doll',
+		'round1', 'round2', 'round3', 'round4', 'round5', 'round6', 'round7', 'round8', 'round9', 'round10',
+		'clear', 'nobody', 'timeup', 'scores', 'rankings', 'win0', 'win1', 'win2', 'win3', 'win4', 'win5', 'tie', 'team', 'board', 'thanks'];
+	const VOICE_SOUNDS = Object.fromEntries(VOICE.map((id) => ['vo_' + id, [`assets/red-light-green-light/vo/${id}.wav`, 1]]));
+	let speaking = null;
+	function voice(id) {
+		if (!VOICE.includes(id)) return;
+		if (speaking) show.stop(speaking);
+		speaking = 'vo_' + id;
+		show.play(speaking);
+	}
+
 	// the piggy bank in the team total (see drawPiggy)
 	const PIGGY = {
 		y: 480,                 // its middle, on every wall
@@ -456,7 +471,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		team: { y: PIGGY.y, into: PIGGY.y, decor: drawPiggy },   // the team total: the scores fly into the piggy bank, the total right over it
 		rivals: ['Dalgona Crew', 'Marble Masters', 'The Frozen Few', 'Statue Squad', 'Ddakji Slappers', 'Last Ones Moving',
 			'Tracksuit Titans', 'Sandy Sprinters', 'Still Standing', 'Circle Triangle Square', 'The Green Line', 'No Wobble Club'],
-		sounds: { dollSong: ['assets/red-light-green-light/doll-song.wav', 0.8] },   // her song, once through each green light, fitted to its length (the only music)
+		sounds: Object.assign({ dollSong: ['assets/red-light-green-light/doll-song.wav', 0.8] }, VOICE_SOUNDS),   // her song, once through each green light, fitted to its length (the only music); the voice
 	});
 
 	// The piggy bank, as in the show: a giant clear glass pig hung on a cable
@@ -681,6 +696,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			cam = introCam();
 			setPhase('ready', ROUND_GAP.look + ROUND_GAP.sweep);
 			show.fx('roundStart');
+			voice('round' + (r + 1));
 		}
 	}
 
@@ -777,6 +793,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		if (survivors.length) {
 			show.mark(t);
 			show.fx('roundClear');
+			voice('clear');
 			// then each survivor is paid for completing the round, one after another
 			survivors.forEach(function (c, i) {
 				stage.timeout(function () {
@@ -788,6 +805,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			});
 		} else {
 			show.fx('roundFail');
+			voice('nobody');
 		}
 		turnHead(0, 1);
 		setPhase('cleared', survivors.length ? ROUND_GAP.cleared : ROUND_GAP.quick);
@@ -2031,6 +2049,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const step = CONTROLS.steps[i];
 		if (!step) return;
 		show.fx('stepIn');
+		voice('step_' + step.id);
 		// practice cash on every wall with someone on it, just up the field from them
 		if (step.id === 'cash') {
 			const walls = [...new Set(contestants.map((c) => c.wall))];
@@ -2095,6 +2114,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			practice.done = true;
 			sound.ding();
 			show.fx('nice');
+			voice('good');
 		}
 		if (practice.done) practice.doneAge += dt;
 		if ((practice.done && practice.doneAge >= CONTROLS.nice) || practice.age >= step.max) enterStep(practice.i + 1);
@@ -2123,19 +2143,28 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		show.beats.titleDrop({
 			lines: [{ text: 'RED LIGHT', fill: '#ff3640', glow: '#ff3640' }, { text: 'GREEN LIGHT', fill: '#27d96b', glow: '#27d96b' }],
 			tagline: 'DON\'T GET CAUGHT MOVING',
-			update(dt) { stepWorld(dt); },
+			update(dt) {
+				stepWorld(dt);
+				if (show.cue(0.35)) voice('title');
+			},
 		}),
 
 		// 2. the ten-minute clock, slamming in out of the dark; it starts
 		// counting a moment after it lands, and runs through everything after
 		show.beats.clockIntro({
 			enter() { gloom = 0.2; setPhase('waiting'); },
-			update(dt) { stepWorld(dt); },
+			update(dt) {
+				stepWorld(dt);
+				if (show.cue(0.45)) voice('clock');
+			},
 		}),
 
 		// the visors on, in the right colours, and a wiggle in the middle of the room
 		show.beats.visors({
-			update(dt) { stepWorld(dt); },
+			update(dt) {
+				stepWorld(dt);
+				if (show.cue(0.6)) voice('visors');
+			},
 		}),
 
 		// 3. the controls, one at a time, the whole field in view; no doll yet
@@ -2199,6 +2228,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				glare = bt < E.eyes ? 0 : bt < E.turn ? 0.75 + 0.25 * Math.sin(bt * 10) : Math.max(0, 1 - (bt - E.turn) * 2);
 				if (show.cue(E.eyes)) { show.fx('glint'); show.flash = 0.25; }
 				if (show.cue(E.name)) { show.fx('villainReveal'); show.shake = 0.9; show.flash = 0.5; }
+				if (show.cue(E.name + 0.35)) voice('doll');
+				if (show.cue(E.round)) voice('round1');
 				if (show.cue(E.turn)) turnHead(Math.PI, E.turnFor);
 				if (show.cue(E.pull)) { show.camera.wide(E.pullFor); show.fx('whooshLong', 0.6); }
 				// back down the field to the contestants at the start line
@@ -2283,14 +2314,28 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				turnHead(0, 1);
 				glare = 1;
 			},
-			update(dt) { stepWorld(dt * show.timeScale); },
+			update(dt) {
+				stepWorld(dt * show.timeScale);
+				if (show.cue(0.8)) voice('timeup');
+			},
 		}),
 
 		// 7–11. the scores, the ranking, the team total, the leaderboard, the replay
-		show.beats.scores(),
-		show.beats.rank(),
+		show.beats.scores({
+			update() { if (show.cue(0.3)) voice('scores'); },
+		}),
+		show.beats.rank({
+			update() {
+				if (show.cue(0.2)) voice('rankings');
+				// as the winner's place is revealed (Showtime's RANK: reveal 2.2, each 0.65): who won, or a tie
+				const s = contestants.map((c) => c.score);
+				const best = Math.max(...s);
+				if (show.cue(2.2 + (s.length - 1) * 0.65 + 0.45)) voice(s.filter((v) => v === best).length > 1 ? 'tie' : 'win' + s.indexOf(best));
+			},
+		}),
 		show.beats.team({
 			update() {
+				if (show.cue(0.95)) voice('team');
 				// a ka-ching for each pour of notes into the piggy bank, quicker and higher as it fills
 				for (let k = 0; k < PIGGY.kachings; k++) {
 					const at = PIGGY.fillFrom + 0.04 + PIGGY.fillFor * Math.pow(k / PIGGY.kachings, 1.3);   // (just after the smoosh, whose cue is at fillFrom)
@@ -2298,13 +2343,16 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				}
 			},
 		}),
-		show.beats.board(),
+		show.beats.board({
+			update() { if (show.cue(0.2)) voice('board'); },
+		}),
 		show.beats.replay(),
 		// how was it? five faces to tap, sad to happy
 		show.beats.rate(),
 
 		show.beats.end({
 			enter() {
+				voice('thanks');
 				if (completed) return;
 				completed = true;
 				IGB.complete(scoresToRewards(contestants.map((c) => c.score)));
