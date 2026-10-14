@@ -2302,13 +2302,13 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	/* ---------- the debug panel ---------- */
 
-	// DEBUG, bottom left of the left wall (folded away until opened): jump to
+	// DEBUG, on the left wall, centred up and down (folded away until opened): jump to
 	// any beat, and step through everything inside them: the tutorial's
 	// steps, each phase of a round, whole rounds, the clock.
-	const DEBUG = { x: 24, y: 940, w: W - 48 };
+	const DEBUG = { x: 24, w: W - 48 };
 	const BEATS = ['title', 'clock', 'visors', 'controls', 'doll', 'play', 'timeup', 'scores', 'rank', 'team', 'board', 'replay', 'rate', 'end'];
 	const $debug = $('<debug-panel>').css({
-		position: 'absolute', left: DEBUG.x + 'px', bottom: (H - DEBUG.y) + 'px', width: DEBUG.w + 'px',
+		position: 'absolute', left: DEBUG.x + 'px', top: H / 2 + 'px', transform: 'translateY(-50%)', width: DEBUG.w + 'px',
 		padding: '12px 16px', boxSizing: 'border-box', borderRadius: '20px',
 		background: 'rgba(8,12,28,0.88)', border: '3px solid rgba(58,209,255,0.6)',
 		fontFamily: `"${Showtime.TYPE.font}", sans-serif`, color: 'white', pointerEvents: 'auto', zIndex: 20,
@@ -2319,17 +2319,24 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		margin: '4px', padding: '8px 14px', borderRadius: '12px', border: 'none', cursor: 'pointer',
 		background: colour, color: 'white', fontFamily: 'inherit', fontSize: '22px',
 	}).on('click', function (e) { e.stopPropagation(); fn(); });
-	dbutton('DEBUG ▸', function () {
-		const open = !$dbody.is(':visible');
-		$dbody.toggle(open);
-		$(this).text(open ? 'DEBUG ▾' : 'DEBUG ▸');
-	}, '#1a5a7a').appendTo($dhead);
+	const $dtoggle = dbutton('DEBUG ▸', () => debugOpen(!$dbody.is(':visible')), '#1a5a7a').appendTo($dhead);
 	const $dnow = $('<span>').css({ flex: 1, color: '#9fb6d8', fontFamily: 'monospace', fontSize: '22px' }).appendTo($dhead);
+	// closed, it's just the button; open, the whole panel
+	function debugOpen(open) {
+		$dbody.toggle(open);
+		$dnow.toggle(open);
+		$dtoggle.text(open ? 'DEBUG ▾' : 'DEBUG ▸');
+		$debug.css(open
+			? { width: DEBUG.w + 'px', padding: '12px 16px', background: 'rgba(8,12,28,0.88)', border: '3px solid rgba(58,209,255,0.6)' }
+			: { width: 'auto', padding: 0, background: 'none', border: 'none' });
+	}
 	const drow = (label) => {
 		const $row = $('<div>').css({ display: 'flex', flexWrap: 'wrap', alignItems: 'center' }).appendTo($dbody);
 		$('<span>').text(label).css({ width: '120px', color: '#9fb6d8', fontSize: '20px' }).appendTo($row);
 		return $row;
 	};
+
+	debugOpen(false);
 
 	const $beats = drow('BEATS');
 	for (const id of BEATS) dbutton(id.toUpperCase(), () => debugJump(id)).appendTo($beats);
