@@ -1703,6 +1703,11 @@ window.Showtime = function (stage, opts) {
 	// scores fade away, the scores fly from where they sat to the middle and
 	// smoosh into one number that counts up, the bonus lands on top, and the
 	// room erupts.
+	// opts.team (optional): { y, into, decor(c, bt, state) }: where the total
+	// sits, where the scores fly to, and the game's own scene behind it all
+	// (drawn on each wall first; state: { fade, fly, merged, mergedAt, partyAt, total })
+	const TEAM_AT = Object.assign({ y: TEAM.y }, opts.team);
+	if (TEAM_AT.into === undefined) TEAM_AT.into = TEAM_AT.y;
 	beatsLib.team = function (extra) {
 		let shown = 0;
 		let partyAt = 0;
@@ -1728,7 +1733,7 @@ window.Showtime = function (stage, opts) {
 					self.shake = 0.7;
 					self.flash = 0.5;
 					self.confetti(400);
-					for (let w = 0; w < 3; w++) { self.burst(w * W + W / 2, TEAM.y, theme.gold); self.burst(w * W + 250, 300, theme.accent); self.burst(w * W + 1350, 300, '#33e0ff'); }
+					for (let w = 0; w < 3; w++) { self.burst(w * W + W / 2, TEAM_AT.y, theme.gold); self.burst(w * W + 250, 300, theme.accent); self.burst(w * W + 1350, 300, '#33e0ff'); }
 				}
 				// more light bursts, all round the room, while it celebrates
 				if (bt > partyAt && Math.floor((bt - dt) / 0.45) !== Math.floor(bt / 0.45) && bt < TEAM.length - 1.5) {
@@ -1748,6 +1753,7 @@ window.Showtime = function (stage, opts) {
 				order.sort((a, b) => s[b] - s[a] || a - b);
 				const SUFFIX = ['1ST', '2ND', '3RD', '4TH', '5TH', '6TH'];
 				self.onWalls(ctx, function (c) {
+					if (TEAM_AT.decor) TEAM_AT.decor(c, bt, { fade, fly, merged, mergedAt: TEAM.fly[1], partyAt, total: s.reduce((a, b) => a + b, 0) });
 					if (bt > TEAM.fade[1]) self.slam(c, 'TEAM TOTAL', W / 2, 150, 110, bt - TEAM.fade[1], { fill: theme.gold });
 					if (merged) return drawTotal(c, bt);
 					const gap = Math.min(LIST.row, LIST.height / Math.max(1, n));
@@ -1763,7 +1769,7 @@ window.Showtime = function (stage, opts) {
 						const w = measure(c, fmt(s[p]), size);
 						const x0 = right - w / 2;
 						const fx = lerp(x0, W / 2, fly);
-						const fy = lerp(y + 2, TEAM.y, fly);
+						const fy = lerp(y + 2, TEAM_AT.into, fly);
 						const grow = lerp(1, 1.4, fly);
 						c.save();
 						c.translate(fx, fy);
@@ -1781,7 +1787,7 @@ window.Showtime = function (stage, opts) {
 			const sq = Math.exp(-age * 5) * Math.cos(age * 22);
 			const party = bt > partyAt ? 1 + 0.06 * Math.sin(bt * 10) : 1;
 			c.save();
-			c.translate(W / 2, TEAM.y);
+			c.translate(W / 2, TEAM_AT.y);
 			c.scale((1 + 0.45 * sq) * party, (1 - 0.4 * sq) * party);
 			self.text(c, fmt(shown), 0, 0, 220, { fill: theme.gold });
 			c.restore();

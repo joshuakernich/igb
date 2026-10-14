@@ -16,7 +16,7 @@
  * The show, in order (see the beats at the bottom, and shared/showtime.js
  * for the generic ones): the squad picker over the dimmed field; the
  * ten-minute clock slamming in; the controls, one at a time, with the
- * camera in close on the contestants and no doll yet (practice cash to grab,
+ * whole field in view and no doll yet (practice cash to grab,
  * a practice red light with no shooting, practice jump pads there and back);
  * the doll, the camera tight on her face, YOUNG-HEE, her head turning away
  * and the camera pulling back down the field; GREEN LIGHT and the rounds;
@@ -149,9 +149,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			{ id: 'jump', caption: 'JUMP PADS SWITCH YOUR WALL', min: 3, max: 18 },
 		],
 		nice: 1.1,            // the NICE! once a step is done, before the next
-		zoom: [1.35, 2.3],    // how close the camera comes in on the contestants
-		fit: 2300,            // zoom = fit / (their spread + pad)
-		pad: 450,
 		moved: 0.35,          // how far along their wall (per contestant) counts as moving
 		stepped: 0.3,         // and how far toward and away from it
 		red: [1.5, 5.0],      // the practice red light: on, then off (no shooting)
@@ -429,6 +426,15 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	/* ---------- the show ---------- */
 
+	// the piggy bank in the team total (see drawPiggy)
+	const PIGGY = {
+		y: 470,                 // its middle, on every wall
+		rx: 300, ry: 195,       // its body
+		fill: 0.74,             // how full it ends up
+		fillFor: 1.6,           // seconds it takes to fill, once the scores are in
+		notes: ['#f3d27e', '#e6b955', '#d39d3b', '#f7e2a4'],   // the notes inside: yellowy ₩50,000s
+	};
+
 	const SAND = '#e3c08a';
 	const PINK = '#ff3d8b';
 	const TEAL = '#1fa58a';
@@ -445,10 +451,99 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			sky: ['#f1d9ab', '#c99560'], panel: 'rgba(42,16,32,0.84)', floor: 'rgba(90,50,24,0.45)', glow: 'rgba(255,61,139,0.3)',
 		},
 		backdrop: drawShapes,
+		team: { y: 880, into: PIGGY.y, decor: drawPiggy },   // the team total: the scores fly into the piggy bank
 		rivals: ['Dalgona Crew', 'Marble Masters', 'The Frozen Few', 'Statue Squad', 'Ddakji Slappers', 'Last Ones Moving',
 			'Tracksuit Titans', 'Sandy Sprinters', 'Still Standing', 'Circle Triangle Square', 'The Green Line', 'No Wobble Club'],
 		sounds: { dollSong: ['assets/red-light-green-light/doll-song.wav', 0.8] },   // her song, once through each green light, fitted to its length (the only music)
 	});
+
+	// The piggy bank, as in the show: a giant clear glass pig hung on a cable
+	// over the room, with a gold cap and a coin slot. For the team total, the
+	// scores fly into it and it fills up with ₩50,000 notes falling in through
+	// the slot; once the total's up, it glows and sways.
+	function drawPiggy(c, bt, st) {
+		const P = PIGGY;
+		const appear = st.fade;                                  // (in as the rankings fade out)
+		if (appear <= 0) return;
+		const filled = st.merged ? P.fill * (1 - Math.pow(1 - Math.min(1, (bt - st.mergedAt) / P.fillFor), 3)) : 0;
+		const party = bt > st.partyAt;
+		const sway = Math.sin(bt * 1.3) * (party ? 2.2 : 1.2) + (st.merged ? Math.exp(-(bt - st.mergedAt) * 3) * Math.sin((bt - st.mergedAt) * 14) * 3 : 0);
+		const glass = 'rgba(205,232,255,0.16)';
+		const edge = 'rgba(255,255,255,0.75)';
+		const { rx, ry } = P;
+		const top = P.y - ry;
+
+		c.save();
+		c.globalAlpha *= appear;
+		// the cable, from up out of sight
+		art.line(c, [[W / 2, -20], [W / 2, top - 30]], { stroke: '#2b2622', lineWidth: 7 });
+		c.translate(W / 2, top - 30);
+		c.rotate(sway * Math.PI / 180);
+		c.translate(0, ry + 30);
+		// a warm glow round it, stronger once it's full
+		art.circle(c, 0, 0, rx * 1.5, { fill: art.radial(c, 0, 0, rx * 0.3, rx * 1.5, [[0, `rgba(255,200,90,${0.15 + 0.35 * filled})`], [1, 'rgba(255,200,90,0)']]) });
+		// legs, then the tail, behind the body
+		for (const lx of [-0.62, -0.3, 0.3, 0.6]) art.roundRect(c, lx * rx - 30, ry * 0.62, 60, 80, [8, 8, 22, 22], { fill: glass, stroke: edge, lineWidth: 4 });
+		const tail = [];
+		for (let i = 0; i <= 20; i++) { const a = i / 20 * Math.PI * 3; const r = 8 + i * 1.3; tail.push([-rx - 4 - i * 1.6 + Math.cos(a) * r * 0.6, -ry * 0.15 + Math.sin(a) * r * 0.6]); }
+		art.line(c, tail, { stroke: edge, lineWidth: 5 });
+		// the body
+		art.ellipse(c, 0, 0, rx, ry, { fill: glass });
+		// the money inside, up to how full it is: notes in rows, the top row tumbled
+		if (filled > 0) {
+			c.save();
+			c.beginPath();
+			c.ellipse(0, 0, rx - 6, ry - 6, 0, 0, Math.PI * 2);
+			c.clip();
+			const level = ry - 2 * ry * filled;                 // the surface, from the middle
+			art.rect(c, -rx, level + 10, rx * 2, ry * 2, { fill: '#c99134' });
+			for (let row = 0, y = ry - 18; y > level - 10; row++, y -= 22) {
+				for (let x = -rx - 40 + (row % 2) * 34; x < rx + 40; x += 68) {
+					const k = (row * 7 + Math.round(x)) & 3;
+					art.with(c, { x, y, rotate: ((row * 13 + x * 0.7) % 9) - 4 }, function (c2) {
+						art.rect(c2, -32, -13, 64, 26, { fill: P.notes[k] });
+						art.rect(c2, -32, -13, 64, 26, { stroke: 'rgba(120,80,20,0.45)', lineWidth: 2 });
+						art.circle(c2, 14, 0, 6, { fill: 'rgba(160,110,40,0.5)' });
+					});
+				}
+			}
+			c.restore();
+		}
+		// notes dropping in through the slot while it fills
+		if (st.merged && bt - st.mergedAt < P.fillFor) {
+			const level = ry - 2 * ry * filled;
+			for (let i = 0; i < 7; i++) {
+				const k = ((bt - st.mergedAt) * 2.4 + i / 7) % 1;
+				const y = -ry - 260 + k * (level + ry + 260);
+				art.with(c, { x: -30 + Math.sin(i * 2.7 + k * 9) * 40, y, rotate: (k * 400 + i * 50) % 360, alpha: Math.min(1, (1 - k) * 4) }, function (c2) {
+					art.rect(c2, -24, -10, 48, 20, { fill: P.notes[i % 4] });
+				});
+			}
+		}
+		// the glass: its rim, a bright sheen top left, a glint
+		art.ellipse(c, 0, 0, rx, ry, { stroke: edge, lineWidth: 6 });
+		c.save();
+		c.globalAlpha *= 0.4;
+		c.lineCap = 'round';
+		c.strokeStyle = 'white';
+		c.lineWidth = 16;
+		c.beginPath();
+		c.ellipse(0, 0, rx * 0.84, ry * 0.8, 0, Math.PI * 1.08, Math.PI * 1.42);
+		c.stroke();
+		c.restore();
+		art.circle(c, -rx * 0.55, -ry * 0.62, 7, { fill: 'white', alpha: 0.8 });
+		// the snout, ears, an eye
+		art.ellipse(c, rx * 0.97, ry * 0.05, 46, 60, { fill: glass, stroke: edge, lineWidth: 5 });
+		for (const dy of [-16, 16]) art.ellipse(c, rx * 1.03, ry * 0.05 + dy, 7, 11, { fill: 'rgba(60,40,30,0.55)' });
+		for (const ex of [0.38, 0.6]) art.poly(c, [[ex * rx - 34, -ry * 0.86], [ex * rx + 4, -ry * 1.28], [ex * rx + 40, -ry * 0.8]], { fill: glass, stroke: edge, lineWidth: 5 });
+		art.circle(c, rx * 0.7, -ry * 0.32, 11, { fill: '#2a1d16' });
+		art.circle(c, rx * 0.7 + 3, -ry * 0.32 - 3, 3.5, { fill: 'white' });
+		// the gold cap the cable holds, and the coin slot
+		art.roundRect(c, -60, -ry - 14, 120, 30, 12, { fill: '#e4b23c', stroke: '#9b6d16', lineWidth: 3 });
+		art.circle(c, 0, -ry - 24, 14, { stroke: '#9b6d16', lineWidth: 6 });
+		art.roundRect(c, -48, -ry + 22, 72, 12, 6, { fill: 'rgba(30,20,10,0.6)' });
+		c.restore();
+	}
 
 	// Big flat ○ △ □ drifting slowly up the results backdrop, pink and teal.
 	function drawShapes(c, time) {
@@ -1927,17 +2022,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		if ((practice.done && practice.doneAge >= CONTROLS.nice) || practice.age >= step.max) enterStep(practice.i + 1);
 	}
 
-	// The camera in close on the contestants, wherever they are.
-	function crewShot() {
-		if (!contestants.length) return { x: WIDTH / 2, y: H / 2, z: 1 };
-		const xs = contestants.map((c) => c.x);
-		const lo = Math.min(...xs);
-		const hi = Math.max(...xs);
-		const ys = contestants.map((c) => at(c.x, c.f).y);
-		const y = ys.reduce((a, b) => a + b, 0) / ys.length - 90;
-		return { x: (lo + hi) / 2, y, z: clamp(CONTROLS.fit / (hi - lo + CONTROLS.pad), CONTROLS.zoom[0], CONTROLS.zoom[1]) };
-	}
-
 	/* ---------- the beats ---------- */
 
 	// Where her head is, in the world, with the view at the far end.
@@ -1976,7 +2060,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			update(dt) { stepWorld(dt); },
 		}),
 
-		// 3. the controls, one at a time, the camera in close on the contestants; no doll yet
+		// 3. the controls, one at a time, the whole field in view; no doll yet
 		{
 			id: 'controls',
 			length: CONTROLS.steps.reduce((a, s) => a + s.max + CONTROLS.nice, 0),   // a safety net: each step has its own limit
@@ -1984,7 +2068,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			enter() {
 				gloom = 0;
 				cam = 0;
-				show.camera.follow(crewShot);
+				show.camera.wide(0.6);
 				enterStep(0);
 			},
 			update(dt) {
