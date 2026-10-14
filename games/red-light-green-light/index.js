@@ -476,15 +476,15 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 		c.save();
 		c.globalAlpha *= appear;
-		// the room in darkness, as in the show, one light down onto the pig
+		// the room in darkness, as in the show, one beam of light down through the pig
 		art.rect(c, -10, -10, W + 20, H + 20, { fill: '#060509', alpha: 0.96 });
 		c.save();
 		c.globalAlpha *= 0.5 + 0.25 * filled;
-		art.poly(c, [[W / 2 - 70, -10], [W / 2 + 70, -10], [W / 2 + R * 1.5, P.y + R], [W / 2 - R * 1.5, P.y + R]], {
-			fill: art.linear(c, 0, 0, 0, P.y + R, ['rgba(255,236,190,0.22)', 'rgba(255,236,190,0.05)']),
+		// (a beam the whole height of the wall, top to bottom: no floor to land on)
+		art.poly(c, [[W / 2 - 70, -10], [W / 2 + 70, -10], [W / 2 + R * 1.9, H + 10], [W / 2 - R * 1.9, H + 10]], {
+			fill: art.linear(c, 0, 0, 0, H, ['rgba(255,236,190,0.22)', 'rgba(255,236,190,0.12)', 'rgba(255,236,190,0.04)']),
 		});
 		c.restore();
-		art.ellipse(c, W / 2, P.y + R + 95, R * 1.3, 40, { fill: art.radial(c, W / 2, P.y + R + 95, 0, R * 1.3, [[0, 'rgba(255,214,140,0.28)'], [1, 'rgba(255,214,140,0)']]) });
 		// the cable, from up out of sight
 		art.line(c, [[W / 2, -20], [W / 2, P.y - R - 30]], { stroke: '#4a4038', lineWidth: 7 });
 
