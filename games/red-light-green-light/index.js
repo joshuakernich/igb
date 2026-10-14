@@ -447,7 +447,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		backdrop: drawShapes,
 		rivals: ['Dalgona Crew', 'Marble Masters', 'The Frozen Few', 'Statue Squad', 'Ddakji Slappers', 'Last Ones Moving',
 			'Tracksuit Titans', 'Sandy Sprinters', 'Still Standing', 'Circle Triangle Square', 'The Green Line', 'No Wobble Club'],
-		sounds: { dollSong: ['assets/red-light-green-light/doll-song.mp3', 0.8, true] },   // her song, looping through every green light (the only music)
+		sounds: { dollSong: ['assets/red-light-green-light/doll-song.mp3', 0.8] },   // her song, once through each green light, fitted to its length (the only music)
 	});
 
 	// Big flat ○ △ □ drifting slowly up the results backdrop, pink and teal.
@@ -528,10 +528,20 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			c.pass = false;
 		}
 		finalDash = false;
-		show.play('dollSong');   // (from the top, each green light)
 		scrollTo = Math.min(camEnd, cam + rand(settings.leg));
 		if (camEnd - scrollTo < settings.leg[0] * 0.5) scrollTo = camEnd;   // no stub of a last leg
+		playSong((scrollTo - cam) / settings.speed);
 		setPhase('green', Infinity);
+	}
+
+	// Her song, from the top, sped up or slowed down (its pitch kept) to last
+	// exactly as long as this green light: it ends as she turns.
+	function playSong(seconds) {
+		const el = show.audio.get('dollSong');
+		if (el) el.preservesPitch = el.mozPreservesPitch = el.webkitPreservesPitch = true;
+		const length = show.audio.getDuration('dollSong');
+		const speed = isFinite(length) && seconds > 0 ? clamp(length / seconds, 0.25, 4) : 1;
+		show.play('dollSong', speed);
 	}
 
 	// The track stops at the end of the last leg, the line in reach: just long
