@@ -1040,6 +1040,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			if (Math.abs(c.f - b.f) < reach) c.f = c.f < b.f ? b.f - reach : b.f + reach;
 		}
 
+		// Once over the finish line, there's no going back over it.
+		if (c.safe) c.f = Math.max(c.f, finishF + 13);
+
 		// Guards and marbles are deadly.
 		for (const m of movers) {
 			if (Math.abs(c.x - m.x) < m.r + BODY && Math.abs(c.f - m.f) < (m.r + BODY) * 0.7) {
@@ -1079,6 +1082,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					const push = (min - Math.abs(df)) / 2 * (df >= 0 ? 1 : -1);
 					a.f -= push;
 					b.f += push;
+					// (and never jostled back over the finish line)
+					for (const o of [a, b]) if (o.safe) o.f = Math.max(o.f, finishF + 13);
 				}
 			}
 		}
