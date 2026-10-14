@@ -481,7 +481,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		c.save();
 		c.globalAlpha *= 0.5 + 0.25 * filled;
 		// (a beam the whole height of the wall, top to bottom: no floor to land on)
-		art.poly(c, [[W / 2 - 70, -10], [W / 2 + 70, -10], [W / 2 + R * 1.9, H + 10], [W / 2 - R * 1.9, H + 10]], {
+		art.poly(c, [[W / 2 - R * 1.15, -10], [W / 2 + R * 1.15, -10], [W / 2 + R * 1.45, H + 10], [W / 2 - R * 1.45, H + 10]], {   // (nearly upright)
 			fill: art.linear(c, 0, 0, 0, H, ['rgba(255,236,190,0.22)', 'rgba(255,236,190,0.12)', 'rgba(255,236,190,0.04)']),
 		});
 		c.restore();
