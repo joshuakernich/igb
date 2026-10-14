@@ -453,7 +453,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			sky: ['#f1d9ab', '#c99560'], panel: 'rgba(42,16,32,0.84)', floor: 'rgba(90,50,24,0.45)', glow: 'rgba(255,61,139,0.3)',
 		},
 		backdrop: drawShapes,
-		team: { y: 880, into: PIGGY.y, decor: drawPiggy },   // the team total: the scores fly into the piggy bank
+		team: { y: PIGGY.y, into: PIGGY.y, decor: drawPiggy },   // the team total: the scores fly into the piggy bank, the total right over it
 		rivals: ['Dalgona Crew', 'Marble Masters', 'The Frozen Few', 'Statue Squad', 'Ddakji Slappers', 'Last Ones Moving',
 			'Tracksuit Titans', 'Sandy Sprinters', 'Still Standing', 'Circle Triangle Square', 'The Green Line', 'No Wobble Club'],
 		sounds: { dollSong: ['assets/red-light-green-light/doll-song.wav', 0.8] },   // her song, once through each green light, fitted to its length (the only music)
