@@ -88,7 +88,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const START_F = H / 2;      // the white start line: halfway up the walls as each round starts
 	const FINISH_GAP = 90;      // from the red finish line to the doll's feet: she stands right behind it
 	const DOLL_X = 1.5 * W;
-	const INSET = { x: 2 * W - 150, y: 125, r: 92 };   // the doll-head inset: top right of the front wall; on the side walls, a third of the way from the back
+	// The clock on each wall, a capsule standing clear of the edges: on the
+	// front wall near the top left corner; on the side walls toward the back
+	// corner, a quarter of the wall in from it, with the doll-head inset under it.
+	const CLOCK_AT = [{ x: W / 4, y: 78 }, { x: 175, y: 78 }, { x: W * 3 / 4, y: 78 }];
+	const INSET = { x: 2 * W - 150, y: 125, r: 92, side: 262 };   // the doll-head inset: top right of the front wall; on the side walls (at y side), under the clock
 
 	// Jump pads and cash
 	const PAD = { rx: 95, rf: 40, every: 420 };   // a pad's half-width and half-depth; one every so far up the track (field units)
@@ -433,7 +437,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const show = new Showtime(stage, {
 		score: won,   // scores are in won
 		id: 'red-light-green-light',
-		clock: 'corner',   // the clock in the top left corner of every wall
+		clock: (n) => CLOCK_AT[n],   // the clock, as a capsule: see CLOCK_AT
 		seconds: GAME_SECONDS,
 		players: () => contestants.length,
 		scores: () => contestants.map((c) => c.score),
@@ -1172,8 +1176,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	function drawCalls(ctx) {
 		if (showInset) {
 			if (scaleAt(dollF) < SCALE * 0.4) drawInset(ctx, INSET.x);   // while she's small, far off on the horizon
-			drawInset(ctx, W / 3);                                // and always on the side walls, where she can't be seen,
-			drawInset(ctx, WIDTH - W / 3);                        // a third of the way along from the back of the room
+			drawInset(ctx, CLOCK_AT[0].x, INSET.side);                 // and always on the side walls, where she can't be seen,
+			drawInset(ctx, 2 * W + CLOCK_AT[2].x, INSET.side);         // under the clock
 		}
 		if (callout && callout.age < 2 && show.beat !== 'controls') {   // (the controls say it in their caption)
 			const a = callout.age < 1.3 ? 1 : 1 - (callout.age - 1.3) / 0.7;
@@ -1802,12 +1806,12 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	// The doll-head inset, while she's too far up the field to see: her head
 	// in a ring that says what she's doing.
-	function drawInset(ctx, x) {
+	function drawInset(ctx, x, y = INSET.y) {
 		const looking = Math.cos(head.yaw) > 0.5;
 		const turning = head.t < head.dur;
 		const label = looking ? 'WATCHING' : turning ? 'TURNING' : 'BACK TURNED';
 		const colour = looking ? '#ff3640' : turning ? '#ffb020' : '#27d96b';
-		const { y, r } = INSET;
+		const { r } = INSET;
 		art.circle(ctx, x, y, r + 10, { fill: colour });
 		art.circle(ctx, x, y, r, { fill: '#f3e3c4' });
 		art.save(ctx, function (c) {

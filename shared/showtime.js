@@ -923,10 +923,9 @@ window.Showtime = function (stage, opts) {
 	// up: how far the pill reaches up past its top (the corner clock hangs
 	// from the top edge of the wall)
 	// box: how much of the pill itself shows (the digits always do)
-	// where the corner clock sits on each wall: top centre, or (opts.clock:
-	// 'corner') tucked into the top left corner
-	const CORNER = opts.clock === 'corner';
-	const clockX = () => (CORNER ? CLOCK.size * 3.3 / 2 + 26 : W / 2);
+	// where the clock sits on wall n: hung from the top edge, top centre; or
+	// wherever the game says (opts.clock(n) => { x, y }), a capsule standing free
+	const clockAt = (n) => (typeof opts.clock === 'function' ? Object.assign({ hang: false }, opts.clock(n)) : { x: W / 2, y: CLOCK.y, hang: true });
 
 	// side: how far the pill reaches out past its left (hung from the corner)
 	function clockPill(ctx, x, y, size, left, alpha = 1, up = 0, box = 1, side = 0) {
@@ -947,10 +946,11 @@ window.Showtime = function (stage, opts) {
 
 	function drawClock(ctx) {
 		const left = clock.left;
-		self.onWalls(ctx, function (c) {
-			// hung from the top edge; its pill fades in round the digits once they've docked
+		self.onWalls(ctx, function (c, n) {
+			// hung from the top edge (or standing free); its pill fades in round the digits once they've docked
 			const box = clock.shownAt === undefined ? 1 : clamp((showTime - clock.shownAt) / 0.25, 0, 1);
-			clockPill(c, clockX(), CLOCK.y, CLOCK.size, left, 1, CLOCK.y + 20, box, CORNER ? clockX() + 20 : 0);
+			const at = clockAt(n);
+			clockPill(c, at.x, at.y, CLOCK.size, left, 1, at.hang ? at.y + 20 : 0, box);
 			// the last ten seconds loom, big and solid, over every wall
 			if (left > 0 && left <= CLOCK.final) {
 				const k = 1 - (left % 1 || 1);
@@ -1146,8 +1146,9 @@ window.Showtime = function (stage, opts) {
 				if (bt >= C.settle[1]) return;
 				const fly = ease(between(bt, C.settle[0], C.settle[1]));
 				const fade = 1 - between(bt, C.settle[0], C.settle[0] + 0.4);
-				self.onWalls(ctx, function (c) {
+				self.onWalls(ctx, function (c, n) {
 					const cx = W / 2;
+					const dock = clockAt(n);
 					// 1. the dial, its ticks lighting round one by one
 					const charged = between(bt, C.charge[0], C.charge[1]);
 					if (bt > C.dial) {
@@ -1176,9 +1177,9 @@ window.Showtime = function (stage, opts) {
 					if (bt > C.number) {
 						const age = bt - C.number;
 						const s = age < 0.26 ? lerp(2.4, 0.9, (age / 0.26) ** 2) : 0.9 + 0.1 * easeOut((age - 0.26) / 0.18);
-						const cy = lerp(C.y, CLOCK.y, fly);
+						const cy = lerp(C.y, dock.y, fly);
 						c.save();
-						c.translate(lerp(cx, clockX(), fly), cy);
+						c.translate(lerp(cx, dock.x, fly), cy);
 						c.scale(s, s);
 						c.globalAlpha = clamp(age / 0.15, 0, 1);
 						// the clock's size is a step of the scale that fits 10:00 (its widest), so it
