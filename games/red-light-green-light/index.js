@@ -37,12 +37,14 @@
  * The field runs on across all three walls: blocks, patrolling guards and
  * rolling marbles on every wall, armed guards at the far ends.
  *
- * Drawn in 2.5D, like Gwi-Ma Showdown: the game is played on a flat plane,
- * x across all three walls (0..4800), f up the field toward the doll. The
- * plane tilts away in perspective in depth only; across stays 1:1, so each
- * contestant stands on the front wall exactly where their player stands in
- * the room. A small inset at the top of the front wall shows the doll's
- * head while she's too far up the field to see.
+ * The game is played on a flat plane, x across all three walls (0..4800),
+ * f up the field toward the doll. The foreground is flat, 1:1; further up,
+ * the field curves away to a horizon high on the walls, under a painted sky,
+ * so the doll is always there at the far end, small on the horizon and
+ * growing as the field scrolls toward her. Across stays 1:1 everywhere, so
+ * each contestant stands on their wall exactly where their player stands in
+ * the room. While she's small, an inset at the top of the front wall shows
+ * her head close up.
  *
  * Input: px (left / right), pz (forward / back). On the front wall px is
  * the position along it and pz how near it the player stands (1 right up
@@ -172,25 +174,44 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	/* ---------- the view ---------- */
 
-	// The plane, flat on the wall with no perspective: one field unit is one
-	// unit up the wall, everything drawn at one size (SCALE). The field runs on
-	// up past the top of the walls; the doll and the obstacles further up the
-	// field are simply off the top until the field scrolls them down into view.
+	// The plane: flat in the foreground, one field unit one unit up the wall at
+	// one size (SCALE), then, past VIEW.flat, it curves away over the brow of
+	// the world to a horizon line high on the walls: the field further on
+	// squeezes up toward the horizon and everything on it shrinks (never below
+	// VIEW.least), so the doll is always there at the far end, growing as the
+	// field scrolls toward her. Across stays 1:1 everywhere. Far things fade
+	// into the haze (the doll, her tree and the finish line never do).
 	// `cam` is the field distance at the bottom of the walls, and scrolls up.
-	const SCALE = 0.75;         // the size of everything on the field
+	const SCALE = 0.75;         // the size of everything on the flat
+	const VIEW = {
+		flat: 560,              // the flat foreground: this far up the field from the bottom of the walls
+		horizon: 150,           // the horizon line, from the top of the walls
+		least: 0.18,            // things far off shrink to this share of their size, and no smaller
+		shrink: 900,            // how quickly they shrink past the flat (field units)
+		haze: [1500, 2700],     // past the flat, things fade out over this stretch
+	};
 	const INK = '#1a1a1a';     // for drop shadows on words
 
 	let cam = 0;
 
-	function project(x, y, up = 0) {
-		return { x, y: y - up * SCALE, s: SCALE };
-	}
-	const planeY = (f) => H - (f - cam);
-	const at = (x, f, up = 0) => project(x, planeY(f), up);
-	// On the walls, or near enough to reach onto them (tall things standing
-	// just below the bottom edge, or above the top).
-	const fadeIn = () => 1;
-	const onView = (f) => planeY(f) < H + 320 && planeY(f) > -500;
+	// the bend: past the flat, field distance runs out toward the horizon (its
+	// slope matching the flat's where they meet, so there's no crease)
+	const BEND = H - VIEW.flat - VIEW.horizon;
+	const beyond = (f) => Math.max(0, f - cam - VIEW.flat);
+	const planeY = function (f) {
+		const d = f - cam;
+		if (d <= VIEW.flat) return H - d;
+		return H - VIEW.flat - BEND * (1 - Math.exp(-(d - VIEW.flat) / BEND));
+	};
+	const scaleAt = (f) => SCALE * (VIEW.least + (1 - VIEW.least) * Math.exp(-beyond(f) / VIEW.shrink));
+	const at = function (x, f, up = 0) {
+		const s = scaleAt(f);
+		return { x, y: planeY(f) - up * s, s };
+	};
+	// how much of a thing shows through the haze; and whether it's worth drawing
+	const fadeIn = (f) => 1 - Math.max(0, Math.min(1, (beyond(f) - VIEW.haze[0]) / (VIEW.haze[1] - VIEW.haze[0])));
+	const onView = (f) => planeY(f) < H + 320 && fadeIn(f) > 0;
+	const horizonY = () => VIEW.horizon;
 
 	/* ---------- the field ---------- */
 
@@ -768,7 +789,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const pulse = 1 + 0.06 * Math.sin(s.t * 14);
 		const sight = alpha * (0.75 + 0.25 * Math.random());   // (it flickers a little)
 		// (a hot centre, fading gradually out over well beyond its rim)
-		art.with(ctx, { x: s.x, y: cy, scaleY: ry / LASER.rx }, function (c) {
+		art.with(ctx, { x: s.x, y: cy, scaleX: (front.s + back.s) / 2 / SCALE, scaleY: ry / LASER.rx }, function (c) {
 			const R = LASER.rx * pulse;
 			art.circle(c, 0, 0, R * 1.9, { fill: art.radial(c, 0, 0, 0, R * 1.9, [[0, 'rgba(255,120,100,0.75)'], [0.2, 'rgba(255,60,50,0.5)'], [0.5, 'rgba(255,40,40,0.22)'], [0.8, 'rgba(255,30,30,0.07)'], [1, 'rgba(255,30,30,0)']]), alpha: sight });
 			art.circle(c, 0, 0, R, { stroke: '#ff6a5a', lineWidth: 4, alpha: sight * 0.6 });
@@ -818,7 +839,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// any guard on the walls: the ones at the edges, and the patrolling ones
 		const patrol = movers.filter((m) => m.kind === 'guard');
 		for (const g of sentries.concat(patrol)) {
-			if (planeY(g.f) < 0 || planeY(g.f) > H + 40) continue;   // (only guards on the walls)
+			if (planeY(g.f) > H + 40 || fadeIn(g.f) < 0.5) continue;   // (only guards on the walls, not lost in the haze)
 			const d = Math.abs(g.x - c.x) + Math.abs(g.f - c.f) * 2 + (Math.floor(g.x / W) === c.wall ? 0 : 1200);   // one on their own wall if there is one
 			if (d < best) { best = d; nearest = g; }
 		}
@@ -1090,14 +1111,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		drawArena(ctx);
 
 		// Lying flat on the sand: rake marks, the lines, blood.
-		const lineAt = function (f, colour, half) {
-			if (!onView(f)) return;
+		const lineAt = function (f, colour, half, always) {
+			if (!always && !onView(f)) return;
 			const a = at(0, f + half);
 			const b = at(0, f - half);
-			art.rect(ctx, -20, a.y, WIDTH + 40, b.y - a.y, { fill: colour, alpha: fadeIn(f) });
+			art.rect(ctx, -20, a.y, WIDTH + 40, Math.max(1.5, b.y - a.y), { fill: colour, alpha: always ? 1 : fadeIn(f) });
 		};
 		lineAt(START_F, '#f6f1e6', 7);
-		lineAt(finishF, '#d7262e', 10);
+		lineAt(finishF, '#d7262e', 10, dollShown);   // (never lost in the haze: it's where she stands)
 		for (const s of splats) drawSplat(ctx, s);
 		// (while the view is up the field, before a round, the contestants wait
 		// unseen at the start)
@@ -1108,8 +1129,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const things = [];
 		const add = (f, fn) => { if (onView(f)) things.push({ f, fn }); };
 		if (dollShown) {
-			add(dollF + 140, (c) => drawTree(c));
-			add(dollF, (c) => drawDoll(c));
+			// (she and her tree are always there, however far off: on the horizon)
+			things.push({ f: dollF + 140, fn: (c) => drawTree(c) });
+			things.push({ f: dollF, fn: (c) => drawDoll(c) });
 		}
 		for (const b of blocks) add(b.f - b.r * 0.6, (c) => drawBlock(c, b));
 		for (const m of cash) if (!m.taken) add(m.f, (c) => drawCash(c, m));
@@ -1148,7 +1170,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// RED LIGHT called out on every wall, and the white flash of a shot.
 	function drawCalls(ctx) {
 		if (showInset) {
-			if (planeY(dollF) < 250) drawInset(ctx, INSET.x);   // while she's off the top (or only just on)
+			if (scaleAt(dollF) < SCALE * 0.4) drawInset(ctx, INSET.x);   // while she's small, far off on the horizon
 			drawInset(ctx, W / 3);                                // and always on the side walls, where she can't be seen,
 			drawInset(ctx, WIDTH - W / 3);                        // a third of the way along from the back of the room
 		}
@@ -1194,15 +1216,17 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	}
 
 	// The arena: sand all the way up the walls, a little darker far away.
+	// The arena: the sand, curving away to the horizon, hazy far off; the
+	// painted sky above it.
 	function drawArena(ctx) {
-		art.rect(ctx, -20, -20, WIDTH + 40, H + 40, { fill: art.linear(ctx, 0, 0, 0, H, ['#c0945e', '#d3ad79', '#e6c592']) });
+		const hz = horizonY();
+		art.rect(ctx, -20, -20, WIDTH + 40, H + 40, { fill: art.linear(ctx, 0, hz, 0, H, ['#c0945e', '#d3ad79', '#e6c592']) });
 		// rake marks every couple of metres, so the scrolling shows: flat
-		// bands across
+		// bands across, bunching up and fading toward the horizon
 		const gap = 110;
-		for (let f = Math.ceil(cam / gap) * gap; f < cam + 6000; f += gap) {
+		for (let f = Math.ceil(cam / gap) * gap; fadeIn(f) > 0; f += gap) {
 			const p = at(0, f);
-			if (p.y < -20) break;
-			art.rect(ctx, -20, p.y - 2 * p.s, WIDTH + 40, 4 * p.s, { fill: 'rgba(120,80,40,0.12)' });
+			art.rect(ctx, -20, p.y - 2 * p.s, WIDTH + 40, 4 * p.s, { fill: 'rgba(120,80,40,0.12)', alpha: fadeIn(f) });
 		}
 		// a few pebbles, scrolling with the field
 		for (let k = Math.floor(cam / 90); k < (cam + 3000) / 90; k++) {
@@ -1210,10 +1234,19 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			for (let j = 0; j < 4; j++) {
 				const x = ((k * 7919 + j * 104729) % 4700) + 50;
 				const p = at(x, f + j * 20);
-				if (p.y > H + 10) continue;
-				art.ellipse(ctx, p.x, p.y, 9 * p.s, 4 * p.s, { fill: 'rgba(110,75,40,0.25)' });
+				if (p.y > H + 10 || fadeIn(f) <= 0) continue;
+				art.ellipse(ctx, p.x, p.y, 9 * p.s, 4 * p.s, { fill: 'rgba(110,75,40,0.25)', alpha: fadeIn(f) });
 			}
 		}
+		// the haze over the far sand, and the sky
+		art.rect(ctx, -20, hz, WIDTH + 40, 260, { fill: art.linear(ctx, 0, hz, 0, hz + 260, ['rgba(246,236,214,0.9)', 'rgba(246,236,214,0)']) });
+		art.rect(ctx, -20, -20, WIDTH + 40, hz + 20, { fill: art.linear(ctx, 0, 0, 0, hz, ['#6ec3ea', '#bfe4f2', '#f3ecd9']) });
+		for (let i = 0; i < 9; i++) {
+			const x = ((i * 977 + 260) % WIDTH) + Math.sin(wallT * 0.05 + i) * 30;
+			const y = 30 + (i * 37) % 70;
+			for (const [dx, dy, r] of [[0, 0, 34], [38, 6, 26], [-36, 8, 24], [14, -14, 24]]) art.ellipse(ctx, x + dx, y + dy, r * 1.6, r * 0.7, { fill: 'rgba(255,255,255,0.75)' });
+		}
+		art.rect(ctx, -20, hz - 1.5, WIDTH + 40, 3, { fill: 'rgba(160,120,80,0.35)' });
 	}
 
 	function drawSplat(ctx, s) {
@@ -1252,15 +1285,17 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const shade = (k) => mix(b.colour, k);
 		const fr = at(0, b.f - b.r);       // its front edge
 		const bk = at(0, b.f + b.r);       // its back edge
-		const x0 = b.x - b.r;
-		const x1 = b.x + b.r;
+		const x0 = b.x - b.r * fr.s / SCALE;   // (the far ones smaller across too)
+		const x1 = b.x + b.r * fr.s / SCALE;
+		const xb0 = b.x - b.r * bk.s / SCALE;
+		const xb1 = b.x + b.r * bk.s / SCALE;
 		const hf = b.h * fr.s;
 		const hb = b.h * bk.s;
 		art.save(ctx, function (c) {
 			c.globalAlpha = alpha;
 			art.ellipse(c, b.x + 10, fr.y + 2, b.r * 1.15 * fr.s + 8, 12 * fr.s, { fill: 'rgba(0,0,0,0.22)' });
 			if (b.shape === 'square') {
-				art.poly(c, [[x0, bk.y - hb], [x1, bk.y - hb], [x1, fr.y - hf], [x0, fr.y - hf]], { fill: shade(1.25) });
+				art.poly(c, [[xb0, bk.y - hb], [xb1, bk.y - hb], [x1, fr.y - hf], [x0, fr.y - hf]], { fill: shade(1.25) });
 				art.poly(c, [[x0, fr.y - hf], [x1, fr.y - hf], [x1, fr.y], [x0, fr.y]], { fill: b.colour });
 			} else if (b.shape === 'circle') {
 				const cy = (fr.y + bk.y) / 2;
@@ -1459,7 +1494,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const R = PAD.rx;
 		const GLOW = '#7df9ff';
 		const dir = Math.sign(p.to - p.wall);
-		art.with(ctx, { x: p.x, y: cy, scaleX: appear * (1 + 0.06 * beat), scaleY: appear * (1 + 0.06 * beat) * squash }, function (c) {
+		const across = front.s / SCALE;   // (smaller far off)
+		art.with(ctx, { x: p.x, y: cy, scaleX: appear * (1 + 0.06 * beat) * across, scaleY: appear * (1 + 0.06 * beat) * squash, alpha: fadeIn(p.f) }, function (c) {
 			for (const k of [1.5, 1.3, 1.14]) art.circle(c, 0, 0, R * k, { fill: GLOW, alpha: (0.12 + 0.2 * beat) * 0.55 });
 			art.circle(c, 0, 0, R, { fill: GLOW });
 			art.circle(c, 0, 0, R * 0.8, { fill: '#1d6f86' });
@@ -1473,6 +1509,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// A wad of cash: a stack of green notes with a paper band, floating above
 	// the sand and bobbing up and down, its shadow shrinking as it rises.
 	function drawCash(ctx, m) {
+		art.save(ctx, (c) => { c.globalAlpha *= fadeIn(m.f); drawCashHere(c, m); });
+	}
+	function drawCashHere(ctx, m) {
 		const p = at(m.x, m.f);
 		const s = p.s * CASH.size;
 		const rise = 0.5 + 0.5 * Math.sin(m.spin * 2.4);
@@ -1494,6 +1533,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// A magnet: a red horseshoe with silver tips, floating and turning a little,
 	// sparks crackling between its tips.
 	function drawMagnet(ctx, g) {
+		art.save(ctx, (c) => { c.globalAlpha *= fadeIn(g.f); drawMagnetHere(c, g); });
+	}
+	function drawMagnetHere(ctx, g) {
 		const p = at(g.x, g.f);
 		const s = p.s * CASH.size;
 		const rise = 0.5 + 0.5 * Math.sin(g.spin * 2.4);
@@ -1629,7 +1671,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// back to the players; only her head turns round to watch them.
 	function drawDoll(ctx) {
 		const p = at(DOLL_X, dollF);
-		art.with(ctx, { x: p.x, y: p.y, scale: p.s * 0.82, alpha: fadeIn(dollF) }, function (c) {
+		art.with(ctx, { x: p.x, y: p.y, scale: p.s * 0.82 }, function (c) {
 			art.ellipse(c, 0, 0, 190, 34, { fill: 'rgba(0,0,0,0.25)' });
 			dollBody(c, false);
 			art.with(c, { y: -610, scale: 2.1 }, (c2) => dollHead(c2, head.yaw, glare));
@@ -1740,7 +1782,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// The tree behind her: a bare trunk with a few clumps of leaves.
 	function drawTree(ctx) {
 		const p = at(DOLL_X - 360, dollF + 140);
-		art.with(ctx, { x: p.x, y: p.y, scale: p.s * 0.85, alpha: fadeIn(dollF + 140) }, function (c) {
+		art.with(ctx, { x: p.x, y: p.y, scale: p.s * 0.85 }, function (c) {
 			const BARK = '#5a4332';
 			art.ellipse(c, 0, 0, 120, 22, { fill: 'rgba(0,0,0,0.22)' });
 			const branches = [[[0, -380], [-150, -560], [-230, -610]], [[0, -430], [120, -600], [210, -650]], [[0, -330], [180, -420]], [[0, -300], [-170, -390]], [[0, -480], [10, -720]]];
