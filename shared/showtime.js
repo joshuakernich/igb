@@ -230,9 +230,9 @@ window.Showtime = function (stage, opts) {
 	/* ---------- tuning: the leaderboard ---------- */
 
 	const BOARD = {
-		drop: 0.1,             // the other teams' rows drop in, one after another
-		enter: 1.9,            // your row slides in at the bottom
-		climb: 0.42,           // and climbs past each team above it
+		drop: 0.06,            // the other teams' rows drop in, one after another
+		enter: 1.2,            // your row slides in at the bottom
+		climb: 0.2,            // and climbs past each team above it
 		hold: 4.5,
 		top: 175,
 		row: 70,
@@ -1836,9 +1836,9 @@ window.Showtime = function (stage, opts) {
 				const slot = BOARD.teams - climbed;
 				board.rows.forEach(function (row, i) {
 					const want = BOARD.top + (i >= slot ? i + 1 : i) * BOARD.row;
-					row.y += (want - row.y) * Math.min(1, dt * 14);
+					row.y += (want - row.y) * Math.min(1, dt * 24);
 				});
-				if (bt > BOARD.enter) board.us.y += (BOARD.top + slot * BOARD.row - board.us.y) * Math.min(1, dt * 14);
+				if (bt > BOARD.enter) board.us.y += (BOARD.top + slot * BOARD.row - board.us.y) * Math.min(1, dt * 24);
 				for (let k = 1; k <= passes(); k++) if (self.cue(BOARD.enter + 0.6 + (k - 1) * BOARD.climb)) self.fx('climb', 0.8, 1 + k * 0.06);
 				if (self.cue(BOARD.enter)) self.fx('rowIn');
 				if (self.cue(landAt())) {
