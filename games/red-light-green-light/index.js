@@ -204,9 +204,16 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		return H - VIEW.flat - BEND * (1 - Math.exp(-(d - VIEW.flat) / BEND));
 	};
 	const scaleAt = (f) => SCALE * (VIEW.least + (1 - VIEW.least) * Math.exp(-beyond(f) / VIEW.shrink));
-	const at = function (x, f, up = 0) {
+	// Across, things far off draw in toward their wall's vanishing point as
+	// they shrink (none of that in the flat foreground, where it's 1:1): the
+	// front wall's in its middle; each side wall's at its corner with the front
+	// wall, as if looking along it. Each wall keeps its own.
+	const vanishOf = (wall) => (wall === 0 ? W : wall === 2 ? 2 * W : 1.5 * W);
+	const wallOfX = (x) => Math.max(0, Math.min(2, Math.floor(x / W)));
+	const at = function (x, f, up = 0, wall = wallOfX(x)) {
 		const s = scaleAt(f);
-		return { x, y: planeY(f) - up * s, s };
+		const vp = vanishOf(wall);
+		return { x: vp + (x - vp) * (s / SCALE), y: planeY(f) - up * s, s };
 	};
 	// how much of a thing shows through the haze; and whether it's worth drawing
 	const fadeIn = (f) => 1 - Math.max(0, Math.min(1, (beyond(f) - VIEW.haze[0]) / (VIEW.haze[1] - VIEW.haze[0])));
@@ -1014,7 +1021,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const pulse = 1 + 0.06 * Math.sin(s.t * 14);
 		const sight = alpha * (0.75 + 0.25 * Math.random());   // (it flickers a little)
 		// (a hot centre, fading gradually out over well beyond its rim)
-		art.with(ctx, { x: s.x, y: cy, scaleX: (front.s + back.s) / 2 / SCALE, scaleY: ry / LASER.rx }, function (c) {
+		const tx = (front.x + back.x) / 2;   // (where the target is, drawn in toward its wall's vanishing point)
+		art.with(ctx, { x: tx, y: cy, scaleX: (front.s + back.s) / 2 / SCALE, scaleY: ry / LASER.rx }, function (c) {
 			const R = LASER.rx * pulse;
 			art.circle(c, 0, 0, R * 1.9, { fill: art.radial(c, 0, 0, 0, R * 1.9, [[0, 'rgba(255,120,100,0.75)'], [0.2, 'rgba(255,60,50,0.5)'], [0.5, 'rgba(255,40,40,0.22)'], [0.8, 'rgba(255,30,30,0.07)'], [1, 'rgba(255,30,30,0)']]), alpha: sight });
 			art.circle(c, 0, 0, R, { stroke: '#ff6a5a', lineWidth: 4, alpha: sight * 0.6 });
@@ -1023,7 +1031,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// and then cutting out altogether
 		for (const off of [-14, 14]) {
 			const flicker = Math.random() < 0.06 ? 0.1 : 0.6 + 0.4 * Math.random();
-			const beam = [[DOLL_X + off, eyes], [s.x + off * 2, cy]];
+			const beam = [[DOLL_X + off, eyes], [tx + off * 2, cy]];
 			art.line(ctx, beam, { stroke: RED, lineWidth: 34, alpha: alpha * 0.12 * flicker, shadow: { color: RED, blur: LASER.glow } });
 			art.line(ctx, beam, { stroke: RED, lineWidth: 14, alpha: alpha * 0.3 * flicker, shadow: { color: RED, blur: LASER.glow * 0.6 } });
 			art.line(ctx, beam, { stroke: '#ffd0c8', lineWidth: 3.5, alpha: alpha * flicker, shadow: { color: RED, blur: 18 } });   // a white-hot core
@@ -1343,9 +1351,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// Lying flat on the sand: rake marks, the lines, blood.
 		const lineAt = function (f, colour, half, always) {
 			if (!always && !onView(f)) return;
-			const a = at(0, f + half);
-			const b = at(0, f - half);
-			art.rect(ctx, -20, a.y, WIDTH + 40, Math.max(1.5, b.y - a.y), { fill: colour, alpha: always ? 1 : fadeIn(f) });
+			for (let w = 0; w < 3; w++) {
+				const x0 = w * W - (w === 0 ? 20 : 0);
+				const x1 = (w + 1) * W + (w === 2 ? 20 : 0);
+				const a0 = at(x0, f + half, 0, w), a1 = at(x1, f + half, 0, w);
+				const b0 = at(x0, f - half, 0, w), b1 = at(x1, f - half, 0, w);
+				const thin = Math.max(0, 1.5 - (b0.y - a0.y));   // (never thinner than a hairline)
+				art.poly(ctx, [[a0.x, a0.y - thin], [a1.x, a1.y - thin], [b1.x, b1.y], [b0.x, b0.y]], { fill: colour, alpha: always ? 1 : fadeIn(f) });
+			}
 		};
 		lineAt(START_F, '#f6f1e6', 7);
 		lineAt(finishF, '#d7262e', 10, dollShown);   // (never lost in the haze: it's where she stands)
@@ -1431,7 +1444,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const s = p.s * 1.6;
 			if (step.id === 'move') {
 				for (const side of [-1, 1]) {
-					const x = c.x + side * (75 + 14 * pulse) * s;
+					const x = p.x + side * (75 + 14 * pulse) * s;
 					const y = p.y - 60 * s;
 					art.poly(ctx, [[x, y - 20 * s], [x + side * 26 * s, y], [x, y + 20 * s]], { fill: colour, alpha: 0.95 });
 				}
@@ -1440,7 +1453,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				for (let i = 0; i < 3; i++) {
 					const y = p.y - 185 * s - i * 22 * s - pulse * 10 * s;
 					const w = 20 * s;
-					art.poly(ctx, [[c.x - w, y + 12 * s], [c.x, y - 6 * s], [c.x + w, y + 12 * s], [c.x + w, y + 20 * s], [c.x, y + 2 * s], [c.x - w, y + 20 * s]], { fill: colour, alpha: 1 - i * 0.28 });
+					art.poly(ctx, [[p.x - w, y + 12 * s], [p.x, y - 6 * s], [p.x + w, y + 12 * s], [p.x + w, y + 20 * s], [p.x, y + 2 * s], [p.x - w, y + 20 * s]], { fill: colour, alpha: 1 - i * 0.28 });
 				}
 			}
 		}
@@ -1514,17 +1527,17 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	function drawBlock(ctx, b) {
 		const alpha = fadeIn(b.f + b.r);
 		const shade = (k) => mix(b.colour, k);
-		const fr = at(0, b.f - b.r);       // its front edge
-		const bk = at(0, b.f + b.r);       // its back edge
-		const x0 = b.x - b.r * fr.s / SCALE;   // (the far ones smaller across too)
-		const x1 = b.x + b.r * fr.s / SCALE;
-		const xb0 = b.x - b.r * bk.s / SCALE;
-		const xb1 = b.x + b.r * bk.s / SCALE;
+		const fr = at(b.x, b.f - b.r);     // its front edge (its middle, drawn in toward the vanishing point)
+		const bk = at(b.x, b.f + b.r);     // its back edge
+		const x0 = fr.x - b.r * fr.s / SCALE;   // (the far ones smaller across too)
+		const x1 = fr.x + b.r * fr.s / SCALE;
+		const xb0 = bk.x - b.r * bk.s / SCALE;
+		const xb1 = bk.x + b.r * bk.s / SCALE;
 		const hf = b.h * fr.s;
 		const hb = b.h * bk.s;
 		art.save(ctx, function (c) {
 			c.globalAlpha = alpha;
-			art.ellipse(c, b.x + 10, fr.y + 2, b.r * 1.15 * fr.s + 8, 12 * fr.s, { fill: 'rgba(0,0,0,0.22)' });
+			art.ellipse(c, fr.x + 10, fr.y + 2, b.r * 1.15 * fr.s + 8, 12 * fr.s, { fill: 'rgba(0,0,0,0.22)' });
 			if (b.shape === 'square') {
 				art.poly(c, [[xb0, bk.y - hb], [xb1, bk.y - hb], [x1, fr.y - hf], [x0, fr.y - hf]], { fill: shade(1.25) });
 				art.poly(c, [[x0, fr.y - hf], [x1, fr.y - hf], [x1, fr.y], [x0, fr.y]], { fill: b.colour });
@@ -1734,7 +1747,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const GLOW = '#7df9ff';
 		const dir = Math.sign(p.to - p.wall);
 		const across = front.s / SCALE;   // (smaller far off)
-		art.with(ctx, { x: p.x, y: cy, scaleX: appear * (1 + 0.06 * beat) * across, scaleY: appear * (1 + 0.06 * beat) * squash, alpha: fadeIn(p.f) }, function (c) {
+		art.with(ctx, { x: (front.x + back.x) / 2, y: cy, scaleX: appear * (1 + 0.06 * beat) * across, scaleY: appear * (1 + 0.06 * beat) * squash, alpha: fadeIn(p.f) }, function (c) {
 			for (const k of [1.5, 1.3, 1.14]) art.circle(c, 0, 0, R * k, { fill: GLOW, alpha: (0.12 + 0.2 * beat) * 0.55 });
 			art.circle(c, 0, 0, R, { fill: GLOW });
 			art.circle(c, 0, 0, R * 0.8, { fill: '#1d6f86' });
