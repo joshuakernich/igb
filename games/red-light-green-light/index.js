@@ -1332,7 +1332,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (const s of splats) drawSplat(ctx, s);
 		// (while the view is up the field, before a round, the contestants wait
 		// unseen at the start)
-		const waiting = cam > 1 && (show.beat === 'doll' || (show.beat === 'play' && phase === 'ready'));
+		const waiting = (cam > 1 && (show.beat === 'doll' || (show.beat === 'play' && phase === 'ready')))
+			|| show.beat === 'visors';   // (nor while the visors go on: the walls are about the visors then)
 		for (const p of pads) drawPad(ctx, p);
 
 		// Everything standing on the plane, far to near.
