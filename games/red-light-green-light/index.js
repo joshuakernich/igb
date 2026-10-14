@@ -1380,19 +1380,21 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 		// Everything standing on the plane, far to near.
 		const things = [];
-		const add = (f, fn) => { if (onView(f)) things.push({ f, fn }); };
+		const add = (f, fn, d = 0) => { if (onView(f)) things.push({ f, fn, d }); };
 		if (dollShown) {
 			// (she and her tree are always there, however far off: on the horizon)
-			things.push({ f: dollF + 140, fn: (c) => drawTree(c) });
-			things.push({ f: dollF, fn: (c) => drawDoll(c) });
+			things.push({ f: dollF + 140, fn: (c) => drawTree(c), d: 0 });
+			things.push({ f: dollF, fn: (c) => drawDoll(c), d: 0 });
 		}
-		for (const b of blocks) add(b.f - b.r * 0.6, (c) => drawBlock(c, b));
+		// (blocks side by side in a run: the ones further from their wall's vanishing
+		// point first, so a block's receding side goes under its neighbour's front)
+		for (const b of blocks) add(b.f - b.r * 0.6, (c) => drawBlock(c, b), Math.abs(b.x - vanishOf(wallOfX(b.x))));
 		for (const m of cash) if (!m.taken) add(m.f, (c) => drawCash(c, m));
 		for (const g of magnets) if (!g.taken) add(g.f, (c) => drawMagnet(c, g));
 		for (const m of movers) add(m.f, (c) => (m.kind === 'guard' ? drawGuardOn(c, m.x, m.f, m.mask, true, m.phase, m.flash || 0, m.dir) : drawMarble(c, m)));
 		for (const g of sentries) if (dollShown || !g.doll) add(g.f, (c) => drawGuardOn(c, g.x, g.f, g.mask, true, 0, g.flash, facing(g)));
 		if (!waiting) for (const c of contestants) add(c.f, (cx) => drawContestant(cx, c));
-		things.sort((a, b) => b.f - a.f);
+		things.sort((a, b) => (b.f - a.f) || (b.d - a.d));
 		for (const thing of things) thing.fn(ctx);
 		if (!waiting) for (const c of contestants) if (c.alive && onView(footOf(c).f)) drawFoot(ctx, c);
 		drawLasers(ctx);
