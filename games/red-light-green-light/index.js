@@ -428,10 +428,12 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	// the piggy bank in the team total (see drawPiggy)
 	const PIGGY = {
-		y: 470,                 // its middle, on every wall
-		rx: 300, ry: 195,       // its body
+		y: 480,                 // its middle, on every wall
+		r: 250,                 // its body: a perfect sphere
 		fill: 0.74,             // how full it ends up
 		fillFor: 1.6,           // seconds it takes to fill, once the scores are in
+		fillFrom: 2.0,          // (when the scores smoosh into it, in the team beat: Showtime's TEAM.fly[1])
+		kachings: 7,            // a ka-ching for each pour of notes as it fills
 		notes: ['#f3d27e', '#e6b955', '#d39d3b', '#f7e2a4'],   // the notes inside: yellowy ₩50,000s
 	};
 
@@ -463,42 +465,61 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// the slot; once the total's up, it glows and sways.
 	function drawPiggy(c, bt, st) {
 		const P = PIGGY;
+		const R = P.r;
 		const appear = st.fade;                                  // (in as the rankings fade out)
 		if (appear <= 0) return;
 		const filled = st.merged ? P.fill * (1 - Math.pow(1 - Math.min(1, (bt - st.mergedAt) / P.fillFor), 3)) : 0;
 		const party = bt > st.partyAt;
 		const sway = Math.sin(bt * 1.3) * (party ? 2.2 : 1.2) + (st.merged ? Math.exp(-(bt - st.mergedAt) * 3) * Math.sin((bt - st.mergedAt) * 14) * 3 : 0);
-		const glass = 'rgba(205,232,255,0.16)';
-		const edge = 'rgba(255,255,255,0.75)';
-		const { rx, ry } = P;
-		const top = P.y - ry;
+		const edge = 'rgba(235,245,255,0.8)';
+		const pane = 'rgba(190,220,255,0.10)';                   // the glass of the snout, ears and legs
 
 		c.save();
 		c.globalAlpha *= appear;
+		// the room in darkness, as in the show, one light down onto the pig
+		art.rect(c, -10, -10, W + 20, H + 20, { fill: '#060509', alpha: 0.96 });
+		c.save();
+		c.globalAlpha *= 0.5 + 0.25 * filled;
+		art.poly(c, [[W / 2 - 70, -10], [W / 2 + 70, -10], [W / 2 + R * 1.5, P.y + R], [W / 2 - R * 1.5, P.y + R]], {
+			fill: art.linear(c, 0, 0, 0, P.y + R, ['rgba(255,236,190,0.22)', 'rgba(255,236,190,0.05)']),
+		});
+		c.restore();
+		art.ellipse(c, W / 2, P.y + R + 95, R * 1.3, 40, { fill: art.radial(c, W / 2, P.y + R + 95, 0, R * 1.3, [[0, 'rgba(255,214,140,0.28)'], [1, 'rgba(255,214,140,0)']]) });
 		// the cable, from up out of sight
-		art.line(c, [[W / 2, -20], [W / 2, top - 30]], { stroke: '#2b2622', lineWidth: 7 });
-		c.translate(W / 2, top - 30);
+		art.line(c, [[W / 2, -20], [W / 2, P.y - R - 30]], { stroke: '#4a4038', lineWidth: 7 });
+
+		c.translate(W / 2, P.y - R - 30);
 		c.rotate(sway * Math.PI / 180);
-		c.translate(0, ry + 30);
-		// a warm glow round it, stronger once it's full
-		art.circle(c, 0, 0, rx * 1.5, { fill: art.radial(c, 0, 0, rx * 0.3, rx * 1.5, [[0, `rgba(255,200,90,${0.15 + 0.35 * filled})`], [1, 'rgba(255,200,90,0)']]) });
-		// legs, then the tail, behind the body
-		for (const lx of [-0.62, -0.3, 0.3, 0.6]) art.roundRect(c, lx * rx - 30, ry * 0.62, 60, 80, [8, 8, 22, 22], { fill: glass, stroke: edge, lineWidth: 4 });
+		c.translate(0, R + 30);
+		// a warm glow round it, stronger as it fills
+		art.circle(c, 0, 0, R * 1.6, { fill: art.radial(c, 0, 0, R * 0.4, R * 1.6, [[0, `rgba(255,200,90,${0.1 + 0.3 * filled})`], [1, 'rgba(255,200,90,0)']]) });
+
+		// legs and tail, behind the body
+		for (const lx of [-0.55, -0.22, 0.22, 0.52]) {
+			const x = lx * R;
+			const y0 = Math.sqrt(R * R - x * x) - 30;
+			art.roundRect(c, x - 30, y0, 60, 72, [6, 6, 22, 22], { fill: pane, stroke: edge, lineWidth: 4 });
+			art.line(c, [[x - 16, y0 + 12], [x - 16, y0 + 58]], { stroke: 'rgba(255,255,255,0.35)', lineWidth: 5 });
+		}
 		const tail = [];
-		for (let i = 0; i <= 20; i++) { const a = i / 20 * Math.PI * 3; const r = 8 + i * 1.3; tail.push([-rx - 4 - i * 1.6 + Math.cos(a) * r * 0.6, -ry * 0.15 + Math.sin(a) * r * 0.6]); }
+		for (let i = 0; i <= 20; i++) { const a = i / 20 * Math.PI * 3; const r = 8 + i * 1.3; tail.push([-R - 4 - i * 1.6 + Math.cos(a) * r * 0.6, -R * 0.15 + Math.sin(a) * r * 0.6]); }
 		art.line(c, tail, { stroke: edge, lineWidth: 5 });
-		// the body
-		art.ellipse(c, 0, 0, rx, ry, { fill: glass });
-		// the money inside, up to how full it is: notes in rows, the top row tumbled
+
+		// the body: the far side of the glass first, a bluish tint darkest at
+		// the rim, as thick glass is
+		art.circle(c, 0, 0, R, { fill: art.radial(c, -R * 0.25, -R * 0.3, R * 0.1, R * 1.05, [[0, 'rgba(210,235,255,0.05)'], [0.7, 'rgba(170,205,240,0.12)'], [1, 'rgba(120,170,220,0.35)']]) });
+		art.circle(c, 0, 0, R * 0.9, { stroke: 'rgba(200,225,255,0.12)', lineWidth: 3 });   // the far wall, seen through the near one
+
+		c.save();
+		c.beginPath();
+		c.arc(0, 0, R - 5, 0, Math.PI * 2);
+		c.clip();
+		// the money inside, up to how full it is: notes in rows, a little tumbled
 		if (filled > 0) {
-			c.save();
-			c.beginPath();
-			c.ellipse(0, 0, rx - 6, ry - 6, 0, 0, Math.PI * 2);
-			c.clip();
-			const level = ry - 2 * ry * filled;                 // the surface, from the middle
-			art.rect(c, -rx, level + 10, rx * 2, ry * 2, { fill: '#c99134' });
-			for (let row = 0, y = ry - 18; y > level - 10; row++, y -= 22) {
-				for (let x = -rx - 40 + (row % 2) * 34; x < rx + 40; x += 68) {
+			const level = R - 2 * R * filled;                   // the surface, from the middle
+			art.rect(c, -R, level + 10, R * 2, R * 2, { fill: '#c99134' });
+			for (let row = 0, y = R - 14; y > level - 10; row++, y -= 22) {
+				for (let x = -R - 40 + (row % 2) * 34; x < R + 40; x += 68) {
 					const k = (row * 7 + Math.round(x)) & 3;
 					art.with(c, { x, y, rotate: ((row * 13 + x * 0.7) % 9) - 4 }, function (c2) {
 						art.rect(c2, -32, -13, 64, 26, { fill: P.notes[k] });
@@ -507,42 +528,76 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					});
 				}
 			}
-			c.restore();
+			// light caught in the glass over the money (a bright band along its top)
+			art.rect(c, -R, level - 4, R * 2, 18, { fill: 'rgba(255,240,200,0.25)' });
 		}
 		// notes dropping in through the slot while it fills
 		if (st.merged && bt - st.mergedAt < P.fillFor) {
-			const level = ry - 2 * ry * filled;
+			const level = R - 2 * R * filled;
 			for (let i = 0; i < 7; i++) {
 				const k = ((bt - st.mergedAt) * 2.4 + i / 7) % 1;
-				const y = -ry - 260 + k * (level + ry + 260);
+				const y = -R + k * (level + R);
 				art.with(c, { x: -30 + Math.sin(i * 2.7 + k * 9) * 40, y, rotate: (k * 400 + i * 50) % 360, alpha: Math.min(1, (1 - k) * 4) }, function (c2) {
 					art.rect(c2, -24, -10, 48, 20, { fill: P.notes[i % 4] });
 				});
 			}
 		}
-		// the glass: its rim, a bright sheen top left, a glint
-		art.ellipse(c, 0, 0, rx, ry, { stroke: edge, lineWidth: 6 });
+		// the texture of the moulded glass: faint ribs curving round the sphere
+		for (let i = -6; i <= 6; i++) {
+			const x = Math.sin(i / 7 * Math.PI / 2) * R;
+			const rx = Math.abs(x);
+			art.ellipse(c, 0, 0, Math.max(1, rx), R, { stroke: 'rgba(255,255,255,0.05)', lineWidth: 3 });
+		}
+		for (let i = -4; i <= 4; i++) art.ellipse(c, 0, i / 5 * R, R * Math.cos(Math.asin(i / 5)), R * 0.12 * Math.cos(Math.asin(i / 5)), { stroke: 'rgba(255,255,255,0.035)', lineWidth: 2 });
+		// fine speckle in the glass
+		for (let i = 0; i < 40; i++) {
+			const a = i * 2.39996;
+			const d = Math.sqrt((i + 0.5) / 40) * R * 0.95;
+			art.circle(c, Math.cos(a) * d, Math.sin(a) * d, 1.6, { fill: 'rgba(255,255,255,0.18)' });
+		}
+		// the near side's tint, over everything inside
+		art.circle(c, 0, 0, R, { fill: art.radial(c, 0, 0, R * 0.55, R, [[0, 'rgba(180,215,255,0)'], [1, 'rgba(150,200,255,0.18)']]) });
+		c.restore();
+
+		// highlights: a long curved sheen top left, a soft one low right, glints
 		c.save();
-		c.globalAlpha *= 0.4;
 		c.lineCap = 'round';
-		c.strokeStyle = 'white';
-		c.lineWidth = 16;
-		c.beginPath();
-		c.ellipse(0, 0, rx * 0.84, ry * 0.8, 0, Math.PI * 1.08, Math.PI * 1.42);
-		c.stroke();
+		for (const [r, a0, a1, w, a] of [[0.86, 1.05, 1.45, 22, 0.45], [0.86, 1.48, 1.55, 22, 0.35], [0.74, 1.12, 1.3, 9, 0.6], [0.88, 0.1, 0.38, 14, 0.18]]) {
+			c.globalAlpha = appear * a;
+			c.strokeStyle = 'white';
+			c.lineWidth = w;
+			c.beginPath();
+			c.arc(0, 0, R * r, Math.PI * a0, Math.PI * a1);
+			c.stroke();
+		}
 		c.restore();
-		art.circle(c, -rx * 0.55, -ry * 0.62, 7, { fill: 'white', alpha: 0.8 });
+		art.ellipse(c, -R * 0.42, -R * 0.55, 34, 18, { fill: art.radial(c, -R * 0.42, -R * 0.55, 0, 34, [[0, 'rgba(255,255,255,0.85)'], [1, 'rgba(255,255,255,0)']]) });
+		for (const [x, y, s] of [[-0.6, -0.42, 1], [0.35, -0.7, 0.7], [0.6, 0.45, 0.6]]) glint(c, x * R, y * R, 14 * s, bt + x * 3);
+		// the rim: a bright edge with a darker line inside it (the glass's thickness)
+		art.circle(c, 0, 0, R, { stroke: edge, lineWidth: 5 });
+		art.circle(c, 0, 0, R - 9, { stroke: 'rgba(80,120,170,0.35)', lineWidth: 4 });
+
 		// the snout, ears, an eye
-		art.ellipse(c, rx * 0.97, ry * 0.05, 46, 60, { fill: glass, stroke: edge, lineWidth: 5 });
-		for (const dy of [-16, 16]) art.ellipse(c, rx * 1.03, ry * 0.05 + dy, 7, 11, { fill: 'rgba(60,40,30,0.55)' });
-		for (const ex of [0.38, 0.6]) art.poly(c, [[ex * rx - 34, -ry * 0.86], [ex * rx + 4, -ry * 1.28], [ex * rx + 40, -ry * 0.8]], { fill: glass, stroke: edge, lineWidth: 5 });
-		art.circle(c, rx * 0.7, -ry * 0.32, 11, { fill: '#2a1d16' });
-		art.circle(c, rx * 0.7 + 3, -ry * 0.32 - 3, 3.5, { fill: 'white' });
+		art.ellipse(c, R * 0.98, R * 0.1, 46, 58, { fill: pane, stroke: edge, lineWidth: 5 });
+		art.ellipse(c, R * 0.98 - 12, R * 0.1 - 20, 10, 18, { fill: 'rgba(255,255,255,0.4)' });
+		for (const dy of [-15, 15]) art.ellipse(c, R * 1.02, R * 0.1 + dy, 7, 11, { fill: 'rgba(40,30,25,0.6)' });
+		for (const ex of [0.32, 0.6]) {
+			const top = -Math.sqrt(R * R - (ex * R) * (ex * R));
+			art.poly(c, [[ex * R - 38, top + 26], [ex * R + 4, top - 52], [ex * R + 40, top + 30]], { fill: pane, stroke: edge, lineWidth: 5 });
+		}
+		art.circle(c, R * 0.62, -R * 0.3, 12, { fill: '#2a1d16' });
+		art.circle(c, R * 0.62 + 4, -R * 0.3 - 4, 4, { fill: 'white' });
 		// the gold cap the cable holds, and the coin slot
-		art.roundRect(c, -60, -ry - 14, 120, 30, 12, { fill: '#e4b23c', stroke: '#9b6d16', lineWidth: 3 });
-		art.circle(c, 0, -ry - 24, 14, { stroke: '#9b6d16', lineWidth: 6 });
-		art.roundRect(c, -48, -ry + 22, 72, 12, 6, { fill: 'rgba(30,20,10,0.6)' });
+		art.roundRect(c, -60, -R - 12, 120, 28, 12, { fill: art.linear(c, -60, 0, 60, 0, ['#9b6d16', '#f2c752', '#c48f24']), stroke: '#7a5410', lineWidth: 3 });
+		art.circle(c, 0, -R - 24, 14, { stroke: '#9b6d16', lineWidth: 6 });
+		art.roundRect(c, -46, -R + 18, 72, 12, 6, { fill: 'rgba(20,14,8,0.7)' });
 		c.restore();
+	}
+
+	// a four-pointed glint, twinkling
+	function glint(c, x, y, r, t) {
+		const k = 0.6 + 0.4 * Math.sin(t * 3.1);
+		art.poly(c, [[x, y - r * k], [x + r * 0.18, y - r * 0.18], [x + r * k, y], [x + r * 0.18, y + r * 0.18], [x, y + r * k], [x - r * 0.18, y + r * 0.18], [x - r * k, y], [x - r * 0.18, y - r * 0.18]], { fill: 'white', alpha: 0.8 });
 	}
 
 	// Big flat ○ △ □ drifting slowly up the results backdrop, pink and teal.
@@ -2211,7 +2266,15 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// 7–11. the scores, the ranking, the team total, the leaderboard, the replay
 		show.beats.scores(),
 		show.beats.rank(),
-		show.beats.team(),
+		show.beats.team({
+			update() {
+				// a ka-ching for each pour of notes into the piggy bank, quicker and higher as it fills
+				for (let k = 0; k < PIGGY.kachings; k++) {
+					const at = PIGGY.fillFrom + 0.04 + PIGGY.fillFor * Math.pow(k / PIGGY.kachings, 1.3);   // (just after the smoosh, whose cue is at fillFrom)
+					if (show.cue(at)) show.fx('kaching', 0.75, 1 + k * 0.05);
+				}
+			},
+		}),
 		show.beats.board(),
 		show.beats.replay(),
 		// how was it? five faces to tap, sad to happy
