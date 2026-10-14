@@ -514,26 +514,12 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		c.beginPath();
 		c.arc(0, 0, R - 5, 0, Math.PI * 2);
 		c.clip();
-		// the money inside, up to how full it is: notes in rows, a little tumbled
-		if (filled > 0) {
-			const level = R - 2 * R * filled;                   // the surface, from the middle
-			art.rect(c, -R, level + 10, R * 2, R * 2, { fill: '#c99134' });
-			for (let row = 0, y = R - 14; y > level - 10; row++, y -= 22) {
-				for (let x = -R - 40 + (row % 2) * 34; x < R + 40; x += 68) {
-					const k = (row * 7 + Math.round(x)) & 3;
-					art.with(c, { x, y, rotate: ((row * 13 + x * 0.7) % 9) - 4 }, function (c2) {
-						art.rect(c2, -32, -13, 64, 26, { fill: P.notes[k] });
-						art.rect(c2, -32, -13, 64, 26, { stroke: 'rgba(120,80,20,0.45)', lineWidth: 2 });
-						art.circle(c2, 14, 0, 6, { fill: 'rgba(160,110,40,0.5)' });
-					});
-				}
-			}
-			// light caught in the glass over the money (a bright band along its top)
-			art.rect(c, -R, level - 4, R * 2, 18, { fill: 'rgba(255,240,200,0.25)' });
-		}
-		// notes dropping in through the slot while it fills
+		// the money inside, up to how full it is: a lumpy heap of notes,
+		// mounded up under the slot, every note at its own angle
+		if (filled > 0) drawPile(c, R, filled);
+		// notes dropping in through the slot while it fills, onto the top of the heap
 		if (st.merged && bt - st.mergedAt < P.fillFor) {
-			const level = R - 2 * R * filled;
+			const level = R - pileTop(0, R, filled);
 			for (let i = 0; i < 7; i++) {
 				const k = ((bt - st.mergedAt) * 2.4 + i / 7) % 1;
 				const y = -R + k * (level + R);
@@ -592,6 +578,43 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		art.circle(c, 0, -R - 24, 14, { stroke: '#9b6d16', lineWidth: 6 });
 		art.roundRect(c, -46, -R + 18, 72, 12, 6, { fill: 'rgba(20,14,8,0.7)' });
 		c.restore();
+	}
+
+	// The heap inside the piggy bank: how high it stands at x (from the
+	// bottom of the sphere), a mound with lumps; and its notes, scattered once,
+	// shown up to the heap's surface, the deeper ones under the higher.
+	const PILE = Array.from({ length: 340 }, () => ({
+		x: (Math.random() * 2 - 1) * 1.1, h: Math.random(),          // across (share of the radius), height (share of the diameter)
+		rot: (Math.random() * 2 - 1) * 60, k: Math.floor(Math.random() * 4),
+		s: 0.8 + Math.random() * 0.45, flip: Math.random() < 0.3,
+	})).sort((a, b) => a.h - b.h);
+	function pileTop(x, R, filled) {
+		const u = x / R;
+		const lumps = (Math.sin(x * 0.031 + 1.3) * 14 + Math.sin(x * 0.083 + 0.4) * 9 + Math.sin(x * 0.19) * 5) * Math.min(1, filled * 4);
+		return 2 * R * filled * (0.9 + 0.22 * (1 - u * u)) + lumps;
+	}
+	function drawPile(c, R, filled) {
+		// the heap's body, under its lumpy surface: notes packed deep, darker down low
+		const pts = [[-R, R + 10]];
+		for (let x = -R; x <= R; x += 10) pts.push([x, R - pileTop(x, R, filled)]);
+		pts.push([R, R + 10]);
+		art.poly(c, pts, { fill: art.linear(c, 0, R - 2 * R * filled, 0, R, ['#d9a548', '#a8731f']) });
+		// the notes, each where it lies, up to the surface
+		for (const n of PILE) {
+			const x = n.x * R;
+			const top = pileTop(x, R, filled);
+			const h = n.h * 2 * R;
+			if (h > top - 6) continue;
+			const depth = Math.min(1, (top - h) / 160);              // (the deeper, the more in shadow)
+			art.with(c, { x, y: R - h, rotate: n.rot, scaleX: n.s * (n.flip ? 0.55 : 1), scaleY: n.s }, function (c2) {
+				art.rect(c2, -32, -13, 64, 26, { fill: PIGGY.notes[n.k] });
+				art.rect(c2, -32, -13, 64, 26, { stroke: 'rgba(120,80,20,0.45)', lineWidth: 2 });
+				art.circle(c2, 14, 0, 6, { fill: 'rgba(160,110,40,0.5)' });
+				art.rect(c2, -32, -13, 64, 26, { fill: `rgba(70,40,10,${0.5 * depth})` });
+			});
+		}
+		// light caught along the top of the heap
+		art.line(c, pts.slice(1, -1).map(([x, y]) => [x, y + 3]), { stroke: 'rgba(255,240,200,0.3)', lineWidth: 6 });
 	}
 
 	// a four-pointed glint, twinkling
