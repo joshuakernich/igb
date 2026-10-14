@@ -2090,9 +2090,9 @@ window.Showtime = function (stage, opts) {
 	// game is over). One rating for the group: HOW WAS IT? and five faces on
 	// every wall, sad to happy; the first tap counts. Then, for a low rating
 	// (1-3), WHAT WENT WRONG? with reasons to tap (as many as fit) and DONE;
-	// for a high one (4-5), PLAY AGAIN? with the games to pick from, or NO
-	// THANKS. Picking a game starts it straight away. Each part gives up and
-	// moves on if nobody taps. self.feedback() is what was said.
+	// for a high one (4-5), PLAY ANOTHER GAME?: the other games in a carousel
+	// of screenshots, and BOOK ANOTHER SESSION AT THE KIOSK, with DONE. Each
+	// part gives up and moves on if nobody taps. self.feedback() is what was said.
 	beatsLib.rate = function (extra) {
 		const R = RATE;
 		let part = 'faces';     // 'faces' | 'reasons' | 'again' | 'thanks' | 'over'
@@ -2179,29 +2179,68 @@ window.Showtime = function (stage, opts) {
 			tap(pill('DONE ✓', true, { marginTop: '16px', fontSize: '56px', padding: '24px 70px' }).attr('done', '').appendTo($wall), () => finish());
 		}
 
+		// For a high rating: the other games, in a carousel of screenshots
+		// (assets/shared/screens/<id>.jpg, made by tools/screens.mjs), and a
+		// prompt to book another session at the kiosk. Nothing to pick here.
+		const CAROUSEL = { every: 2.8, w: 640, h: 400, side: 520 };
+		let slides = [];      // every wall's slides, by game: [[$slide, ...], ...]
+		let shownSlide = -1;
 		function again($wall) {
-			big('PLAY AGAIN?').appendTo($wall);
-			small('PICK A GAME').appendTo($wall);
-			const $row = $('<div>').css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '36px', maxWidth: '1450px' }).appendTo($wall);
-			for (const g of games()) {
-				const $b = $('<button>').attr('game', g.id).css({
-					display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px',
-					width: '220px', padding: 0, border: 'none', background: 'none', cursor: 'pointer', pointerEvents: 'auto',
-					fontFamily: font, color: 'white', fontSize: '28px', lineHeight: 1.1, whiteSpace: 'normal',
-				}).appendTo($row);
+			$wall.css({ gap: '26px' });
+			big('PLAY ANOTHER GAME?', 96).appendTo($wall);
+			const list = games().filter((g) => g.id !== opts.id);   // (the others: they've just played this one)
+			const $track = $('<div>').attr('carousel', '').css({ position: 'relative', width: '1500px', height: CAROUSEL.h + 56 + 'px' }).appendTo($wall);
+			list.forEach(function (g, i) {
+				const $slide = $('<div>').attr('slide', g.id).css({
+					position: 'absolute', left: '50%', top: 0, width: CAROUSEL.w + 'px', marginLeft: -CAROUSEL.w / 2 + 'px',
+					display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px',
+					transition: 'transform 0.7s cubic-bezier(.4,0,.2,1), opacity 0.7s',
+				}).appendTo($track);
+				const shot = 'assets/shared/screens/' + g.id + '.jpg';
 				$('<div>').css({
-					width: '180px', height: '180px', borderRadius: '36px', background: `#999 center / cover`,
-					backgroundImage: g.icon ? `url("${g.icon}")` : 'none',
-					border: g.id === opts.id ? `7px solid ${TYPE.colours.gold}` : '7px solid transparent',
-				}).appendTo($b);
-				$('<div>').text(g.id === opts.id ? 'AGAIN!' : g.name.toUpperCase()).css({ WebkitTextStroke: `4px ${theme.ink}`, paintOrder: 'stroke fill', color: g.id === opts.id ? TYPE.colours.gold : 'white' }).appendTo($b);
-				tap($b, () => pick(g.id));
-			}
-			tap(pill('NO THANKS', false).attr('no', '').appendTo($wall), () => finish());
+					width: CAROUSEL.w + 'px', height: CAROUSEL.h + 'px', borderRadius: '28px',
+					background: `#1a1030 url("${shot}") center / cover`, border: `6px solid ${TYPE.colours.white}`,
+					boxShadow: '0 18px 40px rgba(0,0,0,0.55)',
+				}).appendTo($slide);
+				$('<div>').text(g.name.toUpperCase()).css({ fontSize: '40px', letterSpacing: '1px', WebkitTextStroke: `5px ${theme.ink}`, paintOrder: 'stroke fill' }).appendTo($slide);
+				(slides[i] = slides[i] || []).push($slide);
+			});
+			// the kiosk: book another session
+			$('<div>').text('BOOK ANOTHER SESSION AT THE KIOSK').attr('kiosk', '').css({
+				padding: '20px 46px', borderRadius: '60px', background: TYPE.colours.gold, color: TYPE.colours.ink,
+				fontSize: '50px', letterSpacing: '1px', lineHeight: 1, animation: 'showtime-kiosk 1.6s ease-in-out infinite',
+			}).appendTo($wall);
+			tap(pill('DONE', false, { fontSize: '36px', padding: '18px 40px' }).attr('done', '').appendTo($wall), () => finish());
+			placeSlides(Math.max(0, shownSlide), true);
+		}
+		// the slides round the one showing: it in the middle, its neighbours
+		// smaller either side, the rest out of sight
+		function placeSlides(at, instant) {
+			const n = slides.length;
+			slides.forEach(function (copies, i) {
+				let d = ((i - at) % n + n) % n;
+				if (d > n / 2) d -= n;
+				const k = Math.abs(d);
+				const css = {
+					transform: `translateX(${d * CAROUSEL.side}px) scale(${k === 0 ? 1 : k === 1 ? 0.66 : 0.45})`,
+					opacity: k === 0 ? 1 : k === 1 ? 0.5 : 0,
+					zIndex: 10 - k,
+				};
+				for (const $s of copies) {
+					if (instant) $s.css('transition', 'none');
+					$s.css(css);
+					if (instant) { void $s[0].offsetWidth; $s.css('transition', 'transform 0.7s cubic-bezier(.4,0,.2,1), opacity 0.7s'); }
+				}
+			});
+		}
+		if (!document.getElementById('showtime-kiosk-css')) {
+			$('<style id="showtime-kiosk-css">').text('@keyframes showtime-kiosk { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }').appendTo('head');
 		}
 
 		function go(next) {
 			part = next;
+			slides = [];
+			shownSlide = -1;
 			partAt = self.bt;
 			render();
 		}
@@ -2224,19 +2263,6 @@ window.Showtime = function (stage, opts) {
 				if (IGB.log) IGB.log('Feedback: ' + feedback.reasons.join(', '));
 			}
 			go('over');   // straight on to the end: THANKS FOR PLAYING!
-		}
-
-		function pick(id) {
-			feedback.again = id;
-			console.log('Play again:', id);
-			if (IGB.log) IGB.log('Play again: ' + id);
-			go('over');
-			// the launcher switches games on a #id; in a box party, the party decides
-			stage.timeout(function () {
-				if (opts.onPlayAgain) opts.onPlayAgain(id);
-				else if (window.location.hash.slice(1) === id) $('[btn=refresh]').trigger('click');
-				else window.location.hash = id;
-			}, R.thanks * 1000 * 0.6);
 		}
 
 		function clear() {
@@ -2262,6 +2288,11 @@ window.Showtime = function (stage, opts) {
 				if (part === 'faces' && age > R.wait.faces) go('over');
 				if (part === 'reasons' && age > R.wait.reasons) finish();
 				if (part === 'again' && age > R.wait.again) finish();
+				// the carousel moves on every few seconds
+				if (part === 'again' && slides.length) {
+					const at = Math.floor(age / CAROUSEL.every) % slides.length;
+					if (at !== shownSlide) { shownSlide = at; placeSlides(at); }
+				}
 				if (part === 'thanks' && age > R.thanks) part = 'over';
 			},
 			draw(ctx, bt) {

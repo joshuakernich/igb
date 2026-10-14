@@ -2145,7 +2145,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			tagline: 'DON\'T GET CAUGHT MOVING',
 			update(dt) {
 				stepWorld(dt);
-				if (show.cue(0.35)) voice('title');
+				if (show.cue(0.05)) voice('title');   // (straight away: it's a long one)
 			},
 		}),
 
