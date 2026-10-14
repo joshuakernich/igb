@@ -923,7 +923,13 @@ window.Showtime = function (stage, opts) {
 	// up: how far the pill reaches up past its top (the corner clock hangs
 	// from the top edge of the wall)
 	// box: how much of the pill itself shows (the digits always do)
-	function clockPill(ctx, x, y, size, left, alpha = 1, up = 0, box = 1) {
+	// where the corner clock sits on each wall: top centre, or (opts.clock:
+	// 'corner') tucked into the top left corner
+	const CORNER = opts.clock === 'corner';
+	const clockX = () => (CORNER ? CLOCK.size * 3.3 / 2 + 26 : W / 2);
+
+	// side: how far the pill reaches out past its left (hung from the corner)
+	function clockPill(ctx, x, y, size, left, alpha = 1, up = 0, box = 1, side = 0) {
 		const urgent = left <= CLOCK.urgent;
 		const pulse = urgent ? 1 + 0.06 * Math.max(0, Math.cos((left % 1) * Math.PI * 2)) : 1;
 		const w = size * 3.3;
@@ -931,7 +937,7 @@ window.Showtime = function (stage, opts) {
 		ctx.globalAlpha *= alpha;
 		ctx.translate(x, y);
 		ctx.scale(pulse, pulse);
-		if (box > 0) art.roundRect(ctx, -w / 2, -size * 0.66 - up, w, size * 1.32 + up, size * 0.66, { fill: 'rgba(12,4,30,0.78)', stroke: urgent ? '#ff3d6a' : theme.accent, lineWidth: size * 0.07, alpha: box });
+		if (box > 0) art.roundRect(ctx, -w / 2 - side, -size * 0.66 - up, w + side, size * 1.32 + up, size * 0.66, { fill: 'rgba(12,4,30,0.78)', stroke: urgent ? '#ff3d6a' : theme.accent, lineWidth: size * 0.07, alpha: box });
 		// its digits at a step of the scale, sized with the pill by scaling
 		const ref = self.size(CLOCK.size);
 		ctx.scale(size / ref, size / ref);
@@ -944,7 +950,7 @@ window.Showtime = function (stage, opts) {
 		self.onWalls(ctx, function (c) {
 			// hung from the top edge; its pill fades in round the digits once they've docked
 			const box = clock.shownAt === undefined ? 1 : clamp((showTime - clock.shownAt) / 0.25, 0, 1);
-			clockPill(c, W / 2, CLOCK.y, CLOCK.size, left, 1, CLOCK.y + 20, box);
+			clockPill(c, clockX(), CLOCK.y, CLOCK.size, left, 1, CLOCK.y + 20, box, CORNER ? clockX() + 20 : 0);
 			// the last ten seconds loom, big and solid, over every wall
 			if (left > 0 && left <= CLOCK.final) {
 				const k = 1 - (left % 1 || 1);
@@ -1172,7 +1178,7 @@ window.Showtime = function (stage, opts) {
 						const s = age < 0.26 ? lerp(2.4, 0.9, (age / 0.26) ** 2) : 0.9 + 0.1 * easeOut((age - 0.26) / 0.18);
 						const cy = lerp(C.y, CLOCK.y, fly);
 						c.save();
-						c.translate(cx, cy);
+						c.translate(lerp(cx, clockX(), fly), cy);
 						c.scale(s, s);
 						c.globalAlpha = clamp(age / 0.15, 0, 1);
 						// the clock's size is a step of the scale that fits 10:00 (its widest), so it

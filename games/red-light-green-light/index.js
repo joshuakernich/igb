@@ -185,7 +185,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const SCALE = 0.75;         // the size of everything on the flat
 	const VIEW = {
 		flat: 560,              // the flat foreground: this far up the field from the bottom of the walls
-		horizon: 150,           // the horizon line, from the top of the walls
+		horizon: 205,           // the horizon line, from the top of the walls
 		least: 0.18,            // things far off shrink to this share of their size, and no smaller
 		shrink: 900,            // how quickly they shrink past the flat (field units)
 		haze: [1500, 2700],     // past the flat, things fade out over this stretch
@@ -433,6 +433,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const show = new Showtime(stage, {
 		score: won,   // scores are in won
 		id: 'red-light-green-light',
+		clock: 'corner',   // the clock in the top left corner of every wall
 		seconds: GAME_SECONDS,
 		players: () => contestants.length,
 		scores: () => contestants.map((c) => c.score),
