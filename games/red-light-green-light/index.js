@@ -2234,6 +2234,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		wallT += dt;
 		show.frame(ctx, dt, drawWorld);
 		sound.tick();
+		debugStatus();
 	};
 
 	/* ---------- input ---------- */
@@ -2282,7 +2283,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	};
 
 	// Test hooks: jump to any beat (skipping the intros), wind the clock on.
-	const INTROS = ['squad', 'clock', 'visors', 'controls', 'doll'];
+	const INTROS = ['squad', 'title', 'clock', 'visors', 'controls', 'doll'];
 	self.test = {
 		// no block walls this round or after (tests that steer players straight somewhere)
 		clearBlocks() { blocks = []; noBlocks = true; },
@@ -2298,6 +2299,101 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		},
 		timeLeft(s) { show.setTimeLeft(s); },
 	};
+
+	/* ---------- the debug panel ---------- */
+
+	// DEBUG, bottom left of the left wall (folded away until opened): jump to
+	// any beat, and step through everything inside them: the tutorial's
+	// steps, each phase of a round, whole rounds, the clock.
+	const DEBUG = { x: 24, y: 940, w: W - 48 };
+	const BEATS = ['title', 'clock', 'visors', 'controls', 'doll', 'play', 'timeup', 'scores', 'rank', 'team', 'board', 'replay', 'rate', 'end'];
+	const $debug = $('<debug-panel>').css({
+		position: 'absolute', left: DEBUG.x + 'px', bottom: (H - DEBUG.y) + 'px', width: DEBUG.w + 'px',
+		padding: '12px 16px', boxSizing: 'border-box', borderRadius: '20px',
+		background: 'rgba(8,12,28,0.88)', border: '3px solid rgba(58,209,255,0.6)',
+		fontFamily: `"${Showtime.TYPE.font}", sans-serif`, color: 'white', pointerEvents: 'auto', zIndex: 20,
+	}).appendTo(stage.$ui);
+	const $dhead = $('<div>').css({ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '26px' }).appendTo($debug);
+	const $dbody = $('<div>').css({ marginTop: '8px' }).hide().appendTo($debug);
+	const dbutton = (label, fn, colour = '#22305a') => $('<button>').text(label).css({
+		margin: '4px', padding: '8px 14px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+		background: colour, color: 'white', fontFamily: 'inherit', fontSize: '22px',
+	}).on('click', function (e) { e.stopPropagation(); fn(); });
+	dbutton('DEBUG ▸', function () {
+		const open = !$dbody.is(':visible');
+		$dbody.toggle(open);
+		$(this).text(open ? 'DEBUG ▾' : 'DEBUG ▸');
+	}, '#1a5a7a').appendTo($dhead);
+	const $dnow = $('<span>').css({ flex: 1, color: '#9fb6d8', fontFamily: 'monospace', fontSize: '22px' }).appendTo($dhead);
+	const drow = (label) => {
+		const $row = $('<div>').css({ display: 'flex', flexWrap: 'wrap', alignItems: 'center' }).appendTo($dbody);
+		$('<span>').text(label).css({ width: '120px', color: '#9fb6d8', fontSize: '20px' }).appendTo($row);
+		return $row;
+	};
+
+	const $beats = drow('BEATS');
+	for (const id of BEATS) dbutton(id.toUpperCase(), () => debugJump(id)).appendTo($beats);
+	dbutton('NEXT BEAT ▶', () => { show.stop('dollSong'); show.next(); }, '#3a2a5a').appendTo($beats);
+	dbutton('RESTART', () => $('[btn=refresh]').trigger('click'), '#5a2232').appendTo($beats);
+
+	const $tut = drow('TUTORIAL');
+	dbutton('NEXT STEP ▶', () => { if (show.beat === 'controls') enterStep(practice.i + 1); }).appendTo($tut);
+	dbutton('PASS STEP ✓', () => { if (show.beat === 'controls' && !practice.done) { practice.done = true; practice.doneAge = 0; show.fx('nice'); } }).appendTo($tut);
+
+	const $round = drow('ROUND');
+	dbutton('NEXT PHASE ▶', debugPhase).appendTo($round);
+	dbutton('RED LIGHT NOW', () => { if (show.beat === 'play' && (phase === 'green' || phase === 'turning')) warn(); }, '#7a2230').appendTo($round);
+	dbutton('LAST LEG', () => { if (show.beat === 'play' && phase === 'green') { scrollTo = camEnd; cam = Math.max(cam, camEnd - settings.speed * 1.5); } }).appendTo($round);
+	dbutton('EVERYONE FINISHES', debugFinish, '#225a3a').appendTo($round);
+	dbutton('EVERYONE SHOT', () => { if (show.beat === 'play') for (const c of contestants) if (c.alive && !c.safe) eliminate(c, 'debug'); }, '#7a2230').appendTo($round);
+	dbutton('NEXT ROUND', () => debugRound(round + 1)).appendTo($round);
+	dbutton('ROUND 5', () => debugRound(4)).appendTo($round);
+
+	const $misc = drow('CLOCK');
+	dbutton('1:00 LEFT', () => show.setTimeLeft(60), '#5a3a22').appendTo($misc);
+	dbutton('0:15 LEFT', () => show.setTimeLeft(15), '#5a3a22').appendTo($misc);
+	dbutton('+ CASH', () => { for (const c of contestants) c.score += 100 * (1 + Math.floor(Math.random() * 20)); }, '#225a3a').appendTo($misc);
+	dbutton('MAGNET ALL', () => { for (const c of contestants) c.magnet = MAGNET.time; }, '#225a3a').appendTo($misc);
+
+	// any beat, straight away (a squad of three if none was picked; the
+	// results with some scores to show)
+	function debugJump(id) {
+		$('showtime-picker').remove();
+		show.stop('dollSong');
+		callout = null;
+		self.test.skipTo(id);
+		if (['scores', 'rank', 'team', 'board', 'replay'].includes(id) && contestants.every((c) => !c.score)) {
+			for (const c of contestants) c.score = 1000 * (1 + Math.floor(Math.random() * 4)) + 100 * Math.floor(Math.random() * 30);
+		}
+	}
+
+	// on to the next phase of the round (or the next step, or the next beat)
+	function debugPhase() {
+		if (show.beat === 'controls') return enterStep(practice.i + 1);
+		if (show.beat !== 'play') return show.next();
+		if (phase === 'green') cam = scrollTo;                   // (the leg's end: she turns next frame)
+		else if (phase === 'closed') endRound();
+		else phaseT = Math.max(phaseT, phaseDur);
+	}
+
+	function debugFinish() {
+		if (show.beat !== 'play' || phase === 'cleared' || phase === 'ready') return;
+		for (const c of contestants) if (c.alive) { c.safe = true; c.glue = null; c.f = Math.max(c.f, finishF + 13); }
+		endRound();
+	}
+
+	function debugRound(r) {
+		if (show.beat !== 'play') debugJump('play');
+		show.stop('dollSong');
+		callout = null;
+		startRound(Math.max(0, r));
+	}
+
+	function debugStatus() {
+		const step = show.beat === 'controls' && CONTROLS.steps[practice.i] ? ' ' + CONTROLS.steps[practice.i].id : '';
+		const ph = show.beat === 'play' ? ` R${round + 1} ${phase}` : '';
+		$dnow.text(`${show.beat}${step}${ph}  ${show.mmss ? show.mmss(show.timeLeft()) : ''}`);
+	}
 
 	self.fini = function () {
 		sound.close();
