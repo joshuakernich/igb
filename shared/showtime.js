@@ -800,15 +800,16 @@ window.Showtime = function (stage, opts) {
 	/* ---------- the skip button ---------- */
 
 	// Through the intros (after the squad is picked, before the first round)
-	// a button on the front wall skips straight to the play.
+	// a button on the front wall skips straight to the play. A game can say
+	// otherwise: opts.skip = { during: [beat ids], to: beat id }.
 	let $skip = null;
 	function showSkip(id) {
 		const play = beats.findIndex((b) => b.id === 'play');
 		const at = beats.findIndex((b) => b.id === id);
-		const intro = id !== 'squad' && play >= 0 && at >= 0 && at < play;
+		const intro = opts.skip ? opts.skip.during.includes(id) : id !== 'squad' && play >= 0 && at >= 0 && at < play;
 		if (intro && !$skip) {
-			$skip = $('<button skip>').text('SKIP ▶▶').css({
-				position: 'absolute', left: (2 * W - 330) + 'px', top: '880px', zIndex: 5,
+			$skip = $('<button skip>').text((opts.skip && opts.skip.label) || 'SKIP ▶▶').css({
+				position: 'absolute', left: (2 * W - 30) + 'px', transform: 'translateX(-100%)', whiteSpace: 'nowrap', top: '880px', zIndex: 5,
 				padding: '16px 36px', borderRadius: '40px', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
 				background: 'rgba(12,4,30,0.72)', color: 'white', cursor: 'pointer', pointerEvents: 'auto',
 				fontFamily: `"${TYPE.font}", sans-serif`, fontSize: '40px', letterSpacing: '2px',
@@ -816,7 +817,7 @@ window.Showtime = function (stage, opts) {
 			}).appendTo(stage.$ui).on('click', function (e) {
 				e.stopPropagation();
 				self.fx('skip');
-				self.go('play');
+				self.go(opts.skip ? opts.skip.to : 'play');
 			});
 			stage.timeout(() => $skip && $skip.css({ opacity: 0.9 }), 30);
 		} else if (!intro && $skip) {

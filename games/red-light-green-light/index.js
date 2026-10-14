@@ -461,6 +461,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const show = new Showtime(stage, {
 		score: won,   // scores are in won
 		id: 'red-light-green-light',
+		skip: { during: ['controls'], to: 'doll', label: 'SKIP TUTORIAL ▶▶' },   // the skip button: only in the tutorial, on to her entrance
 		clock: (n) => CLOCK_AT[n],   // the clock, as a capsule: see CLOCK_AT
 		seconds: GAME_SECONDS,
 		players: () => contestants.length,
@@ -1649,10 +1650,18 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const air = 1 - c.lift / 300;        // the shadow shrinks under a skip
 		// a solid spot of their colour, always under the avatar
 		if (c.alive) art.ellipse(ctx, ground.x, ground.y, 40 * s * air, 13 * s * air, { fill: colour, alpha: alpha * 0.9 });
-		// magnetised: a ring of magnetic red pulsing out round their feet
+		// magnetised: rings of soft magnetic red, closing in on them over and
+		// over, the pull drawn on the sand
 		if (c.alive && c.magnet > 0) {
-			const k = (clock * 2.5) % 1;
-			art.ellipse(ctx, ground.x, ground.y, (50 + 70 * k) * s, (16 + 22 * k) * s, { stroke: '#ff4d6d', lineWidth: 5, alpha: alpha * (1 - k) * Math.min(1, c.magnet * 2) });
+			const on = alpha * Math.min(1, c.magnet * 2);
+			for (let i = 0; i < 3; i++) {
+				const k = (clock * 1.4 + i / 3) % 1;              // 0: far out, 1: in at their feet
+				const R = (260 - 210 * k) * s;
+				const fade = Math.sin(k * Math.PI);              // (in from nothing, gone as it arrives)
+				art.with(ctx, { x: ground.x, y: ground.y, scaleY: 0.33 }, function (c2) {
+					art.circle(c2, 0, 0, R, { fill: art.radial(c2, 0, 0, R * 0.55, R, [[0, 'rgba(255,77,109,0)'], [0.75, 'rgba(255,77,109,0.45)'], [1, 'rgba(255,77,109,0)']]), alpha: on * fade });
+				});
+			}
 		}
 		art.ellipse(ctx, ground.x, ground.y, 27 * s * air, 8 * s * air, { fill: 'rgba(0,0,0,0.35)', alpha });
 
@@ -2216,6 +2225,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			length: ENTRANCE.length,
 			enter() {
 				callout = null;
+				// (the tutorial's leftovers gone, in case it was skipped)
+				pads = pads.filter((p) => !p.practice);
+				cash = cash.filter((m) => !m.practice);
 				for (const c of contestants) resetContestant(c);
 				setPhase('waiting');
 				dollShown = true;
