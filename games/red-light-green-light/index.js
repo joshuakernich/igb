@@ -516,17 +516,16 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (const lx of [-0.55, -0.22, 0.22, 0.52]) {
 			const x = lx * R;
 			const y0 = Math.sqrt(R * R - x * x) - 30;
-			art.roundRect(c, x - 30, y0, 60, 72, [6, 6, 22, 22], { fill: pane, stroke: edge, lineWidth: 4 });
+			art.roundRect(c, x - 30, y0, 60, 72, [6, 6, 22, 22], { fill: pane });
 			art.line(c, [[x - 16, y0 + 12], [x - 16, y0 + 58]], { stroke: 'rgba(255,255,255,0.35)', lineWidth: 5 });
 		}
 		const tail = [];
 		for (let i = 0; i <= 20; i++) { const a = i / 20 * Math.PI * 3; const r = 8 + i * 1.3; tail.push([-R - 4 - i * 1.6 + Math.cos(a) * r * 0.6, -R * 0.15 + Math.sin(a) * r * 0.6]); }
-		art.line(c, tail, { stroke: edge, lineWidth: 5 });
+		art.line(c, tail, { stroke: 'rgba(190,220,255,0.3)', lineWidth: 10 });   // (a curl of glass, not a line)
 
 		// the body: the far side of the glass first, a bluish tint darkest at
 		// the rim, as thick glass is
 		art.circle(c, 0, 0, R, { fill: art.radial(c, -R * 0.25, -R * 0.3, R * 0.1, R * 1.05, [[0, 'rgba(210,235,255,0.05)'], [0.7, 'rgba(170,205,240,0.12)'], [1, 'rgba(120,170,220,0.35)']]) });
-		art.circle(c, 0, 0, R * 0.9, { stroke: 'rgba(200,225,255,0.12)', lineWidth: 3 });   // the far wall, seen through the near one
 
 		c.save();
 		c.beginPath();
@@ -577,22 +576,19 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		c.restore();
 		art.ellipse(c, -R * 0.42, -R * 0.55, 34, 18, { fill: art.radial(c, -R * 0.42, -R * 0.55, 0, 34, [[0, 'rgba(255,255,255,0.85)'], [1, 'rgba(255,255,255,0)']]) });
 		for (const [x, y, s] of [[-0.6, -0.42, 1], [0.35, -0.7, 0.7], [0.6, 0.45, 0.6]]) glint(c, x * R, y * R, 14 * s, bt + x * 3);
-		// the rim: a bright edge with a darker line inside it (the glass's thickness)
-		art.circle(c, 0, 0, R, { stroke: edge, lineWidth: 5 });
-		art.circle(c, 0, 0, R - 9, { stroke: 'rgba(80,120,170,0.35)', lineWidth: 4 });
 
 		// the snout, ears, an eye
-		art.ellipse(c, R * 0.98, R * 0.1, 46, 58, { fill: pane, stroke: edge, lineWidth: 5 });
+		art.ellipse(c, R * 0.98, R * 0.1, 46, 58, { fill: pane });
 		art.ellipse(c, R * 0.98 - 12, R * 0.1 - 20, 10, 18, { fill: 'rgba(255,255,255,0.4)' });
 		for (const dy of [-15, 15]) art.ellipse(c, R * 1.02, R * 0.1 + dy, 7, 11, { fill: 'rgba(40,30,25,0.6)' });
 		for (const ex of [0.32, 0.6]) {
 			const top = -Math.sqrt(R * R - (ex * R) * (ex * R));
-			art.poly(c, [[ex * R - 38, top + 26], [ex * R + 4, top - 52], [ex * R + 40, top + 30]], { fill: pane, stroke: edge, lineWidth: 5 });
+			art.poly(c, [[ex * R - 38, top + 26], [ex * R + 4, top - 52], [ex * R + 40, top + 30]], { fill: pane });
 		}
 		art.circle(c, R * 0.62, -R * 0.3, 12, { fill: '#2a1d16' });
 		art.circle(c, R * 0.62 + 4, -R * 0.3 - 4, 4, { fill: 'white' });
 		// the gold cap the cable holds, and the coin slot
-		art.roundRect(c, -60, -R - 12, 120, 28, 12, { fill: art.linear(c, -60, 0, 60, 0, ['#9b6d16', '#f2c752', '#c48f24']), stroke: '#7a5410', lineWidth: 3 });
+		art.roundRect(c, -60, -R - 12, 120, 28, 12, { fill: art.linear(c, -60, 0, 60, 0, ['#9b6d16', '#f2c752', '#c48f24']) });
 		art.circle(c, 0, -R - 24, 14, { stroke: '#9b6d16', lineWidth: 6 });
 		art.roundRect(c, -46, -R + 18, 72, 12, 6, { fill: 'rgba(20,14,8,0.7)' });
 		c.restore();
