@@ -2067,6 +2067,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	}
 
 	function guard(c, mask, armed, walk, muzzle) {
+		const name = mask === 'triangle' || mask === 'square' ? mask : 'circle';
+		if (sheets[name]) {
+			softShadow(c, 0, 0, 28, 8, 0.3);
+			// walking: the 4-frame walk; standing: at attention; a shot: firing
+			const i = muzzle > 0 ? 6 : walk ? Math.floor(((walk / (Math.PI * 2)) % 1 + 1) % 1 * 4) : 4;
+			drawFrame(c, name, i, SPRITE.guard);
+			return;
+		}
 		const PINK = '#e5287a';
 		// the same quick steps as the contestants, bobbing up off each one
 		const step = walk ? Math.sin(walk) * 7 : 0;
@@ -2152,9 +2160,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			// flat as a pancake, springing back up at the end
 			const k = 1 - c.down / BOULDER.down;
 			scaleY = k < 0.8 ? 0.22 : 0.22 + 0.78 * ease((k - 0.8) / 0.2) * (1 + Math.sin((k - 0.8) / 0.2 * Math.PI) * 0.25);
+			if (sheets.act) scaleY = 1;   // (the sprite has them lying flat already)
 		} else if (c.fall) {
 			const k = Math.min(1, c.fall.t / 0.45);
-			rotate = c.fall.dir * 88 * k * k;
+			if (!sheets.act) rotate = c.fall.dir * 88 * k * k;   // (the sprite falls by itself)
 		} else {
 			const lx = Math.max(-1.6, Math.min(1.6, c.lean.x));
 			const lz = Math.max(-1.4, Math.min(1.4, c.lean.z));
@@ -2162,7 +2171,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			scaleY = 1 - 0.14 * lz;     // leaning up the field (or back) foreshortens
 		}
 		art.with(ctx, { x: p.x, y: p.y, scale: s, scaleY, rotate, alpha }, function (cx) {
-			contestant(cx, c);
+			if (sheets.act && sheets.run) contestantSprite(cx, c);
+			else contestant(cx, c);
 		});
 
 		if (c.down > 0) {
@@ -2336,6 +2346,161 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	const FREEZE_ARMS = 55;   // degrees the arms swing out from the body when frozen
 
+	/* ---------- character sprite sheets ---------- */
+
+	// Drawn in ChatGPT (see assets/red-light-green-light/prompts.md): each an
+	// even grid, 4 across and 2 down, a frame centred in each cell with the
+	// feet on the row's baseline. Cut up once when they load: each frame
+	// trimmed to what's in it, remembering where it sat over its cell's centre
+	// and baseline. Until they've loaded (or if they can't be read), the
+	// characters are drawn as before.
+	const SHEETS = {
+		run: 'sheet-contestant-run.png',          // 8-frame run cycle, from behind
+		act: 'sheet-contestant-actions.png',      // stand, frozen, wobble left, wobble right, jump, land, shot, face down
+		front: 'sheet-contestant-front.png',      // stand, wave, cheer, jump, victory, slump, knocked out, running at us
+		circle: 'sheet-guard-circle.png',         // 4-frame walk, attention, aim, fire, lower (facing right)
+		triangle: 'sheet-guard-triangle.png',
+		square: 'sheet-guard-square.png',
+		head: 'sheet-doll-head.png',              // her head turning, from the back of it to her face
+	};
+	const SPRITE = { contestant: 136, guard: 150, head: 150, patch: 1.35 };   // heights to draw at (the contestants and guards, feet to top, as the drawn ones; her head, across); how much bigger their number patch is painted
+	const sheets = {};   // name: { frames: [{ img, x, y, w, h, patch }], unit } once cut up
+	for (const [name, file] of Object.entries(SHEETS)) {
+		const img = new Image();
+		img.onload = function () {
+			try { sheets[name] = slice(img, name); } catch (e) { /* (unreadable: keep drawing them) */ }
+		};
+		img.src = 'assets/red-light-green-light/' + file;
+	}
+
+	function slice(img, name) {
+		const cw = img.width / 4;
+		const ch = img.height / 2;
+		const cv = document.createElement('canvas');
+		cv.width = img.width;
+		cv.height = img.height;
+		const g = cv.getContext('2d');
+		g.drawImage(img, 0, 0);
+		const data = g.getImageData(0, 0, img.width, img.height).data;
+		const solid = (x, y) => data[(y * img.width + x) * 4 + 3] > 40;
+		const frames = [];
+		const baselines = [];
+		const boxes = [];
+		for (let i = 0; i < 8; i++) {
+			const cx0 = Math.round((i % 4) * cw);
+			const cy0 = Math.round(Math.floor(i / 4) * ch);
+			let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1;
+			for (let y = cy0; y < cy0 + ch; y += 2) for (let x = cx0; x < cx0 + cw; x += 2) {
+				if (!solid(x, y)) continue;
+				if (x < x0) x0 = x;
+				if (x > x1) x1 = x;
+				if (y < y0) y0 = y;
+				if (y > y1) y1 = y;
+			}
+			boxes.push(x1 < 0 ? null : { x0, y0, x1: x1 + 2, y1: y1 + 2, cx: cx0 + cw / 2 });
+		}
+		// each row's baseline: its lowest feet
+		for (let r = 0; r < 2; r++) baselines.push(Math.max(...boxes.slice(r * 4, r * 4 + 4).map((b) => (b ? b.y1 : 0))));
+		boxes.forEach(function (b, i) {
+			if (!b) { frames.push(null); return; }
+			const w = b.x1 - b.x0;
+			const h = b.y1 - b.y0;
+			const crop = document.createElement('canvas');
+			crop.width = w;
+			crop.height = h;
+			crop.getContext('2d').drawImage(cv, b.x0, b.y0, w, h, 0, 0, w, h);
+			const base = baselines[Math.floor(i / 4)];
+			frames.push({ img: crop, x: b.x0 - b.cx, y: b.y0 - base, w, h, patch: (name === 'run' || name === 'act' || name === 'front') ? findPatch(data, img.width, b, name === 'front') : null });
+		});
+		// the size to draw at comes from the first frame (standing, or mid-stride)
+		const f0 = frames[0];
+		const sheet = { frames, unit: name === 'head' ? frames[7].w : f0.h };
+		// a guard's rifle: its muzzle is the furthest-right thing in the firing frame
+		if (name === 'circle' && frames[6]) {
+			const b = boxes[6];
+			let best = null;
+			for (let x = b.x1 - 1; x > b.x0 && !best; x--) {
+				let sum = 0, n = 0;
+				for (let y = b.y0; y < b.y1; y++) if (solid(x, y)) { sum += y; n++; }
+				if (n) best = { x, y: sum / n };
+			}
+			if (best) {
+				const k = SPRITE.guard / sheet.unit;
+				GUN.muzzle = [(best.x - 18 - b.cx) * k, (best.y - baselines[1]) * k];   // (just inside the flash)
+			}
+		}
+		return sheet;
+	}
+
+	// The white number patch on a contestant's back (or chest): the biggest
+	// patch of near-white in the middle of the torso, as a box in the frame.
+	function findPatch(data, width, b, front) {
+		const w = b.x1 - b.x0;
+		const h = b.y1 - b.y0;
+		const xa = b.x0 + w * (front ? 0.2 : 0.3);
+		const xb = b.x1 - w * (front ? 0.2 : 0.3);
+		const ya = b.y0 + h * 0.25;
+		const yb = b.y0 + h * 0.62;
+		let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1, n = 0;
+		for (let y = Math.round(ya); y < yb; y++) for (let x = Math.round(xa); x < xb; x++) {
+			const i = (y * width + x) * 4;
+			if (data[i + 3] > 200 && data[i] > 225 && data[i + 1] > 225 && data[i + 2] > 225) {
+				n++;
+				if (x < x0) x0 = x;
+				if (x > x1) x1 = x;
+				if (y < y0) y0 = y;
+				if (y > y1) y1 = y;
+			}
+		}
+		// (too few, or a thin stripe rather than a patch: none)
+		if (n < 40 || x1 - x0 < 8 || y1 - y0 < 6) return null;
+		return { x: x0 - b.x0, y: y0 - b.y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+	}
+
+	// One frame, feet at (0, 0), so tall (the sheet's first frame at that
+	// height). Returns where its number patch landed, if it has one.
+	function drawFrame(c, name, i, height, flip = false) {
+		const sheet = sheets[name];
+		const f = sheet && sheet.frames[i];
+		if (!f) return null;
+		const k = height / sheet.unit;
+		c.save();
+		if (flip) c.scale(-1, 1);
+		c.drawImage(f.img, f.x * k, f.y * k, f.w * k, f.h * k);
+		c.restore();
+		if (!f.patch) return null;
+		const px = (f.x + f.patch.x) * k;
+		return { x: flip ? -px - f.patch.w * k : px, y: (f.y + f.patch.y) * k, w: f.patch.w * k, h: f.patch.h * k };
+	}
+
+	// A contestant's number on their patch, in their colour, a little bigger
+	// than the patch so it reads across the room.
+	function paintPatch(c, p, n, number) {
+		if (!p) return;
+		const cx = p.x + p.w / 2;
+		const cy = p.y + p.h / 2;
+		const w = Math.max(p.w, 22) * SPRITE.patch;
+		const h = Math.max(p.h, 15) * SPRITE.patch;
+		art.roundRect(c, cx - w / 2, cy - h / 2, w, h, 3, { fill: PLAYER_COLORS[n], stroke: INK, lineWidth: 1.5 });
+		art.text(c, number, cx, cy + 1, { size: h * 0.72, font: 'Rubik', weight: 800, fill: 'white', outline: INK, outlineWidth: 2 });
+	}
+
+	// The frame for a contestant in play, from behind.
+	function contestantSprite(c, k) {
+		let name = 'act';
+		let i = 0;
+		if (k.fall) i = k.fall.t < 0.45 ? 6 : 7;                     // shot: falling back, then face down
+		else if (k.down > 0) i = 7;                                   // flattened by a boulder
+		else if (k.hop) i = k.hop.t / HOP < 0.7 ? 4 : 5;              // over a corner: up, then landing
+		else if (k.glue) i = k.lean.x < -0.5 ? 2 : k.lean.x > 0.5 ? 3 : 1;   // frozen, wobbling if they're drifting
+		else if (k.moving > 0.2) {
+			name = 'run';
+			i = Math.floor(((k.walk / (Math.PI * 2)) % 1 + 1) % 1 * 8);
+		}
+		const patch = drawFrame(c, name, i, SPRITE.contestant);
+		if (!k.fall && !(k.down > 0)) paintPatch(c, patch, k.n, k.number);
+	}
+
 	function contestant(c, k) {
 		const TEAL = '#1f8a6e';
 		const PANTS = '#17705a';
@@ -2398,6 +2563,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// feet. Feet at the origin, about 136 tall. Pose 'stand', 'cheer' (arms
 	// up) or 'win' (arms up, waving, a big grin).
 	function contestantFront(c, n, pose) {
+		if (sheets.front) {
+			art.ellipse(c, 0, 0, 44, 14, { fill: PLAYER_COLORS[n] || 'white' });
+			softShadow(c, 0, 0, 28, 8, 0.3);
+			// stand; cheer; win: jumping for joy and the victory pose, by turns
+			const i = pose === 'cheer' ? 2 : pose === 'win' ? (Math.floor(wallT * 2.5 + n) % 2 ? 3 : 4) : 0;
+			paintPatch(c, drawFrame(c, 'front', i, SPRITE.contestant), n, NUMBERS[n] || String(n + 1).padStart(3, '0'));
+			return;
+		}
 		const TEAL = '#1f8a6e';
 		const PANTS = '#17705a';
 		const SLEEVE = '#176f5b';
@@ -2491,6 +2664,30 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// each feature sits at a longitude on it, slides across as she turns,
 	// narrows toward the edge and goes out of sight round the back.
 	function dollHead(c, yaw, glare) {
+		if (sheets.head) {
+			// how far round to face us (1) from facing away (0); the sheet's turn
+			// bunches up near her face, so its last steps are skipped
+			const front = (1 + Math.cos(yaw)) / 2;
+			const STEPS = [0, 1, 2, 3, 7];
+			const i = STEPS[Math.round(front * (STEPS.length - 1))];
+			const f = sheets.head.frames[i];
+			if (f) {
+				const k = SPRITE.head / sheets.head.unit;
+				c.save();
+				if (Math.sin(yaw) < 0) c.scale(-1, 1);   // (turning the other way round)
+				c.drawImage(f.img, -f.w * k / 2, -f.h * k / 2, f.w * k, f.h * k);
+				c.restore();
+				// watching: her eyes glow red
+				if (glare > 0 && i === 7) {
+					for (const side of [-1, 1]) {
+						const ex = side * f.w * k * 0.16;
+						const ey = f.h * k * 0.06;
+						art.circle(c, ex, ey, 16, { fill: art.radial(c, ex, ey, 0, 16, [[0, `rgba(255,60,60,${0.9 * glare})`], [1, 'rgba(255,0,0,0)']]) });
+					}
+				}
+				return;
+			}
+		}
 		const HAIR = '#16120f';
 		const SKIN = '#f6d6c0';
 		const R = 60;
