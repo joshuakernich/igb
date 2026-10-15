@@ -1649,10 +1649,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// Over the camera, never zoomed: the doll-head insets, GREEN LIGHT /
 	// RED LIGHT called out on every wall, and the white flash of a shot.
 	// Everyone's score, in little capsules along the bottom of every wall,
-	// rising up off the bottom edge: their colour, their winnings. A score that
+	// rising up off the bottom edge: dark glass with their colour along the top, their winnings. A score that
 	// just changed pops; anyone out is dimmed. At the end of a round, while its
 	// banner's up, they rise up the wall and grow, then sink back.
-	const SCORES = { w: 176, h: 64, gap: 12, sink: 22, size: 32, rise: 260, grow: 0.35 };   // a capsule's width and height (the part showing), the gap between them, how far it reaches down past the edge, the figures' size; at a round's end, how far up they rise and how much bigger they get
+	const SCORES = { w: 176, h: 64, gap: 12, sink: 22, size: 32, rise: 260, grow: 0.35, line: 7 };   // a capsule's width and height (the part showing), the gap between them, how far it reaches down past the edge, the figures' size; at a round's end, how far up they rise and how much bigger they get
 	function drawScores(ctx) {
 		const n = contestants.length;
 		if (!n) return;
@@ -1669,7 +1669,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				const y = H - SCORES.h / 2 - SCORES.rise * lift;
 				const sink = SCORES.sink * (1 - lift);   // (risen clear of the edge, the whole capsule shows)
 				art.with(c, { x, y, scale: pop * grow, alpha: k.alive || lift > 0 ? 1 : 0.45 }, function (c2) {
-					art.roundRect(c2, -SCORES.w / 2, -SCORES.h / 2, SCORES.w, SCORES.h + sink, SCORES.h / 2, { fill: PLAYER_COLORS[k.n] });
+					// black glass, a line of their colour along the top
+					art.roundRect(c2, -SCORES.w / 2, -SCORES.h / 2, SCORES.w, SCORES.h + sink, SCORES.h / 2, { fill: 'rgba(0,0,0,0.6)' });
+					art.save(c2, function (c3) {
+						c3.beginPath();
+						c3.roundRect(-SCORES.w / 2, -SCORES.h / 2, SCORES.w, SCORES.h + sink, SCORES.h / 2);
+						c3.clip();
+						art.rect(c3, -SCORES.w / 2, -SCORES.h / 2, SCORES.w, SCORES.line, { fill: PLAYER_COLORS[k.n] });
+					});
 					art.text(c2, won(k.score), 0, 2, { size: SCORES.size, font: 'Paytone One', weight: 400, fill: 'white', shadow: { color: 'rgba(0,0,0,0.35)', blur: 0, y: 2 } });
 				});
 			});
@@ -2190,8 +2197,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const phase = ((walk / (Math.PI * 2)) % 1 + 1) % 1;
 			const pick = {
 				head,
-				torso: muzzle > 0 ? 'torsoAim' : 'torso',
-				legs: walk ? ['legsA', 'legs', 'legsB', 'legs'][Math.floor(phase * 4)] : 'legs',
+				pose: muzzle > 0 ? 'aim' : walk ? 'walk' + (1 + Math.floor(phase * 4)) : 'stand',
 				bob: walk ? Math.abs(Math.sin(walk)) * 5 : 0,
 			};
 			if (assemble(c, rigs.guard, pick)) {
@@ -2690,12 +2696,58 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		guard: { file: 'parts-guard.png', parts: ['circle', 'triangle', 'square', 'torso', 'torsoAim', 'legs', 'legsA', 'legsB'], height: 124, heads: ['circle', 'triangle', 'square'] },
 	};
 	const RIG = { overlap: 0.06, lean: 14, bob: 6 };   // how far parts tuck into each other at the joins (a share of the figure); degrees the body leans when drifting frozen; how much it bobs running
+
+	// Every pose each figure strikes: which head, body and legs (the torso
+	// mirrored on the second half of the run, so the arms pump), and a lift off
+	// the ground for a jump.
+	const POSES = {
+		back: {
+			stand: { head: 'head', torso: 'torso', legs: 'legs' },
+			run1: { head: 'head', torso: 'torsoRun', legs: 'legsL' },
+			run2: { head: 'head', torso: 'torsoRun', legs: 'legs' },
+			run3: { head: 'head', torso: 'torsoRun', legs: 'legsR', mirror: true },
+			run4: { head: 'head', torso: 'torsoRun', legs: 'legs', mirror: true },
+			frozen: { head: 'head', torso: 'torsoOut', legs: 'legs' },
+			hop: { head: 'head', torso: 'torsoOut', legs: 'legsCrouch' },
+		},
+		front: {
+			stand: { head: 'head', torso: 'torso', legs: 'legs' },
+			cheer: { head: 'headGrin', torso: 'torsoCheer', legs: 'legs' },
+			win1: { head: 'headGrin', torso: 'torsoCheer', legs: 'legsJump', lift: 26 },
+			win2: { head: 'headGrin', torso: 'torsoWave', legs: 'legs' },
+			sad: { head: 'headSad', torso: 'torso', legs: 'legs' },
+		},
+		guard: {
+			stand: { head: 'circle', torso: 'torso', legs: 'legs' },
+			walk1: { head: 'circle', torso: 'torso', legs: 'legsA' },
+			walk2: { head: 'circle', torso: 'torso', legs: 'legs' },
+			walk3: { head: 'circle', torso: 'torso', legs: 'legsB' },
+			walk4: { head: 'circle', torso: 'torso', legs: 'legs' },
+			aim: { head: 'circle', torso: 'torsoAim', legs: 'legs' },
+		},
+	};
+
+	// Fine-tuning, from the character lab (DEBUG ▸ CHARACTER LAB): per figure
+	// and pose, each part's nudge (x, y in figure units, r in degrees, s a
+	// scale), and per figure, '_': its height and how far the parts tuck
+	// together. Baked in here; the lab's changes are kept in this browser on
+	// top of these until they're baked in too.
+	const TUNED = {};
+	const TUNE_KEY = 'rlgl-character-lab';
+	const TUNE = JSON.parse(JSON.stringify(TUNED));
+	try {
+		const saved = JSON.parse(localStorage.getItem(TUNE_KEY) || '{}');
+		for (const fig of Object.keys(saved)) TUNE[fig] = Object.assign(TUNE[fig] || {}, saved[fig]);
+	} catch (e) { /* (no storage here: just the baked-in tuning) */ }
+	const NUDGE = { x: 0, y: 0, r: 0, s: 1 };
+	const nudge = (fig, pose, part) => Object.assign({}, NUDGE, TUNE[fig] && TUNE[fig][pose] && TUNE[fig][pose][part]);
+	const figure = (fig) => Object.assign({ height: PART_SHEETS[fig].height, overlap: RIG.overlap }, TUNE[fig] && TUNE[fig]._);
 	const rigs = {};   // name: { parts: { id: { img, w, h, top: [x, y], bottom: [x, y] } }, k }
 	for (const [name, def] of Object.entries(PART_SHEETS)) {
 		const img = new Image();
 		img.onload = function () {
 			try {
-				rigs[name] = cutParts(img, def);
+				rigs[name] = cutParts(img, def, name);
 				if (name === 'guard') { const m = rigMuzzle(rigs.guard); if (m) GUN.muzzle = m; }
 			} catch (e) { /* (unreadable: the sheets stand in) */ }
 		};
@@ -2707,7 +2759,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// bottom middle, so raised arms don't count) and its bottom join (the
 	// middle of its bottom edge: the neck stub on a head, the waist on a
 	// torso, the feet on legs).
-	function cutParts(img, def) {
+	function cutParts(img, def, name) {
 		const cw = img.width / 4;
 		const ch = img.height / 2;
 		const cv = document.createElement('canvas');
@@ -2757,77 +2809,92 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				}
 			}
 		});
-		// the scale: an assembled standing figure the given height
+		// how tall a standing figure is, put together (for its scale)
 		const head = parts[def.heads ? def.heads[0] : 'head'];
 		const tall = parts.legs.bottom[1] - parts.legs.top[1] + parts.torso.bottom[1] - parts.torso.top[1] + head.h;
-		return { parts, k: def.height / (tall * (1 - RIG.overlap * 2)) };
+		return { name, parts, tall };
 	}
 
-	// Put a figure together, feet at (0, 0): legs, then the body on them at
-	// the waist, then the head on the body at the neck. The body (and head
-	// with it) can lean (degrees) and bob up; the torso can be mirrored.
+	// Put a figure together in a pose, feet at (0, 0): legs, then the body on
+	// them at the waist, then the head on the body at the neck, each nudged as
+	// the lab says. On top of that, the moment's own movement: the body (and
+	// head with it) leaning (degrees) and bobbing up, the head tilting, a lift
+	// off the ground.
 	function assemble(c, rig, pick) {
+		const poses = POSES[rig.name];
+		const poseId = poses[pick.pose] ? pick.pose : 'stand';
+		const pose = poses[poseId];
 		const P = rig.parts;
-		const legs = P[pick.legs] || P.legs;
-		const torso = P[pick.torso] || P.torso;
-		const head = P[pick.head];
+		const legs = P[pose.legs];
+		const torso = P[pose.torso];
+		const head = P[pick.head || pose.head];
 		if (!legs || !torso || !head) return false;
-		const k = rig.k;
-		const tuck = RIG.overlap * head.h * 0.9;
+		const fig = figure(rig.name);
+		const k = fig.height / (rig.tall * (1 - fig.overlap * 2));
+		const tuck = fig.overlap * head.h * 0.9;
+		const T = (part) => nudge(rig.name, poseId, part);
+		const lift = ((pick.lift || 0) + (pose.lift || 0)) / k;
+		const legsTall = legs.bottom[1] - legs.top[1];
 		c.save();
 		c.scale(k, k);
 		if (pick.flip) c.scale(-1, 1);
-		// legs: feet on the ground (lifted for a jump)
-		const waist = [0, -(legs.bottom[1] - legs.top[1]) - (pick.lift || 0) / k];
-		c.drawImage(legs.img, -legs.bottom[0] + (legs.bottom[0] - legs.top[0]), waist[1] - legs.top[1], legs.w, legs.h);
-		// the body, tucked into the waist, bobbing and leaning
+		// the legs, hung from the waist
+		const tl = T('legs');
 		c.save();
-		c.translate(0, waist[1] + tuck - (pick.bob || 0) / k);
-		c.rotate((pick.lean || 0) * Math.PI / 180);
-		c.save();
-		if (pick.mirrorTorso) c.scale(-1, 1);
-		c.drawImage(torso.img, -torso.bottom[0], -torso.bottom[1], torso.w, torso.h);
+		c.translate(tl.x / k, -legsTall - lift + tl.y / k);
+		c.rotate(tl.r * Math.PI / 180);
+		c.scale(tl.s, tl.s);
+		c.drawImage(legs.img, -legs.top[0], -legs.top[1]);
 		c.restore();
-		const neck = -(torso.bottom[1] - torso.top[1]) + tuck * 1.2;
-		// the head on the neck, tilting a little more than the body
-		c.translate(0, neck);
-		c.rotate((pick.tilt || 0) * Math.PI / 180);
-		c.drawImage(head.img, -head.bottom[0], -head.bottom[1], head.w, head.h);
+		// the body on the waist
+		const tt = T('torso');
+		c.save();
+		c.translate(tt.x / k, -legsTall - lift + tuck - (pick.bob || 0) / k + tt.y / k);
+		c.rotate(((pick.lean || 0) + tt.r) * Math.PI / 180);
+		c.scale(tt.s, tt.s);
+		c.save();
+		if (pick.mirror !== undefined ? pick.mirror : pose.mirror) c.scale(-1, 1);
+		c.drawImage(torso.img, -torso.bottom[0], -torso.bottom[1]);
+		c.restore();
+		// the head on the neck
+		const th = T('head');
+		c.translate(th.x / k, -(torso.bottom[1] - torso.top[1]) + tuck * 1.2 + th.y / k);
+		c.rotate(((pick.tilt || 0) + th.r) * Math.PI / 180);
+		c.scale(th.s, th.s);
+		c.drawImage(head.img, -head.bottom[0], -head.bottom[1]);
 		c.restore();
 		c.restore();
 		return true;
 	}
 
-	// Where an assembled guard's rifle muzzle is (feet at 0, facing right).
+	// Where an assembled guard's rifle muzzle is, aiming (feet at 0, facing right).
 	function rigMuzzle(rig) {
 		const P = rig.parts;
 		const t = P.torsoAim;
 		if (!t || !t.tip) return null;
-		const k = rig.k;
-		const tuck = RIG.overlap * P.circle.h * 0.9;
-		const waistY = -(P.legs.bottom[1] - P.legs.top[1]) + tuck;
-		return [(t.tip[0] - t.bottom[0]) * k, (waistY + t.tip[1] - t.bottom[1]) * k];
+		const fig = figure('guard');
+		const k = fig.height / (rig.tall * (1 - fig.overlap * 2));
+		const tuck = fig.overlap * P.circle.h * 0.9;
+		const n = nudge('guard', 'aim', 'torso');
+		const waistY = -(P.legs.bottom[1] - P.legs.top[1]) + tuck + n.y / k;
+		return [(t.tip[0] - t.bottom[0]) * n.s * k + n.x, (waistY + (t.tip[1] - t.bottom[1]) * n.s) * k];
 	}
 
 	// A contestant in play, from behind, from parts.
 	function contestantRig(c, k) {
 		const rig = rigs.back;
-		const pick = { head: 'head', torso: 'torso', legs: 'legs' };
-		if (k.hop) {
-			pick.torso = 'torsoOut';
-			pick.legs = 'legsCrouch';
-		} else if (k.glue) {
+		const pick = { pose: 'stand' };
+		if (k.hop) pick.pose = 'hop';
+		else if (k.glue) {
 			// frozen: arms stuck out, the body leaning the way their player drifts
-			pick.torso = 'torsoOut';
+			pick.pose = 'frozen';
 			pick.lean = Math.max(-1.6, Math.min(1.6, k.lean.x)) * RIG.lean;
 			pick.tilt = pick.lean * 0.5;
 		} else if (k.moving > 0.2 && !k.fall && !(k.down > 0)) {
 			// running: the legs through their strides, the arms pumping (the
 			// body mirrored on the other stride), bobbing up off each step
 			const phase = ((k.walk / (Math.PI * 2)) % 1 + 1) % 1;
-			pick.legs = ['legsL', 'legs', 'legsR', 'legs'][Math.floor(phase * 4)];
-			pick.torso = 'torsoRun';
-			pick.mirrorTorso = phase >= 0.5;
+			pick.pose = 'run' + (1 + Math.floor(phase * 4));
 			pick.bob = Math.abs(Math.sin(k.walk)) * RIG.bob * k.moving;
 			pick.lean = (k.drift || 0) * -8;
 			pick.tilt = Math.sin(k.walk) * 3;
@@ -2915,9 +2982,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			art.ellipse(c, 0, 0, 44, 14, { fill: PLAYER_COLORS[n] || 'white' });
 			softShadow(c, 0, 0, 28, 8, 0.3);
 			const beat = Math.floor(wallT * 2.5 + n) % 2;
-			const pick = pose === 'cheer' ? { head: 'headGrin', torso: 'torsoCheer', legs: 'legs' }
-				: pose === 'win' ? { head: 'headGrin', torso: beat ? 'torsoCheer' : 'torsoWave', legs: beat ? 'legsJump' : 'legs', lift: beat ? 26 : 0 }
-				: { head: 'head', torso: 'torso', legs: 'legs', tilt: Math.sin(wallT * 2 + n) * 3 };
+			const pick = pose === 'cheer' ? { pose: 'cheer' }
+				: pose === 'win' ? { pose: beat ? 'win1' : 'win2' }
+				: { pose: 'stand', tilt: Math.sin(wallT * 2 + n) * 3 };
 			if (assemble(c, rigs.front, pick)) return;
 		}
 		if (sheets.front) {
@@ -3659,6 +3726,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	dbutton('+ CASH', () => { for (const c of contestants) c.score += 100 * (1 + Math.floor(Math.random() * 20)); }, '#225a3a').appendTo($misc);
 	dbutton('MAGNET ALL', () => { for (const c of contestants) c.magnet = MAGNET.time; }, '#225a3a').appendTo($misc);
 	dbutton('BOULDER', () => { for (let w = 0; w < 3; w++) rollBoulder(true); }, '#225a3a').appendTo($misc);
+	dbutton('CHARACTER LAB', () => lab.open(), '#5a3a8a').appendTo($misc);
 	dbutton('MONEY BAG ALL', () => { for (const c of contestants) if (c.alive) popBag(c.x, c.f + 60, c.wall); }, '#225a3a').appendTo($misc);
 
 	// any beat, straight away (a squad of three if none was picked; the
@@ -3700,6 +3768,174 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const ph = show.beat === 'play' ? ` R${round + 1} ${phase}` : '';
 		$dnow.text(`${show.beat}${step}${ph}  ${show.mmss ? show.mmss(show.timeLeft()) : ''}`);
 	}
+
+	/* ---------- the character lab ---------- */
+
+	// For fine-tuning how the characters are put together: pick a figure and
+	// a pose, then nudge its legs, body and head (across, up, turn, size), and
+	// the figure's height and how far its parts tuck together. It shows the
+	// pose big, the rest of that figure's poses in a row beneath, and the
+	// running or walking cycle playing. Every change shows in the game at
+	// once, is kept in this browser, and COPY puts the whole tuning on the
+	// clipboard to be baked into TUNED.
+	const lab = (function () {
+		let $lab = null;
+		let canvas = null;
+		let timer = null;
+		let fig = 'back';
+		let pose = 'stand';
+		let part = 'torso';
+		let t0 = 0;
+		const FIGS = { back: 'CONTESTANT · BACK', front: 'CONTESTANT · FRONT', guard: 'GUARD' };
+		const SLIDERS = [['x', -40, 40, 0.5], ['y', -40, 40, 0.5], ['r', -45, 45, 0.5], ['s', 0.5, 1.6, 0.01]];
+		const LABELS = { x: 'ACROSS', y: 'UP / DOWN', r: 'TURN °', s: 'SIZE' };
+
+		function save() {
+			try { localStorage.setItem(TUNE_KEY, JSON.stringify(TUNE)); } catch (e) { /* (not kept: no storage) */ }
+			if (rigs.guard) { const m = rigMuzzle(rigs.guard); if (m) GUN.muzzle = m; }
+		}
+		function set(path, value) {
+			const [a, b, c] = path;
+			TUNE[a] = TUNE[a] || {};
+			TUNE[a][b] = TUNE[a][b] || {};
+			if (c) {
+				TUNE[a][b][c] = TUNE[a][b][c] || {};
+				TUNE[a][b][c][path[3]] = value;
+			} else TUNE[a][b] = Object.assign(TUNE[a][b], value);
+			save();
+		}
+
+		const css = { fontFamily: `"${Showtime.TYPE.font}", sans-serif`, color: 'white' };
+		const button = (label, fn, colour = '#22305a') => $('<button>').text(label).css({
+			margin: '4px', padding: '8px 14px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+			background: colour, color: 'white', fontFamily: 'inherit', fontSize: '22px',
+		}).on('click', function (e) { e.stopPropagation(); fn(); });
+
+		function build() {
+			$lab = $('<character-lab>').css(Object.assign({
+				position: 'absolute', left: W + 'px', top: 0, width: W + 'px', height: H + 'px', zIndex: 30,
+				display: 'flex', background: 'rgba(8,10,22,0.96)', pointerEvents: 'auto',
+			}, css)).appendTo(stage.$ui).on('pointerdown click', (e) => e.stopPropagation());
+			const $side = $('<div>').css({ width: '640px', padding: '20px', boxSizing: 'border-box', overflowY: 'auto' }).appendTo($lab);
+			canvas = $('<canvas>').attr({ width: 960, height: 1000 }).css({ width: '960px', height: '1000px' }).appendTo($lab)[0];
+			render($side);
+		}
+
+		function render($side) {
+			$side = $side || $lab.children().first();
+			$side.empty();
+			$('<div>').text('CHARACTER LAB').css({ fontSize: '44px', marginBottom: '10px' }).appendTo($side);
+			const row = () => $('<div>').css({ display: 'flex', flexWrap: 'wrap', marginBottom: '10px' }).appendTo($side);
+			const $figs = row();
+			for (const f of Object.keys(FIGS)) button(FIGS[f], () => { fig = f; pose = 'stand'; render(); }, f === fig ? '#3a8ad8' : '#22305a').appendTo($figs);
+			const $poses = row();
+			for (const id of Object.keys(POSES[fig])) button(id.toUpperCase(), () => { pose = id; render(); }, id === pose ? '#3a8ad8' : '#22305a').appendTo($poses);
+			const $parts = row();
+			for (const pt of ['legs', 'torso', 'head']) button(pt.toUpperCase(), () => { part = pt; render(); }, pt === part ? '#d8743a' : '#22305a').appendTo($parts);
+
+			// the part's nudge in this pose
+			const n = nudge(fig, pose, part);
+			$('<div>').text(`${pose.toUpperCase()} · ${part.toUpperCase()}`).css({ fontSize: '26px', color: '#9fb6d8', margin: '6px 4px' }).appendTo($side);
+			for (const [key, lo, hi, step] of SLIDERS) slider(LABELS[key], n[key], lo, hi, step, (v) => set([fig, pose, part, key], v)).appendTo($side);
+			const $pr = row();
+			button('RESET PART', () => { if (TUNE[fig] && TUNE[fig][pose]) delete TUNE[fig][pose][part]; save(); render(); }, '#5a2232').appendTo($pr);
+			button('RESET POSE', () => { if (TUNE[fig]) delete TUNE[fig][pose]; save(); render(); }, '#5a2232').appendTo($pr);
+			button('COPY TO OTHER POSES', () => {
+				for (const id of Object.keys(POSES[fig])) if (id !== pose) set([fig, id, part, 'x'], n.x), set([fig, id, part, 'y'], n.y), set([fig, id, part, 'r'], n.r), set([fig, id, part, 's'], n.s);
+			}, '#225a3a').appendTo($pr);
+
+			// the whole figure
+			const g = figure(fig);
+			$('<div>').text(FIGS[fig] + ' · WHOLE FIGURE').css({ fontSize: '26px', color: '#9fb6d8', margin: '16px 4px 6px' }).appendTo($side);
+			slider('HEIGHT', g.height, 60, 200, 1, (v) => set([fig, '_'], { height: v })).appendTo($side);
+			slider('TUCK AT JOINS', g.overlap, 0, 0.2, 0.005, (v) => set([fig, '_'], { overlap: v })).appendTo($side);
+
+			const $end = row();
+			const $copy = button('COPY TUNING', () => copy($copy, $text), '#3a6a2a').appendTo($end);
+			// (two clicks to wipe it all, in case of a slip)
+			const $wipe = button('RESET EVERYTHING', function () {
+				if ($wipe.data('sure')) {
+					for (const f of Object.keys(TUNE)) delete TUNE[f];
+					Object.assign(TUNE, JSON.parse(JSON.stringify(TUNED)));
+					save();
+					render();
+				} else $wipe.data('sure', true).text('SURE? CLICK AGAIN');
+			}, '#5a2232').appendTo($end);
+			button('CLOSE', close, '#444').appendTo($end);
+			const $text = $('<textarea readonly>').css({ width: '100%', height: '140px', marginTop: '8px', fontSize: '14px', fontFamily: 'monospace', background: '#0d1424', color: '#9fd8ff', border: '1px solid #345', borderRadius: '8px' }).hide().appendTo($side);
+		}
+
+		function slider(label, value, lo, hi, step, onChange) {
+			const $row = $('<label>').css({ display: 'flex', alignItems: 'center', gap: '12px', margin: '6px 4px', fontSize: '22px' });
+			$('<span>').text(label).css({ width: '170px' }).appendTo($row);
+			const $val = $('<span>').text(Number(value).toFixed(step < 0.1 ? 2 : 1)).css({ width: '70px', textAlign: 'right', fontFamily: 'monospace' });
+			$('<input type="range">').attr({ min: lo, max: hi, step, value }).css({ flex: 1, height: '30px' }).on('input', function () {
+				const v = parseFloat(this.value);
+				$val.text(v.toFixed(step < 0.1 ? 2 : 1));
+				onChange(v);
+			}).appendTo($row);
+			$val.appendTo($row);
+			return $row;
+		}
+
+		// The tuning as JSON: on the clipboard if the page may, and always in the
+		// box under the buttons, selected, to copy by hand.
+		function copy($button, $text) {
+			const text = JSON.stringify(TUNE, null, '\t');
+			$text.val(text).show()[0].select();
+			try {
+				navigator.clipboard.writeText(text).then(() => $button.text('COPIED ✓'), () => $button.text('COPY FROM THE BOX'));
+			} catch (e) {
+				$button.text('COPY FROM THE BOX');
+			}
+		}
+
+		// The preview: the pose big, the cycle playing beside it, every pose in a row.
+		function draw() {
+			if (!canvas) return;
+			const c = canvas.getContext('2d');
+			c.clearRect(0, 0, canvas.width, canvas.height);
+			const rig = rigs[fig];
+			if (!rig) {
+				art.text(c, 'LOADING THE PARTS…', 480, 400, { size: 40, font: 'Paytone One', weight: 400 });
+				return;
+			}
+			const t = (performance.now() - t0) / 1000;
+			const ground = 640;
+			const g = figure(fig);
+			// the ground, and a guide for the figure's height
+			art.rect(c, 0, ground, 960, 2, { fill: 'rgba(255,255,255,0.25)' });
+			for (const [x, scale] of [[330, 3.6]]) {
+				art.rect(c, 60, ground - g.height * scale, 900, 1, { fill: 'rgba(255,255,255,0.12)' });
+				art.with(c, { x, y: ground, scale }, (c2) => assemble(c2, rig, { pose }));
+			}
+			// the cycle, playing
+			const cycle = fig === 'back' ? ['run1', 'run2', 'run3', 'run4'] : fig === 'guard' ? ['walk1', 'walk2', 'walk3', 'walk4'] : ['win1', 'win2'];
+			const step = Math.floor(t * (fig === 'front' ? 2.5 : 8)) % cycle.length;
+			art.with(c, { x: 780, y: ground, scale: 2.2 }, (c2) => assemble(c2, rig, { pose: cycle[step], bob: fig === 'back' ? Math.abs(Math.sin(t * Math.PI * 4)) * RIG.bob : 0 }));
+			art.text(c, 'PLAYING: ' + cycle[step].toUpperCase(), 780, ground + 40, { size: 22, font: 'Paytone One', weight: 400, fill: '#9fb6d8' });
+			// every pose, small, the chosen one marked
+			const ids = Object.keys(POSES[fig]);
+			ids.forEach(function (id, i) {
+				const x = 70 + i * (820 / Math.max(1, ids.length - 1));
+				if (id === pose) art.roundRect(c, x - 60, 700, 120, 280, 16, { fill: 'rgba(58,138,216,0.25)' });
+				art.with(c, { x, y: 940, scale: 1.6 }, (c2) => assemble(c2, rig, { pose: id }));
+				art.text(c, id.toUpperCase(), x, 970, { size: 18, font: 'Paytone One', weight: 400, fill: id === pose ? 'white' : '#9fb6d8' });
+			});
+		}
+
+		function open() {
+			if (!$lab) build();
+			$lab.show();
+			t0 = performance.now();
+			if (!timer) timer = stage.interval(draw, 1000 / 30);
+		}
+		function close() {
+			if ($lab) $lab.hide();
+			if (timer) { clearInterval(timer); timer = null; }
+		}
+		return { open, close };
+	})();
 
 	self.fini = function () {
 		if (hallAudio) hallAudio.ctx.close().catch(() => {});
