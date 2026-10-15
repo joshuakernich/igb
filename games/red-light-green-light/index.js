@@ -460,7 +460,40 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		if (!VOICE.includes(id)) return;
 		if (speaking) show.stop(speaking);
 		speaking = 'vo_' + id;
+		hall(show.audio.get(speaking));
 		show.play(speaking);
+	}
+
+	// The voice's hall: the ElevenLabs lines play as they are (dry), and also
+	// into a big reverb, added live here (the files are left untouched).
+	const REVERB = { seconds: 3.2, decay: 2.6, wet: 0.6, dry: 1 };   // the tail's length, how fast it dies (higher: faster), how much of it
+	let hallAudio = null;
+	function hall(el) {
+		if (!el || el.dataset.hall) return;
+		try {
+			if (!hallAudio) {
+				const ctx = new (window.AudioContext || window.webkitAudioContext)();
+				const n = Math.floor(ctx.sampleRate * REVERB.seconds);
+				const imp = ctx.createBuffer(2, n, ctx.sampleRate);
+				for (let ch = 0; ch < 2; ch++) {
+					const d = imp.getChannelData(ch);
+					for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, REVERB.decay);
+				}
+				const verb = ctx.createConvolver();
+				verb.buffer = imp;
+				const wet = ctx.createGain();
+				wet.gain.value = REVERB.wet;
+				verb.connect(wet).connect(ctx.destination);
+				hallAudio = { ctx, verb };
+			}
+			if (hallAudio.ctx.state === 'suspended') hallAudio.ctx.resume().catch(() => {});
+			const src = hallAudio.ctx.createMediaElementSource(el);
+			const dry = hallAudio.ctx.createGain();
+			dry.gain.value = REVERB.dry;
+			src.connect(dry).connect(hallAudio.ctx.destination);
+			src.connect(hallAudio.verb);
+			el.dataset.hall = '1';
+		} catch (e) { /* (no Web Audio: the voice plays dry) */ }
 	}
 
 	// The soundtrack ("Way Back Then"), looping under everything from the
@@ -2621,6 +2654,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	}
 
 	self.fini = function () {
+		if (hallAudio) hallAudio.ctx.close().catch(() => {});
 		sound.close();
 		show.fini();
 	};
