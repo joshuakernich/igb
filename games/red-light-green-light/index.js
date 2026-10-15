@@ -76,7 +76,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const LANE = 30;            // contestants keep this far inside their wall's ends
 	const WALL_ORDER = [1, 0, 2];             // hazards are shared out front, left, right, front...
 	const BLOCK = 116;                        // a square block, side to side: scattered in short runs (a run is one long block)
-	const BLOCK_LOOK = { chamfer: 0.22, symbol: 0.52, line: 7, light: [-0.6, 0.8] };   // its corners cut off (a share of its depth); the shape on top (a share of its depth); that shape's line width; where the light comes from across the field (left, far)
+	const BLOCK_LOOK = { chamfer: 0.22, bevel: 16, symbol: 0.48, line: 7, light: [-0.6, 0.8] };   // its corners cut off (a share of its depth); its top edges bevelled this much (field units); the shape on top (a share of its depth); that shape's line width; where the light comes from across the field (left, far)
 	const SHADOW = { x: 0.55, f: -0.7, layers: 6, dark: 0.075, spread: 16, contact: 0.2 };   // a block's shadow: how far it falls across and down the field for its height; soft layers; each one's darkness; how much it blurs out toward its tip; the dark line where it meets the sand
 	const SENTRY_END = 260;                   // the side walls' far ends belong to the armed guards
 
@@ -1737,7 +1737,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// A block's outline on the sand, in field units: a long box with its four
 	// corners cut off, front left first, going round anticlockwise.
 	function footprint(b, grow = 0) {
-		const c = b.r * 2 * BLOCK_LOOK.chamfer;
+		const c = b.r * 2 * BLOCK_LOOK.chamfer + grow * 0.414;   // (so the cut corners stay parallel when it grows or shrinks)
 		const X = b.rx + grow;
 		const F = b.r + grow;
 		return [
@@ -1790,42 +1790,53 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		}
 	}
 
-	// A block: a chunky slab with chamfered corners, each face shaded by which
-	// way it faces the light (only the faces turned toward us drawn, so the
-	// perspective takes care of itself), and one of the game's shapes
-	// inscribed in its top.
+	// A block: a chunky slab with chamfered corners and bevelled top edges,
+	// each face shaded by which way it faces the light (only the faces turned
+	// toward us drawn, so the perspective takes care of itself), and one of the
+	// game's shapes inscribed in its top.
 	function drawBlock(ctx, b) {
 		const alpha = fadeIn(b.f + b.r);
 		const wall = wallOfX(b.x);
 		const shade = (k) => mix(b.colour, k);
+		const bv = BLOCK_LOOK.bevel;
 		const foot = footprint(b);
 		const base = onScreen(foot, wall);
-		const top = onScreen(foot, wall, b.h);
+		const rim = onScreen(foot, wall, b.h - bv);              // where the sides end and the bevel starts
+		const top = onScreen(footprint(b, -bv), wall, b.h);      // the flat top, inset by the bevel
 		const [lx, lf] = BLOCK_LOOK.light;
 		const ll = Math.hypot(lx, lf);
 		const s = scaleAt(b.f);
 		art.save(ctx, function (c) {
 			c.globalAlpha = alpha;
 			c.lineJoin = 'round';
-			for (let i = 0; i < foot.length; i++) {
-				const j = (i + 1) % foot.length;
-				const quad = [base[i], base[j], top[j], top[i]];
-				// turned toward us? (drawn round the right way on screen)
+			// turned toward us? (drawn round the right way on screen)
+			const facing = (quad) => {
 				let area = 0;
 				for (let k = 0; k < 4; k++) area += quad[k][0] * quad[(k + 1) % 4][1] - quad[(k + 1) % 4][0] * quad[k][1];
-				if (area >= 0) continue;
+				return area < 0;
+			};
+			for (let i = 0; i < foot.length; i++) {
+				const j = (i + 1) % foot.length;
 				// its outward normal on the field, against the light
 				const ex = foot[j][0] - foot[i][0];
 				const ef = foot[j][1] - foot[i][1];
 				const el = Math.hypot(ex, ef) || 1;
 				const lit = (ef / el * lx - ex / el * lf) / ll;
-				art.poly(c, quad, { fill: shade(0.8 + 0.22 * lit) });
-				// darker toward the sand
-				const yTop = Math.min(quad[2][1], quad[3][1]);
-				const yBot = Math.max(quad[0][1], quad[1][1]);
-				art.poly(c, quad, { fill: art.linear(c, 0, yTop, 0, yBot, ['rgba(0,0,0,0)', 'rgba(0,0,0,0.16)']) });
-				// a bright edge along its top
-				art.line(c, [quad[3], quad[2]], { stroke: shade(1.45), lineWidth: Math.max(1, 3 * s) });
+				// the side, up to the bevel
+				const side = [base[i], base[j], rim[j], rim[i]];
+				if (facing(side)) {
+					art.poly(c, side, { fill: shade(0.8 + 0.22 * lit) });
+					// darker toward the sand
+					const yTop = Math.min(side[2][1], side[3][1]);
+					const yBot = Math.max(side[0][1], side[1][1]);
+					art.poly(c, side, { fill: art.linear(c, 0, yTop, 0, yBot, ['rgba(0,0,0,0)', 'rgba(0,0,0,0.16)']) });
+				}
+				// the bevel: half facing up, so lighter than the side below it
+				const slope = [rim[i], rim[j], top[j], top[i]];
+				if (facing(slope)) {
+					art.poly(c, slope, { fill: shade(1.02 + 0.2 * lit) });
+					art.line(c, [slope[3], slope[2]], { stroke: shade(1.5), lineWidth: Math.max(1, 2.5 * s) });   // (a bright edge where it meets the top)
+				}
 			}
 			art.poly(c, top, { fill: shade(1.2) });
 			// the shape, inscribed in the top: a groove and its bright inlay
