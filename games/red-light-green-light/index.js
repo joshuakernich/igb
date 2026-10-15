@@ -1650,20 +1650,26 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// RED LIGHT called out on every wall, and the white flash of a shot.
 	// Everyone's score, in little capsules along the bottom of every wall,
 	// rising up off the bottom edge: their colour, their winnings. A score that
-	// just changed pops; anyone out is dimmed.
-	const SCORES = { w: 220, h: 64, gap: 14, sink: 22, size: 34 };   // a capsule's width and height (the part showing), the gap between them, how far it reaches down past the edge, the figures' size
+	// just changed pops; anyone out is dimmed. At the end of a round, while its
+	// banner's up, they rise up the wall and grow, then sink back.
+	const SCORES = { w: 220, h: 64, gap: 14, sink: 22, size: 34, rise: 260, grow: 0.35 };   // a capsule's width and height (the part showing), the gap between them, how far it reaches down past the edge, the figures' size; at a round's end, how far up they rise and how much bigger they get
 	function drawScores(ctx) {
 		const n = contestants.length;
 		if (!n) return;
+		// up for the round's end, staggered, and down again as its banner goes
+		const up = phase === 'cleared' ? (i) => ease(between(phaseT, 0.4 + i * 0.07, 0.9 + i * 0.07)) * (1 - ease(between(phaseT, phaseDur - 0.6, phaseDur - 0.1))) : () => 0;
 		const total = n * SCORES.w + (n - 1) * SCORES.gap;
 		show.onWalls(ctx, function (c) {
 			contestants.forEach(function (k, i) {
 				if (k.shownScore !== k.score) { k.shownScore = k.score; k.scoreAt = wallT; }
 				const pop = 1 + 0.22 * Math.max(0, 1 - (wallT - (k.scoreAt || -9)) / 0.3);
-				const x = W / 2 - total / 2 + i * (SCORES.w + SCORES.gap) + SCORES.w / 2;
-				const y = H - SCORES.h / 2;
-				art.with(c, { x, y, scale: pop, alpha: k.alive ? 1 : 0.45 }, function (c2) {
-					art.roundRect(c2, -SCORES.w / 2, -SCORES.h / 2, SCORES.w, SCORES.h + SCORES.sink, SCORES.h / 2, { fill: 'rgba(12,4,30,0.78)', stroke: PLAYER_COLORS[k.n], lineWidth: 5 });
+				const lift = up(i);
+				const grow = 1 + Math.min(SCORES.grow, Math.max(0, (W - 80) / total - 1)) * lift;   // (never wider than the wall)
+				const x = W / 2 + (i * (SCORES.w + SCORES.gap) + SCORES.w / 2 - total / 2) * grow;
+				const y = H - SCORES.h / 2 - SCORES.rise * lift;
+				const sink = SCORES.sink * (1 - lift);   // (risen clear of the edge, the whole capsule shows)
+				art.with(c, { x, y, scale: pop * grow, alpha: k.alive || lift > 0 ? 1 : 0.45 }, function (c2) {
+					art.roundRect(c2, -SCORES.w / 2, -SCORES.h / 2, SCORES.w, SCORES.h + sink, SCORES.h / 2, { fill: 'rgba(12,4,30,0.78)', stroke: PLAYER_COLORS[k.n], lineWidth: 5 });
 					art.circle(c2, -SCORES.w / 2 + 34, 0, 15, { fill: PLAYER_COLORS[k.n] });
 					art.text(c2, won(k.score), 16, 2, { size: SCORES.size, font: 'Paytone One', weight: 400, fill: 'white' });
 				});
@@ -3414,14 +3420,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 							show.slam(c, 'NOBODY MADE IT', W / 2, 430, 140, phaseT - 0.1, { fill: '#ff3640', glow: '#ff3640', alpha: fade });
 							show.slam(c, 'ROUND ' + (cleared.round + 1) + ' AGAIN!', W / 2, 580, 80, phaseT - 0.5, { fill: 'white', alpha: fade });
 						}
-						// everyone's total so far, in won (ticking up as the bonuses land)
-						const gap = Math.min(270, (W - 160) / Math.max(1, contestants.length));
-						contestants.forEach(function (o, i) {
-							const x = W / 2 + (i - (contestants.length - 1) / 2) * gap;
-							const a = fade * between(phaseT, 0.5 + i * 0.08, 0.8 + i * 0.08);
-							show.text(c, show.nameOf(o.n), x, 720, 40, { fill: show.lit(o.n), alpha: a, fit: gap - 20 });
-							show.text(c, won(o.score), x, 790, 56, { alpha: a, fit: gap - 20 });
-						});
+						// (everyone's totals: their capsules rise up off the bottom, see drawScores)
 					}
 				});
 			},
