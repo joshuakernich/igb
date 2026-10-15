@@ -19,6 +19,8 @@ IGB.manifest = [
 		{ id: 'red-light-green-light', name: 'Red Light Green Light', icon: 'assets/icons/red-light-green-light.png',
 			file: 'games/red-light-green-light/index.js', module: true,
 			box: { color: '#e5287a', bg: '#1d7a63', note: 'SURVIVAL' } },
+		{ id: 'loop-island', name: 'Loop Island', file: 'games/loop-island/index.js', module: true,
+			box: { color: '#ffe14a', bg: '#2f7cf0', note: 'SPEED' } },
 		{ id: 'mingle', name: 'Mingle', icon: 'assets/icons/mingle.png', file: 'games/mingle/index.js', module: true,
 			box: { color: '#e5287a', bg: '#f3a6c8', note: 'SURVIVAL' } },
 		{ id: 'tether-net', name: 'Tether Net',
@@ -147,7 +149,7 @@ IGB.manifest = [
 
 // The only games the menu shows (in their folders above); the rest stay
 // playable by #id. Remove this (or set it to null) to show everything.
-IGB.menu = ['red-light-green-light', 'mingle', 'backrooms', 'gwi-ma-showdown', 'roll-call', 'show-debug'];
+IGB.menu = ['red-light-green-light', 'loop-island', 'mingle', 'backrooms', 'gwi-ma-showdown', 'roll-call', 'show-debug'];
 
 // The music tracks, on or off everywhere: every music-*.mp3 (the show's music
 // included). Tunes the games synthesise (the doll's song, Mingle's waltz),
