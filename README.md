@@ -179,19 +179,48 @@ meep.handLeft.y = 100;          // parts are numbers you can set or tween
 meep) for HTML and CSS 3D scenes. The header of `shared/meep.js` lists every
 part.
 
+### Starting and finishing: Showtime's screens (the default)
+
+Every new prototype asks how many are playing and shows the scores with
+Showtime (`shared/showtime.js`): "HOW MANY PLAYERS?" on the front wall, and
+at the end everyone's score counting up, then a ranking onto the podium.
+`games/_template.js` is wired this way; copy it.
+
+```js
+const show = new Showtime(stage, {
+	id: 'my-game', seconds: 60,
+	players: () => count, scores: () => scores, music: false,
+	theme: { accent, accent2, gold, ink, sky: [top, bottom], glow },   // optional
+});
+show.sequence([
+	{ id: 'squad', length: Infinity },
+	{ id: 'play', length: Infinity },                  // the game
+	show.beats.scores(), show.beats.rank(),
+	{ id: 'done', length: Infinity, world: false, enter() { IGB.complete(scoresToRewards(scores)); } },
+]);
+self.draw = (ctx, time) => show.frame(ctx, dt, drawWorld);   // dt from time
+show.go('squad');
+if (playersMeta) initGame(playersMeta.length); else show.pickPlayers(initGame);
+// initGame: show.go('play'); at the end: show.go('scores')
+```
+
+Games that want the whole show (clock intro, team total, leaderboard,
+replay, rating, carousel) add more of `show.beats`; see the header of
+`shared/showtime.js`.
+
 ### The HUD
 
 ```js
 const hud = new HUD(colour);
 hud.$el.appendTo(stage.$ui);
-hud.initPlayerCount(count => ...);           // "How big is your squad?"
+hud.initPlayerCount(count => ...);           // the old picker (new games use show.pickPlayers)
 hud.initPlayers(meeps);  hud.updatePlayers(meeps);
 hud.initTimer(seconds, onDone);  hud.finiTimer();
 hud.initRound(n, max);  hud.initBanner(text);  hud.finiBanner();
 hud.summonPlayers([0, 2]);  hud.swapPlayers(a, b);
 hud.initTutorial(name, { x, y, msg, icon }, ...);  hud.finiTutorial();
 hud.flashMessage(x, y, text, size);
-hud.showFinalScores(scores, rewards);
+hud.showFinalScores(scores, rewards);        // the old podium (new games use show.beats.scores / rank)
 ```
 
 Positions given to the HUD are in walls: x 0–3 across the three walls, y 0–1
@@ -203,8 +232,7 @@ When a game ends, turn scores into Box Party coins and report them:
 
 ```js
 const rewards = scoresToRewards(scores);    // higher score, more coins
-hud.showFinalScores(scores, rewards);
-stage.timeout(() => IGB.complete(rewards), 5000);
+IGB.complete(rewards);                      // after Showtime's scores and rank (see above)
 ```
 
 On its own this just logs. Inside Box Party it hands the coins back and

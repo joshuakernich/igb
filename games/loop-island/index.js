@@ -5,8 +5,8 @@
  * hundreds of kilometres an hour: through loop-the-loops, corkscrews,
  * banked turns and helixes, past islands of sand and palms. Everyone runs
  * together as a pack of glossy, spiky little speedsters, one in each
- * player's colour, on a road of three lanes. Step left or right in the room
- * to snap to the lane on that side. Grab the gold rings; dodge the spiked
+ * player's colour, across a wide road. Step left or right in the room and
+ * your runner glides across the road to match. Grab the gold rings; dodge the spiked
  * barriers and mines (a spill throws half your rings away); hit a boost pad
  * to curl up into a ball and smash through anything. 90 seconds; the most
  * rings wins.
@@ -14,7 +14,8 @@
  * The three walls are one view from just behind the pack: the front wall
  * looks down the road, the side walls look out to sea either side.
  *
- * Input: px (left / middle / right thirds of the room: the lane).
+ * Input: px (left to right across the room: left to right across the road).
+ * The squad picker and the scores and rankings are Showtime's.
  * An ES module (manifest: module: true).
  */
 import * as THREE from '../../lib/three/three.module.min.js';
@@ -35,7 +36,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	const DURATION = 90;                                 // seconds of running
 	const SPEED = { start: 40, top: 68, ramp: 55 };      // metres a second: at the off, flat out, and seconds to get there
 	const SURGE = { boost: 22, decay: 0.7 };             // a boost pad's extra speed, and how fast it fades
-	const CAM = { back: 9.5, up: 2.9, pitch: 9, look: 16, follow: 0.35 };   // metres behind and above the pack, degrees down, metres it looks ahead, how far it follows the pack across
+	const CAM = { back: 9.5, up: 2.9, pitch: 7, look: 16, follow: 0.35, kick: 3 };   // metres behind and above the pack, degrees down, metres it looks ahead, how far it follows the pack across, metres it drops back on a boost
 	const FOV = 64;                                      // vertical, degrees: 90 across each 16:10 wall, so the walls meet
 	const READY = 4.2;                                   // seconds of the swoop and countdown
 	const START_S = 40;                                  // where the pack starts
@@ -45,8 +46,9 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	const HIT = { tumble: 0.9, safe: 2.2 };              // seconds tumbling after a spill, and seconds safe after
 	const BOOST = 1.6;                                   // seconds curled up in a ball
 	const REACH = { ring: 1.3, hazard: 1.35 };           // metres across that count as touching
-	const SLOT = 2.4;                                    // metres apart for runners sharing a lane
-	const LANE_HYST = 0.07;                              // of the room's width, either side of a lane's edge, before switching
+	const SLOT = 2.4;                                    // metres apart, one behind another, for runners side by side
+	const SPAN = HALF - 0.7;                             // how far either side of the middle a runner can go
+	const GLIDE = 9;                                     // how quickly a runner follows its player across (per second)
 
 	/* ---------- renderer, scene, cameras ---------- */
 
@@ -92,11 +94,13 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	scene.add(sun, sun.target);
 
 	// One eye riding behind the pack: the front camera down the road, the
-	// side cameras square to it, out to sea.
+	// side cameras square to it, out to sea. All three share one tilt and one
+	// field of view (90 degrees across), so they're the sides of one box and
+	// the walls meet seamlessly.
 	const rig = new THREE.Group();
 	scene.add(rig);
+	const PITCH = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -CAM.pitch * Math.PI / 180);
 	const frontCam = new THREE.PerspectiveCamera(FOV, W / H, 0.1, 6000);
-	frontCam.rotation.x = -CAM.pitch * Math.PI / 180;
 	rig.add(frontCam);
 	const sideCams = [Math.PI / 2, -Math.PI / 2].map(function (yaw) {
 		const cam = new THREE.PerspectiveCamera(FOV, W / H, 0.1, 6000);
@@ -364,29 +368,23 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 		return {
 			n, colour, model, trail, TRAIL, history: [],
 			tint: new THREE.Color(colour),
-			px: 0.5, lane: 1, x: 0, xWas: 0,
+			px: 0.5, x: 0, xWas: 0,
 			off: 0, s: START_S, sWas: START_S,
 			rings: 0, bump: 0,
 			tumble: 0, safe: 0, boost: 0,
 		};
 	}
 
-	function laneFor(r) {
-		const zone = r.px * 3;
-		if (Math.abs(zone - (r.lane + 0.5)) > 0.5 + LANE_HYST * 3) {
-			const lane = Math.max(0, Math.min(2, Math.floor(zone)));
-			if (lane !== r.lane) {
-				r.lane = lane;
-				sound.swish(LANES[lane] / HALF);
-			}
-		}
-	}
+	// Where their player is across the room, across the road.
+	const xFor = (r) => (r.px * 2 - 1) * SPAN;
 
-	// Runners sharing a lane line up one behind another.
+	// Runners side by side line up one behind another, so they never overlap.
 	function formation() {
-		for (let lane = 0; lane < 3; lane++) {
-			runners.filter((r) => r.lane === lane).forEach((r, rank) => { r.offWant = -rank * SLOT; });
-		}
+		runners.forEach(function (r, i) {
+			let rank = 0;
+			for (let j = 0; j < i; j++) if (Math.abs(runners[j].x - r.x) < 1.1) rank++;
+			r.offWant = -rank * SLOT;
+		});
 	}
 
 	/* ---------- effects ---------- */
@@ -412,8 +410,15 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	/* ---------- the flow ---------- */
 
 	const sound = createSound();
-	const hud = new HUD('#2f7cf0');
-	hud.$el.appendTo(stage.$ui);
+	const show = new Showtime(stage, {
+		id: 'loop-island',
+		seconds: DURATION,
+		players: () => runners.length,
+		scores: () => runners.map((r) => r.rings),
+		music: false,
+		theme: { accent: '#2f7cf0', accent2: '#3cd6ff', gold: '#ffe14a', ink: '#0a1a3a', sky: ['#04163a', '#0b4f8a'], glow: 'rgba(60,214,255,0.35)' },
+	});
+	let completed = false;
 
 	let phase = 'waiting';       // waiting, ready, run, finish, over
 	let phaseT = 0;
@@ -440,13 +445,13 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 		for (let i = 0; i < count; i++) {
 			const r = Runner(i);
 			r.px = (i + 0.5) / count;
-			r.lane = Math.max(0, Math.min(2, Math.floor(r.px * 3)));
-			r.x = LANES[r.lane];
+			r.x = xFor(r);
 			runners.push(r);
 		}
 		formation();
 		for (const r of runners) r.off = r.offWant;
 		setPhase('ready');
+		show.go('play');
 	}
 
 	function go() {
@@ -460,13 +465,28 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 		sound.music(false);
 	}
 
+	// Showtime's scores, then its ranking onto the podium, then done.
 	function results() {
 		setPhase('over');
-		const scores = runners.map((r) => r.rings);
-		const rewards = scoresToRewards(scores);
-		hud.showFinalScores(scores, rewards);
-		stage.timeout(() => IGB.complete(rewards), 6000);
+		show.go('scores');
 	}
+
+	show.sequence([
+		{ id: 'squad', length: Infinity },
+		{ id: 'play', length: Infinity },
+		show.beats.scores(),
+		show.beats.rank(),
+		{
+			id: 'done',
+			length: Infinity,
+			world: false,
+			enter() {
+				if (completed) return;
+				completed = true;
+				IGB.complete(scoresToRewards(runners.map((r) => r.rings)));
+			},
+		},
+	]);
 
 	/* ---------- every frame ---------- */
 
@@ -526,12 +546,11 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 		const pace = Math.min(1, speed / SPEED.top);
 		formation();
 		for (const r of runners) {
-			if (phase === 'run') laneFor(r);
 			r.off += (r.offWant - r.off) * Math.min(1, dt * 4);
 			r.sWas = r.s;
 			r.s = sPack + r.off;
 			r.xWas = r.x;
-			r.x += (LANES[r.lane] - r.x) * Math.min(1, dt * 13);
+			if (phase === 'run') r.x += (xFor(r) - r.x) * Math.min(1, dt * GLIDE);
 			r.tumble = Math.max(0, r.tumble - dt);
 			r.safe = Math.max(0, r.safe - dt);
 			r.boost = Math.max(0, r.boost - dt);
@@ -611,7 +630,8 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 		qa.slerp(qb, 0.5);
 		up.set(0, 1, 0).applyQuaternion(qa);
 		right.set(1, 0, 0).applyQuaternion(qa);
-		const chasePos = tmp.copy(P).addScaledVector(up, CAM.up).addScaledVector(right, centre * CAM.follow);
+		const chasePos = tmp.copy(P).addScaledVector(up, CAM.up).addScaledVector(right, centre * CAM.follow)
+			.addScaledVector(v3().set(0, 0, 1).applyQuaternion(qa), kick * CAM.kick);   // (a boost leaves the eye behind for a moment)
 		if (phase === 'waiting' || phase === 'ready') {
 			// the swoop: from in front of the pack, looking back at them, round behind
 			const k = phase === 'waiting' ? 0 : Math.max(0, Math.min(1, (phaseT - 0.4) / 2.6));
@@ -631,10 +651,8 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 			eyeReady = true;
 		}
 		rig.position.copy(eye);
-		rig.quaternion.copy(eyeQ);
+		rig.quaternion.copy(eyeQ).multiply(PITCH);
 		if (shake > 0.01) rig.position.add(tmp.set((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake, 0).applyQuaternion(eyeQ));
-		frontCam.fov = FOV + kick * 9 + pace * 3;
-		frontCam.updateProjectionMatrix();
 
 		keepBuilt(sEye);
 
@@ -914,7 +932,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 		}
 
 		if (phase === 'waiting') {
-			art.text(ctx, 'LOOP ISLAND', W * 1.5, 300, { size: 170, font: 'Knewave', fill: '#ffe14a', outline: '#1a0b2e', outlineWidth: 12, drop: 'rgba(0,0,0,0.35)' });
+			art.text(ctx, 'LOOP ISLAND', W * 1.5, 150, { size: 170, font: 'Knewave', fill: '#ffe14a', outline: '#1a0b2e', outlineWidth: 12, drop: 'rgba(0,0,0,0.35)' });
 			return;
 		}
 
@@ -965,8 +983,8 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 		const dt = last === undefined ? 0 : Math.min(0.05, Math.max(0, now - last));
 		last = now;
 		simulate(dt);
-		render();
-		overlay(ctx, dt);
+		if (show.beat === 'squad' || show.beat === 'play') render();
+		show.frame(ctx, dt, (c) => overlay(c, dt));
 	};
 
 	/* ---------- input ---------- */
@@ -981,7 +999,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	self.state = function () {
 		return {
 			phase, phaseT, runT, sPack, speed,
-			runners: runners.map((r) => ({ n: r.n, lane: r.lane, x: r.x, s: r.s, rings: r.rings, boost: r.boost, tumble: r.tumble })),
+			runners: runners.map((r) => ({ n: r.n, x: r.x, s: r.s, rings: r.rings, boost: r.boost, tumble: r.tumble })),
 			ahead: things.filter((t) => !t.taken && t.s > sPack).slice(0, 12).map((t) => ({ type: t.type, s: t.s, x: t.x })),
 			chunks: [...chunks.keys()],
 		};
@@ -990,7 +1008,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	self.fini = function () {
 		sound.close();
 		unlisten();
-		hud.fini();
+		show.fini();
 		world.dispose();
 		renderer.dispose();
 		renderer.forceContextLoss();
@@ -998,6 +1016,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 
 	/* ---------- go ---------- */
 
+	show.go('squad');
 	if (playersMeta) stage.timeout(() => initGame(playersMeta.length));
-	else hud.initPlayerCount(initGame);
+	else show.pickPlayers(initGame);
 });
