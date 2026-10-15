@@ -2363,7 +2363,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		square: 'sheet-guard-square.png',
 		head: 'sheet-doll-head.png',              // her head turning, from the back of it to her face
 	};
-	const SPRITE = { contestant: 136, guard: 150, head: 150, patch: 1.35 };   // heights to draw at (the contestants and guards, feet to top, as the drawn ones; her head, across); how much bigger their number patch is painted
+	const SPRITE = { contestant: 136, guard: 150, head: 150 };   // heights to draw at (the contestants and guards, feet to top, as the drawn ones; her head, across)
 	const sheets = {};   // name: { frames: [{ img, x, y, w, h, patch }], unit } once cut up
 	for (const [name, file] of Object.entries(SHEETS)) {
 		const img = new Image();
@@ -2410,7 +2410,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			crop.height = h;
 			crop.getContext('2d').drawImage(cv, b.x0, b.y0, w, h, 0, 0, w, h);
 			const base = baselines[Math.floor(i / 4)];
-			frames.push({ img: crop, x: b.x0 - b.cx, y: b.y0 - base, w, h, patch: (name === 'run' || name === 'act' || name === 'front') ? findPatch(data, img.width, b, name === 'front') : null });
+			frames.push({ img: crop, x: b.x0 - b.cx, y: b.y0 - base, w, h });
 		});
 		// the size to draw at comes from the first frame (standing, or mid-stride)
 		const f0 = frames[0];
@@ -2432,57 +2432,16 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		return sheet;
 	}
 
-	// The white number patch on a contestant's back (or chest): the biggest
-	// patch of near-white in the middle of the torso, as a box in the frame.
-	function findPatch(data, width, b, front) {
-		const w = b.x1 - b.x0;
-		const h = b.y1 - b.y0;
-		const xa = b.x0 + w * (front ? 0.2 : 0.3);
-		const xb = b.x1 - w * (front ? 0.2 : 0.3);
-		const ya = b.y0 + h * 0.25;
-		const yb = b.y0 + h * 0.62;
-		let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1, n = 0;
-		for (let y = Math.round(ya); y < yb; y++) for (let x = Math.round(xa); x < xb; x++) {
-			const i = (y * width + x) * 4;
-			if (data[i + 3] > 200 && data[i] > 225 && data[i + 1] > 225 && data[i + 2] > 225) {
-				n++;
-				if (x < x0) x0 = x;
-				if (x > x1) x1 = x;
-				if (y < y0) y0 = y;
-				if (y > y1) y1 = y;
-			}
-		}
-		// (too few, or a thin stripe rather than a patch: none)
-		if (n < 40 || x1 - x0 < 8 || y1 - y0 < 6) return null;
-		return { x: x0 - b.x0, y: y0 - b.y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
-	}
-
-	// One frame, feet at (0, 0), so tall (the sheet's first frame at that
-	// height). Returns where its number patch landed, if it has one.
+	// One frame, feet at (0, 0), so tall (the sheet's first frame at that height).
 	function drawFrame(c, name, i, height, flip = false) {
 		const sheet = sheets[name];
 		const f = sheet && sheet.frames[i];
-		if (!f) return null;
+		if (!f) return;
 		const k = height / sheet.unit;
 		c.save();
 		if (flip) c.scale(-1, 1);
 		c.drawImage(f.img, f.x * k, f.y * k, f.w * k, f.h * k);
 		c.restore();
-		if (!f.patch) return null;
-		const px = (f.x + f.patch.x) * k;
-		return { x: flip ? -px - f.patch.w * k : px, y: (f.y + f.patch.y) * k, w: f.patch.w * k, h: f.patch.h * k };
-	}
-
-	// A contestant's number on their patch, in their colour, a little bigger
-	// than the patch so it reads across the room.
-	function paintPatch(c, p, n, number) {
-		if (!p) return;
-		const cx = p.x + p.w / 2;
-		const cy = p.y + p.h / 2;
-		const w = Math.max(p.w, 22) * SPRITE.patch;
-		const h = Math.max(p.h, 15) * SPRITE.patch;
-		art.roundRect(c, cx - w / 2, cy - h / 2, w, h, 3, { fill: PLAYER_COLORS[n], stroke: INK, lineWidth: 1.5 });
-		art.text(c, number, cx, cy + 1, { size: h * 0.72, font: 'Rubik', weight: 800, fill: 'white', outline: INK, outlineWidth: 2 });
 	}
 
 	// The frame for a contestant in play, from behind.
@@ -2497,8 +2456,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			name = 'run';
 			i = Math.floor(((k.walk / (Math.PI * 2)) % 1 + 1) % 1 * 8);
 		}
-		const patch = drawFrame(c, name, i, SPRITE.contestant);
-		if (!k.fall && !(k.down > 0)) paintPatch(c, patch, k.n, k.number);
+		drawFrame(c, name, i, SPRITE.contestant);
 	}
 
 	function contestant(c, k) {
@@ -2547,9 +2505,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		art.line(c, [[-18, -84], [-18, -44]], { stroke: 'white', lineWidth: 3 });
 		art.line(c, [[18, -84], [18, -44]], { stroke: 'white', lineWidth: 3 });
 		art.line(c, [[-13, -89], [13, -89]], { stroke: 'white', lineWidth: 4, lineCap: 'round' });
-		// the number on the back
+		// the patch on the back
 		art.roundRect(c, -14, -80, 28, 19, 3, { fill: 'white' });
-		art.text(c, k.number, 0, -70, { size: 14, font: 'Rubik', weight: 800, fill: INK });
 		// head from behind: black hair, ears peeking out
 		art.rect(c, -6, -98, 12, 9, { fill: SKIN });
 		for (const side of [-1, 1]) art.ellipse(c, side * 21, -110, 5, 7, { fill: SKIN });
@@ -2568,7 +2525,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			softShadow(c, 0, 0, 28, 8, 0.3);
 			// stand; cheer; win: jumping for joy and the victory pose, by turns
 			const i = pose === 'cheer' ? 2 : pose === 'win' ? (Math.floor(wallT * 2.5 + n) % 2 ? 3 : 4) : 0;
-			paintPatch(c, drawFrame(c, 'front', i, SPRITE.contestant), n, NUMBERS[n] || String(n + 1).padStart(3, '0'));
+			drawFrame(c, 'front', i, SPRITE.contestant);
 			return;
 		}
 		const TEAL = '#1f8a6e';
@@ -2600,7 +2557,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		art.rect(c, -1, -86, 2, 44, { fill: 'rgba(255,255,255,0.55)' });
 		art.poly(c, [[-13, -90], [0, -80], [13, -90]], { fill: 'white' });
 		art.roundRect(c, -19, -74, 17, 13, 2, { fill: 'white' });
-		art.text(c, NUMBERS[n] || String(n + 1).padStart(3, '0'), -10.5, -67.5, { size: 10, font: 'Rubik', weight: 800, fill: INK });
 		// the head: black hair, a round face, a fringe
 		art.rect(c, -6, -98, 12, 9, { fill: SKIN });
 		art.circle(c, 0, -116, 23, { fill: '#1a1612' });
