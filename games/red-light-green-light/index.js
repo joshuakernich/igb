@@ -1649,7 +1649,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// Over the camera, never zoomed: the doll-head insets, GREEN LIGHT /
 	// RED LIGHT called out on every wall, and the white flash of a shot.
 	// Everyone's score, in little capsules along the bottom of every wall,
-	// rising up off the bottom edge: edged in their colour, their winnings. A score that
+	// rising up off the bottom edge: their colour, their winnings. A score that
 	// just changed pops; anyone out is dimmed. At the end of a round, while its
 	// banner's up, they rise up the wall and grow, then sink back.
 	const SCORES = { w: 220, h: 64, gap: 14, sink: 22, size: 34, rise: 260, grow: 0.35 };   // a capsule's width and height (the part showing), the gap between them, how far it reaches down past the edge, the figures' size; at a round's end, how far up they rise and how much bigger they get
@@ -1669,8 +1669,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				const y = H - SCORES.h / 2 - SCORES.rise * lift;
 				const sink = SCORES.sink * (1 - lift);   // (risen clear of the edge, the whole capsule shows)
 				art.with(c, { x, y, scale: pop * grow, alpha: k.alive || lift > 0 ? 1 : 0.45 }, function (c2) {
-					art.roundRect(c2, -SCORES.w / 2, -SCORES.h / 2, SCORES.w, SCORES.h + sink, SCORES.h / 2, { fill: 'rgba(12,4,30,0.78)', stroke: PLAYER_COLORS[k.n], lineWidth: 5 });
-					art.text(c2, won(k.score), 0, 2, { size: SCORES.size, font: 'Paytone One', weight: 400, fill: 'white' });
+					art.roundRect(c2, -SCORES.w / 2, -SCORES.h / 2, SCORES.w, SCORES.h + sink, SCORES.h / 2, { fill: PLAYER_COLORS[k.n] });
+					art.text(c2, won(k.score), 0, 2, { size: SCORES.size, font: 'Paytone One', weight: 400, fill: 'white', shadow: { color: 'rgba(0,0,0,0.35)', blur: 0, y: 2 } });
 				});
 			});
 		});
