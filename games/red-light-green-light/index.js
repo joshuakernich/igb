@@ -144,7 +144,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		steps: [
 			{ id: 'move', caption: 'MOVE LEFT AND RIGHT', min: 2.5, max: 5 },
 			{ id: 'step', caption: 'STEP FORWARD AND BACK', min: 2.5, max: 5 },
-			{ id: 'cash', caption: 'GRAB THE CASH', min: 2.5, max: 10 },
+			{ id: 'cash', caption: 'GRAB THE CASH', min: 2, max: 6 },
 			{ id: 'freeze', caption: 'FREEZE ON RED LIGHT', min: 5.6, max: 6.5 },
 			{ id: 'jump', caption: 'JUMP PADS SWITCH YOUR WALL', min: 2, max: 8 },
 		],
@@ -153,7 +153,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		stepped: 0.3,         // and how far toward and away from it
 		red: [1.5, 5.0],      // the practice red light: on, then off (no shooting)
 		cashEvery: 160,       // practice cash, every so far up each wall
-		grab: 2,              // wads each player picks up to pass the cash step
+		grab: 1,              // wads each player picks up to pass the cash step
 	};
 
 	/* ---------- tuning: the doll's entrance ---------- */
