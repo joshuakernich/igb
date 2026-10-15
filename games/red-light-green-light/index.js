@@ -76,8 +76,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const LANE = 30;            // contestants keep this far inside their wall's ends
 	const WALL_ORDER = [1, 0, 2];             // hazards are shared out front, left, right, front...
 	const BLOCK = 116;                        // a square block, side to side: scattered in short runs (a run is one long block)
-	const BLOCK_LOOK = { chamfer: 0.1, bevel: 8, symbol: 0.48, line: 7, light: [-0.6, 0.8] };   // its corners cut off (a share of its depth); its top edges bevelled this much (field units); the shape on top (a share of its depth); that shape's line width; where the light comes from across the field (left, far)
-	const SHADOW = { x: 0.55, f: -0.7, layers: 6, dark: 0.075, spread: 16, contact: 0.2 };   // a block's shadow: how far it falls across and down the field for its height; soft layers; each one's darkness; how much it blurs out toward its tip; the dark line where it meets the sand
+	const BLOCK_LOOK = { chamfer: 0.1, bevel: 8, symbol: 0.48, line: 7, light: [0, 1] };   // its corners cut off (a share of its depth); its top edges bevelled this much (field units); the shape on top (a share of its depth); that shape's line width; where the light comes from across the field (straight from the far end, so shadows fall straight down the walls)
+	const SHADOW = { x: 0, f: -0.7, layers: 6, dark: 0.075, spread: 16, contact: 0.2 };   // a block's shadow: how far it falls across and down the field for its height; soft layers; each one's darkness; how much it blurs out toward its tip; the dark line where it meets the sand
 	const SENTRY_END = 260;                   // the side walls' far ends belong to the armed guards
 
 	// Where a guard or marble on a wall may roam: that wall only, so nothing
@@ -97,7 +97,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const INSET = { x: 2 * W - 150, y: 125, r: 92, side: 205 };   // the doll-head inset: top right of the front wall; on the side walls (at y side), under the clock
 
 	// Jump pads and cash
-	const PAD = { rx: 70, rf: 70, every: 420, open: 72, throw: 260, sink: 9 };   // a trapdoor's half-width and half-depth (square); one every so far up the track (field units); how far it springs open (degrees); how high it throws you; how far its lid sits sunk below the sand
+	const PAD = { rx: 70, rf: 70, every: 420, open: 72, throw: 260, sink: 9, chamfer: 0.2 };   // a trapdoor's half-width and half-depth (square); one every so far up the track (field units); how far it springs open (degrees); how high it throws you; how far its lid sits sunk below the sand; its corners cut off (a share of its half-width)
 	const CASH = { every: 300, reach: 60, size: 1.8, float: 50, bob: 22 };   // every so far up each wall; how close to grab it; its size, float height and bob
 	const MAGNET = { every: 1400, time: 2.5, radius: 480, pull: 1200 };   // a magnet every so far up each wall; seconds it lasts; how far it reaches; how fast cash comes
 	const BOULDER = { from: 1, gap: [4, 9], quicker: 0.9, r: [75, 105], speed: [320, 440], ahead: 1700, lead: 900, down: 1.2, spill: 3 };   // boulders from this round (0 is round 1); seconds between them, shrinking by this much a round; their size; how fast they roll; how far up the field they start (and never nearer the players than lead); seconds flattened; wads of cash spilled
@@ -2087,7 +2087,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			return;
 		}
 		const R = rx * 1.3;
-		art.with(ctx, { x: x + rx * 0.12, y, scaleY: ry / rx }, function (c) {
+		art.with(ctx, { x, y: y + ry * 0.15, scaleY: ry / rx }, function (c) {
 			art.circle(c, 0, 0, R, { fill: art.radial(c, 0, 0, 0, R, [[0, `rgba(10,5,20,${dark * 1.4})`], [0.45, `rgba(10,5,20,${dark})`], [1, 'rgba(10,5,20,0)']]), alpha });
 		});
 	}
@@ -2353,7 +2353,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const appear = Math.min(1, p.age / 0.35);
 		const beat = 0.5 + 0.5 * Math.sin(padPulse + p.x * 0.01);
 		const R = PAD.rx * appear;
-		const sq = (r) => onScreen(ring([[p.x - r, p.f - r], [p.x + r, p.f - r], [p.x + r, p.f + r], [p.x - r, p.f + r]]), wall);
+		const sq = (r) => {
+			const k = r * PAD.chamfer;   // (its corners cut off)
+			return onScreen(ring([[p.x - r + k, p.f - r], [p.x + r - k, p.f - r], [p.x + r, p.f - r + k], [p.x + r, p.f + r - k], [p.x + r - k, p.f + r], [p.x - r + k, p.f + r], [p.x - r, p.f + r - k], [p.x - r, p.f - r + k]]), wall);
+		};
 		art.save(ctx, function (c) {
 			c.globalAlpha = fadeIn(p.f);
 			// the hole: dark, a faint glow down in it
@@ -2400,16 +2403,32 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const P = (x, f, up) => { const q = at(x, f, up - PAD.sink, wall); return [q.x, q.y]; };   // (hinged down in its hole)
 		// u from its free edge (0) to the hinge (1); v up the field, -1 to 1
 		const at2 = (u, v) => P(hingeX - dir * (1 - u) * 2 * R * Math.cos(a), p.f + v * R, (1 - u) * 2 * R * Math.sin(a));
-		// its outline, as points along each edge, so it bends with the field
-		const n = curving(p.f + R) ? 8 : 1;
+		// its outline, corners cut off like the hole's, as points along each
+		// edge so it bends with the field
+		const cu = PAD.chamfer / 2;   // (u runs over the whole width, v over half of it)
+		const cv = PAD.chamfer;
+		const corners = [[0, -1 + cv], [0, 1 - cv], [cu, 1], [1 - cu, 1], [1, 1 - cv], [1, -1 + cv], [1 - cu, -1], [cu, -1]];
+		const n = curving(p.f + R) ? 6 : 1;
 		const quad = [];
-		for (let k = 0; k < n; k++) quad.push(at2(0, -1 + 2 * k / n));
-		for (let k = 0; k < n; k++) quad.push(at2(k / n, 1));
-		for (let k = 0; k < n; k++) quad.push(at2(1, 1 - 2 * k / n));
-		for (let k = 0; k < n; k++) quad.push(at2(1 - k / n, -1));
+		corners.forEach(function ([u0, v0], i) {
+			const [u1, v1] = corners[(i + 1) % corners.length];
+			const steps = i % 2 ? 1 : n;   // (the long sides divided, the short cut corners not)
+			for (let k = 0; k < steps; k++) quad.push(at2(u0 + (u1 - u0) * k / steps, v0 + (v1 - v0) * k / steps));
+		});
 		// (flipping toward the light it brightens; away from it, it darkens)
 		const shade = 1 + open * (dir > 0 ? 0.08 : -0.28);
 		art.poly(c, quad, { fill: mix('#dcb47c', shade) });
+		// shading: lit from the far end, falling off toward us, darker still
+		// down its near edge and toward the hinge side it sinks on
+		const ys = quad.map(([, y]) => y);
+		const yTop = Math.min(...ys);
+		const yBot = Math.max(...ys);
+		art.poly(c, quad, { fill: art.linear(c, 0, yTop, 0, yBot, ['rgba(255,244,220,0.28)', 'rgba(255,244,220,0)', 'rgba(70,40,15,0.12)', 'rgba(70,40,15,0.32)']) });
+		const xs = quad.map(([x]) => x);
+		const xa = Math.min(...xs);
+		const xb = Math.max(...xs);
+		const dark = 'rgba(70,40,15,0.18)';
+		art.poly(c, quad, { fill: art.linear(c, xa, 0, xb, 0, dir > 0 ? ['rgba(70,40,15,0)', 'rgba(70,40,15,0)', dark] : [dark, 'rgba(70,40,15,0)', 'rgba(70,40,15,0)']) });
 		// grains and little stones, the same each time for this door
 		if (!p.grains) p.grains = Array.from({ length: 22 }, () => [Math.random(), Math.random() * 2 - 1, 1 + Math.random() * 2.5, Math.random() < 0.5]);
 		const s = at(p.x, p.f, 0, wall).s;
