@@ -76,7 +76,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const LANE = 30;            // contestants keep this far inside their wall's ends
 	const WALL_ORDER = [1, 0, 2];             // hazards are shared out front, left, right, front...
 	const BLOCK = 116;                        // a square block, side to side: scattered in short runs (a run is one long block)
-	const BLOCK_LOOK = { chamfer: 0.22, bevel: 16, symbol: 0.48, line: 7, light: [-0.6, 0.8] };   // its corners cut off (a share of its depth); its top edges bevelled this much (field units); the shape on top (a share of its depth); that shape's line width; where the light comes from across the field (left, far)
+	const BLOCK_LOOK = { chamfer: 0.1, bevel: 8, symbol: 0.48, line: 7, light: [-0.6, 0.8] };   // its corners cut off (a share of its depth); its top edges bevelled this much (field units); the shape on top (a share of its depth); that shape's line width; where the light comes from across the field (left, far)
 	const SHADOW = { x: 0.55, f: -0.7, layers: 6, dark: 0.075, spread: 16, contact: 0.2 };   // a block's shadow: how far it falls across and down the field for its height; soft layers; each one's darkness; how much it blurs out toward its tip; the dark line where it meets the sand
 	const SENTRY_END = 260;                   // the side walls' far ends belong to the armed guards
 
