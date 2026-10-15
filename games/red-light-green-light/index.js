@@ -2483,6 +2483,57 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		});
 	}
 
+	// The collectibles, drawn in ChatGPT (items.png: cash, magnet, money bag
+	// and a marble, two by two), each trimmed and its outline peeled off when
+	// it loads. Until then they're drawn as before.
+	const ITEM = { file: 'items.png', cash: 64, magnet: 54, bag: 78, bagSize: 1.5 };   // how wide each is drawn (before the bag's extra size); how much bigger a money bag is
+	const items = {};
+	(function () {
+		const img = new Image();
+		img.onload = function () {
+			try {
+				const cv = document.createElement('canvas');
+				cv.width = img.width;
+				cv.height = img.height;
+				const g = cv.getContext('2d');
+				g.drawImage(img, 0, 0);
+				const data = g.getImageData(0, 0, img.width, img.height).data;
+				['cash', 'magnet', 'bag', 'marble'].forEach(function (name, i) {
+					const cx0 = (i % 2) * img.width / 2;
+					const cy0 = Math.floor(i / 2) * img.height / 2;
+					let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1;
+					for (let y = Math.round(cy0) + 2; y < cy0 + img.height / 2 - 2; y += 2) for (let x = Math.round(cx0) + 2; x < cx0 + img.width / 2 - 2; x += 2) {
+						if (data[(y * img.width + x) * 4 + 3] <= 60) continue;
+						if (x < x0) x0 = x;
+						if (x > x1) x1 = x;
+						if (y < y0) y0 = y;
+						if (y > y1) y1 = y;
+					}
+					if (x1 < 0) return;
+					const w = x1 - x0 + 2;
+					const h = y1 - y0 + 2;
+					const crop = document.createElement('canvas');
+					crop.width = w;
+					crop.height = h;
+					crop.getContext('2d').drawImage(cv, x0, y0, w, h, 0, 0, w, h);
+					stripOutline(crop);
+					items[name] = { img: crop, w, h };
+				});
+			} catch (e) { /* (unreadable: drawn as before) */ }
+		};
+		img.src = 'assets/red-light-green-light/' + ITEM.file;
+	})();
+
+	// One of them, so wide, sitting on (0, 0) (where the drawn one would).
+	function drawItem(c, name) {
+		const it = items[name];
+		if (!it) return false;
+		const w = ITEM[name];
+		const h = w * it.h / it.w;
+		c.drawImage(it.img, -w / 2, 8 - h, w, h);
+		return true;
+	}
+
 	// A wad of cash: a stack of green notes with a paper band, floating above
 	// the sand and bobbing up and down, its shadow shrinking as it rises.
 	function drawCash(ctx, m) {
@@ -2497,6 +2548,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const lift = (CASH.float + CASH.bob * rise + (m.fly ? BAG.arc * 4 * k * (1 - k) : 0)) * p.s;
 		softShadow(ctx, p.x, p.y, 26 * s * (1 - 0.25 * rise), 8 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 40 * s, m.f);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: -0.35 + Math.sin(m.spin * 1.3) * 0.1 }, function (c) {
+			if (drawItem(c, 'cash')) return;
 			// seen at an angle: tipped back and skewed, a stack of notes with depth
 			c.transform(1, 0, -0.45, 0.72, 0, 0);
 			for (let i = 2; i >= 0; i--) {
@@ -2521,6 +2573,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const lift = (CASH.float + CASH.bob * rise) * p.s;
 		softShadow(ctx, p.x, p.y, 22 * s * (1 - 0.25 * rise), 7 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 40 * s, g.f);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: Math.sin(g.spin * 1.6) * 0.25 }, function (c) {
+			if (drawItem(c, 'magnet')) return;
 			c.save();
 			c.lineCap = 'butt';
 			c.lineWidth = 12;
@@ -2550,8 +2603,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const s = p.s * CASH.size;
 		const rise = 0.5 + 0.5 * Math.sin(g.spin * 2.4);
 		const lift = (CASH.float + CASH.bob * rise) * p.s;
-		softShadow(ctx, p.x, p.y, 30 * s * (1 - 0.25 * rise), 9 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 60 * s, g.f);
-		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: Math.sin(g.spin * 1.4) * 6 }, function (c) {
+		const big = ITEM.bagSize;   // (a money bag is bigger than the rest)
+		softShadow(ctx, p.x, p.y, 30 * s * big * (1 - 0.25 * rise), 9 * s * big * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 60 * s * big, g.f);
+		art.with(ctx, { x: p.x, y: p.y - lift, scale: s * big, rotate: Math.sin(g.spin * 1.4) * 6 }, function (c) {
+			if (drawItem(c, 'bag')) return;
 			// the sack: wide at the bottom, gathered in at the neck
 			c.beginPath();
 			c.moveTo(-10, -52);
