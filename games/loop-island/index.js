@@ -14,7 +14,8 @@
  * The three walls are one view from just behind the pack: the front wall
  * looks down the road, the side walls look out to sea either side.
  *
- * Input: px (left to right across the room: left to right across the road).
+ * Input: px (left to right across the room: left to right across the road),
+ * pz (toward the front wall: further up the road, ahead of the pack).
  * The squad picker and the scores and rankings are Showtime's.
  * An ES module (manifest: module: true).
  */
@@ -36,7 +37,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	const DURATION = 90;                                 // seconds of running
 	const SPEED = { start: 40, top: 68, ramp: 55 };      // metres a second: at the off, flat out, and seconds to get there
 	const SURGE = { boost: 22, decay: 0.7 };             // a boost pad's extra speed, and how fast it fades
-	const CAM = { back: 9.5, up: 2.9, pitch: 7, look: 16, follow: 0.35, kick: 3 };   // metres behind and above the pack, degrees down, metres it looks ahead, how far it follows the pack across, metres it drops back on a boost
+	const CAM = { back: 12, up: 2.9, pitch: 7, look: 16, follow: 0.35, kick: 3 };   // metres behind and above the pack, degrees down, metres it looks ahead, how far it follows the pack across, metres it drops back on a boost
 	const FOV = 64;                                      // vertical, degrees: 90 across each 16:10 wall, so the walls meet
 	const READY = 4.2;                                   // seconds of the swoop and countdown
 	const START_S = 40;                                  // where the pack starts
@@ -46,7 +47,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	const HIT = { tumble: 0.9, safe: 2.2 };              // seconds tumbling after a spill, and seconds safe after
 	const BOOST = 1.6;                                   // seconds curled up in a ball
 	const REACH = { ring: 1.3, hazard: 1.35 };           // metres across that count as touching
-	const SLOT = 2.4;                                    // metres apart, one behind another, for runners side by side
+	const DEPTH = { back: -6, front: 6 };                // metres behind and ahead of the pack's middle, at the back of the room and at the front wall
 	const SPAN = HALF - 0.7;                             // how far either side of the middle a runner can go
 	const GLIDE = 9;                                     // how quickly a runner follows its player across (per second)
 
@@ -368,7 +369,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 		return {
 			n, colour, model, trail, TRAIL, history: [],
 			tint: new THREE.Color(colour),
-			px: 0.5, x: 0, xWas: 0,
+			px: 0.5, pz: 0.5, x: 0, xWas: 0,
 			off: 0, s: START_S, sWas: START_S,
 			rings: 0, bump: 0,
 			tumble: 0, safe: 0, boost: 0,
@@ -378,14 +379,9 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	// Where their player is across the room, across the road.
 	const xFor = (r) => (r.px * 2 - 1) * SPAN;
 
-	// Runners side by side line up one behind another, so they never overlap.
-	function formation() {
-		runners.forEach(function (r, i) {
-			let rank = 0;
-			for (let j = 0; j < i; j++) if (Math.abs(runners[j].x - r.x) < 1.1) rank++;
-			r.offWant = -rank * SLOT;
-		});
-	}
+	// Where their player is between the back of the room and the front wall,
+	// up the road.
+	const offFor = (r) => DEPTH.back + (DEPTH.front - DEPTH.back) * r.pz;
 
 	/* ---------- effects ---------- */
 
@@ -448,8 +444,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 			r.x = xFor(r);
 			runners.push(r);
 		}
-		formation();
-		for (const r of runners) r.off = r.offWant;
+		for (const r of runners) r.off = offFor(r);
 		setPhase('ready');
 		show.go('play');
 	}
@@ -544,9 +539,8 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 
 		// the runners
 		const pace = Math.min(1, speed / SPEED.top);
-		formation();
 		for (const r of runners) {
-			r.off += (r.offWant - r.off) * Math.min(1, dt * 4);
+			if (phase === 'run') r.off += (offFor(r) - r.off) * Math.min(1, dt * GLIDE);
 			r.sWas = r.s;
 			r.s = sPack + r.off;
 			r.xWas = r.x;
@@ -992,6 +986,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	self.setPlayers = function (p) {
 		runners.forEach(function (r, i) {
 			if (p[i] && p[i].px !== undefined) r.px = Math.max(0, Math.min(1, p[i].px));
+			if (p[i] && p[i].pz !== undefined) r.pz = Math.max(0, Math.min(1, p[i].pz));   // (1 at the front wall, 0 at the back)
 		});
 	};
 
