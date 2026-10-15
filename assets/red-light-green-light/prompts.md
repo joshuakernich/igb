@@ -102,3 +102,52 @@ Notes:
   checkerboard)" fixed it.
 - Everything was downscaled with sips afterwards: single sprites to 512 px,
   the tree and doll body to 900 px tall, sheets and backdrops to 1280 px wide.
+
+# Character sprite sheets
+
+Animation sheets for every character, laid out as an even grid (2 rows of 4
+cells, each frame centred in its cell, the same scale throughout) so the game
+can cut them up by cell. Shared style for these, matching the game's current
+look rather than the cel-shaded set above:
+
+> Clean 2D game sprite sheet in a flat cartoon vector style: bold simple
+> shapes, flat colours with one soft shadow tone, a thin dark outline. 8
+> frames in a grid of 2 rows by 4 columns, each frame centred in its own
+> equal cell with the feet on the same baseline, the same character at the
+> same scale in every frame. Genuinely transparent background (real PNG
+> alpha, no checkerboard), no ground, no cast shadows, no text, no grid
+> lines, no frame numbers. Landscape 1536x1024.
+
+- **sheet-contestant-run.png**: a contestant in a loose teal-green tracksuit
+  (#1f8a6e, shadow #17705a) with white side stripes, white plimsolls, short
+  dark hair and a plain white rectangle patch on the back (no number), seen
+  from BEHIND and slightly above, running away from us: a smooth 8-frame run
+  cycle (contact, down, pass, up, for each leg).
+- **sheet-contestant-actions.png**: the same contestant from behind and
+  slightly above: 1) standing still, 2) frozen stiff with arms stuck out
+  sideways at 55 degrees, 3) frozen but wobbling, leaning left, 4) wobbling
+  leaning right, 5) jumping up, 6) landing in a crouch, 7) shot, falling
+  backward with arms flung up, 8) lying face down on the ground.
+- **sheet-contestant-front.png**: the same contestant from the FRONT,
+  friendly simple face, blank white chest patch: 1) standing, 2) waving, 3)
+  cheering with both fists up, 4) jumping for joy, 5) victory pose pointing
+  up, 6) disappointed slump, 7) knocked out flat on their back, 8) running
+  toward us.
+- **sheet-guard-circle.png**: an arena guard in a hot-pink hooded jumpsuit (#e5287a,
+  shadow #a8185a), black belt and boots, a smooth black mask with a white
+  circle symbol, holding a black rifle, seen from the side facing RIGHT: 1-4)
+  a 4-frame walk cycle with the rifle held across the body, 5) standing at
+  attention, 6) raising the rifle to aim, 7) firing with a small muzzle flash,
+  8) lowering the rifle after the shot.
+- **sheet-doll-head.png**: the giant playground doll's head (round pale face,
+  small beady black eyes, rosy cheeks, black bob with straight fringe, two
+  short pigtails with orange bobbles), turning on the spot from facing fully
+  AWAY (only hair) to facing us, in 8 even steps of the turn: 1) back of the
+  head, 2-7) turning by quarter-steps through the side view, 8) face on.
+- **sheet-guard-triangle.png** and **sheet-guard-square.png**: the same guard
+  sheet again with a white triangle, then a white square, on the mask.
+
+Notes: generated 2026-10-16 in one ChatGPT chat, then shrunk to 1280x853
+with sips. Each sheet is an even 2x4 grid, so frame n (0-7) is the cell at
+column n % 4, row floor(n / 4). The doll's turn bunches up: frames 4-7 are all
+nearly face-on. They aren't used by the game yet.
