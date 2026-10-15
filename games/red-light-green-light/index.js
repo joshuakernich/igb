@@ -466,7 +466,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	// The voice's hall: the ElevenLabs lines play as they are (dry), and also
 	// into a big reverb, added live here (the files are left untouched).
-	const REVERB = { seconds: 2.8, decay: 2.8, wet: 0.45, dry: 1 };   // the tail's length, how fast it dies (higher: faster), how much of it
+	const REVERB = { seconds: 1.6, decay: 3.2, wet: 0.45, dry: 1 };   // the tail's length, how fast it dies (higher: faster), how much of it
 	let hallAudio = null;
 	function hall(el) {
 		if (!el || el.dataset.hall) return;
