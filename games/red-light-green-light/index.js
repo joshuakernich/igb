@@ -2212,13 +2212,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const phase = ((walk / (Math.PI * 2)) % 1 + 1) % 1;
 			const pick = {
 				head,
-				pose: muzzle > 0 ? 'aim' : walk ? 'walk' + (1 + Math.floor(phase * 4)) : 'stand',
+				pose: muzzle > 0 ? 'fire' : walk ? 'walk' + (1 + Math.floor(phase * 6)) : 'stand',
 				bob: walk ? Math.abs(Math.sin(walk)) * 5 : 0,
 			};
-			if (assemble(c, rigs.guard, pick)) {
-				if (muzzle > 0) art.poly(c, star(GUN.muzzle[0], GUN.muzzle[1], 22, 9, 8), { fill: '#ffe066' });
-				return;
-			}
+			if (assemble(c, rigs.guard, pick)) return;   // (its firing pose has the muzzle flash)
 		}
 		const name = mask === 'triangle' || mask === 'square' ? mask : 'circle';
 		if (sheets[name]) {
@@ -2483,10 +2480,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		});
 	}
 
-	// The collectibles, drawn in ChatGPT (items.png: cash, magnet, money bag
-	// and a marble, two by two), each trimmed and its outline peeled off when
-	// it loads. Until then they're drawn as before.
-	const ITEM = { file: 'items.png', cash: 64, magnet: 54, bag: 78, bagSize: 1.5 };   // how wide each is drawn (before the bag's extra size); how much bigger a money bag is
+	// The collectibles, drawn in ChatGPT (v2-items.png: cash, magnet, money
+	// bag and a marble, two by two), each trimmed when it loads. Until then
+	// they're drawn as before.
+	const ITEM = { file: 'v2-items.png', cash: 64, magnet: 54, bag: 78, bagSize: 1.5 };   // how wide each is drawn (before the bag's extra size); how much bigger a money bag is
 	const items = {};
 	(function () {
 		const img = new Image();
@@ -2516,8 +2513,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					crop.width = w;
 					crop.height = h;
 					crop.getContext('2d').drawImage(cv, x0, y0, w, h, 0, 0, w, h);
-					stripOutline(crop);
-					items[name] = { img: crop, w, h };
+							items[name] = { img: crop, w, h };
 				});
 			} catch (e) { /* (unreadable: drawn as before) */ }
 		};
@@ -2670,52 +2666,21 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		circle: 'sheet-guard-circle.png',         // 4-frame walk, attention, aim, fire, lower (facing right)
 		triangle: 'sheet-guard-triangle.png',
 		square: 'sheet-guard-square.png',
-		head: 'sheet-doll-head.png',              // her head turning, from the back of it to her face
+		head: 'v2-doll-head.png',                 // her head turning in 16 steps, from the back of it to her face (4 by 4)
 	};
 	const SPRITE = { contestant: 112, guard: 124, head: 150 };   // heights to draw at (the contestants and guards, feet to top, as the drawn ones; her head, across)
 	const sheets = {};   // name: { frames: [{ img, x, y, w, h, patch }], unit } once cut up
 	for (const [name, file] of Object.entries(SHEETS)) {
 		const img = new Image();
 		img.onload = function () {
-			try { sheets[name] = slice(img, name); } catch (e) { /* (unreadable: keep drawing them) */ }
+			try { sheets[name] = slice(img, name, name === 'head' ? 4 : 2); } catch (e) { /* (unreadable: keep drawing them) */ }
 		};
 		img.src = 'assets/red-light-green-light/' + file;
 	}
 
-	// The drawings come with a dark ink outline round them; peel it off: a
-	// few passes, each clearing the near-black pixels on the outside edge
-	// (next to a clear one), so the outline goes and the figure's own colours
-	// show to its edge. (Lines drawn inside the figure stay.)
-	const OUTLINE = { passes: 4, dark: 75 };   // how many pixels deep to peel; how dark (0-255, brightest channel) counts as outline
-	function stripOutline(canvas) {
-		const w = canvas.width;
-		const h = canvas.height;
-		const g = canvas.getContext('2d');
-		const im = g.getImageData(0, 0, w, h);
-		const d = im.data;
-		const clear = (x, y) => x < 0 || y < 0 || x >= w || y >= h || d[(y * w + x) * 4 + 3] < 40;
-		for (let pass = 0; pass < OUTLINE.passes; pass++) {
-			const peel = [];
-			for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-				const i = (y * w + x) * 4;
-				if (d[i + 3] < 40) continue;
-				if (Math.max(d[i], d[i + 1], d[i + 2]) > OUTLINE.dark) continue;
-				if (clear(x - 1, y) || clear(x + 1, y) || clear(x, y - 1) || clear(x, y + 1)) peel.push(i);
-			}
-			if (!peel.length) break;
-			for (const i of peel) d[i + 3] = 0;
-		}
-		// and soften what's left of the edge, half-clearing the pixels now on it
-		for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-			const i = (y * w + x) * 4;
-			if (d[i + 3] >= 40 && (clear(x - 1, y) || clear(x + 1, y) || clear(x, y - 1) || clear(x, y + 1))) d[i + 3] = Math.min(d[i + 3], 140);
-		}
-		g.putImageData(im, 0, 0);
-	}
-
-	function slice(img, name) {
+	function slice(img, name, rows = 2) {
 		const cw = img.width / 4;
-		const ch = img.height / 2;
+		const ch = img.height / rows;
 		const cv = document.createElement('canvas');
 		cv.width = img.width;
 		cv.height = img.height;
@@ -2726,7 +2691,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const frames = [];
 		const baselines = [];
 		const boxes = [];
-		for (let i = 0; i < 8; i++) {
+		for (let i = 0; i < rows * 4; i++) {
 			const cx0 = Math.round((i % 4) * cw);
 			const cy0 = Math.round(Math.floor(i / 4) * ch);
 			let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1;
@@ -2740,7 +2705,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			boxes.push(x1 < 0 ? null : { x0, y0, x1: x1 + 2, y1: y1 + 2, cx: cx0 + cw / 2 });
 		}
 		// each row's baseline: its lowest feet
-		for (let r = 0; r < 2; r++) baselines.push(Math.max(...boxes.slice(r * 4, r * 4 + 4).map((b) => (b ? b.y1 : 0))));
+		for (let r = 0; r < rows; r++) baselines.push(Math.max(...boxes.slice(r * 4, r * 4 + 4).map((b) => (b ? b.y1 : 0))));
 		boxes.forEach(function (b, i) {
 			if (!b) { frames.push(null); return; }
 			const w = b.x1 - b.x0;
@@ -2749,13 +2714,12 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			crop.width = w;
 			crop.height = h;
 			crop.getContext('2d').drawImage(cv, b.x0, b.y0, w, h, 0, 0, w, h);
-			stripOutline(crop);
 			const base = baselines[Math.floor(i / 4)];
 			frames.push({ img: crop, x: b.x0 - b.cx, y: b.y0 - base, w, h });
 		});
 		// the size to draw at comes from the first frame (standing, or mid-stride)
 		const f0 = frames[0];
-		const sheet = { frames, unit: name === 'head' ? frames[7].w : f0.h };
+		const sheet = { frames, unit: name === 'head' ? frames[frames.length - 1].w : f0.h };
 		// a guard's rifle: its muzzle is the furthest-right thing in the firing frame
 		if (name === 'circle' && frames[6]) {
 			const b = boxes[6];
@@ -2794,9 +2758,24 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// the head tilts. Until they load, the whole-figure sheets (or the drawn
 	// characters) stand in.
 	const PART_SHEETS = {
-		back: { file: 'parts-contestant-back.png', parts: ['head', 'torso', 'torsoOut', 'torsoRun', 'legs', 'legsL', 'legsR', 'legsCrouch'], height: 112 },
-		front: { file: 'parts-contestant-front.png', parts: ['head', 'headGrin', 'headSad', 'torso', 'torsoCheer', 'torsoWave', 'legs', 'legsJump'], height: 112 },
-		guard: { file: 'parts-guard.png', parts: ['circle', 'triangle', 'square', 'torso', 'torsoAim', 'legs', 'legsA', 'legsB'], height: 124, heads: ['circle', 'triangle', 'square'] },
+		back: { file: 'v2-contestant-back.png', rows: 4, height: 112, parts: [
+			'head', 'torso', 'torsoOut', 'torsoUp',
+			'torsoRun1', 'torsoRun2', 'torsoRun3', 'torsoRun4',   // left arm forward, passing, right arm forward, passing back
+			'legs', 'legsRun1', 'legsRun2', 'legsRun3',           // a six-step run: left foot reaching, down, pushing off...
+			'legsRun4', 'legsRun5', 'legsRun6', 'legsCrouch',     // ...right foot reaching, down, pushing off
+		] },
+		front: { file: 'v2-contestant-front.png', rows: 4, height: 112, parts: [
+			'head', 'headGrin', 'headSad', 'headWow',
+			'torso', 'torsoCheer', 'torsoWaveR', 'torsoWaveL',
+			'torsoPoint', 'torsoShrug', 'torsoClap', 'torsoCross',
+			'legs', 'legsJump', 'legsStep', 'legsCrouch',
+		] },
+		guard: { file: 'v2-guard.png', rows: 4, height: 124, heads: ['circle', 'triangle', 'square'], parts: [
+			'circle', 'triangle', 'square', 'circleDown',
+			'torso', 'torsoAim', 'torsoFire', 'torsoUp',
+			'legs', 'legsWalk1', 'legsWalk2', 'legsWalk3',
+			'legsWalk4', 'legsWalk5', 'legsWalk6', 'legsBrace',
+		] },
 	};
 	const RIG = { overlap: 0.06, lean: 14, bob: 6 };   // how far parts tuck into each other at the joins (a share of the figure); degrees the body leans when drifting frozen; how much it bobs running
 
@@ -2806,27 +2785,37 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const POSES = {
 		back: {
 			stand: { head: 'head', torso: 'torso', legs: 'legs' },
-			run1: { head: 'head', torso: 'torsoRun', legs: 'legsL' },
-			run2: { head: 'head', torso: 'torsoRun', legs: 'legs' },
-			run3: { head: 'head', torso: 'torsoRun', legs: 'legsR', mirror: true },
-			run4: { head: 'head', torso: 'torsoRun', legs: 'legs', mirror: true },
+			// the run: the legs through six steps, the arms swinging against them
+			run1: { head: 'head', torso: 'torsoRun3', legs: 'legsRun1' },
+			run2: { head: 'head', torso: 'torsoRun4', legs: 'legsRun2' },
+			run3: { head: 'head', torso: 'torsoRun1', legs: 'legsRun3' },
+			run4: { head: 'head', torso: 'torsoRun1', legs: 'legsRun4' },
+			run5: { head: 'head', torso: 'torsoRun2', legs: 'legsRun5' },
+			run6: { head: 'head', torso: 'torsoRun3', legs: 'legsRun6' },
 			frozen: { head: 'head', torso: 'torsoOut', legs: 'legs' },
-			hop: { head: 'head', torso: 'torsoOut', legs: 'legsCrouch' },
+			hop: { head: 'head', torso: 'torsoUp', legs: 'legsCrouch' },
 		},
 		front: {
 			stand: { head: 'head', torso: 'torso', legs: 'legs' },
 			cheer: { head: 'headGrin', torso: 'torsoCheer', legs: 'legs' },
 			win1: { head: 'headGrin', torso: 'torsoCheer', legs: 'legsJump', lift: 26 },
-			win2: { head: 'headGrin', torso: 'torsoWave', legs: 'legs' },
-			sad: { head: 'headSad', torso: 'torso', legs: 'legs' },
+			win2: { head: 'headGrin', torso: 'torsoWaveR', legs: 'legs' },
+			win3: { head: 'headGrin', torso: 'torsoPoint', legs: 'legsJump', lift: 20 },
+			win4: { head: 'headGrin', torso: 'torsoWaveL', legs: 'legs' },
+			clap: { head: 'headGrin', torso: 'torsoClap', legs: 'legs' },
+			sad: { head: 'headSad', torso: 'torsoShrug', legs: 'legs' },
+			wow: { head: 'headWow', torso: 'torso', legs: 'legsStep' },
 		},
 		guard: {
-			stand: { head: 'circle', torso: 'torso', legs: 'legs' },
-			walk1: { head: 'circle', torso: 'torso', legs: 'legsA' },
-			walk2: { head: 'circle', torso: 'torso', legs: 'legs' },
-			walk3: { head: 'circle', torso: 'torso', legs: 'legsB' },
-			walk4: { head: 'circle', torso: 'torso', legs: 'legs' },
-			aim: { head: 'circle', torso: 'torsoAim', legs: 'legs' },
+			stand: { head: 'circle', torso: 'torsoUp', legs: 'legs' },
+			walk1: { head: 'circle', torso: 'torso', legs: 'legsWalk1' },
+			walk2: { head: 'circle', torso: 'torso', legs: 'legsWalk2' },
+			walk3: { head: 'circle', torso: 'torso', legs: 'legsWalk3' },
+			walk4: { head: 'circle', torso: 'torso', legs: 'legsWalk4' },
+			walk5: { head: 'circle', torso: 'torso', legs: 'legsWalk5' },
+			walk6: { head: 'circle', torso: 'torso', legs: 'legsWalk6' },
+			aim: { head: 'circle', torso: 'torsoAim', legs: 'legsBrace' },
+			fire: { head: 'circle', torso: 'torsoFire', legs: 'legsBrace' },
 		},
 	};
 
@@ -2864,7 +2853,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// torso, the feet on legs).
 	function cutParts(img, def, name) {
 		const cw = img.width / 4;
-		const ch = img.height / 2;
+		const ch = img.height / (def.rows || 2);
 		const cv = document.createElement('canvas');
 		cv.width = img.width;
 		cv.height = img.height;
@@ -2901,7 +2890,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			crop.width = w;
 			crop.height = h;
 			crop.getContext('2d').drawImage(cv, x0, y0, w, h, 0, 0, w, h);
-			stripOutline(crop);
 			parts[id] = { img: crop, w, h, top: [bx - x0, ty - y0], bottom: [bx - x0, h] };
 			// (a guard's aimed rifle: its muzzle, the furthest-right point)
 			if (id === 'torsoAim') {
@@ -2979,7 +2967,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const k = fig.height / (rig.tall * (1 - fig.overlap * 2));
 		const tuck = fig.overlap * P.circle.h * 0.9;
 		const n = nudge('guard', 'aim', 'torso');
-		const waistY = -(P.legs.bottom[1] - P.legs.top[1]) + tuck + n.y / k;
+		const legs = P[POSES.guard.aim.legs] || P.legs;
+		const waistY = -(legs.bottom[1] - legs.top[1]) + tuck + n.y / k;
 		return [(t.tip[0] - t.bottom[0]) * n.s * k + n.x, (waistY + (t.tip[1] - t.bottom[1]) * n.s) * k];
 	}
 
@@ -2997,7 +2986,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			// running: the legs through their strides, the arms pumping (the
 			// body mirrored on the other stride), bobbing up off each step
 			const phase = ((k.walk / (Math.PI * 2)) % 1 + 1) % 1;
-			pick.pose = 'run' + (1 + Math.floor(phase * 4));
+			pick.pose = 'run' + (1 + Math.floor(phase * 6));
 			pick.bob = Math.abs(Math.sin(k.walk)) * RIG.bob * k.moving;
 			pick.lean = (k.drift || 0) * -8;
 			pick.tilt = Math.sin(k.walk) * 3;
@@ -3084,9 +3073,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		if (rigs.front) {
 			art.ellipse(c, 0, 0, 44, 14, { fill: PLAYER_COLORS[n] || 'white' });
 			softShadow(c, 0, 0, 28, 8, 0.3);
-			const beat = Math.floor(wallT * 2.5 + n) % 2;
+			const beat = Math.floor(wallT * 2.5 + n) % 4;
 			const pick = pose === 'cheer' ? { pose: 'cheer' }
-				: pose === 'win' ? { pose: beat ? 'win1' : 'win2' }
+				: pose === 'win' ? { pose: 'win' + (1 + beat) }
 				: { pose: 'stand', tilt: Math.sin(wallT * 2 + n) * 3 };
 			if (assemble(c, rigs.front, pick)) return;
 		}
@@ -3155,7 +3144,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	// Her body, drawn in ChatGPT: short and stocky, from behind and from the
 	// front, side by side in one picture. Each half trimmed when it loads.
-	const DOLL_BODY = { file: 'doll-body-chibi.png', height: 340, neck: 0.04 };   // how tall to draw it; how far the head sits down into its collar (a share of the body)
+	const DOLL_BODY = { file: 'v2-doll-body.png', height: 340, neck: 0.04 };   // how tall to draw it; how far the head sits down into its collar (a share of the body)
 	let dollBodyImg = null;   // [behind, front]: { img, w, h, cx }
 	(function () {
 		const img = new Image();
@@ -3183,8 +3172,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					crop.width = w;
 					crop.height = h;
 					crop.getContext('2d').drawImage(cv, x0, y0, w, h, 0, 0, w, h);
-					stripOutline(crop);
-					return { img: crop, w, h };
+							return { img: crop, w, h };
 				});
 				dollBodyImg = views;
 			} catch (e) { /* (unreadable: drawn as before) */ }
@@ -3239,9 +3227,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// narrows toward the edge and goes out of sight round the back.
 	function dollHead(c, yaw, glare) {
 		if (sheets.head) {
-			// how far round to face us (1) from facing away (0), in the sheet's 8 steps
+			// how far round to face us (1) from facing away (0), in the sheet's steps
 			const front = (1 + Math.cos(yaw)) / 2;
-			const i = Math.round(front * 7);
+			const i = Math.round(front * (sheets.head.frames.length - 1));
 			const f = sheets.head.frames[i];
 			if (f) {
 				const k = SPRITE.head / sheets.head.unit;
@@ -3324,12 +3312,21 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (const side of sides) if (turn(side * Math.PI / 2).facing >= -0.25) pigtail(side);
 	}
 
-	// The tree behind her: a bare trunk with a few clumps of leaves.
+	// The tree behind her: drawn in ChatGPT (v2-tree.png), or until it's
+	// loaded, a bare trunk with a few clumps of leaves.
+	const TREE = { file: 'v2-tree.png', height: 780 };   // how tall to draw it (in her units)
+	const treeImg = new Image();
+	treeImg.src = 'assets/red-light-green-light/' + TREE.file;
 	function drawTree(ctx) {
 		const p = at(DOLL_X - 360, dollF + 140);
 		art.with(ctx, { x: p.x, y: p.y, scale: p.s * 0.85 }, function (c) {
 			const BARK = '#5a4332';
 			softShadow(c, 0, 0, 90, 20, 0.22, 1, 600, dollF + 140);
+			if (treeImg.complete && treeImg.naturalWidth) {
+				const w = TREE.height * treeImg.naturalWidth / treeImg.naturalHeight;
+				c.drawImage(treeImg, -w / 2, -TREE.height, w, TREE.height);
+				return;
+			}
 			const branches = [[[0, -380], [-150, -560], [-230, -610]], [[0, -430], [120, -600], [210, -650]], [[0, -330], [180, -420]], [[0, -300], [-170, -390]], [[0, -480], [10, -720]]];
 			for (const b of branches) art.line(c, b, { stroke: BARK, lineWidth: 22, lineCap: 'round' });
 			art.poly(c, [[-48, 0], [48, 0], [24, -260], [16, -500], [-16, -500], [-24, -260]], { fill: BARK });
@@ -4013,8 +4010,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				art.with(c, { x, y: ground, scale }, (c2) => assemble(c2, rig, { pose }));
 			}
 			// the cycle, playing
-			const cycle = fig === 'back' ? ['run1', 'run2', 'run3', 'run4'] : fig === 'guard' ? ['walk1', 'walk2', 'walk3', 'walk4'] : ['win1', 'win2'];
-			const step = Math.floor(t * (fig === 'front' ? 2.5 : 8)) % cycle.length;
+			const cycle = fig === 'back' ? ['run1', 'run2', 'run3', 'run4', 'run5', 'run6'] : fig === 'guard' ? ['walk1', 'walk2', 'walk3', 'walk4', 'walk5', 'walk6'] : ['win1', 'win2', 'win3', 'win4'];
+			const step = Math.floor(t * (fig === 'front' ? 2.5 : 12)) % cycle.length;
 			art.with(c, { x: 780, y: ground, scale: 2.2 }, (c2) => assemble(c2, rig, { pose: cycle[step], bob: fig === 'back' ? Math.abs(Math.sin(t * Math.PI * 4)) * RIG.bob : 0 }));
 			art.text(c, 'PLAYING: ' + cycle[step].toUpperCase(), 780, ground + 40, { size: 22, font: 'Paytone One', weight: 400, fill: '#9fb6d8' });
 			// every pose, small, the chosen one marked

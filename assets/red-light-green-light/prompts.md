@@ -182,3 +182,31 @@ waist, everything at the same scale, 2 rows by 4 cells, transparent.
   aiming; legs standing; two walking strides.
 - **doll-body-chibi.png**: the doll's body without a head, short and stocky,
   from behind and from the front side by side (not a grid).
+
+## v2: lineless, richly shaded, more frames (what the game uses now)
+
+Generated in one ChatGPT chat on 2026-10-16. The shared look: chibi, LINELESS
+(no outlines or ink lines at all), richly shaded like a painted toy (three or
+four soft-edged tones per surface, warm key light from the upper left, cool
+shadows, ambient occlusion where parts meet, a soft rim light, fabric folds),
+transparent. The parts sheets are 4x4 grids, one part per cell, cut flat at
+the neck and waist, all at one scale.
+
+- **v2-contestant-back.png**: from behind. Row 1: head; torso arms down; torso
+  arms out (frozen); torso arms flung up. Row 2: four running arm swings (left
+  arm forward, passing, right arm forward, passing back). Rows 3-4: legs
+  standing; a six-step run (left foot reaching, down, pushing off; right foot
+  reaching, down, pushing off); legs crouched.
+- **v2-contestant-front.png**: from the front. Heads: smiling, grinning, sad,
+  surprised. Torsos: arms down, cheering, waving right, waving left, pointing
+  up, shrugging, clapping, arms crossed. Legs: standing, jumping, stepping
+  toward us, crouched.
+- **v2-guard.png**: side view facing right. Heads: circle, triangle, square,
+  circle tipped down. Torsos: rifle across, aiming, firing (with a muzzle
+  flash), rifle upright. Legs: standing, a six-step walk, a braced stance.
+- **v2-doll-head.png**: her head turning from the back to face on in 16 even
+  steps, 4x4.
+- **v2-doll-body.png**: her body without a head, from behind and from the
+  front, side by side.
+- **v2-items.png**: 2x2: cash wad, magnet, money sack (₩), glass marble.
+- **v2-tree.png**: the gnarled tree with a few leaf clumps, portrait.
