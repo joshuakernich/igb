@@ -446,14 +446,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	/* ---------- the show ---------- */
 
 	// The voice: a masked host, as in the show, introducing and reading out
-	// (made with ElevenLabs, each line put through a mask: lower, doubled,
-	// metallic, echoing; assets/red-light-green-light/vo). One line at a time.
+	// (straight from ElevenLabs: a voice designed there, masked, filtered and
+	// echoing, read at its slowest; assets/red-light-green-light/vo). One line at a time.
 	// (each line says what's on the walls as it's said)
 	const upTo10 = (name) => Array.from({ length: 10 }, (_, i) => name + (i + 1));
 	const VOICE = ['title', 'clock', 'visors', 'allset', 'step_move', 'step_step', 'step_cash', 'step_freeze', 'step_jump', 'good', 'doll',
 		...upTo10('round'), ...upTo10('clear'), 'nobody', ...upTo10('again'), 'timeup', 'scores', 'rankings',
 		'win0', 'win1', 'win2', 'win3', 'win4', 'win5', 'tie', 'team', 'board', 'day1', 'day2', 'day3', 'day4', 'rate', 'thanks'];
-	const VOICE_SOUNDS = Object.fromEntries(VOICE.map((id) => ['vo_' + id, [`assets/red-light-green-light/vo/${id}.wav`, 1]]));
+	const VOICE_SOUNDS = Object.fromEntries(VOICE.map((id) => ['vo_' + id, [`assets/red-light-green-light/vo/${id}.mp3`, 1]]));
 	let speaking = null;
 	let saidAllSet = false;
 	function voice(id) {
