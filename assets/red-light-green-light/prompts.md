@@ -162,3 +162,23 @@ and feet". Each character prompt says "a chibi ..." too. The doll's head
 asked for 8 EVEN steps (back, back three-quarter, nearly side-on from behind,
 exact profile, side just showing the face, front three-quarter, nearly face
 on, face on), which fixed the bunching, so the game uses all eight.
+
+## Parts sheets (characters assembled from head, torso and legs)
+
+One chat, 2026-10-16. The shared style for these: a PARTS sheet for a
+cut-out (paper-doll) rig, chibi proportions, each part drawn on its own:
+heads end in a short neck stub, torsos are cut flat at the neck and the
+waist with their arms attached, legs start with the hips cut flat at the
+waist, everything at the same scale, 2 rows by 4 cells, transparent.
+
+- **parts-contestant-back.png**: from behind: head; torso arms down; torso
+  arms out sideways; torso arms swinging (running); legs standing; legs
+  striding left foot forward; right foot forward; legs crouched.
+- **parts-contestant-front.png**: from the front: head smiling; head grinning
+  with closed happy eyes; head sad; torso arms down; torso both fists up;
+  torso one arm waving; legs standing; legs tucked mid-jump.
+- **parts-guard.png**: side view facing right: hooded head with a circle,
+  triangle, square on the mask; torso with the rifle across the body; torso
+  aiming; legs standing; two walking strides.
+- **doll-body-chibi.png**: the doll's body without a head, short and stocky,
+  from behind and from the front side by side (not a grid).

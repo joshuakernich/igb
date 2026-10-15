@@ -97,7 +97,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const INSET = { x: 2 * W - 150, y: 125, r: 92, side: 205 };   // the doll-head inset: top right of the front wall; on the side walls (at y side), under the clock
 
 	// Jump pads and cash
-	const PAD = { rx: 95, rf: 40, every: 420 };   // a pad's half-width and half-depth; one every so far up the track (field units)
+	const PAD = { rx: 70, rf: 70, every: 420, open: 72, throw: 260 };   // a trapdoor's half-width and half-depth (square); one every so far up the track (field units); how far it springs open (degrees); how high it throws you
 	const CASH = { every: 300, reach: 60, size: 1.8, float: 50, bob: 22 };   // every so far up each wall; how close to grab it; its size, float height and bob
 	const MAGNET = { every: 1400, time: 2.5, radius: 480, pull: 1200 };   // a magnet every so far up each wall; seconds it lasts; how far it reaches; how fast cash comes
 	const BOULDER = { from: 1, gap: [4, 9], quicker: 0.9, r: [75, 105], speed: [320, 440], ahead: 1700, lead: 900, down: 1.2, spill: 3 };   // boulders from this round (0 is round 1); seconds between them, shrinking by this much a round; their size; how fast they roll; how far up the field they start (and never nearer the players than lead); seconds flattened; wads of cash spilled
@@ -933,7 +933,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	let bursts = [];            // { x, f, t }: a money bag popping
 	let padPulse = 0;
 
-	const onPad = (c, p) => Math.pow((c.x - p.x) / PAD.rx, 2) + Math.pow((c.f - p.f) / PAD.rf, 2) < 1;
+	const onPad = (c, p) => Math.abs(c.x - p.x) < PAD.rx && Math.abs(c.f - p.f) < PAD.rf;
 
 	// the corner ends of the walls: [the wall, the wall round that corner, the pad's x]
 	const CORNERS = [
@@ -1072,6 +1072,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	// Round the corner onto the next wall, straight away.
 	function jump(c, p) {
+		p.sprung = 0;   // (the door springs open: see agePads and drawDoor)
+		show.fx('thud', 0.5, 1.6);
 		c.hop = { t: 0, x0: c.x, f0: c.f };
 		c.wall = p.to;
 		c.offPad = false;   // (no jumping on again until they've stepped off where they land)
@@ -1128,7 +1130,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	function agePads(dt) {
 		padPulse += dt * 4;
-		for (const p of pads) p.age += dt;
+		for (const p of pads) {
+			p.age += dt;
+			if (p.sprung !== undefined && (p.sprung += dt) > 1.2) p.sprung = undefined;
+		}
 		for (const m of cash) m.spin += dt;
 		for (const g of magnets) g.spin += dt;
 		for (const g of bags) g.spin += dt;
@@ -1435,7 +1440,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const e = ease(k);
 			c.f = c.hop.f0 + (bandF(c) - c.hop.f0) * e;
 			c.x = c.hop.x0 + (xOf(c, bandF(c)) - c.hop.x0) * e;
-			c.lift = Math.sin(k * Math.PI) * 150;
+			c.lift = Math.sin(k * Math.PI) * PAD.throw;
 			if (k >= 1) { c.hop = null; c.lift = 0; }
 			return;
 		}
@@ -1587,6 +1592,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (const b of blocks) add(b.f - b.r * 0.6, (c) => drawBlock(c, b), Math.abs(b.x - vanishOf(wallOfX(b.x))));
 		for (const m of cash) if (!m.taken) add(m.f, (c) => drawCash(c, m));
 		for (const g of magnets) if (!g.taken) add(g.f, (c) => drawMagnet(c, g));
+		for (const p of pads) if (p.sprung !== undefined) add(p.f + PAD.rf, (c) => drawDoor(c, p));
 		for (const g of bags) if (!g.taken) add(g.f, (c) => drawBag(c, g));
 		for (const b of bursts) add(b.f, (c) => drawBurst(c, b));
 		for (const b of boulders) add(b.f, (c) => drawBoulder(c, b));
@@ -1622,6 +1628,29 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	// Over the camera, never zoomed: the doll-head insets, GREEN LIGHT /
 	// RED LIGHT called out on every wall, and the white flash of a shot.
+	// Everyone's score, in little capsules along the bottom of every wall,
+	// rising up off the bottom edge: their colour, their winnings. A score that
+	// just changed pops; anyone out is dimmed.
+	const SCORES = { w: 220, h: 64, gap: 14, sink: 22, size: 34 };   // a capsule's width and height (the part showing), the gap between them, how far it reaches down past the edge, the figures' size
+	function drawScores(ctx) {
+		const n = contestants.length;
+		if (!n) return;
+		const total = n * SCORES.w + (n - 1) * SCORES.gap;
+		show.onWalls(ctx, function (c) {
+			contestants.forEach(function (k, i) {
+				if (k.shownScore !== k.score) { k.shownScore = k.score; k.scoreAt = wallT; }
+				const pop = 1 + 0.22 * Math.max(0, 1 - (wallT - (k.scoreAt || -9)) / 0.3);
+				const x = W / 2 - total / 2 + i * (SCORES.w + SCORES.gap) + SCORES.w / 2;
+				const y = H - SCORES.h / 2;
+				art.with(c, { x, y, scale: pop, alpha: k.alive ? 1 : 0.45 }, function (c2) {
+					art.roundRect(c2, -SCORES.w / 2, -SCORES.h / 2, SCORES.w, SCORES.h + SCORES.sink, SCORES.h / 2, { fill: 'rgba(12,4,30,0.78)', stroke: PLAYER_COLORS[k.n], lineWidth: 5 });
+					art.circle(c2, -SCORES.w / 2 + 34, 0, 15, { fill: PLAYER_COLORS[k.n] });
+					art.text(c2, won(k.score), 16, 2, { size: SCORES.size, font: 'Paytone One', weight: 400, fill: 'white' });
+				});
+			});
+		});
+	}
+
 	function drawCalls(ctx) {
 		if (showInset) {
 			if (scaleAt(dollF) < SCALE * 0.4) drawInset(ctx, INSET.x);   // while she's small, far off on the horizon
@@ -1799,6 +1828,35 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			for (const [dx, dy, r] of [[0, 0, 34], [38, 6, 26], [-36, 8, 24], [14, -14, 24]]) art.ellipse(ctx, x + dx, y + dy, r * 1.6, r * 0.7, { fill: 'rgba(255,255,255,0.75)' });
 		}
 		art.rect(ctx, -20, hz - 1.5, WIDTH + 40, 3, { fill: 'rgba(160,120,80,0.35)' });
+		drawBackWall(ctx);
+	}
+
+	// The arena's far wall, behind the doll and her tree: painted sky blue
+	// with clouds, as in the show. It stands at a place on the field, so far
+	// off it's a low band on the horizon, and it rises and looms as the field
+	// scrolls toward the finish.
+	const BACK_WALL = { gap: 520, height: 600, trim: 26 };    // how far beyond the doll it stands (field units); how tall it is; the cream trim along its top
+	function drawBackWall(ctx) {
+		const f = dollF + BACK_WALL.gap;
+		const s = scaleAt(f);
+		const base = planeY(f);
+		const top = base - BACK_WALL.height * s;
+		const trim = BACK_WALL.trim * s;
+		const haze = 1 - fadeIn(f);   // (the further, the more it's lost in the haze)
+		art.save(ctx, function (c) {
+			art.rect(c, -20, top, WIDTH + 40, base - top, { fill: art.linear(c, 0, top, 0, base, ['#5fb6e6', '#8fcdee', '#bfe4f2']) });
+			// painted clouds, scaled with it, the same wherever it is
+			for (let i = 0; i < 14; i++) {
+				const x = ((i * 733 + 180) % WIDTH);
+				const y = top + (0.25 + (i * 0.37) % 0.55) * (base - top);
+				const r = (70 + (i * 29) % 60) * s;
+				for (const [dx, dy, k] of [[0, 0, 1], [1.1, 0.15, 0.75], [-1.05, 0.2, 0.7], [0.4, -0.45, 0.7]]) art.ellipse(c, x + dx * r, y + dy * r, r * k * 1.5, r * k * 0.8, { fill: 'rgba(255,255,255,0.9)' });
+			}
+			art.rect(c, -20, top - trim, WIDTH + 40, trim, { fill: '#f3ead2' });                 // the trim
+			art.rect(c, -20, top, WIDTH + 40, Math.max(1, trim * 0.35), { fill: 'rgba(0,0,0,0.12)' });
+			art.rect(c, -20, base - 30 * s, WIDTH + 40, 30 * s, { fill: 'rgba(40,60,90,0.18)' });   // shade where it meets the sand
+			if (haze > 0) art.rect(c, -20, top - trim, WIDTH + 40, base - top + trim, { fill: 'rgba(240,232,214,1)', alpha: Math.min(0.75, haze) });
+		});
 	}
 
 	function drawSplat(ctx, s) {
@@ -1958,10 +2016,26 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		});
 	}
 
-	// A soft shadow on the sand: darkest under the middle, fading to nothing
-	// at its edge (and nudged a little away from the light).
-	function softShadow(ctx, x, y, rx, ry, dark, alpha = 1) {
+	// A shadow on the sand. Given how tall the thing is (h, in the same units),
+	// it's cast like a block's: its foot slid away from the light in soft
+	// layers, darkest at the foot and fading and widening toward its tip, with
+	// a dark contact patch under it. Without a height, a soft round pool.
+	function softShadow(ctx, x, y, rx, ry, dark, alpha = 1, h = 0) {
 		if (rx <= 0 || ry <= 0) return;
+		if (h > 0) {
+			const ring = (cx, cy, ax, ay) => Array.from({ length: 14 }, (_, i) => [cx + Math.cos(i / 14 * Math.PI * 2) * ax, cy + Math.sin(i / 14 * Math.PI * 2) * ay]);
+			art.save(ctx, function (c) {
+				c.globalAlpha *= alpha;
+				for (let i = 1; i <= SHADOW.layers; i++) {
+					const t = i / SHADOW.layers;
+					const g = rx * 0.25 * t;   // (blurring out toward the tip)
+					const pts = ring(x, y, rx + g * 0.4, ry + g * 0.4).concat(ring(x + h * SHADOW.x * t, y - h * SHADOW.f * t, (rx + g) * (1 - 0.3 * t), (ry + g) * (1 - 0.3 * t)));
+					art.poly(c, hull(pts), { fill: `rgba(20,10,30,${SHADOW.dark * dark / 0.3})` });
+				}
+				art.ellipse(c, x, y, rx * 0.8, ry * 0.8, { fill: `rgba(20,10,30,${SHADOW.contact * dark / 0.3})` });
+			});
+			return;
+		}
 		const R = rx * 1.3;
 		art.with(ctx, { x: x + rx * 0.12, y, scaleY: ry / rx }, function (c) {
 			art.circle(c, 0, 0, R, { fill: art.radial(c, 0, 0, 0, R, [[0, `rgba(10,5,20,${dark * 1.4})`], [0.45, `rgba(10,5,20,${dark})`], [1, 'rgba(10,5,20,0)']]), alpha });
@@ -1982,7 +2056,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const r = m.r * p.s;
 		art.save(ctx, function (c) {
 			c.globalAlpha = fadeIn(m.f);
-			softShadow(c, foot.x, foot.y, r * 1.05, r * 0.3, 0.28);
+			softShadow(c, foot.x, foot.y, r * 0.9, r * 0.28, 0.28, 1, r * 2);
 			art.circle(c, p.x, p.y, r, { fill: art.radial(c, p.x - r * 0.3, p.y - r * 0.3, r * 0.1, r * 1.3, ['#eef8ff', '#cfe6f8', '#8fb6d8']) });
 			c.save();
 			c.translate(p.x, p.y);
@@ -2015,7 +2089,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				const d = at(b.x + Math.sin(b.seed + i * 2.3) * b.r * 0.7, b.f + b.r * 0.6 + k * 160, 10 + k * 50);
 				art.circle(c, d.x, d.y, (14 + k * 34) * d.s, { fill: 'rgba(214,186,140,0.55)', alpha: (1 - k) * 0.8 });
 			}
-			softShadow(c, foot.x, foot.y, r * 1.1, r * 0.3, 0.3);
+			softShadow(c, foot.x, foot.y, r * 0.95, r * 0.3, 0.3, 1, r * 2);
 			// the stone: a lumpy circle
 			c.save();
 			c.beginPath();
@@ -2051,6 +2125,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	function drawGuardOn(ctx, x, f, mask, armed, walk, muzzle, dir = 1) {
 		const p = at(x, f);
 		const s = p.s * 1.45;
+		softShadow(ctx, p.x, p.y, 24 * s, 8 * s, 0.3, fadeIn(f), 140 * s);   // (out here, so it falls away from the light whichever way they face)
 		art.with(ctx, { x: p.x, y: p.y, scaleX: s * dir, scaleY: s, alpha: fadeIn(f) }, function (c) {
 			guard(c, mask, armed, walk, muzzle);
 		});
@@ -2067,9 +2142,22 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	}
 
 	function guard(c, mask, armed, walk, muzzle) {
+		if (rigs.guard) {
+			const head = mask === 'triangle' || mask === 'square' ? mask : 'circle';
+			const phase = ((walk / (Math.PI * 2)) % 1 + 1) % 1;
+			const pick = {
+				head,
+				torso: muzzle > 0 ? 'torsoAim' : 'torso',
+				legs: walk ? ['legsA', 'legs', 'legsB', 'legs'][Math.floor(phase * 4)] : 'legs',
+				bob: walk ? Math.abs(Math.sin(walk)) * 5 : 0,
+			};
+			if (assemble(c, rigs.guard, pick)) {
+				if (muzzle > 0) art.poly(c, star(GUN.muzzle[0], GUN.muzzle[1], 22, 9, 8), { fill: '#ffe066' });
+				return;
+			}
+		}
 		const name = mask === 'triangle' || mask === 'square' ? mask : 'circle';
 		if (sheets[name]) {
-			softShadow(c, 0, 0, 28, 8, 0.3);
 			// walking: the 4-frame walk; standing: at attention; a shot: firing
 			const i = muzzle > 0 ? 6 : walk ? Math.floor(((walk / (Math.PI * 2)) % 1 + 1) % 1 * 4) : 4;
 			drawFrame(c, name, i, SPRITE.guard);
@@ -2079,7 +2167,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// the same quick steps as the contestants, bobbing up off each one
 		const step = walk ? Math.sin(walk) * 7 : 0;
 		const bob = walk ? Math.abs(Math.sin(walk)) * 7 : 0;
-		softShadow(c, 0, 0, 28, 8, 0.3);
 		// legs and boots
 		for (const side of [-1, 1]) {
 			const lift = Math.max(0, side * step);
@@ -2137,6 +2224,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const s = p.s * 1.6;
 		const alpha = fadeIn(c.f);
 		const air = 1 - c.lift / 300;        // the shadow shrinks under a skip
+		// their shadow, cast like everything's (shorter off the ground, mid-skip)
+		softShadow(ctx, ground.x, ground.y, 22 * s * air, 8 * s * air, 0.35, alpha, 130 * s * air);
 		// a solid spot of their colour, always under the avatar
 		if (c.alive) art.ellipse(ctx, ground.x, ground.y, 40 * s * air, 13 * s * air, { fill: colour, alpha: alpha * 0.9 });
 		// magnetised: rings of soft magnetic red, closing in on them over and
@@ -2152,7 +2241,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				});
 			}
 		}
-		softShadow(ctx, ground.x, ground.y, 27 * s * air, 8 * s * air, 0.35, alpha);
 
 		let rotate = 0;
 		let scaleY = 1;
@@ -2160,17 +2248,18 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			// flat as a pancake, springing back up at the end
 			const k = 1 - c.down / BOULDER.down;
 			scaleY = k < 0.8 ? 0.22 : 0.22 + 0.78 * ease((k - 0.8) / 0.2) * (1 + Math.sin((k - 0.8) / 0.2 * Math.PI) * 0.25);
-			if (sheets.act) scaleY = 1;   // (the sprite has them lying flat already)
+			if (sheets.act && !rigs.back) scaleY = 1;   // (the whole-figure sprite has them lying flat already)
 		} else if (c.fall) {
 			const k = Math.min(1, c.fall.t / 0.45);
-			if (!sheets.act) rotate = c.fall.dir * 88 * k * k;   // (the sprite falls by itself)
+			if (rigs.back || !sheets.act) rotate = c.fall.dir * 88 * k * k;   // (the whole-figure sprite falls by itself)
 		} else {
 			const lx = Math.max(-1.6, Math.min(1.6, c.lean.x));
 			const lz = Math.max(-1.4, Math.min(1.4, c.lean.z));
-			rotate = lx * 24;
+			rotate = lx * (rigs.back ? 10 : 24);   // (from parts, the body leans on its own too)
 			scaleY = 1 - 0.14 * lz;     // leaning up the field (or back) foreshortens
 		}
 		art.with(ctx, { x: p.x, y: p.y, scale: s, scaleY, rotate, alpha }, function (cx) {
+			if (rigs.back && contestantRig(cx, c)) return;
 			if (sheets.act && sheets.run) contestantSprite(cx, c);
 			else contestant(cx, c);
 		});
@@ -2204,28 +2293,83 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		art.ellipse(ctx, g.x, g.y, 50 * s, 17 * s, { stroke: PLAYER_COLORS[c.n], lineWidth: 6, alpha: fadeIn(foot.f) });
 	}
 
-	// A jump pad: a glowing ring painted on the sand at the corner end of a
-	// wall, pulsing, with chevrons pointing round the corner.
+	// A trapdoor at the corner end of a wall: a square steel hatch set in the
+	// sand, a glowing seam round it, arrows on its lid pointing round the
+	// corner. Step on and it springs open (see drawDoor) and throws you onto
+	// the next wall. Here: its frame, the dark pit, and the lid while it's shut.
 	function drawPad(ctx, p) {
 		if (!onView(p.f)) return;
-		const front = at(p.x, p.f - PAD.rf);
-		const back = at(p.x, p.f + PAD.rf);
-		const cy = (front.y + back.y) / 2;
-		const squash = (front.y - back.y) / 2 / PAD.rx;
-		const beat = 0.5 + 0.5 * Math.sin(padPulse + p.x * 0.01);
+		const wall = p.wall;
 		const appear = Math.min(1, p.age / 0.35);
-		const R = PAD.rx;
-		const GLOW = '#7df9ff';
+		const beat = 0.5 + 0.5 * Math.sin(padPulse + p.x * 0.01);
+		const R = PAD.rx * appear;
+		const sq = (r) => onScreen([[p.x - r, p.f - r], [p.x + r, p.f - r], [p.x + r, p.f + r], [p.x - r, p.f + r]], wall);
+		art.save(ctx, function (c) {
+			c.globalAlpha = fadeIn(p.f);
+			// the glow round it, pulsing
+			art.poly(c, sq(R + 22), { fill: '#7df9ff', alpha: 0.12 + 0.14 * beat });
+			art.poly(c, sq(R + 10), { fill: '#3b4652' });                 // the steel frame
+			art.poly(c, sq(R + 4), { fill: '#7df9ff', alpha: 0.55 + 0.45 * beat });   // the seam
+			art.poly(c, sq(R), { fill: '#120d18' });                      // the pit
+			if (p.sprung === undefined) lid(c, p, 0, R);
+		});
+	}
+
+	// How far open a sprung door is (0 shut, 1 open): it snaps open past the
+	// stop, bounces back, holds, then swings shut.
+	function doorOpen(p) {
+		const t = p.sprung;
+		if (t === undefined) return 0;
+		if (t < 0.09) return t / 0.09 * 1.18;
+		if (t < 0.3) return 1.18 - 0.18 * ease((t - 0.09) / 0.21);
+		if (t < 0.75) return 1;
+		return Math.max(0, 1 - ease((t - 0.75) / 0.45));
+	}
+
+	// The lid, hinged along its far edge, lifted by `open` (0 to 1).
+	function lid(c, p, open, R = PAD.rx) {
+		const a = open * PAD.open * Math.PI / 180;
+		const wall = p.wall;
+		const hingeF = p.f + R;
+		const freeF = hingeF - 2 * R * Math.cos(a);
+		const freeUp = 2 * R * Math.sin(a);
+		const P = (x, f, up) => { const q = at(x, f, up, wall); return [q.x, q.y]; };
+		const quad = [P(p.x - R, freeF, freeUp), P(p.x + R, freeF, freeUp), P(p.x + R, hingeF, 0), P(p.x - R, hingeF, 0)];
+		const shade = 1 - 0.25 * open;   // (tipping up toward us, it's turned out of the light)
+		art.poly(c, quad, { fill: mix('#8a96a3', shade) });
+		// hazard stripes along its front edge, and arrows round the corner
 		const dir = Math.sign(p.to - p.wall);
-		const across = front.s / SCALE;   // (smaller far off)
-		art.with(ctx, { x: (front.x + back.x) / 2, y: cy, scaleX: appear * (1 + 0.06 * beat) * across, scaleY: appear * (1 + 0.06 * beat) * squash, alpha: fadeIn(p.f) }, function (c) {
-			for (const k of [1.5, 1.3, 1.14]) art.circle(c, 0, 0, R * k, { fill: GLOW, alpha: (0.12 + 0.2 * beat) * 0.55 });
-			art.circle(c, 0, 0, R, { fill: GLOW });
-			art.circle(c, 0, 0, R * 0.8, { fill: '#1d6f86' });
-			// two small chevrons, centred in the ring, pointing round the corner
-			art.with(c, { scaleX: dir * 0.7, scaleY: 0.7 }, function (c2) {
-				for (const ox of [-8, 28]) art.poly(c2, [[ox - 16, -40], [ox + 18, 0], [ox - 16, 40], [ox - 38, 40], [ox - 4, 0], [ox - 38, -40]], { fill: GLOW, alpha: 0.6 + 0.4 * beat });
-			});
+		const at2 = (u, v) => P(p.x + u * R, hingeF - (1 - v) * 2 * R * Math.cos(a), (1 - v) * freeUp);   // u across -1..1, v from the free edge (0) to the hinge (1)
+		for (let i = 0; i < 6; i++) {
+			const u0 = -1 + i / 3;
+			art.poly(c, [at2(u0, 0), at2(u0 + 1 / 6, 0), at2(u0 + 1 / 6 + 0.12, 0.16), at2(u0 + 0.12, 0.16)].map(([x, y]) => [x, y]), { fill: i % 2 ? '#1a1a1a' : '#ffd23a' });
+		}
+		for (const off of [-0.35, 0.25]) {
+			art.poly(c, [at2(dir * (off - 0.15), 0.35), at2(dir * (off + 0.15), 0.58), at2(dir * (off - 0.15), 0.82), at2(dir * (off - 0.02), 0.58)], { fill: '#7df9ff' });
+		}
+		art.poly(c, quad, { stroke: '#2a313a', lineWidth: Math.max(1, 3 * at(p.x, p.f, 0, wall).s) });
+	}
+
+	// The lid flung open, standing up off its hinge (drawn among everything
+	// standing on the field, so it can hide what's behind it), its spring
+	// showing beneath.
+	function drawDoor(ctx, p) {
+		const open = doorOpen(p);
+		if (open <= 0) return;
+		art.save(ctx, function (c) {
+			c.globalAlpha = fadeIn(p.f);
+			// the spring, from the pit to the underside of the lid
+			const base = at(p.x, p.f, 0, p.wall);
+			const a = open * PAD.open * Math.PI / 180;
+			const top = at(p.x, p.f + PAD.rx - PAD.rx * Math.cos(a), PAD.rx * Math.sin(a), p.wall);
+			const coils = 7;
+			const pts = [];
+			for (let i = 0; i <= coils * 2; i++) {
+				const k = i / (coils * 2);
+				pts.push([base.x + (top.x - base.x) * k + (i % 2 ? 1 : -1) * 14 * base.s, base.y + (top.y - base.y) * k]);
+			}
+			art.line(c, pts, { stroke: '#c9d3dc', lineWidth: Math.max(1.5, 5 * base.s), lineJoin: 'round' });
+			lid(c, p, open);
 		});
 	}
 
@@ -2241,7 +2385,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const s = p.s * CASH.size;
 		const rise = 0.5 + 0.5 * Math.sin(m.spin * 2.4);
 		const lift = (CASH.float + CASH.bob * rise + (m.fly ? BAG.arc * 4 * k * (1 - k) : 0)) * p.s;
-		softShadow(ctx, p.x, p.y, 30 * s * (1 - 0.25 * rise), 9 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise);
+		softShadow(ctx, p.x, p.y, 26 * s * (1 - 0.25 * rise), 8 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 40 * s);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: -0.35 + Math.sin(m.spin * 1.3) * 0.1 }, function (c) {
 			// seen at an angle: tipped back and skewed, a stack of notes with depth
 			c.transform(1, 0, -0.45, 0.72, 0, 0);
@@ -2265,7 +2409,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const s = p.s * CASH.size;
 		const rise = 0.5 + 0.5 * Math.sin(g.spin * 2.4);
 		const lift = (CASH.float + CASH.bob * rise) * p.s;
-		softShadow(ctx, p.x, p.y, 26 * s * (1 - 0.25 * rise), 8 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise);
+		softShadow(ctx, p.x, p.y, 22 * s * (1 - 0.25 * rise), 7 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 40 * s);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: Math.sin(g.spin * 1.6) * 0.25 }, function (c) {
 			c.save();
 			c.lineCap = 'butt';
@@ -2296,7 +2440,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const s = p.s * CASH.size;
 		const rise = 0.5 + 0.5 * Math.sin(g.spin * 2.4);
 		const lift = (CASH.float + CASH.bob * rise) * p.s;
-		softShadow(ctx, p.x, p.y, 34 * s * (1 - 0.25 * rise), 10 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise);
+		softShadow(ctx, p.x, p.y, 30 * s * (1 - 0.25 * rise), 9 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 60 * s);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: Math.sin(g.spin * 1.4) * 6 }, function (c) {
 			// the sack: wide at the bottom, gathered in at the neck
 			c.beginPath();
@@ -2444,6 +2588,164 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		c.restore();
 	}
 
+	/* ---------- characters from parts ---------- */
+
+	// Parts sheets, also from ChatGPT: each cell one part (a head, a torso
+	// with its arms, or a pair of legs), cut flat where they join, all at one
+	// scale. Assembled here at the waist and the neck, so the head, body and
+	// legs can each move on their own: legs stride, the body bobs and leans,
+	// the head tilts. Until they load, the whole-figure sheets (or the drawn
+	// characters) stand in.
+	const PART_SHEETS = {
+		back: { file: 'parts-contestant-back.png', parts: ['head', 'torso', 'torsoOut', 'torsoRun', 'legs', 'legsL', 'legsR', 'legsCrouch'], height: 136 },
+		front: { file: 'parts-contestant-front.png', parts: ['head', 'headGrin', 'headSad', 'torso', 'torsoCheer', 'torsoWave', 'legs', 'legsJump'], height: 136 },
+		guard: { file: 'parts-guard.png', parts: ['circle', 'triangle', 'square', 'torso', 'torsoAim', 'legs', 'legsA', 'legsB'], height: 150, heads: ['circle', 'triangle', 'square'] },
+	};
+	const RIG = { overlap: 0.06, lean: 14, bob: 6 };   // how far parts tuck into each other at the joins (a share of the figure); degrees the body leans when drifting frozen; how much it bobs running
+	const rigs = {};   // name: { parts: { id: { img, w, h, top: [x, y], bottom: [x, y] } }, k }
+	for (const [name, def] of Object.entries(PART_SHEETS)) {
+		const img = new Image();
+		img.onload = function () {
+			try {
+				rigs[name] = cutParts(img, def);
+				if (name === 'guard') { const m = rigMuzzle(rigs.guard); if (m) GUN.muzzle = m; }
+			} catch (e) { /* (unreadable: the sheets stand in) */ }
+		};
+		img.src = 'assets/red-light-green-light/' + def.file;
+	}
+
+	// Each cell's part, trimmed, with its joins: its top join (the waist on
+	// legs, the neck on a torso: the topmost solid point straight above its
+	// bottom middle, so raised arms don't count) and its bottom join (the
+	// middle of its bottom edge: the neck stub on a head, the waist on a
+	// torso, the feet on legs).
+	function cutParts(img, def) {
+		const cw = img.width / 4;
+		const ch = img.height / 2;
+		const cv = document.createElement('canvas');
+		cv.width = img.width;
+		cv.height = img.height;
+		const g = cv.getContext('2d');
+		g.drawImage(img, 0, 0);
+		const data = g.getImageData(0, 0, img.width, img.height).data;
+		const solid = (x, y) => data[(Math.round(y) * img.width + Math.round(x)) * 4 + 3] > 60;
+		const parts = {};
+		def.parts.forEach(function (id, i) {
+			const cx0 = Math.round((i % 4) * cw);
+			const cy0 = Math.round(Math.floor(i / 4) * ch);
+			let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1;
+			for (let y = cy0 + 2; y < cy0 + ch - 2; y += 2) for (let x = cx0 + 2; x < cx0 + cw - 2; x += 2) {
+				if (!solid(x, y)) continue;
+				if (x < x0) x0 = x;
+				if (x > x1) x1 = x;
+				if (y < y0) y0 = y;
+				if (y > y1) y1 = y;
+			}
+			if (x1 < 0) return;
+			x1 += 2;
+			y1 += 2;
+			const w = x1 - x0;
+			const h = y1 - y0;
+			// the middle of its bottom edge
+			let sum = 0, n = 0;
+			for (let y = y1 - Math.max(4, h * 0.1); y < y1; y++) for (let x = x0; x < x1; x++) if (solid(x, y)) { sum += x; n++; }
+			const bx = n ? sum / n : (x0 + x1) / 2;
+			// straight up from there, the first solid point
+			let ty = y0;
+			const strip = Math.max(3, w * 0.06);
+			search: for (let y = y0; y < y1; y++) for (let x = bx - strip; x <= bx + strip; x++) if (solid(x, y)) { ty = y; break search; }
+			const crop = document.createElement('canvas');
+			crop.width = w;
+			crop.height = h;
+			crop.getContext('2d').drawImage(cv, x0, y0, w, h, 0, 0, w, h);
+			parts[id] = { img: crop, w, h, top: [bx - x0, ty - y0], bottom: [bx - x0, h] };
+			// (a guard's aimed rifle: its muzzle, the furthest-right point)
+			if (id === 'torsoAim') {
+				for (let x = x1 - 1; x > bx; x--) {
+					let s2 = 0, m = 0;
+					for (let y = y0; y < y1; y++) if (solid(x, y)) { s2 += y; m++; }
+					if (m) { parts[id].tip = [x - x0, s2 / m - y0]; break; }
+				}
+			}
+		});
+		// the scale: an assembled standing figure the given height
+		const head = parts[def.heads ? def.heads[0] : 'head'];
+		const tall = parts.legs.bottom[1] - parts.legs.top[1] + parts.torso.bottom[1] - parts.torso.top[1] + head.h;
+		return { parts, k: def.height / (tall * (1 - RIG.overlap * 2)) };
+	}
+
+	// Put a figure together, feet at (0, 0): legs, then the body on them at
+	// the waist, then the head on the body at the neck. The body (and head
+	// with it) can lean (degrees) and bob up; the torso can be mirrored.
+	function assemble(c, rig, pick) {
+		const P = rig.parts;
+		const legs = P[pick.legs] || P.legs;
+		const torso = P[pick.torso] || P.torso;
+		const head = P[pick.head];
+		if (!legs || !torso || !head) return false;
+		const k = rig.k;
+		const tuck = RIG.overlap * head.h * 0.9;
+		c.save();
+		c.scale(k, k);
+		if (pick.flip) c.scale(-1, 1);
+		// legs: feet on the ground (lifted for a jump)
+		const waist = [0, -(legs.bottom[1] - legs.top[1]) - (pick.lift || 0) / k];
+		c.drawImage(legs.img, -legs.bottom[0] + (legs.bottom[0] - legs.top[0]), waist[1] - legs.top[1], legs.w, legs.h);
+		// the body, tucked into the waist, bobbing and leaning
+		c.save();
+		c.translate(0, waist[1] + tuck - (pick.bob || 0) / k);
+		c.rotate((pick.lean || 0) * Math.PI / 180);
+		c.save();
+		if (pick.mirrorTorso) c.scale(-1, 1);
+		c.drawImage(torso.img, -torso.bottom[0], -torso.bottom[1], torso.w, torso.h);
+		c.restore();
+		const neck = -(torso.bottom[1] - torso.top[1]) + tuck * 1.2;
+		// the head on the neck, tilting a little more than the body
+		c.translate(0, neck);
+		c.rotate((pick.tilt || 0) * Math.PI / 180);
+		c.drawImage(head.img, -head.bottom[0], -head.bottom[1], head.w, head.h);
+		c.restore();
+		c.restore();
+		return true;
+	}
+
+	// Where an assembled guard's rifle muzzle is (feet at 0, facing right).
+	function rigMuzzle(rig) {
+		const P = rig.parts;
+		const t = P.torsoAim;
+		if (!t || !t.tip) return null;
+		const k = rig.k;
+		const tuck = RIG.overlap * P.circle.h * 0.9;
+		const waistY = -(P.legs.bottom[1] - P.legs.top[1]) + tuck;
+		return [(t.tip[0] - t.bottom[0]) * k, (waistY + t.tip[1] - t.bottom[1]) * k];
+	}
+
+	// A contestant in play, from behind, from parts.
+	function contestantRig(c, k) {
+		const rig = rigs.back;
+		const pick = { head: 'head', torso: 'torso', legs: 'legs' };
+		if (k.hop) {
+			pick.torso = 'torsoOut';
+			pick.legs = 'legsCrouch';
+		} else if (k.glue) {
+			// frozen: arms stuck out, the body leaning the way their player drifts
+			pick.torso = 'torsoOut';
+			pick.lean = Math.max(-1.6, Math.min(1.6, k.lean.x)) * RIG.lean;
+			pick.tilt = pick.lean * 0.5;
+		} else if (k.moving > 0.2 && !k.fall && !(k.down > 0)) {
+			// running: the legs through their strides, the arms pumping (the
+			// body mirrored on the other stride), bobbing up off each step
+			const phase = ((k.walk / (Math.PI * 2)) % 1 + 1) % 1;
+			pick.legs = ['legsL', 'legs', 'legsR', 'legs'][Math.floor(phase * 4)];
+			pick.torso = 'torsoRun';
+			pick.mirrorTorso = phase >= 0.5;
+			pick.bob = Math.abs(Math.sin(k.walk)) * RIG.bob * k.moving;
+			pick.lean = (k.drift || 0) * -8;
+			pick.tilt = Math.sin(k.walk) * 3;
+		}
+		return assemble(c, rig, pick);
+	}
+
 	// The frame for a contestant in play, from behind.
 	function contestantSprite(c, k) {
 		let name = 'act';
@@ -2520,6 +2822,15 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// feet. Feet at the origin, about 136 tall. Pose 'stand', 'cheer' (arms
 	// up) or 'win' (arms up, waving, a big grin).
 	function contestantFront(c, n, pose) {
+		if (rigs.front) {
+			art.ellipse(c, 0, 0, 44, 14, { fill: PLAYER_COLORS[n] || 'white' });
+			softShadow(c, 0, 0, 28, 8, 0.3);
+			const beat = Math.floor(wallT * 2.5 + n) % 2;
+			const pick = pose === 'cheer' ? { head: 'headGrin', torso: 'torsoCheer', legs: 'legs' }
+				: pose === 'win' ? { head: 'headGrin', torso: beat ? 'torsoCheer' : 'torsoWave', legs: beat ? 'legsJump' : 'legs', lift: beat ? 26 : 0 }
+				: { head: 'head', torso: 'torso', legs: 'legs', tilt: Math.sin(wallT * 2 + n) * 3 };
+			if (assemble(c, rigs.front, pick)) return;
+		}
 		if (sheets.front) {
 			art.ellipse(c, 0, 0, 44, 14, { fill: PLAYER_COLORS[n] || 'white' });
 			softShadow(c, 0, 0, 28, 8, 0.3);
@@ -2577,13 +2888,60 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	function drawDoll(ctx) {
 		const p = at(DOLL_X, dollF);
 		art.with(ctx, { x: p.x, y: p.y, scale: p.s * 0.82 }, function (c) {
-			softShadow(c, 0, 0, 190, 34, 0.25);
+			softShadow(c, 0, 0, 150, 30, 0.25, 1, dollBodyImg ? DOLL_BODY.height + 260 : 700);
 			dollBody(c, false);
-			art.with(c, { y: -610, scale: 2.1 }, (c2) => dollHead(c2, head.yaw, glare));
+			art.with(c, { y: -dollHeadY(), scale: 2.1 }, (c2) => dollHead(c2, head.yaw, glare));
 		});
 	}
 
+	// Her body, drawn in ChatGPT: short and stocky, from behind and from the
+	// front, side by side in one picture. Each half trimmed when it loads.
+	const DOLL_BODY = { file: 'doll-body-chibi.png', height: 340, neck: 0.04 };   // how tall to draw it; how far the head sits down into its collar (a share of the body)
+	let dollBodyImg = null;   // [behind, front]: { img, w, h, cx }
+	(function () {
+		const img = new Image();
+		img.onload = function () {
+			try {
+				const cv = document.createElement('canvas');
+				cv.width = img.width;
+				cv.height = img.height;
+				const g = cv.getContext('2d');
+				g.drawImage(img, 0, 0);
+				const data = g.getImageData(0, 0, img.width, img.height).data;
+				const views = [0, 1].map(function (half) {
+					const xa = Math.round(half * img.width / 2);
+					let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1;
+					for (let y = 0; y < img.height; y += 2) for (let x = xa; x < xa + img.width / 2; x += 2) {
+						if (data[(y * img.width + x) * 4 + 3] <= 60) continue;
+						if (x < x0) x0 = x;
+						if (x > x1) x1 = x;
+						if (y < y0) y0 = y;
+						if (y > y1) y1 = y;
+					}
+					const w = x1 - x0 + 2;
+					const h = y1 - y0 + 2;
+					const crop = document.createElement('canvas');
+					crop.width = w;
+					crop.height = h;
+					crop.getContext('2d').drawImage(cv, x0, y0, w, h, 0, 0, w, h);
+					return { img: crop, w, h };
+				});
+				dollBodyImg = views;
+			} catch (e) { /* (unreadable: drawn as before) */ }
+		};
+		img.src = 'assets/red-light-green-light/' + DOLL_BODY.file;
+	})();
+
+	// How high her head sits above her feet (in her own units).
+	const dollHeadY = () => (dollBodyImg ? DOLL_BODY.height * (1 - DOLL_BODY.neck) + 110 : 610);
+
 	function dollBody(c, front) {
+		if (dollBodyImg) {
+			const v = dollBodyImg[front ? 1 : 0];
+			const k = DOLL_BODY.height / v.h;
+			c.drawImage(v.img, -v.w * k / 2, -DOLL_BODY.height, v.w * k, DOLL_BODY.height);
+			return;
+		}
 		const SKIN = '#f6d6c0';
 		const ORANGE = '#f07b1f';
 		const YELLOW = '#f7c934';
@@ -2711,7 +3069,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const p = at(DOLL_X - 360, dollF + 140);
 		art.with(ctx, { x: p.x, y: p.y, scale: p.s * 0.85 }, function (c) {
 			const BARK = '#5a4332';
-			softShadow(c, 0, 0, 120, 22, 0.22);
+			softShadow(c, 0, 0, 90, 20, 0.22, 1, 600);
 			const branches = [[[0, -380], [-150, -560], [-230, -610]], [[0, -430], [120, -600], [210, -650]], [[0, -330], [180, -420]], [[0, -300], [-170, -390]], [[0, -480], [10, -720]]];
 			for (const b of branches) art.line(c, b, { stroke: BARK, lineWidth: 22, lineCap: 'round' });
 			art.poly(c, [[-48, 0], [48, 0], [24, -260], [16, -500], [-16, -500], [-24, -260]], { fill: BARK });
@@ -2839,7 +3197,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// Where her head is, in the world, with the view at the far end.
 	function dollFace() {
 		const p = at(DOLL_X, dollF);
-		return { x: DOLL_X, y: p.y - 610 * 0.82 * p.s + 20 };
+		return { x: DOLL_X, y: p.y - dollHeadY() * 0.82 * p.s + 20 };
 	}
 
 	// The running order. Each beat has its length and its own update and
@@ -2992,6 +3350,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			},
 			draw(ctx) {
 				drawCalls(ctx);
+				drawScores(ctx);
 				show.onWalls(ctx, function (c) {
 					if (phase === 'ready') {
 						show.slam(c, 'ROUND ' + (round + 1), W / 2, 470, 170, phaseT - 0.1, { fill: PINK, glow: PINK, alpha: 1 - between(phaseT, phaseDur - 0.4, phaseDur) });
