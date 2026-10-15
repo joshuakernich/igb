@@ -2348,7 +2348,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	/* ---------- character sprite sheets ---------- */
 
-	// Drawn in ChatGPT (see assets/red-light-green-light/prompts.md): each an
+	// Drawn in ChatGPT, chibi (see assets/red-light-green-light/prompts.md): each an
 	// even grid, 4 across and 2 down, a frame centred in each cell with the
 	// feet on the row's baseline. Cut up once when they load: each frame
 	// trimmed to what's in it, remembering where it sat over its cell's centre
@@ -2621,11 +2621,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// narrows toward the edge and goes out of sight round the back.
 	function dollHead(c, yaw, glare) {
 		if (sheets.head) {
-			// how far round to face us (1) from facing away (0); the sheet's turn
-			// bunches up near her face, so its last steps are skipped
+			// how far round to face us (1) from facing away (0), in the sheet's 8 steps
 			const front = (1 + Math.cos(yaw)) / 2;
-			const STEPS = [0, 1, 2, 3, 7];
-			const i = STEPS[Math.round(front * (STEPS.length - 1))];
+			const i = Math.round(front * 7);
 			const f = sheets.head.frames[i];
 			if (f) {
 				const k = SPRITE.head / sheets.head.unit;

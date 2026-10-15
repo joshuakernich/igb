@@ -151,3 +151,14 @@ Notes: generated 2026-10-16 in one ChatGPT chat, then shrunk to 1280x853
 with sips. Each sheet is an even 2x4 grid, so frame n (0-7) is the cell at
 column n % 4, row floor(n / 4). The doll's turn bunches up: frames 4-7 are all
 nearly face-on. They aren't used by the game yet.
+
+## Chibi versions (these replaced the sheets above, same file names)
+
+Regenerated the same day with CHIBI proportions, the same seven sheets and
+layouts. The shared style gained: "with CHIBI proportions: a big round head
+about as tall as the whole body below it (the head is roughly 45% of the
+total height), a short compact body, short stubby arms and legs, small hands
+and feet". Each character prompt says "a chibi ..." too. The doll's head
+asked for 8 EVEN steps (back, back three-quarter, nearly side-on from behind,
+exact profile, side just showing the face, front three-quarter, nearly face
+on, face on), which fixed the bunching, so the game uses all eight.
