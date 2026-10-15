@@ -506,7 +506,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		if (!el) return;
 		const playing = (id) => { const e = show.audio.get(id); return !!e && !e.paused && !e.ended; };
 		const red = phase === 'red' || phase === 'drill-red';   // (hushed while she watches)
-		const want = MUSIC.level * (playing('dollSong') ? MUSIC.green : Math.min(red ? MUSIC.red : 1, speaking && playing(speaking) ? MUSIC.voice : 1));
+		const turning = head.t < head.dur;   // (silent while her head turns, either way)
+		const want = MUSIC.level * (playing('dollSong') || turning ? MUSIC.green : Math.min(red ? MUSIC.red : 1, speaking && playing(speaking) ? MUSIC.voice : 1));
 		musicLevel += (want - musicLevel) * Math.min(1, dt * MUSIC.ease * 2);
 		el.volume = Math.max(0, Math.min(1, musicLevel));
 	}
