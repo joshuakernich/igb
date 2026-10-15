@@ -37,7 +37,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	const DURATION = 90;                                 // seconds of running
 	const SPEED = { start: 40, top: 68, ramp: 55 };      // metres a second: at the off, flat out, and seconds to get there
 	const SURGE = { boost: 22, decay: 0.7 };             // a boost pad's extra speed, and how fast it fades
-	const CAM = { back: 12, up: 2.9, pitch: 7, look: 16, follow: 0.35, kick: 3 };   // metres behind and above the pack, degrees down, metres it looks ahead, how far it follows the pack across, metres it drops back on a boost
+	const CAM = { back: 5.5, up: 2.2, pitch: 7, look: 16, follow: 0.35, kick: 3 };   // metres behind and above the pack, degrees down, metres it looks ahead, how far it follows the pack across, metres it drops back on a boost
 	const FOV = 64;                                      // vertical, degrees: 90 across each 16:10 wall, so the walls meet
 	const READY = 4.2;                                   // seconds of the swoop and countdown
 	const START_S = 40;                                  // where the pack starts
@@ -47,7 +47,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	const HIT = { tumble: 0.9, safe: 2.2 };              // seconds tumbling after a spill, and seconds safe after
 	const BOOST = 1.6;                                   // seconds curled up in a ball
 	const REACH = { ring: 1.3, hazard: 1.35 };           // metres across that count as touching
-	const DEPTH = { back: -6, front: 6 };                // metres behind and ahead of the pack's middle, at the back of the room and at the front wall
+	const DEPTH = { back: -2, front: 6 };                 // metres behind and ahead of the pack's middle, at the back of the room and at the front wall
 	const SPAN = HALF - 0.7;                             // how far either side of the middle a runner can go
 	const GLIDE = 9;                                     // how quickly a runner follows its player across (per second)
 
