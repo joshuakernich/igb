@@ -97,7 +97,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const INSET = { x: 2 * W - 150, y: 125, r: 92, side: 205 };   // the doll-head inset: top right of the front wall; on the side walls (at y side), under the clock
 
 	// Jump pads and cash
-	const PAD = { rx: 70, rf: 70, every: 420, open: 72, throw: 260 };   // a trapdoor's half-width and half-depth (square); one every so far up the track (field units); how far it springs open (degrees); how high it throws you
+	const PAD = { rx: 70, rf: 70, every: 420, open: 72, throw: 260, sink: 9 };   // a trapdoor's half-width and half-depth (square); one every so far up the track (field units); how far it springs open (degrees); how high it throws you; how far its lid sits sunk below the sand
 	const CASH = { every: 300, reach: 60, size: 1.8, float: 50, bob: 22 };   // every so far up each wall; how close to grab it; its size, float height and bob
 	const MAGNET = { every: 1400, time: 2.5, radius: 480, pull: 1200 };   // a magnet every so far up each wall; seconds it lasts; how far it reaches; how fast cash comes
 	const BOULDER = { from: 1, gap: [4, 9], quicker: 0.9, r: [75, 105], speed: [320, 440], ahead: 1700, lead: 900, down: 1.2, spill: 3 };   // boulders from this round (0 is round 1); seconds between them, shrinking by this much a round; their size; how fast they roll; how far up the field they start (and never nearer the players than lead); seconds flattened; wads of cash spilled
@@ -2342,11 +2342,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		art.ellipse(ctx, g.x, g.y, 50 * s, 17 * s, { stroke: PLAYER_COLORS[c.n], lineWidth: 6, alpha: fadeIn(foot.f) });
 	}
 
-	// A trapdoor at the corner end of a wall: a square hatch of sand, set in
-	// the sand, only a faint glowing seam round it and arrows scratched in it
-	// giving it away. Step on and it springs open toward the next wall (see
-	// drawDoor) and throws you there. Here: its rim, the dark pit, and the
-	// lid while it's shut.
+	// A trapdoor at the corner end of a wall: a square hatch of sand sunk a
+	// little into the sand, only the dark gap where it sits (glowing faintly)
+	// and arrows scratched in it giving it away. Step on and it springs open
+	// toward the next wall (see drawDoor) and throws you there. Here: the hole
+	// and, while it's shut, the lid down in it.
 	function drawPad(ctx, p) {
 		if (!onView(p.f)) return;
 		const wall = p.wall;
@@ -2356,10 +2356,25 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const sq = (r) => onScreen(ring([[p.x - r, p.f - r], [p.x + r, p.f - r], [p.x + r, p.f + r], [p.x - r, p.f + r]]), wall);
 		art.save(ctx, function (c) {
 			c.globalAlpha = fadeIn(p.f);
-			art.poly(c, sq(R + 8), { fill: 'rgba(120,80,40,0.3)' });                   // a darker rim of sand
-			art.poly(c, sq(R + 3), { fill: '#7df9ff', alpha: 0.3 + 0.35 * beat });     // the seam, glowing faintly
-			art.poly(c, sq(R), { fill: '#1a120c' });                                   // the pit
-			if (p.sprung === undefined) lid(c, p, 0, R);
+			// the hole: dark, a faint glow down in it
+			const hole = sq(R);
+			art.poly(c, hole, { fill: '#2a1c10' });
+			art.poly(c, hole, { fill: '#7df9ff', alpha: 0.1 + 0.15 * beat });
+			if (p.sprung === undefined) {
+				// the lid, sunk below the edge: seen through the hole, so its far
+				// side shows a strip of the hole's wall and its near side tucks under the lip
+				c.save();
+				c.beginPath();
+				hole.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
+				c.closePath();
+				c.clip();
+				lid(c, p, 0, R);
+				// the lip's shadow, falling in from the far edge
+				const far = at(p.x, p.f + R, 0, wall);
+				const s2 = far.s;
+				art.rect(c, far.x - R * 2, far.y, R * 4, 14 * s2 / SCALE, { fill: art.linear(c, 0, far.y, 0, far.y + 14 * s2 / SCALE, ['rgba(40,25,10,0.5)', 'rgba(40,25,10,0)']) });
+				c.restore();
+			}
 		});
 	}
 
@@ -2382,7 +2397,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const wall = p.wall;
 		const dir = Math.sign(p.to - p.wall) || 1;
 		const hingeX = p.x + dir * R;
-		const P = (x, f, up) => { const q = at(x, f, up, wall); return [q.x, q.y]; };
+		const P = (x, f, up) => { const q = at(x, f, up - PAD.sink, wall); return [q.x, q.y]; };   // (hinged down in its hole)
 		// u from its free edge (0) to the hinge (1); v up the field, -1 to 1
 		const at2 = (u, v) => P(hingeX - dir * (1 - u) * 2 * R * Math.cos(a), p.f + v * R, (1 - u) * 2 * R * Math.sin(a));
 		// its outline, as points along each edge, so it bends with the field
@@ -2408,7 +2423,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			art.line(c, pts, { stroke: 'rgba(110,72,38,0.55)', lineWidth: Math.max(1.5, 7 * s), lineCap: 'round', lineJoin: 'round' });
 			art.line(c, pts.map(([x, y]) => [x, y - 2 * s]), { stroke: 'rgba(255,240,210,0.5)', lineWidth: Math.max(1, 3 * s), lineCap: 'round', lineJoin: 'round' });
 		}
-		art.poly(c, quad, { stroke: 'rgba(110,72,38,0.6)', lineWidth: Math.max(1, 2.5 * s) });
 	}
 
 	// The lid flung open, standing up off its hinge (drawn among everything
