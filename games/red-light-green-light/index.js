@@ -98,6 +98,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const PAD = { rx: 95, rf: 40, every: 420 };   // a pad's half-width and half-depth; one every so far up the track (field units)
 	const CASH = { every: 300, reach: 60, size: 1.8, float: 50, bob: 22 };   // every so far up each wall; how close to grab it; its size, float height and bob
 	const MAGNET = { every: 1400, time: 2.5, radius: 480, pull: 1200 };   // a magnet every so far up each wall; seconds it lasts; how far it reaches; how fast cash comes
+	const BAG = { every: 1700, count: 9, near: 110, radius: 380, fly: 0.75, arc: 240 };   // a money bag every so far up each wall; wads it bursts into; how near and far they land; seconds in the air; how high they fly
 	const LASER = { hop: 1.2, follow: 20, wobble: 14, search: 50, rx: 150, rf: 60, glow: 50 };   // red light's target: seconds per contestant, how quickly it follows, its jitter, how far it searches round them, its half-width and half-depth, its glow
 	const EDGE_AT = 0.1;        // a pad's centre, as a share of the wall from the corner
 	const HOP = 0.5;            // seconds to skip across a corner onto the next wall
@@ -247,6 +248,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		pads = [];
 		cash = [];
 		magnets = [];
+		bags = [];
+		bursts = [];
 
 		// Square blocks scattered in loose bands across every wall: on each wall,
 		// a few short runs of one to three blocks at odd places along it, each
@@ -304,6 +307,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		layPads(START_F + 200, finishF - 150, PAD.every);
 		layCash(START_F + 80, finishF - 60, CASH.every);
 		layMagnets(START_F + 500, finishF - 200, MAGNET.every);
+		layBags(START_F + 700, finishF - 300, BAG.every);
 
 		// Armed guards line the far ends of the side walls (out of the way
 		// of the contestants playing there), and two flank the doll.
@@ -917,6 +921,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	let pads = [];              // { x, f, wall, to, age, practice }
 	let cash = [];              // { x, f, wall, spin, taken, practice }
 	let magnets = [];           // { x, f, wall, spin, taken }
+	let bags = [];              // { x, f, wall, spin, taken }
+	let bursts = [];            // { x, f, t }: a money bag popping
 	let padPulse = 0;
 
 	const onPad = (c, p) => Math.pow((c.x - p.x) / PAD.rx, 2) + Math.pow((c.f - p.f) / PAD.rf, 2) < 1;
@@ -959,6 +965,39 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		}
 	}
 
+	// A few money bags, here and there up every wall (clear of blocks).
+	function layBags(fromF, toF, every) {
+		for (let wall = 0; wall < 3; wall++) {
+			for (let f = fromF + Math.random() * every; f < toF; f += every * (0.6 + Math.random() * 0.8)) {
+				const x = wall * W + LANE + 160 + Math.random() * (W - 2 * LANE - 320);
+				if (blocks.some((b) => Math.abs(b.x - x) < b.r + 60 && Math.abs(b.f - f) < b.r + 60)) continue;
+				if (magnets.some((g) => g.wall === wall && Math.abs(g.f - f) < 200)) continue;
+				bags.push({ x, f, wall, spin: Math.random() * 6, taken: false });
+			}
+		}
+	}
+
+	// A money bag pops: its wads fly out and land in a ring around it, on its
+	// wall and clear of blocks, ready to be picked up once they're down.
+	function popBag(x, f, wall) {
+		bursts.push({ x, f, t: 0 });
+		show.fx('boom', 0.35);
+		show.fx('kaching', 0.7);
+		const lo = wall * W + LANE + 40;
+		const hi = (wall + 1) * W - LANE - 40;
+		for (let i = 0; i < BAG.count; i++) {
+			let tx = x, tf = f;
+			for (let tries = 0; tries < 12; tries++) {
+				const a = (i + Math.random() * 0.8) / BAG.count * Math.PI * 2;
+				const d = BAG.near + Math.random() * (BAG.radius - BAG.near);
+				tx = Math.min(hi, Math.max(lo, x + Math.cos(a) * d));
+				tf = Math.min(finishF - 40, Math.max(START_F + 40, f + Math.sin(a) * d * 0.8));
+				if (!blocks.some((b) => Math.abs(b.x - tx) < b.r + 40 && Math.abs(b.f - tf) < b.r + 40)) break;
+			}
+			cash.push({ x: tx, f: tf, wall, spin: Math.random() * 6, taken: false, fly: { t: -i * 0.03, x0: x, f0: f } });
+		}
+	}
+
 	// Round the corner onto the next wall, straight away.
 	function jump(c, p) {
 		c.hop = { t: 0, x0: c.x, f0: c.f };
@@ -986,9 +1025,16 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			popOver(c, 'MAGNET!', '#ff4d6d');
 			show.fx('lockIn', 0.8);
 		}
+		// a money bag: picked up like cash; it bursts into a cluster of cash round about
+		for (const g of bags) {
+			if (g.taken || g.wall !== c.wall || Math.abs(g.x - c.x) > CASH.reach || Math.abs(g.f - c.f) > CASH.reach * 0.7) continue;
+			g.taken = true;
+			popOver(c, 'MONEY BAG!', '#ffd23f');
+			popBag(g.x, g.f, g.wall);
+		}
 		if (c.magnet > 0) {
 			for (const m of cash) {
-				if (m.taken || m.wall !== c.wall) continue;
+				if (m.taken || m.fly || m.wall !== c.wall) continue;
 				const dx = c.x - m.x;
 				const df = c.f - m.f;
 				const d = Math.hypot(dx, df);
@@ -999,7 +1045,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			}
 		}
 		for (const m of cash) {
-			if (m.taken || m.wall !== c.wall || Math.abs(m.x - c.x) > CASH.reach || Math.abs(m.f - c.f) > CASH.reach * 0.7) continue;
+			if (m.taken || m.fly || m.wall !== c.wall || Math.abs(m.x - c.x) > CASH.reach || Math.abs(m.f - c.f) > CASH.reach * 0.7) continue;
 			m.taken = true;
 			c.score += POINTS.cash;
 			c.grabbed++;
@@ -1013,6 +1059,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (const p of pads) p.age += dt;
 		for (const m of cash) m.spin += dt;
 		for (const g of magnets) g.spin += dt;
+		for (const g of bags) g.spin += dt;
+		for (const m of cash) if (m.fly && (m.fly.t += dt) >= BAG.fly) m.fly = null;
+		for (const b of bursts) b.t += dt;
+		bursts = bursts.filter((b) => b.t < BURST);
 	}
 
 	/* ---------- her laser ---------- */
@@ -1438,6 +1488,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (const b of blocks) add(b.f - b.r * 0.6, (c) => drawBlock(c, b), Math.abs(b.x - vanishOf(wallOfX(b.x))));
 		for (const m of cash) if (!m.taken) add(m.f, (c) => drawCash(c, m));
 		for (const g of magnets) if (!g.taken) add(g.f, (c) => drawMagnet(c, g));
+		for (const g of bags) if (!g.taken) add(g.f, (c) => drawBag(c, g));
+		for (const b of bursts) add(b.f, (c) => drawBurst(c, b));
 		for (const m of movers) add(m.f, (c) => (m.kind === 'guard' ? drawGuardOn(c, m.x, m.f, m.mask, true, m.phase, m.flash || 0, m.dir) : drawMarble(c, m)));
 		for (const g of sentries) if (dollShown || !g.doll) add(g.f, (c) => drawGuardOn(c, g.x, g.f, g.mask, true, 0, g.flash, facing(g)));
 		if (!waiting) for (const c of contestants) add(c.f, (cx) => drawContestant(cx, c));
@@ -1826,10 +1878,12 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		art.save(ctx, (c) => { c.globalAlpha *= fadeIn(m.f); drawCashHere(c, m); });
 	}
 	function drawCashHere(ctx, m) {
-		const p = at(m.x, m.f);
+		// (flying out of a money bag: along an arc from the bag to where it lands)
+		const k = m.fly ? Math.max(0, m.fly.t) / BAG.fly : 1;
+		const p = m.fly ? at(m.fly.x0 + (m.x - m.fly.x0) * k, m.fly.f0 + (m.f - m.fly.f0) * k) : at(m.x, m.f);
 		const s = p.s * CASH.size;
 		const rise = 0.5 + 0.5 * Math.sin(m.spin * 2.4);
-		const lift = (CASH.float + CASH.bob * rise) * p.s;
+		const lift = (CASH.float + CASH.bob * rise + (m.fly ? BAG.arc * 4 * k * (1 - k) : 0)) * p.s;
 		art.ellipse(ctx, p.x, p.y, 30 * s * (1 - 0.25 * rise), 9 * s * (1 - 0.25 * rise), { fill: 'rgba(0,0,0,0.22)', alpha: 1 - 0.35 * rise });
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: -0.35 + Math.sin(m.spin * 1.3) * 0.1 }, function (c) {
 			// seen at an angle: tipped back and skewed, a stack of notes with depth
@@ -1872,6 +1926,64 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			c.restore();
 			for (const side of [-1, 1]) art.rect(c, side * 15 - 6, -46, 12, 10, { fill: '#e6e9ef' });   // the tips
 			if (Math.sin(g.spin * 9) > 0.3) art.line(c, [[-12, -50], [-4, -56], [3, -49], [12, -55]], { stroke: '#ffe066', lineWidth: 2.5 });
+		});
+	}
+
+	// A money bag: a fat sack of cloth tied at the neck, a ₩ on its front,
+	// floating and bobbing like the cash, a glint winking on it now and then.
+	function drawBag(ctx, g) {
+		art.save(ctx, (c) => { c.globalAlpha *= fadeIn(g.f); drawBagHere(c, g); });
+	}
+	function drawBagHere(ctx, g) {
+		const p = at(g.x, g.f);
+		const s = p.s * CASH.size;
+		const rise = 0.5 + 0.5 * Math.sin(g.spin * 2.4);
+		const lift = (CASH.float + CASH.bob * rise) * p.s;
+		art.ellipse(ctx, p.x, p.y, 34 * s * (1 - 0.25 * rise), 10 * s * (1 - 0.25 * rise), { fill: 'rgba(0,0,0,0.22)', alpha: 1 - 0.35 * rise });
+		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: Math.sin(g.spin * 1.4) * 6 }, function (c) {
+			// the sack: wide at the bottom, gathered in at the neck
+			c.beginPath();
+			c.moveTo(-10, -52);
+			c.bezierCurveTo(-40, -44, -38, -2, -24, 0);
+			c.lineTo(24, 0);
+			c.bezierCurveTo(38, -2, 40, -44, 10, -52);
+			c.closePath();
+			c.fillStyle = '#d9a441';
+			c.fill();
+			c.beginPath();
+			c.ellipse(10, -24, 12, 18, 0, 0, Math.PI * 2);   // a lighter side, where the light falls
+			c.fillStyle = 'rgba(255,240,190,0.35)';
+			c.fill();
+			art.poly(c, [[-12, -52], [12, -52], [18, -66], [6, -60], [0, -68], [-6, -60], [-18, -66]], { fill: '#d9a441' });   // the ruffle above the tie
+			art.rect(c, -13, -55, 26, 6, { fill: '#7a4b1c' });   // the tie
+			art.text(c, '₩', 0, -23, { size: 26, fill: '#7a4b1c', font: 'Paytone One', weight: 400 });
+			if (Math.sin(g.spin * 1.7) > 0.93) {
+				const gl = (Math.sin(g.spin * 1.7) - 0.93) / 0.07;
+				art.line(c, [[-18, -40 - 9 * gl], [-18, -40 + 9 * gl]], { stroke: '#fff', lineWidth: 2.5 });
+				art.line(c, [[-18 - 9 * gl, -40], [-18 + 9 * gl, -40]], { stroke: '#fff', lineWidth: 2.5 });
+			}
+		});
+	}
+
+	// A money bag popping: a flash, a gold ring spreading out over the sand and
+	// scraps of sacking flung up and falling.
+	const BURST = 0.6;
+	function drawBurst(ctx, b) {
+		const k = b.t / BURST;
+		const p = at(b.x, b.f);
+		const s = p.s * CASH.size;
+		const y = p.y - CASH.float * p.s;
+		art.save(ctx, (c) => {
+			c.globalAlpha *= fadeIn(b.f) * (1 - k);
+			art.ellipse(c, p.x, p.y, (40 + 260 * k) * s, (12 + 78 * k) * s, { stroke: '#ffd23f', lineWidth: 6 * s * (1 - k) + 1 });
+			if (k < 0.3) art.circle(c, p.x, y - 30 * s, (30 + 120 * k) * s, { fill: 'rgba(255,240,180,' + (0.9 - k * 3) + ')' });
+			for (let i = 0; i < 8; i++) {
+				const a = i / 8 * Math.PI * 2 + 0.3;
+				const d = 90 * k * s;
+				const sx = p.x + Math.cos(a) * d * 1.4;
+				const sy = y - 30 * s + Math.sin(a) * d * 0.7 - (120 * k - 160 * k * k) * s;
+				art.with(c, { x: sx, y: sy, rotate: k * 500 + i * 45 }, (cc) => art.rect(cc, -6 * s, -4 * s, 12 * s, 8 * s, { fill: i % 2 ? '#d9a441' : '#b8862f' }));
+			}
 		});
 	}
 
@@ -2614,6 +2726,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	dbutton('0:15 LEFT', () => show.setTimeLeft(15), '#5a3a22').appendTo($misc);
 	dbutton('+ CASH', () => { for (const c of contestants) c.score += 100 * (1 + Math.floor(Math.random() * 20)); }, '#225a3a').appendTo($misc);
 	dbutton('MAGNET ALL', () => { for (const c of contestants) c.magnet = MAGNET.time; }, '#225a3a').appendTo($misc);
+	dbutton('MONEY BAG ALL', () => { for (const c of contestants) if (c.alive) popBag(c.x, c.f + 60, c.wall); }, '#225a3a').appendTo($misc);
 
 	// any beat, straight away (a squad of three if none was picked; the
 	// results with some scores to show)
