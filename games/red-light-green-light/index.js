@@ -1652,7 +1652,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// rising up off the bottom edge: their colour, their winnings. A score that
 	// just changed pops; anyone out is dimmed. At the end of a round, while its
 	// banner's up, they rise up the wall and grow, then sink back.
-	const SCORES = { w: 220, h: 64, gap: 14, sink: 22, size: 34, rise: 260, grow: 0.35 };   // a capsule's width and height (the part showing), the gap between them, how far it reaches down past the edge, the figures' size; at a round's end, how far up they rise and how much bigger they get
+	const SCORES = { w: 176, h: 64, gap: 12, sink: 22, size: 32, rise: 260, grow: 0.35 };   // a capsule's width and height (the part showing), the gap between them, how far it reaches down past the edge, the figures' size; at a round's end, how far up they rise and how much bigger they get
 	function drawScores(ctx) {
 		const n = contestants.length;
 		if (!n) return;
@@ -2573,6 +2573,37 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		img.src = 'assets/red-light-green-light/' + file;
 	}
 
+	// The drawings come with a dark ink outline round them; peel it off: a
+	// few passes, each clearing the near-black pixels on the outside edge
+	// (next to a clear one), so the outline goes and the figure's own colours
+	// show to its edge. (Lines drawn inside the figure stay.)
+	const OUTLINE = { passes: 4, dark: 75 };   // how many pixels deep to peel; how dark (0-255, brightest channel) counts as outline
+	function stripOutline(canvas) {
+		const w = canvas.width;
+		const h = canvas.height;
+		const g = canvas.getContext('2d');
+		const im = g.getImageData(0, 0, w, h);
+		const d = im.data;
+		const clear = (x, y) => x < 0 || y < 0 || x >= w || y >= h || d[(y * w + x) * 4 + 3] < 40;
+		for (let pass = 0; pass < OUTLINE.passes; pass++) {
+			const peel = [];
+			for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+				const i = (y * w + x) * 4;
+				if (d[i + 3] < 40) continue;
+				if (Math.max(d[i], d[i + 1], d[i + 2]) > OUTLINE.dark) continue;
+				if (clear(x - 1, y) || clear(x + 1, y) || clear(x, y - 1) || clear(x, y + 1)) peel.push(i);
+			}
+			if (!peel.length) break;
+			for (const i of peel) d[i + 3] = 0;
+		}
+		// and soften what's left of the edge, half-clearing the pixels now on it
+		for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+			const i = (y * w + x) * 4;
+			if (d[i + 3] >= 40 && (clear(x - 1, y) || clear(x + 1, y) || clear(x, y - 1) || clear(x, y + 1))) d[i + 3] = Math.min(d[i + 3], 140);
+		}
+		g.putImageData(im, 0, 0);
+	}
+
 	function slice(img, name) {
 		const cw = img.width / 4;
 		const ch = img.height / 2;
@@ -2609,6 +2640,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			crop.width = w;
 			crop.height = h;
 			crop.getContext('2d').drawImage(cv, b.x0, b.y0, w, h, 0, 0, w, h);
+			stripOutline(crop);
 			const base = baselines[Math.floor(i / 4)];
 			frames.push({ img: crop, x: b.x0 - b.cx, y: b.y0 - base, w, h });
 		});
@@ -2714,6 +2746,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			crop.width = w;
 			crop.height = h;
 			crop.getContext('2d').drawImage(cv, x0, y0, w, h, 0, 0, w, h);
+			stripOutline(crop);
 			parts[id] = { img: crop, w, h, top: [bx - x0, ty - y0], bottom: [bx - x0, h] };
 			// (a guard's aimed rifle: its muzzle, the furthest-right point)
 			if (id === 'torsoAim') {
@@ -2980,6 +3013,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					crop.width = w;
 					crop.height = h;
 					crop.getContext('2d').drawImage(cv, x0, y0, w, h, 0, 0, w, h);
+					stripOutline(crop);
 					return { img: crop, w, h };
 				});
 				dollBodyImg = views;
