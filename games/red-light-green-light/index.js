@@ -1671,11 +1671,18 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				art.with(c, { x, y, scale: pop * grow, alpha: k.alive || lift > 0 ? 1 : 0.45 }, function (c2) {
 					// black glass, a line of their colour along the top
 					art.roundRect(c2, -SCORES.w / 2, -SCORES.h / 2, SCORES.w, SCORES.h + sink, SCORES.h / 2, { fill: 'rgba(0,0,0,0.6)' });
+					// (the line: the capsule's top, as a thin capsule-ended strip, so no clipping is needed)
+					const r = SCORES.h / 2;
+					const L = SCORES.line;
 					art.save(c2, function (c3) {
 						c3.beginPath();
-						c3.roundRect(-SCORES.w / 2, -SCORES.h / 2, SCORES.w, SCORES.h + sink, SCORES.h / 2);
-						c3.clip();
-						art.rect(c3, -SCORES.w / 2, -SCORES.h / 2, SCORES.w, SCORES.line, { fill: PLAYER_COLORS[k.n] });
+						c3.moveTo(-SCORES.w / 2 + r - Math.sqrt(r * r - (r - L) * (r - L)), -SCORES.h / 2 + L);
+						c3.arc(-SCORES.w / 2 + r, -SCORES.h / 2 + r, r, Math.PI + Math.asin((r - L) / r), Math.PI * 1.5);
+						c3.lineTo(SCORES.w / 2 - r, -SCORES.h / 2);
+						c3.arc(SCORES.w / 2 - r, -SCORES.h / 2 + r, r, Math.PI * 1.5, -Math.asin((r - L) / r));
+						c3.closePath();
+						c3.fillStyle = PLAYER_COLORS[k.n];
+						c3.fill();
 					});
 					art.text(c2, won(k.score), 0, 2, { size: SCORES.size, font: 'Paytone One', weight: 400, fill: 'white', shadow: { color: 'rgba(0,0,0,0.35)', blur: 0, y: 2 } });
 				});
@@ -2070,8 +2077,16 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// it's cast like a block's: its foot slid away from the light in soft
 	// layers, darkest at the foot and fading and widening toward its tip, with
 	// a dark contact patch under it. Without a height, a soft round pool.
-	function softShadow(ctx, x, y, rx, ry, dark, alpha = 1, h = 0) {
+	// (f, the field distance it stands at: up the bend the ground tilts away,
+	// so a shadow down it shortens far more than the thing casting it shrinks)
+	const groundTilt = (f) => Math.max(0.02, (planeY(f - 1) - planeY(f)) / (scaleAt(f) / SCALE));
+	function softShadow(ctx, x, y, rx, ry, dark, alpha = 1, h = 0, f) {
 		if (rx <= 0 || ry <= 0) return;
+		if (f !== undefined) {
+			const tilt = groundTilt(f);
+			h *= tilt;
+			ry *= Math.min(1, 0.4 + 0.6 * tilt);   // (its foot flattens with the ground too)
+		}
 		if (h > 0) {
 			const ring = (cx, cy, ax, ay) => Array.from({ length: 14 }, (_, i) => [cx + Math.cos(i / 14 * Math.PI * 2) * ax, cy + Math.sin(i / 14 * Math.PI * 2) * ay]);
 			art.save(ctx, function (c) {
@@ -2106,7 +2121,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const r = m.r * p.s;
 		art.save(ctx, function (c) {
 			c.globalAlpha = fadeIn(m.f);
-			softShadow(c, foot.x, foot.y, r * 0.9, r * 0.28, 0.28, 1, r * 2);
+			softShadow(c, foot.x, foot.y, r * 0.9, r * 0.28, 0.28, 1, r * 2, m.f);
 			art.circle(c, p.x, p.y, r, { fill: art.radial(c, p.x - r * 0.3, p.y - r * 0.3, r * 0.1, r * 1.3, ['#eef8ff', '#cfe6f8', '#8fb6d8']) });
 			c.save();
 			c.translate(p.x, p.y);
@@ -2139,7 +2154,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				const d = at(b.x + Math.sin(b.seed + i * 2.3) * b.r * 0.7, b.f + b.r * 0.6 + k * 160, 10 + k * 50);
 				art.circle(c, d.x, d.y, (14 + k * 34) * d.s, { fill: 'rgba(214,186,140,0.55)', alpha: (1 - k) * 0.8 });
 			}
-			softShadow(c, foot.x, foot.y, r * 0.95, r * 0.3, 0.3, 1, r * 2);
+			softShadow(c, foot.x, foot.y, r * 0.95, r * 0.3, 0.3, 1, r * 2, b.f);
 			// the stone: a lumpy circle
 			c.save();
 			c.beginPath();
@@ -2175,7 +2190,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	function drawGuardOn(ctx, x, f, mask, armed, walk, muzzle, dir = 1) {
 		const p = at(x, f);
 		const s = p.s * 1.45;
-		softShadow(ctx, p.x, p.y, 24 * s, 8 * s, 0.3, fadeIn(f), 118 * s);   // (out here, so it falls away from the light whichever way they face)
+		softShadow(ctx, p.x, p.y, 24 * s, 8 * s, 0.3, fadeIn(f), 118 * s, f);   // (out here, so it falls away from the light whichever way they face)
 		art.with(ctx, { x: p.x, y: p.y, scaleX: s * dir, scaleY: s, alpha: fadeIn(f) }, function (c) {
 			guard(c, mask, armed, walk, muzzle);
 		});
@@ -2274,7 +2289,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const alpha = fadeIn(c.f);
 		const air = 1 - c.lift / 300;        // the shadow shrinks under a skip
 		// their shadow, cast like everything's (shorter off the ground, mid-skip)
-		softShadow(ctx, ground.x, ground.y, 22 * s * air, 8 * s * air, 0.35, alpha, 108 * s * air);
+		softShadow(ctx, ground.x, ground.y, 22 * s * air, 8 * s * air, 0.35, alpha, 108 * s * air, c.f);
 		// a solid spot of their colour, always under the avatar
 		if (c.alive) art.ellipse(ctx, ground.x, ground.y, 40 * s * air, 13 * s * air, { fill: colour, alpha: alpha * 0.9 });
 		// magnetised: rings of soft magnetic red, closing in on them over and
@@ -2480,7 +2495,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const s = p.s * CASH.size;
 		const rise = 0.5 + 0.5 * Math.sin(m.spin * 2.4);
 		const lift = (CASH.float + CASH.bob * rise + (m.fly ? BAG.arc * 4 * k * (1 - k) : 0)) * p.s;
-		softShadow(ctx, p.x, p.y, 26 * s * (1 - 0.25 * rise), 8 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 40 * s);
+		softShadow(ctx, p.x, p.y, 26 * s * (1 - 0.25 * rise), 8 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 40 * s, m.f);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: -0.35 + Math.sin(m.spin * 1.3) * 0.1 }, function (c) {
 			// seen at an angle: tipped back and skewed, a stack of notes with depth
 			c.transform(1, 0, -0.45, 0.72, 0, 0);
@@ -2504,7 +2519,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const s = p.s * CASH.size;
 		const rise = 0.5 + 0.5 * Math.sin(g.spin * 2.4);
 		const lift = (CASH.float + CASH.bob * rise) * p.s;
-		softShadow(ctx, p.x, p.y, 22 * s * (1 - 0.25 * rise), 7 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 40 * s);
+		softShadow(ctx, p.x, p.y, 22 * s * (1 - 0.25 * rise), 7 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 40 * s, g.f);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: Math.sin(g.spin * 1.6) * 0.25 }, function (c) {
 			c.save();
 			c.lineCap = 'butt';
@@ -2535,7 +2550,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const s = p.s * CASH.size;
 		const rise = 0.5 + 0.5 * Math.sin(g.spin * 2.4);
 		const lift = (CASH.float + CASH.bob * rise) * p.s;
-		softShadow(ctx, p.x, p.y, 30 * s * (1 - 0.25 * rise), 9 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 60 * s);
+		softShadow(ctx, p.x, p.y, 30 * s * (1 - 0.25 * rise), 9 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 60 * s, g.f);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: Math.sin(g.spin * 1.4) * 6 }, function (c) {
 			// the sack: wide at the bottom, gathered in at the neck
 			c.beginPath();
@@ -3077,7 +3092,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	function drawDoll(ctx) {
 		const p = at(DOLL_X, dollF);
 		art.with(ctx, { x: p.x, y: p.y, scale: p.s * 0.82 }, function (c) {
-			softShadow(c, 0, 0, 150, 30, 0.25, 1, dollBodyImg ? DOLL_BODY.height + 260 : 700);
+			softShadow(c, 0, 0, 150, 30, 0.25, 1, dollBodyImg ? DOLL_BODY.height + 260 : 700, dollF);
 			dollBody(c, false);
 			art.with(c, { y: -dollHeadY(), scale: 2.1 }, (c2) => dollHead(c2, head.yaw, glare));
 		});
@@ -3259,7 +3274,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const p = at(DOLL_X - 360, dollF + 140);
 		art.with(ctx, { x: p.x, y: p.y, scale: p.s * 0.85 }, function (c) {
 			const BARK = '#5a4332';
-			softShadow(c, 0, 0, 90, 20, 0.22, 1, 600);
+			softShadow(c, 0, 0, 90, 20, 0.22, 1, 600, dollF + 140);
 			const branches = [[[0, -380], [-150, -560], [-230, -610]], [[0, -430], [120, -600], [210, -650]], [[0, -330], [180, -420]], [[0, -300], [-170, -390]], [[0, -480], [10, -720]]];
 			for (const b of branches) art.line(c, b, { stroke: BARK, lineWidth: 22, lineCap: 'round' });
 			art.poly(c, [[-48, 0], [48, 0], [24, -260], [16, -500], [-16, -500], [-24, -260]], { fill: BARK });
