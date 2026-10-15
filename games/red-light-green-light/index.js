@@ -1612,7 +1612,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (const b of blocks) add(b.f - b.r * 0.6, (c) => drawBlock(c, b), Math.abs(b.x - vanishOf(wallOfX(b.x))));
 		for (const m of cash) if (!m.taken) add(m.f, (c) => drawCash(c, m));
 		for (const g of magnets) if (!g.taken) add(g.f, (c) => drawMagnet(c, g));
-		for (const p of pads) if (p.sprung !== undefined) add(p.f + PAD.rf, (c) => drawDoor(c, p));
+		for (const p of pads) if (p.sprung !== undefined) add(p.f, (c) => drawDoor(c, p));
 		for (const g of bags) if (!g.taken) add(g.f, (c) => drawBag(c, g));
 		for (const b of bursts) add(b.f, (c) => drawBurst(c, b));
 		for (const b of boulders) add(b.f, (c) => drawBoulder(c, b));
@@ -2331,10 +2331,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		art.ellipse(ctx, g.x, g.y, 50 * s, 17 * s, { stroke: PLAYER_COLORS[c.n], lineWidth: 6, alpha: fadeIn(foot.f) });
 	}
 
-	// A trapdoor at the corner end of a wall: a square steel hatch set in the
-	// sand, a glowing seam round it, arrows on its lid pointing round the
-	// corner. Step on and it springs open (see drawDoor) and throws you onto
-	// the next wall. Here: its frame, the dark pit, and the lid while it's shut.
+	// A trapdoor at the corner end of a wall: a square hatch of sand, set in
+	// the sand, only a faint glowing seam round it and arrows scratched in it
+	// giving it away. Step on and it springs open toward the next wall (see
+	// drawDoor) and throws you there. Here: its rim, the dark pit, and the
+	// lid while it's shut.
 	function drawPad(ctx, p) {
 		if (!onView(p.f)) return;
 		const wall = p.wall;
@@ -2344,11 +2345,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const sq = (r) => onScreen(ring([[p.x - r, p.f - r], [p.x + r, p.f - r], [p.x + r, p.f + r], [p.x - r, p.f + r]]), wall);
 		art.save(ctx, function (c) {
 			c.globalAlpha = fadeIn(p.f);
-			// the glow round it, pulsing
-			art.poly(c, sq(R + 22), { fill: '#7df9ff', alpha: 0.12 + 0.14 * beat });
-			art.poly(c, sq(R + 10), { fill: '#3b4652' });                 // the steel frame
-			art.poly(c, sq(R + 4), { fill: '#7df9ff', alpha: 0.55 + 0.45 * beat });   // the seam
-			art.poly(c, sq(R), { fill: '#120d18' });                      // the pit
+			art.poly(c, sq(R + 8), { fill: 'rgba(120,80,40,0.3)' });                   // a darker rim of sand
+			art.poly(c, sq(R + 3), { fill: '#7df9ff', alpha: 0.3 + 0.35 * beat });     // the seam, glowing faintly
+			art.poly(c, sq(R), { fill: '#1a120c' });                                   // the pit
 			if (p.sprung === undefined) lid(c, p, 0, R);
 		});
 	}
@@ -2364,34 +2363,41 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		return Math.max(0, 1 - ease((t - 0.75) / 0.45));
 	}
 
-	// The lid, hinged along its far edge, lifted by `open` (0 to 1).
+	// The lid: a slab of sand, hinged along its edge on the side it throws
+	// you (toward the next wall), lifted by `open` (0 to 1) so it flips up and
+	// over that way.
 	function lid(c, p, open, R = PAD.rx) {
 		const a = open * PAD.open * Math.PI / 180;
 		const wall = p.wall;
-		const hingeF = p.f + R;
-		const freeF = hingeF - 2 * R * Math.cos(a);
-		const freeUp = 2 * R * Math.sin(a);
+		const dir = Math.sign(p.to - p.wall) || 1;
+		const hingeX = p.x + dir * R;
 		const P = (x, f, up) => { const q = at(x, f, up, wall); return [q.x, q.y]; };
-		const at2 = (u, v) => P(p.x + u * R, hingeF - (1 - v) * 2 * R * Math.cos(a), (1 - v) * freeUp);   // u across -1..1, v from the free edge (0) to the hinge (1)
+		// u from its free edge (0) to the hinge (1); v up the field, -1 to 1
+		const at2 = (u, v) => P(hingeX - dir * (1 - u) * 2 * R * Math.cos(a), p.f + v * R, (1 - u) * 2 * R * Math.sin(a));
 		// its outline, as points along each edge, so it bends with the field
-		const n = curving(hingeF) ? 8 : 1;
+		const n = curving(p.f + R) ? 8 : 1;
 		const quad = [];
-		for (let k = 0; k < n; k++) quad.push(at2(-1 + 2 * k / n, 0));
-		for (let k = 0; k < n; k++) quad.push(at2(1, k / n));
-		for (let k = 0; k < n; k++) quad.push(at2(1 - 2 * k / n, 1));
-		for (let k = 0; k < n; k++) quad.push(at2(-1, 1 - k / n));
-		const shade = 1 - 0.25 * open;   // (tipping up toward us, it's turned out of the light)
-		art.poly(c, quad, { fill: mix('#8a96a3', shade) });
-		// hazard stripes along its front edge, and arrows round the corner
-		const dir = Math.sign(p.to - p.wall);
-		for (let i = 0; i < 6; i++) {
-			const u0 = -1 + i / 3;
-			art.poly(c, [at2(u0, 0), at2(u0 + 1 / 6, 0), at2(u0 + 1 / 6 + 0.12, 0.16), at2(u0 + 0.12, 0.16)].map(([x, y]) => [x, y]), { fill: i % 2 ? '#1a1a1a' : '#ffd23a' });
+		for (let k = 0; k < n; k++) quad.push(at2(0, -1 + 2 * k / n));
+		for (let k = 0; k < n; k++) quad.push(at2(k / n, 1));
+		for (let k = 0; k < n; k++) quad.push(at2(1, 1 - 2 * k / n));
+		for (let k = 0; k < n; k++) quad.push(at2(1 - k / n, -1));
+		// (flipping toward the light it brightens; away from it, it darkens)
+		const shade = 1 + open * (dir > 0 ? 0.08 : -0.28);
+		art.poly(c, quad, { fill: mix('#dcb47c', shade) });
+		// grains and little stones, the same each time for this door
+		if (!p.grains) p.grains = Array.from({ length: 22 }, () => [Math.random(), Math.random() * 2 - 1, 1 + Math.random() * 2.5, Math.random() < 0.5]);
+		const s = at(p.x, p.f, 0, wall).s;
+		for (const [u, v, r, light] of p.grains) {
+			const [x, y] = at2(0.06 + u * 0.88, v * 0.9);
+			art.circle(c, x, y, r * s * 1.6, { fill: light ? 'rgba(255,240,210,0.6)' : 'rgba(110,72,38,0.45)' });
 		}
-		for (const off of [-0.35, 0.25]) {
-			art.poly(c, [at2(dir * (off - 0.15), 0.35), at2(dir * (off + 0.15), 0.58), at2(dir * (off - 0.15), 0.82), at2(dir * (off - 0.02), 0.58)], { fill: '#7df9ff' });
+		// arrows scratched into it, pointing the way it throws you
+		for (const u of [0.28, 0.62]) {
+			const pts = [at2(u, -0.45), at2(u + 0.2, 0), at2(u, 0.45)];
+			art.line(c, pts, { stroke: 'rgba(110,72,38,0.55)', lineWidth: Math.max(1.5, 7 * s), lineCap: 'round', lineJoin: 'round' });
+			art.line(c, pts.map(([x, y]) => [x, y - 2 * s]), { stroke: 'rgba(255,240,210,0.5)', lineWidth: Math.max(1, 3 * s), lineCap: 'round', lineJoin: 'round' });
 		}
-		art.poly(c, quad, { stroke: '#2a313a', lineWidth: Math.max(1, 3 * at(p.x, p.f, 0, wall).s) });
+		art.poly(c, quad, { stroke: 'rgba(110,72,38,0.6)', lineWidth: Math.max(1, 2.5 * s) });
 	}
 
 	// The lid flung open, standing up off its hinge (drawn among everything
@@ -2402,15 +2408,16 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		if (open <= 0) return;
 		art.save(ctx, function (c) {
 			c.globalAlpha = fadeIn(p.f);
-			// the spring, from the pit to the underside of the lid
-			const base = at(p.x, p.f, 0, p.wall);
+			// the spring, from the middle of the pit to the middle of the lid's underside
+			const dir = Math.sign(p.to - p.wall) || 1;
 			const a = open * PAD.open * Math.PI / 180;
-			const top = at(p.x, p.f + PAD.rx - PAD.rx * Math.cos(a), PAD.rx * Math.sin(a), p.wall);
+			const base = at(p.x, p.f, 0, p.wall);
+			const top = at(p.x + dir * PAD.rx - dir * PAD.rx * Math.cos(a), p.f, PAD.rx * Math.sin(a), p.wall);
 			const coils = 7;
 			const pts = [];
 			for (let i = 0; i <= coils * 2; i++) {
 				const k = i / (coils * 2);
-				pts.push([base.x + (top.x - base.x) * k + (i % 2 ? 1 : -1) * 14 * base.s, base.y + (top.y - base.y) * k]);
+				pts.push([base.x + (top.x - base.x) * k, base.y + (top.y - base.y) * k + (i % 2 ? 1 : -1) * 10 * base.s]);
 			}
 			art.line(c, pts, { stroke: '#c9d3dc', lineWidth: Math.max(1.5, 5 * base.s), lineJoin: 'round' });
 			lid(c, p, open);
@@ -3125,24 +3132,16 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		});
 	}
 
-	// The doll-head inset, while she's too far up the field to see: her head
-	// in a ring that says what she's doing.
+	// The doll-head inset, while she's too far up the field to see: just her
+	// head, and under it a tag that says what she's doing.
 	function drawInset(ctx, x, y = INSET.y) {
 		const looking = Math.cos(head.yaw) > 0.5;
 		const turning = head.t < head.dur;
 		const label = looking ? 'WATCHING' : turning ? 'TURNING' : 'BACK TURNED';
 		const colour = looking ? '#ff3640' : turning ? '#ffb020' : '#27d96b';
 		const { r } = INSET;
-		art.circle(ctx, x, y, r + 10, { fill: colour });
-		art.circle(ctx, x, y, r, { fill: '#f3e3c4' });
-		art.save(ctx, function (c) {
-			c.beginPath();
-			c.arc(x, y, r, 0, Math.PI * 2);
-			c.clip();
-			art.with(c, { x, y: y + 18, scale: 1.05 }, function (c2) {
-				art.roundRect(c2, -70, 55, 140, 80, 30, { fill: '#f7c934' });
-				dollHead(c2, head.yaw, glare);
-			});
+		art.with(ctx, { x, y: y + 6, scale: 1.05 }, function (c2) {
+			dollHead(c2, head.yaw, glare);
 		});
 		art.roundRect(ctx, x - 92, y + r - 6, 184, 40, 20, { fill: colour });
 		show.text(ctx, label, x, y + r + 14, 28, {});
