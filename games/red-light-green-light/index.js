@@ -194,19 +194,39 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		least: 0.18,            // things far off shrink to this share of their size, and no smaller
 		shrink: 900,            // how quickly they shrink past the flat (field units)
 		haze: [1500, 2700],     // past the flat, things fade out over this stretch
+		knee: 240,              // the flat eases into the bend over this much either side of its edge (field units), so nothing kinks there
 	};
+	const CURVE = { step: 22 };   // field units between points along an edge drawn on the curving field, so straight edges bend with it
 	const INK = '#1a1a1a';     // for drop shadows on words
 
 	let cam = 0;
 
-	// the bend: past the flat, field distance runs out toward the horizon (its
-	// slope matching the flat's where they meet, so there's no crease)
+	// the bend: past the flat, field distance runs out toward the horizon.
+	// The flat eases into it: `beyond` (how far past the flat) starts gently
+	// over the knee rather than all at once, so the squeeze up the walls and
+	// the shrinking both come on smoothly, with no crease where they start.
 	const BEND = H - VIEW.flat - VIEW.horizon;
-	const beyond = (f) => Math.max(0, f - cam - VIEW.flat);
+	const soft = function (u) {
+		const K = VIEW.knee;
+		if (u <= -K) return 0;
+		if (u >= K) return u;
+		return (u + K) * (u + K) / (4 * K);
+	};
+	const beyond = (f) => soft(f - cam - VIEW.flat);
 	const planeY = function (f) {
 		const d = f - cam;
-		if (d <= VIEW.flat) return H - d;
-		return H - VIEW.flat - BEND * (1 - Math.exp(-(d - VIEW.flat) / BEND));
+		const b = soft(d - VIEW.flat);
+		return H - (d - b) - BEND * (1 - Math.exp(-b / BEND));
+	};
+	// (the other way: the field distance at a height on the walls)
+	const fieldAtY = function (y) {
+		let lo = cam - 2000;
+		let hi = cam + 40000;
+		for (let i = 0; i < 40; i++) {
+			const mid = (lo + hi) / 2;
+			if (planeY(mid) > y) lo = mid; else hi = mid;
+		}
+		return (lo + hi) / 2;
 	};
 	const scaleAt = (f) => SCALE * (VIEW.least + (1 - VIEW.least) * Math.exp(-beyond(f) / VIEW.shrink));
 	// Across, things far off draw in toward their wall's vanishing point as
@@ -1779,24 +1799,22 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	function drawGravel(ctx) {
 		if (!gravelPattern) gravelPattern = ctx.createPattern(gravelTile(), 'repeat');
 		const pat = gravelPattern;
-		const flatTop = H - VIEW.flat;
+		const flatTop = H - VIEW.flat + VIEW.knee;   // (truly flat only below the knee)
 		ctx.save();
 		ctx.fillStyle = pat;
 		// the flat: field units are screen pixels; v = -f, so the grain moves down as the field scrolls
 		pat.setTransform(new DOMMatrix([1, 0, 0, 1, 0, H + cam]));
-		ctx.fillRect(-20, flatTop, WIDTH + 40, VIEW.flat + 20);
+		ctx.fillRect(-20, flatTop, WIDTH + 40, H - flatTop + 20);
 		// past the flat, band by band up to where it's lost in the haze
 		for (let y1 = flatTop; y1 > VIEW.horizon + 2; y1 -= GRAVEL.band) {
 			const y0 = Math.max(VIEW.horizon + 2, y1 - GRAVEL.band);
 			const yc = (y0 + y1) / 2;
-			const u = (H - VIEW.flat - yc) / BEND;   // how far into the bend (0 at the flat, 1 at the horizon)
-			if (u >= 0.999) break;
-			const d = VIEW.flat - BEND * Math.log(1 - u);
-			const f = cam + d;
+			const f = fieldAtY(yc);
+			if (f > cam + 30000) break;
 			const fade = fadeIn(f);
 			if (fade <= 0) break;
 			const k = scaleAt(f) / SCALE;
-			const slope = Math.exp(-(d - VIEW.flat) / BEND);   // screen pixels per field unit up the field, here
+			const slope = Math.max(1e-4, planeY(f) - planeY(f + 1));   // screen pixels per field unit up the field, here
 			ctx.globalAlpha = fade * Math.min(1, k / GRAVEL.fade);
 			for (let wall = 0; wall < 3; wall++) {
 				const vp = vanishOf(wall);
@@ -1924,6 +1942,19 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// Field points onto the screen (on this block's wall), so many up.
 	const onScreen = (pts, wall, up = 0) => pts.map(([x, f]) => { const p = at(x, f, up, wall); return [p.x, p.y]; });
 
+	// An edge on the field, a→z, as points close enough together that it
+	// bends with the field once it's on the screen (just its ends where the
+	// field is still flat, where a straight line is right).
+	const curving = (f) => f > cam + VIEW.flat - VIEW.knee - 40;
+	function seg(a, z, bend = curving(Math.max(a[1], z[1]))) {
+		const n = bend ? Math.max(1, Math.ceil(Math.hypot(z[0] - a[0], z[1] - a[1]) / CURVE.step)) : 1;
+		const out = [];
+		for (let k = 0; k <= n; k++) out.push([a[0] + (z[0] - a[0]) * k / n, a[1] + (z[1] - a[1]) * k / n]);
+		return out;
+	}
+	// a closed outline, every edge so divided
+	const ring = (pts) => pts.flatMap((p, i) => seg(p, pts[(i + 1) % pts.length]).slice(0, -1));
+
 	// Every block's shadow, soft: the outline slid away from the light in
 	// layers, each a little further and a little wider, so it's darkest at the
 	// foot of the block and fades out toward its tip; and a dark line of
@@ -1939,9 +1970,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					const t = i / SHADOW.layers;
 					const base = footprint(b, SHADOW.spread * t * 0.5);
 					const slid = base.map(([x, f]) => [x + b.h * SHADOW.x * t, f + b.h * SHADOW.f * t]);
-					art.poly(c, onScreen(hull(base.concat(slid)), wall), { fill: `rgba(20,10,30,${SHADOW.dark})` });
+					art.poly(c, onScreen(ring(hull(base.concat(slid))), wall), { fill: `rgba(20,10,30,${SHADOW.dark})` });
 				}
-				art.poly(c, onScreen(footprint(b, 5), wall), { fill: `rgba(20,10,30,${SHADOW.contact})` });
+				art.poly(c, onScreen(ring(footprint(b, 5)), wall), { fill: `rgba(20,10,30,${SHADOW.contact})` });
 			});
 		}
 	}
@@ -1956,9 +1987,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const shade = (k) => mix(b.colour, k);
 		const bv = BLOCK_LOOK.bevel;
 		const foot = footprint(b);
+		const inset = footprint(b, -bv);
 		const base = onScreen(foot, wall);
 		const rim = onScreen(foot, wall, b.h - bv);              // where the sides end and the bevel starts
-		const top = onScreen(footprint(b, -bv), wall, b.h);      // the flat top, inset by the bevel
+		const top = onScreen(inset, wall, b.h);                  // the flat top, inset by the bevel
 		const [lx, lf] = BLOCK_LOOK.light;
 		const ll = Math.hypot(lx, lf);
 		const s = scaleAt(b.f);
@@ -1978,30 +2010,36 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				const ef = foot[j][1] - foot[i][1];
 				const el = Math.hypot(ex, ef) || 1;
 				const lit = (ef / el * lx - ex / el * lf) / ll;
+				// (each face's edges follow the field's curve: its bottom and top
+				// edges as runs of points, the face the strip between them)
+				const along = seg(foot[i], foot[j]);
+				const alongTop = seg(inset[i], inset[j], along.length > 2);
 				// the side, up to the bevel
 				const side = [base[i], base[j], rim[j], rim[i]];
 				if (facing(side)) {
-					art.poly(c, side, { fill: shade(0.8 + 0.22 * lit) });
+					const face = onScreen(along, wall).concat(onScreen(along, wall, b.h - bv).reverse());
+					art.poly(c, face, { fill: shade(0.8 + 0.22 * lit) });
 					// darker toward the sand
 					const yTop = Math.min(side[2][1], side[3][1]);
 					const yBot = Math.max(side[0][1], side[1][1]);
-					art.poly(c, side, { fill: art.linear(c, 0, yTop, 0, yBot, ['rgba(0,0,0,0)', 'rgba(0,0,0,0.16)']) });
+					art.poly(c, face, { fill: art.linear(c, 0, yTop, 0, yBot, ['rgba(0,0,0,0)', 'rgba(0,0,0,0.16)']) });
 				}
 				// the bevel: half facing up, so lighter than the side below it
 				const slope = [rim[i], rim[j], top[j], top[i]];
 				if (facing(slope)) {
-					art.poly(c, slope, { fill: shade(1.02 + 0.2 * lit) });
-					art.line(c, [slope[3], slope[2]], { stroke: shade(1.5), lineWidth: Math.max(1, 2.5 * s) });   // (a bright edge where it meets the top)
+					const edge = onScreen(alongTop, wall, b.h);
+					art.poly(c, onScreen(along, wall, b.h - bv).concat(edge.slice().reverse()), { fill: shade(1.02 + 0.2 * lit) });
+					art.line(c, edge, { stroke: shade(1.5), lineWidth: Math.max(1, 2.5 * s) });   // (a bright edge where it meets the top)
 				}
 			}
-			art.poly(c, top, { fill: shade(1.2) });
+			art.poly(c, onScreen(ring(inset), wall, b.h), { fill: shade(1.2) });
 			// the shape, inscribed in the top: a groove and its bright inlay
 			const size = b.r * BLOCK_LOOK.symbol;
 			let shape;
 			if (b.symbol === 'circle') shape = Array.from({ length: 28 }, (_, i) => [b.x + Math.cos(i / 28 * Math.PI * 2) * size, b.f + Math.sin(i / 28 * Math.PI * 2) * size]);
 			else if (b.symbol === 'triangle') shape = [[b.x, b.f + size * 1.1], [b.x + size * 1.05, b.f - size * 0.75], [b.x - size * 1.05, b.f - size * 0.75]];
 			else shape = [[b.x - size * 0.9, b.f - size * 0.9], [b.x + size * 0.9, b.f - size * 0.9], [b.x + size * 0.9, b.f + size * 0.9], [b.x - size * 0.9, b.f + size * 0.9]];
-			const pts = onScreen(shape, wall, b.h);
+			const pts = onScreen(b.symbol === 'circle' ? shape : ring(shape), wall, b.h);
 			const w = BLOCK_LOOK.line * s;
 			c.beginPath();
 			pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
@@ -2125,7 +2163,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	function drawGuardOn(ctx, x, f, mask, armed, walk, muzzle, dir = 1) {
 		const p = at(x, f);
 		const s = p.s * 1.45;
-		softShadow(ctx, p.x, p.y, 24 * s, 8 * s, 0.3, fadeIn(f), 140 * s);   // (out here, so it falls away from the light whichever way they face)
+		softShadow(ctx, p.x, p.y, 24 * s, 8 * s, 0.3, fadeIn(f), 118 * s);   // (out here, so it falls away from the light whichever way they face)
 		art.with(ctx, { x: p.x, y: p.y, scaleX: s * dir, scaleY: s, alpha: fadeIn(f) }, function (c) {
 			guard(c, mask, armed, walk, muzzle);
 		});
@@ -2225,7 +2263,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const alpha = fadeIn(c.f);
 		const air = 1 - c.lift / 300;        // the shadow shrinks under a skip
 		// their shadow, cast like everything's (shorter off the ground, mid-skip)
-		softShadow(ctx, ground.x, ground.y, 22 * s * air, 8 * s * air, 0.35, alpha, 130 * s * air);
+		softShadow(ctx, ground.x, ground.y, 22 * s * air, 8 * s * air, 0.35, alpha, 108 * s * air);
 		// a solid spot of their colour, always under the avatar
 		if (c.alive) art.ellipse(ctx, ground.x, ground.y, 40 * s * air, 13 * s * air, { fill: colour, alpha: alpha * 0.9 });
 		// magnetised: rings of soft magnetic red, closing in on them over and
@@ -2275,7 +2313,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		if (!c.alive) return;
 		// over their head: a marker in their colour
 		const bob = Math.sin(clock * 4 + c.n) * 4;
-		const top = p.y - 175 * s + bob * s;
+		const top = p.y - (rigs.back || sheets.act ? 148 : 175) * s + bob * s;   // (over the shorter sprite figures, or the drawn ones)
 		art.poly(ctx, [[p.x - 14 * s, top - 14 * s], [p.x + 14 * s, top - 14 * s], [p.x, top + 4 * s]], { fill: colour, alpha });
 	}
 
@@ -2303,7 +2341,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const appear = Math.min(1, p.age / 0.35);
 		const beat = 0.5 + 0.5 * Math.sin(padPulse + p.x * 0.01);
 		const R = PAD.rx * appear;
-		const sq = (r) => onScreen([[p.x - r, p.f - r], [p.x + r, p.f - r], [p.x + r, p.f + r], [p.x - r, p.f + r]], wall);
+		const sq = (r) => onScreen(ring([[p.x - r, p.f - r], [p.x + r, p.f - r], [p.x + r, p.f + r], [p.x - r, p.f + r]]), wall);
 		art.save(ctx, function (c) {
 			c.globalAlpha = fadeIn(p.f);
 			// the glow round it, pulsing
@@ -2334,12 +2372,18 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const freeF = hingeF - 2 * R * Math.cos(a);
 		const freeUp = 2 * R * Math.sin(a);
 		const P = (x, f, up) => { const q = at(x, f, up, wall); return [q.x, q.y]; };
-		const quad = [P(p.x - R, freeF, freeUp), P(p.x + R, freeF, freeUp), P(p.x + R, hingeF, 0), P(p.x - R, hingeF, 0)];
+		const at2 = (u, v) => P(p.x + u * R, hingeF - (1 - v) * 2 * R * Math.cos(a), (1 - v) * freeUp);   // u across -1..1, v from the free edge (0) to the hinge (1)
+		// its outline, as points along each edge, so it bends with the field
+		const n = curving(hingeF) ? 8 : 1;
+		const quad = [];
+		for (let k = 0; k < n; k++) quad.push(at2(-1 + 2 * k / n, 0));
+		for (let k = 0; k < n; k++) quad.push(at2(1, k / n));
+		for (let k = 0; k < n; k++) quad.push(at2(1 - 2 * k / n, 1));
+		for (let k = 0; k < n; k++) quad.push(at2(-1, 1 - k / n));
 		const shade = 1 - 0.25 * open;   // (tipping up toward us, it's turned out of the light)
 		art.poly(c, quad, { fill: mix('#8a96a3', shade) });
 		// hazard stripes along its front edge, and arrows round the corner
 		const dir = Math.sign(p.to - p.wall);
-		const at2 = (u, v) => P(p.x + u * R, hingeF - (1 - v) * 2 * R * Math.cos(a), (1 - v) * freeUp);   // u across -1..1, v from the free edge (0) to the hinge (1)
 		for (let i = 0; i < 6; i++) {
 			const u0 = -1 + i / 3;
 			art.poly(c, [at2(u0, 0), at2(u0 + 1 / 6, 0), at2(u0 + 1 / 6 + 0.12, 0.16), at2(u0 + 0.12, 0.16)].map(([x, y]) => [x, y]), { fill: i % 2 ? '#1a1a1a' : '#ffd23a' });
@@ -2507,7 +2551,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		square: 'sheet-guard-square.png',
 		head: 'sheet-doll-head.png',              // her head turning, from the back of it to her face
 	};
-	const SPRITE = { contestant: 136, guard: 150, head: 150 };   // heights to draw at (the contestants and guards, feet to top, as the drawn ones; her head, across)
+	const SPRITE = { contestant: 112, guard: 124, head: 150 };   // heights to draw at (the contestants and guards, feet to top, as the drawn ones; her head, across)
 	const sheets = {};   // name: { frames: [{ img, x, y, w, h, patch }], unit } once cut up
 	for (const [name, file] of Object.entries(SHEETS)) {
 		const img = new Image();
@@ -2597,9 +2641,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// the head tilts. Until they load, the whole-figure sheets (or the drawn
 	// characters) stand in.
 	const PART_SHEETS = {
-		back: { file: 'parts-contestant-back.png', parts: ['head', 'torso', 'torsoOut', 'torsoRun', 'legs', 'legsL', 'legsR', 'legsCrouch'], height: 136 },
-		front: { file: 'parts-contestant-front.png', parts: ['head', 'headGrin', 'headSad', 'torso', 'torsoCheer', 'torsoWave', 'legs', 'legsJump'], height: 136 },
-		guard: { file: 'parts-guard.png', parts: ['circle', 'triangle', 'square', 'torso', 'torsoAim', 'legs', 'legsA', 'legsB'], height: 150, heads: ['circle', 'triangle', 'square'] },
+		back: { file: 'parts-contestant-back.png', parts: ['head', 'torso', 'torsoOut', 'torsoRun', 'legs', 'legsL', 'legsR', 'legsCrouch'], height: 112 },
+		front: { file: 'parts-contestant-front.png', parts: ['head', 'headGrin', 'headSad', 'torso', 'torsoCheer', 'torsoWave', 'legs', 'legsJump'], height: 112 },
+		guard: { file: 'parts-guard.png', parts: ['circle', 'triangle', 'square', 'torso', 'torsoAim', 'legs', 'legsA', 'legsB'], height: 124, heads: ['circle', 'triangle', 'square'] },
 	};
 	const RIG = { overlap: 0.06, lean: 14, bob: 6 };   // how far parts tuck into each other at the joins (a share of the figure); degrees the body leans when drifting frozen; how much it bobs running
 	const rigs = {};   // name: { parts: { id: { img, w, h, top: [x, y], bottom: [x, y] } }, k }
