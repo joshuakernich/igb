@@ -98,6 +98,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const PAD = { rx: 95, rf: 40, every: 420 };   // a pad's half-width and half-depth; one every so far up the track (field units)
 	const CASH = { every: 300, reach: 60, size: 1.8, float: 50, bob: 22 };   // every so far up each wall; how close to grab it; its size, float height and bob
 	const MAGNET = { every: 1400, time: 2.5, radius: 480, pull: 1200 };   // a magnet every so far up each wall; seconds it lasts; how far it reaches; how fast cash comes
+	const BOULDER = { from: 1, gap: [4, 9], quicker: 0.9, r: [75, 105], speed: [320, 440], ahead: 1700, lead: 900, down: 1.2, spill: 3 };   // boulders from this round (0 is round 1); seconds between them, shrinking by this much a round; their size; how fast they roll; how far up the field they start (and never nearer the players than lead); seconds flattened; wads of cash spilled
 	const BAG = { every: 1700, count: 9, near: 110, radius: 380, fly: 0.75, arc: 240 };   // a money bag every so far up each wall; wads it bursts into; how near and far they land; seconds in the air; how high they fly
 	const LASER = { hop: 1.2, follow: 20, wobble: 14, search: 50, rx: 150, rf: 60, glow: 50 };   // red light's target: seconds per contestant, how quickly it follows, its jitter, how far it searches round them, its half-width and half-depth, its glow
 	const EDGE_AT = 0.1;        // a pad's centre, as a share of the wall from the corner
@@ -125,6 +126,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			guardSpeed: (1.1 + 0.2 * r) * M,
 			marbles: Math.max(0, Math.min(4, r - 1)),      // rolling marbles (deadly), from round 3
 			marbleSpeed: (2.6 + 0.4 * r) * M,
+			boulderGap: r < BOULDER.from ? 0 : Math.max(2, BOULDER.gap[0] - BOULDER.quicker * (r - BOULDER.from)),   // seconds between boulders (0: none yet)
 		};
 	}
 
@@ -229,6 +231,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	let camEnd = 0;
 	let blocks = [];         // { x, f, r, h, shape, colour }
 	let movers = [];         // patrolling guards and rolling marbles
+	let boulders = [];       // { x, f, r, speed, spin, wall, shade }: rolling down the field at the players
+	let boulderIn = 0;       // seconds to the next one
+	let boulderWall = 0;
 	let sentries = [];       // armed guards along the sides: { x, f, mask, flash }
 	let splats = [];         // { x, f, t, seed }
 	const SHAPES = ['circle', 'triangle', 'square'];
@@ -243,6 +248,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		camEnd = finishF - BACK - DEPTH * 0.45;   // the last stop: the finish line part way up the play area
 		blocks = [];
 		movers = [];
+		boulders = [];
+		boulderIn = 2;
 		sentries = [];
 		splats = [];
 		pads = [];
@@ -390,6 +397,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		c.wall = 1;
 		c.offPad = true;
 		c.magnet = 0;
+		c.down = 0;
 		c.hop = null;
 		c.lift = 0;
 		c.pass = false;
@@ -977,18 +985,82 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		}
 	}
 
+	/* ---------- boulders ---------- */
+
+	// From round 2, big boulders roll down the field at the players, through
+	// green light AND red: one coming at you while she's watching means take
+	// the hit or move and be shot. A hit knocks you flat (no shot for moving
+	// while you're down) and spills some of your cash.
+	const BOULDER_SHADES = [['#c9a274', '#8c6a46', '#e8c99a'], ['#a7a49c', '#6d6b65', '#d4d1c8'], ['#b5704a', '#7a4429', '#de9a72']];   // base, dark, light
+
+	function stepBoulders(dt) {
+		const rolling = show.beat === 'play' && ['green', 'dash', 'warning', 'red', 'turning'].includes(phase);
+		if (rolling && settings.boulderGap > 0) {
+			boulderIn -= dt;
+			if (boulderIn <= 0) {
+				rollBoulder();
+				boulderIn = settings.boulderGap * (0.7 + Math.random() * 0.6);
+			}
+		}
+		for (const b of boulders) {
+			if (!rolling && !b.loose) continue;
+			b.f -= b.speed * dt;
+			b.spin += b.speed * dt / b.r;
+			b.dust += dt;
+		}
+		boulders = boulders.filter((b) => b.f > cam - 300);
+	}
+
+	// One down a wall (taking turns), in a lane clear of blocks all the way down.
+	function rollBoulder(loose) {
+		for (let tries = 0; tries < 3; tries++) {
+			const wall = WALL_ORDER[boulderWall++ % WALL_ORDER.length];
+			const r = BOULDER.r[0] + Math.random() * (BOULDER.r[1] - BOULDER.r[0]);
+			const f = Math.max(cam + BACK + DEPTH + BOULDER.lead, Math.min(finishF - 30, cam + BOULDER.ahead));
+			const lo = wall * W + LANE + r;
+			const hi = (wall + 1) * W - LANE - r;
+			// aimed at someone on that wall, more often than not
+			const target = contestants.filter((c) => c.alive && !c.safe && c.wall === wall);
+			for (let k = 0; k < 14; k++) {
+				const aim = target.length && Math.random() < 0.6 ? target[Math.floor(Math.random() * target.length)].x + (Math.random() - 0.5) * 120 : lo + Math.random() * (hi - lo);
+				const x = Math.max(lo, Math.min(hi, aim));
+				if (blocks.some((b) => wallOfX(b.x) === wall && Math.abs(b.x - x) < b.r + r + 10 && b.f < f + r && b.f > cam - 100)) continue;
+				boulders.push({ x, f, r, wall, speed: BOULDER.speed[0] + Math.random() * (BOULDER.speed[1] - BOULDER.speed[0]), spin: Math.random() * 6, dust: 0, shade: BOULDER_SHADES[Math.floor(Math.random() * BOULDER_SHADES.length)], seed: Math.random() * 100, loose });
+				show.fx('rumble', 0.5);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// Flattened: down for a moment, a few wads of cash flying.
+	function knock(c, b) {
+		c.down = BOULDER.down;
+		c.glue = null;
+		c.over = 0;
+		const n = Math.min(BOULDER.spill, Math.floor(c.score / POINTS.cash));
+		c.score -= n * POINTS.cash;
+		if (n) popBag(c.x, c.f, c.wall, n, true);
+		popOver(c, n ? 'FLATTENED! −' + won(n * POINTS.cash) : 'FLATTENED!', '#ff8a1c');
+		show.fx('thud', 0.9);
+		shake = Math.max(shake, 0.4);
+	}
+
 	// A money bag pops: its wads fly out and land in a ring around it, on its
 	// wall and clear of blocks, ready to be picked up once they're down.
-	function popBag(x, f, wall) {
-		bursts.push({ x, f, t: 0 });
-		show.fx('boom', 0.35);
-		show.fx('kaching', 0.7);
+	// (Also a contestant's spilt cash: count wads, quietly.)
+	function popBag(x, f, wall, count = BAG.count, spill = false) {
+		if (!spill) {
+			bursts.push({ x, f, t: 0 });
+			show.fx('boom', 0.35);
+			show.fx('kaching', 0.7);
+		}
 		const lo = wall * W + LANE + 40;
 		const hi = (wall + 1) * W - LANE - 40;
-		for (let i = 0; i < BAG.count; i++) {
+		for (let i = 0; i < count; i++) {
 			let tx = x, tf = f;
 			for (let tries = 0; tries < 12; tries++) {
-				const a = (i + Math.random() * 0.8) / BAG.count * Math.PI * 2;
+				const a = (i + Math.random() * 0.8) / count * Math.PI * 2;
 				const d = BAG.near + Math.random() * (BAG.radius - BAG.near);
 				tx = Math.min(hi, Math.max(lo, x + Math.cos(a) * d));
 				tf = Math.min(finishF - 40, Math.max(START_F + 40, f + Math.sin(a) * d * 0.8));
@@ -1272,6 +1344,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			if (m.kind === 'guard') m.phase += dt * 20;   // (stepping like the contestants)
 			else m.spin += m.dir * m.speed * dt / m.r;
 		}
+		stepBoulders(dt);
 
 		if (phase === 'waiting') {
 			// Standing at the start, following their players.
@@ -1309,6 +1382,15 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			return;
 		}
 
+		// Flattened by a boulder: lying there, then up again. (Nothing they do
+		// counts while they're down; if she's watching when they get up, their
+		// feet stick where they are now.)
+		if (c.down > 0) {
+			c.down -= dt;
+			if (c.down <= 0 && (phase === 'red' || phase === 'warning') && !c.safe) c.glue = { x: c.x, f: c.f, u: alongOf(c.wall, c.px, c.pz), near: nearOf(c.wall, c.px, c.pz) };
+			return;
+		}
+
 		if (c.glue) {
 			// Feet stay put; the body bends toward where the player has moved.
 			c.x = c.glue.x;
@@ -1317,6 +1399,13 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const dz = (nearOf(c.wall, c.px, c.pz) - c.glue.near) * 0.6;
 			c.lean.x = dx / MOVE_LIMIT;
 			c.lean.z = dz / MOVE_LIMIT;   // toward the wall leans away up the field
+			// (frozen in a boulder's path: flattened, and that's no reason to shoot them)
+			for (const b of boulders) {
+				if (b.wall === c.wall && Math.abs(c.x - b.x) < b.r + BODY && Math.abs(c.f - b.f) < (b.r + BODY) * 0.7) {
+					knock(c, b);
+					return;
+				}
+			}
 			if ((phase === 'red' || phase === 'drill-red') && phaseT > GRACE) {
 				if (Math.hypot(dx, dz) > MOVE_LIMIT) {
 					c.over += dt;
@@ -1371,6 +1460,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// Once over the finish line, there's no going back over it.
 		if (c.safe) c.f = Math.max(c.f, finishF + 13);
 		c.x = xOf(c);   // (still 1:1 at wherever the blocks left them)
+
+		// A boulder knocks you flat.
+		for (const b of boulders) {
+			if (b.wall === c.wall && Math.abs(c.x - b.x) < b.r + BODY && Math.abs(c.f - b.f) < (b.r + BODY) * 0.7) {
+				knock(c, b);
+				return;
+			}
+		}
 
 		// Guards and marbles are deadly.
 		for (const m of movers) {
@@ -1490,6 +1587,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (const g of magnets) if (!g.taken) add(g.f, (c) => drawMagnet(c, g));
 		for (const g of bags) if (!g.taken) add(g.f, (c) => drawBag(c, g));
 		for (const b of bursts) add(b.f, (c) => drawBurst(c, b));
+		for (const b of boulders) add(b.f, (c) => drawBoulder(c, b));
 		for (const m of movers) add(m.f, (c) => (m.kind === 'guard' ? drawGuardOn(c, m.x, m.f, m.mask, true, m.phase, m.flash || 0, m.dir) : drawMarble(c, m)));
 		for (const g of sentries) if (dollShown || !g.doll) add(g.f, (c) => drawGuardOn(c, g.x, g.f, g.mask, true, 0, g.flash, facing(g)));
 		if (!waiting) for (const c of contestants) add(c.f, (cx) => drawContestant(cx, c));
@@ -1710,6 +1808,52 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		});
 	}
 
+	// A boulder rolling down the field: a rough round stone, lit from the top
+	// left, its cracks and chips sliding down its face as it rolls toward
+	// you, dust kicked up behind it.
+	function drawBoulder(ctx, b) {
+		const foot = at(b.x, b.f);
+		const p = at(b.x, b.f, b.r);
+		const r = b.r * p.s;
+		const [base, dark, light] = b.shade;
+		art.save(ctx, function (c) {
+			c.globalAlpha = fadeIn(b.f);
+			// dust behind it
+			for (let i = 0; i < 4; i++) {
+				const k = (b.dust * 2.2 + i / 4) % 1;
+				const d = at(b.x + Math.sin(b.seed + i * 2.3) * b.r * 0.7, b.f + b.r * 0.6 + k * 160, 10 + k * 50);
+				art.circle(c, d.x, d.y, (14 + k * 34) * d.s, { fill: 'rgba(214,186,140,0.55)', alpha: (1 - k) * 0.8 });
+			}
+			art.ellipse(c, foot.x, foot.y, r * 1.1, r * 0.3, { fill: 'rgba(0,0,0,0.3)' });
+			// the stone: a lumpy circle
+			c.save();
+			c.beginPath();
+			for (let i = 0; i <= 18; i++) {
+				const a = i / 18 * Math.PI * 2;
+				const k = 1 + 0.06 * Math.sin(a * 3 + b.seed) + 0.04 * Math.sin(a * 5 + b.seed * 2);
+				c[i ? 'lineTo' : 'moveTo'](p.x + Math.cos(a) * r * k, p.y + Math.sin(a) * r * k);
+			}
+			c.closePath();
+			c.fillStyle = art.radial(c, p.x - r * 0.35, p.y - r * 0.4, r * 0.1, r * 1.35, [[0, light], [0.45, base], [1, dark]]);
+			c.fill();
+			c.clip();
+			// chips and cracks rolling down its face
+			const roll = (b.spin * r) % (r * 2);
+			for (let i = 0; i < 7; i++) {
+				const u = Math.sin(b.seed + i * 7.1) * 0.7;
+				const v = ((i / 7) * 2 * r + roll) % (2 * r) - r;
+				const squash = Math.sqrt(Math.max(0, 1 - (v / r) * (v / r)));
+				const x = p.x + u * r * squash;
+				const y = p.y + v;
+				if (i % 3 === 0) art.line(c, [[x - r * 0.18 * squash, y - r * 0.05], [x, y + r * 0.06 * squash], [x + r * 0.15 * squash, y - r * 0.02]], { stroke: dark, lineWidth: Math.max(1.5, r * 0.04) });
+				else art.ellipse(c, x, y, r * 0.09 * (0.4 + squash), r * 0.06 * squash, { fill: i % 2 ? dark : light, alpha: 0.7 });
+			}
+			// the shadowed underside
+			art.ellipse(c, p.x + r * 0.15, p.y + r * 0.55, r * 1.1, r * 0.6, { fill: 'rgba(0,0,0,0.18)' });
+			c.restore();
+		});
+	}
+
 	// A pink guard, facing the field: hood, black mask with a white shape,
 	// black belt and boots. The armed ones line the walls with rifles.
 	// dir: which way they face (1 right, -1 left; the rifle points that way)
@@ -1813,7 +1957,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 		let rotate = 0;
 		let scaleY = 1;
-		if (c.fall) {
+		if (c.down > 0) {
+			// flat as a pancake, springing back up at the end
+			const k = 1 - c.down / BOULDER.down;
+			scaleY = k < 0.8 ? 0.22 : 0.22 + 0.78 * ease((k - 0.8) / 0.2) * (1 + Math.sin((k - 0.8) / 0.2 * Math.PI) * 0.25);
+		} else if (c.fall) {
 			const k = Math.min(1, c.fall.t / 0.45);
 			rotate = c.fall.dir * 88 * k * k;
 		} else {
@@ -1825,6 +1973,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		art.with(ctx, { x: p.x, y: p.y, scale: s, scaleY, rotate, alpha }, function (cx) {
 			contestant(cx, c);
 		});
+
+		if (c.down > 0) {
+			// stars going round their head
+			for (let i = 0; i < 3; i++) {
+				const a = clock * 5 + i * Math.PI * 2 / 3;
+				art.text(ctx, '★', p.x + Math.cos(a) * 40 * s, p.y - 45 * s + Math.sin(a) * 12 * s, { size: 26 * s, fill: '#ffe14a', outline: INK, outlineWidth: 2, alpha });
+			}
+		}
 
 		if (!c.alive) return;
 		// over their head: a marker in their colour
@@ -2726,6 +2882,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	dbutton('0:15 LEFT', () => show.setTimeLeft(15), '#5a3a22').appendTo($misc);
 	dbutton('+ CASH', () => { for (const c of contestants) c.score += 100 * (1 + Math.floor(Math.random() * 20)); }, '#225a3a').appendTo($misc);
 	dbutton('MAGNET ALL', () => { for (const c of contestants) c.magnet = MAGNET.time; }, '#225a3a').appendTo($misc);
+	dbutton('BOULDER', () => { for (let w = 0; w < 3; w++) rollBoulder(true); }, '#225a3a').appendTo($misc);
 	dbutton('MONEY BAG ALL', () => { for (const c of contestants) if (c.alive) popBag(c.x, c.f + 60, c.wall); }, '#225a3a').appendTo($misc);
 
 	// any beat, straight away (a squad of three if none was picked; the
