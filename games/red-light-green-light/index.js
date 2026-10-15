@@ -1672,6 +1672,113 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// The arena: sand all the way up the walls, a little darker far away.
 	// The arena: the sand, curving away to the horizon, hazy far off; the
 	// painted sky above it.
+	// The sand's grain: a tile of fine sand, grit and little stones (painted
+	// once, seamless), laid on the field so it scrolls with it. On the flat
+	// it's one fill; past the flat, thin bands toward the horizon, each scaled
+	// in toward its wall's vanishing point and squeezed by the bend, the grit
+	// fading as it gets too fine to see.
+	const GRAVEL = { tile: 512, grains: 9000, grit: 900, stones: 150, blotches: 26, band: 4, fade: 0.4 };   // the tile, in field units; fine grains, coarser grit, little stones and soft light/dark patches on it; screen pixels per band past the flat; below this size (a share of near size) the grit fades out
+	let gravelPattern = null;
+	function gravelTile() {
+		const T = GRAVEL.tile;
+		const cv = document.createElement('canvas');
+		cv.width = cv.height = T;
+		const g = cv.getContext('2d');
+		const rnd = (a, b) => a + Math.random() * (b - a);
+		// (anything near an edge drawn again on the far side, so the tile wraps)
+		const wrap = function (x, y, r, fn) {
+			for (const dx of [0, -T, T]) for (const dy of [0, -T, T]) {
+				if (x + dx < -r || x + dx > T + r || y + dy < -r || y + dy > T + r) continue;
+				fn(x + dx, y + dy);
+			}
+		};
+		for (let i = 0; i < GRAVEL.blotches; i++) {
+			const x = rnd(0, T);
+			const y = rnd(0, T);
+			const r = rnd(40, 110);
+			const light = Math.random() < 0.5;
+			wrap(x, y, r, function (px, py) {
+				const grad = g.createRadialGradient(px, py, 0, px, py, r);
+				grad.addColorStop(0, light ? 'rgba(255,238,205,0.12)' : 'rgba(120,80,40,0.1)');
+				grad.addColorStop(1, 'rgba(0,0,0,0)');
+				g.fillStyle = grad;
+				g.fillRect(px - r, py - r, r * 2, r * 2);
+			});
+		}
+		for (let i = 0; i < GRAVEL.grains; i++) {
+			g.fillStyle = Math.random() < 0.5 ? `rgba(255,244,220,${rnd(0.15, 0.4)})` : `rgba(110,72,38,${rnd(0.12, 0.35)})`;
+			g.fillRect(rnd(0, T), rnd(0, T), 1.2, 1.2);
+		}
+		for (let i = 0; i < GRAVEL.grit; i++) {
+			const x = rnd(0, T);
+			const y = rnd(0, T);
+			g.fillStyle = Math.random() < 0.4 ? `rgba(250,232,200,${rnd(0.3, 0.6)})` : `rgba(100,66,34,${rnd(0.25, 0.5)})`;
+			g.beginPath();
+			g.arc(x, y, rnd(1, 2.2), 0, Math.PI * 2);
+			g.fill();
+		}
+		const STONE = ['#9c8a74', '#b5a48c', '#857563', '#c9b89c', '#a08268', '#7d7468'];
+		for (let i = 0; i < GRAVEL.stones; i++) {
+			const x = rnd(0, T);
+			const y = rnd(0, T);
+			const rx = rnd(2.5, 7);
+			const ry = rx * rnd(0.55, 0.85);
+			const rot = rnd(0, Math.PI);
+			const colour = STONE[Math.floor(Math.random() * STONE.length)];
+			wrap(x, y, rx + 3, function (px, py) {
+				g.save();
+				g.translate(px, py);
+				g.rotate(rot);
+				g.fillStyle = 'rgba(70,45,20,0.35)';   // its shadow, down and to the right
+				g.beginPath();
+				g.ellipse(rx * 0.3, ry * 0.45, rx, ry, 0, 0, Math.PI * 2);
+				g.fill();
+				g.fillStyle = colour;
+				g.beginPath();
+				g.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+				g.fill();
+				g.fillStyle = 'rgba(255,255,255,0.35)';   // a glint, up and to the left
+				g.beginPath();
+				g.ellipse(-rx * 0.3, -ry * 0.35, rx * 0.4, ry * 0.3, 0, 0, Math.PI * 2);
+				g.fill();
+				g.restore();
+			});
+		}
+		return cv;
+	}
+
+	function drawGravel(ctx) {
+		if (!gravelPattern) gravelPattern = ctx.createPattern(gravelTile(), 'repeat');
+		const pat = gravelPattern;
+		const flatTop = H - VIEW.flat;
+		ctx.save();
+		ctx.fillStyle = pat;
+		// the flat: field units are screen pixels; v = -f, so the grain moves down as the field scrolls
+		pat.setTransform(new DOMMatrix([1, 0, 0, 1, 0, H + cam]));
+		ctx.fillRect(-20, flatTop, WIDTH + 40, VIEW.flat + 20);
+		// past the flat, band by band up to where it's lost in the haze
+		for (let y1 = flatTop; y1 > VIEW.horizon + 2; y1 -= GRAVEL.band) {
+			const y0 = Math.max(VIEW.horizon + 2, y1 - GRAVEL.band);
+			const yc = (y0 + y1) / 2;
+			const u = (H - VIEW.flat - yc) / BEND;   // how far into the bend (0 at the flat, 1 at the horizon)
+			if (u >= 0.999) break;
+			const d = VIEW.flat - BEND * Math.log(1 - u);
+			const f = cam + d;
+			const fade = fadeIn(f);
+			if (fade <= 0) break;
+			const k = scaleAt(f) / SCALE;
+			const slope = Math.exp(-(d - VIEW.flat) / BEND);   // screen pixels per field unit up the field, here
+			ctx.globalAlpha = fade * Math.min(1, k / GRAVEL.fade);
+			for (let wall = 0; wall < 3; wall++) {
+				const vp = vanishOf(wall);
+				// screen x = vp + (x - vp) * k; screen y = yc - (f' - f) * slope, with v = -f'
+				pat.setTransform(new DOMMatrix([k, 0, 0, slope, vp * (1 - k), yc + f * slope]));
+				ctx.fillRect(wall * W, y0, W, y1 - y0 + 0.5);
+			}
+		}
+		ctx.restore();
+	}
+
 	function drawArena(ctx) {
 		const hz = horizonY();
 		art.rect(ctx, -20, -20, WIDTH + 40, H + 40, { fill: art.linear(ctx, 0, hz, 0, H, ['#c0945e', '#d3ad79', '#e6c592']) });
@@ -1682,16 +1789,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const p = at(0, f);
 			art.rect(ctx, -20, p.y - 2 * p.s, WIDTH + 40, 4 * p.s, { fill: 'rgba(120,80,40,0.12)', alpha: fadeIn(f) });
 		}
-		// a few pebbles, scrolling with the field
-		for (let k = Math.floor(cam / 90); k < (cam + 3000) / 90; k++) {
-			const f = k * 90;
-			for (let j = 0; j < 4; j++) {
-				const x = ((k * 7919 + j * 104729) % 4700) + 50;
-				const p = at(x, f + j * 20);
-				if (p.y > H + 10 || fadeIn(f) <= 0) continue;
-				art.ellipse(ctx, p.x, p.y, 9 * p.s, 4 * p.s, { fill: 'rgba(110,75,40,0.25)', alpha: fadeIn(f) });
-			}
-		}
+		drawGravel(ctx);
 		// the haze over the far sand, and the sky
 		art.rect(ctx, -20, hz, WIDTH + 40, 260, { fill: art.linear(ctx, 0, hz, 0, hz + 260, ['rgba(246,236,214,0.9)', 'rgba(246,236,214,0)']) });
 		art.rect(ctx, -20, -20, WIDTH + 40, hz + 20, { fill: art.linear(ctx, 0, 0, 0, hz, ['#6ec3ea', '#bfe4f2', '#f3ecd9']) });
