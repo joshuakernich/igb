@@ -1540,8 +1540,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				art.ellipse(ctx, p.x, p.y, 9 * p.s, 4 * p.s, { fill: 'rgba(110,75,40,0.25)', alpha: fadeIn(f) });
 			}
 		}
-		// the arena's painted walls, at the far ends of the side walls
-		drawMurals(ctx);
 		// the haze over the far sand, and the sky
 		art.rect(ctx, -20, hz, WIDTH + 40, 260, { fill: art.linear(ctx, 0, hz, 0, hz + 260, ['rgba(246,236,214,0.9)', 'rgba(246,236,214,0)']) });
 		art.rect(ctx, -20, -20, WIDTH + 40, hz + 20, { fill: art.linear(ctx, 0, 0, 0, hz, ['#6ec3ea', '#bfe4f2', '#f3ecd9']) });
@@ -1551,73 +1549,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			for (const [dx, dy, r] of [[0, 0, 34], [38, 6, 26], [-36, 8, 24], [14, -14, 24]]) art.ellipse(ctx, x + dx, y + dy, r * 1.6, r * 0.7, { fill: 'rgba(255,255,255,0.75)' });
 		}
 		art.rect(ctx, -20, hz - 1.5, WIDTH + 40, 3, { fill: 'rgba(160,120,80,0.35)' });
-	}
-
-	// The arena's own walls, as in the show: tall walls painted as a sunny sky
-	// with clouds, boxing the field in at the far ends of the two side walls
-	// (the back corners of the room). Each runs on up the field into the
-	// distance, drawn in toward its wall's vanishing point, its clouds scrolling
-	// and shrinking with the field.
-	const MURAL = {
-		inset: 210,             // how far in from the end of the side wall the arena's wall stands (at its foot)
-		cloudEvery: 260,        // a cloud every so far up the field
-	};
-	function drawMurals(ctx) {
-		const hz = horizonY();
-		for (const wall of [0, 2]) {
-			const inner = wall === 0 ? MURAL.inset : WIDTH - MURAL.inset;   // its foot, along the field
-			const outer = wall === 0 ? -40 : WIDTH + 40;
-			// its foot, from just below the bottom of the walls up the field to the horizon
-			const foot = [];
-			for (let f = cam - 200; ; f += 40) {
-				const q = at(inner, f, 0, wall);
-				foot.push([q.x, q.y]);
-				if (q.y <= hz + 0.5 || foot.length > 400) break;
-			}
-			const last = foot[foot.length - 1];
-			const outline = [[outer, H + 20], ...foot, [last[0], -20], [outer, -20]];
-			art.save(ctx, function (c) {
-				c.beginPath();
-				outline.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
-				c.closePath();
-				c.fillStyle = art.linear(c, 0, 0, 0, H, ['#4aa6dc', '#8fcbee', '#c6e6f6']);
-				c.fill();
-				c.clip();
-				// painted clouds, up the wall and on along it, scrolling with the field
-				const k0 = Math.floor((cam - 300) / MURAL.cloudEvery);
-				for (let k = k0; k < k0 + 40; k++) {
-					const f = k * MURAL.cloudEvery;
-					if (fadeIn(f) <= 0) break;
-					const seed = Math.abs(Math.sin(k * 12.9898 + wall * 78.233) * 43758.5453) % 1;
-					const across = inner + (wall === 0 ? -1 : 1) * (40 + seed * 260);   // (out toward the wall's end)
-					const up = 260 + ((seed * 7.3) % 1) * 700;
-					const q = at(across, f, up, wall);
-					const r = 70 * q.s / SCALE;
-					c.globalAlpha = 0.85 * fadeIn(f);
-					for (const [dx, dy, rr] of [[0, 0, 1], [0.9, 0.18, 0.75], [-0.85, 0.22, 0.7], [0.35, -0.35, 0.7]]) {
-						art.ellipse(c, q.x + dx * r, q.y + dy * r, rr * r * 1.25, rr * r * 0.7, { fill: 'white' });
-					}
-				}
-				c.globalAlpha = 1;
-				// its foot: a skirting band along the sand, and a shadow it casts in
-				c.lineCap = 'round';
-				c.lineJoin = 'round';
-				c.strokeStyle = 'rgba(240,232,214,0.95)';
-				c.lineWidth = 10;
-				c.beginPath();
-				foot.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
-				c.stroke();
-			});
-			// a soft shadow on the sand along its foot
-			art.save(ctx, function (c) {
-				c.globalAlpha = 0.18;
-				c.strokeStyle = '#6b4a28';
-				c.lineWidth = 26;
-				c.beginPath();
-				foot.forEach(([x, y], i) => (i ? c.lineTo(x + (wall === 0 ? 16 : -16), y) : c.moveTo(x + (wall === 0 ? 16 : -16), y)));
-				c.stroke();
-			});
-		}
 	}
 
 	function drawSplat(ctx, s) {
