@@ -75,7 +75,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const BODY = 30;            // a contestant's radius on the plane
 	const LANE = 30;            // contestants keep this far inside their wall's ends
 	const WALL_ORDER = [1, 0, 2];             // hazards are shared out front, left, right, front...
-	const BLOCK = 116;                        // a square block, side to side: scattered in short runs
+	const BLOCK = 116;                        // a square block, side to side: scattered in short runs (a run is one long block)
+	const BLOCK_LOOK = { chamfer: 0.22, symbol: 0.52, line: 7, light: [-0.6, 0.8] };   // its corners cut off (a share of its depth); the shape on top (a share of its depth); that shape's line width; where the light comes from across the field (left, far)
+	const SHADOW = { x: 0.55, f: -0.7, layers: 6, dark: 0.075, spread: 16, contact: 0.2 };   // a block's shadow: how far it falls across and down the field for its height; soft layers; each one's darkness; how much it blurs out toward its tip; the dark line where it meets the sand
 	const SENTRY_END = 260;                   // the side walls' far ends belong to the armed guards
 
 	// Where a guard or marble on a wall may roam: that wall only, so nothing
@@ -229,7 +231,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	let finishF = 0;
 	let dollF = 0;
 	let camEnd = 0;
-	let blocks = [];         // { x, f, r, h, shape, colour }
+	let blocks = [];         // { x, f, rx, r, h, shape, colour, symbol }: rx across, r up the field (half-sizes)
 	let movers = [];         // patrolling guards and rolling marbles
 	let boulders = [];       // { x, f, r, speed, spin, wall, shade }: rolling down the field at the players
 	let boulderIn = 0;       // seconds to the next one
@@ -258,10 +260,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		bags = [];
 		bursts = [];
 
-		// Square blocks scattered in loose bands across every wall: on each wall,
-		// a few short runs of one to three blocks at odd places along it, each
-		// run nudged up or down the field, so you weave rather than queue for a
-		// gap. The bands stay apart, leaving lanes for the guards and marbles.
+		// Blocks scattered in loose bands across every wall: on each wall, a few
+		// short runs one to three blocks long at odd places along it (each run one
+		// long block), nudged up or down the field, so you weave rather than queue
+		// for a gap. The bands stay apart, leaving lanes for the guards and marbles.
 		const rows = Math.max(1, Math.round(settings.length / M / 12 * settings.blockDensity * 1.4));
 		const first = START_F + 330;   // (nothing in the way until past the start line)
 		const last = finishF - 280;
@@ -285,10 +287,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					if (!free) continue;
 					const runF = f + (Math.random() * 2 - 1) * nudge;
 					const colour = SHAPE_COLOURS[Math.floor(Math.random() * SHAPE_COLOURS.length)];
-					for (let j = j0; j < j0 + len; j++) {
-						taken[j] = true;
-						blocks.push({ x: x0 + j * BLOCK, f: runF, r: BLOCK / 2, h: 84, shape: 'square', colour, gapRow: i });
-					}
+					for (let j = j0; j < j0 + len; j++) taken[j] = true;
+					blocks.push({ x: x0 + (j0 + (len - 1) / 2) * BLOCK, f: runF, rx: len * BLOCK / 2, r: BLOCK / 2, h: 84, shape: 'square', colour, gapRow: i, symbol: SHAPES[Math.floor(Math.random() * SHAPES.length)] });
 					k++;
 				}
 			}
@@ -945,7 +945,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	function layPads(fromF, toF, every, practice) {
 		for (let f = fromF; f < toF; f += every * (0.7 + Math.random() * 0.6)) {
 			const [wall, to, x] = CORNERS[Math.floor(Math.random() * CORNERS.length)];
-			if (blocks.some((b) => Math.abs(b.x - x) < b.r + PAD.rx && Math.abs(b.f - f) < b.r + PAD.rf)) continue;
+			if (blocks.some((b) => Math.abs(b.x - x) < b.rx + PAD.rx && Math.abs(b.f - f) < b.r + PAD.rf)) continue;
 			pads.push({ x, f, wall, to, age: 0, practice });
 		}
 	}
@@ -956,7 +956,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			if (wallsOnly && !wallsOnly.includes(wall)) continue;
 			for (let f = fromF + Math.random() * every; f < toF; f += every * (0.5 + Math.random())) {
 				const x = wall * W + LANE + 80 + Math.random() * (W - 2 * LANE - 160);
-				if (blocks.some((b) => Math.abs(b.x - x) < b.r + 50 && Math.abs(b.f - f) < b.r + 50)) continue;
+				if (blocks.some((b) => Math.abs(b.x - x) < b.rx + 50 && Math.abs(b.f - f) < b.r + 50)) continue;
 				cash.push({ x, f, wall, spin: Math.random() * 6, taken: false, practice });
 			}
 		}
@@ -967,7 +967,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (let wall = 0; wall < 3; wall++) {
 			for (let f = fromF + Math.random() * every; f < toF; f += every * (0.6 + Math.random() * 0.8)) {
 				const x = wall * W + LANE + 120 + Math.random() * (W - 2 * LANE - 240);
-				if (blocks.some((b) => Math.abs(b.x - x) < b.r + 60 && Math.abs(b.f - f) < b.r + 60)) continue;
+				if (blocks.some((b) => Math.abs(b.x - x) < b.rx + 60 && Math.abs(b.f - f) < b.r + 60)) continue;
 				magnets.push({ x, f, wall, spin: Math.random() * 6, taken: false });
 			}
 		}
@@ -978,7 +978,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (let wall = 0; wall < 3; wall++) {
 			for (let f = fromF + Math.random() * every; f < toF; f += every * (0.6 + Math.random() * 0.8)) {
 				const x = wall * W + LANE + 160 + Math.random() * (W - 2 * LANE - 320);
-				if (blocks.some((b) => Math.abs(b.x - x) < b.r + 60 && Math.abs(b.f - f) < b.r + 60)) continue;
+				if (blocks.some((b) => Math.abs(b.x - x) < b.rx + 60 && Math.abs(b.f - f) < b.r + 60)) continue;
 				if (magnets.some((g) => g.wall === wall && Math.abs(g.f - f) < 200)) continue;
 				bags.push({ x, f, wall, spin: Math.random() * 6, taken: false });
 			}
@@ -1024,7 +1024,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			for (let k = 0; k < 14; k++) {
 				const aim = target.length && Math.random() < 0.6 ? target[Math.floor(Math.random() * target.length)].x + (Math.random() - 0.5) * 120 : lo + Math.random() * (hi - lo);
 				const x = Math.max(lo, Math.min(hi, aim));
-				if (blocks.some((b) => wallOfX(b.x) === wall && Math.abs(b.x - x) < b.r + r + 10 && b.f < f + r && b.f > cam - 100)) continue;
+				if (blocks.some((b) => wallOfX(b.x) === wall && Math.abs(b.x - x) < b.rx + r + 10 && b.f < f + r && b.f > cam - 100)) continue;
 				boulders.push({ x, f, r, wall, speed: BOULDER.speed[0] + Math.random() * (BOULDER.speed[1] - BOULDER.speed[0]), spin: Math.random() * 6, dust: 0, shade: BOULDER_SHADES[Math.floor(Math.random() * BOULDER_SHADES.length)], seed: Math.random() * 100, loose });
 				show.fx('rumble', 0.5);
 				return true;
@@ -1064,7 +1064,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				const d = BAG.near + Math.random() * (BAG.radius - BAG.near);
 				tx = Math.min(hi, Math.max(lo, x + Math.cos(a) * d));
 				tf = Math.min(finishF - 40, Math.max(START_F + 40, f + Math.sin(a) * d * 0.8));
-				if (!blocks.some((b) => Math.abs(b.x - tx) < b.r + 40 && Math.abs(b.f - tf) < b.r + 40)) break;
+				if (!blocks.some((b) => Math.abs(b.x - tx) < b.rx + 40 && Math.abs(b.f - tf) < b.r + 40)) break;
 			}
 			cash.push({ x: tx, f: tf, wall, spin: Math.random() * 6, taken: false, fly: { t: -i * 0.03, x0: x, f0: f } });
 		}
@@ -1339,7 +1339,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			// they turn back at a block
 			for (const b of blocks) {
 				const dx = m.x - b.x;
-				if (Math.abs(m.f - b.f) < b.r + m.r && Math.abs(dx) < b.r + m.r && Math.sign(dx) === -m.dir) m.dir = -m.dir;
+				if (Math.abs(m.f - b.f) < b.r + m.r && Math.abs(dx) < b.rx + m.r && Math.sign(dx) === -m.dir) m.dir = -m.dir;
 			}
 			if (m.kind === 'guard') m.phase += dt * 20;   // (stepping like the contestants)
 			else m.spin += m.dir * m.speed * dt / m.r;
@@ -1450,9 +1450,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// strafe round them. (Only their own wall's.)
 		for (const b of blocks) {
 			if (wallOfX(b.x) !== c.wall) continue;
-			const dx = c.x - b.x;
+			// (a long block: straight along its length, rounded at its ends)
+			const dx = Math.max(0, Math.abs(c.x - b.x) - (b.rx - b.r));
 			const min = b.r + BODY;
-			if (Math.abs(dx) >= min) continue;
+			if (dx >= min) continue;
 			const reach = Math.sqrt(min * min - dx * dx) * 0.7;
 			if (Math.abs(c.f - b.f) < reach) c.f = c.f < b.f ? b.f - reach : b.f + reach;
 		}
@@ -1571,6 +1572,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const waiting = (cam > 1 && (show.beat === 'doll' || (show.beat === 'play' && phase === 'ready')))
 			|| show.beat === 'visors';   // (nor while the visors go on: the walls are about the visors then)
 		for (const p of pads) drawPad(ctx, p);
+		drawBlockShadows(ctx);   // (on the sand, under everything standing on it)
 
 		// Everything standing on the plane, far to near.
 		const things = [];
@@ -1732,48 +1734,128 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	// A block: a big playground shape standing on the sand, its footprint
 	// drawn straight on the plane so it sits right in the field.
+	// A block's outline on the sand, in field units: a long box with its four
+	// corners cut off, front left first, going round anticlockwise.
+	function footprint(b, grow = 0) {
+		const c = b.r * 2 * BLOCK_LOOK.chamfer;
+		const X = b.rx + grow;
+		const F = b.r + grow;
+		return [
+			[b.x - X + c, b.f - F], [b.x + X - c, b.f - F], [b.x + X, b.f - F + c], [b.x + X, b.f + F - c],
+			[b.x + X - c, b.f + F], [b.x - X + c, b.f + F], [b.x - X, b.f + F - c], [b.x - X, b.f - F + c],
+		];
+	}
+
+	// The convex hull of some field points (for a shadow: the block's
+	// outline and the same outline slid along the light).
+	function hull(pts) {
+		pts = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+		const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+		const lo = [];
+		const hi = [];
+		for (const p of pts) {
+			while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop();
+			lo.push(p);
+		}
+		for (let i = pts.length - 1; i >= 0; i--) {
+			const p = pts[i];
+			while (hi.length >= 2 && cross(hi[hi.length - 2], hi[hi.length - 1], p) <= 0) hi.pop();
+			hi.push(p);
+		}
+		return lo.slice(0, -1).concat(hi.slice(0, -1));
+	}
+
+	// Field points onto the screen (on this block's wall), so many up.
+	const onScreen = (pts, wall, up = 0) => pts.map(([x, f]) => { const p = at(x, f, up, wall); return [p.x, p.y]; });
+
+	// Every block's shadow, soft: the outline slid away from the light in
+	// layers, each a little further and a little wider, so it's darkest at the
+	// foot of the block and fades out toward its tip; and a dark line of
+	// contact where the block meets the sand.
+	function drawBlockShadows(ctx) {
+		for (const b of blocks) {
+			if (!onView(b.f)) continue;
+			const wall = wallOfX(b.x);
+			const alpha = fadeIn(b.f + b.r);
+			art.save(ctx, function (c) {
+				c.globalAlpha = alpha;
+				for (let i = 1; i <= SHADOW.layers; i++) {
+					const t = i / SHADOW.layers;
+					const base = footprint(b, SHADOW.spread * t * 0.5);
+					const slid = base.map(([x, f]) => [x + b.h * SHADOW.x * t, f + b.h * SHADOW.f * t]);
+					art.poly(c, onScreen(hull(base.concat(slid)), wall), { fill: `rgba(20,10,30,${SHADOW.dark})` });
+				}
+				art.poly(c, onScreen(footprint(b, 5), wall), { fill: `rgba(20,10,30,${SHADOW.contact})` });
+			});
+		}
+	}
+
+	// A block: a chunky slab with chamfered corners, each face shaded by which
+	// way it faces the light (only the faces turned toward us drawn, so the
+	// perspective takes care of itself), and one of the game's shapes
+	// inscribed in its top.
 	function drawBlock(ctx, b) {
 		const alpha = fadeIn(b.f + b.r);
+		const wall = wallOfX(b.x);
 		const shade = (k) => mix(b.colour, k);
-		const fr = at(b.x, b.f - b.r);     // its front edge (its middle, drawn in toward the vanishing point)
-		const bk = at(b.x, b.f + b.r);     // its back edge
-		const x0 = fr.x - b.r * fr.s / SCALE;   // (the far ones smaller across too)
-		const x1 = fr.x + b.r * fr.s / SCALE;
-		const xb0 = bk.x - b.r * bk.s / SCALE;
-		const xb1 = bk.x + b.r * bk.s / SCALE;
-		const hf = b.h * fr.s;
-		const hb = b.h * bk.s;
+		const foot = footprint(b);
+		const base = onScreen(foot, wall);
+		const top = onScreen(foot, wall, b.h);
+		const [lx, lf] = BLOCK_LOOK.light;
+		const ll = Math.hypot(lx, lf);
+		const s = scaleAt(b.f);
 		art.save(ctx, function (c) {
 			c.globalAlpha = alpha;
-			art.ellipse(c, fr.x + 10, fr.y + 2, b.r * 1.15 * fr.s + 8, 12 * fr.s, { fill: 'rgba(0,0,0,0.22)' });
-			if (b.shape === 'square') {
-				art.poly(c, [[xb0, bk.y - hb], [xb1, bk.y - hb], [x1, fr.y - hf], [x0, fr.y - hf]], { fill: shade(1.25) });
-				// its sides, where the perspective turns one toward us: the side
-				// facing the vanishing point shows when the back edge sits beyond the front
-				if (xb1 > x1 + 0.5) art.poly(c, [[x1, fr.y], [x1, fr.y - hf], [xb1, bk.y - hb], [xb1, bk.y]], { fill: shade(0.78) });
-				if (xb0 < x0 - 0.5) art.poly(c, [[x0, fr.y], [x0, fr.y - hf], [xb0, bk.y - hb], [xb0, bk.y]], { fill: shade(0.78) });
-				art.poly(c, [[x0, fr.y - hf], [x1, fr.y - hf], [x1, fr.y], [x0, fr.y]], { fill: b.colour });
-			} else if (b.shape === 'circle') {
-				const cy = (fr.y + bk.y) / 2;
-				const ry = (fr.y - bk.y) / 2;
-				const h = (hf + hb) / 2;
-				c.beginPath();
-				c.ellipse(b.x, cy, b.r, ry, 0, 0, Math.PI);
-				c.lineTo(x0, cy - h);
-				c.ellipse(b.x, cy - h, b.r, ry, 0, Math.PI, 0, true);
-				c.closePath();
-				c.fillStyle = b.colour;
-				c.fill();
-				art.ellipse(c, b.x, cy - h, b.r, ry, { fill: shade(1.25) });
-				art.rect(c, x0 + b.r * 0.25, cy - h * 0.85, b.r * 0.18, h * 0.75, { fill: 'rgba(255,255,255,0.22)' });
-			} else {
-				// a ridge running up the field, two slopes and the front gable
-				const apexF = [b.x, fr.y - hf * 1.15];
-				const apexB = [b.x, bk.y - hb * 1.15];
-				art.poly(c, [[x0, fr.y], apexF, apexB, [x0, bk.y]], { fill: shade(1.2) });
-				art.poly(c, [[x1, fr.y], apexF, apexB, [x1, bk.y]], { fill: shade(0.85) });
-				art.poly(c, [[x0, fr.y], [x1, fr.y], apexF], { fill: b.colour });
+			c.lineJoin = 'round';
+			for (let i = 0; i < foot.length; i++) {
+				const j = (i + 1) % foot.length;
+				const quad = [base[i], base[j], top[j], top[i]];
+				// turned toward us? (drawn round the right way on screen)
+				let area = 0;
+				for (let k = 0; k < 4; k++) area += quad[k][0] * quad[(k + 1) % 4][1] - quad[(k + 1) % 4][0] * quad[k][1];
+				if (area >= 0) continue;
+				// its outward normal on the field, against the light
+				const ex = foot[j][0] - foot[i][0];
+				const ef = foot[j][1] - foot[i][1];
+				const el = Math.hypot(ex, ef) || 1;
+				const lit = (ef / el * lx - ex / el * lf) / ll;
+				art.poly(c, quad, { fill: shade(0.8 + 0.22 * lit) });
+				// darker toward the sand
+				const yTop = Math.min(quad[2][1], quad[3][1]);
+				const yBot = Math.max(quad[0][1], quad[1][1]);
+				art.poly(c, quad, { fill: art.linear(c, 0, yTop, 0, yBot, ['rgba(0,0,0,0)', 'rgba(0,0,0,0.16)']) });
+				// a bright edge along its top
+				art.line(c, [quad[3], quad[2]], { stroke: shade(1.45), lineWidth: Math.max(1, 3 * s) });
 			}
+			art.poly(c, top, { fill: shade(1.2) });
+			// the shape, inscribed in the top: a groove and its bright inlay
+			const size = b.r * BLOCK_LOOK.symbol;
+			let shape;
+			if (b.symbol === 'circle') shape = Array.from({ length: 28 }, (_, i) => [b.x + Math.cos(i / 28 * Math.PI * 2) * size, b.f + Math.sin(i / 28 * Math.PI * 2) * size]);
+			else if (b.symbol === 'triangle') shape = [[b.x, b.f + size * 1.1], [b.x + size * 1.05, b.f - size * 0.75], [b.x - size * 1.05, b.f - size * 0.75]];
+			else shape = [[b.x - size * 0.9, b.f - size * 0.9], [b.x + size * 0.9, b.f - size * 0.9], [b.x + size * 0.9, b.f + size * 0.9], [b.x - size * 0.9, b.f + size * 0.9]];
+			const pts = onScreen(shape, wall, b.h);
+			const w = BLOCK_LOOK.line * s;
+			c.beginPath();
+			pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
+			c.closePath();
+			c.lineWidth = w * 1.7;
+			c.strokeStyle = shade(0.8);
+			c.stroke();
+			c.translate(0, -w * 0.3);
+			c.lineWidth = w;
+			c.strokeStyle = 'rgba(255,250,236,0.95)';
+			c.stroke();
+		});
+	}
+
+	// A soft shadow on the sand: darkest under the middle, fading to nothing
+	// at its edge (and nudged a little away from the light).
+	function softShadow(ctx, x, y, rx, ry, dark, alpha = 1) {
+		if (rx <= 0 || ry <= 0) return;
+		const R = rx * 1.3;
+		art.with(ctx, { x: x + rx * 0.12, y, scaleY: ry / rx }, function (c) {
+			art.circle(c, 0, 0, R, { fill: art.radial(c, 0, 0, 0, R, [[0, `rgba(10,5,20,${dark * 1.4})`], [0.45, `rgba(10,5,20,${dark})`], [1, 'rgba(10,5,20,0)']]), alpha });
 		});
 	}
 
@@ -1791,7 +1873,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const r = m.r * p.s;
 		art.save(ctx, function (c) {
 			c.globalAlpha = fadeIn(m.f);
-			art.ellipse(c, foot.x, foot.y, r * 1.05, r * 0.3, { fill: 'rgba(0,0,0,0.28)' });
+			softShadow(c, foot.x, foot.y, r * 1.05, r * 0.3, 0.28);
 			art.circle(c, p.x, p.y, r, { fill: art.radial(c, p.x - r * 0.3, p.y - r * 0.3, r * 0.1, r * 1.3, ['#eef8ff', '#cfe6f8', '#8fb6d8']) });
 			c.save();
 			c.translate(p.x, p.y);
@@ -1824,7 +1906,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				const d = at(b.x + Math.sin(b.seed + i * 2.3) * b.r * 0.7, b.f + b.r * 0.6 + k * 160, 10 + k * 50);
 				art.circle(c, d.x, d.y, (14 + k * 34) * d.s, { fill: 'rgba(214,186,140,0.55)', alpha: (1 - k) * 0.8 });
 			}
-			art.ellipse(c, foot.x, foot.y, r * 1.1, r * 0.3, { fill: 'rgba(0,0,0,0.3)' });
+			softShadow(c, foot.x, foot.y, r * 1.1, r * 0.3, 0.3);
 			// the stone: a lumpy circle
 			c.save();
 			c.beginPath();
@@ -1880,7 +1962,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// the same quick steps as the contestants, bobbing up off each one
 		const step = walk ? Math.sin(walk) * 7 : 0;
 		const bob = walk ? Math.abs(Math.sin(walk)) * 7 : 0;
-		art.ellipse(c, 0, 0, 28, 8, { fill: 'rgba(0,0,0,0.3)' });
+		softShadow(c, 0, 0, 28, 8, 0.3);
 		// legs and boots
 		for (const side of [-1, 1]) {
 			const lift = Math.max(0, side * step);
@@ -1953,7 +2035,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				});
 			}
 		}
-		art.ellipse(ctx, ground.x, ground.y, 27 * s * air, 8 * s * air, { fill: 'rgba(0,0,0,0.35)', alpha });
+		softShadow(ctx, ground.x, ground.y, 27 * s * air, 8 * s * air, 0.35, alpha);
 
 		let rotate = 0;
 		let scaleY = 1;
@@ -2040,7 +2122,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const s = p.s * CASH.size;
 		const rise = 0.5 + 0.5 * Math.sin(m.spin * 2.4);
 		const lift = (CASH.float + CASH.bob * rise + (m.fly ? BAG.arc * 4 * k * (1 - k) : 0)) * p.s;
-		art.ellipse(ctx, p.x, p.y, 30 * s * (1 - 0.25 * rise), 9 * s * (1 - 0.25 * rise), { fill: 'rgba(0,0,0,0.22)', alpha: 1 - 0.35 * rise });
+		softShadow(ctx, p.x, p.y, 30 * s * (1 - 0.25 * rise), 9 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: -0.35 + Math.sin(m.spin * 1.3) * 0.1 }, function (c) {
 			// seen at an angle: tipped back and skewed, a stack of notes with depth
 			c.transform(1, 0, -0.45, 0.72, 0, 0);
@@ -2064,7 +2146,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const s = p.s * CASH.size;
 		const rise = 0.5 + 0.5 * Math.sin(g.spin * 2.4);
 		const lift = (CASH.float + CASH.bob * rise) * p.s;
-		art.ellipse(ctx, p.x, p.y, 26 * s * (1 - 0.25 * rise), 8 * s * (1 - 0.25 * rise), { fill: 'rgba(0,0,0,0.22)', alpha: 1 - 0.35 * rise });
+		softShadow(ctx, p.x, p.y, 26 * s * (1 - 0.25 * rise), 8 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: Math.sin(g.spin * 1.6) * 0.25 }, function (c) {
 			c.save();
 			c.lineCap = 'butt';
@@ -2095,7 +2177,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const s = p.s * CASH.size;
 		const rise = 0.5 + 0.5 * Math.sin(g.spin * 2.4);
 		const lift = (CASH.float + CASH.bob * rise) * p.s;
-		art.ellipse(ctx, p.x, p.y, 34 * s * (1 - 0.25 * rise), 10 * s * (1 - 0.25 * rise), { fill: 'rgba(0,0,0,0.22)', alpha: 1 - 0.35 * rise });
+		softShadow(ctx, p.x, p.y, 34 * s * (1 - 0.25 * rise), 10 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: Math.sin(g.spin * 1.4) * 6 }, function (c) {
 			// the sack: wide at the bottom, gathered in at the neck
 			c.beginPath();
@@ -2214,7 +2296,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const up = pose === 'cheer' || pose === 'win';
 		const wave = pose === 'win' ? Math.sin(wallT * 9 + n) * 0.35 : 0;
 		art.ellipse(c, 0, 0, 44, 14, { fill: PLAYER_COLORS[n] || 'white' });
-		art.ellipse(c, 0, 0, 28, 8, { fill: 'rgba(0,0,0,0.3)' });
+		softShadow(c, 0, 0, 28, 8, 0.3);
 		// legs, white stripes down the outsides, white trainers
 		for (const side of [-1, 1]) {
 			art.roundRect(c, side * 8.5 - 6.5, -44, 13, 38, 4, { fill: PANTS });
@@ -2257,7 +2339,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	function drawDoll(ctx) {
 		const p = at(DOLL_X, dollF);
 		art.with(ctx, { x: p.x, y: p.y, scale: p.s * 0.82 }, function (c) {
-			art.ellipse(c, 0, 0, 190, 34, { fill: 'rgba(0,0,0,0.25)' });
+			softShadow(c, 0, 0, 190, 34, 0.25);
 			dollBody(c, false);
 			art.with(c, { y: -610, scale: 2.1 }, (c2) => dollHead(c2, head.yaw, glare));
 		});
@@ -2369,7 +2451,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const p = at(DOLL_X - 360, dollF + 140);
 		art.with(ctx, { x: p.x, y: p.y, scale: p.s * 0.85 }, function (c) {
 			const BARK = '#5a4332';
-			art.ellipse(c, 0, 0, 120, 22, { fill: 'rgba(0,0,0,0.22)' });
+			softShadow(c, 0, 0, 120, 22, 0.22);
 			const branches = [[[0, -380], [-150, -560], [-230, -610]], [[0, -430], [120, -600], [210, -650]], [[0, -330], [180, -420]], [[0, -300], [-170, -390]], [[0, -480], [10, -720]]];
 			for (const b of branches) art.line(c, b, { stroke: BARK, lineWidth: 22, lineCap: 'round' });
 			art.poly(c, [[-48, 0], [48, 0], [24, -260], [16, -500], [-16, -500], [-24, -260]], { fill: BARK });
