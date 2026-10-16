@@ -4621,7 +4621,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	}).hide().appendTo(stage.$ui).on('click', function (e) { e.stopPropagation(); setPaused(true); })
 		.on('mouseenter', function () { $(this).css({ transform: 'translateY(-50%) scale(1.08)' }); })
 		.on('mouseleave', function () { $(this).css({ transform: 'translateY(-50%) scale(1)' }); });
-	$('<span>').html('TAP FOR<br>OPTIONS').css({   // (the prompt, standing just above it, outlined and dropped like the other words)
+	$('<span>').text('TAP').css({   // (the prompt, standing just above it, outlined and dropped like the other words)
 		position: 'absolute', left: '50%', bottom: 'calc(100% + 16px)', transform: 'translateX(-50%)', whiteSpace: 'nowrap',
 		fontFamily: font, fontSize: '30px', lineHeight: 1.1, letterSpacing: '1px', color: 'white', textAlign: 'center',
 		WebkitTextStroke: `4px ${Showtime.TYPE.colours.ink}`, paintOrder: 'stroke fill', textShadow: '0 3px 0 rgba(0,0,0,0.55)',
