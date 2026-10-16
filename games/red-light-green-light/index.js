@@ -3328,9 +3328,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// (a part the sheet didn't give us stands in as the standing one, so
 		// a figure never drops back to another kind of drawing for a frame)
 		const head0 = P[PART_SHEETS[rig.name].heads ? PART_SHEETS[rig.name].heads[0] : 'head'];
-		const parts = (p) => ({ legs: P[p.legs] || P.legs, torso: P[p.torso] || P.torso, head: P[pick.head || p.head] || head0 });
-		const A = parts(pose);
-		const B = next ? parts(next) : null;
+		// (which drawing each part uses in a pose: the pose's own, unless the lab chose another)
+		const chosen = (id, part) => (TUNE[rig.name] && TUNE[rig.name][id] && TUNE[rig.name][id].use && TUNE[rig.name][id].use[part]) || poses[id][part];
+		const parts = (id) => ({ legs: P[chosen(id, 'legs')] || P.legs, torso: P[chosen(id, 'torso')] || P.torso, head: P[pick.head || chosen(id, 'head')] || head0 });
+		const A = parts(poseId);
+		const B = next ? parts(nextId) : null;
 		if (!A.legs || !A.torso || !A.head) return false;
 		const fig = figure(rig.name);
 		const k = fig.height / (rig.tall * (1 - fig.overlap * 2));
@@ -4402,8 +4404,34 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const n = nudge(fig, pose, part);
 			$('<div>').text(`${pose.toUpperCase()} · ${part.toUpperCase()}`).css({ fontSize: '26px', color: '#9fb6d8', margin: '6px 4px' }).appendTo($side);
 			for (const [key, lo, hi, step] of SLIDERS) slider(LABELS[key], n[key], lo, hi, step, (v) => set([fig, pose, part, key], v)).appendTo($side);
+			// which drawing this part uses in this pose: every one of its kind on the sheet
+			const rig = rigs[fig];
+			if (rig) {
+				$('<div>').text('DRAWING').css({ fontSize: '20px', color: '#9fb6d8', margin: '10px 4px 4px' }).appendTo($side);
+				const $use = $('<div>').css({ display: 'flex', flexWrap: 'wrap', gap: '6px', margin: '0 4px 8px' }).appendTo($side);
+				const current = (TUNE[fig] && TUNE[fig][pose] && TUNE[fig][pose].use && TUNE[fig][pose].use[part]) || POSES[fig][pose][part];
+				for (const [id, pt] of Object.entries(rig.parts)) {
+					if (pt.kind !== (part === 'head' ? 'head' : part)) continue;
+					const thumb = document.createElement('canvas');
+					thumb.width = thumb.height = 74;
+					const tg = thumb.getContext('2d');
+					const k = Math.min(74 / pt.img.width, 74 / pt.img.height);
+					tg.drawImage(pt.img, (74 - pt.img.width * k) / 2, (74 - pt.img.height * k) / 2, pt.img.width * k, pt.img.height * k);
+					$('<button>').attr('title', id).css({
+						width: '86px', height: '86px', padding: '4px', borderRadius: '10px', cursor: 'pointer',
+						border: id === current ? '3px solid #d8743a' : '3px solid transparent', background: '#18213a',
+					}).append(thumb).appendTo($use).on('click', function (e) {
+						e.stopPropagation();
+						TUNE[fig] = TUNE[fig] || {};
+						TUNE[fig][pose] = TUNE[fig][pose] || {};
+						TUNE[fig][pose].use = Object.assign(TUNE[fig][pose].use || {}, { [part]: id });
+						save();
+						render();
+					});
+				}
+			}
 			const $pr = row();
-			button('RESET PART', () => { if (TUNE[fig] && TUNE[fig][pose]) delete TUNE[fig][pose][part]; save(); render(); }, '#5a2232').appendTo($pr);
+			button('RESET PART', () => { if (TUNE[fig] && TUNE[fig][pose]) { delete TUNE[fig][pose][part]; if (TUNE[fig][pose].use) delete TUNE[fig][pose].use[part]; } save(); render(); }, '#5a2232').appendTo($pr);
 			button('RESET POSE', () => { if (TUNE[fig]) delete TUNE[fig][pose]; save(); render(); }, '#5a2232').appendTo($pr);
 			button('COPY TO OTHER POSES', () => {
 				for (const id of Object.keys(POSES[fig])) if (id !== pose) set([fig, id, part, 'x'], n.x), set([fig, id, part, 'y'], n.y), set([fig, id, part, 'r'], n.r), set([fig, id, part, 's'], n.s);
