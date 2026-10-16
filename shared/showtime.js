@@ -25,6 +25,7 @@
  *       music: false,                     // optional: no music, only the effects
  *       clockOutline: false,              // optional: the clock's capsule without its coloured outline
  *       clockFont: 'Share Tech Mono',     // optional: the clock's digits in their own (monospace) font
+ *       clockBox: false,                  // optional: no dark capsule behind the clock, just its digits (styled like the rest of the text)
  *       font: 'Game of Squids',           // optional: one font for everything the show writes (load it first)
  *   });
  *
@@ -965,7 +966,7 @@ window.Showtime = function (stage, opts) {
 		ctx.translate(x, y);
 		ctx.scale(pulse, pulse);
 		const outline = opts.clockOutline === false ? {} : { stroke: urgent ? '#ff3d6a' : theme.accent, lineWidth: size * 0.07 };   // (a game can leave it off: clockOutline: false)
-		if (box > 0) art.roundRect(ctx, -w / 2 - side, -size * 0.66 - up, w + side, size * 1.32 + up, size * 0.66, Object.assign({ fill: 'rgba(12,4,30,0.78)', alpha: box }, outline));
+		if (box > 0 && opts.clockBox !== false) art.roundRect(ctx, -w / 2 - side, -size * 0.66 - up, w + side, size * 1.32 + up, size * 0.66, Object.assign({ fill: 'rgba(12,4,30,0.78)', alpha: box }, outline));
 		// its digits at a step of the scale, sized with the pill by scaling
 		const ref = self.size(CLOCK.size);
 		ctx.scale(size / ref, size / ref);

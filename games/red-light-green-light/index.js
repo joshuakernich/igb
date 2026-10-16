@@ -577,6 +577,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		clockOutline: false,         // (no outline round it)
 		font: SQUID_FONT,            // everything the show writes, in the game's own lettering
 		clockFont: 'Share Tech Mono',   // (but the clock: steady monospace digital digits)
+		clockBox: false,             // (its digits alone, outlined and extruded like the rest of the text: no dark capsule behind them)
 		seconds: GAME_SECONDS,
 		players: () => contestants.length,
 		scores: () => contestants.map((c) => c.score),
