@@ -2539,13 +2539,42 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const dark = 'rgba(70,40,15,0.18)';
 		art.poly(c, quad, { fill: art.linear(c, xa, 0, xb, 0, dir > 0 ? ['rgba(70,40,15,0)', 'rgba(70,40,15,0)', dark] : [dark, 'rgba(70,40,15,0)', 'rgba(70,40,15,0)']) });
 		const s = at(p.x, p.f, 0, wall).s;
-		// an arrow painted on it, pointing the way it throws you: red paint,
-		// soaked into the sand and worn, grit showing through it (a little up
-		// the lid from its middle)
+		// an arrow painted on it, pointing the way it throws you: the guards'
+		// pink, slapped on roughly with a brush, ragged edges, patchy, soaked
+		// into the sand and worn, grit showing through it (a little up the lid
+		// from its middle). Its roughness is the same each time for this door.
 		const UP = 0.14;
-		const ARROW = [[0.16, -0.15], [0.54, -0.15], [0.54, -0.44], [0.86, 0], [0.54, 0.44], [0.54, 0.15], [0.16, 0.15]];
-		art.poly(c, ARROW.map(([u, v]) => at2(u, v + UP)), { fill: 'rgba(206,38,42,0.75)' });
-		if (!p.wear) p.wear = Array.from({ length: 40 }, () => [0.16 + Math.random() * 0.7, (Math.random() * 2 - 1) * 0.44 + UP, 0.6 + Math.random() * 1.6]);
+		if (!p.arrow) {
+			const ARROW = [[0.16, -0.15], [0.54, -0.15], [0.54, -0.44], [0.86, 0], [0.54, 0.44], [0.54, 0.15], [0.16, 0.15]];
+			const ragged = [];
+			ARROW.forEach(function ([u0, v0], i) {
+				const [u1, v1] = ARROW[(i + 1) % ARROW.length];
+				for (let k = 0; k < 6; k++) {
+					const t = k / 6;
+					const j = k ? 0.035 : 0.012;   // (the corners hold, the edges between wander)
+					ragged.push([u0 + (u1 - u0) * t + (Math.random() - 0.5) * j, v0 + (v1 - v0) * t + (Math.random() - 0.5) * j * 1.6]);
+				}
+			});
+			p.arrow = {
+				ragged,
+				blotches: Array.from({ length: 9 }, () => [0.2 + Math.random() * 0.6, (Math.random() * 2 - 1) * 0.3, 2 + Math.random() * 5, Math.random() < 0.5]),
+				wear: Array.from({ length: 80 }, () => [0.14 + Math.random() * 0.74, (Math.random() * 2 - 1) * 0.46, 0.5 + Math.random() * 2]),
+			};
+		}
+		const shape = p.arrow.ragged.map(([u, v]) => at2(u, v + UP));
+		art.poly(c, shape, { fill: 'rgba(229,40,122,0.78)' });
+		// patchy: thicker and thinner brushfuls of paint (inside the arrow)
+		c.save();
+		c.beginPath();
+		shape.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
+		c.closePath();
+		c.clip();
+		for (const [u, v, r, thick] of p.arrow.blotches) {
+			const [x, y] = at2(u, v + UP);
+			art.ellipse(c, x, y, r * s * 3, r * s * 1.4, { fill: thick ? 'rgba(200,24,100,0.35)' : 'rgba(255,140,190,0.25)' });
+		}
+		c.restore();
+		p.wear = p.arrow.wear.map(([u, v, r]) => [u, v + UP, r]);
 		for (const [u, v, r] of p.wear) {
 			const [x, y] = at2(u, v);
 			art.circle(c, x, y, r * s * 1.6, { fill: mix('#dcb47c', shade), alpha: 0.75 });
