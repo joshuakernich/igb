@@ -71,7 +71,6 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		{ id: 'squad', length: Infinity },
 		show.beats.titleDrop({
 			lines: [{ text: 'SHOW', fill: '#3ad1ff', glow: '#5a4dff' }, { text: 'DEBUG', fill: '#ffd23f', glow: '#ff7a3d' }],
-			tagline: 'THE WHOLE CHOREOGRAPHY',
 		}),
 		show.beats.clockIntro(),
 		show.beats.visors(),

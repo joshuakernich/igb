@@ -4133,10 +4133,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// 1b. the title, crashing in letter by letter
 		show.beats.titleDrop({
 			lines: [{ text: 'RED LIGHT', fill: '#ff3640', glow: '#ff3640' }, { text: 'GREEN LIGHT', fill: '#27d96b', glow: '#27d96b' }],
-			tagline: 'DON\'T GET CAUGHT MOVING',
 			update(dt) {
 				stepWorld(dt);
-				if (show.cue(1.41)) voice('title');   // (RED LIGHT as its letters land, GREEN LIGHT, then the tagline)
+				if (show.cue(1.41)) voice('title');   // (RED LIGHT as its letters land, then GREEN LIGHT)
 			},
 		}),
 

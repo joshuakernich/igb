@@ -1211,7 +1211,6 @@ IGB.register('mingle', function MingleGame(stage, playersMeta) {
 		// 1b. the title, crashing in letter by letter
 		show.beats.titleDrop({
 			lines: [{ text: 'MINGLE', fill: LIGHT_PINK, glow: PINK }],
-			tagline: 'FIND YOUR GROUP',
 			enter() { speed = IDLE_ROLL; },
 			update(dt) { stepWorld(dt); },
 		}),
