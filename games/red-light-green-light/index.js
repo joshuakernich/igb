@@ -3120,8 +3120,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	};
 
 	// Fine-tuning, from the character lab (DEBUG ▸ CHARACTER LAB): per figure
-	// and pose, each part's nudge (x, y in figure units, r in degrees, s a
-	// scale), and per figure, '_': its height and how far the parts tuck
+	// and pose, each part's nudge (x, y in figure units, r in degrees; no
+	// scaling, so a figure's parts always stay at one scale), and per figure, '_': its height and how far the parts tuck
 	// together. Baked in here; the lab's changes are kept in this browser on
 	// top of these until they're baked in too.
 	const TUNED = {};
@@ -3274,12 +3274,12 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		c.save();
 		c.scale(k, k);
 		if (pick.flip) c.scale(-1, 1);
+		// (every part at the one scale, k: none is scaled on its own)
 		// the legs, hung from the waist
 		const tl = T('legs');
 		c.save();
 		c.translate(tl.x / k, -legsTall - lift + tl.y / k);
 		c.rotate(tl.r * Math.PI / 180);
-		c.scale(tl.s, tl.s);
 		layer(A.legs, B && B.legs, 'top');
 		c.restore();
 		// the body on the waist
@@ -3287,14 +3287,12 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		c.save();
 		c.translate(tt.x / k, -legsTall - lift + tuck - (pick.bob || 0) / k + tt.y / k);
 		c.rotate(((pick.lean || 0) + tt.r) * Math.PI / 180);
-		c.scale(tt.s, tt.s);
 		const flips = (p) => (pick.mirror !== undefined ? pick.mirror : !!p.mirror);
 		layer(A.torso, B && B.torso, 'bottom', flips(pose));
 		// the head on the neck
 		const th = T('head');
 		c.translate(th.x / k, -torsoTall + tuck * 1.2 + th.y / k);
 		c.rotate(((pick.tilt || 0) + th.r) * Math.PI / 180);
-		c.scale(th.s, th.s);
 		layer(A.head, B && B.head, 'bottom');
 		c.restore();
 		c.restore();
@@ -3312,7 +3310,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const n = nudge('guard', 'aim', 'torso');
 		const legs = P[POSES.guard.aim.legs] || P.legs;
 		const waistY = -(legs.bottom[1] - legs.top[1]) * legs.norm + tuck + n.y / k;
-		const g = n.s * t.norm;
+		const g = t.norm;
 		return [(t.tip[0] - t.bottom[0]) * g * k + n.x, (waistY + (t.tip[1] - t.bottom[1]) * g) * k];
 	}
 
@@ -4255,8 +4253,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		let part = 'torso';
 		let t0 = 0;
 		const FIGS = { back: 'CONTESTANT · BACK', front: 'CONTESTANT · FRONT', guard: 'GUARD' };
-		const SLIDERS = [['x', -40, 40, 0.5], ['y', -40, 40, 0.5], ['r', -45, 45, 0.5], ['s', 0.5, 1.6, 0.01]];
-		const LABELS = { x: 'ACROSS', y: 'UP / DOWN', r: 'TURN °', s: 'SIZE' };
+		const SLIDERS = [['x', -40, 40, 0.5], ['y', -40, 40, 0.5], ['r', -45, 45, 0.5]];   // (no size: every part of a figure is drawn at one scale)
+		const LABELS = { x: 'ACROSS', y: 'UP / DOWN', r: 'TURN °' };
 
 		function save() {
 			try { localStorage.setItem(TUNE_KEY, JSON.stringify(TUNE)); } catch (e) { /* (not kept: no storage) */ }
