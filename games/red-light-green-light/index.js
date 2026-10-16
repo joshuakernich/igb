@@ -2530,6 +2530,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		return true;
 	}
 
+	// How high a pickup floats, as a share of its height on the flat: up the
+	// bend the ground tilts away, so the gap under it closes up just as its
+	// shadow shortens (see groundTilt).
+	const hover = (f) => Math.min(1, groundTilt(f));
+
 	// A wad of cash: a stack of green notes with a paper band, floating above
 	// the sand and bobbing up and down, its shadow shrinking as it rises.
 	function drawCash(ctx, m) {
@@ -2541,7 +2546,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const p = m.fly ? at(m.fly.x0 + (m.x - m.fly.x0) * k, m.fly.f0 + (m.f - m.fly.f0) * k) : at(m.x, m.f);
 		const s = p.s * CASH.size;
 		const rise = 0.5 + 0.5 * Math.sin(m.spin * 2.4);
-		const lift = (CASH.float + CASH.bob * rise + (m.fly ? BAG.arc * 4 * k * (1 - k) : 0)) * p.s;
+		const lift = ((CASH.float + CASH.bob * rise) * hover(m.f) + (m.fly ? BAG.arc * 4 * k * (1 - k) : 0)) * p.s;
 		softShadow(ctx, p.x, p.y, 26 * s * (1 - 0.25 * rise), 8 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 40 * s, m.f);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: -0.35 + Math.sin(m.spin * 1.3) * 0.1 }, function (c) {
 			if (drawItem(c, 'cash')) return;
@@ -2566,7 +2571,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const p = at(g.x, g.f);
 		const s = p.s * CASH.size;
 		const rise = 0.5 + 0.5 * Math.sin(g.spin * 2.4);
-		const lift = (CASH.float + CASH.bob * rise) * p.s;
+		const lift = (CASH.float + CASH.bob * rise) * hover(g.f) * p.s;
 		softShadow(ctx, p.x, p.y, 22 * s * (1 - 0.25 * rise), 7 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 40 * s, g.f);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: Math.sin(g.spin * 1.6) * 0.25 }, function (c) {
 			if (drawItem(c, 'magnet')) return;
@@ -2598,7 +2603,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const p = at(g.x, g.f);
 		const s = p.s * CASH.size;
 		const rise = 0.5 + 0.5 * Math.sin(g.spin * 2.4);
-		const lift = (CASH.float + CASH.bob * rise) * p.s;
+		const lift = (CASH.float + CASH.bob * rise) * hover(g.f) * p.s;
 		const big = ITEM.bagSize;   // (a money bag is bigger than the rest)
 		softShadow(ctx, p.x, p.y, 30 * s * big * (1 - 0.25 * rise), 9 * s * big * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 60 * s * big, g.f);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s * big, rotate: Math.sin(g.spin * 1.4) * 6 }, function (c) {
