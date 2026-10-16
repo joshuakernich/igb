@@ -2998,9 +2998,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// match the rest and nudged as the lab says. On top of that, the moment's
 	// own movement: the body (and head with it) leaning (degrees) and bobbing
 	// up, the head tilting, a lift off the ground. Given a next pose and how
-	// far toward it (pick.next, pick.t), it eases between them: the joins
-	// slide from one pose's to the next's, and the next pose's parts fade in
-	// over this one's, so a cycle runs smoothly rather than in jumps.
+	// far toward it (pick.next, pick.t), the joins slide from one pose's to
+	// the next's, so the body rides smoothly over the legs' steps.
 	function assemble(c, rig, pick) {
 		const poses = POSES[rig.name];
 		const poseId = poses[pick.pose] ? pick.pose : 'stand';
@@ -3009,10 +3008,13 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const next = nextId ? poses[nextId] : null;
 		const t = next ? Math.max(0, Math.min(1, pick.t || 0)) : 0;
 		const P = rig.parts;
-		const parts = (p) => ({ legs: P[p.legs], torso: P[p.torso], head: P[pick.head || p.head] });
+		// (a part the sheet didn't give us stands in as the standing one, so
+		// a figure never drops back to another kind of drawing for a frame)
+		const head0 = P[PART_SHEETS[rig.name].heads ? PART_SHEETS[rig.name].heads[0] : 'head'];
+		const parts = (p) => ({ legs: P[p.legs] || P.legs, torso: P[p.torso] || P.torso, head: P[pick.head || p.head] || head0 });
 		const A = parts(pose);
 		const B = next ? parts(next) : null;
-		if (!A.legs || !A.torso || !A.head || (B && (!B.legs || !B.torso || !B.head))) return false;
+		if (!A.legs || !A.torso || !A.head) return false;
 		const fig = figure(rig.name);
 		const k = fig.height / (rig.tall * (1 - fig.overlap * 2));
 		const tuck = fig.overlap * A.head.h * A.head.norm * 0.9;
@@ -3028,18 +3030,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const lift = ((pick.lift || 0) + mix(pose.lift || 0, next ? next.lift || 0 : 0)) / k;
 		const legsTall = mix(tallOf(A.legs, 'bottom', 'top'), B ? tallOf(B.legs, 'bottom', 'top') : 0);
 		const torsoTall = mix(tallOf(A.torso, 'bottom', 'top'), B ? tallOf(B.torso, 'bottom', 'top') : 0);
-		// one part (and the next pose's, faded in over it), its join at the origin
-		const layer = function (a, b, join, flipA, flipB) {
-			for (const [part, alpha, flip] of [[a, 1, flipA], [b, t, flipB]]) {
-				if (!part || alpha <= 0.02) continue;
-				if (part === b && b === a && flipA === flipB) continue;   // (the same part: once is enough)
-				c.save();
-				c.globalAlpha *= alpha;
-				c.scale(part.norm, part.norm);
-				if (flip) c.scale(-1, 1);
-				c.drawImage(part.img, -part[join][0], -part[join][1]);
-				c.restore();
-			}
+		// one part, its join at the origin (only this pose's: fading the next
+		// one in over it flickered, so only the joins ease between them)
+		const layer = function (a, b, join, flip) {
+			c.save();
+			c.scale(a.norm, a.norm);
+			if (flip) c.scale(-1, 1);
+			c.drawImage(a.img, -a[join][0], -a[join][1]);
+			c.restore();
 		};
 		c.save();
 		c.scale(k, k);
@@ -3059,7 +3057,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		c.rotate(((pick.lean || 0) + tt.r) * Math.PI / 180);
 		c.scale(tt.s, tt.s);
 		const flips = (p) => (pick.mirror !== undefined ? pick.mirror : !!p.mirror);
-		layer(A.torso, B && B.torso, 'bottom', flips(pose), next ? flips(next) : false);
+		layer(A.torso, B && B.torso, 'bottom', flips(pose));
 		// the head on the neck
 		const th = T('head');
 		c.translate(th.x / k, -torsoTall + tuck * 1.2 + th.y / k);
