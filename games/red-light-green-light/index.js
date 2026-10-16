@@ -4659,26 +4659,28 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		.on('click', function (e) { e.stopPropagation(); fn(); });
 	rowButton('RESUME', 'play', () => setPaused(false), ROW_COLOURS.resume).appendTo($front);
 	// the volume, the same shape: its name, then five bars, all alike, lit up to its level; click one for that level
-	// The volume, the same shape, its control in the icons' style: a white
-	// capsule snug in the row's end with five bars cut out of it, the ones up
-	// to the level cut clean through, the rest only faintly; click a bar for
-	// that level.
+	// The volume, the same shape, its control in the icons' style: a capsule
+	// half the row's width, snug in its end, with five spots cut out of it,
+	// the ones up to the level cut clean through, the rest only faintly;
+	// click a spot for that level.
 	const $vol = $('<div>').css(Object.assign({}, rowCss, { color: ROW_COLOURS.volume, borderColor: ROW_COLOURS.volume })).appendTo($front);
 	label('VOLUME').appendTo($vol);
 	const VH = R.h - 10 - R.inset * 2;                  // (as tall as the icons)
-	const BAR = { w: VH * 0.2, gap: VH * 0.12, pad: VH * 0.3 };
-	const VW = BAR.pad * 2 + PAUSE.levels.length * BAR.w + (PAUSE.levels.length - 1) * BAR.gap;
+	const VW = R.w / 2;                                  // (half the row's width)
+	const SPOT = { r: VH * 0.22 };
+	const N = PAUSE.levels.length;
+	const step = (VW - VH) / (N - 1);                    // (the spots evenly along it, the end ones centred in its round ends)
+	const barX = (i) => VH / 2 + i * step - step / 2;     // (each spot's click zone: its left edge)
+	const BAR = { w: step, gap: 0 };
 	const $volIcon = $('<div>').css({ position: 'relative', width: VW + 'px', height: VH + 'px', flex: 'none' }).appendTo($vol);
 	const volMask = 'cut-icon-' + ++iconIds;
-	const barX = (i) => BAR.pad + i * (BAR.w + BAR.gap);
-	const barH = (i) => VH * (0.3 + 0.1 * i);   // (rising, left to right, standing on one line)
 	const $volSvg = $(`<svg viewBox="0 0 ${VW} ${VH}" width="${VW}" height="${VH}" style="display:block">`
 		+ `<defs><mask id="${volMask}"><rect width="${VW}" height="${VH}" fill="white"/>`
-		+ PAUSE.levels.map((v, i) => `<rect class="vbar" x="${barX(i)}" y="${VH * 0.82 - barH(i)}" width="${BAR.w}" height="${barH(i)}" rx="${BAR.w * 0.3}" fill="black"/>`).join('')
+		+ PAUSE.levels.map((v, i) => `<circle class="vbar" cx="${VH / 2 + i * step}" cy="${VH / 2}" r="${SPOT.r}" fill="black"/>`).join('')
 		+ `</mask></defs><rect width="${VW}" height="${VH}" rx="${VH / 2}" fill="${ROW_COLOURS.volume}" mask="url(#${volMask})"/></svg>`).appendTo($volIcon);
 	PAUSE.levels.forEach(function (v, i) {
 		$('<button>').attr('title', 'Volume ' + (i + 1)).css({
-			position: 'absolute', left: barX(i) - BAR.gap / 2 + 'px', top: 0, width: BAR.w + BAR.gap + 'px', height: '100%',
+			position: 'absolute', left: barX(i) + 'px', top: 0, width: BAR.w + 'px', height: '100%',
 			background: 'none', border: 'none', padding: 0, cursor: 'pointer',
 		}).appendTo($volIcon).on('click', function (e) { e.stopPropagation(); IGB.setVolume(v); showVolume(); show.fx('pick'); });
 	});
