@@ -152,6 +152,14 @@ window.Showtime = function (stage, opts) {
 		// spring, damp: how stiff the spring back is and how quickly its wobble
 		// dies; r: its body's thickness; segs: how many segments make it up
 		worm: { tall: 330, smooth: 0.08, lean: 2.4, most: 0.8, kick: 1.6, swing: 1.3, spring: 60, damp: 2.2, r: 17, segs: 12 },
+		// and its two little arms, hanging limp from its shoulders at rest and
+		// flailing as it moves. at: how far up the body they hang from; upper,
+		// lower: the arm's two lengths, and thick: its thickness (all in body
+		// thicknesses); rest: how far out from straight down they hang (radians,
+		// and the elbow's bend); spring, damp: how floppy; shove: how hard the
+		// body's swaying throws them about; flail: how wildly they wave (per
+		// unit of speed across the room)
+		arms: { at: 0.68, upper: 1.5, lower: 1.3, thick: 0.42, rest: 0.22, bend: 0.15, spring: 22, damp: 1.6, shove: 0.9, flail: 60 },
 	};
 
 	/* ---------- tuning: the rating ---------- */
@@ -1271,6 +1279,23 @@ window.Showtime = function (stage, opts) {
 					b.v += (V.worm.spring * (want - b.a) - V.worm.damp * b.v) * h;
 					b.a += b.v * h;
 					if (Math.abs(b.a) > V.worm.swing) { b.a = Math.sign(b.a) * V.worm.swing; b.v *= -0.4; }   // (as far as it goes: it bounces back)
+					// its arms: dangling on floppy springs, thrown about by the body's
+					// sway and flailing the faster they go
+					const A = V.arms;
+					const leanAcc = (b.v - (b.lastV || 0)) / Math.max(h, 1e-3);
+					b.lastV = b.v;
+					b.t = (b.t || 0) + h;
+					b.arms = b.arms || [{ a: A.rest, v: 0, e: A.bend, ev: 0 }, { a: A.rest, v: 0, e: A.bend, ev: 0 }];
+					b.arms.forEach(function (arm, j) {
+						const side = j ? 1 : -1;
+						const speed = Math.min(1.5, Math.abs(b.vx));
+						const wave = Math.sin(b.t * (9 + j * 2.3) + j * 2) + 0.6 * Math.sin(b.t * (14.7 - j * 3.1));
+						const before = arm.v;
+						arm.v += (A.spring * (A.rest - arm.a) - A.damp * arm.v - side * leanAcc * A.shove * 0.1 + wave * speed * A.flail) * h;
+						arm.a = clamp(arm.a + arm.v * h, -0.7, 3.1);
+						arm.ev += (A.spring * 1.4 * (A.bend - arm.e) - A.damp * arm.ev - (arm.v - before) / Math.max(h, 1e-3) * 0.5) * h;
+						arm.e = clamp(arm.e + arm.ev * h, -1.6, 1.6);
+					});
 					// tick off a squad visor once it's wiggled in the zone a moment
 					if (bt > V.show && i < count() && ticked[i] === undefined) {
 						if (inZone(p) && motion[i] > V.wiggle) held[i] = (held[i] || 0) + dt;
@@ -1552,14 +1577,14 @@ window.Showtime = function (stage, opts) {
 				const q = at(clamp(p.px, 0, 1), clamp(p.pz, 0, 1));   // (right where they are, 1:1)
 				const tall = V.worm.tall * clamp((p.Y + 1) / 2, 0.15, 1) * q.k;
 				const lean = bend[i] ? bend[i].a : 0;
-				worm(c, q.x, q.y, tall, lean, q.k, colour(i), i >= n, bt + i * 1.7);
+				worm(c, q.x, q.y, tall, lean, q.k, colour(i), i >= n, bt + i * 1.7, bend[i] && bend[i].arms);
 			}
 		}
 
 		// A worm standing on its tail at (x, y), so tall, its body curling over
 		// to lean (radians: + to the right) as it rises, swaying a little,
 		// in its player's colour (wrong: ringed in red).
-		function worm(c, x, y, tall, lean, k, fill, wrong, t) {
+		function worm(c, x, y, tall, lean, k, fill, wrong, t, arms) {
 			const W2 = V.worm;
 			const r = W2.r * k;
 			const sway = Math.sin(t * 2.2) * 0.06;
@@ -1577,6 +1602,18 @@ window.Showtime = function (stage, opts) {
 			// its shadow, and a red ring if it's a visor that isn't playing
 			art.ellipse(c, x, y, r * 1.6, r * 0.55, { fill: 'rgba(0,0,0,0.35)' });
 			if (wrong) art.ellipse(c, x, y, r * 2.2, r * 0.8, { stroke: '#ff3d6a', lineWidth: 6 * k });
+			// its arms (behind it, reaching out from its sides): from the shoulder,
+			// angled out from straight down, then bent at the elbow, a little hand
+			const A = V.arms;
+			const sh = pts[Math.round(A.at * (pts.length - 1))];
+			(arms || [{ a: A.rest, e: A.bend }, { a: A.rest, e: A.bend }]).forEach(function (arm, j) {
+				const side = j ? 1 : -1;
+				const root = { x: sh.x + side * r * 0.8, y: sh.y };   // (at the body's edge, so they hang beside it)
+				const elbow = { x: root.x + side * Math.sin(arm.a) * r * A.upper, y: root.y + Math.cos(arm.a) * r * A.upper };
+				const hand = { x: elbow.x + side * Math.sin(arm.a + arm.e) * r * A.lower, y: elbow.y + Math.cos(arm.a + arm.e) * r * A.lower };
+				art.line(c, [root, elbow, hand], { stroke: fill, lineWidth: r * A.thick * 2 });
+				art.circle(c, hand.x, hand.y, r * A.thick * 1.35, { fill });
+			});
 			// the body: one smooth tube, one thickness all the way, in their colour
 			art.line(c, pts, { stroke: fill, lineWidth: r * 2 });
 			c.restore();
