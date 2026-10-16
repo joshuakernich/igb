@@ -3081,7 +3081,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// (height: the figure's size, as 2.15 head widths: a standing contestant's
 	// height, but more than a guard's, whose hood is wider)
 	const ANIMS = {
-		back: { height: 80, clips: { run: range('arun', 0, 15), idle: range('aact', 0, 3), freeze: range('aact', 4, 7), hop: range('aact', 8, 11), shot: range('aact', 12, 15) } },
+		back: { height: 100, clips: { run: range('arun', 0, 15), idle: range('aact', 0, 3), freeze: range('aact', 4, 7), hop: range('aact', 8, 11), shot: range('aact', 12, 15) } },
 		front: { height: 127, clips: { idle: range('afront', 0, 3), cheer: range('afront', 4, 7), win: range('afront', 8, 11), sad: range('afront', 12, 15) } },
 		guard: { height: 143, clips: { walk: range('g', 0, 7), stand: range('g', 8, 9), aim: range('g', 10, 11), fire: range('g', 12, 15) } },
 	};
