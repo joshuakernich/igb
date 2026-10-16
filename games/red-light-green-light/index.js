@@ -4621,6 +4621,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	}).hide().appendTo(stage.$ui).on('click', function (e) { e.stopPropagation(); setPaused(true); })
 		.on('mouseenter', function () { $(this).css({ transform: 'translateY(-50%) scale(1.08)' }); })
 		.on('mouseleave', function () { $(this).css({ transform: 'translateY(-50%) scale(1)' }); });
+	$('<span>').html('TAP FOR<br>OPTIONS').css({ fontFamily: font, fontSize: '21px', lineHeight: 1.1, letterSpacing: '1px', color: 'white', textAlign: 'center', marginTop: '4px' }).appendTo($pauseBtn);   // (the prompt, at its top)
 	for (const name of ['pause', 'volume', 'cog']) cutIcon(name, PAUSE.button - 38).appendTo($pauseBtn);
 
 	// the screen: dark glass over all three walls, a panel on each
