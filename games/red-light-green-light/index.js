@@ -2172,7 +2172,32 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// silhouette. Laid on the sand flipped down from its feet (the light's
 	// behind it, at the far end), its length the ground's tilt allows (see
 	// groundTilt). So a guard's has a rifle, the doll's has her pigtails.
-	const SIL = { alpha: 0.3, contact: 0.22, res: 3 };   // how dark; the dark patch where it touches down; how sharp the kept shapes are
+	const SIL = { alpha: 0.34, contact: 0.22, res: 3, blur: 0.03, fade: 0.55 };   // how dark; the dark patch where it touches down; how sharp the kept shapes are; how soft (a share of the shape's size); how dark it still is halfway along
+
+	// A kept shadow made soft, once: blurred, darkened to shadow, and fading
+	// out from its foot (the bottom of the picture) toward its far tip. With
+	// a margin round it for the blur to spread into.
+	function soften(src, w0, h0) {
+		const pad = Math.ceil(Math.max(w0, h0) * SIL.blur);
+		const out = document.createElement('canvas');
+		out.width = Math.ceil(w0 + pad * 2);
+		out.height = Math.ceil(h0 + pad * 2);
+		const g = out.getContext('2d');
+		g.filter = `blur(${pad / 2}px)`;
+		g.drawImage(src, pad, pad, w0, h0);
+		g.filter = 'none';
+		g.globalCompositeOperation = 'source-in';
+		g.fillStyle = 'rgb(20,10,30)';
+		g.fillRect(0, 0, out.width, out.height);
+		g.globalCompositeOperation = 'destination-in';
+		const grad = g.createLinearGradient(0, pad + h0, 0, pad);
+		grad.addColorStop(0, 'rgba(0,0,0,1)');
+		grad.addColorStop(0.5, `rgba(0,0,0,${SIL.fade})`);
+		grad.addColorStop(1, 'rgba(0,0,0,0)');
+		g.fillStyle = grad;
+		g.fillRect(0, 0, out.width, out.height);
+		return { canvas: out, pad };
+	}
 	const shapes = new Map();   // key: { canvas, fx, fy } (the feet, in the canvas)
 	function shapeOf(key, draw, width, height) {
 		if (shapes.has(key)) return shapes.get(key);
@@ -2188,10 +2213,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		g.scale(R, R);
 		draw(g);
 		g.restore();
-		g.globalCompositeOperation = 'source-in';
-		g.fillStyle = 'rgb(20,10,30)';
-		g.fillRect(0, 0, canvas.width, canvas.height);
-		const shape = { canvas, fx, fy };
+		const soft = soften(canvas, canvas.width, canvas.height);
+		const shape = { canvas: soft.canvas, fx: fx + soft.pad, fy: fy + soft.pad };
 		shapes.set(key, shape);
 		return shape;
 	}
@@ -2332,7 +2355,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				const d = at(b.x + Math.sin(b.seed + i * 2.3) * b.r * 0.7, b.f + b.r * 0.6 + k * 160, 10 + k * 50);
 				art.circle(c, d.x, d.y, (14 + k * 34) * d.s, { fill: 'rgba(214,186,140,0.55)', alpha: (1 - k) * 0.8 });
 			}
-			softShadow(c, foot.x, foot.y, r * 0.95, r * 0.3, 0.3, 1, r * 2, b.f);
+			// its shadow, in its shape (once its picture's in)
+			if (boulderFrames) castShape(c, shapeOf('boulder', (g) => g.drawImage(boulderFrames[0].img, -50, -100, 100, 100 * boulderFrames[0].h / boulderFrames[0].w), 120, 120), foot.x, foot.y, b.f, r * 2 * BOULDER_ART.size / 100, 1, r * 0.8);
+			else softShadow(c, foot.x, foot.y, r * 0.95, r * 0.3, 0.3, 1, r * 2, b.f);
 			// the stone, rolling: its sprite sheet, a frame for each eighth of a turn
 			if (boulderFrames) {
 				const f = boulderFrames[Math.floor((((b.spin / (Math.PI * 2)) % 1) + 1) % 1 * boulderFrames.length)];
@@ -2755,16 +2780,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					crop.width = w;
 					crop.height = h;
 					crop.getContext('2d').drawImage(cv, x0, y0, w, h, 0, 0, w, h);
-							// and its shadow: the same shape, dark, made once
-					const sil = document.createElement('canvas');
-					sil.width = w;
-					sil.height = h;
-					const sg = sil.getContext('2d');
-					sg.drawImage(crop, 0, 0);
-					sg.globalCompositeOperation = 'source-in';
-					sg.fillStyle = 'rgb(20,10,30)';
-					sg.fillRect(0, 0, w, h);
-					items[name] = { img: crop, sil, w, h };
+							// and its shadow: the same shape, dark and soft, made once
+					items[name] = { img: crop, sil: soften(crop, w, h), w, h };
 				});
 			} catch (e) { /* (unreadable: drawn as before) */ }
 		};
@@ -2782,7 +2799,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		ctx.translate(x, y);
 		ctx.scale(1, SHADOW.f * groundTilt(f));   // (negative: flipped down)
 		ctx.rotate(rotate * Math.PI / 180);
-		ctx.drawImage(it.sil, -w / 2, -h, w, h);
+		const k = w / it.w;
+		const pad = it.sil.pad * k;
+		ctx.drawImage(it.sil.canvas, -w / 2 - pad, -h - pad, w + pad * 2, h + pad * 2);
 		ctx.restore();
 	}
 
@@ -3695,23 +3714,16 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const p = at(DOLL_X, dollF + 140);   // (directly behind her)
 		if (treeImg.complete && treeImg.naturalWidth) {
 			// its shadow, branches and all: a dark copy, made once, flipped down onto the sand
-			if (!treeSil) {
-				treeSil = document.createElement('canvas');
-				treeSil.width = treeImg.naturalWidth;
-				treeSil.height = treeImg.naturalHeight;
-				const g = treeSil.getContext('2d');
-				g.drawImage(treeImg, 0, 0);
-				g.globalCompositeOperation = 'source-in';
-				g.fillStyle = 'rgb(20,10,30)';
-				g.fillRect(0, 0, treeSil.width, treeSil.height);
-			}
+			if (!treeSil) treeSil = soften(treeImg, treeImg.naturalWidth, treeImg.naturalHeight);
 			const k = p.s * 0.85;
-			const w = TREE.height * treeImg.naturalWidth / treeImg.naturalHeight * k;
+			const h = TREE.height * k;
+			const w = h * treeImg.naturalWidth / treeImg.naturalHeight;
+			const pad = treeSil.pad * h / treeImg.naturalHeight;
 			ctx.save();
 			ctx.globalAlpha *= SIL.alpha;
 			ctx.translate(p.x, p.y);
 			ctx.scale(1, SHADOW.f * groundTilt(dollF + 140));
-			ctx.drawImage(treeSil, -w / 2, -TREE.height * k, w, TREE.height * k);
+			ctx.drawImage(treeSil.canvas, -w / 2 - pad, -h - pad, w + pad * 2, h + pad * 2);
 			ctx.restore();
 		}
 		art.with(ctx, { x: p.x, y: p.y, scale: p.s * 0.85 }, function (c) {
