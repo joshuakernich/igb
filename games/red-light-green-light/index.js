@@ -4628,20 +4628,21 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	clocks.push(words('', 96, Showtime.TYPE.colours.gold).css({ fontFamily: '"Share Tech Mono", monospace', marginBottom: '14px' }).appendTo($front));
 	const R = PAUSE.row;
 	const rowCss = {
-		width: R.w + 'px', height: R.h + 'px', boxSizing: 'border-box', borderRadius: R.h / 2 + 'px', border: '5px solid rgba(255,255,255,0.9)',
+		width: R.w + 'px', height: R.h + 'px', boxSizing: 'border-box', textAlign: 'left', borderRadius: R.h / 2 + 'px', border: '5px solid rgba(255,255,255,0.9)',
 		background: 'rgba(255,255,255,0.1)', color: 'white', fontFamily: font, fontSize: R.size + 'px', lineHeight: 1, letterSpacing: '2px',
 		display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', padding: '0 44px 0 52px',   // (the words on the left, an icon on the right)
 		boxShadow: '0 10px 0 rgba(0,0,0,0.45)', transition: 'transform 0.12s, background 0.12s',
 	};
 	const icon = (glyph) => $('<span>').text(glyph).css({ fontFamily: 'system-ui, -apple-system, "Segoe UI Symbol", sans-serif', fontSize: R.size * 1.1 + 'px', width: '1.2em', textAlign: 'center' });
-	const rowButton = (label, glyph, fn) => $('<button>').append($('<span>').text(label)).append(icon(glyph)).css(Object.assign({ cursor: 'pointer' }, rowCss))
+	const label = (text) => $('<span>').text(text).css({ flex: 1, textAlign: 'left' });   // (hard against the left, whatever the button would do)
+	const rowButton = (text, glyph, fn) => $('<button>').append(label(text)).append(icon(glyph)).css(Object.assign({ cursor: 'pointer' }, rowCss))
 		.on('mouseenter', function () { $(this).css({ transform: 'scale(1.04)', background: 'rgba(255,255,255,0.2)' }); })
 		.on('mouseleave', function () { $(this).css({ transform: 'scale(1)', background: 'rgba(255,255,255,0.1)' }); })
 		.on('click', function (e) { e.stopPropagation(); fn(); });
 	rowButton('RESUME', '▶', () => setPaused(false)).appendTo($front);
 	// the volume, the same shape: its name, then five bars, all alike, lit up to its level; click one for that level
 	const $vol = $('<div>').css(rowCss).appendTo($front);
-	$('<span>').text('VOLUME').appendTo($vol);
+	label('VOLUME').appendTo($vol);
 	const $bars = $('<div>').css({ display: 'flex', alignItems: 'center', gap: '12px', height: R.h * 0.46 + 'px' }).appendTo($vol);
 	const bars = PAUSE.levels.map((v, i) => $('<button>').attr('title', 'Volume ' + (i + 1)).css({
 		width: '36px', height: '100%', borderRadius: '8px', border: '4px solid white', cursor: 'pointer', padding: 0,   // (all one size: lit up to the level)
