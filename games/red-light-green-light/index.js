@@ -3306,9 +3306,17 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// An animation's frames: as edited in the lab, or as POSES has them.
 	function seqFrames(fig, name) {
 		const saved = TUNE[fig] && TUNE[fig]._seq && TUNE[fig]._seq[name];
-		if (saved && saved.length) return saved;
+		if (saved && saved.length) {
+			// (a run edited before frames kept their own lift: give them the lift they had)
+			if (name === 'run' && saved.every((f) => f.bob === undefined)) saved.forEach((f, i) => { f.bob = Math.round(runBob(i, saved.length) * 10) / 10; });
+			return saved;
+		}
 		const n = (SEQS[fig] && SEQS[fig][name]) || 0;
-		return Array.from({ length: n }, (_, i) => frameFromPose(fig, name + (i + 1)));
+		return Array.from({ length: n }, function (_, i) {
+			const f = frameFromPose(fig, name + (i + 1));
+			if (name === 'run') f.bob = Math.round(runBob(i, n) * 10) / 10;   // (each run frame keeps its own lift, so adding or removing frames never moves the others)
+			return f;
+		});
 	}
 	const nudge = (fig, pose, part) => Object.assign({}, NUDGE, TUNE[fig] && TUNE[fig][pose] && TUNE[fig][pose][part]);
 	const figure = (fig) => Object.assign({ height: PART_SHEETS[fig].height, overlap: RIG.overlap }, TUNE[fig] && TUNE[fig]._);
@@ -3531,7 +3539,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const step = Math.floor(phase * n);
 			pick.seq = 'run';
 			pick.frame = step;
-			pick.bob = runBob(step, n) * k.moving;
+			pick.bob = (seqFrames('back', 'run')[step].bob || 0) * k.moving;
 			pick.lean = (k.drift || 0) * -8;
 		}
 		return assemble(c, rig, pick);
@@ -4565,15 +4573,17 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					const $cell = $('<button>').attr('title', 'Frame ' + (i + 1)).css({
 						flex: 'none', width: '40px', padding: '2px 0 0', borderRadius: '5px', cursor: 'pointer', background: '#18213a', color: '#9fb6d8',
 						border: i === sel.frame ? '2px solid #d8743a' : '2px solid transparent', fontSize: '10px', fontFamily: 'inherit',
-					}).append(thumbOf({ seq: sel.seq, frame: i }, 36, 52)).append($('<div>').text(i + 1)).appendTo($tl);
+					}).append(thumbOf({ seq: sel.seq, frame: i, bob: f.bob || 0 }, 36, 52)).append($('<div>').text(i + 1)).appendTo($tl);
 					$cell.on('click', (e) => { e.stopPropagation(); sel.frame = i; render(); });
 				});
 				const $ops = row();
-				button('+ FRAME', () => { const fs = editable(sel.seq); fs.splice(sel.frame + 1, 0, JSON.parse(JSON.stringify(fs[sel.frame]))); sel.frame++; save(); render(); }, '#225a3a').appendTo($ops);
+				button('+ FRAME', () => { const fs = editable(sel.seq); fs.splice(sel.frame + 1, 0, JSON.parse(JSON.stringify(fs[sel.frame]))); sel.frame++; save(); render(); }, '#225a3a').attr('title', 'Add an exact copy of this frame after it').appendTo($ops);
 				button('− FRAME', () => { const fs = editable(sel.seq); if (fs.length > 1) { fs.splice(sel.frame, 1); sel.frame = Math.max(0, sel.frame - 1); save(); render(); } }, '#5a2232').appendTo($ops);
 				button('◀ MOVE', () => { const fs = editable(sel.seq); const i = sel.frame; if (i > 0) { [fs[i - 1], fs[i]] = [fs[i], fs[i - 1]]; sel.frame--; save(); render(); } }).appendTo($ops);
 				button('MOVE ▶', () => { const fs = editable(sel.seq); const i = sel.frame; if (i < fs.length - 1) { [fs[i + 1], fs[i]] = [fs[i], fs[i + 1]]; sel.frame++; save(); render(); } }).appendTo($ops);
 				button('RESET ANIMATION', () => { if (TUNE[fig] && TUNE[fig]._seq) delete TUNE[fig]._seq[sel.seq]; save(); render(); }, '#5a2232').appendTo($ops);
+				// this frame's lift (the whole figure, up off the ground)
+				slider('FRAME LIFT', frames[sel.frame].bob || 0, -10, 30, 0.5, (v) => { editable(sel.seq)[sel.frame].bob = v; save(); }).appendTo($side);
 			}
 
 			// the part, its drawing and its nudge, in this pose or frame
@@ -4695,14 +4705,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const ground = 600;
 			const g = figure(fig);
 			// a frame of a run lifted by its own bob, as it is in the game
-			const lifted = (name, i, n) => (name === 'run' ? runBob(i, n) : 0);
+			const lifted = (name, i) => seqFrames(fig, name)[i].bob || 0;
 			// the chosen pose or frame
 			const bigX = CW * 0.28;
 			art.rect(c, CW * 0.05, ground, CW * 0.9, 2, { fill: 'rgba(255,255,255,0.22)' });
 			art.rect(c, bigX - 200, ground - g.height * LAB.big, 400, 1.5, { fill: 'rgba(255,255,255,0.14)' });
 			if (sel.seq) {
 				const n = seqFrames(fig, sel.seq).length;
-				art.with(c, { x: bigX, y: ground, scale: LAB.big }, (c2) => assemble(c2, rig, { seq: sel.seq, frame: sel.frame, bob: lifted(sel.seq, sel.frame, n) }));
+				art.with(c, { x: bigX, y: ground, scale: LAB.big }, (c2) => assemble(c2, rig, { seq: sel.seq, frame: sel.frame, bob: lifted(sel.seq, sel.frame) }));
 				art.text(c, `${sel.seq.toUpperCase()} · FRAME ${sel.frame + 1} OF ${n}`, bigX, ground + 40, { size: 22, font: SQUID_FONT, weight: 400, fill: 'white' });
 			} else {
 				art.with(c, { x: bigX, y: ground, scale: LAB.big }, (c2) => assemble(c2, rig, { pose: sel.pose }));
@@ -4714,7 +4724,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				const n = seqFrames(fig, name).length;
 				const i = Math.floor(t * fps(name, n)) % n;
 				const cycX = CW * 0.66;
-				art.with(c, { x: cycX, y: ground, scale: LAB.cycle }, (c2) => assemble(c2, rig, { seq: name, frame: i, bob: lifted(name, i, n) }));
+				art.with(c, { x: cycX, y: ground, scale: LAB.cycle }, (c2) => assemble(c2, rig, { seq: name, frame: i, bob: lifted(name, i) }));
 				art.text(c, `PLAYING ${name.toUpperCase()} · ${i + 1} / ${n}`, cycX, ground + 40, { size: 20, font: SQUID_FONT, weight: 400, fill: '#9fb6d8' });
 			}
 			// the still poses, along the bottom
