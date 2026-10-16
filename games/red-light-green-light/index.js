@@ -2423,7 +2423,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const phase = ((walk / (Math.PI * 2)) % 1 + 1) % 1;
 			const pick = {
 				head,
-				pose: muzzle > 0 ? 'fire' : walk ? 'walk' + (1 + Math.floor(phase * 6)) : 'stand',
+				pose: muzzle > 0 ? 'fire' : 'stand',
+				seq: walk && !(muzzle > 0) ? 'walk' : undefined,
+				frame: Math.floor(phase * (seqFrames('guard', 'walk').length || 1)),
 				bob: walk ? Math.abs(Math.sin(walk)) * 5 : 0,
 			};
 
@@ -3124,6 +3126,13 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		},
 	};
 
+	// The poses that play as animations, as timelines of frames: how many
+	// frames each has to start with (run1, run2, ... in POSES). The lab can
+	// lengthen or shorten a timeline and put any drawing in any frame; the
+	// edited timeline is kept in the tuning as TUNE[figure]._seq[name], a
+	// list of frames { use: { legs, torso, head }, legs/torso/head nudges }.
+	const SEQS = { back: { run: 12 }, guard: { walk: 6 }, front: { win: 4 } };
+
 	// Fine-tuning, from the character lab (DEBUG ▸ CHARACTER LAB): per figure
 	// and pose, each part's nudge (x, y in figure units, r in degrees; no
 	// scaling, so a figure's parts always stay at one scale), and per figure, '_': its height and how far the parts tuck
@@ -3284,6 +3293,23 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (const fig of Object.keys(saved)) TUNE[fig] = Object.assign(TUNE[fig] || {}, saved[fig]);
 	} catch (e) { /* (no storage here: just the baked-in tuning) */ }
 	const NUDGE = { x: 0, y: 0, r: 0, s: 1 };
+	// A still pose as a frame: which drawings, and its nudges.
+	function frameFromPose(fig, id) {
+		const p = POSES[fig][id] || POSES[fig].stand;
+		const t = (TUNE[fig] && TUNE[fig][id]) || {};
+		const f = { use: Object.assign({ legs: p.legs, torso: p.torso, head: p.head }, p.alt ? { alt: p.alt } : {}, t.use || {}) };
+		for (const part of ['legs', 'torso', 'head']) if (t[part]) f[part] = Object.assign({}, t[part]);
+		if (p.mirror) f.mirror = true;
+		if (p.lift) f.lift = p.lift;
+		return f;
+	}
+	// An animation's frames: as edited in the lab, or as POSES has them.
+	function seqFrames(fig, name) {
+		const saved = TUNE[fig] && TUNE[fig]._seq && TUNE[fig]._seq[name];
+		if (saved && saved.length) return saved;
+		const n = (SEQS[fig] && SEQS[fig][name]) || 0;
+		return Array.from({ length: n }, (_, i) => frameFromPose(fig, name + (i + 1)));
+	}
 	const nudge = (fig, pose, part) => Object.assign({}, NUDGE, TUNE[fig] && TUNE[fig][pose] && TUNE[fig][pose][part]);
 	const figure = (fig) => Object.assign({ height: PART_SHEETS[fig].height, overlap: RIG.overlap }, TUNE[fig] && TUNE[fig]._);
 	const rigs = {};   // name: { parts: { id: { img, w, h, top: [x, y], bottom: [x, y] } }, k }
@@ -3394,52 +3420,42 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		return { name, parts, tall, at };
 	}
 
-	// Put a figure together in a pose, feet at (0, 0): legs, then the body on
-	// them at the waist, then the head on the body at the neck, each scaled to
-	// match the rest and nudged as the lab says. On top of that, the moment's
-	// own movement: the body (and head with it) leaning (degrees) and bobbing
-	// up, the head tilting, a lift off the ground. Given a next pose and how
-	// far toward it (pick.next, pick.t), the joins slide from one pose's to
-	// the next's, so the body rides smoothly over the legs' steps.
+	// Put a figure together, feet at (0, 0): legs, then the body on them at
+	// the waist, then the head on the neck (drawn first, so the collar sits
+	// over it), every part at the figure's one scale and nudged as the lab
+	// says. Which frame: a still pose (pick.pose) or a frame of an animation
+	// (pick.seq, pick.frame). On top of that, the moment's own movement: the
+	// body (and head with it) leaning (degrees) and bobbing up, the head
+	// tilting, a lift off the ground.
 	function assemble(c, rig, pick) {
-		const poses = POSES[rig.name];
-		const poseId = poses[pick.pose] ? pick.pose : 'stand';
-		const pose = poses[poseId];
-		const nextId = pick.next && poses[pick.next] ? pick.next : null;
-		const next = nextId ? poses[nextId] : null;
-		const t = next ? Math.max(0, Math.min(1, pick.t || 0)) : 0;
+		let def;
+		if (pick.seq) {
+			const frames = seqFrames(rig.name, pick.seq);
+			const n = frames.length;
+			def = n ? frames[((pick.frame || 0) % n + n) % n] : frameFromPose(rig.name, 'stand');
+		} else def = frameFromPose(rig.name, POSES[rig.name][pick.pose] ? pick.pose : 'stand');
 		const P = rig.parts;
 		// (a part the sheet didn't give us stands in as the standing one, so
 		// a figure never drops back to another kind of drawing for a frame)
 		const head0 = P[PART_SHEETS[rig.name].heads ? PART_SHEETS[rig.name].heads[0] : 'head'];
-		// (which drawing each part uses in a pose: the pose's own, unless the lab chose another)
-		const chosen = (id, part) => (TUNE[rig.name] && TUNE[rig.name][id] && TUNE[rig.name][id].use && TUNE[rig.name][id].use[part]) || poses[id][part];
-		const parts = (id) => ({ legs: P[chosen(id, 'legs')] || P.legs, torso: P[chosen(id, 'torso')] || P[poses[id].alt] || P.torso, head: P[pick.head || chosen(id, 'head')] || head0 });
-		const A = parts(poseId);
-		const B = next ? parts(nextId) : null;
-		if (!A.legs || !A.torso || !A.head) return false;
+		const use = def.use || {};
+		const legs = P[use.legs] || P.legs;
+		const torso = P[use.torso] || P[use.alt] || P.torso;
+		const head = P[pick.head || use.head] || head0;
+		if (!legs || !torso || !head) return false;
 		const fig = figure(rig.name);
 		const k = fig.height / (rig.tall * (1 - fig.overlap * 2));
-		const tuck = fig.overlap * A.head.h * A.head.norm * 0.9;
-		const mix = (a, b) => (B ? a + (b - a) * t : a);
-		// the nudges, eased between the two poses
-		const T = function (part) {
-			const a = nudge(rig.name, poseId, part);
-			if (!B) return a;
-			const b = nudge(rig.name, nextId, part);
-			return { x: mix(a.x, b.x), y: mix(a.y, b.y), r: mix(a.r, b.r), s: mix(a.s, b.s) };
-		};
+		const tuck = fig.overlap * head.h * head.norm * 0.9;
+		const T = (part) => Object.assign({}, NUDGE, def[part]);
 		const tallOf = (part, from, to) => (part[from][1] - part[to][1]) * part.norm;
-		const lift = ((pick.lift || 0) + mix(pose.lift || 0, next ? next.lift || 0 : 0)) / k;
+		const lift = ((pick.lift || 0) + (def.lift || 0)) / k;
 		// (striding legs come out shorter or longer than standing ones; in a
 		// cycle the waist stays at the standing height, so the body doesn't
 		// jump from step to step)
-		const cycling = (p) => /^legs(Run|Walk)/.test(p.legs);
-		const legsTall = cycling(pose) && (!next || cycling(next)) ? tallOf(P.legs, 'bottom', 'top') : mix(tallOf(A.legs, 'bottom', 'top'), B ? tallOf(B.legs, 'bottom', 'top') : 0);
-		const torsoTall = mix(tallOf(A.torso, 'bottom', 'top'), B ? tallOf(B.torso, 'bottom', 'top') : 0);
-		// one part, its join at the origin (only this pose's: fading the next
-		// one in over it flickered, so only the joins ease between them)
-		const layer = function (a, b, join, flip) {
+		const legsTall = /^legs(Run|Walk)/.test(use.legs || '') ? tallOf(P.legs, 'bottom', 'top') : tallOf(legs, 'bottom', 'top');
+		const torsoTall = tallOf(torso, 'bottom', 'top');
+		// one part, its join at the origin
+		const layer = function (a, join, flip) {
 			c.save();
 			c.scale(a.norm, a.norm);
 			if (flip) c.scale(-1, 1);
@@ -3449,28 +3465,26 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		c.save();
 		c.scale(k, k);
 		if (pick.flip) c.scale(-1, 1);
-		// (every part at the one scale, k: none is scaled on its own)
 		// the legs, hung from the waist
 		const tl = T('legs');
 		c.save();
 		c.translate(tl.x / k, -legsTall - lift + tl.y / k);
 		c.rotate(tl.r * Math.PI / 180);
-		layer(A.legs, B && B.legs, 'top');
+		layer(legs, 'top');
 		c.restore();
 		// the body on the waist
 		const tt = T('torso');
 		c.save();
 		c.translate(tt.x / k, -legsTall - lift + tuck - (pick.bob || 0) / k + tt.y / k);
 		c.rotate(((pick.lean || 0) + tt.r) * Math.PI / 180);
-		const flips = (p) => (pick.mirror !== undefined ? pick.mirror : !!p.mirror);
 		// the head on the neck, drawn first so the body's collar sits over it
 		const th = T('head');
 		c.save();
 		c.translate(th.x / k, -torsoTall + tuck * 1.2 + th.y / k);
 		c.rotate(((pick.tilt || 0) + th.r) * Math.PI / 180);
-		layer(A.head, B && B.head, 'bottom');
+		layer(head, 'bottom');
 		c.restore();
-		layer(A.torso, B && B.torso, 'bottom', flips(pose));
+		layer(torso, 'bottom', pick.mirror !== undefined ? pick.mirror : !!def.mirror);
 		c.restore();
 		c.restore();
 		return true;
@@ -3494,8 +3508,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// How high a run frame is lifted: up off each stride, twice a cycle, the
 	// same every time that frame shows (so the lab's still frames are exactly
 	// the cycle's).
-	const RUN_STEPS = 12;
-	const runBob = (i) => Math.abs(Math.sin((i + 0.5) / RUN_STEPS * Math.PI * 2)) * RIG.bob;
+	const runBob = (i, n) => Math.abs(Math.sin((i + 0.5) / n * Math.PI * 2)) * RIG.bob;
 
 	// A contestant in play, from behind, from parts.
 	function contestantRig(c, k) {
@@ -3514,9 +3527,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			// fixed bob: the run is just its frames, played in turn)
 			const cycle = k.walk * RIG.run;   // (slower than their pace: a loping run)
 			const phase = ((cycle / (Math.PI * 2)) % 1 + 1) % 1;
-			const step = Math.floor(phase * RUN_STEPS);
-			pick.pose = 'run' + (1 + step);
-			pick.bob = runBob(step) * k.moving;
+			const n = seqFrames('back', 'run').length || 1;
+			const step = Math.floor(phase * n);
+			pick.seq = 'run';
+			pick.frame = step;
+			pick.bob = runBob(step, n) * k.moving;
 			pick.lean = (k.drift || 0) * -8;
 		}
 		return assemble(c, rig, pick);
@@ -3601,9 +3616,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		if (rigs.front) {
 			art.ellipse(c, 0, 0, 44, 14, { fill: PLAYER_COLORS[n] || 'white' });
 			softShadow(c, 0, 0, 28, 8, 0.3);
-			const beat = Math.floor(wallT * 2.5 + n) % 4;
+			const beat = Math.floor(wallT * 2.5 + n);
 			const pick = pose === 'cheer' ? { pose: 'cheer' }
-				: pose === 'win' ? { pose: 'win' + (1 + beat) }
+				: pose === 'win' ? { seq: 'win', frame: beat }
 				: { pose: 'stand', tilt: Math.sin(wallT * 2 + n) * 3 };
 			if (assemble(c, rigs.front, pick)) return;
 		}
@@ -4432,26 +4447,59 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		let canvas = null;
 		let timer = null;
 		let fig = 'back';
-		let pose = 'stand';
+		let sel = { seq: null, pose: 'stand', frame: 0 };   // a still pose, or a frame of an animation
 		let part = 'torso';
 		let t0 = 0;
-		const LAB = { side: 330, big: 6.2, cycle: 4.2, row: 2.3 };   // the controls' width (screen pixels); how big the chosen pose, the playing cycle and the row of every pose are drawn (the preview is 1000 units tall, filling the window's height)
+		const LAB = { side: 360, big: 3.4, cycle: 2.5, row: 1.4 };   // the controls' width (screen pixels); how big the chosen frame, the playing animation and the row of still poses are drawn (the preview is 1000 units tall, filling the window's height)
 		const FIGS = { back: 'CONTESTANT · BACK', front: 'CONTESTANT · FRONT', guard: 'GUARD' };
 		const SLIDERS = [['x', -40, 40, 0.5], ['y', -40, 40, 0.5], ['r', -45, 45, 0.5]];   // (no size: every part of a figure is drawn at one scale)
 		const LABELS = { x: 'ACROSS', y: 'UP / DOWN', r: 'TURN °' };
+		const PARTS = ['legs', 'torso', 'head'];
+
+		// the figure's still poses (not the frames of its animations)
+		const stills = () => Object.keys(POSES[fig]).filter((id) => !Object.keys(SEQS[fig] || {}).some((sq) => new RegExp('^' + sq + '\\d+$').test(id)));
+		// an animation's frames, made editable (copied into the tuning the first time)
+		function editable(name) {
+			TUNE[fig] = TUNE[fig] || {};
+			TUNE[fig]._seq = TUNE[fig]._seq || {};
+			if (!TUNE[fig]._seq[name] || !TUNE[fig]._seq[name].length) TUNE[fig]._seq[name] = JSON.parse(JSON.stringify(seqFrames(fig, name)));
+			return TUNE[fig]._seq[name];
+		}
+		// what's being edited: the chosen still pose or animation frame
+		const pickNow = () => (sel.seq ? { seq: sel.seq, frame: sel.frame } : { pose: sel.pose });
+		const frameNow = () => (sel.seq ? seqFrames(fig, sel.seq)[sel.frame] : frameFromPose(fig, sel.pose));
+		function setNudge(key, v) {
+			if (sel.seq) {
+				const f = editable(sel.seq)[sel.frame];
+				f[part] = Object.assign({}, f[part], { [key]: v });
+			} else {
+				TUNE[fig] = TUNE[fig] || {};
+				TUNE[fig][sel.pose] = TUNE[fig][sel.pose] || {};
+				TUNE[fig][sel.pose][part] = Object.assign({}, TUNE[fig][sel.pose][part], { [key]: v });
+			}
+			save();
+		}
+		function setUse(id) {
+			if (sel.seq) {
+				const f = editable(sel.seq)[sel.frame];
+				f.use = Object.assign({}, f.use, { [part]: id });
+			} else {
+				TUNE[fig] = TUNE[fig] || {};
+				TUNE[fig][sel.pose] = TUNE[fig][sel.pose] || {};
+				TUNE[fig][sel.pose].use = Object.assign({}, TUNE[fig][sel.pose].use, { [part]: id });
+			}
+			save();
+			render();
+		}
 
 		function save() {
 			try { localStorage.setItem(TUNE_KEY, JSON.stringify(TUNE)); } catch (e) { /* (not kept: no storage) */ }
 			if (rigs.guard) { const m = rigMuzzle(rigs.guard); if (m) GUN.muzzle = m; }
+			shapes.clear();   // (the kept shadow shapes follow the new tuning)
 		}
-		function set(path, value) {
-			const [a, b, c] = path;
-			TUNE[a] = TUNE[a] || {};
-			TUNE[a][b] = TUNE[a][b] || {};
-			if (c) {
-				TUNE[a][b][c] = TUNE[a][b][c] || {};
-				TUNE[a][b][c][path[3]] = value;
-			} else TUNE[a][b] = Object.assign(TUNE[a][b], value);
+		function setWhole(value) {
+			TUNE[fig] = TUNE[fig] || {};
+			TUNE[fig]._ = Object.assign({}, TUNE[fig]._, value);
 			save();
 		}
 
@@ -4460,6 +4508,23 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			margin: '2px', padding: '4px 9px', borderRadius: '6px', border: 'none', cursor: 'pointer',
 			background: colour, color: 'white', fontFamily: 'inherit', fontSize: '12px', letterSpacing: '0.3px',
 		}).on('click', function (e) { e.stopPropagation(); fn(); });
+		const heading = (text, $to) => $('<div>').text(text).css({ fontSize: '12px', fontWeight: 600, color: '#9fb6d8', margin: '10px 2px 3px', letterSpacing: '0.5px' }).appendTo($to);
+
+		// a small picture of a frame, for the timeline
+		function thumbOf(pick, w, h) {
+			const cv = document.createElement('canvas');
+			cv.width = w * 2;
+			cv.height = h * 2;
+			cv.style.width = w + 'px';
+			cv.style.height = h + 'px';
+			const rig = rigs[fig];
+			if (rig) {
+				const g = cv.getContext('2d');
+				const sc = (h * 2 - 10) / (figure(fig).height * 1.5);
+				art.with(g, { x: w, y: h * 2 - 6, scale: sc }, (c2) => assemble(c2, rig, pick));
+			}
+			return cv;
+		}
 
 		function build() {
 			$lab = $('<character-lab>').css(Object.assign({
@@ -4477,59 +4542,86 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			$side = $side || $lab.children().first();
 			$side.empty();
 			$('<div>').text('CHARACTER LAB').css({ fontSize: '18px', fontWeight: 700, marginBottom: '8px' }).appendTo($side);
-			const row = () => $('<div>').css({ display: 'flex', flexWrap: 'wrap', marginBottom: '6px' }).appendTo($side);
+			const row = () => $('<div>').css({ display: 'flex', flexWrap: 'wrap', marginBottom: '4px' }).appendTo($side);
+			const on = (yes) => (yes ? '#3a8ad8' : '#22305a');
 			const $figs = row();
-			for (const f of Object.keys(FIGS)) button(FIGS[f], () => { fig = f; pose = 'stand'; render(); }, f === fig ? '#3a8ad8' : '#22305a').appendTo($figs);
-			const $poses = row();
-			for (const id of Object.keys(POSES[fig])) button(id.toUpperCase(), () => { pose = id; render(); }, id === pose ? '#3a8ad8' : '#22305a').appendTo($poses);
-			const $parts = row();
-			for (const pt of ['legs', 'torso', 'head']) button(pt.toUpperCase(), () => { part = pt; render(); }, pt === part ? '#d8743a' : '#22305a').appendTo($parts);
+			for (const f of Object.keys(FIGS)) button(FIGS[f], () => { fig = f; sel = { seq: null, pose: 'stand', frame: 0 }; render(); }, on(f === fig)).appendTo($figs);
 
-			// the part's nudge in this pose
-			const n = nudge(fig, pose, part);
-			$('<div>').text(`${pose.toUpperCase()} · ${part.toUpperCase()}`).css({ fontSize: '13px', fontWeight: 600, color: '#9fb6d8', margin: '8px 2px 2px' }).appendTo($side);
-			for (const [key, lo, hi, step] of SLIDERS) slider(LABELS[key], n[key], lo, hi, step, (v) => set([fig, pose, part, key], v)).appendTo($side);
-			// which drawing this part uses in this pose: every one of its kind on the sheet
+			heading('STILL POSES', $side);
+			const $poses = row();
+			for (const id of stills()) button(id.toUpperCase(), () => { sel = { seq: null, pose: id, frame: 0 }; render(); }, on(!sel.seq && id === sel.pose)).appendTo($poses);
+
+			heading('ANIMATIONS', $side);
+			const $seqs = row();
+			for (const name of Object.keys(SEQS[fig] || {})) button(name.toUpperCase(), () => { sel = { seq: name, pose: null, frame: 0 }; render(); }, on(sel.seq === name)).appendTo($seqs);
+
+			// the timeline: the animation's frames in order, the chosen one marked
+			if (sel.seq) {
+				const frames = seqFrames(fig, sel.seq);
+				sel.frame = Math.max(0, Math.min(frames.length - 1, sel.frame));
+				heading(`${sel.seq.toUpperCase()} · ${frames.length} FRAMES`, $side);
+				const $tl = $('<div>').css({ display: 'flex', gap: '3px', overflowX: 'auto', padding: '4px 2px 6px', margin: '0 0 2px' }).appendTo($side);
+				frames.forEach(function (f, i) {
+					const $cell = $('<button>').attr('title', 'Frame ' + (i + 1)).css({
+						flex: 'none', width: '40px', padding: '2px 0 0', borderRadius: '5px', cursor: 'pointer', background: '#18213a', color: '#9fb6d8',
+						border: i === sel.frame ? '2px solid #d8743a' : '2px solid transparent', fontSize: '10px', fontFamily: 'inherit',
+					}).append(thumbOf({ seq: sel.seq, frame: i }, 36, 52)).append($('<div>').text(i + 1)).appendTo($tl);
+					$cell.on('click', (e) => { e.stopPropagation(); sel.frame = i; render(); });
+				});
+				const $ops = row();
+				button('+ FRAME', () => { const fs = editable(sel.seq); fs.splice(sel.frame + 1, 0, JSON.parse(JSON.stringify(fs[sel.frame]))); sel.frame++; save(); render(); }, '#225a3a').appendTo($ops);
+				button('− FRAME', () => { const fs = editable(sel.seq); if (fs.length > 1) { fs.splice(sel.frame, 1); sel.frame = Math.max(0, sel.frame - 1); save(); render(); } }, '#5a2232').appendTo($ops);
+				button('◀ MOVE', () => { const fs = editable(sel.seq); const i = sel.frame; if (i > 0) { [fs[i - 1], fs[i]] = [fs[i], fs[i - 1]]; sel.frame--; save(); render(); } }).appendTo($ops);
+				button('MOVE ▶', () => { const fs = editable(sel.seq); const i = sel.frame; if (i < fs.length - 1) { [fs[i + 1], fs[i]] = [fs[i], fs[i + 1]]; sel.frame++; save(); render(); } }).appendTo($ops);
+				button('RESET ANIMATION', () => { if (TUNE[fig] && TUNE[fig]._seq) delete TUNE[fig]._seq[sel.seq]; save(); render(); }, '#5a2232').appendTo($ops);
+			}
+
+			// the part, its drawing and its nudge, in this pose or frame
+			heading(sel.seq ? `FRAME ${sel.frame + 1} · PART` : `${sel.pose.toUpperCase()} · PART`, $side);
+			const $parts = row();
+			for (const pt of PARTS) button(pt.toUpperCase(), () => { part = pt; render(); }, pt === part ? '#d8743a' : '#22305a').appendTo($parts);
+			const now = frameNow();
 			const rig = rigs[fig];
-			if (rig) {
-				$('<div>').text('DRAWING').css({ fontSize: '11px', color: '#9fb6d8', margin: '8px 2px 3px' }).appendTo($side);
-				const $use = $('<div>').css({ display: 'flex', flexWrap: 'wrap', gap: '4px', margin: '0 2px 6px' }).appendTo($side);
-				const current = (TUNE[fig] && TUNE[fig][pose] && TUNE[fig][pose].use && TUNE[fig][pose].use[part]) || POSES[fig][pose][part];
+			if (rig && now) {
+				heading('DRAWING', $side);
+				const $use = $('<div>').css({ display: 'flex', flexWrap: 'wrap', gap: '3px', margin: '0 2px 4px' }).appendTo($side);
+				const current = (now.use || {})[part];
 				for (const [id, pt] of Object.entries(rig.parts)) {
-					if (pt.kind !== (part === 'head' ? 'head' : part)) continue;
+					if (pt.kind !== part) continue;
 					const thumb = document.createElement('canvas');
 					thumb.width = thumb.height = 74;
-					thumb.style.width = thumb.style.height = '44px';
+					thumb.style.width = thumb.style.height = '40px';
 					const tg = thumb.getContext('2d');
-					const k = Math.min(74 / pt.img.width, 74 / pt.img.height);
-					tg.drawImage(pt.img, (74 - pt.img.width * k) / 2, (74 - pt.img.height * k) / 2, pt.img.width * k, pt.img.height * k);
+					const kk = Math.min(74 / pt.img.width, 74 / pt.img.height);
+					tg.drawImage(pt.img, (74 - pt.img.width * kk) / 2, (74 - pt.img.height * kk) / 2, pt.img.width * kk, pt.img.height * kk);
 					$('<button>').attr('title', id).css({
-						width: '52px', height: '52px', padding: '2px', borderRadius: '6px', cursor: 'pointer',
+						width: '46px', height: '46px', padding: '1px', borderRadius: '5px', cursor: 'pointer',
 						border: id === current ? '2px solid #d8743a' : '2px solid transparent', background: '#18213a',
-					}).append(thumb).appendTo($use).on('click', function (e) {
-						e.stopPropagation();
-						TUNE[fig] = TUNE[fig] || {};
-						TUNE[fig][pose] = TUNE[fig][pose] || {};
-						TUNE[fig][pose].use = Object.assign(TUNE[fig][pose].use || {}, { [part]: id });
-						save();
-						render();
-					});
+					}).append(thumb).appendTo($use).on('click', (e) => { e.stopPropagation(); setUse(id); });
 				}
+				const n = Object.assign({}, NUDGE, now[part]);
+				for (const [key, lo, hi, step] of SLIDERS) slider(LABELS[key], n[key], lo, hi, step, (v) => setNudge(key, v)).appendTo($side);
+				const $pr = row();
+				button('RESET PART', () => {
+					if (sel.seq) { const f = editable(sel.seq)[sel.frame]; delete f[part]; }
+					else if (TUNE[fig] && TUNE[fig][sel.pose]) { delete TUNE[fig][sel.pose][part]; if (TUNE[fig][sel.pose].use) delete TUNE[fig][sel.pose].use[part]; }
+					save(); render();
+				}, '#5a2232').appendTo($pr);
+				button(sel.seq ? 'NUDGE ALL FRAMES ALIKE' : 'NUDGE ALL STILLS ALIKE', () => {
+					if (sel.seq) for (const f of editable(sel.seq)) f[part] = Object.assign({}, n);
+					else for (const id of stills()) { TUNE[fig] = TUNE[fig] || {}; TUNE[fig][id] = TUNE[fig][id] || {}; TUNE[fig][id][part] = Object.assign({}, n); }
+					save(); render();
+				}, '#225a3a').appendTo($pr);
 			}
-			const $pr = row();
-			button('RESET PART', () => { if (TUNE[fig] && TUNE[fig][pose]) { delete TUNE[fig][pose][part]; if (TUNE[fig][pose].use) delete TUNE[fig][pose].use[part]; } save(); render(); }, '#5a2232').appendTo($pr);
-			button('RESET POSE', () => { if (TUNE[fig]) delete TUNE[fig][pose]; save(); render(); }, '#5a2232').appendTo($pr);
-			button('COPY TO OTHER POSES', () => {
-				for (const id of Object.keys(POSES[fig])) if (id !== pose) set([fig, id, part, 'x'], n.x), set([fig, id, part, 'y'], n.y), set([fig, id, part, 'r'], n.r), set([fig, id, part, 's'], n.s);
-			}, '#225a3a').appendTo($pr);
 
 			// the whole figure
 			const g = figure(fig);
-			$('<div>').text(FIGS[fig] + ' · WHOLE FIGURE').css({ fontSize: '13px', fontWeight: 600, color: '#9fb6d8', margin: '12px 2px 2px' }).appendTo($side);
-			slider('HEIGHT', g.height, 60, 200, 1, (v) => set([fig, '_'], { height: v })).appendTo($side);
-			slider('TUCK AT JOINS', g.overlap, 0, 0.2, 0.005, (v) => set([fig, '_'], { overlap: v })).appendTo($side);
+			heading(FIGS[fig] + ' · WHOLE FIGURE', $side);
+			slider('HEIGHT', g.height, 40, 200, 1, (v) => setWhole({ height: v })).appendTo($side);
+			slider('TUCK AT JOINS', g.overlap, 0, 0.25, 0.005, (v) => setWhole({ overlap: v })).appendTo($side);
 
 			const $end = row();
+			$end.css({ marginTop: '10px' });
 			const $copy = button('COPY TUNING', () => copy($copy, $text), '#3a6a2a').appendTo($end);
 			// (two clicks to wipe it all, in case of a slip)
 			const $wipe = button('RESET EVERYTHING', function () {
@@ -4569,8 +4661,15 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			}
 		}
 
-		// The preview, across the walls: the chosen pose big, the cycle playing
-		// beside it, and every pose in rows down the right.
+		// how fast each animation plays (frames a second), as in the game
+		function fps(name, n) {
+			if (name === 'run') return 20 * RIG.run / (Math.PI * 2) * n;
+			if (name === 'walk') return 20 / (Math.PI * 2) * n;
+			return 2.5;
+		}
+
+		// The preview: the chosen pose or frame, an animation playing beside
+		// it, and the still poses in a row along the bottom.
 		function draw() {
 			if (!canvas) return;
 			// (sharp at the window's size: 1000 units tall, as wide as the window allows)
@@ -4589,41 +4688,44 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const CW = pw / sc;
 			const rig = rigs[fig];
 			if (!rig) {
-				art.text(c, 'LOADING THE PARTS…', CW / 2, 400, { size: 60, font: SQUID_FONT, weight: 400 });
+				art.text(c, 'LOADING THE PARTS…', CW / 2, 400, { size: 40, font: SQUID_FONT, weight: 400 });
 				return;
 			}
 			const t = (performance.now() - t0) / 1000;
-			const ground = 900;
+			const ground = 600;
 			const g = figure(fig);
-			// the ground, a guide for the figure's height, and the pose big
-			const bigX = Math.min(700, CW * 0.2);
-			art.rect(c, 0, ground, CW * 0.62, 3, { fill: 'rgba(255,255,255,0.25)' });
-			art.rect(c, bigX - 450, ground - g.height * LAB.big, 900, 2, { fill: 'rgba(255,255,255,0.14)' });
-			// (a run frame lifted by its own bob, as it is in the game)
-			const lifted = (id) => (fig === 'back' && /^run\d+$/.test(id) ? runBob(+id.slice(3) - 1) : 0);
-			art.with(c, { x: bigX, y: ground, scale: LAB.big }, (c2) => assemble(c2, rig, { pose, bob: lifted(pose) }));
-			art.text(c, pose.toUpperCase(), bigX, ground + 45, { size: 30, font: SQUID_FONT, weight: 400, fill: 'white' });
-			// the cycle, playing
-			const cycle = fig === 'back' ? Array.from({ length: RUN_STEPS }, (_, i) => 'run' + (i + 1)) : fig === 'guard' ? ['walk1', 'walk2', 'walk3', 'walk4', 'walk5', 'walk6'] : ['win1', 'win2', 'win3', 'win4'];
-			const at = t * (fig === 'front' ? 2.5 : fig === 'back' ? 24 * RIG.run : 12);
-			const step = Math.floor(at) % cycle.length;
-
-			const cycX = Math.min(1700, CW * 0.45);
-			art.with(c, { x: cycX, y: ground, scale: LAB.cycle }, (c2) => assemble(c2, rig, { pose: cycle[step], bob: lifted(cycle[step]) }));
-			art.text(c, 'PLAYING: ' + cycle[step].toUpperCase(), cycX, ground + 45, { size: 26, font: SQUID_FONT, weight: 400, fill: '#9fb6d8' });
-			// every pose, in rows on the right, the chosen one marked
-			const ids = Object.keys(POSES[fig]);
-			const x0 = CW * 0.62;
-			const cols = Math.max(2, Math.min(5, Math.floor((CW - x0) / 240)));
-			const colW = (CW - x0 - 80) / cols;
-			const rowH = (H - 60) / Math.ceil(ids.length / cols);
-			const rowScale = Math.min(LAB.row, (rowH - 70) / 150, (colW - 20) / 110);
+			// a frame of a run lifted by its own bob, as it is in the game
+			const lifted = (name, i, n) => (name === 'run' ? runBob(i, n) : 0);
+			// the chosen pose or frame
+			const bigX = CW * 0.28;
+			art.rect(c, CW * 0.05, ground, CW * 0.9, 2, { fill: 'rgba(255,255,255,0.22)' });
+			art.rect(c, bigX - 200, ground - g.height * LAB.big, 400, 1.5, { fill: 'rgba(255,255,255,0.14)' });
+			if (sel.seq) {
+				const n = seqFrames(fig, sel.seq).length;
+				art.with(c, { x: bigX, y: ground, scale: LAB.big }, (c2) => assemble(c2, rig, { seq: sel.seq, frame: sel.frame, bob: lifted(sel.seq, sel.frame, n) }));
+				art.text(c, `${sel.seq.toUpperCase()} · FRAME ${sel.frame + 1} OF ${n}`, bigX, ground + 40, { size: 22, font: SQUID_FONT, weight: 400, fill: 'white' });
+			} else {
+				art.with(c, { x: bigX, y: ground, scale: LAB.big }, (c2) => assemble(c2, rig, { pose: sel.pose }));
+				art.text(c, sel.pose.toUpperCase(), bigX, ground + 40, { size: 22, font: SQUID_FONT, weight: 400, fill: 'white' });
+			}
+			// an animation, playing: the chosen one, or the figure's first
+			const name = sel.seq || Object.keys(SEQS[fig] || {})[0];
+			if (name) {
+				const n = seqFrames(fig, name).length;
+				const i = Math.floor(t * fps(name, n)) % n;
+				const cycX = CW * 0.66;
+				art.with(c, { x: cycX, y: ground, scale: LAB.cycle }, (c2) => assemble(c2, rig, { seq: name, frame: i, bob: lifted(name, i, n) }));
+				art.text(c, `PLAYING ${name.toUpperCase()} · ${i + 1} / ${n}`, cycX, ground + 40, { size: 20, font: SQUID_FONT, weight: 400, fill: '#9fb6d8' });
+			}
+			// the still poses, along the bottom
+			const ids = stills();
+			const colW = CW * 0.9 / Math.max(1, ids.length);
 			ids.forEach(function (id, i) {
-				const x = x0 + (i % cols + 0.5) * colW;
-				const y = 30 + (Math.floor(i / cols) + 1) * rowH - 50;
-				if (id === pose) art.roundRect(c, x - colW / 2 + 10, y - rowH + 60, colW - 20, rowH - 10, 20, { fill: 'rgba(58,138,216,0.25)' });
-				art.with(c, { x, y, scale: rowScale }, (c2) => assemble(c2, rig, { pose: id, bob: lifted(id) }));
-				art.text(c, id.toUpperCase(), x, y + 34, { size: 26, font: SQUID_FONT, weight: 400, fill: id === pose ? 'white' : '#9fb6d8' });
+				const x = CW * 0.05 + (i + 0.5) * colW;
+				const y = 930;
+				if (!sel.seq && id === sel.pose) art.roundRect(c, x - colW / 2 + 6, y - 230, colW - 12, 270, 14, { fill: 'rgba(58,138,216,0.22)' });
+				art.with(c, { x, y, scale: Math.min(LAB.row, (colW - 20) / 110) }, (c2) => assemble(c2, rig, { pose: id }));
+				art.text(c, id.toUpperCase(), x, y + 24, { size: 16, font: SQUID_FONT, weight: 400, fill: !sel.seq && id === sel.pose ? 'white' : '#9fb6d8' });
 			});
 		}
 
