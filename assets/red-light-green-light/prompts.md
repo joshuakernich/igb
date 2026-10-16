@@ -230,3 +230,10 @@ v3-contestant-front, v3-guard (same parts in the same order as v2).
 The lettering is Game of Squids (GameOfSquids.ttf, Darrell Flood, free for
 all use; see GameOfSquids-license.txt).
 - **v3-boulder.png**: a sprite sheet, 4x2, of one round sandstone boulder rolling toward the viewer, an eighth of a turn a frame (its cracks, chips and moss travelling down its face, frame 8 leading back into frame 1), the same size and place in every cell, lineless and richly shaded, transparent.
+
+## v4 (2026-10-17): more arm frames; no sweater underside
+
+- **v4-contestant-arms.png**: 16 running torsos from behind, a smooth arm-swing cycle (left arm fully forward at 1, passing at 5, right arm forward at 9, passing at 13), same layout rules; asked again so the sweater is seen exactly level, the bottom a clean flat horizontal cut with no underside or bulging hem showing.
+- **v4-contestant-back.png**: the back-view parts sheet again with the same fix to every torso (and a flat-cut waistband on the legs).
+
+The run is now twelve steps: the legs' six drawings two steps each, the arms through these sixteen.

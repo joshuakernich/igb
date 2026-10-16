@@ -3055,7 +3055,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// the head tilts. Until they load, the whole-figure sheets (or the drawn
 	// characters) stand in.
 	const PART_SHEETS = {
-		back: { file: 'v3-contestant-back.png', rows: 4, height: 112, parts: [
+		back: { file: 'v4-contestant-back.png', rows: 4, height: 112, extra: { file: 'v4-contestant-arms.png', rows: 4, parts: Array.from({ length: 16 }, (_, i) => 'torsoArm' + (i + 1)) }, parts: [
 			'head', 'torso', 'torsoOut', 'torsoUp',
 			'torsoRun1', 'torsoRun2', 'torsoRun3', 'torsoRun4',   // left arm forward, passing, right arm forward, passing back
 			'legs', 'legsRun1', 'legsRun2', 'legsRun3',           // a six-step run: left foot reaching, down, pushing off...
@@ -3082,13 +3082,21 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const POSES = {
 		back: {
 			stand: { head: 'head', torso: 'torso', legs: 'legs' },
-			// the run: the legs through six steps, the arms swinging against them
-			run1: { head: 'head', torso: 'torsoRun3', legs: 'legsRun1' },
-			run2: { head: 'head', torso: 'torsoRun4', legs: 'legsRun2' },
-			run3: { head: 'head', torso: 'torsoRun1', legs: 'legsRun3' },
-			run4: { head: 'head', torso: 'torsoRun1', legs: 'legsRun4' },
-			run5: { head: 'head', torso: 'torsoRun2', legs: 'legsRun5' },
-			run6: { head: 'head', torso: 'torsoRun3', legs: 'legsRun6' },
+			// the run: twelve steps, the legs through their six drawings (two steps
+			// each), the arms through their sixteen-step swing against them (alt:
+			// the main sheet's arms, until the arms sheet is in)
+			run1: { head: 'head', torso: 'torsoArm9', alt: 'torsoRun3', legs: 'legsRun1' },
+			run2: { head: 'head', torso: 'torsoArm10', alt: 'torsoRun3', legs: 'legsRun1' },
+			run3: { head: 'head', torso: 'torsoArm12', alt: 'torsoRun4', legs: 'legsRun2' },
+			run4: { head: 'head', torso: 'torsoArm13', alt: 'torsoRun4', legs: 'legsRun2' },
+			run5: { head: 'head', torso: 'torsoArm14', alt: 'torsoRun1', legs: 'legsRun3' },
+			run6: { head: 'head', torso: 'torsoArm16', alt: 'torsoRun1', legs: 'legsRun3' },
+			run7: { head: 'head', torso: 'torsoArm1', alt: 'torsoRun1', legs: 'legsRun4' },
+			run8: { head: 'head', torso: 'torsoArm2', alt: 'torsoRun1', legs: 'legsRun4' },
+			run9: { head: 'head', torso: 'torsoArm4', alt: 'torsoRun2', legs: 'legsRun5' },
+			run10: { head: 'head', torso: 'torsoArm5', alt: 'torsoRun2', legs: 'legsRun5' },
+			run11: { head: 'head', torso: 'torsoArm6', alt: 'torsoRun3', legs: 'legsRun6' },
+			run12: { head: 'head', torso: 'torsoArm8', alt: 'torsoRun3', legs: 'legsRun6' },
 			frozen: { head: 'head', torso: 'torsoOut', legs: 'legsCrouch' },   // (frozen in a squat)
 			hop: { head: 'head', torso: 'torsoUp', legs: 'legsCrouch' },
 		},
@@ -3141,61 +3149,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					"y": 3
 				}
 			},
-			"run1": {
-				"torso": {
-					"x": -2,
-					"y": 2.5
-				},
-				"head": {
-					"y": -7
-				}
-			},
-			"run2": {
-				"head": {
-					"y": -7.5
-				},
-				"torso": {
-					"y": 9,
-					"x": 1.5
-				}
-			},
-			"run3": {
-				"torso": {
-					"y": 2.5,
-					"x": -2
-				},
-				"head": {
-					"y": -7.5,
-					"x": 0.5
-				}
-			},
-			"run4": {
-				"head": {
-					"y": -7.5
-				},
-				"torso": {
-					"y": 2,
-					"x": -2
-				}
-			},
-			"run5": {
-				"torso": {
-					"y": 8,
-					"x": 1
-				},
-				"head": {
-					"y": -7.5
-				}
-			},
-			"run6": {
-				"head": {
-					"y": -7.5
-				},
-				"torso": {
-					"y": 1.5,
-					"x": -1.5
-				}
-			},
 			"frozen": {
 				"torso": {
 					"y": -5.5
@@ -3211,10 +3164,120 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				"head": {
 					"y": 3.5
 				}
+			},
+			"run11": {
+				"head": {
+					"y": -7.5
+				},
+				"torso": {
+					"y": 1.5,
+					"x": -1.5
+				}
+			},
+			"run12": {
+				"head": {
+					"y": -7.5
+				},
+				"torso": {
+					"y": 1.5,
+					"x": -1.5
+				}
+			},
+			"run9": {
+				"torso": {
+					"y": 8,
+					"x": 1
+				},
+				"head": {
+					"y": -7.5
+				}
+			},
+			"run10": {
+				"torso": {
+					"y": 8,
+					"x": 1
+				},
+				"head": {
+					"y": -7.5
+				}
+			},
+			"run7": {
+				"head": {
+					"y": -7.5
+				},
+				"torso": {
+					"y": 2,
+					"x": -2
+				}
+			},
+			"run8": {
+				"head": {
+					"y": -7.5
+				},
+				"torso": {
+					"y": 2,
+					"x": -2
+				}
+			},
+			"run5": {
+				"torso": {
+					"y": 2.5,
+					"x": -2
+				},
+				"head": {
+					"y": -7.5,
+					"x": 0.5
+				}
+			},
+			"run6": {
+				"torso": {
+					"y": 2.5,
+					"x": -2
+				},
+				"head": {
+					"y": -7.5,
+					"x": 0.5
+				}
+			},
+			"run3": {
+				"head": {
+					"y": -7.5
+				},
+				"torso": {
+					"y": 9,
+					"x": 1.5
+				}
+			},
+			"run4": {
+				"head": {
+					"y": -7.5
+				},
+				"torso": {
+					"y": 9,
+					"x": 1.5
+				}
+			},
+			"run1": {
+				"torso": {
+					"x": -2,
+					"y": 2.5
+				},
+				"head": {
+					"y": -7
+				}
+			},
+			"run2": {
+				"torso": {
+					"x": -2,
+					"y": 2.5
+				},
+				"head": {
+					"y": -7
+				}
 			}
 		}
 	};   // (from the lab, 2026-10-17; 's' sizes are kept but not used: every part stays at one scale)
-	const TUNE_KEY = 'rlgl-character-lab';
+	const TUNE_KEY = 'rlgl-character-lab-2';   // (new when the run went to twelve steps: older tuning was for six)
 	const TUNE = JSON.parse(JSON.stringify(TUNED));
 	try {
 		const saved = JSON.parse(localStorage.getItem(TUNE_KEY) || '{}');
@@ -3230,9 +3293,30 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			try {
 				rigs[name] = cutParts(img, def, name);
 				if (name === 'guard') { const m = rigMuzzle(rigs.guard); if (m) GUN.muzzle = m; }
+				if (def.extra) loadExtra(name, def);
 			} catch (e) { /* (unreadable: the sheets stand in) */ }
 		};
 		img.src = 'assets/red-light-green-light/' + def.file;
+	}
+
+	// A second sheet of parts for a figure (the contestant's arms, swinging
+	// through a run in 16 steps): cut the same way, and all of it brought to
+	// the main sheet's scale with one factor (its torsos the same height from
+	// hem to neck), then added to the figure's parts.
+	function loadExtra(name, def) {
+		const img = new Image();
+		img.onload = function () {
+			try {
+				const more = cutParts(img, Object.assign({ heads: null }, def.extra, { parts: def.extra.parts }), name);
+				const main = rigs[name].at;
+				const k = (main.hem - main.neck) / Math.max(1, more.at.hem - more.at.neck);
+				for (const [id, part] of Object.entries(more.parts)) {
+					part.norm = k;
+					rigs[name].parts[id] = part;
+				}
+			} catch (e) { /* (unreadable: the main sheet's arms do) */ }
+		};
+		img.src = 'assets/red-light-green-light/' + def.extra.file;
 	}
 
 	// Each cell, cut out whole: the sheet in even boxes, nothing trimmed, so
@@ -3306,8 +3390,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			parts[cell.id] = part;
 		}
 		// how tall a standing figure is, put together (for its scale)
-		const tall = (at.feet - at.waist) + (at.hem - at.neck) + (at.chin - at.crown);
-		return { name, parts, tall };
+		const tall = (at.feet - at.waist) + (at.hem - at.neck) + (at.chin - at.crown);   // (NaN on a sheet of only torsos: unused there)
+		return { name, parts, tall, at };
 	}
 
 	// Put a figure together in a pose, feet at (0, 0): legs, then the body on
@@ -3330,7 +3414,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const head0 = P[PART_SHEETS[rig.name].heads ? PART_SHEETS[rig.name].heads[0] : 'head'];
 		// (which drawing each part uses in a pose: the pose's own, unless the lab chose another)
 		const chosen = (id, part) => (TUNE[rig.name] && TUNE[rig.name][id] && TUNE[rig.name][id].use && TUNE[rig.name][id].use[part]) || poses[id][part];
-		const parts = (id) => ({ legs: P[chosen(id, 'legs')] || P.legs, torso: P[chosen(id, 'torso')] || P.torso, head: P[pick.head || chosen(id, 'head')] || head0 });
+		const parts = (id) => ({ legs: P[chosen(id, 'legs')] || P.legs, torso: P[chosen(id, 'torso')] || P[poses[id].alt] || P.torso, head: P[pick.head || chosen(id, 'head')] || head0 });
 		const A = parts(poseId);
 		const B = next ? parts(nextId) : null;
 		if (!A.legs || !A.torso || !A.head) return false;
@@ -3410,7 +3494,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// How high a run frame is lifted: up off each stride, twice a cycle, the
 	// same every time that frame shows (so the lab's still frames are exactly
 	// the cycle's).
-	const runBob = (i) => Math.abs(Math.sin((i + 0.5) / 6 * Math.PI * 2)) * RIG.bob;
+	const RUN_STEPS = 12;
+	const runBob = (i) => Math.abs(Math.sin((i + 0.5) / RUN_STEPS * Math.PI * 2)) * RIG.bob;
 
 	// A contestant in play, from behind, from parts.
 	function contestantRig(c, k) {
@@ -3429,7 +3514,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			// fixed bob: the run is just its frames, played in turn)
 			const cycle = k.walk * RIG.run;   // (slower than their pace: a loping run)
 			const phase = ((cycle / (Math.PI * 2)) % 1 + 1) % 1;
-			const step = Math.floor(phase * 6);
+			const step = Math.floor(phase * RUN_STEPS);
 			pick.pose = 'run' + (1 + step);
 			pick.bob = runBob(step) * k.moving;
 			pick.lean = (k.drift || 0) * -8;
@@ -4514,12 +4599,12 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			art.rect(c, 0, ground, CW * 0.62, 3, { fill: 'rgba(255,255,255,0.25)' });
 			art.rect(c, bigX - 450, ground - g.height * LAB.big, 900, 2, { fill: 'rgba(255,255,255,0.14)' });
 			// (a run frame lifted by its own bob, as it is in the game)
-			const lifted = (id) => (fig === 'back' && /^run\d$/.test(id) ? runBob(+id.slice(3) - 1) : 0);
+			const lifted = (id) => (fig === 'back' && /^run\d+$/.test(id) ? runBob(+id.slice(3) - 1) : 0);
 			art.with(c, { x: bigX, y: ground, scale: LAB.big }, (c2) => assemble(c2, rig, { pose, bob: lifted(pose) }));
 			art.text(c, pose.toUpperCase(), bigX, ground + 50, { size: 40, font: SQUID_FONT, weight: 400, fill: 'white' });
 			// the cycle, playing
-			const cycle = fig === 'back' ? ['run1', 'run2', 'run3', 'run4', 'run5', 'run6'] : fig === 'guard' ? ['walk1', 'walk2', 'walk3', 'walk4', 'walk5', 'walk6'] : ['win1', 'win2', 'win3', 'win4'];
-			const at = t * (fig === 'front' ? 2.5 : fig === 'back' ? 12 * RIG.run : 12);
+			const cycle = fig === 'back' ? Array.from({ length: RUN_STEPS }, (_, i) => 'run' + (i + 1)) : fig === 'guard' ? ['walk1', 'walk2', 'walk3', 'walk4', 'walk5', 'walk6'] : ['win1', 'win2', 'win3', 'win4'];
+			const at = t * (fig === 'front' ? 2.5 : fig === 'back' ? 24 * RIG.run : 12);
 			const step = Math.floor(at) % cycle.length;
 
 			const cycX = Math.min(1700, CW * 0.45);
