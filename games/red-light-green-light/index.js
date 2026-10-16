@@ -4645,22 +4645,25 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const rowCss = {
 		width: R.w + 'px', height: R.h + 'px', boxSizing: 'border-box', textAlign: 'left', borderRadius: R.h / 2 + 'px', border: '5px solid rgba(255,255,255,0.9)',
 		background: 'rgba(255,255,255,0.1)', color: 'white', fontFamily: font, fontSize: R.size + 'px', lineHeight: 1, letterSpacing: '2px',
+		WebkitTextStroke: `${Math.max(4, R.size * 0.07)}px ${Showtime.TYPE.colours.ink}`, paintOrder: 'stroke fill',
 		display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', padding: `0 ${R.inset}px 0 52px`,   // (the words on the left, an icon on the right, snug in the capsule's end)
 		boxShadow: '0 10px 0 rgba(0,0,0,0.45)', transition: 'transform 0.12s, background 0.12s',
 	};
 	const icon = (name) => cutIcon(name, R.h - 10 - R.inset * 2);   // (as big as fits inside the border, an even gap all round)
 	const label = (text) => $('<span>').text(text).css({ flex: 1, textAlign: 'left' });   // (hard against the left, whatever the button would do)
-	const rowButton = (text, glyph, fn) => $('<button>').append(label(text)).append(icon(glyph)).css(Object.assign({ cursor: 'pointer' }, rowCss))
-		.on('mouseenter', function () { $(this).css({ transform: 'scale(1.04)', background: 'rgba(255,255,255,0.2)' }); })
-		.on('mouseleave', function () { $(this).css({ transform: 'scale(1)', background: 'rgba(255,255,255,0.1)' }); })
+	// (each row in its own colour: the cut-out icons show it through)
+	const ROW_COLOURS = { resume: '#f5b800', volume: '#2f7df6', restart: '#e8323c', help: '#1fb85c' };
+	const rowButton = (text, glyph, fn, colour) => $('<button>').append(label(text)).append(icon(glyph)).css(Object.assign({ cursor: 'pointer' }, rowCss, { background: colour }))
+		.on('mouseenter', function () { $(this).css({ transform: 'scale(1.04)', filter: 'brightness(1.12)' }); })
+		.on('mouseleave', function () { $(this).css({ transform: 'scale(1)', filter: 'none' }); })
 		.on('click', function (e) { e.stopPropagation(); fn(); });
-	rowButton('RESUME', 'play', () => setPaused(false)).appendTo($front);
+	rowButton('RESUME', 'play', () => setPaused(false), ROW_COLOURS.resume).appendTo($front);
 	// the volume, the same shape: its name, then five bars, all alike, lit up to its level; click one for that level
 	// The volume, the same shape, its control in the icons' style: a white
 	// capsule snug in the row's end with five bars cut out of it, the ones up
 	// to the level cut clean through, the rest only faintly; click a bar for
 	// that level.
-	const $vol = $('<div>').css(rowCss).appendTo($front);
+	const $vol = $('<div>').css(Object.assign({}, rowCss, { background: ROW_COLOURS.volume })).appendTo($front);
 	label('VOLUME').appendTo($vol);
 	const VH = R.h - 10 - R.inset * 2;                  // (as tall as the icons)
 	const BAR = { w: VH * 0.2, gap: VH * 0.12, pad: VH * 0.3 };
@@ -4683,8 +4686,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const level = PAUSE.levels.reduce((best, v, i) => (Math.abs(v - IGB.volume) < Math.abs(PAUSE.levels[best] - IGB.volume) ? i : best), 0);
 		$volSvg.find('.vbar').each(function (i) { this.setAttribute('fill', i <= level ? 'black' : '#a8a8a8'); });   // (black: cut clean through; grey: only faintly)
 	}
-	rowButton('RESTART ROUND', 'restart', () => { setPaused(false); restartRound(); }).appendTo($front);
-	rowButton('REPLAY TUTORIAL', 'help', () => { setPaused(false); debugJump('controls'); }).appendTo($front);
+	rowButton('RESTART ROUND', 'restart', () => { setPaused(false); restartRound(); }, ROW_COLOURS.restart).appendTo($front);
+	rowButton('REPLAY TUTORIAL', 'help', () => { setPaused(false); debugJump('controls'); }, ROW_COLOURS.help).appendTo($front);
 
 	// the round over again from its start (in play), or else the beat the show is on
 	function restartRound() {
