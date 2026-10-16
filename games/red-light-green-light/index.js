@@ -3196,7 +3196,19 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		guard: { height: 143, clips: { walk: range('g', 0, 7), stand: range('g', 8, 9), aim: range('g', 10, 11), fire: range('g', 12, 15) } },
 	};
 	const ANIM_SHEETS = { back: ['arun', 'aact'], front: ['afront'], guard: ['gcircle'] };   // (for the lab: which sheets each figure draws from)
-	const ANIM_TUNED = {};   // (the lab's tuning, baked in)
+	const ANIM_TUNED = {   // (the lab's tuning, baked in)
+		back: {
+			clips: {
+				run: [
+					{ s: 'arun', i: 1, x: -1.5 },
+					{ s: 'arun', i: 13, x: -0.5 },
+					{ s: 'arun', i: 3 },
+					{ s: 'arun', i: 4 },
+					{ s: 'arun', i: 14 },
+				],
+			},
+		},
+	};
 	const ANIM_KEY = 'rlgl-animation-lab';
 	const ANIM_TUNE = JSON.parse(JSON.stringify(ANIM_TUNED));
 	try {
