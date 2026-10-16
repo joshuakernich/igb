@@ -2553,7 +2553,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		if (!c.alive) return;
 		// over their head: a marker in their colour
 		const bob = Math.sin(clock * 4 + c.n) * 4;
-		const top = p.y - (rigs.back || sheets.act ? 148 : 175) * s + bob * s;   // (over the shorter sprite figures, or the drawn ones)
+		const top = p.y - (rigs.back ? figure('back').height + 34 : sheets.act ? 148 : 175) * s + bob * s;   // (just over their head, however tall the figure is)
 		art.poly(ctx, [[p.x - 14 * s, top - 14 * s], [p.x + 14 * s, top - 14 * s], [p.x, top + 4 * s]], { fill: colour, alpha });
 	}
 
@@ -3124,7 +3124,99 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// scaling, so a figure's parts always stay at one scale), and per figure, '_': its height and how far the parts tuck
 	// together. Baked in here; the lab's changes are kept in this browser on
 	// top of these until they're baked in too.
-	const TUNED = {};
+	const TUNED = {
+		"back": {
+			"_": {
+				"height": 76,
+				"overlap": 0.2
+			},
+			"stand": {
+				"torso": {
+					"s": 1.14,
+					"r": 1.5,
+					"x": -0.5,
+					"y": -14.5
+				},
+				"legs": {
+					"s": 0.86
+				},
+				"head": {
+					"y": 3
+				}
+			},
+			"run1": {
+				"torso": {
+					"x": -2,
+					"y": -4
+				},
+				"head": {
+					"y": -7
+				}
+			},
+			"run2": {
+				"head": {
+					"y": -7.5
+				},
+				"torso": {
+					"y": -4.5,
+					"x": 1.5
+				}
+			},
+			"run3": {
+				"torso": {
+					"y": -5.5,
+					"x": -1.5
+				},
+				"head": {
+					"y": -7.5,
+					"x": 0.5
+				}
+			},
+			"run4": {
+				"head": {
+					"y": -7.5
+				},
+				"torso": {
+					"y": -5,
+					"x": -2
+				}
+			},
+			"run5": {
+				"torso": {
+					"y": -4.5,
+					"x": 1
+				},
+				"head": {
+					"y": -7.5
+				}
+			},
+			"run6": {
+				"head": {
+					"y": -7.5
+				},
+				"torso": {
+					"y": -5,
+					"x": -1.5
+				}
+			},
+			"frozen": {
+				"torso": {
+					"y": -5.5
+				},
+				"head": {
+					"y": 3
+				}
+			},
+			"hop": {
+				"torso": {
+					"y": -5
+				},
+				"head": {
+					"y": 3.5
+				}
+			}
+		}
+	};   // (from the lab, 2026-10-17; 's' sizes are kept but not used: every part stays at one scale)
 	const TUNE_KEY = 'rlgl-character-lab';
 	const TUNE = JSON.parse(JSON.stringify(TUNED));
 	try {
