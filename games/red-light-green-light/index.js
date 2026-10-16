@@ -1893,10 +1893,21 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		drawSun(ctx, top - trim, false);   // (behind the wall: its lower half hidden by it)
 		art.save(ctx, function (c) {
 			if (wallImg.complete && wallImg.naturalWidth) {
-				// the mural, drawn in ChatGPT: its own sky, clouds, panel seams and sandy skirting, tiled along
+				// the mural, drawn in ChatGPT: its own sky, clouds, panel seams and
+				// sandy skirting, tiled along. On each wall it grows out from that
+				// wall's vanishing point, as everything does, so as it looms
+				// nearer it never slides sideways
 				const h = base - top;
 				const w = h * wallImg.naturalWidth / wallImg.naturalHeight;
-				for (let x = -20 - ((DOLL_X / w) % 1) * w; x < WIDTH + 20; x += w) c.drawImage(wallImg, x, top, w + 1, h);
+				for (let wall = 0; wall < 3; wall++) {
+					const vp = vanishOf(wall);
+					c.save();
+					c.beginPath();
+					c.rect(wall * W - (wall === 0 ? 20 : 0), top - 1, W + (wall === 0 || wall === 2 ? 20 : 0), h + 2);
+					c.clip();
+					for (let x = vp - w * Math.ceil((vp - wall * W + 20) / w); x < (wall + 1) * W + 20; x += w) c.drawImage(wallImg, x, top, w + 1, h);
+					c.restore();
+				}
 				art.rect(c, -20, top - trim, WIDTH + 40, trim, { fill: '#f3ead2' });   // the trim
 				if (haze > 0) art.rect(c, -20, top - trim, WIDTH + 40, base - top + trim, { fill: 'rgba(240,232,214,1)', alpha: Math.min(0.75, haze) });
 				return;
