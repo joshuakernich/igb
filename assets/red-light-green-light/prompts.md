@@ -210,3 +210,22 @@ the neck and waist, all at one scale.
   front, side by side.
 - **v2-items.png**: 2x2: cash wad, magnet, money sack (₩), glass marble.
 - **v2-tree.png**: the gnarled tree with a few leaf clumps, portrait.
+
+## v3 (2026-10-16): stricter layout for the parts, and the back wall
+
+The three parts sheets again, same look as v2, with LAYOUT RULES so the parts
+line up: an exact 4x4 grid of 256 px cells; every part of a kind the same
+size and in the same place in its cell "as if traced from the same template";
+heads centred with the neck stub 24 px above the cell's bottom; torsos the
+same width and height, the waist hem centred 24 px above the cell's bottom;
+legs the same size, the waistband centred 24 px below the cell's top and as
+wide as the torsos' waist; only the pose changes. Files: v3-contestant-back,
+v3-contestant-front, v3-guard (same parts in the same order as v2).
+
+- **v3-back-wall.png**: the arena's back wall, front on, filling the image:
+  a weathered painted mural of a bright naive blue sky with big soft cumulus
+  clouds, faint vertical panel seams, a pale sandy skirting band at the
+  bottom; edges tile.
+
+The lettering is Game of Squids (GameOfSquids.ttf, Darrell Flood, free for
+all use; see GameOfSquids-license.txt).

@@ -24,6 +24,7 @@
  *       sounds: { drama: ['assets/...mp3', 0.3, true] },   // optional overrides
  *       music: false,                     // optional: no music, only the effects
  *       clockOutline: false,              // optional: the clock's capsule without its coloured outline
+ *       font: 'Game of Squids',           // optional: one font for everything the show writes (load it first)
  *   });
  *
  *   show.sequence([                       // the running order
@@ -92,7 +93,7 @@ window.Showtime = function (stage, opts) {
 	const { W, H, WIDTH } = IGB;
 	const art = IGB.art;
 	const theme = Object.assign({}, Showtime.THEME, opts.theme);
-	const FONT = theme.font;
+	const FONT = opts.font || theme.font;   // (a game can set its own: opts.font, for everything the show writes)
 	const SECONDS = opts.seconds || 600;
 
 	/* ---------- tuning: the camera ---------- */
@@ -543,7 +544,7 @@ window.Showtime = function (stage, opts) {
 	// shrinking freely) to fit inside a wall, or style.fit units across. Any
 	// colour snaps to the nearest of the palette; players' colours stay
 	// theirs. The outline and drop are the same everywhere (none on dark ink).
-	const TYPE = Showtime.TYPE;
+	const TYPE = Object.assign({}, Showtime.TYPE, opts.font ? { font: opts.font } : {});
 	const snapSize = (size) => TYPE.sizes.reduce((best, s) => (Math.abs(Math.log(s / size)) < Math.abs(Math.log(best / size)) ? s : best), TYPE.sizes[0]);
 	const measure = function (ctx, str, size) {
 		ctx.save();

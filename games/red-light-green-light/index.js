@@ -558,12 +558,23 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const SAND = '#e3c08a';
 	const PINK = '#ff3d8b';
 	const TEAL = '#1fa58a';
+	// The lettering throughout: Game of Squids (Darrell Flood's free font after
+	// the show's logo; assets/red-light-green-light/GameOfSquids-license.txt).
+	// Its capitals are the plain letters; lowercase ones are stretched, so the
+	// game writes in capitals.
+	const SQUID_FONT = 'Game of Squids';
+	try {
+		const face = new FontFace(SQUID_FONT, 'url(assets/red-light-green-light/GameOfSquids.ttf)');
+		face.load().then((f) => document.fonts.add(f)).catch(() => { /* (falls back to the usual) */ });
+	} catch (e) { /* (no FontFace here: the usual lettering) */ }
+
 	const show = new Showtime(stage, {
 		score: won,   // scores are in won
 		id: 'red-light-green-light',
 		skip: { during: ['controls'], to: 'doll', label: 'SKIP TUTORIAL ▶▶' },   // the skip button: only in the tutorial, on to her entrance
 		clock: (n) => CLOCK_AT[n],   // the clock, as a capsule: see CLOCK_AT
 		clockOutline: false,         // (no outline round it)
+		font: SQUID_FONT,            // everything the show writes, in the game's own lettering
 		seconds: GAME_SECONDS,
 		players: () => contestants.length,
 		scores: () => contestants.map((c) => c.score),
@@ -1686,7 +1697,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 						c3.fillStyle = PLAYER_COLORS[k.n];
 						c3.fill();
 					});
-					art.text(c2, won(k.score), 0, 2, { size: SCORES.size, font: 'Paytone One', weight: 400, fill: 'white', shadow: { color: 'rgba(0,0,0,0.35)', blur: 0, y: 2 } });
+					art.text(c2, won(k.score), 0, 2, { size: SCORES.size, font: SQUID_FONT, weight: 400, fill: 'white', shadow: { color: 'rgba(0,0,0,0.35)', blur: 0, y: 2 } });
 				});
 			});
 		});
@@ -1869,7 +1880,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// with clouds, as in the show. It stands at a place on the field, so far
 	// off it's a low band on the horizon, and it rises and looms as the field
 	// scrolls toward the finish.
-	const BACK_WALL = { gap: 520, height: 600, trim: 26 };    // how far beyond the doll it stands (field units); how tall it is; the cream trim along its top
+	const BACK_WALL = { gap: 520, height: 600, trim: 26, file: 'v3-back-wall.png' };    // how far beyond the doll it stands (field units); how tall it is; the cream trim along its top
+	const wallImg = new Image();
+	wallImg.src = 'assets/red-light-green-light/' + BACK_WALL.file;
 	function drawBackWall(ctx) {
 		const f = dollF + BACK_WALL.gap;
 		const s = scaleAt(f);
@@ -1879,6 +1892,15 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const haze = 1 - fadeIn(f);   // (the further, the more it's lost in the haze)
 		drawSun(ctx, top - trim, false);   // (behind the wall: its lower half hidden by it)
 		art.save(ctx, function (c) {
+			if (wallImg.complete && wallImg.naturalWidth) {
+				// the mural, drawn in ChatGPT: its own sky, clouds, panel seams and sandy skirting, tiled along
+				const h = base - top;
+				const w = h * wallImg.naturalWidth / wallImg.naturalHeight;
+				for (let x = -20 - ((DOLL_X / w) % 1) * w; x < WIDTH + 20; x += w) c.drawImage(wallImg, x, top, w + 1, h);
+				art.rect(c, -20, top - trim, WIDTH + 40, trim, { fill: '#f3ead2' });   // the trim
+				if (haze > 0) art.rect(c, -20, top - trim, WIDTH + 40, base - top + trim, { fill: 'rgba(240,232,214,1)', alpha: Math.min(0.75, haze) });
+				return;
+			}
 			art.rect(c, -20, top, WIDTH + 40, base - top, { fill: art.linear(c, 0, top, 0, base, ['#5fb6e6', '#8fcdee', '#bfe4f2']) });
 			// painted clouds, scaled with it, the same wherever it is
 			for (let i = 0; i < 14; i++) {
@@ -2506,11 +2528,13 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const dark = 'rgba(70,40,15,0.18)';
 		art.poly(c, quad, { fill: art.linear(c, xa, 0, xb, 0, dir > 0 ? ['rgba(70,40,15,0)', 'rgba(70,40,15,0)', dark] : [dark, 'rgba(70,40,15,0)', 'rgba(70,40,15,0)']) });
 		const s = at(p.x, p.f, 0, wall).s;
-		// an arrow painted on it, pointing the way it throws you: chalky white
-		// paint, soaked into the sand and worn, grit showing through it
+		// an arrow painted on it, pointing the way it throws you: red paint,
+		// soaked into the sand and worn, grit showing through it (a little up
+		// the lid from its middle)
+		const UP = 0.14;
 		const ARROW = [[0.16, -0.15], [0.54, -0.15], [0.54, -0.44], [0.86, 0], [0.54, 0.44], [0.54, 0.15], [0.16, 0.15]];
-		art.poly(c, ARROW.map(([u, v]) => at2(u, v)), { fill: 'rgba(250,244,230,0.72)' });
-		if (!p.wear) p.wear = Array.from({ length: 40 }, () => [0.16 + Math.random() * 0.7, (Math.random() * 2 - 1) * 0.44, 0.6 + Math.random() * 1.6]);
+		art.poly(c, ARROW.map(([u, v]) => at2(u, v + UP)), { fill: 'rgba(206,38,42,0.75)' });
+		if (!p.wear) p.wear = Array.from({ length: 40 }, () => [0.16 + Math.random() * 0.7, (Math.random() * 2 - 1) * 0.44 + UP, 0.6 + Math.random() * 1.6]);
 		for (const [u, v, r] of p.wear) {
 			const [x, y] = at2(u, v);
 			art.circle(c, x, y, r * s * 1.6, { fill: mix('#dcb47c', shade), alpha: 0.75 });
@@ -2690,7 +2714,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			c.fill();
 			art.poly(c, [[-12, -52], [12, -52], [18, -66], [6, -60], [0, -68], [-6, -60], [-18, -66]], { fill: '#d9a441' });   // the ruffle above the tie
 			art.rect(c, -13, -55, 26, 6, { fill: '#7a4b1c' });   // the tie
-			art.text(c, '₩', 0, -23, { size: 26, fill: '#7a4b1c', font: 'Paytone One', weight: 400 });
+			art.text(c, '₩', 0, -23, { size: 26, fill: '#7a4b1c', font: SQUID_FONT, weight: 400 });
 			if (Math.sin(g.spin * 1.7) > 0.93) {
 				const gl = (Math.sin(g.spin * 1.7) - 0.93) / 0.07;
 				art.line(c, [[-18, -40 - 9 * gl], [-18, -40 + 9 * gl]], { stroke: '#fff', lineWidth: 2.5 });
@@ -2830,19 +2854,19 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// the head tilts. Until they load, the whole-figure sheets (or the drawn
 	// characters) stand in.
 	const PART_SHEETS = {
-		back: { file: 'v2-contestant-back.png', rows: 4, height: 112, parts: [
+		back: { file: 'v3-contestant-back.png', rows: 4, height: 112, parts: [
 			'head', 'torso', 'torsoOut', 'torsoUp',
 			'torsoRun1', 'torsoRun2', 'torsoRun3', 'torsoRun4',   // left arm forward, passing, right arm forward, passing back
 			'legs', 'legsRun1', 'legsRun2', 'legsRun3',           // a six-step run: left foot reaching, down, pushing off...
 			'legsRun4', 'legsRun5', 'legsRun6', 'legsCrouch',     // ...right foot reaching, down, pushing off
 		] },
-		front: { file: 'v2-contestant-front.png', rows: 4, height: 112, parts: [
+		front: { file: 'v3-contestant-front.png', rows: 4, height: 112, parts: [
 			'head', 'headGrin', 'headSad', 'headWow',
 			'torso', 'torsoCheer', 'torsoWaveR', 'torsoWaveL',
 			'torsoPoint', 'torsoShrug', 'torsoClap', 'torsoCross',
 			'legs', 'legsJump', 'legsStep', 'legsCrouch',
 		] },
-		guard: { file: 'v2-guard.png', rows: 4, height: 124, heads: ['circle', 'triangle', 'square'], parts: [
+		guard: { file: 'v3-guard.png', rows: 4, height: 124, heads: ['circle', 'triangle', 'square'], parts: [
 			'circle', 'triangle', 'square', 'circleDown',
 			'torso', 'torsoAim', 'torsoFire', 'torsoUp',
 			'legs', 'legsWalk1', 'legsWalk2', 'legsWalk3',
@@ -3051,7 +3075,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		};
 		const tallOf = (part, from, to) => (part[from][1] - part[to][1]) * part.norm;
 		const lift = ((pick.lift || 0) + mix(pose.lift || 0, next ? next.lift || 0 : 0)) / k;
-		const legsTall = mix(tallOf(A.legs, 'bottom', 'top'), B ? tallOf(B.legs, 'bottom', 'top') : 0);
+		// (striding legs come out shorter or longer than standing ones; in a
+		// cycle the waist stays at the standing height, so the body doesn't
+		// jump from step to step)
+		const cycling = (p) => /^legs(Run|Walk)/.test(p.legs);
+		const legsTall = cycling(pose) && (!next || cycling(next)) ? tallOf(P.legs, 'bottom', 'top') : mix(tallOf(A.legs, 'bottom', 'top'), B ? tallOf(B.legs, 'bottom', 'top') : 0);
 		const torsoTall = mix(tallOf(A.torso, 'bottom', 'top'), B ? tallOf(B.torso, 'bottom', 'top') : 0);
 		// one part, its join at the origin (only this pose's: fading the next
 		// one in over it flickered, so only the joins ease between them)
@@ -3456,7 +3484,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const treeImg = new Image();
 	treeImg.src = 'assets/red-light-green-light/' + TREE.file;
 	function drawTree(ctx) {
-		const p = at(DOLL_X - 360, dollF + 140);
+		const p = at(DOLL_X, dollF + 140);   // (directly behind her)
 		art.with(ctx, { x: p.x, y: p.y, scale: p.s * 0.85 }, function (c) {
 			const BARK = '#5a4332';
 			softShadow(c, 0, 0, 90, 20, 0.22, 1, 600, dollF + 140);
@@ -4135,7 +4163,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			c.clearRect(0, 0, canvas.width, canvas.height);
 			const rig = rigs[fig];
 			if (!rig) {
-				art.text(c, 'LOADING THE PARTS…', 480, 400, { size: 40, font: 'Paytone One', weight: 400 });
+				art.text(c, 'LOADING THE PARTS…', 480, 400, { size: 40, font: SQUID_FONT, weight: 400 });
 				return;
 			}
 			const t = (performance.now() - t0) / 1000;
@@ -4153,14 +4181,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const step = Math.floor(at) % cycle.length;
 			const ease2 = fig === 'front' ? 0 : at % 1;
 			art.with(c, { x: 780, y: ground, scale: 2.2 }, (c2) => assemble(c2, rig, { pose: cycle[step], next: cycle[(step + 1) % cycle.length], t: ease2, bob: fig === 'back' ? Math.abs(Math.sin(t * Math.PI * 4)) * RIG.bob : 0 }));
-			art.text(c, 'PLAYING: ' + cycle[step].toUpperCase(), 780, ground + 40, { size: 22, font: 'Paytone One', weight: 400, fill: '#9fb6d8' });
+			art.text(c, 'PLAYING: ' + cycle[step].toUpperCase(), 780, ground + 40, { size: 22, font: SQUID_FONT, weight: 400, fill: '#9fb6d8' });
 			// every pose, small, the chosen one marked
 			const ids = Object.keys(POSES[fig]);
 			ids.forEach(function (id, i) {
 				const x = 70 + i * (820 / Math.max(1, ids.length - 1));
 				if (id === pose) art.roundRect(c, x - 60, 700, 120, 280, 16, { fill: 'rgba(58,138,216,0.25)' });
 				art.with(c, { x, y: 940, scale: 1.6 }, (c2) => assemble(c2, rig, { pose: id }));
-				art.text(c, id.toUpperCase(), x, 970, { size: 18, font: 'Paytone One', weight: 400, fill: id === pose ? 'white' : '#9fb6d8' });
+				art.text(c, id.toUpperCase(), x, 970, { size: 18, font: SQUID_FONT, weight: 400, fill: id === pose ? 'white' : '#9fb6d8' });
 			});
 		}
 
