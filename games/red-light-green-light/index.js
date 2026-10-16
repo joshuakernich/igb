@@ -4667,7 +4667,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	label('VOLUME').appendTo($vol);
 	const VH = R.h - 10 - R.inset * 2;                  // (as tall as the icons)
 	const VW = R.w / 2;                                  // (half the row's width)
-	const SPOT = { r: VH * 0.22 };
+	const SPOT = { r: VH * 0.34 };   // (each spot's radius: most of the capsule's height)
 	const N = PAUSE.levels.length;
 	const step = (VW - VH) / (N - 1);                    // (the spots evenly along it, the end ones centred in its round ends)
 	const barX = (i) => VH / 2 + i * step - step / 2;     // (each spot's click zone: its left edge)
