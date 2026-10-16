@@ -23,6 +23,7 @@
  *       rivals: ['Team names', ...],      // optional names for the fake leaderboard
  *       sounds: { drama: ['assets/...mp3', 0.3, true] },   // optional overrides
  *       music: false,                     // optional: no music, only the effects
+ *       clockOutline: false,              // optional: the clock's capsule without its coloured outline
  *   });
  *
  *   show.sequence([                       // the running order
@@ -937,7 +938,8 @@ window.Showtime = function (stage, opts) {
 		ctx.globalAlpha *= alpha;
 		ctx.translate(x, y);
 		ctx.scale(pulse, pulse);
-		if (box > 0) art.roundRect(ctx, -w / 2 - side, -size * 0.66 - up, w + side, size * 1.32 + up, size * 0.66, { fill: 'rgba(12,4,30,0.78)', stroke: urgent ? '#ff3d6a' : theme.accent, lineWidth: size * 0.07, alpha: box });
+		const outline = opts.clockOutline === false ? {} : { stroke: urgent ? '#ff3d6a' : theme.accent, lineWidth: size * 0.07 };   // (a game can leave it off: clockOutline: false)
+		if (box > 0) art.roundRect(ctx, -w / 2 - side, -size * 0.66 - up, w + side, size * 1.32 + up, size * 0.66, Object.assign({ fill: 'rgba(12,4,30,0.78)', alpha: box }, outline));
 		// its digits at a step of the scale, sized with the pill by scaling
 		const ref = self.size(CLOCK.size);
 		ctx.scale(size / ref, size / ref);

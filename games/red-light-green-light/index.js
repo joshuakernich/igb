@@ -563,6 +563,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		id: 'red-light-green-light',
 		skip: { during: ['controls'], to: 'doll', label: 'SKIP TUTORIAL ▶▶' },   // the skip button: only in the tutorial, on to her entrance
 		clock: (n) => CLOCK_AT[n],   // the clock, as a capsule: see CLOCK_AT
+		clockOutline: false,         // (no outline round it)
 		seconds: GAME_SECONDS,
 		players: () => contestants.length,
 		scores: () => contestants.map((c) => c.score),
@@ -1638,6 +1639,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				art.rect(c, 0, 0, W, H, { fill: g });
 			});
 		}
+		drawSunShine(ctx);   // (over everything)
 		if (gloom > 0) art.rect(ctx, -20, -20, WIDTH + 40, H + 40, { fill: '#1c0d10', alpha: gloom });
 		ctx.restore();
 
@@ -1890,16 +1892,31 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			art.rect(c, -20, base - 30 * s, WIDTH + 40, 30 * s, { fill: 'rgba(40,60,90,0.18)' });   // shade where it meets the sand
 			if (haze > 0) art.rect(c, -20, top - trim, WIDTH + 40, base - top + trim, { fill: 'rgba(240,232,214,1)', alpha: Math.min(0.75, haze) });
 		});
-		drawSun(ctx, top - trim, true);   // (its glare spilling over the wall's top)
+		sunEdge = top - trim;   // (its shine, over everything, comes at the end: see drawSunShine)
+	}
+
+	// The sun's shine, last of all, over everything on the field: its glare
+	// spilling down over the wall, a streak of light along the wall's top, and
+	// a soft wash of warm light from it across the whole arena.
+	function drawSunShine(ctx) {
+		if (sunEdge === null) return;
+		drawSun(ctx, sunEdge, true);
+		art.save(ctx, function (c) {
+			c.globalCompositeOperation = 'lighter';
+			const R = SUN_LOOK.bloom * 1.6;
+			c.fillStyle = art.radial(c, SUN_LOOK.x, sunEdge, 0, R, [[0, `rgba(255,236,196,${SUN_LOOK.shine})`], [0.35, `rgba(255,214,150,${SUN_LOOK.shine * 0.35})`], [1, 'rgba(255,200,130,0)']]);
+			c.fillRect(SUN_LOOK.x - R, sunEdge - R, R * 2, R * 2);
+		});
 	}
 
 	// The sun, peeking up over the middle of the back wall: a white-hot disc,
 	// a huge warm bloom round it, slow-turning rays, and (drawn again over the
 	// wall) the glare that spills down over its top and a long streak of
 	// light along it.
-	const SUN_LOOK = { r: 70, peek: 0.45, bloom: 900, rays: 18, ray: 1100, glare: 0.45 };   // its radius; how much of it shows over the wall; the bloom's reach; how many rays, how long; how bright the glare over the wall is
+	const SUN_LOOK = { x: DOLL_X + 560, r: 70, peek: 0.45, bloom: 900, rays: 18, ray: 1100, glare: 0.45, shine: 0.3 };   // where it is across (off to the right of the doll); its radius; how much of it shows over the wall; the bloom's reach; how many rays, how long; how bright the glare over the wall is; how bright its shine over everything is
+	let sunEdge = null;   // (the back wall's top, where the sun sits, as last drawn)
 	function drawSun(ctx, edge, over) {
-		const x = DOLL_X;
+		const x = SUN_LOOK.x;
 		const y = edge + SUN_LOOK.r * (1 - 2 * SUN_LOOK.peek);   // (its centre, below the wall's top so only its upper part shows)
 		art.save(ctx, function (c) {
 			c.globalCompositeOperation = 'lighter';
