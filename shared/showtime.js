@@ -140,6 +140,14 @@ window.Showtime = function (stage, opts) {
 		length: 45,            // and on regardless after this long
 		y: 300,                // the row of visors
 		floor: { far: 330, near: 620, wall: 70 },   // the floor panel: its far and near widths, the walls' height (near)
+		// each player in play, a worm standing on the floor panel: as tall as
+		// the player (by their visor's height), leaning as they tilt their head
+		// (how far the visor sways from where their feet must be, which follows
+		// slowly). tall: a worm's height, in panel pixels, for a visor at the
+		// tracker's top; feet: seconds the feet take to catch up; lean: radians
+		// per unit of sway across the room, and the most it leans; r: its body's
+		// thickness; segs: how many segments make it up
+		worm: { tall: 330, feet: 0.9, lean: 9, most: 0.75, r: 17, segs: 12 },
 	};
 
 	/* ---------- tuning: the rating ---------- */
@@ -1219,6 +1227,7 @@ window.Showtime = function (stage, opts) {
 		let last = [];        // per slot: the last position seen
 		let held = [];        // per slot: seconds wiggled in the zone
 		let ticked = [];      // per slot: when it was ticked off (or undefined)
+		let feet = [];        // per slot: where their feet must be (their visor's spot, followed slowly)
 		let wrongSince = [];  // per slot: when it was first flagged
 		let clearFor = 0;
 		let allSetAt = -1;
@@ -1233,7 +1242,7 @@ window.Showtime = function (stage, opts) {
 			length: V.length,
 			done: (bt) => allSetAt >= 0 && bt > allSetAt + V.allSet,
 			enter() {
-				motion = []; last = []; held = []; ticked = []; wrongSince = [];
+				motion = []; last = []; held = []; ticked = []; wrongSince = []; feet = [];
 				clearFor = 0;
 				allSetAt = -1;
 				self.blackout = INTRO_DIM;
@@ -1246,6 +1255,8 @@ window.Showtime = function (stage, opts) {
 					const moved = last[i] ? Math.hypot(p.X - last[i].X, p.Y - last[i].Y, p.Z - last[i].Z) : 0;
 					last[i] = { X: p.X, Y: p.Y, Z: p.Z };
 					motion[i] = (motion[i] || 0) * k + moved / Math.max(dt, 1e-3) * (1 - k);   // speed, raw units a second
+					const kf = Math.exp(-dt / V.worm.feet);
+					feet[i] = feet[i] ? { px: feet[i].px * kf + p.px * (1 - kf), pz: feet[i].pz * kf + p.pz * (1 - kf) } : { px: p.px, pz: p.pz };
 					// tick off a squad visor once it's wiggled in the zone a moment
 					if (bt > V.show && i < count() && ticked[i] === undefined) {
 						if (inZone(p) && motion[i] > V.wiggle) held[i] = (held[i] || 0) + dt;
@@ -1520,12 +1531,59 @@ window.Showtime = function (stage, opts) {
 			c.restore();
 			const label = up({ x: cx, y: top }, far / near * 0.5);
 			self.text(c, 'FRONT', label.x, label.y, 26, { fill: 'white', outlineWidth: 4, glow: 'transparent' });
-			// everyone in play, far ones smaller
-			slots().forEach(function (p, i) {
-				if (!p || !(motion[i] > V.moving || ticked[i] !== undefined)) return;
-				const q = at(clamp(p.px, 0, 1), clamp(p.pz, 0, 1));
-				art.circle(c, q.x, q.y, 20 * q.k, { fill: colour(i), stroke: i < n ? 'white' : '#ff3d6a', lineWidth: (i < n ? 4 : 7) * q.k });
-			});
+			// everyone in play, a worm each, far ones smaller (and drawn first)
+			const shown = slots().map((p, i) => ({ p, i })).filter(({ p, i }) => p && p.px !== undefined && (motion[i] > V.moving || ticked[i] !== undefined));
+			shown.sort((a, b) => b.p.pz - a.p.pz);
+			for (const { p, i } of shown) {
+				const f = feet[i] || p;
+				const q = at(clamp(f.px, 0, 1), clamp(f.pz, 0, 1));
+				const tall = V.worm.tall * clamp((p.Y + 1) / 2, 0.15, 1) * q.k;
+				const lean = clamp((p.px - f.px) * V.worm.lean, -V.worm.most, V.worm.most);
+				worm(c, q.x, q.y, tall, lean, q.k, colour(i), lit(i, 0.35), i >= n, bt + i * 1.7);
+			}
+		}
+
+		// A worm standing on its tail at (x, y), so tall, its body curling over
+		// to lean (radians: + to the right) as it rises, swaying a little,
+		// in its player's colour (ribbed with a lighter one; wrong: ringed in red),
+		// looking out at us.
+		function worm(c, x, y, tall, lean, k, fill, light, wrong, t) {
+			const W2 = V.worm;
+			const r = W2.r * k;
+			const sway = Math.sin(t * 2.2) * 0.06;
+			// the spine: each segment turned a little more than the last
+			const pts = [{ x, y }];
+			const step = Math.max(1, tall - r) / W2.segs;
+			let a = 0;
+			for (let s = 1; s <= W2.segs; s++) {
+				const u = s / W2.segs;
+				a = (lean + sway) * u * 1.6 * (1 - 0.35 * u);
+				const prev = pts[s - 1];
+				pts.push({ x: prev.x + Math.sin(a) * step, y: prev.y - Math.cos(a) * step });
+			}
+			c.save();
+			// its shadow, and a red ring if it's a visor that isn't playing
+			art.ellipse(c, x, y, r * 1.6, r * 0.55, { fill: 'rgba(0,0,0,0.35)' });
+			if (wrong) art.ellipse(c, x, y, r * 2.2, r * 0.8, { stroke: '#ff3d6a', lineWidth: 6 * k });
+			// the body, segment by segment from the tail up, ribbed: each a touch
+			// fatter toward the head, alternately lighter
+			for (let s = 0; s < pts.length; s++) {
+				const u = s / (pts.length - 1);
+				const rr = r * (0.75 + 0.35 * u) * (1 + 0.06 * Math.sin(t * 6 - s * 0.9));
+				art.circle(c, pts[s].x, pts[s].y, rr, { fill: s % 2 ? fill : light });
+			}
+			// the head, and its face
+			const head = pts[pts.length - 1];
+			const hr = r * 1.45;
+			art.circle(c, head.x, head.y, hr, { fill: light });
+			c.translate(head.x, head.y);
+			c.rotate(a);
+			for (const side of [-1, 1]) {
+				art.circle(c, side * hr * 0.38, -hr * 0.12, hr * 0.3, { fill: 'white' });
+				art.circle(c, side * hr * 0.38 + hr * 0.04, -hr * 0.08, hr * 0.15, { fill: '#1a1020' });
+			}
+			art.ellipse(c, 0, hr * 0.42, hr * 0.28, hr * 0.14, { fill: '#5a1430' });
+			c.restore();
 		}
 	};
 

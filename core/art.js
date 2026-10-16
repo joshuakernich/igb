@@ -272,10 +272,23 @@ IGB.art = (function () {
 	//          shadow }
 	art.text = function (ctx, str, x, y, style) {
 		style = style || {};
+		const alpha = ctx.globalAlpha * (style.alpha === undefined ? 1 : style.alpha);
+		if (alpha <= 0) return;
+		// See-through text with layers (a drop, an outline, a shadow) is drawn
+		// whole, opaque, off to one side, then laid down at its alpha in one go:
+		// so it fades as one thing, never showing the layers through each other.
+		const layered = style.drop || style.outline || style.shadow;
+		if (alpha < 0.995 && layered && flatText(ctx, str, x, y, style, alpha)) return;
 		ctx.save();
 		apply(ctx, { alpha: style.alpha, shadow: style.shadow });
+		textLayers(ctx, str, x, y, style);
+		ctx.restore();
+	};
+
+	// the text's layers, as they are: the drop, the outline, the fill
+	function textLayers(ctx, str, x, y, style) {
 		const size = style.size || 40;
-		ctx.font = `${style.italic ? 'italic ' : ''}${style.weight || 600} ${size}px ${quote(style.font || 'Rubik')}, sans-serif`;
+		ctx.font = textFont(style);
 		ctx.textAlign = style.align || 'center';
 		ctx.textBaseline = style.baseline || 'middle';
 		ctx.lineJoin = 'round';
@@ -302,8 +315,52 @@ IGB.art = (function () {
 			ctx.fillStyle = style.fill || 'white';
 			ctx.fillText(line, x, ly);
 		});
+	}
+	const textFont = (style) => `${style.italic ? 'italic ' : ''}${style.weight || 600} ${style.size || 40}px ${quote(style.font || 'Rubik')}, sans-serif`;
+
+	// One scratch canvas, reused (grown as needed), for flattening text.
+	let flat = null;
+	function flatText(ctx, str, x, y, style, alpha) {
+		const size = style.size || 40;
+		const lines = String(str).split('\n');
+		const lh = style.lineHeight || size * 1.1;
+		if (!flat) flat = document.createElement('canvas').getContext('2d');
+		// its box, in the drawing's own units: the widest line, every line, the
+		// outline, the drop and the shadow's reach round it
+		flat.font = textFont(style);
+		const wide = Math.max(...lines.map((l) => flat.measureText(l).width));
+		const pad = (style.outline ? (style.outlineWidth || 6) : 0) + (style.shadow ? (style.shadow.blur || 0) * 1.5 + Math.abs(style.shadow.x || 0) + Math.abs(style.shadow.y || 0) : 0) + size * 0.2;
+		const align = style.align || 'center';
+		const left = align === 'left' || align === 'start' ? x : align === 'right' || align === 'end' ? x - wide : x - wide / 2;
+		const top = y - (lines.length - 1) * lh / 2 - size * 0.75;
+		const bottom = y + (lines.length - 1) * lh / 2 + size * 0.75 + (style.drop ? (style.dropY || size * 0.1) : 0);
+		const box = [[left - pad, top - pad], [left + wide + pad, top - pad], [left + wide + pad, bottom + pad], [left - pad, bottom + pad]];
+		// and on the screen (through the current transform), in whole pixels
+		const m = ctx.getTransform();
+		const sx = box.map(([px, py]) => m.a * px + m.c * py + m.e);
+		const sy = box.map(([px, py]) => m.b * px + m.d * py + m.f);
+		const bx = Math.floor(Math.min(...sx)), by = Math.floor(Math.min(...sy));
+		const bw = Math.ceil(Math.max(...sx)) - bx, bh = Math.ceil(Math.max(...sy)) - by;
+		if (bw <= 0 || bh <= 0 || bw * bh > 16e6) return false;   // (too big to flatten: draw it as it is)
+		const cv = flat.canvas;
+		if (cv.width < bw || cv.height < bh) { cv.width = Math.max(cv.width, bw); cv.height = Math.max(cv.height, bh); }
+		flat.setTransform(1, 0, 0, 1, 0, 0);
+		flat.clearRect(0, 0, bw, bh);
+		flat.globalAlpha = 1;
+		flat.globalCompositeOperation = 'source-over';
+		flat.shadowColor = 'transparent';
+		flat.setTransform(m.a, m.b, m.c, m.d, m.e - bx, m.f - by);
+		flat.save();
+		if (style.shadow) setShadow(flat, style.shadow);
+		textLayers(flat, str, x, y, style);
+		flat.restore();
+		ctx.save();
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+		ctx.globalAlpha = alpha;
+		ctx.drawImage(cv, 0, 0, bw, bh, bx, by, bw, bh);
 		ctx.restore();
-	};
+		return true;
+	}
 
 	function quote(font) {
 		return /[\s"]/.test(font) && font[0] !== '"' ? `"${font}"` : font;
