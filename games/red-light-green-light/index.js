@@ -197,6 +197,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		haze: [1500, 2700],     // past the flat, things fade out over this stretch
 		knee: 240,              // the flat eases into the bend over this much either side of its edge (field units), so nothing kinks there
 	};
+	// Items and avatars grow a touch as they come down the flat toward the
+	// bottom of the walls (by their spot's height on the wall): none at
+	// `from` (a share of the wall's height), `grow` more at the very bottom.
+	const NEAR = { from: 0.45, grow: 0.16 };
+	const nearer = (y) => 1 + NEAR.grow * Math.max(0, Math.min(1, (y / H - NEAR.from) / (1 - NEAR.from)));
 	const CURVE = { step: 22 };   // field units between points along an edge drawn on the curving field, so straight edges bend with it
 	const INK = '#1a1a1a';     // for drop shadows on words
 
@@ -2616,7 +2621,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const colour = PLAYER_COLORS[c.n];
 		const ground = at(c.x, c.f, 0, c.wall);
 		const p = at(c.x, c.f, c.lift, c.wall);      // off the sand, mid-skip
-		const s = p.s * 1.6;
+		const s = p.s * 1.6 * nearer(ground.y);
 		const alpha = fadeIn(c.f);
 		const air = 1 - c.lift / 300;        // the shadow shrinks under a skip
 		// a solid spot of their colour, always under the avatar
@@ -2959,7 +2964,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// (flying out of a money bag: along an arc from the bag to where it lands)
 		const k = m.fly ? Math.max(0, m.fly.t) / BAG.fly : 1;
 		const p = m.fly ? at(m.fly.x0 + (m.x - m.fly.x0) * k, m.fly.f0 + (m.f - m.fly.f0) * k) : at(m.x, m.f);
-		const s = p.s * CASH.size;
+		const s = p.s * CASH.size * nearer(p.y);
 		const rise = 0.5 + 0.5 * Math.sin(m.spin * 2.4);
 		const lift = ((CASH.float + CASH.bob * rise) * hover(m.f) + (m.fly ? BAG.arc * 4 * k * (1 - k) : 0)) * p.s;
 		if (items.cash) itemShadow(ctx, 'cash', p.x, p.y, m.f, s * (1 - 0.15 * rise), -0.35 + Math.sin(m.spin * 1.3) * 0.1, 0.8 - 0.3 * rise);
@@ -2985,7 +2990,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	}
 	function drawMagnetHere(ctx, g) {
 		const p = at(g.x, g.f);
-		const s = p.s * CASH.size;
+		const s = p.s * CASH.size * nearer(p.y);
 		const rise = 0.5 + 0.5 * Math.sin(g.spin * 2.4);
 		const lift = (CASH.float + CASH.bob * rise) * hover(g.f) * p.s;
 		if (items.magnet) itemShadow(ctx, 'magnet', p.x, p.y, g.f, s * (1 - 0.15 * rise), Math.sin(g.spin * 1.6) * 0.25, 0.8 - 0.3 * rise);
@@ -3018,7 +3023,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	}
 	function drawBagHere(ctx, g) {
 		const p = at(g.x, g.f);
-		const s = p.s * CASH.size;
+		const s = p.s * CASH.size * nearer(p.y);
 		// a money bag is heavy: it sits on the sand, no bobbing, no swaying
 		const big = ITEM.bagSize;   // (a money bag is bigger than the rest)
 		const lift = (8 - ITEM.bag * ITEM.bagSink) * s * big;   // (its anchor a little above the sprite's bottom edge, so it sits down into the sand)
@@ -3059,7 +3064,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	function drawBurst(ctx, b) {
 		const k = b.t / BURST;
 		const p = at(b.x, b.f);
-		const s = p.s * CASH.size;
+		const s = p.s * CASH.size * nearer(p.y);
 		const y = p.y - CASH.float * p.s;
 		art.save(ctx, (c) => {
 			c.globalAlpha *= fadeIn(b.f) * (1 - k);
