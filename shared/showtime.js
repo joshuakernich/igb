@@ -197,6 +197,8 @@ window.Showtime = function (stage, opts) {
 		hold: 1.6,             // then it holds
 		out: 0.5,              // and fades
 		size: 210,
+		raised: 330,           // with a START button: the title's middle, raised to make room
+		startY: 720,           // and the button's
 	};
 
 	/* ---------- tuning: the corner clock ---------- */
@@ -1084,15 +1086,25 @@ window.Showtime = function (stage, opts) {
 			at += T.lineGap;
 		});
 		const lastLand = at - T.lineGap - T.each + T.fall;
-		const length = lastLand + T.tagline + T.hold + T.out;
-		const out = length - T.out;
+		// start: true holds the title, raised, over a big START button that
+		// pops in once it's landed; it fades out once START is pressed
+		const start = !!(extra && extra.start);
+		let startedAt = -1;
+		let $start = null;
+		let now = 0;   // (the beat's time, for the button's click)
+		const length = start ? Infinity : lastLand + T.tagline + T.hold + T.out;
+		const outAt = () => (start ? (startedAt < 0 ? Infinity : startedAt) : length - T.out);
+		const dropStart = () => { if ($start) { const $b = $start; $start = null; $b.css({ opacity: 0, pointerEvents: 'none' }); stage.timeout(() => $b.remove(), 400); } };
 		return extend({
 			id: 'title',
 			length,
+			done: (bt) => start && startedAt >= 0 && bt > startedAt + T.out,
 			enter() {
 				self.blackout = 0;
 				self.play('drama');
+				startedAt = -1;
 			},
+			exit() { dropStart(); },
 			update(dt, bt) {
 				self.blackout = Math.min(INTRO_DIM, bt / T.dark * INTRO_DIM);   // the game's scene still showing behind
 				if (self.cue(T.first - T.riser)) self.fx('riser', 0.7, 1, T.riser);
@@ -1102,14 +1114,34 @@ window.Showtime = function (stage, opts) {
 					});
 				});
 				if (self.cue(lastLand)) { self.fx('titleLand'); self.shake = 0.9; self.flash = 0.6; }
+				now = bt;
+				// the START button, on the front wall under the title
+				if (start && !$start && startedAt < 0 && bt > lastLand + T.tagline) {
+					$start = $('<button start>').text('START').css({
+						position: 'absolute', left: (W + W / 2) + 'px', top: T.startY + 'px', transform: 'translate(-50%, -50%) scale(0)',
+						padding: '28px 110px', borderRadius: '90px', border: 'none', cursor: 'pointer', pointerEvents: 'auto', zIndex: 5,
+						background: TYPE.colours.gold, color: TYPE.colours.ink, fontFamily: `"${FONT}", sans-serif`, fontSize: '120px', lineHeight: 1, letterSpacing: '4px',
+						boxShadow: `0 12px 0 ${theme.ink}`, transition: 'transform 0.4s cubic-bezier(.2,1.6,.4,1), opacity 0.35s',
+					}).appendTo(stage.$ui)
+						.on('mouseenter', function () { $(this).css({ transform: 'translate(-50%, -50%) scale(1.08)' }); })
+						.on('mouseleave', function () { $(this).css({ transform: 'translate(-50%, -50%) scale(1)' }); })
+						.on('click', function (e) {
+							e.stopPropagation();
+							self.fx('pick');
+							startedAt = now;
+							$(this).css({ transform: 'translate(-50%, -50%) scale(1.25)' });
+							dropStart();
+						});
+					stage.timeout(() => $start && $start.css({ transform: 'translate(-50%, -50%) scale(1)' }), 30);
+				}
 			},
 			draw(ctx, bt) {
-				const fade = 1 - between(bt, out, length);
+				const fade = 1 - between(bt, outAt(), outAt() + T.out);
 				const n = lines.length;
 				self.onWalls(ctx, function (c) {
 					lines.forEach(function (line, li) {
 						const size = self.fitSize(c, line.text, T.size * (n > 1 ? 0.85 : 1), W - 140);   // a step of the scale that fits
-						const y = 470 + (li - (n - 1) / 2) * size * 1.05 - (tagline ? 50 : 0);
+						const y = (start ? T.raised : 470) + (li - (n - 1) / 2) * size * 1.05 - (tagline ? 50 : 0);
 						c.save();
 						c.font = `400 ${size}px "${TYPE.font}", sans-serif`;
 						const chars = [...line.text];
@@ -1139,7 +1171,7 @@ window.Showtime = function (stage, opts) {
 					if (tagline) self.slam(c, tagline, W / 2, 470 + (n - 1) / 2 * T.size * 0.9 + 150, 64, bt - lastLand - T.tagline, { fill: theme.gold, alpha: fade });
 				});
 			},
-		}, Object.assign({}, extra, { lines: undefined, tagline: undefined }));
+		}, Object.assign({}, extra, { lines: undefined, tagline: undefined, start: undefined }));
 	};
 
 	// The clock reveal, a piece at a time out of the dark: the dial, its
@@ -1245,11 +1277,14 @@ window.Showtime = function (stage, opts) {
 		let last = [];        // per slot: the last position seen
 		let held = [];        // per slot: seconds wiggled in the zone
 		let ticked = [];      // per slot: when it was ticked off (or undefined)
-		let bend = [];        // per slot: their worm's lean, sprung ({ a: radians, v: its speed, vx: their speed across the room, px: where they were })
+		let bend = [];        // per slot, per wall: their worm's lean as that wall sees it, sprung ({ a: radians, v: its speed, vx: their speed across, px: where they were across })
 		let wrongSince = [];  // per slot: when it was first flagged
 		let clearFor = 0;
 		let allSetAt = -1;
 		const inZone = (p) => Math.hypot(p.px - V.zone.px, p.pz - V.zone.pz) < V.zone.r;
+		// a spot in the room as seen facing wall w (0 left, 1 front, 2 right):
+		// x across, left to right; d how near that wall (1: against it)
+		const viewOf = (w, px, pz) => (w === 0 ? { x: pz, d: 1 - px } : w === 2 ? { x: 1 - pz, d: px } : { x: px, d: pz });
 		const slots = () => (IGB.players && IGB.players.list) || [];
 		const wrong = () => slots().map((p, i) => i).filter((i) => i >= count() && motion[i] > V.moving);
 		const missing = () => Array.from({ length: count() }, (_, i) => i).filter((i) => ticked[i] === undefined);
@@ -1273,35 +1308,40 @@ window.Showtime = function (stage, opts) {
 					const moved = last[i] ? Math.hypot(p.X - last[i].X, p.Y - last[i].Y, p.Z - last[i].Z) : 0;
 					last[i] = { X: p.X, Y: p.Y, Z: p.Z };
 					motion[i] = (motion[i] || 0) * k + moved / Math.max(dt, 1e-3) * (1 - k);   // speed, raw units a second
-					// their worm leans back from the way they're going, on a spring
-					const b = bend[i] || (bend[i] = { a: 0, v: 0, vx: 0, px: p.px });
-					const ks = Math.exp(-dt / V.worm.smooth);
-					const vx = b.vx * ks + (p.px - b.px) / Math.max(dt, 1e-3) * (1 - ks);
-					b.v -= (vx - b.vx) * V.worm.kick * V.worm.spring * 0.1;   // (a change of speed shoves it the other way: these add up)
-					b.vx = vx;
-					b.px = p.px;
-					const want = clamp(-b.vx * V.worm.lean, -V.worm.most, V.worm.most);
+					// their worm leans back from the way they're going, on a spring (on
+					// each wall, the way it's going across that wall's view)
 					const h = Math.min(dt, 0.05);
-					b.v += (V.worm.spring * (want - b.a) - V.worm.damp * b.v) * h;
-					b.a += b.v * h;
-					if (Math.abs(b.a) > V.worm.swing) { b.a = Math.sign(b.a) * V.worm.swing; b.v *= -0.4; }   // (as far as it goes: it bounces back)
-					// its arms: dangling on floppy springs, thrown about by the body's
-					// sway and flailing the faster they go
+					const ks = Math.exp(-dt / V.worm.smooth);
 					const A = V.arms;
-					const leanAcc = (b.v - (b.lastV || 0)) / Math.max(h, 1e-3);
-					b.lastV = b.v;
-					b.t = (b.t || 0) + h;
-					b.arms = b.arms || [{ a: A.rest, v: 0, e: A.bend, ev: 0 }, { a: A.rest, v: 0, e: A.bend, ev: 0 }];
-					b.arms.forEach(function (arm, j) {
-						const side = j ? 1 : -1;
-						const speed = Math.min(1.5, Math.abs(b.vx));
-						const wave = Math.sin(b.t * (9 + j * 2.3) + j * 2) + 0.6 * Math.sin(b.t * (14.7 - j * 3.1));
-						const before = arm.v;
-						arm.v += (A.spring * (A.rest - arm.a) - A.damp * arm.v - side * leanAcc * A.shove * 0.1 + wave * speed * A.flail) * h;
-						arm.a = clamp(arm.a + arm.v * h, -0.7, 3.1);
-						arm.ev += (A.spring * 1.4 * (A.bend - arm.e) - A.damp * arm.ev - (arm.v - before) / Math.max(h, 1e-3) * 0.5) * h;
-						arm.e = clamp(arm.e + arm.ev * h, -1.6, 1.6);
-					});
+					bend[i] = bend[i] || [];
+					for (let w = 0; w < 3; w++) {
+						const across = viewOf(w, p.px, p.pz).x;
+						const b = bend[i][w] || (bend[i][w] = { a: 0, v: 0, vx: 0, px: across });
+						const vx = b.vx * ks + (across - b.px) / Math.max(dt, 1e-3) * (1 - ks);
+						b.v -= (vx - b.vx) * V.worm.kick * V.worm.spring * 0.1;   // (a change of speed shoves it the other way: these add up)
+						b.vx = vx;
+						b.px = across;
+						const want = clamp(-b.vx * V.worm.lean, -V.worm.most, V.worm.most);
+						b.v += (V.worm.spring * (want - b.a) - V.worm.damp * b.v) * h;
+						b.a += b.v * h;
+						if (Math.abs(b.a) > V.worm.swing) { b.a = Math.sign(b.a) * V.worm.swing; b.v *= -0.4; }   // (as far as it goes: it bounces back)
+						// its arms: dangling on floppy springs, thrown about by the body's
+						// sway and flailing the faster they go
+						const leanAcc = (b.v - (b.lastV || 0)) / Math.max(h, 1e-3);
+						b.lastV = b.v;
+						b.t = (b.t || 0) + h;
+						b.arms = b.arms || [{ a: A.rest, v: 0, e: A.bend, ev: 0 }, { a: A.rest, v: 0, e: A.bend, ev: 0 }];
+						b.arms.forEach(function (arm, j) {
+							const side = j ? 1 : -1;
+							const speed = Math.min(1.5, Math.abs(b.vx));
+							const wave = Math.sin(b.t * (9 + j * 2.3) + j * 2) + 0.6 * Math.sin(b.t * (14.7 - j * 3.1));
+							const before = arm.v;
+							arm.v += (A.spring * (A.rest - arm.a) - A.damp * arm.v - side * leanAcc * A.shove * 0.1 + wave * speed * A.flail) * h;
+							arm.a = clamp(arm.a + arm.v * h, -0.7, 3.1);
+							arm.ev += (A.spring * 1.4 * (A.bend - arm.e) - A.damp * arm.ev - (arm.v - before) / Math.max(h, 1e-3) * 0.5) * h;
+							arm.e = clamp(arm.e + arm.ev * h, -1.6, 1.6);
+						});
+					}
 					// tick off a squad visor once it's wiggled in the zone a moment
 					if (bt > V.show && i < count() && ticked[i] === undefined) {
 						if (inZone(p) && motion[i] > V.wiggle) held[i] = (held[i] || 0) + dt;
@@ -1327,7 +1367,7 @@ window.Showtime = function (stage, opts) {
 				const bad = wrong();
 				const lost = missing();
 				const asking = bt > V.show;
-				self.onWalls(ctx, function (c) {
+				self.onWalls(ctx, function (c, wall) {
 					const cx = W / 2;
 					if (allSetAt >= 0) {
 						self.slam(c, 'ALL SET!', cx, 640, 190, bt - allSetAt, { fill: theme.gold, glow: '#ff7a3d' });
@@ -1365,7 +1405,7 @@ window.Showtime = function (stage, opts) {
 					});
 					// any wrong visors join the row, after the squad's, marked
 					const xs = drawVisorRow(c, cx, V.y, n, bt, bad);
-					drawFloor(c, cx, 600, 960, n, bt);
+					drawFloor(c, cx, 600, 960, n, bt, wall);
 					// and the first gets the big flag underneath it, over everything
 					if (bad.length) {
 						const i = bad[0];
@@ -1512,7 +1552,8 @@ window.Showtime = function (stage, opts) {
 		// The room's floor, tilted back in perspective: the front wall standing
 		// along its far edge, the side walls along its sides, the circle to
 		// stand in, and every visor in play where it is.
-		function drawFloor(c, cx, top, bottom, n, bt) {
+		// (the room as seen facing this wall: that wall at the far edge)
+		function drawFloor(c, cx, top, bottom, n, bt, wall = 1) {
 			const far = V.floor.far;
 			const near = V.floor.near;
 			// width at depth t (0 the front wall, 1 the back of the room): even
@@ -1575,15 +1616,17 @@ window.Showtime = function (stage, opts) {
 			c.stroke();
 			c.restore();
 			const label = up({ x: cx, y: top }, far / near * 0.5);
-			self.text(c, 'FRONT', label.x, label.y, 26, { fill: 'white', outlineWidth: 4, glow: 'transparent' });
+			self.text(c, ['LEFT WALL', 'FRONT', 'RIGHT WALL'][wall], label.x, label.y, 26, { fill: 'white', outlineWidth: 4, glow: 'transparent' });
 			// everyone in play, a worm each, far ones smaller (and drawn first)
 			const shown = slots().map((p, i) => ({ p, i })).filter(({ p, i }) => p && p.px !== undefined && (motion[i] > V.moving || ticked[i] !== undefined));
-			shown.sort((a, b) => b.p.pz - a.p.pz);
+			const seen = (p) => viewOf(wall, clamp(p.px, 0, 1), clamp(p.pz, 0, 1));
+			shown.sort((a, b) => seen(b.p).d - seen(a.p).d);
 			for (const { p, i } of shown) {
-				const q = at(clamp(p.px, 0, 1), clamp(p.pz, 0, 1));   // (right where they are, 1:1)
+				const v = seen(p);
+				const q = at(v.x, v.d);   // (right where they are, 1:1)
 				const tall = V.worm.tall * clamp((p.Y + 1) / 2, 0.15, 1) * q.k;
-				const lean = bend[i] ? bend[i].a : 0;
-				worm(c, q.x, q.y, tall, lean, q.k, colour(i), i >= n, bt + i * 1.7, bend[i] && bend[i].arms);
+				const b = bend[i] && bend[i][wall];
+				worm(c, q.x, q.y, tall, b ? b.a : 0, q.k, colour(i), i >= n, bt + i * 1.7, b && b.arms);
 			}
 		}
 

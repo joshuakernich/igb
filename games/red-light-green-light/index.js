@@ -328,7 +328,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (let i = 0; i < settings.marbles; i++) {
 			const f = laneOf(i + 2);
 			const [lo, hi] = patrolOn(WALL_ORDER[(i + 1) % 3]);
-			movers.push({ kind: 'marble', colour: MARBLE_COLOURS[i % MARBLE_COLOURS.length], lo, hi, x: lo + Math.random() * (hi - lo), f, dir: Math.random() < 0.5 ? -1 : 1, speed: settings.marbleSpeed * (0.8 + Math.random() * 0.4), r: 56, spin: 0 });
+			movers.push({ kind: 'marble', colour: MARBLE_COLOURS[i % MARBLE_COLOURS.length], lo, hi, x: lo + Math.random() * (hi - lo), f, dir: Math.random() < 0.5 ? -1 : 1, speed: settings.marbleSpeed * (0.8 + Math.random() * 0.4), r: 80, spin: 0 });
 		}
 
 		// Jump pads up the track, and cash all over it.
@@ -1421,6 +1421,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 		const running = phase === 'green' || phase === 'dash' || phase === 'warning';
 		for (const m of movers) {
+			m.walking = running;
 			if (!running) continue;
 			m.x += m.dir * m.speed * dt;
 			if (m.x > m.hi) { m.x = m.hi; m.dir = -1; }
@@ -1430,7 +1431,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				const dx = m.x - b.x;
 				if (Math.abs(m.f - b.f) < b.r + m.r && Math.abs(dx) < b.rx + m.r && Math.sign(dx) === -m.dir) m.dir = -m.dir;
 			}
-			if (m.kind === 'guard') m.phase += dt * 20;   // (stepping like the contestants)
+			if (m.kind === 'guard') m.phase += Math.PI * 2 * m.speed * dt / GUARD_STRIDE;   // (one walk cycle, two side-steps, every stride's distance: so their feet keep pace with the ground)
 			else m.spin += m.dir * m.speed * dt / m.r;
 		}
 		stepBoulders(dt);
@@ -1648,7 +1649,12 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				art.poly(ctx, [[a0.x, a0.y - thin], [a1.x, a1.y - thin], [b1.x, b1.y], [b0.x, b0.y]], { fill: colour, alpha: always ? 1 : fadeIn(f) });
 			}
 		};
-		lineAt(START_F, '#f6f1e6', 7);
+		// the start line: one band, unbroken, right across all three walls, like the finish
+		if (onView(START_F)) {
+			const a = at(0, START_F + 7);
+			const b = at(0, START_F - 7);
+			art.rect(ctx, -20, a.y, WIDTH + 40, Math.max(1.5, b.y - a.y), { fill: '#f6f1e6', alpha: fadeIn(START_F) });
+		}
 		// the finish line: one band, unbroken, right across all three walls (never lost in the haze: it's where she stands)
 		if (dollShown || onView(finishF)) {
 			const a = at(0, finishF + 10);
@@ -1659,7 +1665,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// (while the view is up the field, before a round, the contestants wait
 		// unseen at the start)
 		const waiting = (cam > 1 && (show.beat === 'doll' || (show.beat === 'play' && phase === 'ready')))
-			|| show.beat === 'visors';   // (nor while the visors go on: the walls are about the visors then)
+			|| ['squad', 'title', 'clock', 'visors'].includes(show.beat);   // (nor before the tutorial: no one on the field until then)
 		for (const p of pads) drawPad(ctx, p);
 		drawBlockShadows(ctx);   // (on the sand, under everything standing on it)
 		if (!waiting) for (const c of contestants) if (c.alive && onView(footOf(c).f)) drawFoot(ctx, c);   // (where each player really is: on the sand too, behind everything)
@@ -1681,7 +1687,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (const g of bags) if (!g.taken) add(g.f, (c) => drawBag(c, g));
 		for (const b of bursts) add(b.f, (c) => drawBurst(c, b));
 		for (const b of boulders) add(b.f, (c) => drawBoulder(c, b));
-		for (const m of movers) add(m.f, (c) => (m.kind === 'guard' ? drawGuardOn(c, m.x, m.f, m.mask, true, m.phase, m.flash || 0, m.dir) : drawMarble(c, m)));
+		for (const m of movers) add(m.f, (c) => (m.kind === 'guard' ? drawGuardOn(c, m.x, m.f, m.mask, true, m.walking ? m.phase || 1e-6 : 0, m.flash || 0, m.dir) : drawMarble(c, m)));   // (standing still while they wait)
 		for (const g of sentries) if (dollShown || !g.doll) add(g.f, (c) => drawGuardOn(c, g.x, g.f, g.mask, true, 0, g.flash, facing(g)));
 		if (!waiting) for (const c of contestants) add(c.f, (cx) => drawContestant(cx, c));
 		things.sort((a, b) => (b.f - a.f) || (b.d - a.d));
@@ -1939,7 +1945,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// with clouds, as in the show. It stands at a place on the field, so far
 	// off it's a low band on the horizon, and it rises and looms as the field
 	// scrolls toward the finish.
-	const BACK_WALL = { gap: 520, height: 600, trim: 26, file: 'v3-back-wall.png' };    // how far beyond the doll it stands (field units); how tall it is; the cream trim along its top
+	const BACK_WALL = { gap: 520, height: 600, trim: 26, file: 'v5-back-wall.png' };    // how far beyond the doll it stands (field units); how tall it is; the cream trim along its top
 	const wallImg = new Image();
 	wallImg.src = 'assets/red-light-green-light/' + BACK_WALL.file;
 	function drawBackWall(ctx) {
@@ -2331,6 +2337,38 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	}
 
 	// A giant marble rolling across: glassy, with a coloured twist inside.
+	// The marble: a glassy painted sphere (ChatGPT: v5-marble.png), trimmed
+	// to its disc when it loads, rolling, see-through.
+	const MARBLE_ART = { file: 'v5-marble.png', alpha: 0.72, size: 1.04 };   // its picture; how see-through it is drawn; how big, against the marble's size
+	let marbleImg = null;
+	(function () {
+		const img = new Image();
+		img.onload = function () {
+			try {
+				const cv = document.createElement('canvas');
+				cv.width = img.width;
+				cv.height = img.height;
+				const g = cv.getContext('2d');
+				g.drawImage(img, 0, 0);
+				const data = g.getImageData(0, 0, img.width, img.height).data;
+				let x0 = img.width, y0 = img.height, x1 = 0, y1 = 0;
+				for (let y = 0; y < img.height; y += 2) for (let x = 0; x < img.width; x += 2) {
+					if (data[(y * img.width + x) * 4 + 3] < 40) continue;
+					if (x < x0) x0 = x;
+					if (x > x1) x1 = x;
+					if (y < y0) y0 = y;
+					if (y > y1) y1 = y;
+				}
+				const d = Math.max(x1 - x0, y1 - y0) + 2;
+				const out = document.createElement('canvas');
+				out.width = out.height = d;
+				out.getContext('2d').drawImage(cv, (x0 + x1) / 2 - d / 2, (y0 + y1) / 2 - d / 2, d, d, 0, 0, d, d);
+				marbleImg = out;
+			} catch (e) { /* (unreadable: the drawn one stays) */ }
+		};
+		img.src = 'assets/red-light-green-light/' + MARBLE_ART.file;
+	})();
+
 	function drawMarble(ctx, m) {
 		const foot = at(m.x, m.f);
 		const p = at(m.x, m.f, m.r);
@@ -2338,6 +2376,18 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		art.save(ctx, function (c) {
 			c.globalAlpha = fadeIn(m.f);
 			softShadow(c, foot.x, foot.y, r * 0.9, r * 0.28, 0.28, 1, r * 2, m.f);
+			if (marbleImg) {
+				// rolling, and see-through, with a highlight that stays put on top
+				const R = r * MARBLE_ART.size;
+				c.save();
+				c.globalAlpha *= MARBLE_ART.alpha;
+				c.translate(p.x, p.y);
+				c.rotate(m.spin);
+				c.drawImage(marbleImg, -R, -R, R * 2, R * 2);
+				c.restore();
+				art.ellipse(c, p.x - r * 0.36, p.y - r * 0.42, r * 0.22, r * 0.12, { fill: 'rgba(255,255,255,0.7)' });
+				return;
+			}
 			art.circle(c, p.x, p.y, r, { fill: art.radial(c, p.x - r * 0.3, p.y - r * 0.3, r * 0.1, r * 1.3, ['#eef8ff', '#cfe6f8', '#8fb6d8']) });
 			c.save();
 			c.translate(p.x, p.y);
@@ -2466,6 +2516,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		art.with(ctx, { x: p.x, y: p.y, scaleX: s * dir, scaleY: s, alpha: fadeIn(f) }, figure);
 	}
 
+	const GUARD_STRIDE = 120;   // how far a patrolling guard side-steps in one walk cycle (field units)
 	const GUN = { muzzle: [58, -82] };   // where a held rifle's muzzle is, on the guard (facing right)
 	// which way a guard faces: a patrolling one, the way it walks (or last
 	// turned); one at the edge, in toward the field
@@ -3034,9 +3085,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		arun: 'v5-run.png',                       // the contestant from behind: a 16-frame run
 		aact: 'v5-actions.png',                   // idle, freeze, hop, shot: 4 frames each
 		afront: 'v5-front.png',                   // from the front: idle, cheer, celebrate, sad
-		gcircle: 'v5-guard-circle.png',           // a guard (each mask): an 8-frame walk, stand, aim, fire
-		gtriangle: 'v5-guard-triangle.png',
-		gsquare: 'v5-guard-square.png',
+		gcircle: 'v6-guard-circle.png',           // a guard (each mask), facing us: an 8-frame side-stepping walk, stand, aim, fire
+		gtriangle: 'v6-guard-triangle.png',
+		gsquare: 'v6-guard-square.png',
 	};
 	const SPRITE = { contestant: 112, guard: 124, head: 150 };   // heights to draw at (the contestants and guards, feet to top, as the drawn ones; her head, across)
 	const sheets = {};   // name: { frames: [{ img, x, y, w, h, patch }], unit } once cut up
@@ -3895,7 +3946,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	})();
 
 	// How high her head sits above her feet (in her own units).
-	const dollHeadY = () => (dollBodyImg ? DOLL_BODY.height * (1 - DOLL_BODY.neck) + 110 : 610);
+	const dollHeadY = () => (dollBodyImg ? DOLL_BODY.height * (1 - DOLL_BODY.neck) + 128 : 610);   // (her head's middle, above her feet)
 
 	function dollBody(c, front) {
 		if (dollBodyImg) {
@@ -4182,7 +4233,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// Where her head is, in the world, with the view at the far end.
 	// Where one of her pupils is (side -1: her right, as we look), in her
 	// head's units, when she faces us: measured on the sheet's last frame.
-	const PUPIL = { x: 0.15, y: -0.012, ring: 0.038 };   // (a share of the frame's width out from its middle, and of its height up or down; the red ring round each eye, as a share of the frame's width)
+	const PUPIL = { x: 0.15, y: -0.012, ring: 0.029 };   // (a share of the frame's width out from its middle, and of its height up or down; the red ring round each eye, as a share of the frame's width)
 	function pupil(side) {
 		const sheet = sheets.head;
 		const f = sheet && sheet.frames[sheet.frames.length - 1];
@@ -4213,8 +4264,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			update(dt) { stepWorld(dt); },
 		},
 
-		// 1b. the title, crashing in letter by letter
+		// 1b. the title, crashing in letter by letter, raised over a big START button
 		show.beats.titleDrop({
+			start: true,
 			lines: [{ text: 'RED LIGHT', fill: '#ff3640', glow: '#ff3640' }, { text: 'GREEN LIGHT', fill: '#27d96b', glow: '#27d96b' }],
 			update(dt) {
 				stepWorld(dt);
@@ -4270,10 +4322,16 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 						show.slam(c, 'FREEZE', W / 2, 330, 80, phaseT - 0.15, {});
 					}
 					else show.slam(c, step.caption, W / 2, 200, step.caption.length > 24 ? 80 : 96, practice.red === 2 ? phaseT : practice.age, { fill: 'white' });
-					// which step this is, as pips
+					// which step this is, as pips over the caption, outlined and
+					// dropped like the text (solid: a dim pip is grey, not see-through)
 					CONTROLS.steps.forEach(function (s, i) {
 						const x = W / 2 + (i - (CONTROLS.steps.length - 1) / 2) * 50;
-						art.circle(c, x, 290, i === practice.i ? 13 : 9, { fill: i < practice.i || (i === practice.i && practice.done) ? '#ffd23f' : i === practice.i ? 'white' : 'rgba(255,255,255,0.45)' });
+						const r = i === practice.i ? 13 : 9;
+						const y = 100;
+						const ring = 5;
+						art.circle(c, x, y + 7, r + ring, { fill: 'rgba(0,0,0,0.55)' });   // (the drop, as the text's)
+						art.circle(c, x, y, r + ring, { fill: Showtime.TYPE.colours.ink });   // (the outline)
+						art.circle(c, x, y, r, { fill: i < practice.i || (i === practice.i && practice.done) ? '#ffd23f' : i === practice.i ? 'white' : '#8a8a96' });
 					});
 					if (practice.done) show.slam(c, 'NICE!', W / 2, 490, 140, practice.doneAge, { fill: '#7dff9e', glow: TEAL, rotate: -0.06 });
 				});
