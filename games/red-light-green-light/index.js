@@ -2725,7 +2725,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// The collectibles, drawn in ChatGPT (v2-items.png: cash, magnet, money
 	// bag and a marble, two by two), each trimmed when it loads. Until then
 	// they're drawn as before.
-	const ITEM = { file: 'v2-items.png', cash: 64, magnet: 54, bag: 78, bagSize: 1.5 };   // how wide each is drawn (before the bag's extra size); how much bigger a money bag is
+	const ITEM = { file: 'v2-items.png', cash: 64, magnet: 54, bag: 78, bagSize: 1.5, bagSink: 0.12 };   // how wide each is drawn (before the bag's extra size); how much bigger a money bag is; how far up its height its anchor sits (it settles into the sand)
 	const items = {};
 	(function () {
 		const img = new Image();
@@ -2872,7 +2872,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const s = p.s * CASH.size;
 		// a money bag is heavy: it sits on the sand, no bobbing, no swaying
 		const big = ITEM.bagSize;   // (a money bag is bigger than the rest)
-		const lift = 8 * s * big;   // (the sprite's foot, set down on the sand)
+		const lift = (8 - ITEM.bag * ITEM.bagSink) * s * big;   // (its anchor a little above the sprite's bottom edge, so it sits down into the sand)
 		if (items.bag) {
 			itemShadow(ctx, 'bag', p.x, p.y, g.f, s * big);
 			art.ellipse(ctx, p.x, p.y, 22 * s * big, 6.6 * s * big, { fill: `rgba(20,10,30,${SIL.contact})` });
