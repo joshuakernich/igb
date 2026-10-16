@@ -2166,6 +2166,48 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		});
 	}
 
+	// A shadow in the shape of the thing that casts it: the thing drawn again
+	// (by draw, feet at (0, 0), in screen units) into a spare canvas, turned
+	// into a dark silhouette, and laid on the sand flipped down from its feet
+	// (the light's behind it, at the far end), its length the ground's tilt
+	// allows (see groundTilt), softly blurred. So a runner's shadow runs, a
+	// guard's holds a rifle, the doll's has her pigtails.
+	const SIL = { alpha: 0.3, blur: 2.5, contact: 0.22 };   // how dark; how soft (pixels); the dark patch where it touches down
+	const silCanvas = document.createElement('canvas');
+	function castShape(ctx, x, y, f, draw, size, alpha = 1, foot = 0) {
+		const half = Math.max(8, Math.ceil(size));
+		const cw = half * 2;
+		const ch = Math.ceil(half * 1.6);
+		if (silCanvas.width < cw || silCanvas.height < ch) {
+			silCanvas.width = Math.max(silCanvas.width, cw);
+			silCanvas.height = Math.max(silCanvas.height, ch);
+		}
+		const g = silCanvas.getContext('2d');
+		g.setTransform(1, 0, 0, 1, 0, 0);
+		g.globalCompositeOperation = 'source-over';
+		g.globalAlpha = 1;
+		g.filter = 'none';
+		g.clearRect(0, 0, silCanvas.width, silCanvas.height);
+		g.save();
+		g.translate(half, ch - 2);
+		draw(g);
+		g.restore();
+		g.globalCompositeOperation = 'source-in';
+		g.fillStyle = 'rgb(20,10,30)';
+		g.fillRect(0, 0, cw, ch);
+		g.globalCompositeOperation = 'source-over';
+		const k = -SHADOW.f * (f !== undefined ? groundTilt(f) : 1);
+		ctx.save();
+		ctx.globalAlpha *= SIL.alpha * alpha;
+		if (SIL.blur) ctx.filter = `blur(${SIL.blur}px)`;
+		ctx.translate(x, y);
+		ctx.scale(1, -k);   // (flipped down from its feet, and flattened onto the sand)
+		ctx.drawImage(silCanvas, 0, 0, cw, ch, -half, -(ch - 2), cw, ch);
+		ctx.restore();
+		// where it touches the sand, darker
+		if (foot > 0) art.ellipse(ctx, x, y, foot, foot * 0.3, { fill: `rgba(20,10,30,${SIL.contact})`, alpha });
+	}
+
 	// A shadow on the sand. Given how tall the thing is (h, in the same units),
 	// it's cast like a block's: its foot slid away from the light in soft
 	// layers, darkest at the foot and fading and widening toward its tip, with
@@ -2283,10 +2325,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	function drawGuardOn(ctx, x, f, mask, armed, walk, muzzle, dir = 1) {
 		const p = at(x, f);
 		const s = p.s * 1.45;
-		softShadow(ctx, p.x, p.y, 24 * s, 8 * s, 0.3, fadeIn(f), 118 * s, f);   // (out here, so it falls away from the light whichever way they face)
-		art.with(ctx, { x: p.x, y: p.y, scaleX: s * dir, scaleY: s, alpha: fadeIn(f) }, function (c) {
-			guard(c, mask, armed, walk, muzzle);
-		});
+		const figure = (c) => guard(c, mask, armed, walk, muzzle);
+		castShape(ctx, p.x, p.y, f, (g) => art.with(g, { scaleX: s * dir, scaleY: s }, figure), 170 * s, fadeIn(f), 18 * s);   // (their shadow, in their shape)
+		art.with(ctx, { x: p.x, y: p.y, scaleX: s * dir, scaleY: s, alpha: fadeIn(f) }, figure);
 	}
 
 	const GUN = { muzzle: [58, -82] };   // where a held rifle's muzzle is, on the guard (facing right)
@@ -2382,8 +2423,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const s = p.s * 1.6;
 		const alpha = fadeIn(c.f);
 		const air = 1 - c.lift / 300;        // the shadow shrinks under a skip
-		// their shadow, cast like everything's (shorter off the ground, mid-skip)
-		softShadow(ctx, ground.x, ground.y, 22 * s * air, 8 * s * air, 0.35, alpha, 108 * s * air, c.f);
 		// a solid spot of their colour, always under the avatar
 		if (c.alive) art.ellipse(ctx, ground.x, ground.y, 40 * s * air, 13 * s * air, { fill: colour, alpha: alpha * 0.9 });
 		// magnetised: rings of soft magnetic red, closing in on them over and
@@ -2416,11 +2455,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			rotate = lx * (rigs.back ? 10 : 24);   // (from parts, the body leans on its own too)
 			scaleY = 1 - 0.14 * lz;     // leaning up the field (or back) foreshortens
 		}
-		art.with(ctx, { x: p.x, y: p.y, scale: s, scaleY, rotate, alpha }, function (cx) {
+		const figure = function (cx) {
 			if (rigs.back && contestantRig(cx, c)) return;
 			if (sheets.act && sheets.run) contestantSprite(cx, c);
 			else contestant(cx, c);
-		});
+		};
+		// their shadow, in their shape, on the sand under them (fainter when they're up off it)
+		castShape(ctx, ground.x, ground.y, c.f, (g) => art.with(g, { scale: s * Math.max(0.6, air), scaleY, rotate }, figure), 160 * s, alpha * Math.max(0.3, air), 18 * s * air);
+		art.with(ctx, { x: p.x, y: p.y, scale: s, scaleY, rotate, alpha }, figure);
 
 		if (c.down > 0) {
 			// stars going round their head
@@ -2678,7 +2720,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const s = p.s * CASH.size;
 		const rise = 0.5 + 0.5 * Math.sin(m.spin * 2.4);
 		const lift = ((CASH.float + CASH.bob * rise) * hover(m.f) + (m.fly ? BAG.arc * 4 * k * (1 - k) : 0)) * p.s;
-		softShadow(ctx, p.x, p.y, 26 * s * (1 - 0.25 * rise), 8 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 40 * s, m.f);
+		if (items.cash) castShape(ctx, p.x, p.y, m.f, (g) => art.with(g, { scale: s * (1 - 0.15 * rise), rotate: -0.35 + Math.sin(m.spin * 1.3) * 0.1 }, (c) => drawItem(c, 'cash')), 70 * s, 0.8 - 0.3 * rise);
+		else softShadow(ctx, p.x, p.y, 26 * s * (1 - 0.25 * rise), 8 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 40 * s, m.f);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: -0.35 + Math.sin(m.spin * 1.3) * 0.1 }, function (c) {
 			if (drawItem(c, 'cash')) return;
 			// seen at an angle: tipped back and skewed, a stack of notes with depth
@@ -2703,7 +2746,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const s = p.s * CASH.size;
 		const rise = 0.5 + 0.5 * Math.sin(g.spin * 2.4);
 		const lift = (CASH.float + CASH.bob * rise) * hover(g.f) * p.s;
-		softShadow(ctx, p.x, p.y, 22 * s * (1 - 0.25 * rise), 7 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 40 * s, g.f);
+		if (items.magnet) castShape(ctx, p.x, p.y, g.f, (gc) => art.with(gc, { scale: s * (1 - 0.15 * rise), rotate: Math.sin(g.spin * 1.6) * 0.25 }, (c) => drawItem(c, 'magnet')), 60 * s, 0.8 - 0.3 * rise);
+		else softShadow(ctx, p.x, p.y, 22 * s * (1 - 0.25 * rise), 7 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 40 * s, g.f);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: Math.sin(g.spin * 1.6) * 0.25 }, function (c) {
 			if (drawItem(c, 'magnet')) return;
 			c.save();
@@ -2736,7 +2780,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// a money bag is heavy: it sits on the sand, no bobbing, no swaying
 		const big = ITEM.bagSize;   // (a money bag is bigger than the rest)
 		const lift = 8 * s * big;   // (the sprite's foot, set down on the sand)
-		softShadow(ctx, p.x, p.y, 30 * s * big, 9 * s * big, 0.3, 1, 40 * s * big, g.f);
+		if (items.bag) castShape(ctx, p.x, p.y, g.f, (gc) => art.with(gc, { y: -8 * s * big, scale: s * big }, (c) => drawItem(c, 'bag')), 70 * s * big, 1, 22 * s * big);
+		else softShadow(ctx, p.x, p.y, 30 * s * big, 9 * s * big, 0.3, 1, 40 * s * big, g.f);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s * big }, function (c) {
 			if (drawItem(c, 'bag')) return;
 			// the sack: wide at the bottom, gathered in at the neck
@@ -2928,7 +2973,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			run4: { head: 'head', torso: 'torsoRun1', legs: 'legsRun4' },
 			run5: { head: 'head', torso: 'torsoRun2', legs: 'legsRun5' },
 			run6: { head: 'head', torso: 'torsoRun3', legs: 'legsRun6' },
-			frozen: { head: 'head', torso: 'torsoOut', legs: 'legs' },
+			frozen: { head: 'head', torso: 'torsoOut', legs: 'legsCrouch' },   // (frozen in a squat)
 			hop: { head: 'head', torso: 'torsoUp', legs: 'legsCrouch' },
 		},
 		front: {
@@ -3341,8 +3386,12 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// back to the players; only her head turns round to watch them.
 	function drawDoll(ctx) {
 		const p = at(DOLL_X, dollF);
+		const her = function (c) {
+			dollBody(c, false);
+			art.with(c, { y: -dollHeadY(), scale: 2.1 }, (c2) => dollHead(c2, head.yaw, 0));
+		};
+		castShape(ctx, p.x, p.y, dollF, (g) => art.with(g, { scale: p.s * 0.82 }, her), (dollHeadY() + 200) * p.s * 0.82, 1, 120 * p.s * 0.82);   // (her shadow, pigtails and all)
 		art.with(ctx, { x: p.x, y: p.y, scale: p.s * 0.82 }, function (c) {
-			softShadow(c, 0, 0, 150, 30, 0.25, 1, dollBodyImg ? DOLL_BODY.height + 260 : 700, dollF);
 			dollBody(c, false);
 			art.with(c, { y: -dollHeadY(), scale: 2.1 }, (c2) => dollHead(c2, head.yaw, glare));
 		});
@@ -3525,9 +3574,13 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	treeImg.src = 'assets/red-light-green-light/' + TREE.file;
 	function drawTree(ctx) {
 		const p = at(DOLL_X, dollF + 140);   // (directly behind her)
+		if (treeImg.complete && treeImg.naturalWidth) {
+			const w = TREE.height * treeImg.naturalWidth / treeImg.naturalHeight;
+			castShape(ctx, p.x, p.y, dollF + 140, (g) => art.with(g, { scale: p.s * 0.85 }, (c) => c.drawImage(treeImg, -w / 2, -TREE.height, w, TREE.height)), Math.max(w, TREE.height) * 0.7 * p.s * 0.85, 1, 60 * p.s * 0.85);   // (its shadow, branches and all)
+		}
 		art.with(ctx, { x: p.x, y: p.y, scale: p.s * 0.85 }, function (c) {
 			const BARK = '#5a4332';
-			softShadow(c, 0, 0, 90, 20, 0.22, 1, 600, dollF + 140);
+			if (!(treeImg.complete && treeImg.naturalWidth)) softShadow(c, 0, 0, 90, 20, 0.22, 1, 600, dollF + 140);
 			if (treeImg.complete && treeImg.naturalWidth) {
 				const w = TREE.height * treeImg.naturalWidth / treeImg.naturalHeight;
 				c.drawImage(treeImg, -w / 2, -TREE.height, w, TREE.height);
