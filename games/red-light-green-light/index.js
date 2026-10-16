@@ -102,8 +102,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const MAGNET = { every: 1400, time: 2.5, radius: 480, pull: 1200 };   // a magnet every so far up each wall; seconds it lasts; how far it reaches; how fast cash comes
 	const BOULDER = { from: 1, gap: [4, 9], quicker: 0.9, r: [75, 105], speed: [320, 440], ahead: 1700, lead: 900, down: 1.2, spill: 3 };   // boulders from this round (0 is round 1); seconds between them, shrinking by this much a round; their size; how fast they roll; how far up the field they start (and never nearer the players than lead); seconds flattened; wads of cash spilled
 	const BAG = { every: 1700, count: 9, near: 110, radius: 380, fly: 0.75, arc: 240 };   // a money bag every so far up each wall; wads it bursts into; how near and far they land; seconds in the air; how high they fly
-	const LASER = { hop: 1.2, follow: 20, wobble: 14, search: 50, rx: 150, rf: 60, glow: 50, thin: 0.12, thick: 1.6 };   // (thin, thick: how wide the beams are at her eyes and, times the sand's scale there, at the target)
-	const STARE = { chance: 0.45, time: 0.7, bloom: 1100, wash: 0.22 };   // as the laser darts to the next contestant: how often it swings round to look straight out at us, for how long (seconds), how far its bloom of red reaches (world units), and how red it washes the whole view   // red light's target: seconds per contestant, how quickly it follows, its jitter, how far it searches round them, its half-width and half-depth, its glow
+	const LASER = { hop: 1.2, follow: 20, wobble: 14, search: 50, rx: 150, rf: 60, glow: 50, thin: 0.12, thick: 1.6 };   // red light's target: seconds per contestant, how quickly it follows, its jitter, how far it searches round them, its half-width and half-depth, its glow; how wide the beams are at her eyes, and (times the sand's scale there) at the target
+	const STARE = { chance: 0.45, sweep: 0.4, hold: 0.45, wide: 900, bloom: 1100, wash: 0.22 };   // as the laser darts to the next contestant: how often it sweeps up to look straight out at us; how long the sweep up (and away again) takes and how long it stares (seconds); how wide the beams get as they reach us; how far its bloom of red reaches (world units), and how red it washes the whole view
 	const EDGE_AT = 0.1;        // a pad's centre, as a share of the wall from the corner
 	const HOP = 0.5;            // seconds to skip across a corner onto the next wall
 	const WALL_NAMES = ['LEFT', 'FRONT', 'RIGHT'];
@@ -1192,7 +1192,15 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		scanner.stareT = Infinity;
 	}
 	// how far round to look straight at us it is (0 to 1 and back)
-	const stareOf = (s) => (s.stareT < STARE.time ? Math.sin(Math.PI * s.stareT / STARE.time) ** 2 : 0);
+	// how far it has swept up to us (0: on the sand, 1: looking straight out), easing in and out
+	function stareOf(s) {
+		const t = s.stareT;
+		const ease = (k) => k * k * (3 - 2 * k);
+		if (t < STARE.sweep) return ease(t / STARE.sweep);
+		if (t < STARE.sweep + STARE.hold) return 1;
+		if (t < STARE.sweep * 2 + STARE.hold) return ease(1 - (t - STARE.sweep - STARE.hold) / STARE.sweep);
+		return 0;
+	}
 
 	function stepLasers(dt) {
 		const on = phase === 'red' || phase === 'drill-red';
@@ -1250,29 +1258,33 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		});
 		// the beams, one from each eye, each flickering on its own and now
 		// and then cutting out altogether
-		// (thin at her eyes, widening toward us; while she stares out at us they
-		// swing round to point down the camera, shrinking to her eyes)
+		// (thin at her eyes, widening toward us; to stare out at us they sweep
+		// up off the sand, their ends racing toward us and off the bottom of the
+		// view, wider and wider, until they hit the screen, then sweep away again)
 		const stare = stareOf(s);
+		const reach = stare * stare;   // (slow off the sand, fast as they come at us)
 		const near = (front.s + back.s) / 2 / SCALE;
 		for (const [k, off] of [[0, -14], [1, 14]]) {
 			const flicker = Math.random() < 0.06 ? 0.1 : 0.6 + 0.4 * Math.random();
 			const a = eyes[k];
-			const b = { x: tx + off * 2 + (a.x - tx - off * 2) * stare, y: cy + (a.y - cy) * stare };
-			const wide = near * (1 + stare * 2);
+			const us = { x: a.x + (a.x - DOLL_X) * 8, y: H + 260 };   // (straight at us: off the bottom of the view, below her eyes)
+			const b = { x: tx + off * 2 + (us.x - tx - off * 2) * reach, y: cy + (us.y - cy) * reach };
+			const wide = near + (STARE.wide / (34 * LASER.thick) - near) * reach ** 3;
 			taper(ctx, a, b, 34 * LASER.thin, 34 * LASER.thick * wide, { fill: RED, alpha: alpha * 0.12 * flicker, shadow: { color: RED, blur: LASER.glow } });
 			taper(ctx, a, b, 14 * LASER.thin, 14 * LASER.thick * wide, { fill: RED, alpha: alpha * 0.3 * flicker, shadow: { color: RED, blur: LASER.glow * 0.6 } });
 			taper(ctx, a, b, 3.5 * LASER.thin + 0.6, 3.5 * LASER.thick * wide, { fill: '#ffd0c8', alpha: alpha * flicker, shadow: { color: RED, blur: 18 } });   // a white-hot core
 		}
 		// looking straight at us: a big bloom of red light from her eyes, and the whole view washed red
-		if (stare > 0.01) {
+		const flare = Math.max(0, (stare - 0.75) / 0.25) ** 2;   // (the bloom: only as they reach us)
+		if (flare > 0.01) {
 			const mx = (eyes[0].x + eyes[1].x) / 2;
 			const my = (eyes[0].y + eyes[1].y) / 2;
 			ctx.save();
 			ctx.globalCompositeOperation = 'lighter';
-			art.rect(ctx, -20, 0, WIDTH + 40, H, { fill: `rgba(255,30,20,${STARE.wash * stare * alpha})` });
-			const R = STARE.bloom * (0.4 + 0.6 * stare);
-			art.circle(ctx, mx, my, R, { fill: art.radial(ctx, mx, my, 0, R, [[0, `rgba(255,235,225,${0.95 * stare * alpha})`], [0.06, `rgba(255,90,70,${0.8 * stare * alpha})`], [0.25, `rgba(255,40,30,${0.4 * stare * alpha})`], [0.6, `rgba(255,20,20,${0.12 * stare * alpha})`], [1, 'rgba(255,0,0,0)']]) });
-			for (const e of eyes) art.circle(ctx, e.x, e.y, 60 * stare, { fill: art.radial(ctx, e.x, e.y, 0, 60 * stare, [[0, `rgba(255,255,255,${stare * alpha})`], [1, 'rgba(255,60,60,0)']]) });
+			art.rect(ctx, -20, 0, WIDTH + 40, H, { fill: `rgba(255,30,20,${STARE.wash * flare * alpha})` });
+			const R = STARE.bloom * (0.4 + 0.6 * flare);
+			art.circle(ctx, mx, my, R, { fill: art.radial(ctx, mx, my, 0, R, [[0, `rgba(255,235,225,${0.95 * flare * alpha})`], [0.06, `rgba(255,90,70,${0.8 * flare * alpha})`], [0.25, `rgba(255,40,30,${0.4 * flare * alpha})`], [0.6, `rgba(255,20,20,${0.12 * flare * alpha})`], [1, 'rgba(255,0,0,0)']]) });
+			for (const e of eyes) art.circle(ctx, e.x, e.y, 60 * flare, { fill: art.radial(ctx, e.x, e.y, 0, 60 * flare, [[0, `rgba(255,255,255,${flare * alpha})`], [1, 'rgba(255,60,60,0)']]) });
 			ctx.restore();
 		}
 	}
