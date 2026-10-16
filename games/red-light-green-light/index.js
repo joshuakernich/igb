@@ -4661,7 +4661,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// the volume, the same shape: its name, then five bars, all alike, lit up to its level; click one for that level
 	// The volume, the same shape, its control in the icons' style: a capsule
 	// half the row's width, snug in its end, with five spots cut out of it,
-	// the ones up to the level cut clean through, the rest only faintly;
+	// the ones up to the level cut clean through, the rest just outlined;
 	// click a spot for that level.
 	const $vol = $('<div>').css(Object.assign({}, rowCss, { color: ROW_COLOURS.volume, borderColor: ROW_COLOURS.volume })).appendTo($front);
 	label('VOLUME').appendTo($vol);
@@ -4686,7 +4686,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	});
 	function showVolume() {
 		const level = PAUSE.levels.reduce((best, v, i) => (Math.abs(v - IGB.volume) < Math.abs(PAUSE.levels[best] - IGB.volume) ? i : best), 0);
-		$volSvg.find('.vbar').each(function (i) { this.setAttribute('fill', i <= level ? 'black' : '#a8a8a8'); });   // (black: cut clean through; grey: only faintly)
+		// (up to the level: cut clean through; the rest: just their outline cut)
+		$volSvg.find('.vbar').each(function (i) {
+			const on = i <= level;
+			this.setAttribute('fill', on ? 'black' : 'white');
+			this.setAttribute('stroke', 'black');
+			this.setAttribute('stroke-width', on ? 0 : VH * 0.07);
+			this.setAttribute('r', on ? SPOT.r : SPOT.r - VH * 0.035);   // (the outline inside the same circle)
+		});
 	}
 	rowButton('RESTART ROUND', 'restart', () => { setPaused(false); restartRound(); }, ROW_COLOURS.restart).appendTo($front);
 	rowButton('REPLAY TUTORIAL', 'help', () => { setPaused(false); debugJump('controls'); }, ROW_COLOURS.help).appendTo($front);
