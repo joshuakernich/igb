@@ -151,7 +151,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			{ id: 'move', caption: 'MOVE LEFT AND RIGHT', min: 2.5, max: 5 },
 			{ id: 'step', caption: 'STEP FORWARD AND BACK', min: 2.5, max: 5 },
 			{ id: 'cash', caption: 'GRAB THE CASH', min: 2, max: 6 },
-			{ id: 'freeze', caption: 'FREEZE ON RED LIGHT', min: 5.6, max: 6.5 },
+			{ id: 'freeze', caption: 'FREEZE ON RED LIGHT', parts: [{ text: 'FREEZE ON ' }, { text: 'RED LIGHT', fill: '#ff3640' }], min: 5.6, max: 6.5 },   // (parts: the caption in colours)
 			{ id: 'jump', caption: 'JUMP PADS SWITCH YOUR WALL', min: 2, max: 8 },
 		],
 		nice: 1.1,            // the NICE! once a step is done, before the next
@@ -4316,12 +4316,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				const step = CONTROLS.steps[practice.i];
 				if (!step) return;
 				show.onWalls(ctx, function (c) {
-					// the practice red light takes over the caption while it lasts
-					if (phase === 'drill-red') {
-						show.slam(c, 'RED LIGHT!', W / 2, 200, 130, phaseT, { fill: '#ff3640' });
-						show.slam(c, 'FREEZE', W / 2, 330, 80, phaseT - 0.15, {});
-					}
-					else show.slam(c, step.caption, W / 2, 200, step.caption.length > 24 ? 80 : 96, practice.red === 2 ? phaseT : practice.age, { fill: 'white' });
+					// the step's caption, staying up through the whole step (the
+					// practice red light included: no RED LIGHT! over it)
+					const size = step.caption.length > 24 ? 80 : 96;
+					if (step.parts) show.slamParts(c, step.parts, W / 2, 200, size, practice.age, { fill: 'white' });
+					else show.slam(c, step.caption, W / 2, 200, size, practice.age, { fill: 'white' });
 					// which step this is, as pips over the caption, outlined and
 					// dropped like the text (solid: a dim pip is grey, not see-through)
 					CONTROLS.steps.forEach(function (s, i) {

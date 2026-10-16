@@ -638,6 +638,31 @@ window.Showtime = function (stage, opts) {
 		self.text(ctx, str, 0, 0, size, Object.assign({}, style, { alpha: (style.alpha === undefined ? 1 : style.alpha) * clamp(age / (dur * 0.6), 0, 1) }));
 		ctx.restore();
 	};
+	// The same, for a line in several colours: parts [{ text, fill }], laid
+	// side by side and slammed in together as one line.
+	self.slamParts = function (ctx, parts, x, y, size, age, style = {}) {
+		if (age < 0) return;
+		const whole = parts.map((p) => p.text).join('');
+		size = self.fitSize(ctx, whole, size, style.fit || W - 140);
+		ctx.save();
+		ctx.font = `400 ${size}px "${style.font || TYPE.font}", sans-serif`;
+		const widths = parts.map((p) => ctx.measureText(p.text).width);
+		ctx.restore();
+		const total = widths.reduce((a, b) => a + b, 0);
+		const dur = style.dur || 0.26;
+		const k = clamp(age / dur, 0, 1);
+		const s = age < dur ? lerp(style.from || 2.4, 0.9, k * k) : 0.9 + 0.1 * easeOut((age - dur) / 0.18);
+		const alpha = (style.alpha === undefined ? 1 : style.alpha) * clamp(age / (dur * 0.6), 0, 1);
+		ctx.save();
+		ctx.translate(x, y);
+		ctx.scale(s, s);
+		let at = -total / 2;
+		parts.forEach(function (p, i) {
+			self.text(ctx, p.text, at, 0, size, Object.assign({}, style, { fill: p.fill || style.fill, align: 'left', alpha, fit: 99999 }));
+			at += widths[i];
+		});
+		ctx.restore();
+	};
 
 	/* ---------- celebrations ---------- */
 
@@ -846,7 +871,7 @@ window.Showtime = function (stage, opts) {
 					? { left: opts.skip.at.x + 'px', top: opts.skip.at.y + 'px', transform: 'translate(-50%, -50%)' }
 					: { left: (2 * W - 30) + 'px', top: '880px', transform: 'translateX(-100%)' }),
 				padding: '16px 36px', borderRadius: '40px', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
-				background: 'rgba(12,4,30,0.72)', color: 'white', cursor: 'pointer', pointerEvents: 'auto',
+				background: 'rgba(12,4,30,0.94)', color: 'white', cursor: 'pointer', pointerEvents: 'auto',
 				fontFamily: `"${TYPE.font}", sans-serif`, fontSize: '40px', letterSpacing: '2px',
 				opacity: 0, transition: 'opacity 0.4s',
 			}).appendTo(stage.$ui).on('click', function (e) {
@@ -854,7 +879,7 @@ window.Showtime = function (stage, opts) {
 				self.fx('skip');
 				self.go(opts.skip ? opts.skip.to : 'play');
 			});
-			stage.timeout(() => $skip && $skip.css({ opacity: 0.9 }), 30);
+			stage.timeout(() => $skip && $skip.css({ opacity: 1 }), 30);
 		} else if (!intro && $skip) {
 			$skip.remove();
 			$skip = null;
