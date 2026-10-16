@@ -4670,10 +4670,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		showPauseButton();
 		if (on) { showVolume(); tickPause(); }
 	}
-	// the button: only once the clock has started counting down (and not while paused)
+	// the button: in the box, only once the clock has started counting down;
+	// off it, always (for the debug buttons); never while paused
 	let buttonShown = false;
 	function showPauseButton() {
-		const want = !paused && show.clockStarted();
+		const want = !paused && (!live || show.clockStarted());
 		if (want !== buttonShown) { buttonShown = want; $pauseBtn.toggle(want); }
 	}
 	function tickPause() {
