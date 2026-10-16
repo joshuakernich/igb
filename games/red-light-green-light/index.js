@@ -4652,14 +4652,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	});
 	const clocks = [];
 	const $left = wallPanel(0), $front = wallPanel(1), $right = wallPanel(2);
-	// the side walls: PAUSED and the time left (the left one, off the box, the debug buttons instead)
-	for (const $w of live ? [$left, $right] : [$right]) {
-		words('PAUSED', 80).appendTo($w);
-		clocks.push(words('', 110, Showtime.TYPE.colours.gold).css({ fontFamily: '"Share Tech Mono", monospace' }).appendTo($w));
-	}
-	// the front wall: the time left, and what to do, in a stack of rows all alike
-	words('PAUSED', 64).appendTo($front);
-	clocks.push(words('', 96, Showtime.TYPE.colours.gold).css({ fontFamily: '"Share Tech Mono", monospace', marginBottom: '14px' }).appendTo($front));
 	const R = PAUSE.row;
 	const rowCss = {
 		width: R.w + 'px', height: R.h + 'px', boxSizing: 'border-box', textAlign: 'left', borderRadius: R.h / 2 + 'px', border: '5px solid rgba(255,255,255,0.9)',
@@ -4676,37 +4668,38 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		.on('mouseenter', function () { $(this).css({ transform: 'scale(1.04)', filter: 'brightness(1.12)' }); })
 		.on('mouseleave', function () { $(this).css({ transform: 'scale(1)', filter: 'none' }); })
 		.on('click', function (e) { e.stopPropagation(); fn(); });
-	rowButton('RESUME', 'play', () => setPaused(false), ROW_COLOURS.resume).appendTo($front);
-	// the volume, the same shape: its name, then five bars, all alike, lit up to its level; click one for that level
+
 	// The volume, the same shape, its control in the icons' style: a capsule
 	// half the row's width, snug in its end, with five spots cut out of it,
 	// the ones up to the level cut clean through, the rest just outlined;
-	// click a spot for that level.
-	const $vol = $('<div>').css(Object.assign({}, rowCss, { color: ROW_COLOURS.volume, borderColor: ROW_COLOURS.volume })).appendTo($front);
-	label('VOLUME').appendTo($vol);
+	// click a spot for that level. (One on each wall, all kept alike.)
 	const VH = R.h - 10 - R.inset * 2;                  // (as tall as the icons)
 	const VW = R.w / 2;                                  // (half the row's width)
-	const SPOT = { r: VH * 0.29 };   // (each spot's radius: most of the capsule's height)
+	const SPOT = { r: VH * 0.29 };                       // (each spot's radius)
 	const N = PAUSE.levels.length;
 	const step = (VW - VH) / (N - 1);                    // (the spots evenly along it, the end ones centred in its round ends)
-	const barX = (i) => VH / 2 + i * step - step / 2;     // (each spot's click zone: its left edge)
-	const BAR = { w: step, gap: 0 };
-	const $volIcon = $('<div>').css({ position: 'relative', width: VW + 'px', height: VH + 'px', flex: 'none' }).appendTo($vol);
-	const volMask = 'cut-icon-' + ++iconIds;
-	const $volSvg = $(`<svg viewBox="0 0 ${VW} ${VH}" width="${VW}" height="${VH}" style="display:block">`
-		+ `<defs><mask id="${volMask}"><rect width="${VW}" height="${VH}" fill="white"/>`
-		+ PAUSE.levels.map((v, i) => `<circle class="vbar" cx="${VH / 2 + i * step}" cy="${VH / 2}" r="${SPOT.r}" fill="black"/>`).join('')
-		+ `</mask></defs><rect width="${VW}" height="${VH}" rx="${VH / 2}" fill="${ROW_COLOURS.volume}" mask="url(#${volMask})"/></svg>`).appendTo($volIcon);
-	PAUSE.levels.forEach(function (v, i) {
-		$('<button>').attr('title', 'Volume ' + (i + 1)).css({
-			position: 'absolute', left: barX(i) + 'px', top: 0, width: BAR.w + 'px', height: '100%',
-			background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-		}).appendTo($volIcon).on('click', function (e) { e.stopPropagation(); IGB.setVolume(v); showVolume(); show.fx('pick'); });
-	});
+	const volSvgs = [];
+	function volumeRow() {
+		const $vol = $('<div>').css(Object.assign({}, rowCss, { color: ROW_COLOURS.volume, borderColor: ROW_COLOURS.volume }));
+		label('VOLUME').appendTo($vol);
+		const $volIcon = $('<div>').css({ position: 'relative', width: VW + 'px', height: VH + 'px', flex: 'none' }).appendTo($vol);
+		const mask = 'cut-icon-' + ++iconIds;
+		volSvgs.push($(`<svg viewBox="0 0 ${VW} ${VH}" width="${VW}" height="${VH}" style="display:block">`
+			+ `<defs><mask id="${mask}"><rect width="${VW}" height="${VH}" fill="white"/>`
+			+ PAUSE.levels.map((v, i) => `<circle class="vbar" cx="${VH / 2 + i * step}" cy="${VH / 2}" r="${SPOT.r}" fill="black"/>`).join('')
+			+ `</mask></defs><rect width="${VW}" height="${VH}" rx="${VH / 2}" fill="${ROW_COLOURS.volume}" mask="url(#${mask})"/></svg>`).appendTo($volIcon));
+		PAUSE.levels.forEach(function (v, i) {
+			$('<button>').attr('title', 'Volume ' + (i + 1)).css({
+				position: 'absolute', left: VH / 2 + (i - 0.5) * step + 'px', top: 0, width: step + 'px', height: '100%',   // (each spot's click zone)
+				background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+			}).appendTo($volIcon).on('click', function (e) { e.stopPropagation(); IGB.setVolume(v); showVolume(); show.fx('pick'); });
+		});
+		return $vol;
+	}
 	function showVolume() {
 		const level = PAUSE.levels.reduce((best, v, i) => (Math.abs(v - IGB.volume) < Math.abs(PAUSE.levels[best] - IGB.volume) ? i : best), 0);
 		// (up to the level: cut clean through; the rest: just their outline cut)
-		$volSvg.find('.vbar').each(function (i) {
+		for (const $svg of volSvgs) $svg.find('.vbar').each(function (i) {
 			const on = i <= level;
 			this.setAttribute('fill', on ? 'black' : 'white');
 			this.setAttribute('stroke', 'black');
@@ -4714,8 +4707,23 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			this.setAttribute('r', on ? SPOT.r : SPOT.r - VH * 0.035);   // (the outline inside the same circle)
 		});
 	}
-	rowButton('RESTART ROUND', 'restart', () => { setPaused(false); restartRound(); }, ROW_COLOURS.restart).appendTo($front);
-	rowButton('REPLAY TUTORIAL', 'help', () => { setPaused(false); debugJump('controls'); }, ROW_COLOURS.help).appendTo($front);
+
+	// The whole menu, on a wall: PAUSED, the time left, then a stack of rows
+	// all alike. (With debug: just PAUSED and the time, the debug buttons
+	// going under them.)
+	function menu($w, debug) {
+		words('PAUSED', 64).appendTo($w);
+		clocks.push(words('', 96, Showtime.TYPE.colours.gold).css({ fontFamily: '"Share Tech Mono", monospace', marginBottom: '14px' }).appendTo($w));
+		if (debug) return;
+		rowButton('RESUME', 'play', () => setPaused(false), ROW_COLOURS.resume).appendTo($w);
+		volumeRow().appendTo($w);
+		rowButton('RESTART ROUND', 'restart', () => { setPaused(false); restartRound(); }, ROW_COLOURS.restart).appendTo($w);
+		rowButton('REPLAY TUTORIAL', 'help', () => { setPaused(false); debugJump('controls'); }, ROW_COLOURS.help).appendTo($w);
+	}
+	menu($left, !live);
+	menu($front);
+	menu($right);
+	if (!live) $left.css({ justifyContent: 'flex-start' });   // (off the box: the debug buttons fill the rest of the left wall)
 
 	// the round over again from its start (in play), or else the beat the show is on
 	function restartRound() {
@@ -4744,9 +4752,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	}
 	stage.own(() => { if (paused) IGB.pauseAudio(false); });   // (never left paused)
 
-	// the debug buttons, on the left wall's panel (off the box only)
+	// the debug buttons, on the left wall's panel under PAUSED and the time (off the box only)
 	const $debug = $('<div>').css({
-		display: live ? 'none' : 'block', width: '100%', maxHeight: '100%', overflowY: 'auto', fontFamily: `"${Showtime.TYPE.font}", sans-serif`,
+		display: live ? 'none' : 'block', width: '100%', flex: 1, minHeight: 0, overflowY: 'auto', fontFamily: `"${Showtime.TYPE.font}", sans-serif`,
 	}).appendTo($left);
 	const $dhead = $('<div>').css({ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '30px', marginBottom: '8px' }).appendTo($debug);
 	$('<span>').text('DEBUG').css({ color: '#3ad1ff', letterSpacing: '2px' }).appendTo($dhead);
