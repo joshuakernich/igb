@@ -1131,6 +1131,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			if (g.taken || g.wall !== c.wall || Math.abs(g.x - c.x) > CASH.reach || Math.abs(g.f - c.f) > CASH.reach * 0.7) continue;
 			g.taken = true;
 			c.magnet = MAGNET.time;
+			c.flashAt = clock;
 			popOver(c, 'MAGNET!', '#ff4d6d');
 			show.fx('lockIn', 0.8);
 		}
@@ -1138,6 +1139,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (const g of bags) {
 			if (g.taken || g.wall !== c.wall || Math.abs(g.x - c.x) > CASH.reach || Math.abs(g.f - c.f) > CASH.reach * 0.7) continue;
 			g.taken = true;
+			c.flashAt = clock;
 			popOver(c, 'MONEY BAG!', '#ffd23f');
 			popBag(g.x, g.f, g.wall);
 		}
@@ -1158,6 +1160,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			m.taken = true;
 			c.score += POINTS.cash;
 			c.grabbed++;
+			c.flashAt = clock;
 			popOver(c, '+' + won(POINTS.cash), '#3cdc7a');
 			show.fx('kaching', 0.6);
 		}
@@ -2608,6 +2611,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// behind, white trim, their number on the back, their player colour on a
 	// ring round their feet. On red light the whole body tilts toward the
 	// player's drift; shot, they topple sideways.
+	const FLASH = { time: 0.35, strength: 2 };   // a contestant's flash on picking something up: how long it fades over (seconds), how many times over it lights them
 	function drawContestant(ctx, c) {
 		const colour = PLAYER_COLORS[c.n];
 		const ground = at(c.x, c.f, 0, c.wall);
@@ -2658,6 +2662,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		else if (rigs.back) castShape(ctx, shapeOf('contestant', (g) => assemble(g, rigs.back, { pose: 'stand' }), 160, 150), ground.x, ground.y, c.f, s * Math.max(0.6, air), alpha * Math.max(0.3, air), 18 * s * air);
 		else softShadow(ctx, ground.x, ground.y, 22 * s * air, 8 * s * air, 0.35, alpha, 108 * s * air, c.f);
 		art.with(ctx, { x: p.x, y: p.y, scale: s, scaleY, rotate, alpha }, body);
+		// just picked something up: they flash, lit up (their own picture added over itself)
+		const flash = c.flashAt === undefined ? 0 : 1 - (clock - c.flashAt) / FLASH.time;
+		if (flash > 0) {
+			ctx.save();
+			ctx.globalCompositeOperation = 'lighter';
+			for (let k = 0; k < FLASH.strength; k++) art.with(ctx, { x: p.x, y: p.y, scale: s, scaleY, rotate, alpha: alpha * Math.min(1, flash * 1.5) }, body);
+			ctx.restore();
+		}
 
 		if (c.down > 0) {
 			// stars going round their head
