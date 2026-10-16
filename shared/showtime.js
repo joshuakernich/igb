@@ -948,6 +948,7 @@ window.Showtime = function (stage, opts) {
 		clock.label = text || '';
 	};
 	self.timeLeft = () => clock.left;
+	self.clockStarted = () => clock.running || clock.ran > 0;   // (counting down, or has been)
 	self.setTimeLeft = function (left) {
 		clock.left = left;
 		clock.said = Math.ceil(left);

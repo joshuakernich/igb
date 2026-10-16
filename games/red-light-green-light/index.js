@@ -4514,6 +4514,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		sound.tick();
 		duckMusic(dt);
 		debugStatus();
+		showPauseButton();
 	};
 
 	/* ---------- input ---------- */
@@ -4598,7 +4599,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		background: 'rgba(12,4,30,0.9)', cursor: 'pointer', pointerEvents: 'auto', zIndex: 20, padding: 0,
 		display: 'flex', alignItems: 'center', justifyContent: 'center', gap: PAUSE.button * 0.12 + 'px',
 		boxShadow: '0 10px 0 rgba(0,0,0,0.45)', transition: 'transform 0.15s',
-	}).appendTo(stage.$ui).on('click', function (e) { e.stopPropagation(); setPaused(true); })
+	}).hide().appendTo(stage.$ui).on('click', function (e) { e.stopPropagation(); setPaused(true); })
 		.on('mouseenter', function () { $(this).css({ transform: 'translateY(-50%) scale(1.08)' }); })
 		.on('mouseleave', function () { $(this).css({ transform: 'translateY(-50%) scale(1)' }); });
 	for (let i = 0; i < 2; i++) $('<span>').css({ width: PAUSE.button * 0.13 + 'px', height: PAUSE.button * 0.42 + 'px', borderRadius: '6px', background: 'white' }).appendTo($pauseBtn);
@@ -4666,8 +4667,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		paused = on;
 		IGB.pauseAudio(on);
 		$pause.toggle(on);
-		$pauseBtn.toggle(!on);
+		showPauseButton();
 		if (on) { showVolume(); tickPause(); }
+	}
+	// the button: only once the clock has started counting down (and not while paused)
+	let buttonShown = false;
+	function showPauseButton() {
+		const want = !paused && show.clockStarted();
+		if (want !== buttonShown) { buttonShown = want; $pauseBtn.toggle(want); }
 	}
 	function tickPause() {
 		const t = show.mmss ? show.mmss(show.timeLeft()) : '';
