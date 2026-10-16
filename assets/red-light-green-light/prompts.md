@@ -237,3 +237,20 @@ all use; see GameOfSquids-license.txt).
 - **v4-contestant-back.png**: the back-view parts sheet again with the same fix to every torso (and a flat-cut waistband on the legs).
 
 The run is now twelve steps: the legs' six drawings two steps each, the arms through these sixteen.
+
+## v5 — whole-figure animation sheets (no separate parts)
+
+Generated in a fresh ChatGPT chat, one sheet per message, each 4×4 frames in reading order. Every prompt ends with the same three blocks:
+
+- **STYLE:** cute chibi 3D toy look (big round head about 40% of the body height, short compact body, stubby limbs), LINELESS (no outlines, no dark ink lines at all), richly shaded like a painted vinyl toy: soft-edged tones, warm key light from the upper left, cool shadows, soft rim light.
+- **CAMERA:** looking slightly DOWN on the character from about 30 degrees above (a gentle top-down three-quarter view, like a game camera mounted high on a wall): the top of the head and shoulders show a little and the feet are slightly foreshortened. The camera angle and distance are identical in every frame.
+- **LAYOUT:** a SQUARE image split into a strict 4x4 grid of EQUAL square cells. Frames run in reading order. Every cell holds ONE COMPLETE character, head to feet, nothing cut off and nothing crossing into another cell. The character is the same size in every cell (about 75% of the cell height when standing), horizontally centred, with the feet on the same baseline near the bottom of every cell. No ground, no shadows, no text, no numbers, no grid lines. Fully TRANSPARENT background.
+
+Contestant: a chibi Squid Game style contestant: loose teal-green tracksuit (#1f8a6e) with white stripes down the sleeves and legs, white plimsolls, short messy dark-brown hair, a plain white rectangular patch on the back of the jacket (no number).
+
+Guard: a chibi Squid Game style guard: hot-pink hooded jumpsuit (#e8336f) with a black belt and black boots, a glossy black fencing-style face mask with a simple white circle / triangle / square outline on it, holding a black rifle.
+
+- **v5-run.png:** the contestant from directly BEHIND, running away: a smooth 16-frame RUN CYCLE (frames 1–8 one stride with the left foot, 9–16 the right; 16 leads back into 1), arms swinging opposite the legs, body bobbing slightly.
+- **v5-actions.png:** from BEHIND, one animation per row, 4 frames each: IDLE (breathing), FREEZE (snapping from mid-run into a frozen crouch, arms out, holding it with a tiny wobble), HOP (crouch, jump with arms up, top, landing), SHOT (hit, falling forward, hitting the ground, lying face down).
+- **v5-front.png:** from the FRONT: IDLE (breathing, a blink), CHEER (fists pumping), CELEBRATE (jumping for joy), SAD (slumping, head down).
+- **v5-guard-circle/triangle/square.png:** from the SIDE facing RIGHT: rows 1–2 an 8-frame WALK with the rifle across the chest; row 3 standing at ease ×2, raising the rifle to aim ×2; row 4 firing (aim, muzzle flash, recoil, settle). The triangle and square sheets ask for the same guard as the previous sheet with only the mask shape changed.

@@ -2402,7 +2402,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const s = p.s * 1.45;
 		const figure = (c) => guard(c, mask, armed, walk, muzzle);
 		// their shadow, in a guard's shape (standing, rifle and all), facing their way
-		if (rigs.guard) castShape(ctx, shapeOf('guard-' + mask, (g) => guard(g, mask, armed, 0, 0), 220, 170), p.x, p.y, f, s, fadeIn(f), 18 * s, dir < 0);
+		if (sheets.gcircle || rigs.guard) castShape(ctx, shapeOf((sheets.gcircle ? 'guard-anim-' : 'guard-') + mask, (g) => guard(g, mask, armed, 0, 0), 220, 170), p.x, p.y, f, s, fadeIn(f), 18 * s, dir < 0);
 		else softShadow(ctx, p.x, p.y, 24 * s, 8 * s, 0.3, fadeIn(f), 118 * s, f);
 		art.with(ctx, { x: p.x, y: p.y, scaleX: s * dir, scaleY: s, alpha: fadeIn(f) }, figure);
 	}
@@ -2418,6 +2418,12 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	}
 
 	function guard(c, mask, armed, walk, muzzle) {
+		const m = mask === 'triangle' || mask === 'square' ? mask : 'circle';
+		if (sheets['g' + m]) {
+			const phase = ((walk / (Math.PI * 2)) % 1 + 1) % 1;
+			const n = clipOf('guard', 'walk').length || 1;
+			if (muzzle > 0 ? drawClip(c, 'guard', 'fire', 1, m) : walk ? drawClip(c, 'guard', 'walk', phase * n, m) : drawClip(c, 'guard', 'stand', clock * 1.5, m)) return;
+		}
 		if (rigs.guard) {
 			const head = mask === 'triangle' || mask === 'square' ? mask : 'circle';
 			const phase = ((walk / (Math.PI * 2)) % 1 + 1) % 1;
@@ -2521,25 +2527,27 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			// flat as a pancake, springing back up at the end
 			const k = 1 - c.down / BOULDER.down;
 			scaleY = k < 0.8 ? 0.22 : 0.22 + 0.78 * ease((k - 0.8) / 0.2) * (1 + Math.sin((k - 0.8) / 0.2 * Math.PI) * 0.25);
-			if (sheets.act && !rigs.back) scaleY = 1;   // (the whole-figure sprite has them lying flat already)
+			if (animReady('back') || (sheets.act && !rigs.back)) scaleY = 1;   // (the whole-figure animation has them lying flat already)
 		} else if (c.fall) {
 			const k = Math.min(1, c.fall.t / 0.45);
-			if (rigs.back || !sheets.act) rotate = c.fall.dir * 88 * k * k;   // (the whole-figure sprite falls by itself)
+			if (!animReady('back') && (rigs.back || !sheets.act)) rotate = c.fall.dir * 88 * k * k;   // (the whole-figure animation falls by itself)
 		} else {
 			const lx = Math.max(-1.6, Math.min(1.6, c.lean.x));
 			const lz = Math.max(-1.4, Math.min(1.4, c.lean.z));
-			rotate = lx * (rigs.back ? 10 : 24);   // (from parts, the body leans on its own too)
+			rotate = lx * (animReady('back') ? 14 : rigs.back ? 10 : 24);   // (a little less when the figure wobbles by itself)
 			scaleY = 1 - 0.14 * lz;     // leaning up the field (or back) foreshortens
 		}
-		const figure = function (cx) {
+		const body = function (cx) {
+			if (animReady('back') && contestantAnim(cx, c)) return;
 			if (rigs.back && contestantRig(cx, c)) return;
 			if (sheets.act && sheets.run) contestantSprite(cx, c);
 			else contestant(cx, c);
 		};
 		// their shadow, in a contestant's shape (standing), on the sand under them (fainter when they're up off it)
-		if (rigs.back) castShape(ctx, shapeOf('contestant', (g) => assemble(g, rigs.back, { pose: 'stand' }), 160, 150), ground.x, ground.y, c.f, s * Math.max(0.6, air), alpha * Math.max(0.3, air), 18 * s * air);
+		if (animReady('back')) castShape(ctx, shapeOf('contestant-anim', (g) => drawClip(g, 'back', 'idle', 0), 160, 150), ground.x, ground.y, c.f, s * Math.max(0.6, air), alpha * Math.max(0.3, air), 18 * s * air);
+		else if (rigs.back) castShape(ctx, shapeOf('contestant', (g) => assemble(g, rigs.back, { pose: 'stand' }), 160, 150), ground.x, ground.y, c.f, s * Math.max(0.6, air), alpha * Math.max(0.3, air), 18 * s * air);
 		else softShadow(ctx, ground.x, ground.y, 22 * s * air, 8 * s * air, 0.35, alpha, 108 * s * air, c.f);
-		art.with(ctx, { x: p.x, y: p.y, scale: s, scaleY, rotate, alpha }, figure);
+		art.with(ctx, { x: p.x, y: p.y, scale: s, scaleY, rotate, alpha }, body);
 
 		if (c.down > 0) {
 			// stars going round their head
@@ -2552,7 +2560,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		if (!c.alive) return;
 		// over their head: a marker in their colour
 		const bob = Math.sin(clock * 4 + c.n) * 4;
-		const top = p.y - (rigs.back ? figure('back').height + 34 : sheets.act ? 148 : 175) * s + bob * s;   // (just over their head, however tall the figure is)
+		const top = p.y - (animReady('back') ? animHeight('back') + 30 : rigs.back ? figure('back').height + 34 : sheets.act ? 148 : 175) * s + bob * s;   // (just over their head, however tall the figure is)
 		art.poly(ctx, [[p.x - 14 * s, top - 14 * s], [p.x + 14 * s, top - 14 * s], [p.x, top + 4 * s]], { fill: colour, alpha });
 	}
 
@@ -2962,13 +2970,20 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		triangle: 'sheet-guard-triangle.png',
 		square: 'sheet-guard-square.png',
 		head: 'v2-doll-head.png',                 // her head turning in 16 steps, from the back of it to her face (4 by 4)
+		// whole-figure animation sheets, 4 by 4, every frame aligned on one baseline (see ANIMS)
+		arun: 'v5-run.png',                       // the contestant from behind: a 16-frame run
+		aact: 'v5-actions.png',                   // idle, freeze, hop, shot: 4 frames each
+		afront: 'v5-front.png',                   // from the front: idle, cheer, celebrate, sad
+		gcircle: 'v5-guard-circle.png',           // a guard (each mask): an 8-frame walk, stand, aim, fire
+		gtriangle: 'v5-guard-triangle.png',
+		gsquare: 'v5-guard-square.png',
 	};
 	const SPRITE = { contestant: 112, guard: 124, head: 150 };   // heights to draw at (the contestants and guards, feet to top, as the drawn ones; her head, across)
 	const sheets = {};   // name: { frames: [{ img, x, y, w, h, patch }], unit } once cut up
 	for (const [name, file] of Object.entries(SHEETS)) {
 		const img = new Image();
 		img.onload = function () {
-			try { sheets[name] = slice(img, name, name === 'head' ? 4 : 2); } catch (e) { /* (unreadable: keep drawing them) */ }
+			try { sheets[name] = slice(img, name, name === 'head' || /^(arun|aact|afront|g(circle|triangle|square))$/.test(name) ? 4 : 2); } catch (e) { /* (unreadable: keep drawing them) */ }
 		};
 		img.src = 'assets/red-light-green-light/' + file;
 	}
@@ -3020,8 +3035,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		for (let r = 0; r < rows; r++) baselines.push(Math.round(r * ch) + base);
 		const sheet = { frames, unit: name === 'head' ? median(boxes.map((b) => (b ? b.x1 - b.x0 : null))) : median(boxes.map((b) => (b ? b.y1 - b.y0 : null))) };
 		// a guard's rifle: its muzzle is the furthest-right thing in the firing frame
-		if (name === 'circle' && frames[6]) {
-			const b = boxes[6];
+		const fireAt = { circle: 6, gcircle: 13 }[name];
+		if (fireAt !== undefined && frames[fireAt] && boxes[fireAt]) {
+			const b = boxes[fireAt];
 			let best = null;
 			for (let x = b.x1 - 1; x > b.x0 && !best; x--) {
 				let sum = 0, n = 0;
@@ -3029,11 +3045,68 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				if (n) best = { x, y: sum / n };
 			}
 			if (best) {
-				const k = SPRITE.guard / sheet.unit;
-				GUN.muzzle = [(best.x - 18 - b.cx) * k, (best.y - baselines[1]) * k];   // (just inside the flash)
+				const k = (name === 'gcircle' ? animHeight('guard') : SPRITE.guard) / sheet.unit;
+				GUN.muzzle = [(best.x - 18 - b.cx) * k, (best.y - baselines[Math.floor(fireAt / 4)]) * k];   // (just inside the flash)
 			}
 		}
 		return sheet;
+	}
+
+	/* ---------- whole-figure animations ---------- */
+
+	// Each figure's animations, as clips: lists of frames from its sheets
+	// ({ s: sheet, i: frame, x, y: a nudge }), 'g' meaning that guard's own
+	// mask sheet. The character lab can change any clip: its length, which
+	// frame goes where, and each frame's nudge (kept as ANIM_TUNE[figure].
+	// clips[name]), and each figure's height.
+	const range = (s, a, b) => Array.from({ length: b - a + 1 }, (_, k) => ({ s, i: a + k }));
+	const ANIMS = {
+		back: { height: 80, clips: { run: range('arun', 0, 15), idle: range('aact', 0, 3), freeze: range('aact', 4, 7), hop: range('aact', 8, 11), shot: range('aact', 12, 15) } },
+		front: { height: 100, clips: { idle: range('afront', 0, 3), cheer: range('afront', 4, 7), win: range('afront', 8, 11), sad: range('afront', 12, 15) } },
+		guard: { height: 112, clips: { walk: range('g', 0, 7), stand: range('g', 8, 9), aim: range('g', 10, 11), fire: range('g', 12, 15) } },
+	};
+	const ANIM_SHEETS = { back: ['arun', 'aact'], front: ['afront'], guard: ['gcircle'] };   // (for the lab: which sheets each figure draws from)
+	const ANIM_TUNED = {};   // (the lab's tuning, baked in)
+	const ANIM_KEY = 'rlgl-animation-lab';
+	const ANIM_TUNE = JSON.parse(JSON.stringify(ANIM_TUNED));
+	try {
+		const saved = JSON.parse(localStorage.getItem(ANIM_KEY) || '{}');
+		for (const f of Object.keys(saved)) ANIM_TUNE[f] = Object.assign(ANIM_TUNE[f] || {}, saved[f]);
+	} catch (e) { /* (no storage: just the baked-in tuning) */ }
+	const animHeight = (fig) => (ANIM_TUNE[fig] && ANIM_TUNE[fig].height) || ANIMS[fig].height;
+	const clipOf = (fig, name) => (ANIM_TUNE[fig] && ANIM_TUNE[fig].clips && ANIM_TUNE[fig].clips[name]) || ANIMS[fig].clips[name] || [];
+	const animReady = (fig) => ANIM_SHEETS[fig].every((n) => sheets[n]);
+	// One frame of a clip (k: which, round and round), feet at (0, 0).
+	function drawClip(c, fig, name, k, mask = 'circle') {
+		const frames = clipOf(fig, name);
+		if (!frames.length) return false;
+		const f = frames[((Math.floor(k) % frames.length) + frames.length) % frames.length];
+		const sheet = f.s === 'g' ? 'g' + mask : f.s;
+		if (!sheets[sheet]) return false;
+		c.save();
+		c.translate(f.x || 0, f.y || 0);
+		drawFrame(c, sheet, f.i, animHeight(fig));
+		c.restore();
+		return true;
+	}
+
+	// A contestant in play, from behind: the clip for what they're doing.
+	function contestantAnim(c, k) {
+		const n = (name) => clipOf('back', name).length || 1;
+		if (k.fall) return drawClip(c, 'back', 'shot', Math.min(n('shot') - 1, k.fall.t / 0.45 * (n('shot') - 1)));
+		if (k.down > 0) return drawClip(c, 'back', 'shot', n('shot') - 1);
+		if (k.hop) return drawClip(c, 'back', 'hop', Math.min(n('hop') - 1, k.hop.t / HOP * n('hop')));
+		if (k.glue) {
+			// snapping into the freeze, then holding it, wobbling between its last two frames
+			const m = n('freeze');
+			const sq = k.squat || 0;
+			return drawClip(c, 'back', 'freeze', sq < 0.95 ? sq * (m - 2) : m - 2 + (Math.floor(clock * 3) % 2));
+		}
+		if (k.moving > 0.2) {
+			const phase = (((k.walk * RIG.run) / (Math.PI * 2)) % 1 + 1) % 1;
+			return drawClip(c, 'back', 'run', phase * n('run'));
+		}
+		return drawClip(c, 'back', 'idle', clock * 4 + k.n);
 	}
 
 	// One frame, feet at (0, 0), so tall (the sheet's first frame at that height).
@@ -3621,6 +3694,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// feet. Feet at the origin, about 136 tall. Pose 'stand', 'cheer' (arms
 	// up) or 'win' (arms up, waving, a big grin).
 	function contestantFront(c, n, pose) {
+		if (animReady('front')) {
+			art.ellipse(c, 0, 0, 44, 14, { fill: PLAYER_COLORS[n] || 'white' });
+			softShadow(c, 0, 0, 28, 8, 0.3);
+			if (drawClip(c, 'front', pose === 'cheer' ? 'cheer' : pose === 'win' ? 'win' : 'idle', wallT * 6 + n)) return;
+		}
 		if (rigs.front) {
 			art.ellipse(c, 0, 0, 44, 14, { fill: PLAYER_COLORS[n] || 'white' });
 			softShadow(c, 0, 0, 28, 8, 0.3);
@@ -4443,73 +4521,50 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	/* ---------- the character lab ---------- */
 
-	// For fine-tuning how the characters are put together: pick a figure and
-	// a pose, then nudge its legs, body and head (across, up, turn, size), and
-	// the figure's height and how far its parts tuck together. It shows the
-	// pose big, the rest of that figure's poses in a row beneath, and the
-	// running or walking cycle playing. Every change shows in the game at
-	// once, is kept in this browser, and COPY puts the whole tuning on the
-	// clipboard to be baked into TUNED.
+	// For fine-tuning the characters' animations: pick a figure and one of
+	// its animations, then change its frames: how many, which drawing from
+	// the sheets goes in each place, and a nudge for each (across, up), plus
+	// the figure's height. It shows the chosen frame big over a faint copy of
+	// the frame before it (to line them up), the animation playing beside it,
+	// and every animation playing in a row beneath (click one to pick it).
+	// Every change shows in the game at once, is kept in this browser, and
+	// COPY puts the whole tuning on the clipboard to be baked into ANIM_TUNED.
 	const lab = (function () {
 		let $lab = null;
 		let canvas = null;
 		let timer = null;
 		let fig = 'back';
-		let sel = { seq: null, pose: 'stand', frame: 0 };   // a still pose, or a frame of an animation
-		let part = 'torso';
+		let mask = 'circle';
+		let clip = 'run';
+		let at = 0;      // (the chosen frame)
 		let t0 = 0;
 		let hits = [];   // (the bottom row's boxes, for clicks: in preview units)
-		const LAB = { side: 360, big: 3.4, cycle: 2.5, row: 1.4 };   // the controls' width (screen pixels); how big the chosen frame, the playing animation and the row of still poses are drawn (the preview is 1000 units tall, filling the window's height)
+		const LAB = { side: 380, big: 3.4, cycle: 2.6, row: 1.5, ghost: 0.28 };   // the controls' width (screen pixels); how big the chosen frame, the playing animation and the bottom row are drawn (the preview is 1000 units tall, filling the window's height); how faint the frame before shows under the chosen one
 		const FIGS = { back: 'CONTESTANT · BACK', front: 'CONTESTANT · FRONT', guard: 'GUARD' };
-		const SLIDERS = [['x', -40, 40, 0.5], ['y', -40, 40, 0.5], ['r', -45, 45, 0.5]];   // (no size: every part of a figure is drawn at one scale)
-		const LABELS = { x: 'ACROSS', y: 'UP / DOWN', r: 'TURN °' };
-		const PARTS = ['legs', 'torso', 'head'];
-
-		// the figure's still poses (not the frames of its animations)
-		const stills = () => Object.keys(POSES[fig]).filter((id) => !Object.keys(SEQS[fig] || {}).some((sq) => new RegExp('^' + sq + '\\d+$').test(id)));
+		const MASKS = ['circle', 'triangle', 'square'];
+		const clips = () => Object.keys(ANIMS[fig].clips);
+		// how fast each animation plays (frames a second), as in the game
+		function fps(name, n) {
+			if (fig === 'back' && name === 'run') return 20 * RIG.run / (Math.PI * 2) * n;
+			if (fig === 'guard' && name === 'walk') return 20 / (Math.PI * 2) * n;
+			if (name === 'hop') return n / HOP;
+			if (name === 'shot') return n / 0.45;
+			if (name === 'stand') return 1.5;
+			if (name === 'freeze') return 3;
+			return fig === 'front' ? 6 : 4;
+		}
+		const sheetOf = (s) => (s === 'g' ? 'g' + mask : s);
+		const sourcesOf = () => (fig === 'guard' ? ['g'] : ANIM_SHEETS[fig]);
 		// an animation's frames, made editable (copied into the tuning the first time)
 		function editable(name) {
-			TUNE[fig] = TUNE[fig] || {};
-			TUNE[fig]._seq = TUNE[fig]._seq || {};
-			if (!TUNE[fig]._seq[name] || !TUNE[fig]._seq[name].length) TUNE[fig]._seq[name] = JSON.parse(JSON.stringify(seqFrames(fig, name)));
-			return TUNE[fig]._seq[name];
+			ANIM_TUNE[fig] = ANIM_TUNE[fig] || {};
+			ANIM_TUNE[fig].clips = ANIM_TUNE[fig].clips || {};
+			if (!ANIM_TUNE[fig].clips[name] || !ANIM_TUNE[fig].clips[name].length) ANIM_TUNE[fig].clips[name] = JSON.parse(JSON.stringify(clipOf(fig, name)));
+			return ANIM_TUNE[fig].clips[name];
 		}
-		// what's being edited: the chosen still pose or animation frame
-		const pickNow = () => (sel.seq ? { seq: sel.seq, frame: sel.frame } : { pose: sel.pose });
-		const frameNow = () => (sel.seq ? seqFrames(fig, sel.seq)[sel.frame] : frameFromPose(fig, sel.pose));
-		function setNudge(key, v) {
-			if (sel.seq) {
-				const f = editable(sel.seq)[sel.frame];
-				f[part] = Object.assign({}, f[part], { [key]: v });
-			} else {
-				TUNE[fig] = TUNE[fig] || {};
-				TUNE[fig][sel.pose] = TUNE[fig][sel.pose] || {};
-				TUNE[fig][sel.pose][part] = Object.assign({}, TUNE[fig][sel.pose][part], { [key]: v });
-			}
-			save();
-		}
-		function setUse(id) {
-			if (sel.seq) {
-				const f = editable(sel.seq)[sel.frame];
-				f.use = Object.assign({}, f.use, { [part]: id });
-			} else {
-				TUNE[fig] = TUNE[fig] || {};
-				TUNE[fig][sel.pose] = TUNE[fig][sel.pose] || {};
-				TUNE[fig][sel.pose].use = Object.assign({}, TUNE[fig][sel.pose].use, { [part]: id });
-			}
-			save();
-			render();
-		}
-
 		function save() {
-			try { localStorage.setItem(TUNE_KEY, JSON.stringify(TUNE)); } catch (e) { /* (not kept: no storage) */ }
-			if (rigs.guard) { const m = rigMuzzle(rigs.guard); if (m) GUN.muzzle = m; }
+			try { localStorage.setItem(ANIM_KEY, JSON.stringify(ANIM_TUNE)); } catch (e) { /* (not kept: no storage) */ }
 			shapes.clear();   // (the kept shadow shapes follow the new tuning)
-		}
-		function setWhole(value) {
-			TUNE[fig] = TUNE[fig] || {};
-			TUNE[fig]._ = Object.assign({}, TUNE[fig]._, value);
-			save();
 		}
 
 		const css = { fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif', color: 'white' };   // (a tool for the computer, not the box: ordinary type at ordinary sizes)
@@ -4519,18 +4574,20 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		}).on('click', function (e) { e.stopPropagation(); fn(); });
 		const heading = (text, $to) => $('<div>').text(text).css({ fontSize: '12px', fontWeight: 600, color: '#9fb6d8', margin: '10px 2px 3px', letterSpacing: '0.5px' }).appendTo($to);
 
-		// a small picture of a frame, for the timeline
-		function thumbOf(pick, w, h) {
+		// a small picture of one drawing from a sheet, feet near the bottom
+		function thumb(sheet, i, w, h, nudge) {
 			const cv = document.createElement('canvas');
 			cv.width = w * 2;
 			cv.height = h * 2;
 			cv.style.width = w + 'px';
 			cv.style.height = h + 'px';
-			const rig = rigs[fig];
-			if (rig) {
+			if (sheets[sheet]) {
 				const g = cv.getContext('2d');
-				const sc = (h * 2 - 10) / (figure(fig).height * 1.5);
-				art.with(g, { x: w, y: h * 2 - 6, scale: sc }, (c2) => assemble(c2, rig, pick));
+				const sc = (h * 2 - 10) / (animHeight(fig) * 1.45);
+				art.with(g, { x: w, y: h * 2 - 8, scale: sc }, function (c2) {
+					if (nudge) c2.translate(nudge.x || 0, nudge.y || 0);
+					drawFrame(c2, sheet, i, animHeight(fig));
+				});
 			}
 			return cv;
 		}
@@ -4544,19 +4601,17 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			// (the whole browser window: the controls down the left, the figures filling the rest)
 			const $side = $('<div>').css({ width: LAB.side + 'px', flex: 'none', padding: '14px', boxSizing: 'border-box', overflowY: 'auto', fontSize: '13px' }).appendTo($lab);
 			canvas = $('<canvas>').css({ flex: 1, minWidth: 0, height: '100%', display: 'block', cursor: 'default' }).appendTo($lab)[0];
-			// a click on the bottom row picks that pose or animation
+			// a click on the bottom row picks that animation
 			const toUnits = (e) => { const r = canvas.getBoundingClientRect(); const k = H / r.height; return [(e.clientX - r.left) * k, (e.clientY - r.top) * k]; };
+			const hitAt = (e) => { const [x, y] = toUnits(e); return hits.find((h) => x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1); };
 			canvas.addEventListener('click', function (e) {
-				const [x, y] = toUnits(e);
-				const hit = hits.find((h) => x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1);
+				const hit = hitAt(e);
 				if (!hit) return;
-				sel = hit.it.seq ? { seq: hit.it.seq, pose: null, frame: 0 } : { seq: null, pose: hit.it.pose, frame: 0 };
+				clip = hit.name;
+				at = 0;
 				render();
 			});
-			canvas.addEventListener('mousemove', function (e) {
-				const [x, y] = toUnits(e);
-				canvas.style.cursor = hits.some((h) => x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1) ? 'pointer' : 'default';
-			});
+			canvas.addEventListener('mousemove', (e) => { canvas.style.cursor = hitAt(e) ? 'pointer' : 'default'; });
 			render($side);
 		}
 
@@ -4567,82 +4622,63 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const row = () => $('<div>').css({ display: 'flex', flexWrap: 'wrap', marginBottom: '4px' }).appendTo($side);
 			const on = (yes) => (yes ? '#3a8ad8' : '#22305a');
 			const $figs = row();
-			for (const f of Object.keys(FIGS)) button(FIGS[f], () => { fig = f; sel = { seq: null, pose: 'stand', frame: 0 }; render(); }, on(f === fig)).appendTo($figs);
-
-			heading('STILL POSES', $side);
-			const $poses = row();
-			for (const id of stills()) button(id.toUpperCase(), () => { sel = { seq: null, pose: id, frame: 0 }; render(); }, on(!sel.seq && id === sel.pose)).appendTo($poses);
+			for (const f of Object.keys(FIGS)) button(FIGS[f], () => { fig = f; clip = clips()[0]; at = 0; render(); }, on(f === fig)).appendTo($figs);
+			if (fig === 'guard') {
+				const $masks = row();
+				for (const m of MASKS) button(m.toUpperCase() + ' MASK', () => { mask = m; render(); }, on(m === mask)).appendTo($masks);
+			}
+			if (!animReady(fig)) $('<div>').text('(the sheets are still loading, or missing)').css({ color: '#d88', margin: '6px 2px' }).appendTo($side);
 
 			heading('ANIMATIONS', $side);
-			const $seqs = row();
-			for (const name of Object.keys(SEQS[fig] || {})) button(name.toUpperCase(), () => { sel = { seq: name, pose: null, frame: 0 }; render(); }, on(sel.seq === name)).appendTo($seqs);
+			const $clips = row();
+			for (const name of clips()) button(name.toUpperCase(), () => { clip = name; at = 0; render(); }, on(name === clip)).appendTo($clips);
 
 			// the timeline: the animation's frames in order, the chosen one marked
-			if (sel.seq) {
-				const frames = seqFrames(fig, sel.seq);
-				sel.frame = Math.max(0, Math.min(frames.length - 1, sel.frame));
-				heading(`${sel.seq.toUpperCase()} · ${frames.length} FRAMES`, $side);
-				const $tl = $('<div>').css({ display: 'flex', gap: '3px', overflowX: 'auto', padding: '4px 2px 6px', margin: '0 0 2px' }).appendTo($side);
-				frames.forEach(function (f, i) {
-					const $cell = $('<button>').attr('title', 'Frame ' + (i + 1)).css({
-						flex: 'none', width: '40px', padding: '2px 0 0', borderRadius: '5px', cursor: 'pointer', background: '#18213a', color: '#9fb6d8',
-						border: i === sel.frame ? '2px solid #d8743a' : '2px solid transparent', fontSize: '10px', fontFamily: 'inherit',
-					}).append(thumbOf({ seq: sel.seq, frame: i, bob: f.bob || 0 }, 36, 52)).append($('<div>').text(i + 1)).appendTo($tl);
-					$cell.on('click', (e) => { e.stopPropagation(); sel.frame = i; render(); });
-				});
-				const $ops = row();
-				button('+ FRAME', () => { const fs = editable(sel.seq); fs.splice(sel.frame + 1, 0, JSON.parse(JSON.stringify(fs[sel.frame]))); sel.frame++; save(); render(); }, '#225a3a').attr('title', 'Add an exact copy of this frame after it').appendTo($ops);
-				button('− FRAME', () => { const fs = editable(sel.seq); if (fs.length > 1) { fs.splice(sel.frame, 1); sel.frame = Math.max(0, sel.frame - 1); save(); render(); } }, '#5a2232').appendTo($ops);
-				button('◀ MOVE', () => { const fs = editable(sel.seq); const i = sel.frame; if (i > 0) { [fs[i - 1], fs[i]] = [fs[i], fs[i - 1]]; sel.frame--; save(); render(); } }).appendTo($ops);
-				button('MOVE ▶', () => { const fs = editable(sel.seq); const i = sel.frame; if (i < fs.length - 1) { [fs[i + 1], fs[i]] = [fs[i], fs[i + 1]]; sel.frame++; save(); render(); } }).appendTo($ops);
-				button('RESET ANIMATION', () => { if (TUNE[fig] && TUNE[fig]._seq) delete TUNE[fig]._seq[sel.seq]; save(); render(); }, '#5a2232').appendTo($ops);
-				// this frame's lift (the whole figure, up off the ground)
-				slider('FRAME LIFT', frames[sel.frame].bob || 0, -10, 30, 0.5, (v) => { editable(sel.seq)[sel.frame].bob = v; save(); }).appendTo($side);
-			}
+			const frames = clipOf(fig, clip);
+			at = Math.max(0, Math.min(frames.length - 1, at));
+			heading(`${clip.toUpperCase()} · ${frames.length} FRAMES`, $side);
+			const $tl = $('<div>').css({ display: 'flex', gap: '3px', overflowX: 'auto', padding: '4px 2px 6px', margin: '0 0 2px' }).appendTo($side);
+			frames.forEach(function (f, i) {
+				$('<button>').attr('title', 'Frame ' + (i + 1)).css({
+					flex: 'none', width: '40px', padding: '2px 0 0', borderRadius: '5px', cursor: 'pointer', background: '#18213a', color: '#9fb6d8',
+					border: i === at ? '2px solid #d8743a' : '2px solid transparent', fontSize: '10px', fontFamily: 'inherit',
+				}).append(thumb(sheetOf(f.s), f.i, 36, 52, f)).append($('<div>').text(i + 1)).appendTo($tl)
+					.on('click', (e) => { e.stopPropagation(); at = i; render(); });
+			});
+			const $ops = row();
+			button('+ FRAME', () => { const fs = editable(clip); fs.splice(at + 1, 0, JSON.parse(JSON.stringify(fs[at]))); at++; save(); render(); }, '#225a3a').attr('title', 'Add an exact copy of this frame after it').appendTo($ops);
+			button('− FRAME', () => { const fs = editable(clip); if (fs.length > 1) { fs.splice(at, 1); at = Math.max(0, at - 1); save(); render(); } }, '#5a2232').appendTo($ops);
+			button('◀ MOVE', () => { const fs = editable(clip); if (at > 0) { [fs[at - 1], fs[at]] = [fs[at], fs[at - 1]]; at--; save(); render(); } }).appendTo($ops);
+			button('MOVE ▶', () => { const fs = editable(clip); if (at < fs.length - 1) { [fs[at + 1], fs[at]] = [fs[at], fs[at + 1]]; at++; save(); render(); } }).appendTo($ops);
+			button('RESET ANIMATION', () => { if (ANIM_TUNE[fig] && ANIM_TUNE[fig].clips) delete ANIM_TUNE[fig].clips[clip]; save(); render(); }, '#5a2232').appendTo($ops);
 
-			// the part, its drawing and its nudge, in this pose or frame
-			heading(sel.seq ? `FRAME ${sel.frame + 1} · PART` : `${sel.pose.toUpperCase()} · PART`, $side);
-			const $parts = row();
-			for (const pt of PARTS) button(pt.toUpperCase(), () => { part = pt; render(); }, pt === part ? '#d8743a' : '#22305a').appendTo($parts);
-			const now = frameNow();
-			const rig = rigs[fig];
-			if (rig && now) {
-				heading('DRAWING', $side);
-				const $use = $('<div>').css({ display: 'flex', flexWrap: 'wrap', gap: '3px', margin: '0 2px 4px' }).appendTo($side);
-				const current = (now.use || {})[part];
-				for (const [id, pt] of Object.entries(rig.parts)) {
-					if (pt.kind !== part) continue;
-					const thumb = document.createElement('canvas');
-					thumb.width = thumb.height = 74;
-					thumb.style.width = thumb.style.height = '40px';
-					const tg = thumb.getContext('2d');
-					const kk = Math.min(74 / pt.img.width, 74 / pt.img.height);
-					tg.drawImage(pt.img, (74 - pt.img.width * kk) / 2, (74 - pt.img.height * kk) / 2, pt.img.width * kk, pt.img.height * kk);
-					$('<button>').attr('title', id).css({
-						width: '46px', height: '46px', padding: '1px', borderRadius: '5px', cursor: 'pointer',
-						border: id === current ? '2px solid #d8743a' : '2px solid transparent', background: '#18213a',
-					}).append(thumb).appendTo($use).on('click', (e) => { e.stopPropagation(); setUse(id); });
+			// this frame: its drawing, and its nudge
+			const now = frames[at];
+			if (now) {
+				heading(`FRAME ${at + 1} · DRAWING`, $side);
+				for (const src of sourcesOf()) {
+					const sheet = sheetOf(src);
+					const count = sheets[sheet] ? sheets[sheet].frames.length : 0;
+					const $use = $('<div>').css({ display: 'flex', flexWrap: 'wrap', gap: '3px', margin: '0 2px 6px' }).appendTo($side);
+					for (let i = 0; i < count; i++) {
+						$('<button>').attr('title', src + ' ' + (i + 1)).css({
+							width: '40px', height: '54px', padding: '1px', borderRadius: '5px', cursor: 'pointer',
+							border: src === now.s && i === now.i ? '2px solid #d8743a' : '2px solid transparent', background: '#18213a',
+						}).append(thumb(sheet, i, 34, 48)).appendTo($use)
+							.on('click', (e) => { e.stopPropagation(); Object.assign(editable(clip)[at], { s: src, i }); save(); render(); });
+					}
 				}
-				const n = Object.assign({}, NUDGE, now[part]);
-				for (const [key, lo, hi, step] of SLIDERS) slider(LABELS[key], n[key], lo, hi, step, (v) => setNudge(key, v)).appendTo($side);
-				const $pr = row();
-				button('RESET PART', () => {
-					if (sel.seq) { const f = editable(sel.seq)[sel.frame]; delete f[part]; }
-					else if (TUNE[fig] && TUNE[fig][sel.pose]) { delete TUNE[fig][sel.pose][part]; if (TUNE[fig][sel.pose].use) delete TUNE[fig][sel.pose].use[part]; }
-					save(); render();
-				}, '#5a2232').appendTo($pr);
-				button(sel.seq ? 'NUDGE ALL FRAMES ALIKE' : 'NUDGE ALL STILLS ALIKE', () => {
-					if (sel.seq) for (const f of editable(sel.seq)) f[part] = Object.assign({}, n);
-					else for (const id of stills()) { TUNE[fig] = TUNE[fig] || {}; TUNE[fig][id] = TUNE[fig][id] || {}; TUNE[fig][id][part] = Object.assign({}, n); }
-					save(); render();
-				}, '#225a3a').appendTo($pr);
+				heading(`FRAME ${at + 1} · NUDGE`, $side);
+				slider('ACROSS', now.x || 0, -40, 40, 0.5, (v) => { editable(clip)[at].x = v; save(); }).appendTo($side);
+				slider('UP / DOWN', now.y || 0, -40, 40, 0.5, (v) => { editable(clip)[at].y = v; save(); }).appendTo($side);
+				const $fr = row();
+				button('RESET NUDGE', () => { const f = editable(clip)[at]; delete f.x; delete f.y; save(); render(); }, '#5a2232').appendTo($fr);
+				button('NUDGE ALL FRAMES ALIKE', () => { for (const f of editable(clip)) { f.x = now.x || 0; f.y = now.y || 0; } save(); render(); }, '#225a3a').appendTo($fr);
 			}
 
 			// the whole figure
-			const g = figure(fig);
 			heading(FIGS[fig] + ' · WHOLE FIGURE', $side);
-			slider('HEIGHT', g.height, 40, 200, 1, (v) => setWhole({ height: v })).appendTo($side);
-			slider('TUCK AT JOINS', g.overlap, 0, 0.25, 0.005, (v) => setWhole({ overlap: v })).appendTo($side);
+			slider('HEIGHT', animHeight(fig), 40, 200, 1, (v) => { ANIM_TUNE[fig] = Object.assign(ANIM_TUNE[fig] || {}, { height: v }); save(); }).appendTo($side);
 
 			const $end = row();
 			$end.css({ marginTop: '10px' });
@@ -4650,8 +4686,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			// (two clicks to wipe it all, in case of a slip)
 			const $wipe = button('RESET EVERYTHING', function () {
 				if ($wipe.data('sure')) {
-					for (const f of Object.keys(TUNE)) delete TUNE[f];
-					Object.assign(TUNE, JSON.parse(JSON.stringify(TUNED)));
+					for (const f of Object.keys(ANIM_TUNE)) delete ANIM_TUNE[f];
+					Object.assign(ANIM_TUNE, JSON.parse(JSON.stringify(ANIM_TUNED)));
 					save();
 					render();
 				} else $wipe.data('sure', true).text('SURE? CLICK AGAIN');
@@ -4676,7 +4712,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// The tuning as JSON: on the clipboard if the page may, and always in the
 		// box under the buttons, selected, to copy by hand.
 		function copy($button, $text) {
-			const text = JSON.stringify(TUNE, null, '\t');
+			const text = JSON.stringify(ANIM_TUNE, null, '\t');
 			$text.val(text).show()[0].select();
 			try {
 				navigator.clipboard.writeText(text).then(() => $button.text('COPIED ✓'), () => $button.text('COPY FROM THE BOX'));
@@ -4685,15 +4721,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			}
 		}
 
-		// how fast each animation plays (frames a second), as in the game
-		function fps(name, n) {
-			if (name === 'run') return 20 * RIG.run / (Math.PI * 2) * n;
-			if (name === 'walk') return 20 / (Math.PI * 2) * n;
-			return 2.5;
-		}
-
-		// The preview: the chosen pose or frame, an animation playing beside
-		// it, and the still poses in a row along the bottom.
+		// The preview: the chosen frame over the one before it, the animation
+		// playing beside it, and every animation playing along the bottom.
 		function draw() {
 			if (!canvas) return;
 			// (sharp at the window's size: 1000 units tall, as wide as the window allows)
@@ -4710,60 +4739,46 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const sc = ph / H;
 			c.setTransform(sc, 0, 0, sc, 0, 0);
 			const CW = pw / sc;
-			const rig = rigs[fig];
-			if (!rig) {
-				art.text(c, 'LOADING THE PARTS…', CW / 2, 400, { size: 40, font: SQUID_FONT, weight: 400 });
+			if (!animReady(fig)) {
+				art.text(c, 'LOADING THE SHEETS…', CW / 2, 400, { size: 40, font: SQUID_FONT, weight: 400 });
 				return;
 			}
 			const t = (performance.now() - t0) / 1000;
 			const ground = 600;
-			const g = figure(fig);
-			// a frame of a run lifted by its own bob, as it is in the game
-			const lifted = (name, i) => seqFrames(fig, name)[i].bob || 0;
-			// the chosen pose or frame
+			const n = clipOf(fig, clip).length;
+			// the chosen frame, over a faint copy of the one before
 			const bigX = CW * 0.28;
 			art.rect(c, CW * 0.05, ground, CW * 0.9, 2, { fill: 'rgba(255,255,255,0.22)' });
-			art.rect(c, bigX - 200, ground - g.height * LAB.big, 400, 1.5, { fill: 'rgba(255,255,255,0.14)' });
-			if (sel.seq) {
-				const n = seqFrames(fig, sel.seq).length;
-				art.with(c, { x: bigX, y: ground, scale: LAB.big }, (c2) => assemble(c2, rig, { seq: sel.seq, frame: sel.frame, bob: lifted(sel.seq, sel.frame) }));
-				art.text(c, `${sel.seq.toUpperCase()} · FRAME ${sel.frame + 1} OF ${n}`, bigX, ground + 40, { size: 22, font: SQUID_FONT, weight: 400, fill: 'white' });
-			} else {
-				art.with(c, { x: bigX, y: ground, scale: LAB.big }, (c2) => assemble(c2, rig, { pose: sel.pose }));
-				art.text(c, sel.pose.toUpperCase(), bigX, ground + 40, { size: 22, font: SQUID_FONT, weight: 400, fill: 'white' });
-			}
-			// an animation, playing: the chosen one, or the figure's first
-			const name = sel.seq || Object.keys(SEQS[fig] || {})[0];
-			if (name) {
-				const n = seqFrames(fig, name).length;
-				const i = Math.floor(t * fps(name, n)) % n;
-				const cycX = CW * 0.66;
-				art.with(c, { x: cycX, y: ground, scale: LAB.cycle }, (c2) => assemble(c2, rig, { seq: name, frame: i, bob: lifted(name, i) }));
-				art.text(c, `PLAYING ${name.toUpperCase()} · ${i + 1} / ${n}`, cycX, ground + 40, { size: 20, font: SQUID_FONT, weight: 400, fill: '#9fb6d8' });
-			}
-			// along the bottom: every still pose, then every animation (playing);
-			// click one to pick it
-			const items = stills().map((id) => ({ pose: id })).concat(Object.keys(SEQS[fig] || {}).map((sq) => ({ seq: sq })));
-			const colW = CW * 0.9 / Math.max(1, items.length);
+			art.rect(c, bigX - 200, ground - animHeight(fig) * LAB.big, 400, 1.5, { fill: 'rgba(255,255,255,0.14)' });
+			art.rect(c, bigX - 0.75, ground - animHeight(fig) * LAB.big - 20, 1.5, animHeight(fig) * LAB.big + 20, { fill: 'rgba(255,255,255,0.14)' });
+			if (n > 1) art.with(c, { x: bigX, y: ground, scale: LAB.big, alpha: LAB.ghost }, (c2) => drawClip(c2, fig, clip, at - 1, mask));
+			art.with(c, { x: bigX, y: ground, scale: LAB.big }, (c2) => drawClip(c2, fig, clip, at, mask));
+			art.text(c, `${clip.toUpperCase()} · FRAME ${at + 1} OF ${n}`, bigX, ground + 40, { size: 22, font: SQUID_FONT, weight: 400, fill: 'white' });
+			// the animation, playing
+			const cycX = CW * 0.68;
+			const i = Math.floor(t * fps(clip, n)) % Math.max(1, n);
+			art.with(c, { x: cycX, y: ground, scale: LAB.cycle }, (c2) => drawClip(c2, fig, clip, i, mask));
+			art.text(c, `PLAYING ${clip.toUpperCase()} · ${i + 1} / ${n}`, cycX, ground + 40, { size: 20, font: SQUID_FONT, weight: 400, fill: '#9fb6d8' });
+			// along the bottom: every animation, playing; click one to pick it
+			const names = clips();
+			const colW = CW * 0.9 / Math.max(1, names.length);
 			hits = [];
-			items.forEach(function (it, i) {
-				const x = CW * 0.05 + (i + 0.5) * colW;
+			names.forEach(function (name, k) {
+				const x = CW * 0.05 + (k + 0.5) * colW;
 				const y = 930;
-				const chosen = it.seq ? sel.seq === it.seq : !sel.seq && it.pose === sel.pose;
+				const chosen = name === clip;
+				const m = clipOf(fig, name).length || 1;
 				art.roundRect(c, x - colW / 2 + 6, y - 230, colW - 12, 270, 14, { fill: chosen ? 'rgba(58,138,216,0.3)' : 'rgba(255,255,255,0.04)' });
 				const scale = Math.min(LAB.row, (colW - 20) / 110);
-				if (it.seq) {
-					const n = seqFrames(fig, it.seq).length;
-					const f = Math.floor(t * fps(it.seq, n)) % n;
-					art.with(c, { x, y, scale }, (c2) => assemble(c2, rig, { seq: it.seq, frame: f, bob: lifted(it.seq, f) }));
-				} else art.with(c, { x, y, scale }, (c2) => assemble(c2, rig, { pose: it.pose }));
-				art.text(c, (it.seq ? '▶ ' + it.seq : it.pose).toUpperCase(), x, y + 24, { size: 16, font: SQUID_FONT, weight: 400, fill: chosen ? 'white' : '#9fb6d8' });
-				hits.push({ x0: x - colW / 2, x1: x + colW / 2, y0: y - 230, y1: y + 40, it });
+				art.with(c, { x, y, scale }, (c2) => drawClip(c2, fig, name, Math.floor(t * fps(name, m)) % m, mask));
+				art.text(c, '▶ ' + name.toUpperCase(), x, y + 24, { size: 16, font: SQUID_FONT, weight: 400, fill: chosen ? 'white' : '#9fb6d8' });
+				hits.push({ x0: x - colW / 2, x1: x + colW / 2, y0: y - 230, y1: y + 40, name });
 			});
 		}
 
 		function open() {
 			if (!$lab) build();
+			else render();
 			$lab.show();
 			t0 = performance.now();
 			if (!timer) timer = stage.interval(draw, 1000 / 30);
