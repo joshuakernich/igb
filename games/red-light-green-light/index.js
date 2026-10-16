@@ -4602,11 +4602,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		restart: '<path d="M71 50 A21 21 0 1 1 64 34" fill="none" stroke="black" stroke-width="10" stroke-linecap="round"/><path d="M57 21 L74 30 L60 43 Z" stroke-linejoin="round" stroke-width="4" stroke="black"/>',
 		help: '<text x="50" y="69" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="56">?</text>',
 	};
-	function cutIcon(name, size) {
+	function cutIcon(name, size, fill = 'white') {
 		const id = 'cut-icon-' + ++iconIds;
 		return $(`<svg viewBox="0 0 100 100" width="${size}" height="${size}" style="display:block;flex:none">`
 			+ `<defs><mask id="${id}"><rect width="100" height="100" fill="white"/><g fill="black">${SYMBOLS[name]}</g></mask></defs>`
-			+ `<circle cx="50" cy="50" r="48" fill="white" mask="url(#${id})"/></svg>`);
+			+ `<circle cx="50" cy="50" r="48" fill="${fill}" mask="url(#${id})"/></svg>`);
 	}
 	const $pauseBtn = $('<button pause>').attr('title', 'Pause').css({
 		position: 'absolute', left: PAUSE.x + 'px', top: H / 2 + 'px', transform: 'translateY(-50%)',
@@ -4644,16 +4644,16 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const R = PAUSE.row;
 	const rowCss = {
 		width: R.w + 'px', height: R.h + 'px', boxSizing: 'border-box', textAlign: 'left', borderRadius: R.h / 2 + 'px', border: '5px solid rgba(255,255,255,0.9)',
-		background: 'rgba(255,255,255,0.1)', color: 'white', fontFamily: font, fontSize: R.size + 'px', lineHeight: 1, letterSpacing: '2px',
+		background: 'rgba(0,0,0,0.92)', color: 'white', fontFamily: font, fontSize: R.size + 'px', lineHeight: 1, letterSpacing: '2px',
 		WebkitTextStroke: `${Math.max(4, R.size * 0.07)}px ${Showtime.TYPE.colours.ink}`, paintOrder: 'stroke fill',
 		display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', padding: `0 ${R.inset}px 0 52px`,   // (the words on the left, an icon on the right, snug in the capsule's end)
 		boxShadow: '0 10px 0 rgba(0,0,0,0.45)', transition: 'transform 0.12s, background 0.12s',
 	};
-	const icon = (name) => cutIcon(name, R.h - 10 - R.inset * 2);   // (as big as fits inside the border, an even gap all round)
+	const icon = (name, colour) => cutIcon(name, R.h - 10 - R.inset * 2, colour);   // (as big as fits inside the border, an even gap all round)
 	const label = (text) => $('<span>').text(text).css({ flex: 1, textAlign: 'left' });   // (hard against the left, whatever the button would do)
-	// (each row in its own colour: the cut-out icons show it through)
+	// (each row black, its border, words and icon in its own colour)
 	const ROW_COLOURS = { resume: '#f5b800', volume: '#2f7df6', restart: '#e8323c', help: '#1fb85c' };
-	const rowButton = (text, glyph, fn, colour) => $('<button>').append(label(text)).append(icon(glyph)).css(Object.assign({ cursor: 'pointer' }, rowCss, { background: colour }))
+	const rowButton = (text, glyph, fn, colour) => $('<button>').append(label(text)).append(icon(glyph, colour)).css(Object.assign({ cursor: 'pointer' }, rowCss, { color: colour, borderColor: colour }))
 		.on('mouseenter', function () { $(this).css({ transform: 'scale(1.04)', filter: 'brightness(1.12)' }); })
 		.on('mouseleave', function () { $(this).css({ transform: 'scale(1)', filter: 'none' }); })
 		.on('click', function (e) { e.stopPropagation(); fn(); });
@@ -4663,7 +4663,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// capsule snug in the row's end with five bars cut out of it, the ones up
 	// to the level cut clean through, the rest only faintly; click a bar for
 	// that level.
-	const $vol = $('<div>').css(Object.assign({}, rowCss, { background: ROW_COLOURS.volume })).appendTo($front);
+	const $vol = $('<div>').css(Object.assign({}, rowCss, { color: ROW_COLOURS.volume, borderColor: ROW_COLOURS.volume })).appendTo($front);
 	label('VOLUME').appendTo($vol);
 	const VH = R.h - 10 - R.inset * 2;                  // (as tall as the icons)
 	const BAR = { w: VH * 0.2, gap: VH * 0.12, pad: VH * 0.3 };
@@ -4675,7 +4675,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const $volSvg = $(`<svg viewBox="0 0 ${VW} ${VH}" width="${VW}" height="${VH}" style="display:block">`
 		+ `<defs><mask id="${volMask}"><rect width="${VW}" height="${VH}" fill="white"/>`
 		+ PAUSE.levels.map((v, i) => `<rect class="vbar" x="${barX(i)}" y="${VH * 0.82 - barH(i)}" width="${BAR.w}" height="${barH(i)}" rx="${BAR.w * 0.3}" fill="black"/>`).join('')
-		+ `</mask></defs><rect width="${VW}" height="${VH}" rx="${VH / 2}" fill="white" mask="url(#${volMask})"/></svg>`).appendTo($volIcon);
+		+ `</mask></defs><rect width="${VW}" height="${VH}" rx="${VH / 2}" fill="${ROW_COLOURS.volume}" mask="url(#${volMask})"/></svg>`).appendTo($volIcon);
 	PAUSE.levels.forEach(function (v, i) {
 		$('<button>').attr('title', 'Volume ' + (i + 1)).css({
 			position: 'absolute', left: barX(i) - BAR.gap / 2 + 'px', top: 0, width: BAR.w + BAR.gap + 'px', height: '100%',
