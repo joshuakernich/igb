@@ -140,7 +140,7 @@ window.Showtime = function (stage, opts) {
 		allSet: 1.8,           // "ALL SET!" holds this long, then on
 		length: 45,            // and on regardless after this long
 		y: 300,                // the row of visors
-		floor: { far: 330, near: 620, wall: 70 },   // the floor panel: its far and near widths, the walls' height (near)
+		floor: { far: 330, near: 620, wall: 150 },  // the floor panel: its far and near widths, how high the walls' glow rises (near)
 		// each player in play, a worm standing on the floor panel right where
 		// they are, as tall as the player (by their visor's height), leaning back
 		// away from the way they're moving and springing upright again when they
@@ -1570,20 +1570,6 @@ window.Showtime = function (stage, opts) {
 			const corners = [at(0, 1), at(1, 1), at(1, 0), at(0, 0)];   // far left, far right, near right, near left
 			const up = (p, k) => ({ x: p.x, y: p.y - V.floor.wall * k });
 			c.save();
-			// the walls: front, then the sides
-			c.fillStyle = 'rgba(255,255,255,0.08)';
-			c.strokeStyle = 'rgba(255,255,255,0.6)';
-			c.lineWidth = 4;
-			for (const face of [
-				[corners[0], corners[1], up(corners[1], far / near), up(corners[0], far / near)],
-				[corners[0], corners[3], up(corners[3], 1), up(corners[0], far / near)],
-				[corners[1], corners[2], up(corners[2], 1), up(corners[1], far / near)],
-			]) {
-				path(face);
-				c.closePath();
-				c.fill();
-				c.stroke();
-			}
 			// the floor, with a grid across it
 			path(corners);
 			c.closePath();
@@ -1602,6 +1588,37 @@ window.Showtime = function (stage, opts) {
 			c.strokeStyle = 'rgba(255,255,255,0.85)';
 			c.lineWidth = 5;
 			c.stroke();
+			// the walls: light glowing up off the floor's far and side edges,
+			// fading to nothing as it rises (the wall faced, at the far edge, the brightest)
+			c.save();
+			// (each edge in thin slices, each fading up from its own foot, so a
+			// slanting side wall fades evenly all along)
+			const SLICES = 16;
+			const glow = function (u0, d0, u1, d1, bright) {
+				for (let k = 0; k < SLICES; k++) {
+					const t0 = k / SLICES, t1 = (k + 1) / SLICES;
+					const a = at(lerp(u0, u1, t0), lerp(d0, d1, t0));
+					const b = at(lerp(u0, u1, t1), lerp(d0, d1, t1));
+					const ha = V.floor.wall * a.k, hb = V.floor.wall * b.k;
+					const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+					const g = c.createLinearGradient(mid.x, mid.y, mid.x, mid.y - (ha + hb) / 2);
+					g.addColorStop(0, `rgba(120,230,255,${0.75 * bright})`);
+					g.addColorStop(0.25, `rgba(90,180,255,${0.35 * bright})`);
+					g.addColorStop(1, 'rgba(60,120,255,0)');
+					c.beginPath();
+					c.moveTo(a.x, a.y);
+					c.lineTo(b.x + 0.5, b.y);
+					c.lineTo(b.x + 0.5, b.y - hb);
+					c.lineTo(a.x, a.y - ha);
+					c.closePath();
+					c.fillStyle = g;
+					c.fill();
+				}
+			};
+			glow(0, 1, 1, 1, 1);       // the wall faced: the far edge
+			glow(0, 0, 0, 1, 0.7);     // the side walls
+			glow(1, 0, 1, 1, 0.7);
+			c.restore();
 			// the circle, pulsing, lying on the floor
 			const r = V.zone.r * (1 + 0.04 * Math.sin(bt * 5));
 			const ring = [];
