@@ -1610,6 +1610,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			|| show.beat === 'visors';   // (nor while the visors go on: the walls are about the visors then)
 		for (const p of pads) drawPad(ctx, p);
 		drawBlockShadows(ctx);   // (on the sand, under everything standing on it)
+		if (!waiting) for (const c of contestants) if (c.alive && onView(footOf(c).f)) drawFoot(ctx, c);   // (where each player really is: on the sand too, behind everything)
 
 		// Everything standing on the plane, far to near.
 		const things = [];
@@ -1633,7 +1634,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		if (!waiting) for (const c of contestants) add(c.f, (cx) => drawContestant(cx, c));
 		things.sort((a, b) => (b.f - a.f) || (b.d - a.d));
 		for (const thing of things) thing.fn(ctx);
-		if (!waiting) for (const c of contestants) if (c.alive && onView(footOf(c).f)) drawFoot(ctx, c);
 		drawLasers(ctx);
 
 		for (const t of tracers) drawTracer(ctx, t);
@@ -2506,7 +2506,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const alpha = fadeIn(c.f);
 		const air = 1 - c.lift / 300;        // the shadow shrinks under a skip
 		// a solid spot of their colour, always under the avatar
-		if (c.alive) art.ellipse(ctx, ground.x, ground.y, 40 * s * air, 13 * s * air, { fill: colour, alpha: alpha * 0.9 });
+		if (c.alive) art.ellipse(ctx, ground.x, ground.y, 40 * s * air, 40 * FOOT_ROUND * s * air, { fill: colour, alpha: alpha * 0.9 });
 		// magnetised: rings of soft magnetic red, closing in on them over and
 		// over, the pull drawn on the sand
 		if (c.alive && c.magnet > 0) {
@@ -2567,7 +2567,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// Where the player really is, 1:1, even when a block holds the avatar back
 	// or red light glues its feet (mid-skip it rides along under the avatar):
 	// a ring of their colour, a little bigger than the spot under the avatar,
-	// drawn over everything so nothing hides it.
+	// on the sand, behind everything standing on it.
 	function footOf(c) {
 		return c.hop ? { x: c.x, f: c.f, air: 1 - c.lift / 300 } : { x: xOf(c, bandF(c)), f: bandF(c), air: 1 };
 	}
@@ -2575,8 +2575,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const foot = footOf(c);
 		const g = at(foot.x, foot.f, 0, c.wall);
 		const s = g.s * 1.6 * foot.air;
-		art.ellipse(ctx, g.x, g.y, 50 * s, 17 * s, { stroke: PLAYER_COLORS[c.n], lineWidth: 6, alpha: fadeIn(foot.f) });
+		art.ellipse(ctx, g.x, g.y, 50 * s, 50 * FOOT_ROUND * s, { stroke: PLAYER_COLORS[c.n], lineWidth: 6, alpha: fadeIn(foot.f) });
 	}
+	const FOOT_ROUND = 0.55;   // (how round a player's spot and ring are: height over width)
 
 	// A trapdoor at the corner end of a wall: a square hatch of sand sunk a
 	// little into the sand, only the dark gap where it sits (glowing faintly)
@@ -3012,7 +3013,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				if (y < y0) y0 = y;
 				if (y > y1) y1 = y;
 			}
-			boxes.push(x1 < 0 ? null : { x0, y0, x1: x1 + 2, y1: y1 + 2, cx: cx0 + cw / 2 });
+			// (how wide the head is: the widest the figure gets in its top 30%)
+			let hw = 0;
+			if (x1 >= 0) for (let y = y0; y < y0 + (y1 - y0) * 0.3; y += 2) {
+				let a = -1, b = -1;
+				for (let x = cx0; x < cx0 + cw; x += 2) if (solid(x, y)) { if (a < 0) a = x; b = x; }
+				if (a >= 0) hw = Math.max(hw, b - a);
+			}
+			boxes.push(x1 < 0 ? null : { x0, y0, x1: x1 + 2, y1: y1 + 2, cx: cx0 + cw / 2, hw });
 		}
 		// Each frame is its whole box, nothing trimmed, so it keeps exactly the
 		// place it was drawn in: hung from the box's middle at one baseline
@@ -3021,6 +3029,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// frames' heights (or, for her head, their widths).
 		const median = (list) => { const l = list.filter((v) => v !== null && v !== undefined).sort((a, b) => a - b); return l[Math.floor(l.length / 2)]; };
 		const base = median(boxes.map((b, i) => (b ? b.y1 - Math.round(Math.floor(i / 4) * ch) : null)));
+		// her head turning: each frame lifted or dropped so its middle sits at
+		// one height, keeping her eyes level as she turns
+		const mid = (b, i) => (b ? (b.y0 + b.y1) / 2 - Math.round(Math.floor(i / 4) * ch) : null);
+		const midAll = median(boxes.map(mid));
 		boxes.forEach(function (b, i) {
 			const cx0 = Math.round((i % 4) * cw);
 			const cy0 = Math.round(Math.floor(i / 4) * ch);
@@ -3030,10 +3042,15 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			crop.width = w;
 			crop.height = h;
 			crop.getContext('2d').drawImage(cv, cx0, cy0, w, h, 0, 0, w, h);
-			frames.push({ img: crop, x: -w / 2, y: -base, w, h });
+			frames.push({ img: crop, x: -w / 2, y: -base, w, h, dy: name === 'head' && b ? midAll - mid(b, i) : 0 });
 		});
 		for (let r = 0; r < rows; r++) baselines.push(Math.round(r * ch) + base);
 		const sheet = { frames, unit: name === 'head' ? median(boxes.map((b) => (b ? b.x1 - b.x0 : null))) : median(boxes.map((b) => (b ? b.y1 - b.y0 : null))) };
+		// The animation sheets are sized by the head (the same in every pose and
+		// every sheet), measured in their upright frames: so a crouch or a fall
+		// is drawn at the same scale as the run, whatever else is on its sheet.
+		const upright = { arun: 16, aact: 4, afront: 4, gcircle: 8, gtriangle: 8, gsquare: 8 }[name];
+		if (upright) sheet.unit = median(boxes.slice(0, upright).map((b) => (b ? b.hw : null))) * HEAD_TO_HEIGHT;
 		// a guard's rifle: its muzzle is the furthest-right thing in the firing frame
 		const fireAt = { circle: 6, gcircle: 13 }[name];
 		if (fireAt !== undefined && frames[fireAt] && boxes[fireAt]) {
@@ -3059,11 +3076,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// mask sheet. The character lab can change any clip: its length, which
 	// frame goes where, and each frame's nudge (kept as ANIM_TUNE[figure].
 	// clips[name]), and each figure's height.
+	const HEAD_TO_HEIGHT = 2.15;   // (a figure's standing height, in head widths: the run sheet's)
 	const range = (s, a, b) => Array.from({ length: b - a + 1 }, (_, k) => ({ s, i: a + k }));
+	// (height: the figure's size, as 2.15 head widths: a standing contestant's
+	// height, but more than a guard's, whose hood is wider)
 	const ANIMS = {
 		back: { height: 80, clips: { run: range('arun', 0, 15), idle: range('aact', 0, 3), freeze: range('aact', 4, 7), hop: range('aact', 8, 11), shot: range('aact', 12, 15) } },
-		front: { height: 100, clips: { idle: range('afront', 0, 3), cheer: range('afront', 4, 7), win: range('afront', 8, 11), sad: range('afront', 12, 15) } },
-		guard: { height: 112, clips: { walk: range('g', 0, 7), stand: range('g', 8, 9), aim: range('g', 10, 11), fire: range('g', 12, 15) } },
+		front: { height: 127, clips: { idle: range('afront', 0, 3), cheer: range('afront', 4, 7), win: range('afront', 8, 11), sad: range('afront', 12, 15) } },
+		guard: { height: 143, clips: { walk: range('g', 0, 7), stand: range('g', 8, 9), aim: range('g', 10, 11), fire: range('g', 12, 15) } },
 	};
 	const ANIM_SHEETS = { back: ['arun', 'aact'], front: ['afront'], guard: ['gcircle'] };   // (for the lab: which sheets each figure draws from)
 	const ANIM_TUNED = {};   // (the lab's tuning, baked in)
@@ -3870,13 +3890,13 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				const k = SPRITE.head / sheets.head.unit;
 				c.save();
 				if (Math.sin(yaw) < 0) c.scale(-1, 1);   // (turning the other way round)
-				c.drawImage(f.img, -f.w * k / 2, -f.h * k / 2, f.w * k, f.h * k);
+				c.drawImage(f.img, -f.w * k / 2, (-f.h / 2 + f.dy) * k, f.w * k, f.h * k);   // (each step lifted or dropped to keep her eyes level)
 				c.restore();
 				// watching: her eyes glow red
 				if (glare > 0 && i === sheets.head.frames.length - 1) {
 					for (const side of [-1, 1]) {
 						const ex = side * SPRITE.head * 0.16;
-						const ey = SPRITE.head * 0.06;
+						const ey = SPRITE.head * 0.06 + f.dy * k;
 						art.circle(c, ex, ey, 16, { fill: art.radial(c, ex, ey, 0, 16, [[0, `rgba(255,60,60,${0.9 * glare})`], [1, 'rgba(255,0,0,0)']]) });
 					}
 				}
