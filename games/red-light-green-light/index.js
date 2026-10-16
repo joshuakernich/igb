@@ -3077,7 +3077,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			'legsWalk4', 'legsWalk5', 'legsWalk6', 'legsBrace',
 		] },
 	};
-	const RIG = { overlap: 0.06, lean: 14, bob: 6 };   // how far parts tuck into each other at the joins (a share of the figure); degrees the body leans when drifting frozen; how much it bobs running
+	const RIG = { overlap: 0.06, lean: 14, bob: 13, run: 0.6 };   // how far parts tuck into each other at the joins (a share of the figure); degrees the body leans when drifting frozen; how much it bobs running; how fast the run cycle steps (against their pace)
 
 	// Every pose each figure strikes: which head, body and legs (the torso
 	// mirrored on the second half of the run, so the arms pump), and a lift off
@@ -3288,12 +3288,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		c.translate(tt.x / k, -legsTall - lift + tuck - (pick.bob || 0) / k + tt.y / k);
 		c.rotate(((pick.lean || 0) + tt.r) * Math.PI / 180);
 		const flips = (p) => (pick.mirror !== undefined ? pick.mirror : !!p.mirror);
-		layer(A.torso, B && B.torso, 'bottom', flips(pose));
-		// the head on the neck
+		// the head on the neck, drawn first so the body's collar sits over it
 		const th = T('head');
+		c.save();
 		c.translate(th.x / k, -torsoTall + tuck * 1.2 + th.y / k);
 		c.rotate(((pick.tilt || 0) + th.r) * Math.PI / 180);
 		layer(A.head, B && B.head, 'bottom');
+		c.restore();
+		layer(A.torso, B && B.torso, 'bottom', flips(pose));
 		c.restore();
 		c.restore();
 		return true;
@@ -3327,14 +3329,15 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		} else if (k.moving > 0.2 && !k.fall && !(k.down > 0)) {
 			// running: the legs through their strides, the arms pumping (the
 			// body mirrored on the other stride), bobbing up off each step
-			const phase = ((k.walk / (Math.PI * 2)) % 1 + 1) % 1;
+			const cycle = k.walk * RIG.run;   // (slower than their pace: a loping run)
+			const phase = ((cycle / (Math.PI * 2)) % 1 + 1) % 1;
 			const step = phase * 6;
 			pick.pose = 'run' + (1 + Math.floor(step));
 			pick.next = 'run' + (1 + (Math.floor(step) + 1) % 6);
 			pick.t = step % 1;
-			pick.bob = Math.abs(Math.sin(k.walk)) * RIG.bob * k.moving;
+			pick.bob = Math.abs(Math.sin(cycle)) * RIG.bob * k.moving;   // (up off each stride, twice a cycle)
 			pick.lean = (k.drift || 0) * -8;
-			pick.tilt = Math.sin(k.walk) * 3;
+			pick.tilt = Math.sin(cycle) * 3;
 		}
 		return assemble(c, rig, pick);
 	}
@@ -4377,10 +4380,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			}
 			// the cycle, playing
 			const cycle = fig === 'back' ? ['run1', 'run2', 'run3', 'run4', 'run5', 'run6'] : fig === 'guard' ? ['walk1', 'walk2', 'walk3', 'walk4', 'walk5', 'walk6'] : ['win1', 'win2', 'win3', 'win4'];
-			const at = t * (fig === 'front' ? 2.5 : 12);
+			const at = t * (fig === 'front' ? 2.5 : fig === 'back' ? 12 * RIG.run : 12);
 			const step = Math.floor(at) % cycle.length;
 			const ease2 = fig === 'front' ? 0 : at % 1;
-			art.with(c, { x: 780, y: ground, scale: 2.2 }, (c2) => assemble(c2, rig, { pose: cycle[step], next: cycle[(step + 1) % cycle.length], t: ease2, bob: fig === 'back' ? Math.abs(Math.sin(t * Math.PI * 4)) * RIG.bob : 0 }));
+			art.with(c, { x: 780, y: ground, scale: 2.2 }, (c2) => assemble(c2, rig, { pose: cycle[step], next: cycle[(step + 1) % cycle.length], t: ease2, bob: fig === 'back' ? Math.abs(Math.sin(at / 6 * Math.PI * 2)) * RIG.bob : 0 }));
 			art.text(c, 'PLAYING: ' + cycle[step].toUpperCase(), 780, ground + 40, { size: 22, font: SQUID_FONT, weight: 400, fill: '#9fb6d8' });
 			// every pose, small, the chosen one marked
 			const ids = Object.keys(POSES[fig]);
