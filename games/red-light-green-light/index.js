@@ -2166,44 +2166,44 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		});
 	}
 
-	// A shadow in the shape of the thing that casts it: the thing drawn again
-	// (by draw, feet at (0, 0), in screen units) into a spare canvas, turned
-	// into a dark silhouette, and laid on the sand flipped down from its feet
-	// (the light's behind it, at the far end), its length the ground's tilt
-	// allows (see groundTilt), softly blurred. So a runner's shadow runs, a
-	// guard's holds a rifle, the doll's has her pigtails.
-	const SIL = { alpha: 0.3, blur: 0, contact: 0.22 };   // how dark; how soft (pixels: blurring every frame is slow, so off); the dark patch where it touches down
-	const silCanvas = document.createElement('canvas');
-	function castShape(ctx, x, y, f, draw, size, alpha = 1, foot = 0) {
-		const half = Math.max(8, Math.ceil(size));
-		const cw = half * 2;
-		const ch = Math.ceil(half * 1.6);
-		if (silCanvas.width < cw || silCanvas.height < ch) {
-			silCanvas.width = Math.max(silCanvas.width, cw);
-			silCanvas.height = Math.max(silCanvas.height, ch);
-		}
-		const g = silCanvas.getContext('2d');
-		g.setTransform(1, 0, 0, 1, 0, 0);
-		g.globalCompositeOperation = 'source-over';
-		g.globalAlpha = 1;
-		g.clearRect(0, 0, cw, ch);   // (just the part this one uses)
+	// A shadow in the shape of the thing that casts it, made once from one
+	// pose and kept: the thing drawn (by draw, feet at (0, 0), at SIL.res
+	// times its usual size) into a canvas of its own and turned into a dark
+	// silhouette. Laid on the sand flipped down from its feet (the light's
+	// behind it, at the far end), its length the ground's tilt allows (see
+	// groundTilt). So a guard's has a rifle, the doll's has her pigtails.
+	const SIL = { alpha: 0.3, contact: 0.22, res: 3 };   // how dark; the dark patch where it touches down; how sharp the kept shapes are
+	const shapes = new Map();   // key: { canvas, fx, fy } (the feet, in the canvas)
+	function shapeOf(key, draw, width, height) {
+		if (shapes.has(key)) return shapes.get(key);
+		const R = SIL.res;
+		const canvas = document.createElement('canvas');
+		canvas.width = Math.ceil(width * R);
+		canvas.height = Math.ceil(height * R);
+		const g = canvas.getContext('2d');
+		const fx = canvas.width / 2;
+		const fy = canvas.height - 2;
 		g.save();
-		g.translate(half, ch - 2);
+		g.translate(fx, fy);
+		g.scale(R, R);
 		draw(g);
 		g.restore();
 		g.globalCompositeOperation = 'source-in';
 		g.fillStyle = 'rgb(20,10,30)';
-		g.fillRect(0, 0, cw, ch);
-		g.globalCompositeOperation = 'source-over';
-		const k = -SHADOW.f * (f !== undefined ? groundTilt(f) : 1);
+		g.fillRect(0, 0, canvas.width, canvas.height);
+		const shape = { canvas, fx, fy };
+		shapes.set(key, shape);
+		return shape;
+	}
+	// lay a kept shape down at (x, y), scale times its kept size (flip: mirrored across)
+	function castShape(ctx, shape, x, y, f, scale, alpha = 1, foot = 0, flip = false) {
+		const k = scale / SIL.res;
 		ctx.save();
 		ctx.globalAlpha *= SIL.alpha * alpha;
-		if (SIL.blur) ctx.filter = `blur(${SIL.blur}px)`;
 		ctx.translate(x, y);
-		ctx.scale(1, -k);   // (flipped down from its feet, and flattened onto the sand)
-		ctx.drawImage(silCanvas, 0, 0, cw, ch, -half, -(ch - 2), cw, ch);
+		ctx.scale(flip ? -k : k, SHADOW.f * groundTilt(f) * k);   // (negative: flipped down from its feet)
+		ctx.drawImage(shape.canvas, -shape.fx, -shape.fy);
 		ctx.restore();
-		// where it touches the sand, darker
 		if (foot > 0) art.ellipse(ctx, x, y, foot, foot * 0.3, { fill: `rgba(20,10,30,${SIL.contact})`, alpha });
 	}
 
@@ -2275,6 +2275,50 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// A boulder rolling down the field: a rough round stone, lit from the top
 	// left, its cracks and chips sliding down its face as it rolls toward
 	// you, dust kicked up behind it.
+	// The boulder's sprite sheet (ChatGPT: v3-boulder.png, 4 by 2, rolling
+	// toward us an eighth of a turn a frame), each frame trimmed when it loads.
+	const BOULDER_ART = { file: 'v3-boulder.png', size: 1.12 };   // how big it's drawn, against the boulder's size
+	let boulderFrames = null;
+	(function () {
+		const img = new Image();
+		img.onload = function () {
+			try {
+				const cv = document.createElement('canvas');
+				cv.width = img.width;
+				cv.height = img.height;
+				const g = cv.getContext('2d');
+				g.drawImage(img, 0, 0);
+				const data = g.getImageData(0, 0, img.width, img.height).data;
+				const cw = img.width / 4;
+				const ch = img.height / 2;
+				const frames = [];
+				for (let i = 0; i < 8; i++) {
+					const cx0 = Math.round((i % 4) * cw);
+					const cy0 = Math.round(Math.floor(i / 4) * ch);
+					let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1;
+					for (let y = cy0 + 2; y < cy0 + ch - 2; y += 2) for (let x = cx0 + 2; x < cx0 + cw - 2; x += 2) {
+						if (data[(y * img.width + x) * 4 + 3] <= 60) continue;
+						if (x < x0) x0 = x;
+						if (x > x1) x1 = x;
+						if (y < y0) y0 = y;
+						if (y > y1) y1 = y;
+					}
+					if (x1 < 0) return;
+					// (every frame cut to one square round the cell's middle, so it can't wobble)
+					const half = Math.max(x1 - x0, y1 - y0) / 2 + 4;
+					const mx = cx0 + cw / 2;
+					const my = cy0 + ch / 2;
+					const crop = document.createElement('canvas');
+					crop.width = crop.height = Math.ceil(half * 2);
+					crop.getContext('2d').drawImage(cv, mx - half, my - half, half * 2, half * 2, 0, 0, half * 2, half * 2);
+					frames.push({ img: crop, w: crop.width, h: crop.height });
+				}
+				boulderFrames = frames;
+			} catch (e) { /* (drawn as before) */ }
+		};
+		img.src = 'assets/red-light-green-light/' + BOULDER_ART.file;
+	})();
+
 	function drawBoulder(ctx, b) {
 		const foot = at(b.x, b.f);
 		const p = at(b.x, b.f, b.r);
@@ -2289,7 +2333,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				art.circle(c, d.x, d.y, (14 + k * 34) * d.s, { fill: 'rgba(214,186,140,0.55)', alpha: (1 - k) * 0.8 });
 			}
 			softShadow(c, foot.x, foot.y, r * 0.95, r * 0.3, 0.3, 1, r * 2, b.f);
-			// the stone: a lumpy circle
+			// the stone, rolling: its sprite sheet, a frame for each eighth of a turn
+			if (boulderFrames) {
+				const f = boulderFrames[Math.floor((((b.spin / (Math.PI * 2)) % 1) + 1) % 1 * boulderFrames.length)];
+				const d = r * 2 * BOULDER_ART.size;
+				c.drawImage(f.img, p.x - d / 2, p.y - d / 2 * f.h / f.w, d, d * f.h / f.w);
+				return;
+			}
+			// (until it's loaded) a lumpy circle
 			c.save();
 			c.beginPath();
 			for (let i = 0; i <= 18; i++) {
@@ -2325,7 +2376,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const p = at(x, f);
 		const s = p.s * 1.45;
 		const figure = (c) => guard(c, mask, armed, walk, muzzle);
-		castShape(ctx, p.x, p.y, f, (g) => art.with(g, { scaleX: s * dir, scaleY: s }, figure), 170 * s, fadeIn(f), 18 * s);   // (their shadow, in their shape)
+		// their shadow, in a guard's shape (standing, rifle and all), facing their way
+		if (rigs.guard) castShape(ctx, shapeOf('guard-' + mask, (g) => guard(g, mask, armed, 0, 0), 220, 170), p.x, p.y, f, s, fadeIn(f), 18 * s, dir < 0);
+		else softShadow(ctx, p.x, p.y, 24 * s, 8 * s, 0.3, fadeIn(f), 118 * s, f);
 		art.with(ctx, { x: p.x, y: p.y, scaleX: s * dir, scaleY: s, alpha: fadeIn(f) }, figure);
 	}
 
@@ -2459,8 +2512,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			if (sheets.act && sheets.run) contestantSprite(cx, c);
 			else contestant(cx, c);
 		};
-		// their shadow, in their shape, on the sand under them (fainter when they're up off it)
-		castShape(ctx, ground.x, ground.y, c.f, (g) => art.with(g, { scale: s * Math.max(0.6, air), scaleY, rotate }, figure), 160 * s, alpha * Math.max(0.3, air), 18 * s * air);
+		// their shadow, in a contestant's shape (standing), on the sand under them (fainter when they're up off it)
+		if (rigs.back) castShape(ctx, shapeOf('contestant', (g) => assemble(g, rigs.back, { pose: 'stand' }), 160, 150), ground.x, ground.y, c.f, s * Math.max(0.6, air), alpha * Math.max(0.3, air), 18 * s * air);
+		else softShadow(ctx, ground.x, ground.y, 22 * s * air, 8 * s * air, 0.35, alpha, 108 * s * air, c.f);
 		art.with(ctx, { x: p.x, y: p.y, scale: s, scaleY, rotate, alpha }, figure);
 
 		if (c.down > 0) {
@@ -3436,7 +3490,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			dollBody(c, false);
 			art.with(c, { y: -dollHeadY(), scale: 2.1 }, (c2) => dollHead(c2, head.yaw, 0));
 		};
-		castShape(ctx, p.x, p.y, dollF, (g) => art.with(g, { scale: p.s * 0.82 }, her), (dollHeadY() + 200) * p.s * 0.82, 1, 120 * p.s * 0.82);   // (her shadow, pigtails and all)
+		// her shadow, pigtails and all
+		if (dollBodyImg && sheets.head) castShape(ctx, shapeOf('doll', (g) => art.with(g, { scale: 0.35 }, her), 400 * 0.35 * 2.2, (dollHeadY() + 220) * 0.35), p.x, p.y, dollF, p.s * 0.82 / 0.35, 1, 120 * p.s * 0.82);
+		else softShadow(ctx, p.x, p.y, 150 * p.s * 0.82, 30 * p.s * 0.82, 0.25, 1, 700 * p.s * 0.82, dollF);
 		art.with(ctx, { x: p.x, y: p.y, scale: p.s * 0.82 }, function (c) {
 			dollBody(c, false);
 			art.with(c, { y: -dollHeadY(), scale: 2.1 }, (c2) => dollHead(c2, head.yaw, glare));

@@ -229,3 +229,4 @@ v3-contestant-front, v3-guard (same parts in the same order as v2).
 
 The lettering is Game of Squids (GameOfSquids.ttf, Darrell Flood, free for
 all use; see GameOfSquids-license.txt).
+- **v3-boulder.png**: a sprite sheet, 4x2, of one round sandstone boulder rolling toward the viewer, an eighth of a turn a frame (its cracks, chips and moss travelling down its face, frame 8 leading back into frame 1), the same size and place in every cell, lineless and richly shaded, transparent.
