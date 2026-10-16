@@ -4593,16 +4593,30 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const live = !!window.vuplex;
 	const font = `"${SQUID_FONT}", "${Showtime.TYPE.font}", sans-serif`;
 	let paused = false;
+	// The menu's icons: a white disc with its symbol cut clean out of it (an
+	// SVG mask), so whatever's behind shows through the symbol.
+	let iconIds = 0;
+	const SYMBOLS = {
+		pause: '<rect x="33" y="28" width="12" height="44" rx="3"/><rect x="55" y="28" width="12" height="44" rx="3"/>',
+		play: '<path d="M39 27 L74 50 L39 73 Z" stroke-linejoin="round" stroke-width="6" stroke="black"/>',
+		restart: '<path d="M71 50 A21 21 0 1 1 64 34" fill="none" stroke="black" stroke-width="10" stroke-linecap="round"/><path d="M57 21 L74 30 L60 43 Z" stroke-linejoin="round" stroke-width="4" stroke="black"/>',
+		help: '<text x="50" y="69" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="56">?</text>',
+	};
+	function cutIcon(name, size) {
+		const id = 'cut-icon-' + ++iconIds;
+		return $(`<svg viewBox="0 0 100 100" width="${size}" height="${size}" style="display:block;flex:none">`
+			+ `<defs><mask id="${id}"><rect width="100" height="100" fill="white"/><g fill="black">${SYMBOLS[name]}</g></mask></defs>`
+			+ `<circle cx="50" cy="50" r="48" fill="white" mask="url(#${id})"/></svg>`);
+	}
 	const $pauseBtn = $('<button pause>').attr('title', 'Pause').css({
 		position: 'absolute', left: PAUSE.x + 'px', top: H / 2 + 'px', transform: 'translateY(-50%)',
-		width: PAUSE.button + 'px', height: PAUSE.button + 'px', borderRadius: '50%', border: '6px solid rgba(255,255,255,0.9)',
-		background: 'rgba(12,4,30,0.9)', cursor: 'pointer', pointerEvents: 'auto', zIndex: 20, padding: 0,
-		display: 'flex', alignItems: 'center', justifyContent: 'center', gap: PAUSE.button * 0.12 + 'px',
-		boxShadow: '0 10px 0 rgba(0,0,0,0.45)', transition: 'transform 0.15s',
+		width: PAUSE.button + 'px', height: PAUSE.button + 'px', borderRadius: '50%', border: 'none',
+		background: 'none', cursor: 'pointer', pointerEvents: 'auto', zIndex: 20, padding: 0,
+		filter: 'drop-shadow(0 10px 0 rgba(0,0,0,0.45))', transition: 'transform 0.15s',
 	}).hide().appendTo(stage.$ui).on('click', function (e) { e.stopPropagation(); setPaused(true); })
 		.on('mouseenter', function () { $(this).css({ transform: 'translateY(-50%) scale(1.08)' }); })
 		.on('mouseleave', function () { $(this).css({ transform: 'translateY(-50%) scale(1)' }); });
-	for (let i = 0; i < 2; i++) $('<span>').css({ width: PAUSE.button * 0.13 + 'px', height: PAUSE.button * 0.42 + 'px', borderRadius: '6px', background: 'white' }).appendTo($pauseBtn);
+	cutIcon('pause', PAUSE.button).appendTo($pauseBtn);
 
 	// the screen: dark glass over all three walls, a panel on each
 	const $pause = $('<pause-screen>').css({
@@ -4634,14 +4648,13 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', padding: '0 44px 0 52px',   // (the words on the left, an icon on the right)
 		boxShadow: '0 10px 0 rgba(0,0,0,0.45)', transition: 'transform 0.12s, background 0.12s',
 	};
-	const icon = (glyph) => $('<span>').text(glyph).css(Object.assign({ fontFamily: 'system-ui, -apple-system, "Segoe UI Symbol", sans-serif', fontSize: R.size * 1.1 + 'px', width: '1.2em', textAlign: 'center' },
-		glyph === '?' ? { fontSize: R.size * 0.8 + 'px', fontWeight: 800, width: '1.25em', height: '1.25em', lineHeight: '1.15em', borderRadius: '50%', border: '5px solid white', boxSizing: 'border-box' } : {}));   // (?: in a ring, the help sign)
+	const icon = (name) => cutIcon(name, R.h * 0.62);
 	const label = (text) => $('<span>').text(text).css({ flex: 1, textAlign: 'left' });   // (hard against the left, whatever the button would do)
 	const rowButton = (text, glyph, fn) => $('<button>').append(label(text)).append(icon(glyph)).css(Object.assign({ cursor: 'pointer' }, rowCss))
 		.on('mouseenter', function () { $(this).css({ transform: 'scale(1.04)', background: 'rgba(255,255,255,0.2)' }); })
 		.on('mouseleave', function () { $(this).css({ transform: 'scale(1)', background: 'rgba(255,255,255,0.1)' }); })
 		.on('click', function (e) { e.stopPropagation(); fn(); });
-	rowButton('RESUME', '▶', () => setPaused(false)).appendTo($front);
+	rowButton('RESUME', 'play', () => setPaused(false)).appendTo($front);
 	// the volume, the same shape: its name, then five bars, all alike, lit up to its level; click one for that level
 	const $vol = $('<div>').css(rowCss).appendTo($front);
 	label('VOLUME').appendTo($vol);
@@ -4653,8 +4666,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const level = PAUSE.levels.reduce((best, v, i) => (Math.abs(v - IGB.volume) < Math.abs(PAUSE.levels[best] - IGB.volume) ? i : best), 0);
 		bars.forEach(($b, i) => $b.css({ background: i <= level ? 'white' : 'rgba(255,255,255,0.08)' }));
 	}
-	rowButton('RESTART ROUND', '↻', () => { setPaused(false); restartRound(); }).appendTo($front);
-	rowButton('REPLAY TUTORIAL', '?', () => { setPaused(false); debugJump('controls'); }).appendTo($front);
+	rowButton('RESTART ROUND', 'restart', () => { setPaused(false); restartRound(); }).appendTo($front);
+	rowButton('REPLAY TUTORIAL', 'help', () => { setPaused(false); debugJump('controls'); }).appendTo($front);
 
 	// the round over again from its start (in play), or else the beat the show is on
 	function restartRound() {
