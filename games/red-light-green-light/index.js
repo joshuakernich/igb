@@ -1858,12 +1858,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		drawGravel(ctx);
 		// the haze over the far sand, and the sky
 		art.rect(ctx, -20, hz, WIDTH + 40, 260, { fill: art.linear(ctx, 0, hz, 0, hz + 260, ['rgba(246,236,214,0.9)', 'rgba(246,236,214,0)']) });
-		art.rect(ctx, -20, -20, WIDTH + 40, hz + 20, { fill: art.linear(ctx, 0, 0, 0, hz, ['#6ec3ea', '#bfe4f2', '#f3ecd9']) });
-		for (let i = 0; i < 9; i++) {
-			const x = ((i * 977 + 260) % WIDTH) + Math.sin(wallT * 0.05 + i) * 30;
-			const y = 30 + (i * 37) % 70;
-			for (const [dx, dy, r] of [[0, 0, 34], [38, 6, 26], [-36, 8, 24], [14, -14, 24]]) art.ellipse(ctx, x + dx, y + dy, r * 1.6, r * 0.7, { fill: 'rgba(255,255,255,0.75)' });
-		}
+		art.rect(ctx, -20, -20, WIDTH + 40, hz + 20, { fill: art.linear(ctx, 0, 0, 0, hz, ['#6ec3ea', '#bfe4f2', '#f3ecd9']) });   // (a clear sky: the sun's the show)
 		art.rect(ctx, -20, hz - 1.5, WIDTH + 40, 3, { fill: 'rgba(160,120,80,0.35)' });
 		drawBackWall(ctx);
 	}
@@ -1880,6 +1875,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const top = base - BACK_WALL.height * s;
 		const trim = BACK_WALL.trim * s;
 		const haze = 1 - fadeIn(f);   // (the further, the more it's lost in the haze)
+		drawSun(ctx, top - trim, false);   // (behind the wall: its lower half hidden by it)
 		art.save(ctx, function (c) {
 			art.rect(c, -20, top, WIDTH + 40, base - top, { fill: art.linear(c, 0, top, 0, base, ['#5fb6e6', '#8fcdee', '#bfe4f2']) });
 			// painted clouds, scaled with it, the same wherever it is
@@ -1893,6 +1889,47 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			art.rect(c, -20, top, WIDTH + 40, Math.max(1, trim * 0.35), { fill: 'rgba(0,0,0,0.12)' });
 			art.rect(c, -20, base - 30 * s, WIDTH + 40, 30 * s, { fill: 'rgba(40,60,90,0.18)' });   // shade where it meets the sand
 			if (haze > 0) art.rect(c, -20, top - trim, WIDTH + 40, base - top + trim, { fill: 'rgba(240,232,214,1)', alpha: Math.min(0.75, haze) });
+		});
+		drawSun(ctx, top - trim, true);   // (its glare spilling over the wall's top)
+	}
+
+	// The sun, peeking up over the middle of the back wall: a white-hot disc,
+	// a huge warm bloom round it, slow-turning rays, and (drawn again over the
+	// wall) the glare that spills down over its top and a long streak of
+	// light along it.
+	const SUN_LOOK = { r: 70, peek: 0.45, bloom: 900, rays: 18, ray: 1100, glare: 0.45 };   // its radius; how much of it shows over the wall; the bloom's reach; how many rays, how long; how bright the glare over the wall is
+	function drawSun(ctx, edge, over) {
+		const x = DOLL_X;
+		const y = edge + SUN_LOOK.r * (1 - 2 * SUN_LOOK.peek);   // (its centre, below the wall's top so only its upper part shows)
+		art.save(ctx, function (c) {
+			c.globalCompositeOperation = 'lighter';
+			if (!over) {
+				// the bloom, and the rays fanning up from it
+				const R = SUN_LOOK.bloom;
+				c.fillStyle = art.radial(c, x, y, 0, R, [[0, 'rgba(255,246,220,0.95)'], [0.06, 'rgba(255,236,190,0.75)'], [0.18, 'rgba(255,214,150,0.35)'], [0.45, 'rgba(255,190,120,0.12)'], [1, 'rgba(255,170,90,0)']]);
+				c.fillRect(x - R, y - R, R * 2, R * 2);
+				for (let i = 0; i < SUN_LOOK.rays; i++) {
+					const a = Math.PI + (i + 0.5) / SUN_LOOK.rays * Math.PI + Math.sin(wallT * 0.15 + i) * 0.03;   // (only up: the wall hides the rest)
+					const len = SUN_LOOK.ray * (i % 2 ? 0.6 : 1) * (0.85 + 0.15 * Math.sin(wallT * 0.7 + i * 1.7));
+					const w = 0.035;
+					c.fillStyle = art.radial(c, x, y, 0, len, [[0, 'rgba(255,240,200,0.22)'], [1, 'rgba(255,220,160,0)']]);
+					c.beginPath();
+					c.moveTo(x, y);
+					c.lineTo(x + Math.cos(a - w) * len, y + Math.sin(a - w) * len);
+					c.lineTo(x + Math.cos(a + w) * len, y + Math.sin(a + w) * len);
+					c.closePath();
+					c.fill();
+				}
+				art.circle(c, x, y, SUN_LOOK.r * 1.4, { fill: 'rgba(255,250,235,0.6)' });
+				art.circle(c, x, y, SUN_LOOK.r, { fill: '#fffaf0' });
+			} else {
+				// the glare over the wall's top, and a streak of light along it
+				const G = SUN_LOOK.bloom * 0.5;
+				c.fillStyle = art.radial(c, x, edge, 0, G, [[0, `rgba(255,244,214,${SUN_LOOK.glare})`], [0.25, `rgba(255,226,170,${SUN_LOOK.glare * 0.4})`], [1, 'rgba(255,200,130,0)']]);
+				c.fillRect(x - G, edge - G, G * 2, G * 2);
+				c.fillStyle = art.linear(c, x - 1400, 0, x + 1400, 0, ['rgba(255,236,190,0)', `rgba(255,244,214,${SUN_LOOK.glare})`, 'rgba(255,236,190,0)']);
+				c.fillRect(x - 1400, edge - 3, 2800, 6);
+			}
 		});
 	}
 
