@@ -4656,15 +4656,32 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		.on('click', function (e) { e.stopPropagation(); fn(); });
 	rowButton('RESUME', 'play', () => setPaused(false)).appendTo($front);
 	// the volume, the same shape: its name, then five bars, all alike, lit up to its level; click one for that level
-	const $vol = $('<div>').css(Object.assign({}, rowCss, { paddingRight: '40px' })).appendTo($front);
+	// The volume, the same shape, its control in the icons' style: a white
+	// capsule snug in the row's end with five bars cut out of it, the ones up
+	// to the level cut clean through, the rest only faintly; click a bar for
+	// that level.
+	const $vol = $('<div>').css(rowCss).appendTo($front);
 	label('VOLUME').appendTo($vol);
-	const $bars = $('<div>').css({ display: 'flex', alignItems: 'center', gap: '12px', height: R.h * 0.46 + 'px' }).appendTo($vol);
-	const bars = PAUSE.levels.map((v, i) => $('<button>').attr('title', 'Volume ' + (i + 1)).css({
-		width: '36px', height: '100%', borderRadius: '8px', border: '4px solid white', cursor: 'pointer', padding: 0,   // (all one size: lit up to the level)
-	}).appendTo($bars).on('click', function (e) { e.stopPropagation(); IGB.setVolume(v); showVolume(); show.fx('pick'); }));
+	const VH = R.h - 10 - R.inset * 2;                  // (as tall as the icons)
+	const BAR = { w: VH * 0.2, gap: VH * 0.12, pad: VH * 0.3 };
+	const VW = BAR.pad * 2 + PAUSE.levels.length * BAR.w + (PAUSE.levels.length - 1) * BAR.gap;
+	const $volIcon = $('<div>').css({ position: 'relative', width: VW + 'px', height: VH + 'px', flex: 'none' }).appendTo($vol);
+	const volMask = 'cut-icon-' + ++iconIds;
+	const barX = (i) => BAR.pad + i * (BAR.w + BAR.gap);
+	const barH = (i) => VH * (0.3 + 0.1 * i);   // (rising, left to right, standing on one line)
+	const $volSvg = $(`<svg viewBox="0 0 ${VW} ${VH}" width="${VW}" height="${VH}" style="display:block">`
+		+ `<defs><mask id="${volMask}"><rect width="${VW}" height="${VH}" fill="white"/>`
+		+ PAUSE.levels.map((v, i) => `<rect class="vbar" x="${barX(i)}" y="${VH * 0.82 - barH(i)}" width="${BAR.w}" height="${barH(i)}" rx="${BAR.w * 0.3}" fill="black"/>`).join('')
+		+ `</mask></defs><rect width="${VW}" height="${VH}" rx="${VH / 2}" fill="white" mask="url(#${volMask})"/></svg>`).appendTo($volIcon);
+	PAUSE.levels.forEach(function (v, i) {
+		$('<button>').attr('title', 'Volume ' + (i + 1)).css({
+			position: 'absolute', left: barX(i) - BAR.gap / 2 + 'px', top: 0, width: BAR.w + BAR.gap + 'px', height: '100%',
+			background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+		}).appendTo($volIcon).on('click', function (e) { e.stopPropagation(); IGB.setVolume(v); showVolume(); show.fx('pick'); });
+	});
 	function showVolume() {
 		const level = PAUSE.levels.reduce((best, v, i) => (Math.abs(v - IGB.volume) < Math.abs(PAUSE.levels[best] - IGB.volume) ? i : best), 0);
-		bars.forEach(($b, i) => $b.css({ background: i <= level ? 'white' : 'rgba(255,255,255,0.08)' }));
+		$volSvg.find('.vbar').each(function (i) { this.setAttribute('fill', i <= level ? 'black' : '#a8a8a8'); });   // (black: cut clean through; grey: only faintly)
 	}
 	rowButton('RESTART ROUND', 'restart', () => { setPaused(false); restartRound(); }).appendTo($front);
 	rowButton('REPLAY TUTORIAL', 'help', () => { setPaused(false); debugJump('controls'); }).appendTo($front);
