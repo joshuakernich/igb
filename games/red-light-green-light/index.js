@@ -2420,7 +2420,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	// A trapdoor at the corner end of a wall: a square hatch of sand sunk a
 	// little into the sand, only the dark gap where it sits (glowing faintly)
-	// and arrows scratched in it giving it away. Step on and it springs open
+	// and an arrow painted on it giving it away. Step on and it springs open
 	// toward the next wall (see drawDoor) and throws you there. Here: the hole
 	// and, while it's shut, the lid down in it.
 	function drawPad(ctx, p) {
@@ -2505,18 +2505,21 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const xb = Math.max(...xs);
 		const dark = 'rgba(70,40,15,0.18)';
 		art.poly(c, quad, { fill: art.linear(c, xa, 0, xb, 0, dir > 0 ? ['rgba(70,40,15,0)', 'rgba(70,40,15,0)', dark] : [dark, 'rgba(70,40,15,0)', 'rgba(70,40,15,0)']) });
-		// grains and little stones, the same each time for this door
-		if (!p.grains) p.grains = Array.from({ length: 22 }, () => [Math.random(), Math.random() * 2 - 1, 1 + Math.random() * 2.5, Math.random() < 0.5]);
 		const s = at(p.x, p.f, 0, wall).s;
+		// an arrow painted on it, pointing the way it throws you: chalky white
+		// paint, soaked into the sand and worn, grit showing through it
+		const ARROW = [[0.16, -0.15], [0.54, -0.15], [0.54, -0.44], [0.86, 0], [0.54, 0.44], [0.54, 0.15], [0.16, 0.15]];
+		art.poly(c, ARROW.map(([u, v]) => at2(u, v)), { fill: 'rgba(250,244,230,0.72)' });
+		if (!p.wear) p.wear = Array.from({ length: 40 }, () => [0.16 + Math.random() * 0.7, (Math.random() * 2 - 1) * 0.44, 0.6 + Math.random() * 1.6]);
+		for (const [u, v, r] of p.wear) {
+			const [x, y] = at2(u, v);
+			art.circle(c, x, y, r * s * 1.6, { fill: mix('#dcb47c', shade), alpha: 0.75 });
+		}
+		// grains and little stones over it all, the same each time for this door
+		if (!p.grains) p.grains = Array.from({ length: 22 }, () => [Math.random(), Math.random() * 2 - 1, 1 + Math.random() * 2.5, Math.random() < 0.5]);
 		for (const [u, v, r, light] of p.grains) {
 			const [x, y] = at2(0.06 + u * 0.88, v * 0.9);
 			art.circle(c, x, y, r * s * 1.6, { fill: light ? 'rgba(255,240,210,0.6)' : 'rgba(110,72,38,0.45)' });
-		}
-		// arrows scratched into it, pointing the way it throws you
-		for (const u of [0.28, 0.62]) {
-			const pts = [at2(u, -0.45), at2(u + 0.2, 0), at2(u, 0.45)];
-			art.line(c, pts, { stroke: 'rgba(110,72,38,0.55)', lineWidth: Math.max(1.5, 7 * s), lineCap: 'round', lineJoin: 'round' });
-			art.line(c, pts.map(([x, y]) => [x, y - 2 * s]), { stroke: 'rgba(255,240,210,0.5)', lineWidth: Math.max(1, 3 * s), lineCap: 'round', lineJoin: 'round' });
 		}
 	}
 
