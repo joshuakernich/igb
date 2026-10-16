@@ -97,7 +97,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const INSET = { x: 2 * W - 150, y: 125, r: 92, side: 205 };   // the doll-head inset: top right of the front wall; on the side walls (at y side), under the clock
 
 	// Jump pads and cash
-	const PAD = { rx: 70, rf: 70, every: 420, open: 72, throw: 260, sink: 9, chamfer: 0.2 };   // a trapdoor's half-width and half-depth (square); one every so far up the track (field units); how far it springs open (degrees); how high it throws you; how far its lid sits sunk below the sand; its corners cut off (a share of its half-width)
+	const PAD = { rx: 70, rf: 70, every: 420, open: 72, throw: 260, sink: 9, chamfer: 0.2, thick: 12 };   // a trapdoor's half-width and half-depth (square); one every so far up the track (field units); how far it springs open (degrees); how high it throws you; how far its lid sits sunk below the sand; its corners cut off (a share of its half-width); how thick its lid is
 	const CASH = { every: 300, reach: 60, size: 1.8, float: 50, bob: 22 };   // every so far up each wall; how close to grab it; its size, float height and bob
 	const MAGNET = { every: 1400, time: 2.5, radius: 480, pull: 1200 };   // a magnet every so far up each wall; seconds it lasts; how far it reaches; how fast cash comes
 	const BOULDER = { from: 1, gap: [4, 9], quicker: 0.9, r: [75, 105], speed: [320, 440], ahead: 1700, lead: 900, down: 1.2, spill: 3 };   // boulders from this round (0 is round 1); seconds between them, shrinking by this much a round; their size; how fast they roll; how far up the field they start (and never nearer the players than lead); seconds flattened; wads of cash spilled
@@ -2621,6 +2621,22 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		});
 		// (flipping toward the light it brightens; away from it, it darkens)
 		const shade = 1 + open * (dir > 0 ? 0.08 : -0.28);
+		// open, it's a thick slab: its edges show (its free edge and the edge
+		// nearest us), the sand's depth under the top, darker
+		if (open > 0.03) {
+			const T = PAD.thick;
+			const nx = -dir * Math.sin(a);   // (straight down into the slab, across and up)
+			const nu = -Math.cos(a);
+			const L = (u, v, d) => P(hingeX - dir * (1 - u) * 2 * R * Math.cos(a) + nx * d, p.f + v * R, (1 - u) * 2 * R * Math.sin(a) + nu * d);
+			const edge = (from, to) => {
+				const top = [];
+				for (let k = 0; k <= 6; k++) top.push([from[0] + (to[0] - from[0]) * k / 6, from[1] + (to[1] - from[1]) * k / 6]);
+				return top.map(([u, v]) => L(u, v, 0)).concat(top.slice().reverse().map(([u, v]) => L(u, v, T)));
+			};
+			art.poly(c, edge([0, -1 + cv], [0, 1 - cv]), { fill: mix('#b88d55', shade * 0.85) });       // its free edge
+			art.poly(c, edge([cu, -1], [1 - cu, -1]), { fill: mix('#b88d55', shade * 0.72) });          // the edge nearest us
+			art.poly(c, edge([0, -1 + cv], [cu, -1]), { fill: mix('#b88d55', shade * 0.78) });         // (and the cut corner between)
+		}
 		art.poly(c, quad, { fill: mix('#dcb47c', shade) });
 		// shading: lit from the far end, falling off toward us, darker still
 		// down its near edge and toward the hinge side it sinks on
