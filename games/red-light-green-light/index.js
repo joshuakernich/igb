@@ -3144,7 +3144,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			"run1": {
 				"torso": {
 					"x": -2,
-					"y": -4
+					"y": 2.5
 				},
 				"head": {
 					"y": -7
@@ -3155,14 +3155,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					"y": -7.5
 				},
 				"torso": {
-					"y": -4.5,
+					"y": 9,
 					"x": 1.5
 				}
 			},
 			"run3": {
 				"torso": {
-					"y": -5.5,
-					"x": -1.5
+					"y": 2.5,
+					"x": -2
 				},
 				"head": {
 					"y": -7.5,
@@ -3174,13 +3174,13 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					"y": -7.5
 				},
 				"torso": {
-					"y": -5,
+					"y": 2,
 					"x": -2
 				}
 			},
 			"run5": {
 				"torso": {
-					"y": -4.5,
+					"y": 8,
 					"x": 1
 				},
 				"head": {
@@ -3192,7 +3192,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					"y": -7.5
 				},
 				"torso": {
-					"y": -5,
+					"y": 1.5,
 					"x": -1.5
 				}
 			},
