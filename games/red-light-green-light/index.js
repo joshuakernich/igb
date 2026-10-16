@@ -4435,7 +4435,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		let pose = 'stand';
 		let part = 'torso';
 		let t0 = 0;
-		const LAB = { side: 520, big: 6.2, cycle: 4.2, row: 2.3 };   // the controls' width (screen pixels); how big the chosen pose, the playing cycle and the row of every pose are drawn (the preview is 1000 units tall, filling the window's height)
+		const LAB = { side: 330, big: 6.2, cycle: 4.2, row: 2.3 };   // the controls' width (screen pixels); how big the chosen pose, the playing cycle and the row of every pose are drawn (the preview is 1000 units tall, filling the window's height)
 		const FIGS = { back: 'CONTESTANT · BACK', front: 'CONTESTANT · FRONT', guard: 'GUARD' };
 		const SLIDERS = [['x', -40, 40, 0.5], ['y', -40, 40, 0.5], ['r', -45, 45, 0.5]];   // (no size: every part of a figure is drawn at one scale)
 		const LABELS = { x: 'ACROSS', y: 'UP / DOWN', r: 'TURN °' };
@@ -4455,10 +4455,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			save();
 		}
 
-		const css = { fontFamily: `"${Showtime.TYPE.font}", sans-serif`, color: 'white' };
+		const css = { fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif', color: 'white' };   // (a tool for the computer, not the box: ordinary type at ordinary sizes)
 		const button = (label, fn, colour = '#22305a') => $('<button>').text(label).css({
-			margin: '4px', padding: '8px 14px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-			background: colour, color: 'white', fontFamily: 'inherit', fontSize: '22px',
+			margin: '2px', padding: '4px 9px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+			background: colour, color: 'white', fontFamily: 'inherit', fontSize: '12px', letterSpacing: '0.3px',
 		}).on('click', function (e) { e.stopPropagation(); fn(); });
 
 		function build() {
@@ -4468,7 +4468,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			}, css)).appendTo(document.body).on('pointerdown click', (e) => e.stopPropagation());
 			stage.own(() => $lab && $lab.remove());   // (it lives over the whole page: gone when the game is)
 			// (the whole browser window: the controls down the left, the figures filling the rest)
-			const $side = $('<div>').css({ width: LAB.side + 'px', flex: 'none', padding: '20px', boxSizing: 'border-box', overflowY: 'auto', fontSize: '18px' }).appendTo($lab);
+			const $side = $('<div>').css({ width: LAB.side + 'px', flex: 'none', padding: '14px', boxSizing: 'border-box', overflowY: 'auto', fontSize: '13px' }).appendTo($lab);
 			canvas = $('<canvas>').css({ flex: 1, minWidth: 0, height: '100%', display: 'block' }).appendTo($lab)[0];
 			render($side);
 		}
@@ -4476,8 +4476,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		function render($side) {
 			$side = $side || $lab.children().first();
 			$side.empty();
-			$('<div>').text('CHARACTER LAB').css({ fontSize: '44px', marginBottom: '10px' }).appendTo($side);
-			const row = () => $('<div>').css({ display: 'flex', flexWrap: 'wrap', marginBottom: '10px' }).appendTo($side);
+			$('<div>').text('CHARACTER LAB').css({ fontSize: '18px', fontWeight: 700, marginBottom: '8px' }).appendTo($side);
+			const row = () => $('<div>').css({ display: 'flex', flexWrap: 'wrap', marginBottom: '6px' }).appendTo($side);
 			const $figs = row();
 			for (const f of Object.keys(FIGS)) button(FIGS[f], () => { fig = f; pose = 'stand'; render(); }, f === fig ? '#3a8ad8' : '#22305a').appendTo($figs);
 			const $poses = row();
@@ -4487,24 +4487,25 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 			// the part's nudge in this pose
 			const n = nudge(fig, pose, part);
-			$('<div>').text(`${pose.toUpperCase()} · ${part.toUpperCase()}`).css({ fontSize: '26px', color: '#9fb6d8', margin: '6px 4px' }).appendTo($side);
+			$('<div>').text(`${pose.toUpperCase()} · ${part.toUpperCase()}`).css({ fontSize: '13px', fontWeight: 600, color: '#9fb6d8', margin: '8px 2px 2px' }).appendTo($side);
 			for (const [key, lo, hi, step] of SLIDERS) slider(LABELS[key], n[key], lo, hi, step, (v) => set([fig, pose, part, key], v)).appendTo($side);
 			// which drawing this part uses in this pose: every one of its kind on the sheet
 			const rig = rigs[fig];
 			if (rig) {
-				$('<div>').text('DRAWING').css({ fontSize: '20px', color: '#9fb6d8', margin: '10px 4px 4px' }).appendTo($side);
-				const $use = $('<div>').css({ display: 'flex', flexWrap: 'wrap', gap: '6px', margin: '0 4px 8px' }).appendTo($side);
+				$('<div>').text('DRAWING').css({ fontSize: '11px', color: '#9fb6d8', margin: '8px 2px 3px' }).appendTo($side);
+				const $use = $('<div>').css({ display: 'flex', flexWrap: 'wrap', gap: '4px', margin: '0 2px 6px' }).appendTo($side);
 				const current = (TUNE[fig] && TUNE[fig][pose] && TUNE[fig][pose].use && TUNE[fig][pose].use[part]) || POSES[fig][pose][part];
 				for (const [id, pt] of Object.entries(rig.parts)) {
 					if (pt.kind !== (part === 'head' ? 'head' : part)) continue;
 					const thumb = document.createElement('canvas');
 					thumb.width = thumb.height = 74;
+					thumb.style.width = thumb.style.height = '44px';
 					const tg = thumb.getContext('2d');
 					const k = Math.min(74 / pt.img.width, 74 / pt.img.height);
 					tg.drawImage(pt.img, (74 - pt.img.width * k) / 2, (74 - pt.img.height * k) / 2, pt.img.width * k, pt.img.height * k);
 					$('<button>').attr('title', id).css({
-						width: '86px', height: '86px', padding: '4px', borderRadius: '10px', cursor: 'pointer',
-						border: id === current ? '3px solid #d8743a' : '3px solid transparent', background: '#18213a',
+						width: '52px', height: '52px', padding: '2px', borderRadius: '6px', cursor: 'pointer',
+						border: id === current ? '2px solid #d8743a' : '2px solid transparent', background: '#18213a',
 					}).append(thumb).appendTo($use).on('click', function (e) {
 						e.stopPropagation();
 						TUNE[fig] = TUNE[fig] || {};
@@ -4524,7 +4525,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 			// the whole figure
 			const g = figure(fig);
-			$('<div>').text(FIGS[fig] + ' · WHOLE FIGURE').css({ fontSize: '26px', color: '#9fb6d8', margin: '16px 4px 6px' }).appendTo($side);
+			$('<div>').text(FIGS[fig] + ' · WHOLE FIGURE').css({ fontSize: '13px', fontWeight: 600, color: '#9fb6d8', margin: '12px 2px 2px' }).appendTo($side);
 			slider('HEIGHT', g.height, 60, 200, 1, (v) => set([fig, '_'], { height: v })).appendTo($side);
 			slider('TUCK AT JOINS', g.overlap, 0, 0.2, 0.005, (v) => set([fig, '_'], { overlap: v })).appendTo($side);
 
@@ -4540,14 +4541,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				} else $wipe.data('sure', true).text('SURE? CLICK AGAIN');
 			}, '#5a2232').appendTo($end);
 			button('CLOSE', close, '#444').appendTo($end);
-			const $text = $('<textarea readonly>').css({ width: '100%', height: '140px', marginTop: '8px', fontSize: '14px', fontFamily: 'monospace', background: '#0d1424', color: '#9fd8ff', border: '1px solid #345', borderRadius: '8px' }).hide().appendTo($side);
+			const $text = $('<textarea readonly>').css({ width: '100%', height: '120px', marginTop: '6px', fontSize: '11px', fontFamily: 'monospace', background: '#0d1424', color: '#9fd8ff', border: '1px solid #345', borderRadius: '8px' }).hide().appendTo($side);
 		}
 
 		function slider(label, value, lo, hi, step, onChange) {
-			const $row = $('<label>').css({ display: 'flex', alignItems: 'center', gap: '12px', margin: '6px 4px', fontSize: '22px' });
-			$('<span>').text(label).css({ width: '170px' }).appendTo($row);
-			const $val = $('<span>').text(Number(value).toFixed(step < 0.1 ? 2 : 1)).css({ width: '70px', textAlign: 'right', fontFamily: 'monospace' });
-			$('<input type="range">').attr({ min: lo, max: hi, step, value }).css({ flex: 1, height: '30px' }).on('input', function () {
+			const $row = $('<label>').css({ display: 'flex', alignItems: 'center', gap: '8px', margin: '3px 2px', fontSize: '12px' });
+			$('<span>').text(label).css({ width: '90px' }).appendTo($row);
+			const $val = $('<span>').text(Number(value).toFixed(step < 0.1 ? 2 : 1)).css({ width: '42px', textAlign: 'right', fontFamily: 'monospace' });
+			$('<input type="range">').attr({ min: lo, max: hi, step, value }).css({ flex: 1, height: '18px' }).on('input', function () {
 				const v = parseFloat(this.value);
 				$val.text(v.toFixed(step < 0.1 ? 2 : 1));
 				onChange(v);
@@ -4601,7 +4602,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			// (a run frame lifted by its own bob, as it is in the game)
 			const lifted = (id) => (fig === 'back' && /^run\d+$/.test(id) ? runBob(+id.slice(3) - 1) : 0);
 			art.with(c, { x: bigX, y: ground, scale: LAB.big }, (c2) => assemble(c2, rig, { pose, bob: lifted(pose) }));
-			art.text(c, pose.toUpperCase(), bigX, ground + 50, { size: 40, font: SQUID_FONT, weight: 400, fill: 'white' });
+			art.text(c, pose.toUpperCase(), bigX, ground + 45, { size: 30, font: SQUID_FONT, weight: 400, fill: 'white' });
 			// the cycle, playing
 			const cycle = fig === 'back' ? Array.from({ length: RUN_STEPS }, (_, i) => 'run' + (i + 1)) : fig === 'guard' ? ['walk1', 'walk2', 'walk3', 'walk4', 'walk5', 'walk6'] : ['win1', 'win2', 'win3', 'win4'];
 			const at = t * (fig === 'front' ? 2.5 : fig === 'back' ? 24 * RIG.run : 12);
@@ -4609,7 +4610,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 			const cycX = Math.min(1700, CW * 0.45);
 			art.with(c, { x: cycX, y: ground, scale: LAB.cycle }, (c2) => assemble(c2, rig, { pose: cycle[step], bob: lifted(cycle[step]) }));
-			art.text(c, 'PLAYING: ' + cycle[step].toUpperCase(), cycX, ground + 50, { size: 34, font: SQUID_FONT, weight: 400, fill: '#9fb6d8' });
+			art.text(c, 'PLAYING: ' + cycle[step].toUpperCase(), cycX, ground + 45, { size: 26, font: SQUID_FONT, weight: 400, fill: '#9fb6d8' });
 			// every pose, in rows on the right, the chosen one marked
 			const ids = Object.keys(POSES[fig]);
 			const x0 = CW * 0.62;
