@@ -1913,7 +1913,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// a huge warm bloom round it, slow-turning rays, and (drawn again over the
 	// wall) the glare that spills down over its top and a long streak of
 	// light along it.
-	const SUN_LOOK = { x: DOLL_X + 560, r: 70, peek: 0.45, bloom: 1300, rays: 18, ray: 1400, glare: 0.8, shine: 0.5, flare: 1.6 };   // where it is across (off to the right of the doll); its radius; how much of it shows over the wall; the bloom's reach; how many rays, how long; how bright the glare over the wall is; how bright its shine over everything is; the bloom's strength
+	const SUN_LOOK = { x: DOLL_X + 560, r: 70, peek: 0.45, bloom: 650, rays: 18, ray: 700, glare: 0.18, shine: 0.1, flare: 0.45 };   // where it is across (off to the right of the doll); its radius; how much of it shows over the wall; the bloom's reach; how many rays, how long; how bright the glare over the wall is; how bright its shine over everything is; the bloom's strength
 	let sunEdge = null;   // (the back wall's top, where the sun sits, as last drawn)
 	function drawSun(ctx, edge, over) {
 		const x = SUN_LOOK.x;
@@ -1929,13 +1929,13 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				c.fillRect(x - R, y - R, R * 2, R * 2);
 				// a tight white-hot core, blown out
 				const C = SUN_LOOK.r * 4;
-				c.fillStyle = art.radial(c, x, y, 0, C, [[0, 'rgba(255,255,255,1)'], [0.35, 'rgba(255,250,230,0.8)'], [1, 'rgba(255,240,200,0)']]);
+				c.fillStyle = art.radial(c, x, y, 0, C, [[0, `rgba(255,255,255,${a2(1)})`], [0.35, `rgba(255,250,230,${a2(0.8)})`], [1, 'rgba(255,240,200,0)']]);
 				c.fillRect(x - C, y - C, C * 2, C * 2);
 				for (let i = 0; i < SUN_LOOK.rays; i++) {
 					const a = Math.PI + (i + 0.5) / SUN_LOOK.rays * Math.PI + Math.sin(wallT * 0.15 + i) * 0.03;   // (only up: the wall hides the rest)
 					const len = SUN_LOOK.ray * (i % 2 ? 0.6 : 1) * (0.85 + 0.15 * Math.sin(wallT * 0.7 + i * 1.7));
 					const w = 0.035;
-					c.fillStyle = art.radial(c, x, y, 0, len, [[0, 'rgba(255,240,200,0.22)'], [1, 'rgba(255,220,160,0)']]);
+					c.fillStyle = art.radial(c, x, y, 0, len, [[0, `rgba(255,240,200,${0.22 * SUN_LOOK.flare})`], [1, 'rgba(255,220,160,0)']]);
 					c.beginPath();
 					c.moveTo(x, y);
 					c.lineTo(x + Math.cos(a - w) * len, y + Math.sin(a - w) * len);
