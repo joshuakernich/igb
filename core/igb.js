@@ -175,17 +175,62 @@ window.IGB = (function () {
 		if (owner) this.each(function () { if (!this.nodeType) owner.tweens.add(this); });
 		return animate.apply(this, arguments);
 	};
+	// One volume for everything (IGB.setVolume(0..1), kept in this browser),
+	// and a pause for everything (IGB.pauseAudio(true)): every Web Audio
+	// context sends its sound through a master gain at that volume (its
+	// destination is that gain), and every <audio>/<video> plays at the
+	// volume it asks for times that volume.
+	IGB.volume = 1;
+	try { const v = parseFloat(localStorage.getItem('igb-volume')); if (v >= 0 && v <= 1) IGB.volume = v; } catch (e) { /* (no storage) */ }
+	const contexts = new Set();
+	const media = new Set();
 	const AC = window.AudioContext || window.webkitAudioContext;
 	if (AC) {
 		window.AudioContext = window.webkitAudioContext = class extends AC {
 			constructor(...args) {
 				super(...args);
 				const ctx = this;
+				const master = super.createGain();
+				master.gain.value = IGB.volume;
+				master.connect(super.destination);
+				this._master = master;
+				contexts.add(ctx);
 				const owner = IGB.owner();
-				if (owner) owner.own(() => { if (ctx.state !== 'closed') ctx.close().catch(() => {}); });
+				if (owner) owner.own(() => { contexts.delete(ctx); if (ctx.state !== 'closed') ctx.close().catch(() => {}); });
 			}
+			get destination() { return this._master || super.destination; }
 		};
 	}
+	const volumeOf = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'volume');
+	const clamp01 = (v) => Math.max(0, Math.min(1, v));
+	Object.defineProperty(HTMLMediaElement.prototype, 'volume', {
+		configurable: true,
+		get() { return this._want !== undefined ? this._want : volumeOf.get.call(this); },
+		set(v) { this._want = clamp01(v); media.add(this); volumeOf.set.call(this, clamp01(this._want * IGB.volume)); },
+	});
+	const play = HTMLMediaElement.prototype.play;
+	HTMLMediaElement.prototype.play = function () {
+		media.add(this);
+		volumeOf.set.call(this, clamp01((this._want !== undefined ? this._want : 1) * IGB.volume));
+		if (paused) { this._held = true; return Promise.resolve(); }   // (paused: it starts when everything resumes)
+		return play.apply(this, arguments);
+	};
+	IGB.setVolume = function (v) {
+		IGB.volume = clamp01(v);
+		try { localStorage.setItem('igb-volume', String(IGB.volume)); } catch (e) { /* (not kept) */ }
+		for (const ctx of contexts) if (ctx._master && ctx.state !== 'closed') ctx._master.gain.setTargetAtTime(IGB.volume, ctx.currentTime, 0.02);
+		for (const el of media) volumeOf.set.call(el, clamp01((el._want !== undefined ? el._want : 1) * IGB.volume));
+	};
+	let paused = false;
+	IGB.pauseAudio = function (on) {
+		if (on === paused) return;
+		paused = on;
+		for (const ctx of contexts) if (ctx.state !== 'closed') (on ? ctx.suspend() : ctx.resume()).catch(() => {});
+		for (const el of media) {
+			if (on) { if (!el.paused) { el._held = true; el.pause(); } }
+			else if (el._held) { el._held = false; if (el.isConnected || el.src) play.call(el).catch(() => {}); }
+		}
+	};
 
 	IGB.addStage = function (stage) { stages.push(stage); };
 	IGB.removeStage = function (stage) {

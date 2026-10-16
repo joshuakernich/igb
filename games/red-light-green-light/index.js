@@ -4501,8 +4501,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	let last;
 	self.draw = function (ctx, time) {
 		const now = (time || performance.now()) / 1000;
-		const dt = last === undefined ? 0 : Math.min(0.05, Math.max(0, now - last));
+		const dt = last === undefined || paused ? 0 : Math.min(0.05, Math.max(0, now - last));   // (paused: nothing moves)
 		last = now;
+		if (paused) tickPause();
 		wallT += dt;
 		show.frame(ctx, dt, drawWorld);
 		sound.tick();
@@ -4573,43 +4574,112 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		timeLeft(s) { show.setTimeLeft(s); },
 	};
 
-	/* ---------- the debug panel ---------- */
+	/* ---------- the pause screen ---------- */
 
-	// DEBUG, on the left wall, centred up and down (folded away until opened): jump to
-	// any beat, and step through everything inside them: the tutorial's
-	// steps, each phase of a round, whole rounds, the clock.
-	const DEBUG = { x: 24, w: W - 48 };
+	// A big pause button on the left wall. Pressed, everything stops (the
+	// world, the clock, every sound) and a screen comes down over all three
+	// walls: the time left on each, and on the front wall RESUME, the volume
+	// (five levels), RESTART ROUND and REPLAY TUTORIAL. Away from the box
+	// (not live: no Vuplex), the left wall has the debug buttons too: jump to
+	// any beat, and step through everything inside them.
+	const PAUSE = { button: 150, x: 40, levels: [0.12, 0.3, 0.5, 0.75, 1] };   // the pause button's size and its distance in from the left wall's edge; the volume at each of the five levels
 	const BEATS = ['title', 'clock', 'visors', 'controls', 'doll', 'play', 'timeup', 'scores', 'rank', 'team', 'board', 'replay', 'rate', 'end'];
-	const $debug = $('<debug-panel>').css({
-		position: 'absolute', left: DEBUG.x + 'px', top: H / 2 + 'px', transform: 'translateY(-50%)', width: DEBUG.w + 'px',
-		padding: '12px 16px', boxSizing: 'border-box', borderRadius: '20px',
-		background: 'rgba(8,12,28,0.88)', border: '3px solid rgba(58,209,255,0.6)',
-		fontFamily: `"${Showtime.TYPE.font}", sans-serif`, color: 'white', pointerEvents: 'auto', zIndex: 20,
-	}).appendTo(stage.$ui);
-	const $dhead = $('<div>').css({ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '26px' }).appendTo($debug);
-	const $dbody = $('<div>').css({ marginTop: '8px' }).hide().appendTo($debug);
+	const live = !!window.vuplex;
+	const font = `"${SQUID_FONT}", "${Showtime.TYPE.font}", sans-serif`;
+	let paused = false;
+	const $pauseBtn = $('<button pause>').attr('title', 'Pause').css({
+		position: 'absolute', left: PAUSE.x + 'px', top: H / 2 + 'px', transform: 'translateY(-50%)',
+		width: PAUSE.button + 'px', height: PAUSE.button + 'px', borderRadius: '50%', border: '6px solid rgba(255,255,255,0.9)',
+		background: 'rgba(12,4,30,0.9)', cursor: 'pointer', pointerEvents: 'auto', zIndex: 20, padding: 0,
+		display: 'flex', alignItems: 'center', justifyContent: 'center', gap: PAUSE.button * 0.12 + 'px',
+		boxShadow: '0 10px 0 rgba(0,0,0,0.45)', transition: 'transform 0.15s',
+	}).appendTo(stage.$ui).on('click', function (e) { e.stopPropagation(); setPaused(true); })
+		.on('mouseenter', function () { $(this).css({ transform: 'translateY(-50%) scale(1.08)' }); })
+		.on('mouseleave', function () { $(this).css({ transform: 'translateY(-50%) scale(1)' }); });
+	for (let i = 0; i < 2; i++) $('<span>').css({ width: PAUSE.button * 0.13 + 'px', height: PAUSE.button * 0.42 + 'px', borderRadius: '6px', background: 'white' }).appendTo($pauseBtn);
+
+	// the screen: dark glass over all three walls, a panel on each
+	const $pause = $('<pause-screen>').css({
+		position: 'absolute', left: 0, top: 0, width: 3 * W + 'px', height: H + 'px', zIndex: 30, display: 'none',
+		background: 'rgba(6,3,16,0.84)', backdropFilter: 'blur(6px)', pointerEvents: 'auto', fontFamily: font, color: 'white',
+	}).appendTo(stage.$ui).on('pointerdown click', (e) => e.stopPropagation());
+	const wallPanel = (n) => $('<div>').css({
+		position: 'absolute', left: n * W + 'px', top: 0, width: W + 'px', height: H + 'px', boxSizing: 'border-box', padding: '60px 70px',
+		display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '34px',
+	}).appendTo($pause);
+	const words = (text, size, colour = 'white') => $('<div>').text(text).css({
+		fontSize: size + 'px', lineHeight: 1, letterSpacing: '3px', color: colour,
+		WebkitTextStroke: `${Math.max(4, size * 0.07)}px ${Showtime.TYPE.colours.ink}`, paintOrder: 'stroke fill', textShadow: `0 ${size * 0.09}px 0 rgba(0,0,0,0.55)`,
+	});
+	const bigButton = (label, fn, colour, ink = Showtime.TYPE.colours.ink, size = 64) => $('<button>').text(label).css({
+		padding: `${size * 0.32}px ${size * 0.9}px`, borderRadius: size + 'px', border: 'none', cursor: 'pointer',
+		background: colour, color: ink, fontFamily: font, fontSize: size + 'px', lineHeight: 1, letterSpacing: '2px',
+		boxShadow: `0 ${size * 0.14}px 0 rgba(0,0,0,0.45)`, transition: 'transform 0.12s',
+	}).on('mouseenter', function () { $(this).css({ transform: 'scale(1.05)' }); })
+		.on('mouseleave', function () { $(this).css({ transform: 'scale(1)' }); })
+		.on('click', function (e) { e.stopPropagation(); fn(); });
+	const clocks = [];
+	const $left = wallPanel(0), $front = wallPanel(1), $right = wallPanel(2);
+	// the side walls: PAUSED and the time left (the left one, off the box, the debug buttons instead)
+	for (const $w of live ? [$left, $right] : [$right]) {
+		words('PAUSED', 150).appendTo($w);
+		clocks.push(words('', 200, Showtime.TYPE.colours.gold).css({ fontFamily: '"Share Tech Mono", monospace' }).appendTo($w));
+	}
+	// the front wall: the time left, and what to do
+	words('PAUSED', 110).appendTo($front);
+	clocks.push(words('', 230, Showtime.TYPE.colours.gold).css({ fontFamily: '"Share Tech Mono", monospace' }).appendTo($front));
+	bigButton('▶  RESUME', () => setPaused(false), Showtime.TYPE.colours.gold, Showtime.TYPE.colours.ink, 86).appendTo($front);
+	// the volume: five bars, rising; click one for that level
+	const $vol = $('<div>').css({ display: 'flex', alignItems: 'flex-end', gap: '22px' }).appendTo($front);
+	$('<span>').text('VOLUME').css({ fontSize: '44px', marginRight: '18px', alignSelf: 'center', letterSpacing: '2px' }).appendTo($vol);
+	const bars = PAUSE.levels.map((v, i) => $('<button>').attr('title', 'Volume ' + (i + 1)).css({
+		width: '62px', height: 40 + i * 26 + 'px', borderRadius: '10px', border: '5px solid white', cursor: 'pointer', padding: 0,
+	}).appendTo($vol).on('click', function (e) { e.stopPropagation(); IGB.setVolume(v); showVolume(); show.fx('pick'); }));
+	function showVolume() {
+		const level = PAUSE.levels.reduce((best, v, i) => (Math.abs(v - IGB.volume) < Math.abs(PAUSE.levels[best] - IGB.volume) ? i : best), 0);
+		bars.forEach(($b, i) => $b.css({ background: i <= level ? 'white' : 'rgba(255,255,255,0.08)' }));
+	}
+	const $row2 = $('<div>').css({ display: 'flex', gap: '30px' }).appendTo($front);
+	bigButton('↺  RESTART ROUND', () => { setPaused(false); restartRound(); }, '#ff3640', 'white', 50).appendTo($row2);
+	bigButton('REPLAY TUTORIAL', () => { setPaused(false); debugJump('controls'); }, '#27d96b', Showtime.TYPE.colours.ink, 50).appendTo($row2);
+
+	// the round over again from its start (in play), or else the beat the show is on
+	function restartRound() {
+		if (show.beat === 'play') debugRound(round);
+		else debugJump(show.beat);
+	}
+
+	function setPaused(on) {
+		if (on === paused) return;
+		paused = on;
+		IGB.pauseAudio(on);
+		$pause.toggle(on);
+		$pauseBtn.toggle(!on);
+		if (on) { showVolume(); tickPause(); }
+	}
+	function tickPause() {
+		const t = show.mmss ? show.mmss(show.timeLeft()) : '';
+		for (const $c of clocks) $c.text(t);
+	}
+	stage.own(() => { if (paused) IGB.pauseAudio(false); });   // (never left paused)
+
+	// the debug buttons, on the left wall's panel (off the box only)
+	const $debug = $('<div>').css({
+		display: live ? 'none' : 'block', width: '100%', maxHeight: '100%', overflowY: 'auto', fontFamily: `"${Showtime.TYPE.font}", sans-serif`,
+	}).appendTo($left);
+	const $dhead = $('<div>').css({ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '30px', marginBottom: '8px' }).appendTo($debug);
+	$('<span>').text('DEBUG').css({ color: '#3ad1ff', letterSpacing: '2px' }).appendTo($dhead);
+	const $dbody = $('<div>').appendTo($debug);
 	const dbutton = (label, fn, colour = '#22305a') => $('<button>').text(label).css({
 		margin: '4px', padding: '8px 14px', borderRadius: '12px', border: 'none', cursor: 'pointer',
 		background: colour, color: 'white', fontFamily: 'inherit', fontSize: '22px',
-	}).on('click', function (e) { e.stopPropagation(); fn(); });
-	const $dtoggle = dbutton('DEBUG ▸', () => debugOpen(!$dbody.is(':visible')), '#1a5a7a').appendTo($dhead);
+	}).on('click', function (e) { e.stopPropagation(); setPaused(false); fn(); });   // (a debug button resumes, then does its thing)
 	const $dnow = $('<span>').css({ flex: 1, color: '#9fb6d8', fontFamily: 'monospace', fontSize: '22px' }).appendTo($dhead);
-	// closed, it's just the button; open, the whole panel
-	function debugOpen(open) {
-		$dbody.toggle(open);
-		$dnow.toggle(open);
-		$dtoggle.text(open ? 'DEBUG ▾' : 'DEBUG ▸');
-		$debug.css(open
-			? { width: DEBUG.w + 'px', padding: '12px 16px', background: 'rgba(8,12,28,0.88)', border: '3px solid rgba(58,209,255,0.6)' }
-			: { width: 'auto', padding: 0, background: 'none', border: 'none' });
-	}
 	const drow = (label) => {
 		const $row = $('<div>').css({ display: 'flex', flexWrap: 'wrap', alignItems: 'center' }).appendTo($dbody);
 		$('<span>').text(label).css({ width: '120px', color: '#9fb6d8', fontSize: '20px' }).appendTo($row);
 		return $row;
 	};
-
-	debugOpen(false);
 
 	const $beats = drow('BEATS');
 	for (const id of BEATS) dbutton(id.toUpperCase(), () => debugJump(id)).appendTo($beats);
