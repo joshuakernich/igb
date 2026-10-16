@@ -1860,7 +1860,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		drawGravel(ctx);
 		// the haze over the far sand, and the sky
 		art.rect(ctx, -20, hz, WIDTH + 40, 260, { fill: art.linear(ctx, 0, hz, 0, hz + 260, ['rgba(246,236,214,0.9)', 'rgba(246,236,214,0)']) });
-		art.rect(ctx, -20, -20, WIDTH + 40, hz + 20, { fill: art.linear(ctx, 0, 0, 0, hz, ['#6ec3ea', '#bfe4f2', '#f3ecd9']) });   // (a clear sky: the sun's the show)
+		art.rect(ctx, -20, -20, WIDTH + 40, hz + 20, { fill: art.linear(ctx, 0, 0, 0, hz, ['#2f8fe0', '#5cb2f0', '#a9d8f5']) });   // (a clear blue sky: the sun's the show)
 		art.rect(ctx, -20, hz - 1.5, WIDTH + 40, 3, { fill: 'rgba(160,120,80,0.35)' });
 		drawBackWall(ctx);
 	}
