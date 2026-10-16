@@ -4633,7 +4633,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', padding: '0 44px 0 52px',   // (the words on the left, an icon on the right)
 		boxShadow: '0 10px 0 rgba(0,0,0,0.45)', transition: 'transform 0.12s, background 0.12s',
 	};
-	const icon = (glyph) => $('<span>').text(glyph).css({ fontFamily: 'system-ui, -apple-system, "Segoe UI Symbol", sans-serif', fontSize: R.size * 1.1 + 'px', width: '1.2em', textAlign: 'center' });
+	const icon = (glyph) => $('<span>').text(glyph).css(Object.assign({ fontFamily: 'system-ui, -apple-system, "Segoe UI Symbol", sans-serif', fontSize: R.size * 1.1 + 'px', width: '1.2em', textAlign: 'center' },
+		glyph === '?' ? { fontSize: R.size * 0.8 + 'px', fontWeight: 800, width: '1.25em', height: '1.25em', lineHeight: '1.15em', borderRadius: '50%', border: '5px solid white', boxSizing: 'border-box' } : {}));   // (?: in a ring, the help sign)
 	const label = (text) => $('<span>').text(text).css({ flex: 1, textAlign: 'left' });   // (hard against the left, whatever the button would do)
 	const rowButton = (text, glyph, fn) => $('<button>').append(label(text)).append(icon(glyph)).css(Object.assign({ cursor: 'pointer' }, rowCss))
 		.on('mouseenter', function () { $(this).css({ transform: 'scale(1.04)', background: 'rgba(255,255,255,0.2)' }); })
@@ -4652,7 +4653,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		bars.forEach(($b, i) => $b.css({ background: i <= level ? 'white' : 'rgba(255,255,255,0.08)' }));
 	}
 	rowButton('RESTART ROUND', '↻', () => { setPaused(false); restartRound(); }).appendTo($front);
-	rowButton('REPLAY TUTORIAL', '⏮', () => { setPaused(false); debugJump('controls'); }).appendTo($front);
+	rowButton('REPLAY TUTORIAL', '?', () => { setPaused(false); debugJump('controls'); }).appendTo($front);
 
 	// the round over again from its start (in play), or else the beat the show is on
 	function restartRound() {
