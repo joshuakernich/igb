@@ -4255,6 +4255,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		let pose = 'stand';
 		let part = 'torso';
 		let t0 = 0;
+		const LAB = { side: 1100, big: 6.2, cycle: 4.2, row: 2.3 };   // the controls' width; how big the chosen pose, the playing cycle and the row of every pose are drawn
 		const FIGS = { back: 'CONTESTANT · BACK', front: 'CONTESTANT · FRONT', guard: 'GUARD' };
 		const SLIDERS = [['x', -40, 40, 0.5], ['y', -40, 40, 0.5], ['r', -45, 45, 0.5]];   // (no size: every part of a figure is drawn at one scale)
 		const LABELS = { x: 'ACROSS', y: 'UP / DOWN', r: 'TURN °' };
@@ -4282,11 +4283,12 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 		function build() {
 			$lab = $('<character-lab>').css(Object.assign({
-				position: 'absolute', left: W + 'px', top: 0, width: W + 'px', height: H + 'px', zIndex: 30,
-				display: 'flex', background: 'rgba(8,10,22,0.96)', pointerEvents: 'auto',
+				position: 'absolute', left: 0, top: 0, width: WIDTH + 'px', height: H + 'px', zIndex: 30,
+				display: 'flex', background: 'rgba(8,10,22,0.97)', pointerEvents: 'auto',
 			}, css)).appendTo(stage.$ui).on('pointerdown click', (e) => e.stopPropagation());
-			const $side = $('<div>').css({ width: '640px', padding: '20px', boxSizing: 'border-box', overflowY: 'auto' }).appendTo($lab);
-			canvas = $('<canvas>').attr({ width: 960, height: 1000 }).css({ width: '960px', height: '1000px' }).appendTo($lab)[0];
+			// (all three walls: the controls on the left, the figures across the rest)
+			const $side = $('<div>').css({ width: LAB.side + 'px', padding: '30px', boxSizing: 'border-box', overflowY: 'auto', fontSize: '26px' }).appendTo($lab);
+			canvas = $('<canvas>').attr({ width: WIDTH - LAB.side, height: H }).css({ width: (WIDTH - LAB.side) + 'px', height: H + 'px' }).appendTo($lab)[0];
 			render($side);
 		}
 
@@ -4359,39 +4361,46 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			}
 		}
 
-		// The preview: the pose big, the cycle playing beside it, every pose in a row.
+		// The preview, across the walls: the chosen pose big, the cycle playing
+		// beside it, and every pose in rows down the right.
 		function draw() {
 			if (!canvas) return;
 			const c = canvas.getContext('2d');
-			c.clearRect(0, 0, canvas.width, canvas.height);
+			const CW = canvas.width;
+			c.clearRect(0, 0, CW, canvas.height);
 			const rig = rigs[fig];
 			if (!rig) {
-				art.text(c, 'LOADING THE PARTS…', 480, 400, { size: 40, font: SQUID_FONT, weight: 400 });
+				art.text(c, 'LOADING THE PARTS…', CW / 2, 400, { size: 60, font: SQUID_FONT, weight: 400 });
 				return;
 			}
 			const t = (performance.now() - t0) / 1000;
-			const ground = 640;
+			const ground = 900;
 			const g = figure(fig);
-			// the ground, and a guide for the figure's height
-			art.rect(c, 0, ground, 960, 2, { fill: 'rgba(255,255,255,0.25)' });
-			for (const [x, scale] of [[330, 3.6]]) {
-				art.rect(c, 60, ground - g.height * scale, 900, 1, { fill: 'rgba(255,255,255,0.12)' });
-				art.with(c, { x, y: ground, scale }, (c2) => assemble(c2, rig, { pose }));
-			}
+			// the ground, a guide for the figure's height, and the pose big
+			const bigX = 700;
+			art.rect(c, 0, ground, 2300, 3, { fill: 'rgba(255,255,255,0.25)' });
+			art.rect(c, 150, ground - g.height * LAB.big, 1100, 2, { fill: 'rgba(255,255,255,0.14)' });
+			art.with(c, { x: bigX, y: ground, scale: LAB.big }, (c2) => assemble(c2, rig, { pose }));
+			art.text(c, pose.toUpperCase(), bigX, ground + 50, { size: 40, font: SQUID_FONT, weight: 400, fill: 'white' });
 			// the cycle, playing
 			const cycle = fig === 'back' ? ['run1', 'run2', 'run3', 'run4', 'run5', 'run6'] : fig === 'guard' ? ['walk1', 'walk2', 'walk3', 'walk4', 'walk5', 'walk6'] : ['win1', 'win2', 'win3', 'win4'];
 			const at = t * (fig === 'front' ? 2.5 : fig === 'back' ? 12 * RIG.run : 12);
 			const step = Math.floor(at) % cycle.length;
 			const ease2 = fig === 'front' ? 0 : at % 1;
-			art.with(c, { x: 780, y: ground, scale: 2.2 }, (c2) => assemble(c2, rig, { pose: cycle[step], next: cycle[(step + 1) % cycle.length], t: ease2, bob: fig === 'back' ? Math.abs(Math.sin(at / 6 * Math.PI * 2)) * RIG.bob : 0 }));
-			art.text(c, 'PLAYING: ' + cycle[step].toUpperCase(), 780, ground + 40, { size: 22, font: SQUID_FONT, weight: 400, fill: '#9fb6d8' });
-			// every pose, small, the chosen one marked
+			const cycX = 1700;
+			art.with(c, { x: cycX, y: ground, scale: LAB.cycle }, (c2) => assemble(c2, rig, { pose: cycle[step], next: cycle[(step + 1) % cycle.length], t: ease2, bob: fig === 'back' ? Math.abs(Math.sin(at / 6 * Math.PI * 2)) * RIG.bob : 0 }));
+			art.text(c, 'PLAYING: ' + cycle[step].toUpperCase(), cycX, ground + 50, { size: 34, font: SQUID_FONT, weight: 400, fill: '#9fb6d8' });
+			// every pose, in rows on the right, the chosen one marked
 			const ids = Object.keys(POSES[fig]);
+			const x0 = 2500;
+			const cols = 5;
+			const colW = (CW - x0 - 80) / cols;
 			ids.forEach(function (id, i) {
-				const x = 70 + i * (820 / Math.max(1, ids.length - 1));
-				if (id === pose) art.roundRect(c, x - 60, 700, 120, 280, 16, { fill: 'rgba(58,138,216,0.25)' });
-				art.with(c, { x, y: 940, scale: 1.6 }, (c2) => assemble(c2, rig, { pose: id }));
-				art.text(c, id.toUpperCase(), x, 970, { size: 18, font: SQUID_FONT, weight: 400, fill: id === pose ? 'white' : '#9fb6d8' });
+				const x = x0 + (i % cols + 0.5) * colW;
+				const y = 440 + Math.floor(i / cols) * 470;
+				if (id === pose) art.roundRect(c, x - colW / 2 + 10, y - 400, colW - 20, 460, 20, { fill: 'rgba(58,138,216,0.25)' });
+				art.with(c, { x, y, scale: LAB.row }, (c2) => assemble(c2, rig, { pose: id }));
+				art.text(c, id.toUpperCase(), x, y + 34, { size: 26, font: SQUID_FONT, weight: 400, fill: id === pose ? 'white' : '#9fb6d8' });
 			});
 		}
 
