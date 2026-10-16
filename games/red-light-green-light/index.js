@@ -1218,7 +1218,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	function drawLasers(ctx) {
 		if (phase !== 'red' && phase !== 'drill-red') return;
 		const alpha = Math.min(1, phaseT / 0.3);
-		const eyes = dollFace().y;
+		const eyes = dollEyes();
 		const RED = '#ff2a2a';
 		const s = scanner;
 		// the target: a big oval flat on the sand, pulsing
@@ -1237,9 +1237,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		});
 		// the beams, one from each eye, each flickering on its own and now
 		// and then cutting out altogether
-		for (const off of [-14, 14]) {
+		for (const [k, off] of [[0, -14], [1, 14]]) {
 			const flicker = Math.random() < 0.06 ? 0.1 : 0.6 + 0.4 * Math.random();
-			const beam = [[DOLL_X + off, eyes], [tx + off * 2, cy]];
+			const beam = [[eyes[k].x, eyes[k].y], [tx + off * 2, cy]];   // (from her pupils)
 			art.line(ctx, beam, { stroke: RED, lineWidth: 34, alpha: alpha * 0.12 * flicker, shadow: { color: RED, blur: LASER.glow } });
 			art.line(ctx, beam, { stroke: RED, lineWidth: 14, alpha: alpha * 0.3 * flicker, shadow: { color: RED, blur: LASER.glow * 0.6 } });
 			art.line(ctx, beam, { stroke: '#ffd0c8', lineWidth: 3.5, alpha: alpha * flicker, shadow: { color: RED, blur: 18 } });   // a white-hot core
@@ -3895,8 +3895,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				// watching: her eyes glow red
 				if (glare > 0 && i === sheets.head.frames.length - 1) {
 					for (const side of [-1, 1]) {
-						const ex = side * SPRITE.head * 0.16;
-						const ey = SPRITE.head * 0.06 + f.dy * k;
+						const { x: ex, y: ey } = pupil(side);
 						art.circle(c, ex, ey, 16, { fill: art.radial(c, ex, ey, 0, 16, [[0, `rgba(255,60,60,${0.9 * glare})`], [1, 'rgba(255,0,0,0)']]) });
 					}
 				}
@@ -4114,6 +4113,23 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	/* ---------- the beats ---------- */
 
 	// Where her head is, in the world, with the view at the far end.
+	// Where one of her pupils is (side -1: her right, as we look), in her
+	// head's units, when she faces us: measured on the sheet's last frame.
+	const PUPIL = { x: 0.15, y: -0.03 };   // (a share of the frame's width out from its middle, and of its height up or down)
+	function pupil(side) {
+		const sheet = sheets.head;
+		const f = sheet && sheet.frames[sheet.frames.length - 1];
+		if (!f) return { x: side * SPRITE.head * 0.16, y: SPRITE.head * 0.06 };
+		const k = SPRITE.head / sheet.unit;
+		return { x: side * PUPIL.x * f.w * k, y: (PUPIL.y * f.h + f.dy) * k };
+	}
+	// her two pupils, on the screen (as drawDoll draws her)
+	function dollEyes() {
+		const p = at(DOLL_X, dollF);
+		const S = p.s * 0.82;
+		return [-1, 1].map((side) => { const e = pupil(side); return { x: p.x + S * 2.1 * e.x, y: p.y + S * (-dollHeadY() + 2.1 * e.y) }; });
+	}
+
 	function dollFace() {
 		const p = at(DOLL_X, dollF);
 		return { x: DOLL_X, y: p.y - dollHeadY() * 0.82 * p.s + 20 };
