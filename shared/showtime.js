@@ -24,6 +24,7 @@
  *       sounds: { drama: ['assets/...mp3', 0.3, true] },   // optional overrides
  *       music: false,                     // optional: no music, only the effects
  *       clockOutline: false,              // optional: the clock's capsule without its coloured outline
+ *       clockFont: 'Share Tech Mono',     // optional: the clock's digits in their own (monospace) font
  *       font: 'Game of Squids',           // optional: one font for everything the show writes (load it first)
  *   });
  *
@@ -545,6 +546,10 @@ window.Showtime = function (stage, opts) {
 	// colour snaps to the nearest of the palette; players' colours stay
 	// theirs. The outline and drop are the same everywhere (none on dark ink).
 	const TYPE = Object.assign({}, Showtime.TYPE, opts.font ? { font: opts.font } : {});
+	// the clock's digits: in a font of their own if the game gives one (a
+	// monospace one keeps them from jiggling as they count)
+	const CLOCK_FONT = opts.clockFont || null;
+	if (CLOCK_FONT && document.fonts) document.fonts.load(`40px "${CLOCK_FONT}"`).catch(() => {});
 	const snapSize = (size) => TYPE.sizes.reduce((best, s) => (Math.abs(Math.log(s / size)) < Math.abs(Math.log(best / size)) ? s : best), TYPE.sizes[0]);
 	const measure = function (ctx, str, size) {
 		ctx.save();
@@ -588,7 +593,7 @@ window.Showtime = function (stage, opts) {
 		const fill = textColour(style.fill || TYPE.colours.white);
 		const dark = fill === TYPE.colours.ink;
 		art.text(ctx, str, x, y, {
-			size, font: TYPE.font, weight: 400, fill,
+			size, font: style.font || TYPE.font, weight: 400, fill,
 			outline: dark ? null : TYPE.colours.ink, outlineWidth: dark ? 0 : Math.max(4, size * 0.07),
 			drop: dark ? 'transparent' : 'rgba(0,0,0,0.55)', dropY: size * 0.09,
 			alpha: style.alpha, align: style.align,
@@ -944,7 +949,7 @@ window.Showtime = function (stage, opts) {
 		// its digits at a step of the scale, sized with the pill by scaling
 		const ref = self.size(CLOCK.size);
 		ctx.scale(size / ref, size / ref);
-		self.text(ctx, mmss(left), 0, ref * 0.04, ref, { fill: urgent ? TYPE.colours.red : TYPE.colours.white });
+		self.text(ctx, mmss(left), 0, ref * 0.04, ref, { fill: urgent ? TYPE.colours.red : TYPE.colours.white, font: CLOCK_FONT });
 		ctx.restore();
 	}
 
@@ -1192,7 +1197,7 @@ window.Showtime = function (stage, opts) {
 						const ts = self.fitSize(c, mmss(SECONDS), C.size, C.radius * 1.62);
 						const k = lerp(1, CLOCK.size / ts, fly);
 						c.scale(k, k);
-						self.text(c, mmss(clock.left), 0, ts * 0.04, ts, look({ fit: 99999 }));
+						self.text(c, mmss(clock.left), 0, ts * 0.04, ts, Object.assign(look({ fit: 99999 }), { font: CLOCK_FONT }));
 						c.restore();
 					}
 					// 4. MINUTES, just under the 10
@@ -2060,7 +2065,7 @@ window.Showtime = function (stage, opts) {
 						c.restore();
 						self.text(c, '×' + speed, 1420, 92, 64, { glow: theme.accent });
 					}
-					self.text(c, mmss(SECONDS - gameT), 200, 92, 64, { fill: 'white' });
+					self.text(c, mmss(SECONDS - gameT), 200, 92, 64, { fill: 'white', font: CLOCK_FONT });
 					// a REC dot, for the camera at the back
 					if (Math.floor(bt * 2) % 2 === 0) art.circle(c, 200 - 150, 92, 14, { fill: '#ff3a3a' });
 					// the timeline, with the big moments marked

@@ -102,7 +102,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const MAGNET = { every: 1400, time: 2.5, radius: 480, pull: 1200 };   // a magnet every so far up each wall; seconds it lasts; how far it reaches; how fast cash comes
 	const BOULDER = { from: 1, gap: [4, 9], quicker: 0.9, r: [75, 105], speed: [320, 440], ahead: 1700, lead: 900, down: 1.2, spill: 3 };   // boulders from this round (0 is round 1); seconds between them, shrinking by this much a round; their size; how fast they roll; how far up the field they start (and never nearer the players than lead); seconds flattened; wads of cash spilled
 	const BAG = { every: 1700, count: 9, near: 110, radius: 380, fly: 0.75, arc: 240 };   // a money bag every so far up each wall; wads it bursts into; how near and far they land; seconds in the air; how high they fly
-	const LASER = { hop: 1.2, follow: 20, wobble: 14, search: 50, rx: 150, rf: 60, glow: 50 };   // red light's target: seconds per contestant, how quickly it follows, its jitter, how far it searches round them, its half-width and half-depth, its glow
+	const LASER = { hop: 1.2, follow: 20, wobble: 14, search: 50, rx: 150, rf: 60, glow: 50, thin: 0.12, thick: 1.6 };   // (thin, thick: how wide the beams are at her eyes and, times the sand's scale there, at the target)
+	const STARE = { chance: 0.45, time: 0.7, bloom: 1100, wash: 0.22 };   // as the laser darts to the next contestant: how often it swings round to look straight out at us, for how long (seconds), how far its bloom of red reaches (world units), and how red it washes the whole view   // red light's target: seconds per contestant, how quickly it follows, its jitter, how far it searches round them, its half-width and half-depth, its glow
 	const EDGE_AT = 0.1;        // a pad's centre, as a share of the wall from the corner
 	const HOP = 0.5;            // seconds to skip across a corner onto the next wall
 	const WALL_NAMES = ['LEFT', 'FRONT', 'RIGHT'];
@@ -575,6 +576,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		clock: (n) => CLOCK_AT[n],   // the clock, as a capsule: see CLOCK_AT
 		clockOutline: false,         // (no outline round it)
 		font: SQUID_FONT,            // everything the show writes, in the game's own lettering
+		clockFont: 'Share Tech Mono',   // (but the clock: steady monospace digital digits)
 		seconds: GAME_SECONDS,
 		players: () => contestants.length,
 		scores: () => contestants.map((c) => c.score),
@@ -1180,13 +1182,17 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// two red beams from her eyes, off the top of the field, to a big oval
 	// target lying flat on the sand. It roves across all three walls, hopping
 	// from one contestant to the next, hunting; with nobody left, it roams.
-	const scanner = { x: 1.5 * W, f: 0, t: 0, wall: 1 };
+	const scanner = { x: 1.5 * W, f: 0, t: 0, wall: 1, hopAt: -1, stareT: Infinity };
 
 	function aimLasers() {
 		scanner.x = 1.5 * W;
 		scanner.f = cam + BACK + DEPTH * 0.5;
 		scanner.t = Math.random() * 3;
+		scanner.hopAt = -1;
+		scanner.stareT = Infinity;
 	}
+	// how far round to look straight at us it is (0 to 1 and back)
+	const stareOf = (s) => (s.stareT < STARE.time ? Math.sin(Math.PI * s.stareT / STARE.time) ** 2 : 0);
 
 	function stepLasers(dt) {
 		const on = phase === 'red' || phase === 'drill-red';
@@ -1197,8 +1203,15 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const live = contestants.filter((c) => c.alive && !c.safe);
 		let tx;
 		let tf;
+		// darting on to someone else: now and then it looks straight out at us on the way
+		const hop = Math.floor(s.t / LASER.hop);
+		if (hop !== s.hopAt) {
+			if (s.hopAt >= 0 && Math.random() < STARE.chance) s.stareT = 0;
+			s.hopAt = hop;
+		}
+		s.stareT += dt;
 		if (live.length) {
-			const c = live[Math.floor(s.t / LASER.hop) % live.length];
+			const c = live[hop % live.length];
 			s.wall = c.wall;
 			// (searching all round them, never quite still)
 			tx = c.x + Math.sin(s.t * 2.3) * LASER.search;
@@ -1227,7 +1240,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const cy = (front.y + back.y) / 2;
 		const ry = (front.y - back.y) / 2;
 		const pulse = 1 + 0.06 * Math.sin(s.t * 14);
-		const sight = alpha * (0.75 + 0.25 * Math.random());   // (it flickers a little)
+		const sight = alpha * (0.75 + 0.25 * Math.random()) * (1 - stareOf(s));   // (it flickers a little; gone while she stares out at us)
 		// (a hot centre, fading gradually out over well beyond its rim)
 		const tx = (front.x + back.x) / 2;   // (where the target is, drawn in toward its wall's vanishing point)
 		art.with(ctx, { x: tx, y: cy, scaleX: (front.s + back.s) / 2 / SCALE, scaleY: ry / LASER.rx }, function (c) {
@@ -1237,13 +1250,39 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		});
 		// the beams, one from each eye, each flickering on its own and now
 		// and then cutting out altogether
+		// (thin at her eyes, widening toward us; while she stares out at us they
+		// swing round to point down the camera, shrinking to her eyes)
+		const stare = stareOf(s);
+		const near = (front.s + back.s) / 2 / SCALE;
 		for (const [k, off] of [[0, -14], [1, 14]]) {
 			const flicker = Math.random() < 0.06 ? 0.1 : 0.6 + 0.4 * Math.random();
-			const beam = [[eyes[k].x, eyes[k].y], [tx + off * 2, cy]];   // (from her pupils)
-			art.line(ctx, beam, { stroke: RED, lineWidth: 34, alpha: alpha * 0.12 * flicker, shadow: { color: RED, blur: LASER.glow } });
-			art.line(ctx, beam, { stroke: RED, lineWidth: 14, alpha: alpha * 0.3 * flicker, shadow: { color: RED, blur: LASER.glow * 0.6 } });
-			art.line(ctx, beam, { stroke: '#ffd0c8', lineWidth: 3.5, alpha: alpha * flicker, shadow: { color: RED, blur: 18 } });   // a white-hot core
+			const a = eyes[k];
+			const b = { x: tx + off * 2 + (a.x - tx - off * 2) * stare, y: cy + (a.y - cy) * stare };
+			const wide = near * (1 + stare * 2);
+			taper(ctx, a, b, 34 * LASER.thin, 34 * LASER.thick * wide, { fill: RED, alpha: alpha * 0.12 * flicker, shadow: { color: RED, blur: LASER.glow } });
+			taper(ctx, a, b, 14 * LASER.thin, 14 * LASER.thick * wide, { fill: RED, alpha: alpha * 0.3 * flicker, shadow: { color: RED, blur: LASER.glow * 0.6 } });
+			taper(ctx, a, b, 3.5 * LASER.thin + 0.6, 3.5 * LASER.thick * wide, { fill: '#ffd0c8', alpha: alpha * flicker, shadow: { color: RED, blur: 18 } });   // a white-hot core
 		}
+		// looking straight at us: a big bloom of red light from her eyes, and the whole view washed red
+		if (stare > 0.01) {
+			const mx = (eyes[0].x + eyes[1].x) / 2;
+			const my = (eyes[0].y + eyes[1].y) / 2;
+			ctx.save();
+			ctx.globalCompositeOperation = 'lighter';
+			art.rect(ctx, -20, 0, WIDTH + 40, H, { fill: `rgba(255,30,20,${STARE.wash * stare * alpha})` });
+			const R = STARE.bloom * (0.4 + 0.6 * stare);
+			art.circle(ctx, mx, my, R, { fill: art.radial(ctx, mx, my, 0, R, [[0, `rgba(255,235,225,${0.95 * stare * alpha})`], [0.06, `rgba(255,90,70,${0.8 * stare * alpha})`], [0.25, `rgba(255,40,30,${0.4 * stare * alpha})`], [0.6, `rgba(255,20,20,${0.12 * stare * alpha})`], [1, 'rgba(255,0,0,0)']]) });
+			for (const e of eyes) art.circle(ctx, e.x, e.y, 60 * stare, { fill: art.radial(ctx, e.x, e.y, 0, 60 * stare, [[0, `rgba(255,255,255,${stare * alpha})`], [1, 'rgba(255,60,60,0)']]) });
+			ctx.restore();
+		}
+	}
+
+	// A beam from a to b, w0 wide at a and w1 at b.
+	function taper(ctx, a, b, w0, w1, style) {
+		const dx = b.x - a.x, dy = b.y - a.y;
+		const len = Math.hypot(dx, dy) || 1;
+		const nx = -dy / len, ny = dx / len;
+		art.poly(ctx, [[a.x + nx * w0 / 2, a.y + ny * w0 / 2], [b.x + nx * w1 / 2, b.y + ny * w1 / 2], [b.x - nx * w1 / 2, b.y - ny * w1 / 2], [a.x - nx * w0 / 2, a.y - ny * w0 / 2]], style);
 	}
 
 	/* ---------- eliminations ---------- */
