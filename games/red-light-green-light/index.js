@@ -4255,7 +4255,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		let pose = 'stand';
 		let part = 'torso';
 		let t0 = 0;
-		const LAB = { side: 1100, big: 6.2, cycle: 4.2, row: 2.3 };   // the controls' width; how big the chosen pose, the playing cycle and the row of every pose are drawn
+		const LAB = { side: 520, big: 6.2, cycle: 4.2, row: 2.3 };   // the controls' width (screen pixels); how big the chosen pose, the playing cycle and the row of every pose are drawn (the preview is 1000 units tall, filling the window's height)
 		const FIGS = { back: 'CONTESTANT · BACK', front: 'CONTESTANT · FRONT', guard: 'GUARD' };
 		const SLIDERS = [['x', -40, 40, 0.5], ['y', -40, 40, 0.5], ['r', -45, 45, 0.5]];   // (no size: every part of a figure is drawn at one scale)
 		const LABELS = { x: 'ACROSS', y: 'UP / DOWN', r: 'TURN °' };
@@ -4283,12 +4283,13 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 		function build() {
 			$lab = $('<character-lab>').css(Object.assign({
-				position: 'absolute', left: 0, top: 0, width: WIDTH + 'px', height: H + 'px', zIndex: 30,
-				display: 'flex', background: 'rgba(8,10,22,0.97)', pointerEvents: 'auto',
-			}, css)).appendTo(stage.$ui).on('pointerdown click', (e) => e.stopPropagation());
-			// (all three walls: the controls on the left, the figures across the rest)
-			const $side = $('<div>').css({ width: LAB.side + 'px', padding: '30px', boxSizing: 'border-box', overflowY: 'auto', fontSize: '26px' }).appendTo($lab);
-			canvas = $('<canvas>').attr({ width: WIDTH - LAB.side, height: H }).css({ width: (WIDTH - LAB.side) + 'px', height: H + 'px' }).appendTo($lab)[0];
+				position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, zIndex: 10000,
+				display: 'flex', background: 'rgb(8,10,22)', pointerEvents: 'auto',
+			}, css)).appendTo(document.body).on('pointerdown click', (e) => e.stopPropagation());
+			stage.own(() => $lab && $lab.remove());   // (it lives over the whole page: gone when the game is)
+			// (the whole browser window: the controls down the left, the figures filling the rest)
+			const $side = $('<div>').css({ width: LAB.side + 'px', flex: 'none', padding: '20px', boxSizing: 'border-box', overflowY: 'auto', fontSize: '18px' }).appendTo($lab);
+			canvas = $('<canvas>').css({ flex: 1, minWidth: 0, height: '100%', display: 'block' }).appendTo($lab)[0];
 			render($side);
 		}
 
@@ -4365,9 +4366,20 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// beside it, and every pose in rows down the right.
 		function draw() {
 			if (!canvas) return;
+			// (sharp at the window's size: 1000 units tall, as wide as the window allows)
+			const dpr = window.devicePixelRatio || 1;
+			const pw = Math.max(1, Math.round(canvas.clientWidth * dpr));
+			const ph = Math.max(1, Math.round(canvas.clientHeight * dpr));
+			if (canvas.width !== pw || canvas.height !== ph) {
+				canvas.width = pw;
+				canvas.height = ph;
+			}
 			const c = canvas.getContext('2d');
-			const CW = canvas.width;
-			c.clearRect(0, 0, CW, canvas.height);
+			c.setTransform(1, 0, 0, 1, 0, 0);
+			c.clearRect(0, 0, pw, ph);
+			const sc = ph / H;
+			c.setTransform(sc, 0, 0, sc, 0, 0);
+			const CW = pw / sc;
 			const rig = rigs[fig];
 			if (!rig) {
 				art.text(c, 'LOADING THE PARTS…', CW / 2, 400, { size: 60, font: SQUID_FONT, weight: 400 });
@@ -4377,9 +4389,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const ground = 900;
 			const g = figure(fig);
 			// the ground, a guide for the figure's height, and the pose big
-			const bigX = 700;
-			art.rect(c, 0, ground, 2300, 3, { fill: 'rgba(255,255,255,0.25)' });
-			art.rect(c, 150, ground - g.height * LAB.big, 1100, 2, { fill: 'rgba(255,255,255,0.14)' });
+			const bigX = Math.min(700, CW * 0.2);
+			art.rect(c, 0, ground, CW * 0.62, 3, { fill: 'rgba(255,255,255,0.25)' });
+			art.rect(c, bigX - 450, ground - g.height * LAB.big, 900, 2, { fill: 'rgba(255,255,255,0.14)' });
 			art.with(c, { x: bigX, y: ground, scale: LAB.big }, (c2) => assemble(c2, rig, { pose }));
 			art.text(c, pose.toUpperCase(), bigX, ground + 50, { size: 40, font: SQUID_FONT, weight: 400, fill: 'white' });
 			// the cycle, playing
@@ -4387,19 +4399,21 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const at = t * (fig === 'front' ? 2.5 : fig === 'back' ? 12 * RIG.run : 12);
 			const step = Math.floor(at) % cycle.length;
 			const ease2 = fig === 'front' ? 0 : at % 1;
-			const cycX = 1700;
+			const cycX = Math.min(1700, CW * 0.45);
 			art.with(c, { x: cycX, y: ground, scale: LAB.cycle }, (c2) => assemble(c2, rig, { pose: cycle[step], next: cycle[(step + 1) % cycle.length], t: ease2, bob: fig === 'back' ? Math.abs(Math.sin(at / 6 * Math.PI * 2)) * RIG.bob : 0 }));
 			art.text(c, 'PLAYING: ' + cycle[step].toUpperCase(), cycX, ground + 50, { size: 34, font: SQUID_FONT, weight: 400, fill: '#9fb6d8' });
 			// every pose, in rows on the right, the chosen one marked
 			const ids = Object.keys(POSES[fig]);
-			const x0 = 2500;
-			const cols = 5;
+			const x0 = CW * 0.62;
+			const cols = Math.max(2, Math.min(5, Math.floor((CW - x0) / 240)));
 			const colW = (CW - x0 - 80) / cols;
+			const rowH = (H - 60) / Math.ceil(ids.length / cols);
+			const rowScale = Math.min(LAB.row, (rowH - 70) / 150, (colW - 20) / 110);
 			ids.forEach(function (id, i) {
 				const x = x0 + (i % cols + 0.5) * colW;
-				const y = 440 + Math.floor(i / cols) * 470;
-				if (id === pose) art.roundRect(c, x - colW / 2 + 10, y - 400, colW - 20, 460, 20, { fill: 'rgba(58,138,216,0.25)' });
-				art.with(c, { x, y, scale: LAB.row }, (c2) => assemble(c2, rig, { pose: id }));
+				const y = 30 + (Math.floor(i / cols) + 1) * rowH - 50;
+				if (id === pose) art.roundRect(c, x - colW / 2 + 10, y - rowH + 60, colW - 20, rowH - 10, 20, { fill: 'rgba(58,138,216,0.25)' });
+				art.with(c, { x, y, scale: rowScale }, (c2) => assemble(c2, rig, { pose: id }));
 				art.text(c, id.toUpperCase(), x, y + 34, { size: 26, font: SQUID_FONT, weight: 400, fill: id === pose ? 'white' : '#9fb6d8' });
 			});
 		}
