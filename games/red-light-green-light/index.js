@@ -2327,15 +2327,15 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 						if (y > y1) y1 = y;
 					}
 					if (x1 < 0) return;
-					// (every frame cut to one square round the cell's middle, so it can't wobble)
-					const half = Math.max(x1 - x0, y1 - y0) / 2 + 4;
-					const mx = cx0 + cw / 2;
-					const my = cy0 + ch / 2;
+					// (each frame its whole box, nothing trimmed; how much of the box the boulder fills, for its size)
 					const crop = document.createElement('canvas');
-					crop.width = crop.height = Math.ceil(half * 2);
-					crop.getContext('2d').drawImage(cv, mx - half, my - half, half * 2, half * 2, 0, 0, half * 2, half * 2);
-					frames.push({ img: crop, w: crop.width, h: crop.height });
+					crop.width = Math.floor(cw);
+					crop.height = Math.floor(ch);
+					crop.getContext('2d').drawImage(cv, cx0, cy0, crop.width, crop.height, 0, 0, crop.width, crop.height);
+					frames.push({ img: crop, w: crop.width, h: crop.height, fill: Math.max(x1 - x0, y1 - y0) / crop.width });
 				}
+				const fills = frames.map((f) => f.fill).sort((a, b) => a - b);
+				for (const f of frames) f.fill = fills[Math.floor(fills.length / 2)];   // (one size for all: the middle one)
 				boulderFrames = frames;
 			} catch (e) { /* (drawn as before) */ }
 		};
@@ -2356,12 +2356,12 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				art.circle(c, d.x, d.y, (14 + k * 34) * d.s, { fill: 'rgba(214,186,140,0.55)', alpha: (1 - k) * 0.8 });
 			}
 			// its shadow, in its shape (once its picture's in)
-			if (boulderFrames) castShape(c, shapeOf('boulder', (g) => g.drawImage(boulderFrames[0].img, -50, -100, 100, 100 * boulderFrames[0].h / boulderFrames[0].w), 120, 120), foot.x, foot.y, b.f, r * 2 * BOULDER_ART.size / 100, 1, r * 0.8);
+			if (boulderFrames) castShape(c, shapeOf('boulder', (g) => { const f0 = boulderFrames[0]; const d = 100 / f0.fill; g.drawImage(f0.img, -d / 2, -50 - d / 2, d, d); }, 160, 160), foot.x, foot.y, b.f, r * 2 * BOULDER_ART.size / 100, 1, r * 0.8);
 			else softShadow(c, foot.x, foot.y, r * 0.95, r * 0.3, 0.3, 1, r * 2, b.f);
 			// the stone, rolling: its sprite sheet, a frame for each eighth of a turn
 			if (boulderFrames) {
 				const f = boulderFrames[Math.floor((((b.spin / (Math.PI * 2)) % 1) + 1) % 1 * boulderFrames.length)];
-				const d = r * 2 * BOULDER_ART.size;
+				const d = r * 2 * BOULDER_ART.size / f.fill;   // (the whole box, so the boulder in it comes out the right size)
 				c.drawImage(f.img, p.x - d / 2, p.y - d / 2 * f.h / f.w, d, d * f.h / f.w);
 				return;
 			}
@@ -3000,22 +3000,26 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			}
 			boxes.push(x1 < 0 ? null : { x0, y0, x1: x1 + 2, y1: y1 + 2, cx: cx0 + cw / 2 });
 		}
-		// each row's baseline: its lowest feet
-		for (let r = 0; r < rows; r++) baselines.push(Math.max(...boxes.slice(r * 4, r * 4 + 4).map((b) => (b ? b.y1 : 0))));
+		// Each frame is its whole box, nothing trimmed, so it keeps exactly the
+		// place it was drawn in: hung from the box's middle at one baseline
+		// shared by the whole sheet (the middle of where the frames' feet are
+		// in their boxes). The size it's drawn at comes from the middle of the
+		// frames' heights (or, for her head, their widths).
+		const median = (list) => { const l = list.filter((v) => v !== null && v !== undefined).sort((a, b) => a - b); return l[Math.floor(l.length / 2)]; };
+		const base = median(boxes.map((b, i) => (b ? b.y1 - Math.round(Math.floor(i / 4) * ch) : null)));
 		boxes.forEach(function (b, i) {
-			if (!b) { frames.push(null); return; }
-			const w = b.x1 - b.x0;
-			const h = b.y1 - b.y0;
+			const cx0 = Math.round((i % 4) * cw);
+			const cy0 = Math.round(Math.floor(i / 4) * ch);
+			const w = Math.floor(cw);
+			const h = Math.floor(ch);
 			const crop = document.createElement('canvas');
 			crop.width = w;
 			crop.height = h;
-			crop.getContext('2d').drawImage(cv, b.x0, b.y0, w, h, 0, 0, w, h);
-			const base = baselines[Math.floor(i / 4)];
-			frames.push({ img: crop, x: b.x0 - b.cx, y: b.y0 - base, w, h });
+			crop.getContext('2d').drawImage(cv, cx0, cy0, w, h, 0, 0, w, h);
+			frames.push({ img: crop, x: -w / 2, y: -base, w, h });
 		});
-		// the size to draw at comes from the first frame (standing, or mid-stride)
-		const f0 = frames[0];
-		const sheet = { frames, unit: name === 'head' ? frames[frames.length - 1].w : f0.h };
+		for (let r = 0; r < rows; r++) baselines.push(Math.round(r * ch) + base);
+		const sheet = { frames, unit: name === 'head' ? median(boxes.map((b) => (b ? b.x1 - b.x0 : null))) : median(boxes.map((b) => (b ? b.y1 - b.y0 : null))) };
 		// a guard's rifle: its muzzle is the furthest-right thing in the firing frame
 		if (name === 'circle' && frames[6]) {
 			const b = boxes[6];
@@ -3142,14 +3146,18 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		img.src = 'assets/red-light-green-light/' + def.file;
 	}
 
-	// Each cell's part, trimmed, with its joins: its top join (the waist on
-	// legs, the neck on a torso: the topmost solid point straight above its
-	// bottom middle, so raised arms don't count) and its bottom join (the
-	// middle of its bottom edge: the neck stub on a head, the waist on a
-	// torso, the feet on legs).
+	// Each cell, cut out whole: the sheet in even boxes, nothing trimmed, so
+	// every frame keeps exactly the place ChatGPT drew it in its box. Every
+	// part of a kind joins at one shared point in its box, on the box's
+	// middle line: legs at their waistband, torsos at their hem (and carry
+	// the head at their neck), heads at their neck. Those shared heights are
+	// read once from the sheet (the middle reading across all the parts of
+	// that kind), so they suit the drawing, but they're the same for every
+	// frame: nothing shifts from one to the next.
 	function cutParts(img, def, name) {
-		const cw = img.width / 4;
-		const ch = img.height / (def.rows || 2);
+		const rows = def.rows || 2;
+		const cw = Math.floor(img.width / 4);
+		const ch = Math.floor(img.height / rows);
 		const cv = document.createElement('canvas');
 		cv.width = img.width;
 		cv.height = img.height;
@@ -3157,106 +3165,59 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		g.drawImage(img, 0, 0);
 		const data = g.getImageData(0, 0, img.width, img.height).data;
 		const solid = (x, y) => data[(Math.round(y) * img.width + Math.round(x)) * 4 + 3] > 60;
+		const median = (list) => { const l = list.filter((v) => v !== null).sort((a, b) => a - b); return l.length ? l[Math.floor(l.length / 2)] : null; };
+		const kindOf = (id) => (id.startsWith('legs') ? 'legs' : id.startsWith('torso') ? 'torso' : 'head');
+		const cells = def.parts.map((id, i) => ({ id, kind: kindOf(id), x0: (i % 4) * cw, y0: Math.floor(i / 4) * ch }));
+		// in a box, down its middle strip: the first and last solid rows
+		const column = function (cell, fromTop) {
+			const xa = cell.x0 + cw * 0.4;
+			const xb = cell.x0 + cw * 0.6;
+			for (let k = 2; k < ch - 2; k++) {
+				const y = fromTop ? cell.y0 + k : cell.y0 + ch - 1 - k;
+				for (let x = xa; x < xb; x += 2) if (solid(x, y)) return y - cell.y0;
+			}
+			return null;
+		};
+		// in a box, anywhere: the first and last solid rows
+		const extent = function (cell, fromTop) {
+			for (let k = 2; k < ch - 2; k++) {
+				const y = fromTop ? cell.y0 + k : cell.y0 + ch - 1 - k;
+				for (let x = cell.x0 + 2; x < cell.x0 + cw - 2; x += 2) if (solid(x, y)) return y - cell.y0;
+			}
+			return null;
+		};
+		const of = (kind) => cells.filter((c) => c.kind === kind);
+		const at = {
+			waist: median(of('legs').map((c) => column(c, true))),        // the legs' waistband (its top)
+			feet: median(of('legs').map((c) => extent(c, false))),       // their feet
+			hem: median(of('torso').map((c) => column(c, false))),       // a torso's hem
+			neck: median(of('torso').map((c) => column(c, true))),       // a torso's neck
+			chin: median(of('head').map((c) => column(c, false))),       // a head's neck stub
+			crown: median(of('head').map((c) => extent(c, true))),       // the top of a head
+		};
 		const parts = {};
-		def.parts.forEach(function (id, i) {
-			const cx0 = Math.round((i % 4) * cw);
-			const cy0 = Math.round(Math.floor(i / 4) * ch);
-			let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1;
-			for (let y = cy0 + 2; y < cy0 + ch - 2; y += 2) for (let x = cx0 + 2; x < cx0 + cw - 2; x += 2) {
-				if (!solid(x, y)) continue;
-				if (x < x0) x0 = x;
-				if (x > x1) x1 = x;
-				if (y < y0) y0 = y;
-				if (y > y1) y1 = y;
-			}
-			if (x1 < 0) return;
-			x1 += 2;
-			y1 += 2;
-			const w = x1 - x0;
-			const h = y1 - y0;
-			// Its join, found the same way on every part of its kind, so the
-			// cut-outs line up frame to frame: measured on the band of cloth
-			// where it joins (a torso's hem, the legs' waistband, a head's
-			// neck), across the one solid stretch there (not hands or feet out
-			// to the side), over a few rows and taking the middle reading.
-			const kind = id.startsWith('legs') ? 'legs' : id.startsWith('torso') ? 'torso' : 'head';
-			// the solid stretch along row y that takes in x (or the nearest solid point to it)
-			const stretch = function (y, xc) {
-				y = Math.round(y);
-				let x = Math.round(xc);
-				if (!solid(x, y)) {
-					let found = false;
-					for (let d = 1; d < w * 0.25 && !found; d++) {
-						if (solid(x - d, y)) { x -= d; found = true; } else if (solid(x + d, y)) { x += d; found = true; }
-					}
-					if (!found) return null;
-				}
-				let a = x, b = x;
-				while (a > x0 && solid(a - 1, y)) a--;
-				while (b < x1 - 1 && solid(b + 1, y)) b++;
-				return [a, b];
-			};
-			const median = (list) => { const l = list.slice().sort((p, q) => p - q); return l[Math.floor(l.length / 2)]; };
-			// read a band of rows: the middle centre and the middle width of their stretches
-			const band = function (ys, xc) {
-				const runs = ys.map((y) => stretch(y, xc)).filter(Boolean);
-				if (!runs.length) return null;
-				return { x: median(runs.map(([a, b]) => (a + b) / 2)), w: median(runs.map(([a, b]) => b - a)) };
-			};
-			// a first guess at its middle: where its solid pixels sit, across
-			let sum = 0, n = 0;
-			for (let y = y0; y < y1; y += 2) for (let x = x0; x < x1; x += 2) if (solid(x, y)) { sum += x; n++; }
-			const mid = n ? sum / n : (x0 + x1) / 2;
-			const step = Math.max(2, h * 0.025);
-			let bx = mid;
-			let ty = y0;
-			let joinW = w;
-			if (kind === 'legs') {
-				// the waistband: its top, the topmost solid row near the middle; read just under it
-				search: for (let y = y0; y < y1; y++) for (let x = mid - w * 0.15; x <= mid + w * 0.15; x++) if (solid(x, y)) { ty = y; break search; }
-				const b = band([1, 2, 3, 4, 5].map((k) => ty + k * step), mid);
-				if (b) { bx = b.x; joinW = b.w; }
-			} else {
-				// the hem (a torso) or the neck (a head): read just above the bottom
-				const b = band([1, 2, 3, 4, 5].map((k) => y1 - 1 - k * step), mid);
-				if (b) { bx = b.x; joinW = b.w; }
-				// a torso's neck: straight up from the middle of its waist, the first solid point
-				const strip = Math.max(3, w * 0.05);
-				search: for (let y = y0; y < y1; y++) for (let x = bx - strip; x <= bx + strip; x++) if (solid(x, y)) { ty = y; break search; }
-			}
+		for (const cell of cells) {
 			const crop = document.createElement('canvas');
-			crop.width = w;
-			crop.height = h;
-			crop.getContext('2d').drawImage(cv, x0, y0, w, h, 0, 0, w, h);
-			parts[id] = { img: crop, w, h, kind, top: [bx - x0, ty - y0], bottom: [bx - x0, h], join: kind === 'head' ? w : joinW };
-			// (a guard's aimed rifle: its muzzle, the furthest-right point)
-			if (id === 'torsoAim') {
-				for (let x = x1 - 1; x > bx; x--) {
+			crop.width = cw;
+			crop.height = ch;
+			crop.getContext('2d').drawImage(cv, cell.x0, cell.y0, cw, ch, 0, 0, cw, ch);
+			const mid = cw / 2;
+			const part = { img: crop, w: cw, h: ch, kind: cell.kind, norm: 1 };
+			if (cell.kind === 'legs') { part.top = [mid, at.waist]; part.bottom = [mid, at.feet]; }
+			else if (cell.kind === 'torso') { part.top = [mid, at.neck]; part.bottom = [mid, at.hem]; }
+			else { part.top = [mid, at.crown]; part.bottom = [mid, at.chin]; part.h = at.chin - at.crown; }
+			// (a guard's aimed rifle: its muzzle, the furthest-right solid point in its box)
+			if (cell.id === 'torsoAim') {
+				for (let x = cell.x0 + cw - 3; x > cell.x0 + mid; x--) {
 					let s2 = 0, m = 0;
-					for (let y = y0; y < y1; y++) if (solid(x, y)) { s2 += y; m++; }
-					if (m) { parts[id].tip = [x - x0, s2 / m - y0]; break; }
+					for (let y = cell.y0; y < cell.y0 + ch; y++) if (solid(x, y)) { s2 += y; m++; }
+					if (m) { part.tip = [x - cell.x0, s2 / m - cell.y0]; break; }
 				}
 			}
-		});
-		// ChatGPT drew some parts a little bigger or smaller than others: scale
-		// each to the middle size of its kind (all legs as wide at the
-		// waistband, all torsos at the hem, all heads across), so a figure
-		// stays one size whatever its pose. (Differences too small to see are
-		// left alone, so they can't jitter.)
-		for (const kind of ['legs', 'torso', 'head']) {
-			const list = Object.values(parts).filter((p) => p.kind === kind && p.join > 0);
-			if (!list.length) continue;
-			const sizes = list.map((p) => p.join).sort((p, q) => p - q);
-			const typical = sizes[Math.floor(sizes.length / 2)];
-			for (const part of list) {
-				const k = typical / part.join;
-				part.norm = Math.abs(k - 1) < 0.05 ? 1 : Math.max(0.8, Math.min(1.25, k));
-			}
+			parts[cell.id] = part;
 		}
-		for (const part of Object.values(parts)) if (!part.norm) part.norm = 1;
 		// how tall a standing figure is, put together (for its scale)
-		const head = parts[def.heads ? def.heads[0] : 'head'];
-		const tall = (parts.legs.bottom[1] - parts.legs.top[1]) * parts.legs.norm + (parts.torso.bottom[1] - parts.torso.top[1]) * parts.torso.norm + head.h * head.norm;
+		const tall = (at.feet - at.waist) + (at.hem - at.neck) + (at.chin - at.crown);
 		return { name, parts, tall };
 	}
 
@@ -3630,10 +3591,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				c.drawImage(f.img, -f.w * k / 2, -f.h * k / 2, f.w * k, f.h * k);
 				c.restore();
 				// watching: her eyes glow red
-				if (glare > 0 && i === 7) {
+				if (glare > 0 && i === sheets.head.frames.length - 1) {
 					for (const side of [-1, 1]) {
-						const ex = side * f.w * k * 0.16;
-						const ey = f.h * k * 0.06;
+						const ex = side * SPRITE.head * 0.16;
+						const ey = SPRITE.head * 0.06;
 						art.circle(c, ex, ey, 16, { fill: art.radial(c, ex, ey, 0, 16, [[0, `rgba(255,60,60,${0.9 * glare})`], [1, 'rgba(255,0,0,0)']]) });
 					}
 				}
