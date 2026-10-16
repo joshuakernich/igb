@@ -2215,6 +2215,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				pose: muzzle > 0 ? 'fire' : walk ? 'walk' + (1 + Math.floor(phase * 6)) : 'stand',
 				bob: walk ? Math.abs(Math.sin(walk)) * 5 : 0,
 			};
+			if (walk && !(muzzle > 0)) {
+				pick.next = 'walk' + (1 + (Math.floor(phase * 6) + 1) % 6);
+				pick.t = (phase * 6) % 1;
+			}
 			if (assemble(c, rigs.guard, pick)) return;   // (its firing pose has the muzzle flash)
 		}
 		const name = mask === 'triangle' || mask === 'square' ? mask : 'circle';
@@ -2602,11 +2606,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	function drawBagHere(ctx, g) {
 		const p = at(g.x, g.f);
 		const s = p.s * CASH.size;
-		const rise = 0.5 + 0.5 * Math.sin(g.spin * 2.4);
-		const lift = (CASH.float + CASH.bob * rise) * hover(g.f) * p.s;
+		// a money bag is heavy: it sits on the sand, no bobbing, no swaying
 		const big = ITEM.bagSize;   // (a money bag is bigger than the rest)
-		softShadow(ctx, p.x, p.y, 30 * s * big * (1 - 0.25 * rise), 9 * s * big * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 60 * s * big, g.f);
-		art.with(ctx, { x: p.x, y: p.y - lift, scale: s * big, rotate: Math.sin(g.spin * 1.4) * 6 }, function (c) {
+		const lift = 8 * s * big;   // (the sprite's foot, set down on the sand)
+		softShadow(ctx, p.x, p.y, 30 * s * big, 9 * s * big, 0.3, 1, 40 * s * big, g.f);
+		art.with(ctx, { x: p.x, y: p.y - lift, scale: s * big }, function (c) {
 			if (drawItem(c, 'bag')) return;
 			// the sack: wide at the bottom, gathered in at the neck
 			c.beginPath();
@@ -2895,7 +2899,15 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			crop.width = w;
 			crop.height = h;
 			crop.getContext('2d').drawImage(cv, x0, y0, w, h, 0, 0, w, h);
-			parts[id] = { img: crop, w, h, top: [bx - x0, ty - y0], bottom: [bx - x0, h] };
+			// how wide it is where it joins: across the hips on legs (just
+			// below its top), across the waist on a torso (just above its
+			// bottom); a head, across
+			const span = function (y) {
+				let a = Infinity, b = -1;
+				for (let x = x0; x < x1; x++) if (solid(x, y)) { if (x < a) a = x; b = x; }
+				return b < 0 ? 0 : b - a;
+			};
+			parts[id] = { img: crop, w, h, top: [bx - x0, ty - y0], bottom: [bx - x0, h], hips: span(ty + Math.max(3, h * 0.06)), waist: span(y1 - Math.max(3, h * 0.06)) };
 			// (a guard's aimed rifle: its muzzle, the furthest-right point)
 			if (id === 'torsoAim') {
 				for (let x = x1 - 1; x > bx; x--) {
@@ -2905,6 +2917,16 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				}
 			}
 		});
+		// ChatGPT drew some parts a little bigger or smaller than others:
+		// scale each to match its kind's first (all legs as wide at the hips,
+		// all torsos at the waist, all heads across), so a figure stays one
+		// size whatever its pose
+		const ref = { legs: parts.legs.hips, torso: parts.torso.waist, head: parts[def.heads ? def.heads[0] : 'head'].w };
+		for (const [id, part] of Object.entries(parts)) {
+			const kind = id.startsWith('legs') ? 'legs' : id.startsWith('torso') ? 'torso' : 'head';
+			const size = kind === 'legs' ? part.hips : kind === 'torso' ? part.waist : part.w;
+			part.norm = size > 0 ? Math.max(0.7, Math.min(1.4, ref[kind] / size)) : 1;
+		}
 		// how tall a standing figure is, put together (for its scale)
 		const head = parts[def.heads ? def.heads[0] : 'head'];
 		const tall = parts.legs.bottom[1] - parts.legs.top[1] + parts.torso.bottom[1] - parts.torso.top[1] + head.h;
@@ -2912,25 +2934,53 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	}
 
 	// Put a figure together in a pose, feet at (0, 0): legs, then the body on
-	// them at the waist, then the head on the body at the neck, each nudged as
-	// the lab says. On top of that, the moment's own movement: the body (and
-	// head with it) leaning (degrees) and bobbing up, the head tilting, a lift
-	// off the ground.
+	// them at the waist, then the head on the body at the neck, each scaled to
+	// match the rest and nudged as the lab says. On top of that, the moment's
+	// own movement: the body (and head with it) leaning (degrees) and bobbing
+	// up, the head tilting, a lift off the ground. Given a next pose and how
+	// far toward it (pick.next, pick.t), it eases between them: the joins
+	// slide from one pose's to the next's, and the next pose's parts fade in
+	// over this one's, so a cycle runs smoothly rather than in jumps.
 	function assemble(c, rig, pick) {
 		const poses = POSES[rig.name];
 		const poseId = poses[pick.pose] ? pick.pose : 'stand';
 		const pose = poses[poseId];
+		const nextId = pick.next && poses[pick.next] ? pick.next : null;
+		const next = nextId ? poses[nextId] : null;
+		const t = next ? Math.max(0, Math.min(1, pick.t || 0)) : 0;
 		const P = rig.parts;
-		const legs = P[pose.legs];
-		const torso = P[pose.torso];
-		const head = P[pick.head || pose.head];
-		if (!legs || !torso || !head) return false;
+		const parts = (p) => ({ legs: P[p.legs], torso: P[p.torso], head: P[pick.head || p.head] });
+		const A = parts(pose);
+		const B = next ? parts(next) : null;
+		if (!A.legs || !A.torso || !A.head || (B && (!B.legs || !B.torso || !B.head))) return false;
 		const fig = figure(rig.name);
 		const k = fig.height / (rig.tall * (1 - fig.overlap * 2));
-		const tuck = fig.overlap * head.h * 0.9;
-		const T = (part) => nudge(rig.name, poseId, part);
-		const lift = ((pick.lift || 0) + (pose.lift || 0)) / k;
-		const legsTall = legs.bottom[1] - legs.top[1];
+		const tuck = fig.overlap * A.head.h * A.head.norm * 0.9;
+		const mix = (a, b) => (B ? a + (b - a) * t : a);
+		// the nudges, eased between the two poses
+		const T = function (part) {
+			const a = nudge(rig.name, poseId, part);
+			if (!B) return a;
+			const b = nudge(rig.name, nextId, part);
+			return { x: mix(a.x, b.x), y: mix(a.y, b.y), r: mix(a.r, b.r), s: mix(a.s, b.s) };
+		};
+		const tallOf = (part, from, to) => (part[from][1] - part[to][1]) * part.norm;
+		const lift = ((pick.lift || 0) + mix(pose.lift || 0, next ? next.lift || 0 : 0)) / k;
+		const legsTall = mix(tallOf(A.legs, 'bottom', 'top'), B ? tallOf(B.legs, 'bottom', 'top') : 0);
+		const torsoTall = mix(tallOf(A.torso, 'bottom', 'top'), B ? tallOf(B.torso, 'bottom', 'top') : 0);
+		// one part (and the next pose's, faded in over it), its join at the origin
+		const layer = function (a, b, join, flipA, flipB) {
+			for (const [part, alpha, flip] of [[a, 1, flipA], [b, t, flipB]]) {
+				if (!part || alpha <= 0.02) continue;
+				if (part === b && b === a && flipA === flipB) continue;   // (the same part: once is enough)
+				c.save();
+				c.globalAlpha *= alpha;
+				c.scale(part.norm, part.norm);
+				if (flip) c.scale(-1, 1);
+				c.drawImage(part.img, -part[join][0], -part[join][1]);
+				c.restore();
+			}
+		};
 		c.save();
 		c.scale(k, k);
 		if (pick.flip) c.scale(-1, 1);
@@ -2940,7 +2990,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		c.translate(tl.x / k, -legsTall - lift + tl.y / k);
 		c.rotate(tl.r * Math.PI / 180);
 		c.scale(tl.s, tl.s);
-		c.drawImage(legs.img, -legs.top[0], -legs.top[1]);
+		layer(A.legs, B && B.legs, 'top');
 		c.restore();
 		// the body on the waist
 		const tt = T('torso');
@@ -2948,16 +2998,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		c.translate(tt.x / k, -legsTall - lift + tuck - (pick.bob || 0) / k + tt.y / k);
 		c.rotate(((pick.lean || 0) + tt.r) * Math.PI / 180);
 		c.scale(tt.s, tt.s);
-		c.save();
-		if (pick.mirror !== undefined ? pick.mirror : pose.mirror) c.scale(-1, 1);
-		c.drawImage(torso.img, -torso.bottom[0], -torso.bottom[1]);
-		c.restore();
+		const flips = (p) => (pick.mirror !== undefined ? pick.mirror : !!p.mirror);
+		layer(A.torso, B && B.torso, 'bottom', flips(pose), next ? flips(next) : false);
 		// the head on the neck
 		const th = T('head');
-		c.translate(th.x / k, -(torso.bottom[1] - torso.top[1]) + tuck * 1.2 + th.y / k);
+		c.translate(th.x / k, -torsoTall + tuck * 1.2 + th.y / k);
 		c.rotate(((pick.tilt || 0) + th.r) * Math.PI / 180);
 		c.scale(th.s, th.s);
-		c.drawImage(head.img, -head.bottom[0], -head.bottom[1]);
+		layer(A.head, B && B.head, 'bottom');
 		c.restore();
 		c.restore();
 		return true;
@@ -2973,8 +3021,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const tuck = fig.overlap * P.circle.h * 0.9;
 		const n = nudge('guard', 'aim', 'torso');
 		const legs = P[POSES.guard.aim.legs] || P.legs;
-		const waistY = -(legs.bottom[1] - legs.top[1]) + tuck + n.y / k;
-		return [(t.tip[0] - t.bottom[0]) * n.s * k + n.x, (waistY + (t.tip[1] - t.bottom[1]) * n.s) * k];
+		const waistY = -(legs.bottom[1] - legs.top[1]) * legs.norm + tuck + n.y / k;
+		const g = n.s * t.norm;
+		return [(t.tip[0] - t.bottom[0]) * g * k + n.x, (waistY + (t.tip[1] - t.bottom[1]) * g) * k];
 	}
 
 	// A contestant in play, from behind, from parts.
@@ -2991,7 +3040,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			// running: the legs through their strides, the arms pumping (the
 			// body mirrored on the other stride), bobbing up off each step
 			const phase = ((k.walk / (Math.PI * 2)) % 1 + 1) % 1;
-			pick.pose = 'run' + (1 + Math.floor(phase * 6));
+			const step = phase * 6;
+			pick.pose = 'run' + (1 + Math.floor(step));
+			pick.next = 'run' + (1 + (Math.floor(step) + 1) % 6);
+			pick.t = step % 1;
 			pick.bob = Math.abs(Math.sin(k.walk)) * RIG.bob * k.moving;
 			pick.lean = (k.drift || 0) * -8;
 			pick.tilt = Math.sin(k.walk) * 3;
@@ -4016,8 +4068,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			}
 			// the cycle, playing
 			const cycle = fig === 'back' ? ['run1', 'run2', 'run3', 'run4', 'run5', 'run6'] : fig === 'guard' ? ['walk1', 'walk2', 'walk3', 'walk4', 'walk5', 'walk6'] : ['win1', 'win2', 'win3', 'win4'];
-			const step = Math.floor(t * (fig === 'front' ? 2.5 : 12)) % cycle.length;
-			art.with(c, { x: 780, y: ground, scale: 2.2 }, (c2) => assemble(c2, rig, { pose: cycle[step], bob: fig === 'back' ? Math.abs(Math.sin(t * Math.PI * 4)) * RIG.bob : 0 }));
+			const at = t * (fig === 'front' ? 2.5 : 12);
+			const step = Math.floor(at) % cycle.length;
+			const ease2 = fig === 'front' ? 0 : at % 1;
+			art.with(c, { x: 780, y: ground, scale: 2.2 }, (c2) => assemble(c2, rig, { pose: cycle[step], next: cycle[(step + 1) % cycle.length], t: ease2, bob: fig === 'back' ? Math.abs(Math.sin(t * Math.PI * 4)) * RIG.bob : 0 }));
 			art.text(c, 'PLAYING: ' + cycle[step].toUpperCase(), 780, ground + 40, { size: 22, font: 'Paytone One', weight: 400, fill: '#9fb6d8' });
 			// every pose, small, the chosen one marked
 			const ids = Object.keys(POSES[fig]);
