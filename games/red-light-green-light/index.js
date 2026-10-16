@@ -4588,7 +4588,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// (five levels), RESTART ROUND and REPLAY TUTORIAL. Away from the box
 	// (not live: no Vuplex), the left wall has the debug buttons too: jump to
 	// any beat, and step through everything inside them.
-	const PAUSE = { button: 150, x: 40, levels: [0.12, 0.3, 0.5, 0.75, 1], row: { w: 760, h: 112, size: 50, inset: 8 } };   // the pause button's size and its distance in from the left wall's edge; the volume at each of the five levels; the front wall's rows (all alike): their width, height and type size, and the gap round the icon in each one's end
+	const PAUSE = { button: 130, x: 40, levels: [0.12, 0.3, 0.5, 0.75, 1], row: { w: 760, h: 112, size: 50, inset: 8 } };   // the pause panel's width and its distance in from the left wall's edge; the volume at each of the five levels; the front wall's rows (all alike): their width, height and type size, and the gap round the icon in each one's end
 	const BEATS = ['title', 'clock', 'visors', 'controls', 'doll', 'play', 'timeup', 'scores', 'rank', 'team', 'board', 'replay', 'rate', 'end'];
 	const live = !!window.vuplex;
 	const font = `"${SQUID_FONT}", "${Showtime.TYPE.font}", sans-serif`;
@@ -4601,6 +4601,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		play: '<path d="M39 27 L74 50 L39 73 Z" stroke-linejoin="round" stroke-width="6" stroke="black"/>',
 		restart: '<path d="M71 50 A21 21 0 1 1 64 34" fill="none" stroke="black" stroke-width="10" stroke-linecap="round"/><path d="M57 21 L74 30 L60 43 Z" stroke-linejoin="round" stroke-width="4" stroke="black"/>',
 		help: '<text x="50" y="69" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="56">?</text>',
+		volume: '<path d="M24 41 H35 L51 28 V72 L35 59 H24 Z" stroke-linejoin="round" stroke-width="4" stroke="black"/><path d="M60 39 A14 14 0 0 1 60 61" fill="none" stroke="black" stroke-width="7" stroke-linecap="round"/><path d="M67 30 A25 25 0 0 1 67 70" fill="none" stroke="black" stroke-width="7" stroke-linecap="round"/>',
+		cog: '<rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(0 50 50)"/><rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(45 50 50)"/><rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(90 50 50)"/><rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(135 50 50)"/><rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(180 50 50)"/><rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(225 50 50)"/><rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(270 50 50)"/><rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(315 50 50)"/><circle cx="50" cy="50" r="23"/><circle cx="50" cy="50" r="9" fill="white"/>',   // (its teeth and wheel cut out, the hub left)
 	};
 	function cutIcon(name, size, fill = 'white') {
 		const id = 'cut-icon-' + ++iconIds;
@@ -4608,15 +4610,18 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			+ `<defs><mask id="${id}"><rect width="100" height="100" fill="white"/><g fill="black">${SYMBOLS[name]}</g></mask></defs>`
 			+ `<circle cx="50" cy="50" r="48" fill="${fill}" mask="url(#${id})"/></svg>`);
 	}
+	// (the pause button: a black panel standing on the left wall, a pause,
+	// a volume and a cog on it, one above the other; anywhere on it opens the pause screen)
 	const $pauseBtn = $('<button pause>').attr('title', 'Pause').css({
 		position: 'absolute', left: PAUSE.x + 'px', top: H / 2 + 'px', transform: 'translateY(-50%)',
-		width: PAUSE.button + 'px', height: PAUSE.button + 'px', borderRadius: '50%', border: 'none',
-		background: 'none', cursor: 'pointer', pointerEvents: 'auto', zIndex: 20, padding: 0,
-		filter: 'drop-shadow(0 10px 0 rgba(0,0,0,0.45))', transition: 'transform 0.15s',
+		width: PAUSE.button + 'px', borderRadius: PAUSE.button / 2 + 'px', border: '5px solid rgba(255,255,255,0.9)',
+		background: 'rgba(0,0,0,0.92)', cursor: 'pointer', pointerEvents: 'auto', zIndex: 20, padding: '14px 0',
+		display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
+		boxShadow: '0 10px 0 rgba(0,0,0,0.45)', transition: 'transform 0.15s',
 	}).hide().appendTo(stage.$ui).on('click', function (e) { e.stopPropagation(); setPaused(true); })
 		.on('mouseenter', function () { $(this).css({ transform: 'translateY(-50%) scale(1.08)' }); })
 		.on('mouseleave', function () { $(this).css({ transform: 'translateY(-50%) scale(1)' }); });
-	cutIcon('pause', PAUSE.button).appendTo($pauseBtn);
+	for (const name of ['pause', 'volume', 'cog']) cutIcon(name, PAUSE.button - 38).appendTo($pauseBtn);
 
 	// the screen: dark glass over all three walls, a panel on each
 	const $pause = $('<pause-screen>').css({
