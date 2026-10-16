@@ -3955,9 +3955,15 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				if (glare > 0 && i === sheets.head.frames.length - 1) {
 					for (const side of [-1, 1]) {
 						const { x: ex, y: ey } = pupil(side);
-						// a red ring round each eye, see-through in the middle, glowing
+						// a ring of intense red glow round each eye, nothing solid, clear in the middle
 						const R = PUPIL.ring * f.w * k;
-						art.circle(c, ex, ey, R, { stroke: '#ff2a2a', lineWidth: R * 0.32, alpha: glare, shadow: { color: '#ff2a2a', blur: R * 0.9 } });
+						const O = R * 2.6;
+						c.save();
+						c.globalCompositeOperation = 'lighter';
+						const ring = art.radial(c, ex, ey, 0, O, [[0, 'rgba(255,40,30,0)'], [R * 0.6 / O, 'rgba(255,40,30,0)'], [R / O, `rgba(255,190,170,${glare})`], [R * 1.35 / O, `rgba(255,50,35,${0.85 * glare})`], [R * 1.9 / O, `rgba(255,20,20,${0.3 * glare})`], [1, 'rgba(255,0,0,0)']]);
+						art.circle(c, ex, ey, O, { fill: ring });
+						art.circle(c, ex, ey, O, { fill: ring, alpha: 0.6 });   // (twice over: intense)
+						c.restore();
 					}
 				}
 				return;
@@ -4176,7 +4182,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// Where her head is, in the world, with the view at the far end.
 	// Where one of her pupils is (side -1: her right, as we look), in her
 	// head's units, when she faces us: measured on the sheet's last frame.
-	const PUPIL = { x: 0.15, y: -0.03, ring: 0.045 };   // (a share of the frame's width out from its middle, and of its height up or down; the red ring round each eye, as a share of the frame's width)
+	const PUPIL = { x: 0.15, y: -0.012, ring: 0.038 };   // (a share of the frame's width out from its middle, and of its height up or down; the red ring round each eye, as a share of the frame's width)
 	function pupil(side) {
 		const sheet = sheets.head;
 		const f = sheet && sheet.frames[sheet.frames.length - 1];
