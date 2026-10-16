@@ -816,6 +816,9 @@ window.Showtime = function (stage, opts) {
 	const lengthOf = (b) => (typeof b.length === 'function' ? b.length() : b.length === undefined ? Infinity : b.length);
 
 	// One frame: move the show on, then draw it.
+	// Just the clock, counting on (for a game that's paused: the time still runs).
+	self.tickClock = function (dt) { stepClock(dt); };
+
 	self.frame = function (ctx, dt, drawWorld) {
 		showTime += dt;
 		stepClock(dt);

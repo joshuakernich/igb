@@ -4501,9 +4501,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	let last;
 	self.draw = function (ctx, time) {
 		const now = (time || performance.now()) / 1000;
-		const dt = last === undefined || paused ? 0 : Math.min(0.05, Math.max(0, now - last));   // (paused: nothing moves)
+		const real = last === undefined ? 0 : Math.min(0.05, Math.max(0, now - last));
+		const dt = paused ? 0 : real;   // (paused: nothing moves...)
 		last = now;
-		if (paused) tickPause();
+		if (paused) {
+			show.tickClock(real);   // (...but the clock keeps counting down)
+			tickPause();
+			if (show.beat === 'timeup') setPaused(false);   // (and if it runs out, it's over: on to TIME!)
+		}
 		wallT += dt;
 		show.frame(ctx, dt, drawWorld);
 		sound.tick();
@@ -4577,7 +4582,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	/* ---------- the pause screen ---------- */
 
 	// A big pause button on the left wall. Pressed, everything stops (the
-	// world, the clock, every sound) and a screen comes down over all three
+	// world and every sound; the clock keeps counting down) and a screen comes down over all three
 	// walls: the time left on each, and on the front wall RESUME, the volume
 	// (five levels), RESTART ROUND and REPLAY TUTORIAL. Away from the box
 	// (not live: no Vuplex), the left wall has the debug buttons too: jump to
