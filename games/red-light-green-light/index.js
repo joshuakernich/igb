@@ -572,7 +572,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const show = new Showtime(stage, {
 		score: won,   // scores are in won
 		id: 'red-light-green-light',
-		skip: { during: ['controls'], to: 'doll', label: 'SKIP TUTORIAL ▶▶' },   // the skip button: only in the tutorial, on to her entrance
+		skip: { during: ['controls'], to: 'doll', label: 'SKIP TUTORIAL ▶▶', at: { x: 1.5 * W, y: 360 } },   // the skip button: only in the tutorial, on to her entrance; in the middle of the front wall, under the tutorial's steps
 		clock: (n) => CLOCK_AT[n],   // the clock, as a capsule: see CLOCK_AT
 		clockOutline: false,         // (no outline round it)
 		font: SQUID_FONT,            // everything the show writes, in the game's own lettering
@@ -4176,7 +4176,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// Where her head is, in the world, with the view at the far end.
 	// Where one of her pupils is (side -1: her right, as we look), in her
 	// head's units, when she faces us: measured on the sheet's last frame.
-	const PUPIL = { x: 0.15, y: -0.03, ring: 0.085 };   // (a share of the frame's width out from its middle, and of its height up or down; the red ring round each eye, as a share of the frame's width)
+	const PUPIL = { x: 0.15, y: -0.03, ring: 0.045 };   // (a share of the frame's width out from its middle, and of its height up or down; the red ring round each eye, as a share of the frame's width)
 	function pupil(side) {
 		const sheet = sheets.head;
 		const f = sheet && sheet.frames[sheet.frames.length - 1];
@@ -4269,7 +4269,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 						const x = W / 2 + (i - (CONTROLS.steps.length - 1) / 2) * 50;
 						art.circle(c, x, 290, i === practice.i ? 13 : 9, { fill: i < practice.i || (i === practice.i && practice.done) ? '#ffd23f' : i === practice.i ? 'white' : 'rgba(255,255,255,0.45)' });
 					});
-					if (practice.done) show.slam(c, 'NICE!', W / 2, 430, 140, practice.doneAge, { fill: '#7dff9e', glow: TEAL, rotate: -0.06 });
+					if (practice.done) show.slam(c, 'NICE!', W / 2, 490, 140, practice.doneAge, { fill: '#7dff9e', glow: TEAL, rotate: -0.06 });
 				});
 			},
 		},
