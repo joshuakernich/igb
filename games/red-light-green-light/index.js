@@ -2947,14 +2947,34 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			y1 += 2;
 			const w = x1 - x0;
 			const h = y1 - y0;
+			// the solid run across a row: its ends
+			const across = function (y) {
+				let a = Infinity, b = -1;
+				for (let x = x0; x < x1; x++) if (solid(x, y)) { if (x < a) a = x; b = x; }
+				return b < 0 ? null : [a, b];
+			};
 			// the middle of its bottom edge
 			let sum = 0, n = 0;
 			for (let y = y1 - Math.max(4, h * 0.1); y < y1; y++) for (let x = x0; x < x1; x++) if (solid(x, y)) { sum += x; n++; }
-			const bx = n ? sum / n : (x0 + x1) / 2;
+			let bx = n ? sum / n : (x0 + x1) / 2;
+			// its join, centred where the eye takes it to be: a torso, the
+			// middle of its waist; legs, the middle of the hips (not of the
+			// feet, which stride out to one side); a head, the middle of its neck
+			const kind = id.startsWith('legs') ? 'legs' : id.startsWith('torso') ? 'torso' : 'head';
+			if (kind === 'torso') {
+				const run = across(y1 - Math.max(3, h * 0.06));
+				if (run) bx = (run[0] + run[1]) / 2;
+			}
 			// straight up from there, the first solid point
 			let ty = y0;
 			const strip = Math.max(3, w * 0.06);
 			search: for (let y = y0; y < y1; y++) for (let x = bx - strip; x <= bx + strip; x++) if (solid(x, y)) { ty = y; break search; }
+			if (kind === 'legs') {
+				// (the top of the legs: the topmost solid row; the hips just below it)
+				for (let y = y0; y < y1; y++) if (across(y)) { ty = y; break; }
+				const run = across(ty + Math.max(3, h * 0.06));
+				if (run) bx = (run[0] + run[1]) / 2;
+			}
 			const crop = document.createElement('canvas');
 			crop.width = w;
 			crop.height = h;
