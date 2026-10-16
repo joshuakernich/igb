@@ -4582,7 +4582,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// (five levels), RESTART ROUND and REPLAY TUTORIAL. Away from the box
 	// (not live: no Vuplex), the left wall has the debug buttons too: jump to
 	// any beat, and step through everything inside them.
-	const PAUSE = { button: 150, x: 40, levels: [0.12, 0.3, 0.5, 0.75, 1] };   // the pause button's size and its distance in from the left wall's edge; the volume at each of the five levels
+	const PAUSE = { button: 150, x: 40, levels: [0.12, 0.3, 0.5, 0.75, 1], row: { w: 760, h: 112, size: 50 } };   // the pause button's size and its distance in from the left wall's edge; the volume at each of the five levels; the front wall's rows (all alike): their width, height and type size
 	const BEATS = ['title', 'clock', 'visors', 'controls', 'doll', 'play', 'timeup', 'scores', 'rank', 'team', 'board', 'replay', 'rate', 'end'];
 	const live = !!window.vuplex;
 	const font = `"${SQUID_FONT}", "${Showtime.TYPE.font}", sans-serif`;
@@ -4605,43 +4605,47 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	}).appendTo(stage.$ui).on('pointerdown click', (e) => e.stopPropagation());
 	const wallPanel = (n) => $('<div>').css({
 		position: 'absolute', left: n * W + 'px', top: 0, width: W + 'px', height: H + 'px', boxSizing: 'border-box', padding: '60px 70px',
-		display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '34px',
+		display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '22px',
 	}).appendTo($pause);
 	const words = (text, size, colour = 'white') => $('<div>').text(text).css({
 		fontSize: size + 'px', lineHeight: 1, letterSpacing: '3px', color: colour,
 		WebkitTextStroke: `${Math.max(4, size * 0.07)}px ${Showtime.TYPE.colours.ink}`, paintOrder: 'stroke fill', textShadow: `0 ${size * 0.09}px 0 rgba(0,0,0,0.55)`,
 	});
-	const bigButton = (label, fn, colour, ink = Showtime.TYPE.colours.ink, size = 64) => $('<button>').text(label).css({
-		padding: `${size * 0.32}px ${size * 0.9}px`, borderRadius: size + 'px', border: 'none', cursor: 'pointer',
-		background: colour, color: ink, fontFamily: font, fontSize: size + 'px', lineHeight: 1, letterSpacing: '2px',
-		boxShadow: `0 ${size * 0.14}px 0 rgba(0,0,0,0.45)`, transition: 'transform 0.12s',
-	}).on('mouseenter', function () { $(this).css({ transform: 'scale(1.05)' }); })
-		.on('mouseleave', function () { $(this).css({ transform: 'scale(1)' }); })
-		.on('click', function (e) { e.stopPropagation(); fn(); });
 	const clocks = [];
 	const $left = wallPanel(0), $front = wallPanel(1), $right = wallPanel(2);
 	// the side walls: PAUSED and the time left (the left one, off the box, the debug buttons instead)
 	for (const $w of live ? [$left, $right] : [$right]) {
-		words('PAUSED', 150).appendTo($w);
-		clocks.push(words('', 200, Showtime.TYPE.colours.gold).css({ fontFamily: '"Share Tech Mono", monospace' }).appendTo($w));
+		words('PAUSED', 80).appendTo($w);
+		clocks.push(words('', 110, Showtime.TYPE.colours.gold).css({ fontFamily: '"Share Tech Mono", monospace' }).appendTo($w));
 	}
-	// the front wall: the time left, and what to do
-	words('PAUSED', 110).appendTo($front);
-	clocks.push(words('', 230, Showtime.TYPE.colours.gold).css({ fontFamily: '"Share Tech Mono", monospace' }).appendTo($front));
-	bigButton('▶  RESUME', () => setPaused(false), Showtime.TYPE.colours.gold, Showtime.TYPE.colours.ink, 86).appendTo($front);
-	// the volume: five bars, rising; click one for that level
-	const $vol = $('<div>').css({ display: 'flex', alignItems: 'flex-end', gap: '22px' }).appendTo($front);
-	$('<span>').text('VOLUME').css({ fontSize: '44px', marginRight: '18px', alignSelf: 'center', letterSpacing: '2px' }).appendTo($vol);
+	// the front wall: the time left, and what to do, in a stack of rows all alike
+	words('PAUSED', 64).appendTo($front);
+	clocks.push(words('', 96, Showtime.TYPE.colours.gold).css({ fontFamily: '"Share Tech Mono", monospace', marginBottom: '14px' }).appendTo($front));
+	const R = PAUSE.row;
+	const rowCss = {
+		width: R.w + 'px', height: R.h + 'px', boxSizing: 'border-box', borderRadius: R.h / 2 + 'px', border: '5px solid rgba(255,255,255,0.9)',
+		background: 'rgba(255,255,255,0.1)', color: 'white', fontFamily: font, fontSize: R.size + 'px', lineHeight: 1, letterSpacing: '2px',
+		display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '24px', padding: '0 44px',
+		boxShadow: '0 10px 0 rgba(0,0,0,0.45)', transition: 'transform 0.12s, background 0.12s',
+	};
+	const rowButton = (label, fn) => $('<button>').text(label).css(Object.assign({ cursor: 'pointer' }, rowCss))
+		.on('mouseenter', function () { $(this).css({ transform: 'scale(1.04)', background: 'rgba(255,255,255,0.2)' }); })
+		.on('mouseleave', function () { $(this).css({ transform: 'scale(1)', background: 'rgba(255,255,255,0.1)' }); })
+		.on('click', function (e) { e.stopPropagation(); fn(); });
+	rowButton('▶  RESUME', () => setPaused(false)).appendTo($front);
+	// the volume, the same shape: its name, then five bars rising; click one for that level
+	const $vol = $('<div>').css(Object.assign({}, rowCss, { justifyContent: 'space-between' })).appendTo($front);
+	$('<span>').text('VOLUME').appendTo($vol);
+	const $bars = $('<div>').css({ display: 'flex', alignItems: 'flex-end', gap: '14px', height: R.h * 0.56 + 'px' }).appendTo($vol);
 	const bars = PAUSE.levels.map((v, i) => $('<button>').attr('title', 'Volume ' + (i + 1)).css({
-		width: '62px', height: 40 + i * 26 + 'px', borderRadius: '10px', border: '5px solid white', cursor: 'pointer', padding: 0,
-	}).appendTo($vol).on('click', function (e) { e.stopPropagation(); IGB.setVolume(v); showVolume(); show.fx('pick'); }));
+		width: '40px', height: 28 + i * 18 + '%', borderRadius: '8px', border: '4px solid white', cursor: 'pointer', padding: 0,
+	}).appendTo($bars).on('click', function (e) { e.stopPropagation(); IGB.setVolume(v); showVolume(); show.fx('pick'); }));
 	function showVolume() {
 		const level = PAUSE.levels.reduce((best, v, i) => (Math.abs(v - IGB.volume) < Math.abs(PAUSE.levels[best] - IGB.volume) ? i : best), 0);
 		bars.forEach(($b, i) => $b.css({ background: i <= level ? 'white' : 'rgba(255,255,255,0.08)' }));
 	}
-	const $row2 = $('<div>').css({ display: 'flex', gap: '30px' }).appendTo($front);
-	bigButton('↺  RESTART ROUND', () => { setPaused(false); restartRound(); }, '#ff3640', 'white', 50).appendTo($row2);
-	bigButton('REPLAY TUTORIAL', () => { setPaused(false); debugJump('controls'); }, '#27d96b', Showtime.TYPE.colours.ink, 50).appendTo($row2);
+	rowButton('↺  RESTART ROUND', () => { setPaused(false); restartRound(); }).appendTo($front);
+	rowButton('REPLAY TUTORIAL', () => { setPaused(false); debugJump('controls'); }).appendTo($front);
 
 	// the round over again from its start (in play), or else the beat the show is on
 	function restartRound() {
