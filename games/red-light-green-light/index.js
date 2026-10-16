@@ -4458,6 +4458,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		let sel = { seq: null, pose: 'stand', frame: 0 };   // a still pose, or a frame of an animation
 		let part = 'torso';
 		let t0 = 0;
+		let hits = [];   // (the bottom row's boxes, for clicks: in preview units)
 		const LAB = { side: 360, big: 3.4, cycle: 2.5, row: 1.4 };   // the controls' width (screen pixels); how big the chosen frame, the playing animation and the row of still poses are drawn (the preview is 1000 units tall, filling the window's height)
 		const FIGS = { back: 'CONTESTANT · BACK', front: 'CONTESTANT · FRONT', guard: 'GUARD' };
 		const SLIDERS = [['x', -40, 40, 0.5], ['y', -40, 40, 0.5], ['r', -45, 45, 0.5]];   // (no size: every part of a figure is drawn at one scale)
@@ -4542,7 +4543,20 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			stage.own(() => $lab && $lab.remove());   // (it lives over the whole page: gone when the game is)
 			// (the whole browser window: the controls down the left, the figures filling the rest)
 			const $side = $('<div>').css({ width: LAB.side + 'px', flex: 'none', padding: '14px', boxSizing: 'border-box', overflowY: 'auto', fontSize: '13px' }).appendTo($lab);
-			canvas = $('<canvas>').css({ flex: 1, minWidth: 0, height: '100%', display: 'block' }).appendTo($lab)[0];
+			canvas = $('<canvas>').css({ flex: 1, minWidth: 0, height: '100%', display: 'block', cursor: 'default' }).appendTo($lab)[0];
+			// a click on the bottom row picks that pose or animation
+			const toUnits = (e) => { const r = canvas.getBoundingClientRect(); const k = H / r.height; return [(e.clientX - r.left) * k, (e.clientY - r.top) * k]; };
+			canvas.addEventListener('click', function (e) {
+				const [x, y] = toUnits(e);
+				const hit = hits.find((h) => x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1);
+				if (!hit) return;
+				sel = hit.it.seq ? { seq: hit.it.seq, pose: null, frame: 0 } : { seq: null, pose: hit.it.pose, frame: 0 };
+				render();
+			});
+			canvas.addEventListener('mousemove', function (e) {
+				const [x, y] = toUnits(e);
+				canvas.style.cursor = hits.some((h) => x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1) ? 'pointer' : 'default';
+			});
 			render($side);
 		}
 
@@ -4727,15 +4741,24 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				art.with(c, { x: cycX, y: ground, scale: LAB.cycle }, (c2) => assemble(c2, rig, { seq: name, frame: i, bob: lifted(name, i) }));
 				art.text(c, `PLAYING ${name.toUpperCase()} · ${i + 1} / ${n}`, cycX, ground + 40, { size: 20, font: SQUID_FONT, weight: 400, fill: '#9fb6d8' });
 			}
-			// the still poses, along the bottom
-			const ids = stills();
-			const colW = CW * 0.9 / Math.max(1, ids.length);
-			ids.forEach(function (id, i) {
+			// along the bottom: every still pose, then every animation (playing);
+			// click one to pick it
+			const items = stills().map((id) => ({ pose: id })).concat(Object.keys(SEQS[fig] || {}).map((sq) => ({ seq: sq })));
+			const colW = CW * 0.9 / Math.max(1, items.length);
+			hits = [];
+			items.forEach(function (it, i) {
 				const x = CW * 0.05 + (i + 0.5) * colW;
 				const y = 930;
-				if (!sel.seq && id === sel.pose) art.roundRect(c, x - colW / 2 + 6, y - 230, colW - 12, 270, 14, { fill: 'rgba(58,138,216,0.22)' });
-				art.with(c, { x, y, scale: Math.min(LAB.row, (colW - 20) / 110) }, (c2) => assemble(c2, rig, { pose: id }));
-				art.text(c, id.toUpperCase(), x, y + 24, { size: 16, font: SQUID_FONT, weight: 400, fill: !sel.seq && id === sel.pose ? 'white' : '#9fb6d8' });
+				const chosen = it.seq ? sel.seq === it.seq : !sel.seq && it.pose === sel.pose;
+				art.roundRect(c, x - colW / 2 + 6, y - 230, colW - 12, 270, 14, { fill: chosen ? 'rgba(58,138,216,0.3)' : 'rgba(255,255,255,0.04)' });
+				const scale = Math.min(LAB.row, (colW - 20) / 110);
+				if (it.seq) {
+					const n = seqFrames(fig, it.seq).length;
+					const f = Math.floor(t * fps(it.seq, n)) % n;
+					art.with(c, { x, y, scale }, (c2) => assemble(c2, rig, { seq: it.seq, frame: f, bob: lifted(it.seq, f) }));
+				} else art.with(c, { x, y, scale }, (c2) => assemble(c2, rig, { pose: it.pose }));
+				art.text(c, (it.seq ? '▶ ' + it.seq : it.pose).toUpperCase(), x, y + 24, { size: 16, font: SQUID_FONT, weight: 400, fill: chosen ? 'white' : '#9fb6d8' });
+				hits.push({ x0: x - colW / 2, x1: x + colW / 2, y0: y - 230, y1: y + 40, it });
 			});
 		}
 
