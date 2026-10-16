@@ -141,13 +141,15 @@ window.Showtime = function (stage, opts) {
 		y: 300,                // the row of visors
 		floor: { far: 330, near: 620, wall: 70 },   // the floor panel: its far and near widths, the walls' height (near)
 		// each player in play, a worm standing on the floor panel right where
-		// they are: as tall as the player (by their visor's height), leaning as
-		// they tilt their head (how far the visor sways from where their feet
-		// must be, which follows it slowly). tall: a worm's height, in panel pixels, for a visor at the
-		// tracker's top; feet: seconds the feet take to catch up; lean: radians
-		// per unit of sway across the room, and the most it leans; r: its body's
-		// thickness; segs: how many segments make it up
-		worm: { tall: 330, feet: 0.9, lean: 9, most: 0.75, r: 17, segs: 12 },
+		// they are, as tall as the player (by their visor's height), leaning back
+		// away from the way they're moving and springing upright again when they
+		// stop, with a wobble. tall: a worm's height, in panel pixels, for a visor
+		// at the tracker's top; smooth: seconds over which their speed is
+		// averaged; lean: radians per unit of speed across the room (a second),
+		// and the most it leans; spring, damp: how stiff the spring back is and
+		// how quickly its wobble dies; r: its body's thickness; segs: how many
+		// segments make it up
+		worm: { tall: 330, smooth: 0.12, lean: 1.4, most: 0.8, spring: 70, damp: 5, r: 17, segs: 12 },
 	};
 
 	/* ---------- tuning: the rating ---------- */
@@ -1227,7 +1229,7 @@ window.Showtime = function (stage, opts) {
 		let last = [];        // per slot: the last position seen
 		let held = [];        // per slot: seconds wiggled in the zone
 		let ticked = [];      // per slot: when it was ticked off (or undefined)
-		let feet = [];        // per slot: where their feet must be (their visor's spot, followed slowly)
+		let bend = [];        // per slot: their worm's lean, sprung ({ a: radians, v: its speed, vx: their speed across the room, px: where they were })
 		let wrongSince = [];  // per slot: when it was first flagged
 		let clearFor = 0;
 		let allSetAt = -1;
@@ -1242,7 +1244,7 @@ window.Showtime = function (stage, opts) {
 			length: V.length,
 			done: (bt) => allSetAt >= 0 && bt > allSetAt + V.allSet,
 			enter() {
-				motion = []; last = []; held = []; ticked = []; wrongSince = []; feet = [];
+				motion = []; last = []; held = []; ticked = []; wrongSince = []; bend = [];
 				clearFor = 0;
 				allSetAt = -1;
 				self.blackout = INTRO_DIM;
@@ -1255,8 +1257,15 @@ window.Showtime = function (stage, opts) {
 					const moved = last[i] ? Math.hypot(p.X - last[i].X, p.Y - last[i].Y, p.Z - last[i].Z) : 0;
 					last[i] = { X: p.X, Y: p.Y, Z: p.Z };
 					motion[i] = (motion[i] || 0) * k + moved / Math.max(dt, 1e-3) * (1 - k);   // speed, raw units a second
-					const kf = Math.exp(-dt / V.worm.feet);
-					feet[i] = feet[i] ? { px: feet[i].px * kf + p.px * (1 - kf), pz: feet[i].pz * kf + p.pz * (1 - kf) } : { px: p.px, pz: p.pz };
+					// their worm leans back from the way they're going, on a spring
+					const b = bend[i] || (bend[i] = { a: 0, v: 0, vx: 0, px: p.px });
+					const ks = Math.exp(-dt / V.worm.smooth);
+					b.vx = b.vx * ks + (p.px - b.px) / Math.max(dt, 1e-3) * (1 - ks);
+					b.px = p.px;
+					const want = clamp(-b.vx * V.worm.lean, -V.worm.most, V.worm.most);
+					const h = Math.min(dt, 0.05);
+					b.v += (V.worm.spring * (want - b.a) - V.worm.damp * b.v) * h;
+					b.a += b.v * h;
 					// tick off a squad visor once it's wiggled in the zone a moment
 					if (bt > V.show && i < count() && ticked[i] === undefined) {
 						if (inZone(p) && motion[i] > V.wiggle) held[i] = (held[i] || 0) + dt;
@@ -1535,10 +1544,9 @@ window.Showtime = function (stage, opts) {
 			const shown = slots().map((p, i) => ({ p, i })).filter(({ p, i }) => p && p.px !== undefined && (motion[i] > V.moving || ticked[i] !== undefined));
 			shown.sort((a, b) => b.p.pz - a.p.pz);
 			for (const { p, i } of shown) {
-				const f = feet[i] || p;
 				const q = at(clamp(p.px, 0, 1), clamp(p.pz, 0, 1));   // (right where they are, 1:1)
 				const tall = V.worm.tall * clamp((p.Y + 1) / 2, 0.15, 1) * q.k;
-				const lean = clamp((p.px - f.px) * V.worm.lean, -V.worm.most, V.worm.most);
+				const lean = bend[i] ? clamp(bend[i].a, -V.worm.most * 1.4, V.worm.most * 1.4) : 0;
 				worm(c, q.x, q.y, tall, lean, q.k, colour(i), i >= n, bt + i * 1.7);
 			}
 		}
