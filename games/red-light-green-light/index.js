@@ -2426,10 +2426,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				pose: muzzle > 0 ? 'fire' : walk ? 'walk' + (1 + Math.floor(phase * 6)) : 'stand',
 				bob: walk ? Math.abs(Math.sin(walk)) * 5 : 0,
 			};
-			if (walk && !(muzzle > 0)) {
-				pick.next = 'walk' + (1 + (Math.floor(phase * 6) + 1) % 6);
-				pick.t = (phase * 6) % 1;
-			}
+
 			if (assemble(c, rigs.guard, pick)) return;   // (its firing pose has the muzzle flash)
 		}
 		const name = mask === 'triangle' || mask === 'square' ? mask : 'circle';
@@ -3408,6 +3405,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		return [(t.tip[0] - t.bottom[0]) * g * k + n.x, (waistY + (t.tip[1] - t.bottom[1]) * g) * k];
 	}
 
+	// How high a run frame is lifted: up off each stride, twice a cycle, the
+	// same every time that frame shows (so the lab's still frames are exactly
+	// the cycle's).
+	const runBob = (i) => Math.abs(Math.sin((i + 0.5) / 6 * Math.PI * 2)) * RIG.bob;
+
 	// A contestant in play, from behind, from parts.
 	function contestantRig(c, k) {
 		const rig = rigs.back;
@@ -3421,15 +3423,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		} else if (k.moving > 0.2 && !k.fall && !(k.down > 0)) {
 			// running: the legs through their strides, the arms pumping (the
 			// body mirrored on the other stride), bobbing up off each step
+			// (each step shown exactly as it's tuned in the lab, lifted by its own
+			// fixed bob: the run is just its frames, played in turn)
 			const cycle = k.walk * RIG.run;   // (slower than their pace: a loping run)
 			const phase = ((cycle / (Math.PI * 2)) % 1 + 1) % 1;
-			const step = phase * 6;
-			pick.pose = 'run' + (1 + Math.floor(step));
-			pick.next = 'run' + (1 + (Math.floor(step) + 1) % 6);
-			pick.t = step % 1;
-			pick.bob = Math.abs(Math.sin(cycle)) * RIG.bob * k.moving;   // (up off each stride, twice a cycle)
+			const step = Math.floor(phase * 6);
+			pick.pose = 'run' + (1 + step);
+			pick.bob = runBob(step) * k.moving;
 			pick.lean = (k.drift || 0) * -8;
-			pick.tilt = Math.sin(cycle) * 3;
 		}
 		return assemble(c, rig, pick);
 	}
@@ -4484,15 +4485,17 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const bigX = Math.min(700, CW * 0.2);
 			art.rect(c, 0, ground, CW * 0.62, 3, { fill: 'rgba(255,255,255,0.25)' });
 			art.rect(c, bigX - 450, ground - g.height * LAB.big, 900, 2, { fill: 'rgba(255,255,255,0.14)' });
-			art.with(c, { x: bigX, y: ground, scale: LAB.big }, (c2) => assemble(c2, rig, { pose }));
+			// (a run frame lifted by its own bob, as it is in the game)
+			const lifted = (id) => (fig === 'back' && /^run\d$/.test(id) ? runBob(+id.slice(3) - 1) : 0);
+			art.with(c, { x: bigX, y: ground, scale: LAB.big }, (c2) => assemble(c2, rig, { pose, bob: lifted(pose) }));
 			art.text(c, pose.toUpperCase(), bigX, ground + 50, { size: 40, font: SQUID_FONT, weight: 400, fill: 'white' });
 			// the cycle, playing
 			const cycle = fig === 'back' ? ['run1', 'run2', 'run3', 'run4', 'run5', 'run6'] : fig === 'guard' ? ['walk1', 'walk2', 'walk3', 'walk4', 'walk5', 'walk6'] : ['win1', 'win2', 'win3', 'win4'];
 			const at = t * (fig === 'front' ? 2.5 : fig === 'back' ? 12 * RIG.run : 12);
 			const step = Math.floor(at) % cycle.length;
-			const ease2 = fig === 'front' ? 0 : at % 1;
+
 			const cycX = Math.min(1700, CW * 0.45);
-			art.with(c, { x: cycX, y: ground, scale: LAB.cycle }, (c2) => assemble(c2, rig, { pose: cycle[step], next: cycle[(step + 1) % cycle.length], t: ease2, bob: fig === 'back' ? Math.abs(Math.sin(at / 6 * Math.PI * 2)) * RIG.bob : 0 }));
+			art.with(c, { x: cycX, y: ground, scale: LAB.cycle }, (c2) => assemble(c2, rig, { pose: cycle[step], bob: lifted(cycle[step]) }));
 			art.text(c, 'PLAYING: ' + cycle[step].toUpperCase(), cycX, ground + 50, { size: 34, font: SQUID_FONT, weight: 400, fill: '#9fb6d8' });
 			// every pose, in rows on the right, the chosen one marked
 			const ids = Object.keys(POSES[fig]);
@@ -4505,7 +4508,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				const x = x0 + (i % cols + 0.5) * colW;
 				const y = 30 + (Math.floor(i / cols) + 1) * rowH - 50;
 				if (id === pose) art.roundRect(c, x - colW / 2 + 10, y - rowH + 60, colW - 20, rowH - 10, 20, { fill: 'rgba(58,138,216,0.25)' });
-				art.with(c, { x, y, scale: rowScale }, (c2) => assemble(c2, rig, { pose: id }));
+				art.with(c, { x, y, scale: rowScale }, (c2) => assemble(c2, rig, { pose: id, bob: lifted(id) }));
 				art.text(c, id.toUpperCase(), x, y + 34, { size: 26, font: SQUID_FONT, weight: 400, fill: id === pose ? 'white' : '#9fb6d8' });
 			});
 		}
