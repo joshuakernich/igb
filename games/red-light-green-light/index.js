@@ -4630,27 +4630,28 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const rowCss = {
 		width: R.w + 'px', height: R.h + 'px', boxSizing: 'border-box', borderRadius: R.h / 2 + 'px', border: '5px solid rgba(255,255,255,0.9)',
 		background: 'rgba(255,255,255,0.1)', color: 'white', fontFamily: font, fontSize: R.size + 'px', lineHeight: 1, letterSpacing: '2px',
-		display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '24px', padding: '0 44px',
+		display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', padding: '0 44px 0 52px',   // (the words on the left, an icon on the right)
 		boxShadow: '0 10px 0 rgba(0,0,0,0.45)', transition: 'transform 0.12s, background 0.12s',
 	};
-	const rowButton = (label, fn) => $('<button>').text(label).css(Object.assign({ cursor: 'pointer' }, rowCss))
+	const icon = (glyph) => $('<span>').text(glyph).css({ fontFamily: 'system-ui, -apple-system, "Segoe UI Symbol", sans-serif', fontSize: R.size * 1.1 + 'px', width: '1.2em', textAlign: 'center' });
+	const rowButton = (label, glyph, fn) => $('<button>').append($('<span>').text(label)).append(icon(glyph)).css(Object.assign({ cursor: 'pointer' }, rowCss))
 		.on('mouseenter', function () { $(this).css({ transform: 'scale(1.04)', background: 'rgba(255,255,255,0.2)' }); })
 		.on('mouseleave', function () { $(this).css({ transform: 'scale(1)', background: 'rgba(255,255,255,0.1)' }); })
 		.on('click', function (e) { e.stopPropagation(); fn(); });
-	rowButton('▶  RESUME', () => setPaused(false)).appendTo($front);
-	// the volume, the same shape: its name, then five bars rising; click one for that level
-	const $vol = $('<div>').css(Object.assign({}, rowCss, { justifyContent: 'space-between' })).appendTo($front);
+	rowButton('RESUME', '▶', () => setPaused(false)).appendTo($front);
+	// the volume, the same shape: its name, then five bars, all alike, lit up to its level; click one for that level
+	const $vol = $('<div>').css(rowCss).appendTo($front);
 	$('<span>').text('VOLUME').appendTo($vol);
-	const $bars = $('<div>').css({ display: 'flex', alignItems: 'flex-end', gap: '14px', height: R.h * 0.56 + 'px' }).appendTo($vol);
+	const $bars = $('<div>').css({ display: 'flex', alignItems: 'center', gap: '12px', height: R.h * 0.46 + 'px' }).appendTo($vol);
 	const bars = PAUSE.levels.map((v, i) => $('<button>').attr('title', 'Volume ' + (i + 1)).css({
-		width: '40px', height: 28 + i * 18 + '%', borderRadius: '8px', border: '4px solid white', cursor: 'pointer', padding: 0,
+		width: '36px', height: '100%', borderRadius: '8px', border: '4px solid white', cursor: 'pointer', padding: 0,   // (all one size: lit up to the level)
 	}).appendTo($bars).on('click', function (e) { e.stopPropagation(); IGB.setVolume(v); showVolume(); show.fx('pick'); }));
 	function showVolume() {
 		const level = PAUSE.levels.reduce((best, v, i) => (Math.abs(v - IGB.volume) < Math.abs(PAUSE.levels[best] - IGB.volume) ? i : best), 0);
 		bars.forEach(($b, i) => $b.css({ background: i <= level ? 'white' : 'rgba(255,255,255,0.08)' }));
 	}
-	rowButton('↺  RESTART ROUND', () => { setPaused(false); restartRound(); }).appendTo($front);
-	rowButton('REPLAY TUTORIAL', () => { setPaused(false); debugJump('controls'); }).appendTo($front);
+	rowButton('RESTART ROUND', '↻', () => { setPaused(false); restartRound(); }).appendTo($front);
+	rowButton('REPLAY TUTORIAL', '⏮', () => { setPaused(false); debugJump('controls'); }).appendTo($front);
 
 	// the round over again from its start (in play), or else the beat the show is on
 	function restartRound() {
