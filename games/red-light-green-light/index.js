@@ -4588,7 +4588,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// (five levels), RESTART ROUND and REPLAY TUTORIAL. Away from the box
 	// (not live: no Vuplex), the left wall has the debug buttons too: jump to
 	// any beat, and step through everything inside them.
-	const PAUSE = { button: 150, x: 40, levels: [0.12, 0.3, 0.5, 0.75, 1], row: { w: 760, h: 112, size: 50 } };   // the pause button's size and its distance in from the left wall's edge; the volume at each of the five levels; the front wall's rows (all alike): their width, height and type size
+	const PAUSE = { button: 150, x: 40, levels: [0.12, 0.3, 0.5, 0.75, 1], row: { w: 760, h: 112, size: 50, inset: 8 } };   // the pause button's size and its distance in from the left wall's edge; the volume at each of the five levels; the front wall's rows (all alike): their width, height and type size, and the gap round the icon in each one's end
 	const BEATS = ['title', 'clock', 'visors', 'controls', 'doll', 'play', 'timeup', 'scores', 'rank', 'team', 'board', 'replay', 'rate', 'end'];
 	const live = !!window.vuplex;
 	const font = `"${SQUID_FONT}", "${Showtime.TYPE.font}", sans-serif`;
@@ -4645,10 +4645,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const rowCss = {
 		width: R.w + 'px', height: R.h + 'px', boxSizing: 'border-box', textAlign: 'left', borderRadius: R.h / 2 + 'px', border: '5px solid rgba(255,255,255,0.9)',
 		background: 'rgba(255,255,255,0.1)', color: 'white', fontFamily: font, fontSize: R.size + 'px', lineHeight: 1, letterSpacing: '2px',
-		display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', padding: '0 44px 0 52px',   // (the words on the left, an icon on the right)
+		display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', padding: `0 ${R.inset}px 0 52px`,   // (the words on the left, an icon on the right, snug in the capsule's end)
 		boxShadow: '0 10px 0 rgba(0,0,0,0.45)', transition: 'transform 0.12s, background 0.12s',
 	};
-	const icon = (name) => cutIcon(name, R.h * 0.62);
+	const icon = (name) => cutIcon(name, R.h - 10 - R.inset * 2);   // (as big as fits inside the border, an even gap all round)
 	const label = (text) => $('<span>').text(text).css({ flex: 1, textAlign: 'left' });   // (hard against the left, whatever the button would do)
 	const rowButton = (text, glyph, fn) => $('<button>').append(label(text)).append(icon(glyph)).css(Object.assign({ cursor: 'pointer' }, rowCss))
 		.on('mouseenter', function () { $(this).css({ transform: 'scale(1.04)', background: 'rgba(255,255,255,0.2)' }); })
@@ -4656,7 +4656,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		.on('click', function (e) { e.stopPropagation(); fn(); });
 	rowButton('RESUME', 'play', () => setPaused(false)).appendTo($front);
 	// the volume, the same shape: its name, then five bars, all alike, lit up to its level; click one for that level
-	const $vol = $('<div>').css(rowCss).appendTo($front);
+	const $vol = $('<div>').css(Object.assign({}, rowCss, { paddingRight: '40px' })).appendTo($front);
 	label('VOLUME').appendTo($vol);
 	const $bars = $('<div>').css({ display: 'flex', alignItems: 'center', gap: '12px', height: R.h * 0.46 + 'px' }).appendTo($vol);
 	const bars = PAUSE.levels.map((v, i) => $('<button>').attr('title', 'Volume ' + (i + 1)).css({
