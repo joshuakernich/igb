@@ -2172,7 +2172,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// (the light's behind it, at the far end), its length the ground's tilt
 	// allows (see groundTilt), softly blurred. So a runner's shadow runs, a
 	// guard's holds a rifle, the doll's has her pigtails.
-	const SIL = { alpha: 0.3, blur: 2.5, contact: 0.22 };   // how dark; how soft (pixels); the dark patch where it touches down
+	const SIL = { alpha: 0.3, blur: 0, contact: 0.22 };   // how dark; how soft (pixels: blurring every frame is slow, so off); the dark patch where it touches down
 	const silCanvas = document.createElement('canvas');
 	function castShape(ctx, x, y, f, draw, size, alpha = 1, foot = 0) {
 		const half = Math.max(8, Math.ceil(size));
@@ -2186,8 +2186,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		g.setTransform(1, 0, 0, 1, 0, 0);
 		g.globalCompositeOperation = 'source-over';
 		g.globalAlpha = 1;
-		g.filter = 'none';
-		g.clearRect(0, 0, silCanvas.width, silCanvas.height);
+		g.clearRect(0, 0, cw, ch);   // (just the part this one uses)
 		g.save();
 		g.translate(half, ch - 2);
 		draw(g);
@@ -2686,12 +2685,36 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					crop.width = w;
 					crop.height = h;
 					crop.getContext('2d').drawImage(cv, x0, y0, w, h, 0, 0, w, h);
-							items[name] = { img: crop, w, h };
+							// and its shadow: the same shape, dark, made once
+					const sil = document.createElement('canvas');
+					sil.width = w;
+					sil.height = h;
+					const sg = sil.getContext('2d');
+					sg.drawImage(crop, 0, 0);
+					sg.globalCompositeOperation = 'source-in';
+					sg.fillStyle = 'rgb(20,10,30)';
+					sg.fillRect(0, 0, w, h);
+					items[name] = { img: crop, sil, w, h };
 				});
 			} catch (e) { /* (unreadable: drawn as before) */ }
 		};
 		img.src = 'assets/red-light-green-light/' + ITEM.file;
 	})();
+
+	// Its shadow: its dark copy flipped down from (x, y) onto the sand, the
+	// length the ground's tilt allows, as wide as the item drawn at this scale.
+	function itemShadow(ctx, name, x, y, f, scale, rotate = 0, alpha = 1) {
+		const it = items[name];
+		const w = ITEM[name] * scale;
+		const h = w * it.h / it.w;
+		ctx.save();
+		ctx.globalAlpha *= SIL.alpha * alpha;
+		ctx.translate(x, y);
+		ctx.scale(1, SHADOW.f * groundTilt(f));   // (negative: flipped down)
+		ctx.rotate(rotate * Math.PI / 180);
+		ctx.drawImage(it.sil, -w / 2, -h, w, h);
+		ctx.restore();
+	}
 
 	// One of them, so wide, sitting on (0, 0) (where the drawn one would).
 	function drawItem(c, name) {
@@ -2720,7 +2743,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const s = p.s * CASH.size;
 		const rise = 0.5 + 0.5 * Math.sin(m.spin * 2.4);
 		const lift = ((CASH.float + CASH.bob * rise) * hover(m.f) + (m.fly ? BAG.arc * 4 * k * (1 - k) : 0)) * p.s;
-		if (items.cash) castShape(ctx, p.x, p.y, m.f, (g) => art.with(g, { scale: s * (1 - 0.15 * rise), rotate: -0.35 + Math.sin(m.spin * 1.3) * 0.1 }, (c) => drawItem(c, 'cash')), 70 * s, 0.8 - 0.3 * rise);
+		if (items.cash) itemShadow(ctx, 'cash', p.x, p.y, m.f, s * (1 - 0.15 * rise), -0.35 + Math.sin(m.spin * 1.3) * 0.1, 0.8 - 0.3 * rise);
 		else softShadow(ctx, p.x, p.y, 26 * s * (1 - 0.25 * rise), 8 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 40 * s, m.f);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: -0.35 + Math.sin(m.spin * 1.3) * 0.1 }, function (c) {
 			if (drawItem(c, 'cash')) return;
@@ -2746,7 +2769,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const s = p.s * CASH.size;
 		const rise = 0.5 + 0.5 * Math.sin(g.spin * 2.4);
 		const lift = (CASH.float + CASH.bob * rise) * hover(g.f) * p.s;
-		if (items.magnet) castShape(ctx, p.x, p.y, g.f, (gc) => art.with(gc, { scale: s * (1 - 0.15 * rise), rotate: Math.sin(g.spin * 1.6) * 0.25 }, (c) => drawItem(c, 'magnet')), 60 * s, 0.8 - 0.3 * rise);
+		if (items.magnet) itemShadow(ctx, 'magnet', p.x, p.y, g.f, s * (1 - 0.15 * rise), Math.sin(g.spin * 1.6) * 0.25, 0.8 - 0.3 * rise);
 		else softShadow(ctx, p.x, p.y, 22 * s * (1 - 0.25 * rise), 7 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 40 * s, g.f);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: Math.sin(g.spin * 1.6) * 0.25 }, function (c) {
 			if (drawItem(c, 'magnet')) return;
@@ -2780,7 +2803,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// a money bag is heavy: it sits on the sand, no bobbing, no swaying
 		const big = ITEM.bagSize;   // (a money bag is bigger than the rest)
 		const lift = 8 * s * big;   // (the sprite's foot, set down on the sand)
-		if (items.bag) castShape(ctx, p.x, p.y, g.f, (gc) => art.with(gc, { y: -8 * s * big, scale: s * big }, (c) => drawItem(c, 'bag')), 70 * s * big, 1, 22 * s * big);
+		if (items.bag) {
+			itemShadow(ctx, 'bag', p.x, p.y, g.f, s * big);
+			art.ellipse(ctx, p.x, p.y, 22 * s * big, 6.6 * s * big, { fill: `rgba(20,10,30,${SIL.contact})` });
+		}
 		else softShadow(ctx, p.x, p.y, 30 * s * big, 9 * s * big, 0.3, 1, 40 * s * big, g.f);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s * big }, function (c) {
 			if (drawItem(c, 'bag')) return;
@@ -3059,47 +3085,61 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			y1 += 2;
 			const w = x1 - x0;
 			const h = y1 - y0;
-			// the solid run across a row: its ends
-			const across = function (y) {
-				let a = Infinity, b = -1;
-				for (let x = x0; x < x1; x++) if (solid(x, y)) { if (x < a) a = x; b = x; }
-				return b < 0 ? null : [a, b];
-			};
-			// the middle of its bottom edge
-			let sum = 0, n = 0;
-			for (let y = y1 - Math.max(4, h * 0.1); y < y1; y++) for (let x = x0; x < x1; x++) if (solid(x, y)) { sum += x; n++; }
-			let bx = n ? sum / n : (x0 + x1) / 2;
-			// its join, centred where the eye takes it to be: a torso, the
-			// middle of its waist; legs, the middle of the hips (not of the
-			// feet, which stride out to one side); a head, the middle of its neck
+			// Its join, found the same way on every part of its kind, so the
+			// cut-outs line up frame to frame: measured on the band of cloth
+			// where it joins (a torso's hem, the legs' waistband, a head's
+			// neck), across the one solid stretch there (not hands or feet out
+			// to the side), over a few rows and taking the middle reading.
 			const kind = id.startsWith('legs') ? 'legs' : id.startsWith('torso') ? 'torso' : 'head';
-			if (kind === 'torso') {
-				const run = across(y1 - Math.max(3, h * 0.06));
-				if (run) bx = (run[0] + run[1]) / 2;
-			}
-			// straight up from there, the first solid point
+			// the solid stretch along row y that takes in x (or the nearest solid point to it)
+			const stretch = function (y, xc) {
+				y = Math.round(y);
+				let x = Math.round(xc);
+				if (!solid(x, y)) {
+					let found = false;
+					for (let d = 1; d < w * 0.25 && !found; d++) {
+						if (solid(x - d, y)) { x -= d; found = true; } else if (solid(x + d, y)) { x += d; found = true; }
+					}
+					if (!found) return null;
+				}
+				let a = x, b = x;
+				while (a > x0 && solid(a - 1, y)) a--;
+				while (b < x1 - 1 && solid(b + 1, y)) b++;
+				return [a, b];
+			};
+			const median = (list) => { const l = list.slice().sort((p, q) => p - q); return l[Math.floor(l.length / 2)]; };
+			// read a band of rows: the middle centre and the middle width of their stretches
+			const band = function (ys, xc) {
+				const runs = ys.map((y) => stretch(y, xc)).filter(Boolean);
+				if (!runs.length) return null;
+				return { x: median(runs.map(([a, b]) => (a + b) / 2)), w: median(runs.map(([a, b]) => b - a)) };
+			};
+			// a first guess at its middle: where its solid pixels sit, across
+			let sum = 0, n = 0;
+			for (let y = y0; y < y1; y += 2) for (let x = x0; x < x1; x += 2) if (solid(x, y)) { sum += x; n++; }
+			const mid = n ? sum / n : (x0 + x1) / 2;
+			const step = Math.max(2, h * 0.025);
+			let bx = mid;
 			let ty = y0;
-			const strip = Math.max(3, w * 0.06);
-			search: for (let y = y0; y < y1; y++) for (let x = bx - strip; x <= bx + strip; x++) if (solid(x, y)) { ty = y; break search; }
+			let joinW = w;
 			if (kind === 'legs') {
-				// (the top of the legs: the topmost solid row; the hips just below it)
-				for (let y = y0; y < y1; y++) if (across(y)) { ty = y; break; }
-				const run = across(ty + Math.max(3, h * 0.06));
-				if (run) bx = (run[0] + run[1]) / 2;
+				// the waistband: its top, the topmost solid row near the middle; read just under it
+				search: for (let y = y0; y < y1; y++) for (let x = mid - w * 0.15; x <= mid + w * 0.15; x++) if (solid(x, y)) { ty = y; break search; }
+				const b = band([1, 2, 3, 4, 5].map((k) => ty + k * step), mid);
+				if (b) { bx = b.x; joinW = b.w; }
+			} else {
+				// the hem (a torso) or the neck (a head): read just above the bottom
+				const b = band([1, 2, 3, 4, 5].map((k) => y1 - 1 - k * step), mid);
+				if (b) { bx = b.x; joinW = b.w; }
+				// a torso's neck: straight up from the middle of its waist, the first solid point
+				const strip = Math.max(3, w * 0.05);
+				search: for (let y = y0; y < y1; y++) for (let x = bx - strip; x <= bx + strip; x++) if (solid(x, y)) { ty = y; break search; }
 			}
 			const crop = document.createElement('canvas');
 			crop.width = w;
 			crop.height = h;
 			crop.getContext('2d').drawImage(cv, x0, y0, w, h, 0, 0, w, h);
-			// how wide it is where it joins: across the hips on legs (just
-			// below its top), across the waist on a torso (just above its
-			// bottom); a head, across
-			const span = function (y) {
-				let a = Infinity, b = -1;
-				for (let x = x0; x < x1; x++) if (solid(x, y)) { if (x < a) a = x; b = x; }
-				return b < 0 ? 0 : b - a;
-			};
-			parts[id] = { img: crop, w, h, top: [bx - x0, ty - y0], bottom: [bx - x0, h], hips: span(ty + Math.max(3, h * 0.06)), waist: span(y1 - Math.max(3, h * 0.06)) };
+			parts[id] = { img: crop, w, h, kind, top: [bx - x0, ty - y0], bottom: [bx - x0, h], join: kind === 'head' ? w : joinW };
 			// (a guard's aimed rifle: its muzzle, the furthest-right point)
 			if (id === 'torsoAim') {
 				for (let x = x1 - 1; x > bx; x--) {
@@ -3109,19 +3149,25 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				}
 			}
 		});
-		// ChatGPT drew some parts a little bigger or smaller than others:
-		// scale each to match its kind's first (all legs as wide at the hips,
-		// all torsos at the waist, all heads across), so a figure stays one
-		// size whatever its pose
-		const ref = { legs: parts.legs.hips, torso: parts.torso.waist, head: parts[def.heads ? def.heads[0] : 'head'].w };
-		for (const [id, part] of Object.entries(parts)) {
-			const kind = id.startsWith('legs') ? 'legs' : id.startsWith('torso') ? 'torso' : 'head';
-			const size = kind === 'legs' ? part.hips : kind === 'torso' ? part.waist : part.w;
-			part.norm = size > 0 ? Math.max(0.7, Math.min(1.4, ref[kind] / size)) : 1;
+		// ChatGPT drew some parts a little bigger or smaller than others: scale
+		// each to the middle size of its kind (all legs as wide at the
+		// waistband, all torsos at the hem, all heads across), so a figure
+		// stays one size whatever its pose. (Differences too small to see are
+		// left alone, so they can't jitter.)
+		for (const kind of ['legs', 'torso', 'head']) {
+			const list = Object.values(parts).filter((p) => p.kind === kind && p.join > 0);
+			if (!list.length) continue;
+			const sizes = list.map((p) => p.join).sort((p, q) => p - q);
+			const typical = sizes[Math.floor(sizes.length / 2)];
+			for (const part of list) {
+				const k = typical / part.join;
+				part.norm = Math.abs(k - 1) < 0.05 ? 1 : Math.max(0.8, Math.min(1.25, k));
+			}
 		}
+		for (const part of Object.values(parts)) if (!part.norm) part.norm = 1;
 		// how tall a standing figure is, put together (for its scale)
 		const head = parts[def.heads ? def.heads[0] : 'head'];
-		const tall = parts.legs.bottom[1] - parts.legs.top[1] + parts.torso.bottom[1] - parts.torso.top[1] + head.h;
+		const tall = (parts.legs.bottom[1] - parts.legs.top[1]) * parts.legs.norm + (parts.torso.bottom[1] - parts.torso.top[1]) * parts.torso.norm + head.h * head.norm;
 		return { name, parts, tall };
 	}
 
@@ -3571,12 +3617,30 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// loaded, a bare trunk with a few clumps of leaves.
 	const TREE = { file: 'v2-tree.png', height: 780 };   // how tall to draw it (in her units)
 	const treeImg = new Image();
+	let treeSil = null;   // (its shadow's dark copy, made once it's loaded)
 	treeImg.src = 'assets/red-light-green-light/' + TREE.file;
 	function drawTree(ctx) {
 		const p = at(DOLL_X, dollF + 140);   // (directly behind her)
 		if (treeImg.complete && treeImg.naturalWidth) {
-			const w = TREE.height * treeImg.naturalWidth / treeImg.naturalHeight;
-			castShape(ctx, p.x, p.y, dollF + 140, (g) => art.with(g, { scale: p.s * 0.85 }, (c) => c.drawImage(treeImg, -w / 2, -TREE.height, w, TREE.height)), Math.max(w, TREE.height) * 0.7 * p.s * 0.85, 1, 60 * p.s * 0.85);   // (its shadow, branches and all)
+			// its shadow, branches and all: a dark copy, made once, flipped down onto the sand
+			if (!treeSil) {
+				treeSil = document.createElement('canvas');
+				treeSil.width = treeImg.naturalWidth;
+				treeSil.height = treeImg.naturalHeight;
+				const g = treeSil.getContext('2d');
+				g.drawImage(treeImg, 0, 0);
+				g.globalCompositeOperation = 'source-in';
+				g.fillStyle = 'rgb(20,10,30)';
+				g.fillRect(0, 0, treeSil.width, treeSil.height);
+			}
+			const k = p.s * 0.85;
+			const w = TREE.height * treeImg.naturalWidth / treeImg.naturalHeight * k;
+			ctx.save();
+			ctx.globalAlpha *= SIL.alpha;
+			ctx.translate(p.x, p.y);
+			ctx.scale(1, SHADOW.f * groundTilt(dollF + 140));
+			ctx.drawImage(treeSil, -w / 2, -TREE.height * k, w, TREE.height * k);
+			ctx.restore();
 		}
 		art.with(ctx, { x: p.x, y: p.y, scale: p.s * 0.85 }, function (c) {
 			const BARK = '#5a4332';
