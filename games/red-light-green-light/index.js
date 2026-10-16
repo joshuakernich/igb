@@ -1716,7 +1716,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// rising up off the bottom edge: dark glass with their colour along the top, their winnings. A score that
 	// just changed pops; anyone out is dimmed. At the end of a round, while its
 	// banner's up, they rise up the wall and grow, then sink back.
-	const SCORES = { w: 176, h: 64, gap: 12, sink: 22, size: 32, rise: 260, grow: 0.35, line: 7 };   // a capsule's width and height (the part showing), the gap between them, how far it reaches down past the edge, the figures' size; at a round's end, how far up they rise and how much bigger they get
+	const SCORES = { w: 176, h: 64, gap: 12, sink: 22, size: 32, rise: 260, grow: 0.35, line: 7 };   // a capsule's width and height (the part showing), the gap between them, how far it reaches down past the edge, the figures' size; at a round's end, how far up they rise and how much bigger they get; how thick the band of their colour along its bottom is
 	function drawScores(ctx) {
 		const n = contestants.length;
 		if (!n) return;
@@ -1733,20 +1733,27 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				const y = H - SCORES.h / 2 - SCORES.rise * lift;
 				const sink = SCORES.sink * (1 - lift);   // (risen clear of the edge, the whole capsule shows)
 				art.with(c, { x, y, scale: pop * grow, alpha: k.alive || lift > 0 ? 1 : 0.45 }, function (c2) {
-					// black glass, a line of their colour along the top
-					art.roundRect(c2, -SCORES.w / 2, -SCORES.h / 2, SCORES.w, SCORES.h + sink, SCORES.h / 2, { fill: 'rgba(0,0,0,0.6)' });
-					// (the line: the capsule's top, as a thin capsule-ended strip, so no clipping is needed)
+					// black glass, a band of their colour along the bottom (the part
+					// showing, just above the screen's edge, or the capsule's own
+					// bottom once it's risen clear)
 					const r = SCORES.h / 2;
-					const L = SCORES.line;
-					art.save(c2, function (c3) {
+					const shape = (c3) => {
+						const x0 = -SCORES.w / 2, y0 = -SCORES.h / 2, x1 = SCORES.w / 2, y1 = SCORES.h / 2 + sink;
 						c3.beginPath();
-						c3.moveTo(-SCORES.w / 2 + r - Math.sqrt(r * r - (r - L) * (r - L)), -SCORES.h / 2 + L);
-						c3.arc(-SCORES.w / 2 + r, -SCORES.h / 2 + r, r, Math.PI + Math.asin((r - L) / r), Math.PI * 1.5);
-						c3.lineTo(SCORES.w / 2 - r, -SCORES.h / 2);
-						c3.arc(SCORES.w / 2 - r, -SCORES.h / 2 + r, r, Math.PI * 1.5, -Math.asin((r - L) / r));
+						c3.moveTo(x0 + r, y0);
+						c3.arcTo(x1, y0, x1, y1, r);
+						c3.arcTo(x1, y1, x0, y1, r);
+						c3.arcTo(x0, y1, x0, y0, r);
+						c3.arcTo(x0, y0, x1, y0, r);
 						c3.closePath();
-						c3.fillStyle = PLAYER_COLORS[k.n];
+					};
+					art.save(c2, function (c3) {
+						shape(c3);
+						c3.fillStyle = 'rgba(0,0,0,0.6)';
 						c3.fill();
+						c3.clip();
+						c3.fillStyle = PLAYER_COLORS[k.n];
+						c3.fillRect(-SCORES.w / 2, SCORES.h / 2 - SCORES.line, SCORES.w, SCORES.line + sink);
 					});
 					art.text(c2, won(k.score), 0, 2, { size: SCORES.size, font: SQUID_FONT, weight: 400, fill: 'white', shadow: { color: 'rgba(0,0,0,0.35)', blur: 0, y: 2 } });
 				});
