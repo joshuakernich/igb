@@ -3208,6 +3208,15 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				],
 			},
 		},
+		guard: {
+			clips: {
+				walk: [
+					{ s: 'g', i: 1 },
+					{ s: 'g', i: 4 },
+					{ s: 'g', i: 6 },
+				],
+			},
+		},
 	};
 	const ANIM_KEY = 'rlgl-animation-lab';
 	const ANIM_TUNE = JSON.parse(JSON.stringify(ANIM_TUNED));
