@@ -610,6 +610,20 @@ window.Showtime = function (stage, opts) {
 		const m = /rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)/.exec(v);
 		return m ? [+m[1], +m[2], +m[3]] : [255, 255, 255];
 	};
+	// The button style (faces and buttons alike): one gradient top to bottom,
+	// darker at the top; a single semi-transparent white bar over the top
+	// half; a thin black outline. glossy(colour) is its CSS; GLOSS its numbers.
+	const GLOSS = { dark: 0.62, bar: 0.28, line: 3 };   // how dark the top of the gradient is (a share of the colour); the white bar's opacity; the outline's thickness (px)
+	const darker = function (colour, k) {
+		const [r, g, b] = rgbOf(colour);
+		return `rgb(${Math.round(r * k)},${Math.round(g * k)},${Math.round(b * k)})`;
+	};
+	const glossy = (colour) => ({
+		background: `linear-gradient(to bottom, rgba(255,255,255,${GLOSS.bar}) 0%, rgba(255,255,255,${GLOSS.bar}) 50%, rgba(255,255,255,0) 50%), linear-gradient(to bottom, ${darker(colour, GLOSS.dark)}, ${colour})`,
+		border: `${GLOSS.line}px solid #000`,
+		boxShadow: 'none',
+	});
+	self.glossy = glossy;
 	const textColour = function (fill) {
 		if (typeof fill !== 'string') return fill;
 		if (playerLits.has(fill)) return fill;
@@ -958,10 +972,11 @@ window.Showtime = function (stage, opts) {
 				...((opts.skip && opts.skip.at === false)
 					? { left: (2 * W - 30) + 'px', top: '880px', transform: 'translateX(-100%)' }
 					: { left: ((opts.skip && opts.skip.at) || SKIP_AT).x + 'px', top: ((opts.skip && opts.skip.at) || SKIP_AT).y + 'px', transform: 'translate(-50%, -50%)' }),
-				padding: '16px 36px', borderRadius: '40px', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
-				background: 'rgba(12,4,30,0.94)', color: 'white', cursor: 'pointer', pointerEvents: 'auto',
+				padding: '16px 36px', borderRadius: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+				color: 'white', cursor: 'pointer', pointerEvents: 'auto',
 				fontFamily: `"${TYPE.font}", sans-serif`, fontSize: '40px', letterSpacing: '2px',
 				opacity: 0, transition: 'opacity 0.4s',
+				...glossy('#2a1a4a'),
 			}).appendTo(stage.$ui).on('click', function (e) {
 				e.stopPropagation();
 				self.fx('skip');
@@ -1205,8 +1220,8 @@ window.Showtime = function (stage, opts) {
 		const $row = $('<div>').css({ display: 'flex', gap: '44px' }).appendTo($pick);
 		for (let n = 2; n <= 6; n++) {
 			$('<button>').attr('count', n).text(n).css({
-				width: '190px', height: '190px', borderRadius: '50%', border: 'none',
-				background: TYPE.colours.gold, display: 'flex', alignItems: 'center', justifyContent: 'center',
+				width: '190px', height: '190px', borderRadius: '50%', boxSizing: 'border-box', ...glossy(TYPE.colours.gold),
+				display: 'flex', alignItems: 'center', justifyContent: 'center',
 				color: TYPE.colours.ink, fontFamily: font, fontSize: '110px', lineHeight: '1', cursor: 'pointer', padding: 0,
 				transform: 'scale(0)', transition: `transform 0.4s cubic-bezier(.2,1.6,.4,1) ${0.25 + (n - 2) * 0.08}s`,
 			}).appendTo($row)
@@ -1452,9 +1467,9 @@ window.Showtime = function (stage, opts) {
 				if (start && !$start && startedAt < 0 && bt > lastLand + 0.5) {
 					$start = $('<button start>').text('START').css({
 						position: 'absolute', left: (W + W / 2) + 'px', top: T.startY + 'px', transform: 'translate(-50%, -50%)', opacity: 0,
-						padding: '28px 110px', borderRadius: '90px', border: 'none', cursor: 'pointer', pointerEvents: 'auto', zIndex: 5,
-						background: TYPE.colours.gold, color: TYPE.colours.ink, fontFamily: `"${FONT}", sans-serif`, fontSize: '120px', lineHeight: 1, letterSpacing: '4px',
-						boxShadow: `0 12px 0 ${theme.ink}`, transition: `transform 0.25s, opacity ${T.startFade}s`,
+						padding: '28px 110px', borderRadius: '90px', cursor: 'pointer', pointerEvents: 'auto', zIndex: 5, ...glossy(TYPE.colours.gold),
+						color: TYPE.colours.ink, fontFamily: `"${FONT}", sans-serif`, fontSize: '120px', lineHeight: 1, letterSpacing: '4px',
+						transition: `transform 0.25s, opacity ${T.startFade}s`,
 					}).appendTo(stage.$ui)
 						.on('mouseenter', function () { $(this).css({ transform: 'translate(-50%, -50%) scale(1.08)' }); })
 						.on('mouseleave', function () { $(this).css({ transform: 'translate(-50%, -50%) scale(1)' }); })
@@ -2616,19 +2631,16 @@ window.Showtime = function (stage, opts) {
 				? `<path d="M30 60 Q50 ${60 + f.mouth * 1.6} 70 60 Z" fill="${theme.ink}"/>`
 				: `<path d="M30 ${66 - f.mouth / 3} Q50 ${66 + f.mouth} 70 ${66 - f.mouth / 3}" stroke="${theme.ink}" stroke-width="7" fill="none" stroke-linecap="round"/>`;
 			const brows = f.brows ? `<path d="M28 30 L42 36 M72 30 L58 36" stroke="${theme.ink}" stroke-width="6" stroke-linecap="round"/>` : '';
-			// glassy: a ball of coloured glass, lit through from the top left and
-			// deepening toward the bottom right, a broad gloss across its top, a
-			// glint, light pooling in its lower rim, and the face set into it
+			// the button style: one gradient, darker at the top; a white bar over
+			// the top half; a thin black outline
 			const id = 'rate-face-' + i + '-' + ++faceIds;
-			return `<svg viewBox="0 0 100 100" width="100%" height="100%" style="overflow:visible;filter:drop-shadow(0 6px 0 rgba(0,0,0,0.35))"><defs>`
-				+ `<radialGradient id="${id}b" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="white" stop-opacity="0.55"/><stop offset="0.35" stop-color="${f.colour}" stop-opacity="1"/><stop offset="1" stop-color="${theme.ink}" stop-opacity="0.55"/></radialGradient>`
-				+ `<linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="white" stop-opacity="0.85"/><stop offset="1" stop-color="white" stop-opacity="0"/></linearGradient>`
-				+ `<radialGradient id="${id}r" cx="50%" cy="100%" r="60%"><stop offset="0" stop-color="white" stop-opacity="0.5"/><stop offset="1" stop-color="white" stop-opacity="0"/></radialGradient>`
-				+ `</defs><circle cx="50" cy="50" r="46" fill="${f.colour}"/><circle cx="50" cy="50" r="46" fill="url(#${id}b)"/>`
-				+ `<ellipse cx="50" cy="84" rx="30" ry="10" fill="url(#${id}r)"/>`
+			return `<svg viewBox="0 0 100 100" width="100%" height="100%"><defs>`
+				+ `<linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${darker(f.colour, GLOSS.dark)}"/><stop offset="1" stop-color="${f.colour}"/></linearGradient>`
+				+ `<clipPath id="${id}c"><circle cx="50" cy="50" r="46"/></clipPath></defs>`
+				+ `<circle cx="50" cy="50" r="46" fill="url(#${id}g)"/>`
 				+ `<circle cx="36" cy="42" r="6.5" fill="${theme.ink}"/><circle cx="64" cy="42" r="6.5" fill="${theme.ink}"/>${brows}${mouth}`
-				+ `<ellipse cx="46" cy="25" rx="31" ry="15" fill="url(#${id}g)"/><circle cx="27" cy="31" r="4" fill="white" opacity="0.9"/>`
-				+ `<circle cx="50" cy="50" r="46" fill="none" stroke="${theme.ink}" stroke-width="4"/><circle cx="50" cy="50" r="43" fill="none" stroke="white" stroke-opacity="0.35" stroke-width="1.5"/></svg>`;
+				+ `<rect x="0" y="0" width="100" height="50" fill="white" fill-opacity="${GLOSS.bar}" clip-path="url(#${id}c)"/>`
+				+ `<circle cx="50" cy="50" r="46" fill="none" stroke="#000" stroke-width="2.2"/></svg>`;
 		}
 		let faceIds = 0;
 
@@ -2639,8 +2651,8 @@ window.Showtime = function (stage, opts) {
 		});
 		const small = (text) => $('<div>').text(text).css({ fontSize: '40px', color: TYPE.colours.gold, letterSpacing: '2px', WebkitTextStroke: `4px ${theme.ink}`, paintOrder: 'stroke fill' });
 		const pill = (text, on, extraCss) => $('<button>').text(text).css(Object.assign({
-			padding: '22px 44px', borderRadius: '60px', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
-			background: on ? TYPE.colours.gold : 'rgba(20,10,38,0.9)', color: on ? TYPE.colours.ink : TYPE.colours.white,
+			padding: '22px 44px', borderRadius: '60px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+			...glossy(on ? TYPE.colours.gold : '#2a1a4a'), color: on ? TYPE.colours.ink : TYPE.colours.white,
 			fontFamily: font, fontSize: '40px', letterSpacing: '1px', cursor: 'pointer', pointerEvents: 'auto',
 			transition: 'transform 0.15s',
 		}, extraCss));
@@ -2800,7 +2812,7 @@ window.Showtime = function (stage, opts) {
 				});
 				// the kiosk: book another session
 				$('<div>').text('BOOK ANOTHER SESSION AT THE KIOSK').attr('kiosk', '').css({
-					padding: '20px 46px', borderRadius: '60px', background: TYPE.colours.gold, color: TYPE.colours.ink,
+					padding: '20px 46px', borderRadius: '60px', ...glossy(TYPE.colours.gold), color: TYPE.colours.ink,
 					fontSize: '50px', letterSpacing: '1px', lineHeight: 1, animation: 'showtime-kiosk 1.6s ease-in-out infinite',
 				}).appendTo($wall);
 			}
