@@ -1031,7 +1031,9 @@ window.Showtime = function (stage, opts) {
 		const list = scores();
 		const total = n * S.w + (n - 1) * S.gap;
 		// (through the visor check they grow into squares, a visor in each)
-		const sq = beat && beat.id === 'visors' ? easeOut(clamp(bt / 0.5, 0, 1)) : 0;
+		// (and once everyone's set, they shrink back, READY in each)
+		const setAt = beat && beat.id === 'visors' && self.visorsSetAt ? self.visorsSetAt() : -1;
+		const sq = beat && beat.id === 'visors' ? easeOut(clamp(bt / 0.5, 0, 1)) * (setAt >= 0 ? 1 - easeOut(clamp((bt - setAt - 0.4) / 0.5, 0, 1)) : 1) : 0;
 		const h = S.h + (S.w - S.h) * sq;
 		self.onWalls(ctx, function (c) {
 			for (let i = 0; i < n; i++) {
@@ -1061,7 +1063,7 @@ window.Showtime = function (stage, opts) {
 						c3.fillStyle = colour(i);
 						c3.fillRect(x0, h / 2 - S.line, S.w, S.line + sink);
 					});
-					if (beat && beat.id === 'visors' && self.visorInCapsule) self.visorInCapsule(c2, i, S.w, h, S.line);   // (the visor check: their visor in place of their score)
+					if (beat && beat.id === 'visors' && self.visorInCapsule) self.visorInCapsule(c2, i, S.w, h, S.line, sq, S.size);   // (the visor check: their visor in place of their score)
 					else art.text(c2, fmt(score), 0, -S.line / 2 + 1, { size: S.size, font: FONT, weight: 400, fill: 'white', shadow: { color: 'rgba(0,0,0,0.35)', blur: 0, y: 2 } });   // (in the middle of the dark part, clear of the band)
 				});
 			}
@@ -1796,8 +1798,33 @@ window.Showtime = function (stage, opts) {
 		// visor, peak, band and shadow, spans about 270 by 220 of its own
 		// units, its middle a little below its own origin: centred, it's
 		// lifted by that much)
-		self.visorInCapsule = function (c, i, w, h, line) {
+		self.visorsSetAt = () => allSetAt;
+		self.visorInCapsule = function (c, i, w, h, line, sq, size) {
 			const done = ticked[i] !== undefined;
+			// all set, and the capsule shrinking back: READY
+			if (allSetAt >= 0 && sq < 0.55) {
+				art.text(c, 'READY', 0, -line / 2 + 1, { size, font: FONT, weight: 400, fill: 'white', shadow: { color: 'rgba(0,0,0,0.35)', blur: 0, y: 2 }, alpha: clamp((0.55 - sq) / 0.25, 0, 1) });
+				return;
+			}
+			// calibrated: a circle of their colour with a tick in it, popping in
+			if (done) {
+				const pop = easeOut(clamp((visorNow - ticked[i]) / 0.3, 0, 1));
+				const R = Math.min(w, h - line) * 0.32 * (0.6 + 0.4 * pop) * (1 + 0.15 * Math.max(0, 1 - (visorNow - ticked[i]) / 0.35));
+				c.save();
+				c.translate(0, -line / 2);
+				art.circle(c, 0, 0, R, { fill: colour(i) });
+				c.lineWidth = R * 0.2;
+				c.lineCap = 'round';
+				c.lineJoin = 'round';
+				c.strokeStyle = 'white';
+				c.beginPath();
+				c.moveTo(-R * 0.42, R * 0.02);
+				c.lineTo(-R * 0.1, R * 0.34);
+				c.lineTo(R * 0.46, -R * 0.3);
+				c.stroke();
+				c.restore();
+				return;
+			}
 			const bounce = done ? 1 + 0.25 * Math.max(0, 1 - (visorNow - ticked[i]) / 0.35) : visorNow > V.show ? 1 + 0.05 * Math.sin(visorNow * 6 + i) : 1;
 			const k = Math.min(w * 0.8 / 270, (h - line) * 0.8 / 220) * bounce;
 			c.save();
@@ -1805,7 +1832,6 @@ window.Showtime = function (stage, opts) {
 			c.scale(k, k);
 			visor(c, colour(i), done || visorNow <= V.show ? 1 : 0.55, visorNow * (done ? 3.2 : 1.4) + i * 0.8);
 			c.restore();
-			if (done) art.text(c, '✓', w / 2 - 22, -h / 2 + 22, { size: 30, font: FONT, weight: 400, fill: theme.gold });   // (ticked off: in its corner)
 		};
 		return extend({
 			id: 'visors',
