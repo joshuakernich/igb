@@ -40,6 +40,8 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	const CUBE = { r: 0.22, tall: 0.55, every: 0.55, drop: 26, fall: 8, life: 9, reach: 1.9 };   // a pickup: a little white cylinder, its radius and height (metres); a new one every so often (seconds); how high it falls from and how fast (metres, a second); seconds it lies on the plane; how near a worm must be to grab one (metres)
 	const CUBE_COLOUR = '#ffffff';
 	const GROW = { start: 0.8, each: 0.12, most: 3.2, rate: 8 };   // a worm's height (metres) is down to its pickups alone: this tall with none, this much taller for each, never taller than this; how quickly it grows into it
+	const GOB = { r: 0.6, tall: 3.4, colour: '#1c0b2e', glow: '#ff4fa8', speed: 0.14, reach: 1.5, bite: 3, cool: 1.5, hop: [7, 12], drop: 30 };   // its radius and height (metres); its body and eyes; how fast it wanders (shares of the field a second); how near it must be to eat or bite (metres); pickups a bite takes; seconds before it can bite the same worm again; seconds between hops to another wall; how high it drops in from
+	const GOB_IN = { land: 1.0, name: 1.4, line: 2.3, warn: 3.1, length: 6.2 };   // its entrance: when it lands, its name, what it does, the warning, and the end
 
 	/* ---------- the backdrop: a sunny valley ---------- */
 
@@ -321,8 +323,6 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	// A big dark cylinder with glowing eyes, wandering the plane out from one
 	// wall, now and then crossing to another. It eats any cylinder it
 	// reaches, and a worm it touches loses some of its pickups (and shrinks).
-	const GOB = { r: 0.6, tall: 3.4, colour: '#1c0b2e', glow: '#ff4fa8', speed: 0.14, reach: 1.5, bite: 3, cool: 1.5, hop: [7, 12], drop: 30 };   // its radius and height (metres); its body and eyes; how fast it wanders (shares of the field a second); how near it must be to eat or bite (metres); pickups a bite takes; seconds before it can bite the same worm again; seconds between hops to another wall; how high it drops in from
-	const GOB_IN = { land: 1.0, name: 1.4, line: 2.3, warn: 3.1, length: 6.2 };   // its entrance: when it lands, its name, what it does, the warning, and the end
 	const gob = { wall: 1, u: 0.5, d: 0.6, to: { u: 0.5, d: 0.6 }, y: 0, hop: 0 };
 	const bitten = [];   // each worm: when it can next be bitten
 	function gobArrive() {
