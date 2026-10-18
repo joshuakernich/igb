@@ -1138,6 +1138,7 @@ window.Showtime = function (stage, opts) {
 			+ `<g fill="${colour}" transform="translate(50 50) scale(0.82) translate(-50 -50)">${sym}</g></svg>`)
 			.css({ filter: `drop-shadow(0 ${BUTTON.drop * 0.6}px 0 rgba(0,0,0,0.45))` });
 	}
+	const PANEL_ICON = PAUSE.button - 38;   // (the size of each button on the pause panel)
 	const PANEL_COLOURS = { pause: TYPE.colours.gold, volume: '#2f7df6', cog: 'white' };   // (each icon on the pause panel, in its own colour)
 	const $pauseBtn = $('<button pause>').attr('title', 'Pause').css({
 		// (the score capsules' look, turned on its side: black glass sunk into
@@ -1149,7 +1150,7 @@ window.Showtime = function (stage, opts) {
 		boxShadow: `inset ${SCORE_HUD.line}px 0 0 0 white`, transition: 'transform 0.15s',
 	}).hide().appendTo(stage.$ui).on('click', function (e) { e.stopPropagation(); setPaused(true); });
 	const $tap = $('<span>').text('TAP').css({   // (the prompt, standing just above it, as wide as it, outlined and dropped like the other words)
-		position: 'absolute', left: '50%', bottom: 'calc(100% + 14px)', transform: 'translateX(-50%)', whiteSpace: 'nowrap',
+		position: 'absolute', left: `calc(50% + ${SCORE_HUD.line / 2}px)`, bottom: 'calc(100% + 14px)',   // (centred over the buttons, which sit just right of the edge's band) transform: 'translateX(-50%)', whiteSpace: 'nowrap',
 		fontFamily: font, fontSize: '40px', lineHeight: 1, color: 'white', textAlign: 'center',
 		WebkitTextStroke: `5px ${TYPE.colours.ink}`, paintOrder: 'stroke fill', textShadow: '0 4px 0 rgba(0,0,0,0.55)',
 	}).appendTo($pauseBtn);
@@ -1158,11 +1159,11 @@ window.Showtime = function (stage, opts) {
 		const g = document.createElement('canvas').getContext('2d');
 		g.font = `400 100px ${font}`;
 		const w = g.measureText('TAP').width;
-		if (w > 0) $tap.css({ fontSize: 100 * PAUSE.button / w + 'px' });
+		if (w > 0) $tap.css({ fontSize: 100 * PANEL_ICON / w + 'px' });   // (as wide as the buttons on it)
 	};
 	fitTap();
 	if (document.fonts) document.fonts.load(`100px "${FONT}"`).then(fitTap).catch(() => {});
-	for (const name of ['pause', 'volume', 'cog']) buttonIcon(name, PAUSE.button - 38, PANEL_COLOURS[name]).appendTo($pauseBtn);
+	for (const name of ['pause', 'volume', 'cog']) buttonIcon(name, PANEL_ICON, PANEL_COLOURS[name]).appendTo($pauseBtn);
 
 	// the screen: dark glass over all three walls, a panel on each
 	const $pause = $('<pause-screen>').css({
