@@ -5,10 +5,9 @@
  *
  * Every beat a real game has is here, in order: the squad picker, title
  * drop, clock intro, visor check, a tutorial (grab a cylinder, tap a wall to
- * switch to it), a stand-in villain
- * intro, the play (a little game: see below), TIME!, scores,
- * rank, team, leaderboard, replay, rating and the end. The game's own beats
- * are labelled placeholders, so it's clear where a real game fills in.
+ * switch to it), the villain's entrance (THE GOBBLER: it eats cylinders, and
+ * shrinks a worm it touches), the play (a little game: see below), TIME!, scores,
+ * rank, team, leaderboard, replay, rating and the end.
  *
  * Its debug buttons are on the show's pause screen (the TAP panel on the
  * left wall; off the box, the pause screen's left wall): jump to any beat,
@@ -33,7 +32,6 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	/* ---------- tuning ---------- */
 
 	const GAME_SECONDS = 600;
-	const STAND_IN = 5;           // seconds for each placeholder intro
 	// the room, out on the valley floor, from the back of the room to the
 	// front wall: how far up the valley (metres ahead of the eye). Across, a
 	// worm is always exactly where its player is across the front wall (1:1).
@@ -71,21 +69,6 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		scores = Array.from({ length: count }, () => 0);
 		wallOf.length = 0;
 		show.go('title');
-	}
-
-	// A labelled stand-in for a game's own beat.
-	function standIn(id, title, line) {
-		return {
-			id,
-			length: STAND_IN,
-			enter() { show.blackout = 0.3; },
-			draw(ctx, bt) {
-				show.onWalls(ctx, function (c) {
-					show.slam(c, title, W / 2, 430, 120, bt);
-					show.text(c, line, W / 2, 570, 46, { fill: '#9fb6d8', alpha: Math.min(1, bt * 2), glow: 'transparent' });
-				});
-			},
-		};
 	}
 
 	/* ---------- the tutorial ---------- */
@@ -141,7 +124,28 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 				});
 			},
 		},
-		standIn('villain', 'VILLAIN INTRO', 'THE GAME INTRODUCES ITS THREAT HERE'),
+		// the villain: THE GOBBLER drops out of the sky onto the front wall's
+		// plane, its name and what it does slammed in over every wall
+		{
+			id: 'villain',
+			length: GOB_IN.length,
+			enter() { gobArrive(); show.fx('villainReveal'); },
+			update(dt, bt) {
+				show.blackout = 0.45 * Math.min(1, bt * 2);
+				t += dt;
+				stepWorms(dt);
+				gob.y = Math.max(0, GOB.drop * (1 - bt / GOB_IN.land) ** 2 * (bt < GOB_IN.land ? 1 : 0));
+				if (show.cue(GOB_IN.land)) { show.fx('stomp'); show.shake = 0.6; }
+				if (show.cue(GOB_IN.name)) show.fx('beat');
+			},
+			draw(ctx, bt) {
+				show.onWalls(ctx, function (c) {
+					if (bt > GOB_IN.name) show.slam(c, 'THE GOBBLER', W / 2, 200, 120, bt - GOB_IN.name, { fill: GOB.glow, glow: GOB.glow });
+					if (bt > GOB_IN.line) show.text(c, 'IT EATS YOUR CYLINDERS', W / 2, 320, 56, { fill: 'white', alpha: Math.min(1, (bt - GOB_IN.line) * 3) });
+					if (bt > GOB_IN.warn) show.text(c, 'TOUCH IT AND YOU SHRINK!', W / 2, 400, 56, { fill: '#ffd23f', alpha: Math.min(1, (bt - GOB_IN.warn) * 3) });
+				});
+			},
+		},
 		{
 			id: 'play',
 			length: Infinity,
@@ -151,6 +155,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 				t += dt;
 				stepWorms(dt);
 				stepCubes(dt);
+				stepGob(dt);
 				show.record(t, Array.from({ length: players }, (_, i) => latest[i] || null));
 			},
 		},
@@ -170,7 +175,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 
 	function drawWorld(ctx) {
 		// (the valley is behind, in its own canvas)
-		if (show.beat !== 'play' && show.beat !== 'controls') return;   // (no worms over the opening screens; out there for the tutorial and the play)
+		if (show.beat !== 'play' && show.beat !== 'controls' && show.beat !== 'villain') return;   // (no worms over the opening screens; out there for the tutorial, the villain's entrance and the play)
 		// each player, a worm out on the valley floor, and the pickups: far ones first
 		const shown = [];
 		for (let i = 0; i < players; i++) {
@@ -185,8 +190,15 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 			const at = valley.project(k.x, g + k.y, k.z), floor = valley.project(k.x, g, k.z);
 			if (at && floor) shown.push({ k, at, floor, far: Math.hypot(k.x, k.z) });
 		}
+		if (show.beat === 'villain' || show.beat === 'play') {
+			const g = gobAt();
+			const gy = valley.ground(g.x, g.z);
+			const at = valley.project(g.x, gy + gob.y, g.z), floor = valley.project(g.x, gy, g.z);
+			if (at && floor) shown.push({ gobbler: true, at, floor, far: Math.hypot(g.x, g.z) });
+		}
 		shown.sort((a, b) => b.far - a.far);
-		for (const { i, at, k, floor } of shown) {
+		for (const { i, at, k, floor, gobbler } of shown) {
+			if (gobbler) { drawGob(ctx, at, floor); continue; }
 			if (k) {
 				// a pickup: its shadow on the plane (smaller the higher it is), it over it
 				const r = CUBE.r * floor.ppm * k.scale;
@@ -303,6 +315,73 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		}
 	}
 	const grown = [];   // each worm's height (metres), as its pickups have earned it
+
+	/* ---------- the villain: THE GOBBLER ---------- */
+
+	// A big dark cylinder with glowing eyes, wandering the plane out from one
+	// wall, now and then crossing to another. It eats any cylinder it
+	// reaches, and a worm it touches loses some of its pickups (and shrinks).
+	const GOB = { r: 0.6, tall: 3.4, colour: '#1c0b2e', glow: '#ff4fa8', speed: 0.14, reach: 1.5, bite: 3, cool: 1.5, hop: [7, 12], drop: 30 };   // its radius and height (metres); its body and eyes; how fast it wanders (shares of the field a second); how near it must be to eat or bite (metres); pickups a bite takes; seconds before it can bite the same worm again; seconds between hops to another wall; how high it drops in from
+	const GOB_IN = { land: 1.0, name: 1.4, line: 2.3, warn: 3.1, length: 6.2 };   // its entrance: when it lands, its name, what it does, the warning, and the end
+	const gob = { wall: 1, u: 0.5, d: 0.6, to: { u: 0.5, d: 0.6 }, y: 0, hop: 0 };
+	const bitten = [];   // each worm: when it can next be bitten
+	function gobArrive() {
+		Object.assign(gob, { wall: 1, u: 0.5, d: 0.6, to: { u: 0.5, d: 0.6 }, y: GOB.drop, hop: GOB.hop[0] });
+		bitten.length = 0;
+	}
+	const gobAt = () => fieldOn(gob.wall, gob.u, gob.d);
+	function stepGob(dt) {
+		// wandering toward a spot, a new one once it's there
+		const du = gob.to.u - gob.u, dd = gob.to.d - gob.d, dist = Math.hypot(du, dd);
+		if (dist < 0.02) gob.to = { u: 0.1 + Math.random() * 0.8, d: Math.random() };
+		else { const k = Math.min(1, GOB.speed * dt / dist); gob.u += du * k; gob.d += dd * k; }
+		// now and then, over to another wall
+		gob.hop -= dt;
+		if (gob.hop <= 0) {
+			gob.wall = (gob.wall + 1 + Math.floor(Math.random() * 2)) % 3;
+			gob.y = GOB.drop * 0.4;
+			gob.hop = GOB.hop[0] + Math.random() * (GOB.hop[1] - GOB.hop[0]);
+			show.fx('bossDash', 0.6);
+		}
+		if (gob.y > 0) { gob.y = Math.max(0, gob.y - 30 * dt); if (gob.y === 0) { show.fx('stomp', 0.7); show.shake = 0.3; } return; }
+		const g = gobAt();
+		// it eats the cylinders it reaches
+		for (const k of cubes.slice()) {
+			if (k.y < 2.5 && Math.hypot(k.x - g.x, k.z - g.z) < GOB.reach) { removeCube(k); show.fx('thud', 0.4); }
+		}
+		// and bites the worms it touches
+		for (let i = 0; i < players; i++) {
+			const p = latest[i];
+			if (!p || p.px === undefined || (bitten[i] || 0) > t) continue;
+			const w = toField(p, i);
+			if (Math.hypot(w.x - g.x, w.z - g.z) > GOB.reach) continue;
+			bitten[i] = t + GOB.cool;
+			if (scores[i] > 0) { scores[i] = Math.max(0, scores[i] - GOB.bite); show.fx('rateLow', 0.8); show.shake = 0.25; }
+		}
+	}
+	function drawGob(ctx, at, floor) {
+		// its shadow on the plane (smaller while it's up in the air), the body, its eyes
+		const r = GOB.r * floor.ppm;
+		const near = Math.max(0.3, 1 - gob.y / 15);
+		ctx.fillStyle = `rgba(0,0,0,${0.4 * near})`;
+		ctx.beginPath();
+		ctx.ellipse(floor.x, floor.y, r * 1.6 * near, r * 0.55 * near, 0, 0, Math.PI * 2);
+		ctx.fill();
+		const tall = GOB.tall * at.ppm;
+		show.worms.cylinder(ctx, at.x, at.y, tall, GOB.r * at.ppm / 17, GOB.colour, t * 0.7, null, false);
+		const blink = Math.sin(t * 1.3) > 0.97 ? 0.15 : 1;
+		const ey = at.y - tall * 0.78, er = GOB.r * at.ppm * 0.22;
+		ctx.save();
+		ctx.shadowColor = GOB.glow;
+		ctx.shadowBlur = er * 3;
+		ctx.fillStyle = GOB.glow;
+		for (const side of [-1, 1]) {
+			ctx.beginPath();
+			ctx.ellipse(at.x + side * GOB.r * at.ppm * 0.38, ey, er, er * 1.3 * blink, 0, 0, Math.PI * 2);
+			ctx.fill();
+		}
+		ctx.restore();
+	}
 
 	/* ---------- the debug buttons (on the show's pause screen) ---------- */
 
