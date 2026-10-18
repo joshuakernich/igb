@@ -664,7 +664,7 @@ window.Showtime = function (stage, opts) {
 			const wide = measure(ctx, String(str).split('\n').reduce((a, b) => (b.length > a.length ? b : a), ''), size);
 			if (wide > fit) size *= fit / wide;
 		}
-		const fill = textColour(style.fill || TYPE.colours.white);
+		const fill = style.exact ? style.fill : textColour(style.fill || TYPE.colours.white);   // (style.exact: that colour as it is, not the palette's nearest)
 		const dark = fill === TYPE.colours.ink;
 		art.text(ctx, str, x, y, {
 			size, font: style.font || TYPE.font, weight: 400, fill,
@@ -2285,7 +2285,7 @@ window.Showtime = function (stage, opts) {
 	// its foot (or a band of every player's colour, for the team), its figures
 	// in the middle of the dark part. (x, y) its middle, k its scale; o.w, o.h
 	// its size, o.size its figures', o.sink how far it reaches down past its
-	// foot, o.gold a gold glow round it, o.alpha.
+	// foot, o.gold a glow round it (gold, or o.glow's colour), o.alpha.
 	function capsule(c, x, y, k, band, text, o = {}) {
 		const S = SCORE_HUD;
 		const w = o.w || S.w, h = o.h || S.h, sink = o.sink || 0;
@@ -2301,7 +2301,7 @@ window.Showtime = function (stage, opts) {
 				c2.closePath();
 			};
 			art.save(c2, function (c3) {
-				if (o.gold) { c3.shadowColor = theme.gold; c3.shadowBlur = 40 * o.gold; }
+				if (o.gold) { c3.shadowColor = o.glow || theme.gold; c3.shadowBlur = 40 * o.gold; }
 				path();
 				c3.fillStyle = 'rgba(0,0,0,0.6)';
 				c3.fill();
@@ -2316,7 +2316,7 @@ window.Showtime = function (stage, opts) {
 			});
 			if (o.edge || o.gold) {
 				path();
-				c2.strokeStyle = o.gold ? theme.gold : o.edge;
+				c2.strokeStyle = o.gold ? o.glow || theme.gold : o.edge;
 				c2.lineWidth = o.gold ? 3 : 1.5;
 				c2.stroke();
 			}
@@ -2408,7 +2408,7 @@ window.Showtime = function (stage, opts) {
 				self.onWalls(ctx, function (c) {
 					if (bt < winnerAt) self.slam(c, 'RANKINGS', W / 2, 110, 120, bt - RANK.move[0], { fill: theme.gold });
 					else if (firsts > 1) self.slam(c, 'IT\'S A TIE!', W / 2, 110, 130, bt - winnerAt, { fill: theme.gold });
-					else self.slam(c, self.nameOf(winner) + ' WINS!', W / 2, 110, 130, bt - winnerAt, { fill: lit(winner), glow: colour(winner) });
+					else self.slam(c, self.nameOf(winner) + ' WINS!', W / 2, 110, 130, bt - winnerAt, { fill: colour(winner), exact: true, glow: colour(winner) });   // (in their own colour)
 					// each capsule, from along the bottom up to its row (one at a time, the last risen drawn on top)
 					for (let p = 0; p < n; p++) {
 						const from = hudSpot(p, n);
@@ -2417,7 +2417,7 @@ window.Showtime = function (stage, opts) {
 						const shown = bt >= reveal[p];
 						const top = st.place[p] === 0 && bt >= winnerAt;
 						const pop = shown && bt - reveal[p] < 0.3 ? 1 + 0.12 * Math.sin(Math.PI * (bt - reveal[p]) / 0.3) : 1;
-						capsule(c, x, y, lerp(1, RESULT.k, m) * pop, colour(p), fmt(s[p]), { sink: SCORE_HUD.sink * (1 - m), edge: m > 0 ? RESULT.edge : null, gold: top ? 1 : 0 });
+						capsule(c, x, y, lerp(1, RESULT.k, m) * pop, colour(p), fmt(s[p]), { sink: SCORE_HUD.sink * (1 - m), edge: m > 0 ? RESULT.edge : null, gold: top ? 1 : 0, glow: colour(p) });
 						// its place, once revealed, on its left
 						if (shown) self.slam(c, SUFFIX[st.place[p]], x - SCORE_HUD.w * RESULT.k / 2 - 90, y, 64, bt - reveal[p], { fill: top ? theme.gold : 'white' });
 					}
@@ -2477,7 +2477,7 @@ window.Showtime = function (stage, opts) {
 						const y0 = listY(r, n), x0 = W / 2 + RESULT.x;
 						if (fade < 1) self.text(c, SUFFIX[st.place[p]], x0 - SCORE_HUD.w * RESULT.k / 2 - 90, y0, 64, { fill: st.place[p] === 0 ? theme.gold : 'white', alpha: 1 - fade });
 						const x = lerp(x0, W / 2, fly), y = lerp(y0, TEAM_AT.into, fly);
-						capsule(c, x, y, RESULT.k * (1 - 0.25 * fly), colour(p), fmt(s[p]), { edge: RESULT.edge, gold: st.place[p] === 0 ? 1 - fade : 0 });
+						capsule(c, x, y, RESULT.k * (1 - 0.25 * fly), colour(p), fmt(s[p]), { edge: RESULT.edge, gold: st.place[p] === 0 ? 1 - fade : 0, glow: colour(p) });
 					}
 				});
 			},
