@@ -578,7 +578,12 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		score: won,   // scores are in won
 		id: 'red-light-green-light',
 		skip: { during: ['controls'], to: 'doll', label: 'SKIP TUTORIAL ▶▶' },   // the skip button: only in the tutorial, on to her entrance
-		menu: { restart: () => restartRound(), tutorial: () => debugJump('controls'), jumps: false },   // the pause menu's RESTART ROUND and REPLAY TUTORIAL
+		menu: { restart: () => restartRound(), tutorial: () => debugJump('controls'), jumps: false },
+		// the score capsules (the show's): up the wall for a round's end, staggered, and down again as its banner goes; faint once out
+		scoreHud: {
+			rise: (i) => (phase === 'cleared' ? ease(between(phaseT, 0.4 + i * 0.07, 0.9 + i * 0.07)) * (1 - ease(between(phaseT, phaseDur - 0.6, phaseDur - 0.1))) : 0),
+			dim: (i) => contestants[i] && !contestants[i].alive,
+		},   // the pause menu's RESTART ROUND and REPLAY TUTORIAL
 		clock: (n) => CLOCK_AT[n],   // the clock, as a capsule: see CLOCK_AT
 		font: SQUID_FONT,            // everything the show writes, in the game's own lettering
 		seconds: GAME_SECONDS,
@@ -1725,55 +1730,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	// Over the camera, never zoomed: the doll-head insets, GREEN LIGHT /
 	// RED LIGHT called out on every wall, and the white flash of a shot.
-	// Everyone's score, in little capsules along the bottom of every wall,
-	// rising up off the bottom edge: dark glass with their colour along the top, their winnings. A score that
-	// just changed pops; anyone out is dimmed. At the end of a round, while its
-	// banner's up, they rise up the wall and grow, then sink back.
-	const SCORES = { w: 176, h: 64, gap: 12, sink: 22, size: 32, rise: 260, grow: 0.35, line: 7 };   // a capsule's width and height (the part showing), the gap between them, how far it reaches down past the edge, the figures' size; at a round's end, how far up they rise and how much bigger they get; how thick the band of their colour along its bottom is
-	function drawScores(ctx) {
-		const n = contestants.length;
-		if (!n) return;
-		// up for the round's end, staggered, and down again as its banner goes
-		const up = phase === 'cleared' ? (i) => ease(between(phaseT, 0.4 + i * 0.07, 0.9 + i * 0.07)) * (1 - ease(between(phaseT, phaseDur - 0.6, phaseDur - 0.1))) : () => 0;
-		const total = n * SCORES.w + (n - 1) * SCORES.gap;
-		show.onWalls(ctx, function (c) {
-			contestants.forEach(function (k, i) {
-				if (k.shownScore !== k.score) { k.shownScore = k.score; k.scoreAt = wallT; }
-				const pop = 1 + 0.22 * Math.max(0, 1 - (wallT - (k.scoreAt || -9)) / 0.3);
-				const lift = up(i);
-				const grow = 1 + Math.min(SCORES.grow, Math.max(0, (W - 80) / total - 1)) * lift;   // (never wider than the wall)
-				const x = W / 2 + (i * (SCORES.w + SCORES.gap) + SCORES.w / 2 - total / 2) * grow;
-				const y = H - SCORES.h / 2 - SCORES.rise * lift;
-				const sink = SCORES.sink * (1 - lift);   // (risen clear of the edge, the whole capsule shows)
-				art.with(c, { x, y, scale: pop * grow, alpha: k.alive || lift > 0 ? 1 : 0.45 }, function (c2) {
-					// black glass, a band of their colour along the bottom (the part
-					// showing, just above the screen's edge, or the capsule's own
-					// bottom once it's risen clear)
-					const r = SCORES.h / 2;
-					const shape = (c3) => {
-						const x0 = -SCORES.w / 2, y0 = -SCORES.h / 2, x1 = SCORES.w / 2, y1 = SCORES.h / 2 + sink;
-						c3.beginPath();
-						c3.moveTo(x0 + r, y0);
-						c3.arcTo(x1, y0, x1, y1, r);
-						c3.arcTo(x1, y1, x0, y1, r);
-						c3.arcTo(x0, y1, x0, y0, r);
-						c3.arcTo(x0, y0, x1, y0, r);
-						c3.closePath();
-					};
-					art.save(c2, function (c3) {
-						shape(c3);
-						c3.fillStyle = 'rgba(0,0,0,0.6)';
-						c3.fill();
-						c3.clip();
-						c3.fillStyle = PLAYER_COLORS[k.n];
-						c3.fillRect(-SCORES.w / 2, SCORES.h / 2 - SCORES.line, SCORES.w, SCORES.line + sink);
-					});
-					art.text(c2, won(k.score), 0, 2, { size: SCORES.size, font: SQUID_FONT, weight: 400, fill: 'white', shadow: { color: 'rgba(0,0,0,0.35)', blur: 0, y: 2 } });
-				});
-			});
-		});
-	}
-
+	// (Everyone's score is the show's: its score capsules, see scoreHud.)
 	function drawCalls(ctx) {
 		if (showInset) {
 			if (scaleAt(dollF) < SCALE * 0.4) drawInset(ctx, INSET.x);   // while she's small, far off on the horizon
@@ -4443,7 +4400,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			},
 			draw(ctx) {
 				drawCalls(ctx);
-				drawScores(ctx);
 				show.onWalls(ctx, function (c) {
 					if (phase === 'ready') {
 						show.slam(c, 'ROUND ' + (round + 1), W / 2, 470, 170, phaseT - 0.1, { fill: PINK, glow: PINK, alpha: 1 - between(phaseT, phaseDur - 0.4, phaseDur) });

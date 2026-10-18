@@ -89,6 +89,9 @@
  *                      'wordSlam', 'visorLock', 'fanfare', 'villainReveal'...)
  *   show.sfx.boom() .drum() .roar() .alarm() .riser(s) .sting() .hit()   older synthesised ones
  *   show.state()       the beat, the beats seen in order, and so on, for tests
+ *   the score HUD      through 'play', a capsule a player along the bottom of
+ *                      every wall (see 'the score capsules');
+ *                      opts.scoreHud { rise(i), dim(i) } | false
  *   the pause menu     every show has one: a panel on the left wall opens a
  *                      menu over all three walls (see 'the pause panel and
  *                      menu'); opts.menu { restart(), tutorial() }; show.paused,
@@ -867,12 +870,66 @@ window.Showtime = function (stage, opts) {
 		if (self.blackout > 0) art.rect(ctx, -60, -60, WIDTH + 120, H + 120, { fill: '#030008', alpha: Math.min(1, self.blackout) });
 		drawBursts(ctx);
 		if (beat && beat.draw) beat.draw(ctx, bt);
+		if (beat && beat.id === 'play' && opts.scoreHud !== false) drawScoreHud(ctx);
 		// the clock, from the clock intro until TIME! (not over the results after it)
 		const timeup = beats.findIndex((b) => b.id === 'timeup');
 		if (clock.shown && !(timeup >= 0 && beats.indexOf(beat) > timeup)) drawClock(ctx);
 		drawConfetti(ctx);
 		if (self.flash > 0) art.rect(ctx, -60, -60, WIDTH + 120, H + 120, { fill: 'white', alpha: Math.min(1, self.flash) * 0.8 });
 		ctx.restore();
+	}
+
+	/* ---------- the score capsules (in play) ---------- */
+
+	// Every show has them through 'play' (the standard in-game score HUD): a
+	// row of capsules along the bottom of every wall, one a player, sunk
+	// into the edge: black glass, a band of the player's colour along the
+	// bottom, their score in the middle, popping each time it changes. A game
+	// can lift them (opts.scoreHud.rise(i): 0 down, 1 risen up the wall and
+	// grown, for a round's end, say) and dim one (opts.scoreHud.dim(i): out,
+	// say); opts.scoreHud: false leaves them out.
+	const SCORE_HUD = { w: 176, h: 64, gap: 12, sink: 22, size: 32, rise: 260, grow: 0.35, line: 7, dim: 0.45 };   // a capsule's width and height (the part showing), the gap between them, how far it reaches down past the edge, the figures' size; risen, how far up and how much bigger; how thick the band of colour is; how faint a dimmed one is
+	const hudShown = [];
+	const hudAt = [];
+	function drawScoreHud(ctx) {
+		const n = count();
+		if (!n) return;
+		const S = SCORE_HUD;
+		const hooks = opts.scoreHud || {};
+		const list = scores();
+		const total = n * S.w + (n - 1) * S.gap;
+		self.onWalls(ctx, function (c) {
+			for (let i = 0; i < n; i++) {
+				const score = list[i] || 0;
+				if (hudShown[i] !== score) { hudShown[i] = score; hudAt[i] = showTime; }
+				const pop = 1 + 0.22 * Math.max(0, 1 - (showTime - (hudAt[i] === undefined ? -9 : hudAt[i])) / 0.3);
+				const lift = hooks.rise ? clamp(hooks.rise(i), 0, 1) : 0;
+				const grow = 1 + Math.min(S.grow, Math.max(0, (W - 80) / total - 1)) * lift;   // (never wider than the wall)
+				const x = W / 2 + (i * (S.w + S.gap) + S.w / 2 - total / 2) * grow;
+				const y = H - S.h / 2 - S.rise * lift;
+				const sink = S.sink * (1 - lift);   // (risen clear of the edge, the whole capsule shows)
+				const dim = hooks.dim && hooks.dim(i) && lift <= 0;
+				art.with(c, { x, y, scale: pop * grow, alpha: dim ? S.dim : 1 }, function (c2) {
+					const r = S.h / 2;
+					art.save(c2, function (c3) {
+						const x0 = -S.w / 2, y0 = -S.h / 2, x1 = S.w / 2, y1 = S.h / 2 + sink;
+						c3.beginPath();
+						c3.moveTo(x0 + r, y0);
+						c3.arcTo(x1, y0, x1, y1, r);
+						c3.arcTo(x1, y1, x0, y1, r);
+						c3.arcTo(x0, y1, x0, y0, r);
+						c3.arcTo(x0, y0, x1, y0, r);
+						c3.closePath();
+						c3.fillStyle = 'rgba(0,0,0,0.6)';
+						c3.fill();
+						c3.clip();
+						c3.fillStyle = colour(i);
+						c3.fillRect(x0, S.h / 2 - S.line, S.w, S.line + sink);
+					});
+					art.text(c2, fmt(score), 0, 2, { size: S.size, font: FONT, weight: 400, fill: 'white', shadow: { color: 'rgba(0,0,0,0.35)', blur: 0, y: 2 } });
+				});
+			}
+		});
 	}
 
 	/* ---------- the skip button ---------- */
