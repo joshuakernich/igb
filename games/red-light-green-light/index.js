@@ -4047,7 +4047,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		head: { up: 147, x: -5, scale: 2.1 },
 		order: [0, 1, 2, 3, 4, 5, 6, 7, 12],
 		pupil: { x: 0.139, cx: 0.026, y: 0.03, ring: 0.03 },
-		nudge: {},   // each head frame's own nudge, by its number on the sheet: { x, y } (her head's units)   // half the gap between her pupils, how far right of the frame's middle they're centred, how far down (shares of the face frame's size); the red ring round each eye (a share of the frame's width)
+		nudge: { 0: { x: 0, y: 0.5 }, 1: { x: -3, y: 2 }, 2: { x: 0, y: 3.5 }, 3: { x: 0, y: 3 }, 4: { x: -2, y: 4.5 }, 5: { x: -6, y: 3.5 }, 6: { x: -4, y: 4 }, 7: { x: -2.5, y: 2.5 } },   // each head frame's own nudge, by its number on the sheet: { x, y } (her head's units)
 	};
 	const DOLL_KEY = 'rlgl-doll-lab';
 	const dollTune = JSON.parse(JSON.stringify(DOLL_TUNED));
