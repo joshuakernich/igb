@@ -211,7 +211,7 @@ window.Showtime = function (stage, opts) {
 		size: 210,
 		fit: 0.7,              // the widest a line may be: this share of a wall
 		raised: 330,           // with a START button: the title's middle, raised to make room
-		startY: 720,           // and the button's
+		startGap: 50,          // and the gap between its last line and the START button
 	};
 
 	/* ---------- tuning: the corner clock ---------- */
@@ -1580,6 +1580,12 @@ window.Showtime = function (stage, opts) {
 		// when each line sets off, and when the last settles
 		const sets = lines.map((line, li) => T.first + li * T.lineGap);
 		const lastLand = sets[sets.length - 1] + T.glide;
+		// the START button's middle: just under the title's last line (a neat gap below it)
+		const startTop = function () {
+			const n = lines.length;
+			const full = T.size * (n > 1 ? 0.85 : 1);
+			return T.raised + (n - 1) / 2 * full * 1.05 + full * 0.5 + T.startGap + PAUSE.row.h / 2;
+		};
 		// By default the title holds, raised, over a big START button that pops
 		// in once it's landed, and fades out once START is pressed (start:
 		// false: it plays through and moves on by itself)
@@ -1607,7 +1613,7 @@ window.Showtime = function (stage, opts) {
 				// the START button, on the front wall under the title
 				if (start && !$start && startedAt < 0 && bt > lastLand + 0.5) {
 					$start = $('<button start>').text('START').css({
-						position: 'absolute', left: (W + W / 2) + 'px', top: T.startY + 'px', transform: 'translate(-50%, -50%)', opacity: 0,
+						position: 'absolute', left: (W + W / 2) + 'px', top: startTop() + 'px', transform: 'translate(-50%, -50%)', opacity: 0,
 						// (the same size as the pause menu's buttons)
 						width: PAUSE.row.w + 'px', height: PAUSE.row.h + 'px', boxSizing: 'border-box', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
 						borderRadius: PAUSE.row.h / 2 + 'px', cursor: 'pointer', pointerEvents: 'auto', zIndex: 5, ...button(TYPE.colours.gold, PAUSE.row.size),
