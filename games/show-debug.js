@@ -17,10 +17,9 @@
  * Behind it all, a sunny 3D valley (games/ux-demo-valley.js). The play: each
  * player is a worm (the visor check's worms, show.worms) out on the valley
  * floor, right where they are in the room, as tall as they are, leaning and
- * flailing as they move; little white cubes fall from the sky, and a worm
- * that gets to one picks it up: a point. An ES module (manifest: module: true).
+ * wobbling as they move; little white cylinders fall from the sky, and a worm
+ * that gets to one picks it up: a point, and it grows taller. An ES module (manifest: module: true).
  */
-import * as THREE from '../lib/three/three.module.min.js';
 import { createValley } from './ux-demo-valley.js';
 
 IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
@@ -39,8 +38,9 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	// worm is always exactly where its player is across the front wall (1:1).
 	const FIELD = { near: 4.5, far: 12 };
 	const WORM = { tall: 2.3, thick: 0.3 };   // a worm's height (metres, for a tall player) and its thickness (radius, metres)
-	const CUBE = { size: 0.75, every: 0.55, drop: 26, fall: 8, life: 9, reach: 1.9, spin: 2.2 };   // a cube's size (metres); a new one every so often (seconds); how high it falls from and how fast (metres, a second); seconds it lies on the grass; how near a worm must be to grab one (metres); how fast it spins as it falls
+	const CUBE = { r: 0.22, tall: 0.55, every: 0.55, drop: 26, fall: 8, life: 9, reach: 1.9 };   // a pickup: a little white cylinder, its radius and height (metres); a new one every so often (seconds); how high it falls from and how fast (metres, a second); seconds it lies on the plane; how near a worm must be to grab one (metres)
 	const CUBE_COLOUR = '#ffffff';
+	const GROW = { each: 0.08, most: 2, rate: 8 };   // each pickup makes its worm this much taller (a share of its player's height), up to this many times as tall; how quickly it grows into it
 
 	/* ---------- the backdrop: a sunny valley ---------- */
 
@@ -124,9 +124,9 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	/* ---------- the world: the valley (behind), and where everyone is ---------- */
 
 	function drawWorld(ctx) {
-		// (the valley, and the cubes in it, are behind, in their own canvas)
+		// (the valley is behind, in its own canvas)
 		if (show.beat !== 'play') return;   // (no worms over the opening screens)
-		// each player, a worm out on the valley floor, far ones first
+		// each player, a worm out on the valley floor, and the pickups: far ones first
 		const shown = [];
 		for (let i = 0; i < players; i++) {
 			const p = latest[i];
@@ -135,10 +135,26 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 			const at = valley.project(w.x, valley.ground(w.x, w.z), w.z);
 			if (at) shown.push({ i, p, at, z: w.z });
 		}
+		for (const k of cubes) {
+			const g = valley.ground(k.x, k.z);
+			const at = valley.project(k.x, g + k.y, k.z), floor = valley.project(k.x, g, k.z);
+			if (at && floor) shown.push({ k, at, floor, z: k.z });
+		}
 		shown.sort((a, b) => a.z - b.z);
-		for (const { i, p, at } of shown) {
-			const tall = WORM.tall * Math.max(0.2, Math.min(1, (p.Y + 1) / 2)) * at.ppm;
-			// (a wobbly cylinder, its flat foot right on the plane)
+		for (const { i, p, at, k, floor } of shown) {
+			if (k) {
+				// a pickup: its shadow on the plane (smaller the higher it is), it over it
+				const r = CUBE.r * floor.ppm * k.scale;
+				const near = Math.max(0.25, 1 - k.y / 12);
+				ctx.fillStyle = `rgba(0,0,0,${0.3 * near})`;
+				ctx.beginPath();
+				ctx.ellipse(floor.x, floor.y, r * 1.5 * near, r * 0.5 * near, 0, 0, Math.PI * 2);
+				ctx.fill();
+				show.worms.cylinder(ctx, at.x, at.y, CUBE.tall * at.ppm * k.scale, CUBE.r * at.ppm * k.scale / 17, CUBE_COLOUR, t + k.seed, null, false);
+				continue;
+			}
+			const tall = WORM.tall * Math.max(0.2, Math.min(1, (p.Y + 1) / 2)) * (grown[i] || 1) * at.ppm;
+			// (a wobbly cylinder, its flat foot right on the plane; taller for every pickup)
 			show.worms.cylinder(ctx, at.x, at.y, tall, WORM.thick * at.ppm / 17, PLAYER_COLORS[i], t + i * 1.7, worms[i]);
 		}
 	}
@@ -170,63 +186,55 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		}
 	}
 
-	const cubeGeo = new THREE.BoxGeometry(CUBE.size, CUBE.size, CUBE.size);
-	const cubes = [];
+	// The pickups: little white cylinders, the avatars' look, falling from
+	// the sky and settling on the plane (drawn on the show's canvas with the
+	// worms, not in the valley's 3D scene).
+	const cubes = [];   // { x, z, y (metres above the plane), landed, scale, seed }
 	let nextCube = 0;
 	function dropCube() {
-		const colour = CUBE_COLOUR;
-		const mesh = new THREE.Mesh(cubeGeo, new THREE.MeshStandardMaterial({ color: colour, roughness: 0.4, metalness: 0, emissive: colour, emissiveIntensity: 0.08 }));
-		mesh.receiveShadow = true;
-		mesh.castShadow = true;
 		const spot = fieldAt(0.04 + Math.random() * 0.92, Math.random());   // (somewhere a player could stand)
-		const x = spot.x, z = spot.z;
-		const floor = valley.ground(x, z) + CUBE.size / 2;   // (sitting flat on the plane)
-		mesh.position.set(x, floor + CUBE.drop, z);
-		mesh.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
-		valley.scene.add(mesh);
-		cubes.push({ mesh, colour, floor, landed: -1, spin: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(CUBE.spin) });
+		cubes.push({ x: spot.x, z: spot.z, y: CUBE.drop, landed: -1, scale: 1, seed: Math.random() * 10 });
 	}
 	function removeCube(k) {
-		valley.scene.remove(k.mesh);
-		k.mesh.material.dispose();
 		cubes.splice(cubes.indexOf(k), 1);
 	}
 	function clearCubes() {
-		while (cubes.length) removeCube(cubes[0]);
+		cubes.length = 0;
 	}
 	function stepCubes(dt) {
 		nextCube -= dt;
 		if (nextCube <= 0 && cubes.length < 40) { dropCube(); nextCube = CUBE.every * (0.6 + Math.random() * 0.8); }
 		for (const k of cubes.slice()) {
-			const m = k.mesh;
 			if (k.landed < 0) {
-				// falling, tumbling
-				m.position.y -= CUBE.fall * dt;
-				m.rotation.x += k.spin.x * dt;
-				m.rotation.y += k.spin.y * dt;
-				m.rotation.z += k.spin.z * dt;
-				if (m.position.y <= k.floor) { m.position.y = k.floor; k.landed = t; m.rotation.set(0, m.rotation.y, 0); }
+				// falling
+				k.y = Math.max(0, k.y - CUBE.fall * dt);
+				if (k.y <= 0) k.landed = t;
 			} else {
-				// flat on the grass, then shrinking away
-				m.position.y = k.floor;
+				// on the plane, then shrinking away
 				const left = k.landed + CUBE.life - t;
-				if (left < 0.6) m.scale.setScalar(Math.max(0.01, left / 0.6));
+				if (left < 0.6) k.scale = Math.max(0.01, left / 0.6);
 				if (left <= 0) { removeCube(k); continue; }
 			}
-			// a worm close enough (and the cube low enough) grabs it
-			if (m.position.y - k.floor > 2.5) continue;
+			// a worm close enough (and the pickup low enough) grabs it, and grows
+			if (k.y > 2.5) continue;
 			for (let i = 0; i < players; i++) {
 				const p = latest[i];
 				if (!p || p.px === undefined) continue;
 				const w = toField(p);
-				if (Math.hypot(w.x - m.position.x, w.z - m.position.z) > CUBE.reach) continue;
+				if (Math.hypot(w.x - k.x, w.z - k.z) > CUBE.reach) continue;
 				scores[i] = (scores[i] || 0) + 1;
 				show.fx('pick', 0.7);
 				removeCube(k);
 				break;
 			}
 		}
+		// each worm's height growing (springily quick) toward what its pickups have earned it
+		for (let i = 0; i < players; i++) {
+			const want = Math.min(GROW.most, 1 + GROW.each * (scores[i] || 0));
+			grown[i] = (grown[i] || 1) + (want - (grown[i] || 1)) * Math.min(1, dt * GROW.rate);
+		}
 	}
+	const grown = [];   // each worm's height, against its player's own (1: as tall as they are)
 
 	/* ---------- the debug buttons (on the show's pause screen) ---------- */
 

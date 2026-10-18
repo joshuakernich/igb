@@ -965,7 +965,7 @@ window.Showtime = function (stage, opts) {
 	// A worm standing on its tail at (x, y), so tall, its body curling over
 	// to lean (radians: + to the right) as it rises, swaying a little,
 	// in its player's colour (wrong: ringed in red).
-	function drawWorm(c, x, y, tall, lean, k, fill, wrong, t, arms, cylinder) {
+	function drawWorm(c, x, y, tall, lean, k, fill, wrong, t, arms, cylinder, shadow = true) {
 		const W2 = VISORS.worm;
 		const r = W2.r * k;
 		const sway = Math.sin(t * 2.2) * 0.06;
@@ -981,7 +981,7 @@ window.Showtime = function (stage, opts) {
 		}
 		c.save();
 		// its shadow, and a red ring if it's a visor that isn't playing
-		art.ellipse(c, x, y, r * 1.6, r * 0.55, { fill: 'rgba(0,0,0,0.35)' });
+		if (shadow) art.ellipse(c, x, y, r * 1.6, r * 0.55, { fill: 'rgba(0,0,0,0.35)' });
 		if (wrong) art.ellipse(c, x, y, r * 2.2, r * 0.8, { stroke: '#ff3d6a', lineWidth: 6 * k });
 		// its arms (behind it, reaching out from its sides): from the shoulder,
 		// angled out from straight down, then bent at the elbow, a little hand
@@ -1017,8 +1017,8 @@ window.Showtime = function (stage, opts) {
 		step: wormStep,
 		// draw(ctx, x, y, tall, scale, colour, time, state): its tail at (x, y), so tall (px); scale: its thickness, against the visor check's
 		draw: (c, x, y, tall, k, colour, t, st) => drawWorm(c, x, y, tall, st ? st.a : 0, k, colour, false, t, st && st.arms),
-		// cylinder(...same): no arms, flat ends, its foot (x, y) flat on the ground
-		cylinder: (c, x, y, tall, k, colour, t, st) => drawWorm(c, x, y, tall, st ? st.a : 0, k, colour, false, t, null, true),
+		// cylinder(...same, shadow): no arms, flat ends, its foot (x, y) flat on the ground (shadow false: none under it)
+		cylinder: (c, x, y, tall, k, colour, t, st, shadow = true) => drawWorm(c, x, y, tall, st ? st.a : 0, k, colour, false, t, null, true, shadow),
 	};
 
 	/* ---------- the score capsules (in play) ---------- */

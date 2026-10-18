@@ -1,7 +1,7 @@
 /*
  * UX Demo's backdrop: a sunny 3D valley across the three walls, behind the
- * show. The valley runs away from the front wall, green hills rising either
- * side (the side walls look across them) up to far blue mountains; a bright
+ * show. The valley runs away from the front wall, purple hills rising either
+ * side (the side walls look across them) up to far mauve mountains; a bright
  * sun hangs over it ahead, glowing, its rays slowly turning; soft clouds
  * drift across the sky; round bushes dot the slopes. Rendered with three.js
  * into its own canvas behind the stage's.
@@ -26,7 +26,7 @@ export function createValley(stage) {
 	const BUSHES = 420;                              // how many bushes
 	const CLOUDS = 34;                               // how many clouds
 	const DRIFT = 2.2;                               // metres a second the clouds drift
-	const FOG = { colour: 0xbfdcf2, near: 260, far: 2300 };
+	const FOG = { colour: 0xf5c7e6, near: 260, far: 2300 };
 
 	/* ---------- the renderer, behind the stage ---------- */
 
@@ -104,9 +104,9 @@ export function createValley(stage) {
 	terrainGeo.translate(0, 0, GRID.z);
 	const pos = terrainGeo.attributes.position;
 	const colours = new Float32Array(pos.count * 3);
-	const grass = [new THREE.Color(0x3f8a2a), new THREE.Color(0x6db33f), new THREE.Color(0x9ccc58)];
-	const rock = new THREE.Color(0x8d9a8c);
-	const snow = new THREE.Color(0xf4f8ff);
+	const grass = [new THREE.Color(0x5b2a86), new THREE.Color(0x8a45c0), new THREE.Color(0xc06ad6)];   // (purple meadows)
+	const rock = new THREE.Color(0xb07aa0);
+	const snow = new THREE.Color(0xffe6f4);
 	const c = new THREE.Color();
 	for (let i = 0; i < pos.count; i++) {
 		const x = pos.getX(i), z = pos.getZ(i);
@@ -128,7 +128,7 @@ export function createValley(stage) {
 
 	/* ---------- light ---------- */
 
-	scene.add(new THREE.HemisphereLight(0xcfe8ff, 0x4f7a32, 0.95));
+	scene.add(new THREE.HemisphereLight(0xf0d8ff, 0x6a3a7a, 0.95));
 	const sun = new THREE.DirectionalLight(0xfff1d6, 3.1);
 	sun.position.copy(SUN).multiplyScalar(400).add(new THREE.Vector3(0, floorY, -60));
 	sun.target.position.set(0, floorY, -60);
@@ -157,8 +157,8 @@ export function createValley(stage) {
 			void main() {
 				vec3 d = normalize(vDir);
 				float y = clamp(d.y, 0.0, 1.0);
-				vec3 zenith = vec3(0.16, 0.42, 0.86);
-				vec3 horizon = vec3(0.75, 0.87, 0.96);
+				vec3 zenith = vec3(0.42, 0.22, 0.72);
+				vec3 horizon = vec3(0.96, 0.78, 0.9);
 				vec3 col = mix(horizon, zenith, pow(y, 0.55));
 				float s = max(dot(d, sunDir), 0.0);
 				col += vec3(1.0, 0.86, 0.6) * pow(s, 8.0) * 0.35;     // the warm sky round the sun
@@ -289,7 +289,7 @@ export function createValley(stage) {
 	}
 	const bushMesh = new THREE.InstancedMesh(blob, new THREE.MeshStandardMaterial({ roughness: 0.85, metalness: 0 }), balls.length);
 	const m4 = new THREE.Matrix4();
-	const leaf = [new THREE.Color(0x2e6b22), new THREE.Color(0x4f9a2f), new THREE.Color(0x77b93e)];
+	const leaf = [new THREE.Color(0xa8326e), new THREE.Color(0xe0589a), new THREE.Color(0xff8cc4)];   // (pink bushes)
 	balls.forEach(function (ball, i) {
 		m4.makeScale(ball.s, ball.s * 0.88, ball.s).setPosition(ball.x, ball.y, ball.z);
 		bushMesh.setMatrixAt(i, m4);
