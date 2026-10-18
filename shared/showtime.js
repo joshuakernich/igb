@@ -2845,11 +2845,9 @@ window.Showtime = function (stage, opts) {
 					c.globalAlpha *= out * easeOut(between(bt, 0, 0.4));
 					// the window: a bar along its top (the game's name, the team's score), the replay under it
 					art.roundRect(c, WIN.x - 8, WIN.y - WIN.bar - 8, WIN.w + 16, wh + WIN.bar + 16, 30, { fill: 'rgba(0,0,0,0.75)', shadow: { color: 'rgba(0,0,0,0.5)', blur: 40 } });
-					self.text(c, String(game.name).toUpperCase(), WIN.x + 26, WIN.y - WIN.bar / 2 - 2, 44, { align: 'left', glow: 'transparent' });
-					self.text(c, fmt(self.teamTotal()), WIN.x + WIN.w - 26, WIN.y - WIN.bar / 2 - 2, 44, { align: 'right', fill: theme.gold, glow: 'transparent' });
 					c.save();
 					c.beginPath();
-					c.roundRect ? c.roundRect(WIN.x, WIN.y, WIN.w, wh, [0, 0, 22, 22]) : c.rect(WIN.x, WIN.y, WIN.w, wh);
+					c.roundRect ? c.roundRect(WIN.x, WIN.y - WIN.bar, WIN.w, wh + WIN.bar, 22) : c.rect(WIN.x, WIN.y - WIN.bar, WIN.w, wh + WIN.bar);   // (the replay right up to the window's top edge, under the title)
 					c.clip();
 					c.translate(WIN.x, WIN.y);
 					c.scale(WIN.w / W, WIN.w / W);
@@ -2901,6 +2899,15 @@ window.Showtime = function (stage, opts) {
 						art.poly(c, star(bx0 + (bx1 - bx0) * mk, by, past ? 26 : 18), { fill: past ? theme.gold : 'rgba(255,255,255,0.4)' });
 					}
 					c.restore();
+					// over the top of it: a soft shade, the game's name, the team's score
+					c.save();
+					c.beginPath();
+					c.roundRect ? c.roundRect(WIN.x, WIN.y - WIN.bar, WIN.w, wh + WIN.bar, 22) : c.rect(WIN.x, WIN.y - WIN.bar, WIN.w, wh + WIN.bar);
+					c.clip();
+					art.rect(c, WIN.x, WIN.y - WIN.bar, WIN.w, WIN.bar * 1.6, { fill: art.linear(c, 0, WIN.y - WIN.bar, 0, WIN.y - WIN.bar + WIN.bar * 1.6, ['rgba(0,0,0,0.6)', 'rgba(0,0,0,0)']) });
+					c.restore();
+					self.text(c, String(game.name).toUpperCase(), WIN.x + 26, WIN.y - WIN.bar / 2 - 2, 44, { align: 'left', glow: 'transparent' });
+					self.text(c, fmt(self.teamTotal()), WIN.x + WIN.w - 26, WIN.y - WIN.bar / 2 - 2, 44, { align: 'right', fill: theme.gold, glow: 'transparent' });
 					// and beside it, a QR code: scan to share your gif
 					const Q = REPLAY.qr;
 					const code = qr(Q.link + (opts.id ? '#' + opts.id : ''));
