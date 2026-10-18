@@ -291,7 +291,7 @@ window.Showtime = function (stage, opts) {
 		zoom: 1.6,             // the replay, zoomed in this close on the room
 		footroom: 30,          // keeping this much under the feet of anyone at the very back
 		window: { x: 250, y: 190, w: 960, bar: 80, tilt: 0.035 },   // the window it plays in: its left and its top (under its bar), its width; the bar along its top; how far it's tipped to the left (radians)
-		qr: { size: 290, pad: 20, over: 150, tilt: 0.06, link: 'https://joshuakernich.github.io/igb/' },   // the QR code over its right edge, halfway down: its size, the white round it; how far in over the window's right edge; tipped the other way; where it goes (for now: the game, on the hub)
+		qr: { size: 290, pad: 20, over: 90, tilt: 0.06, link: 'https://joshuakernich.github.io/igb/' },   // the QR code over its right edge, halfway down: its size, the white round it; how far in over the window's right edge; tipped the other way; where it goes (for now: the game, on the hub)
 		trail: 30,             // samples of trail behind each player
 	};
 
