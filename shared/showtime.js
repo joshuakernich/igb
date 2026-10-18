@@ -207,7 +207,6 @@ window.Showtime = function (stage, opts) {
 		glide: 1.7,            // how long a line takes to glide into place (easing gently to a stop)
 		from: [0.8, 0.75],     // where it glides from: this far out (shares of the wall's width and height), the top line from the top left, the next from the bottom right
 		startFade: 0.7,        // the START button fading in
-		tagline: 0.5,          // after the last letter
 		hold: 1.6,             // then it holds
 		out: 0.5,              // and fades
 		size: 210,
@@ -1393,12 +1392,11 @@ window.Showtime = function (stage, opts) {
 	// game's title glides in on every wall, a line at a time: the top line
 	// from the top left, the next from the bottom right (and so on,
 	// alternately), each easing gently into place; a soft boom as the last
-	// settles, the tagline, then the START button fading in (or a hold, and
-	// out). lines: [{ text, fill, glow }]; tagline: a smaller line under.
+	// settles (no flash), then the START button fading in (or a hold, and
+	// out). lines: [{ text, fill, glow }]. Never a byline under it.
 	beatsLib.titleDrop = function (extra) {
 		const T = TITLE;
 		const lines = (extra && extra.lines) || [{ text: (opts.title || opts.id || '').toUpperCase() }];
-		const tagline = extra && extra.tagline;
 		// when each line sets off, and when the last settles
 		const sets = lines.map((line, li) => T.first + li * T.lineGap);
 		const lastLand = sets[sets.length - 1] + T.glide;
@@ -1409,7 +1407,7 @@ window.Showtime = function (stage, opts) {
 		let startedAt = -1;
 		let $start = null;
 		let now = 0;   // (the beat's time, for the button's click)
-		const length = start ? Infinity : lastLand + T.tagline + T.hold + T.out;
+		const length = start ? Infinity : lastLand + T.hold + T.out;
 		const outAt = () => (start ? (startedAt < 0 ? Infinity : startedAt) : length - T.out);
 		const dropStart = () => { if ($start) { const $b = $start; $start = null; $b.css({ opacity: 0, pointerEvents: 'none' }); stage.timeout(() => $b.remove(), 400); } };
 		return extend({
@@ -1425,10 +1423,10 @@ window.Showtime = function (stage, opts) {
 			update(dt, bt) {
 				self.blackout = Math.min(INTRO_DIM, bt / T.dark * INTRO_DIM);   // the game's scene still showing behind
 				if (self.cue(T.first - T.riser)) self.fx('riser', 0.7, 1, T.riser);
-				if (self.cue(lastLand - 0.15)) { self.fx('titleLand', 0.6); self.shake = 0.2; self.flash = 0.2; }   // (gently: it settles rather than slams)
+				if (self.cue(lastLand - 0.15)) { self.fx('titleLand', 0.6); self.shake = 0.2; }   // (gently: it settles rather than slams; no flash)
 				now = bt;
 				// the START button, on the front wall under the title
-				if (start && !$start && startedAt < 0 && bt > lastLand + T.tagline) {
+				if (start && !$start && startedAt < 0 && bt > lastLand + 0.5) {
 					$start = $('<button start>').text('START').css({
 						position: 'absolute', left: (W + W / 2) + 'px', top: T.startY + 'px', transform: 'translate(-50%, -50%)', opacity: 0,
 						padding: '28px 110px', borderRadius: '90px', border: 'none', cursor: 'pointer', pointerEvents: 'auto', zIndex: 5,
@@ -1453,7 +1451,7 @@ window.Showtime = function (stage, opts) {
 				self.onWalls(ctx, function (c) {
 					lines.forEach(function (line, li) {
 						const size = self.fitSize(c, line.text, T.size * (n > 1 ? 0.85 : 1), W - 140);   // a step of the scale that fits
-						const y = (start ? T.raised : 470) + (li - (n - 1) / 2) * size * 1.05 - (tagline ? 50 : 0);
+						const y = (start ? T.raised : 470) + (li - (n - 1) / 2) * size * 1.05;
 						const age = bt - sets[li];
 						if (age <= 0) return;
 						// gliding in from off the wall's corner, easing gently to a stop
@@ -1464,10 +1462,9 @@ window.Showtime = function (stage, opts) {
 						const dy = side * T.from[1] * H * (1 - left);
 						self.text(c, line.text, W / 2 + dx, y + dy, size, { fill: line.fill || 'white', glow: line.glow || theme.accent, alpha: fade * clamp(age / 0.4, 0, 1), fit: 9999 });
 					});
-					if (tagline) self.slam(c, tagline, W / 2, 470 + (n - 1) / 2 * T.size * 0.9 + 150, 64, bt - lastLand - T.tagline, { fill: theme.gold, alpha: fade });
 				});
 			},
-		}, Object.assign({}, extra, { lines: undefined, tagline: undefined, start: undefined }));
+		}, Object.assign({}, extra, { lines: undefined, start: undefined }));
 	};
 
 	// The clock reveal, a piece at a time out of the dark: the dial, its
