@@ -202,8 +202,8 @@ window.Showtime = function (stage, opts) {
 	const TITLE = {
 		dark: 0.4,             // the room goes dark
 		first: 0,              // the first line sets off (straight away)
-		lineGap: 0.45,         // and the next after it
-		glide: 1.7,            // how long a line takes to glide into place (easing gently to a stop)
+		lineGap: 0.3,          // and the next after it
+		glide: 1.0,            // how long a line takes to glide into place (easing gently to a stop)
 		from: [0.8, 0.75],     // where it glides from: this far out (shares of the wall's width and height), the top line from the top left, the next from the bottom right
 		startFade: 0.7,        // the START button fading in
 		hold: 1.6,             // then it holds
