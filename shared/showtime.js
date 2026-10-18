@@ -2237,7 +2237,7 @@ window.Showtime = function (stage, opts) {
 				const q = at(v.x, v.d);   // (right where they are, 1:1)
 				const tall = V.worm.tall * clamp((p.Y + 1) / 2, 0.15, 1) * q.k;
 				const b = bend[i] && bend[i][wall];
-				drawWorm(c, q.x, q.y, tall, b ? b.a : 0, q.k, colour(i), i >= n, bt + i * 1.7, b && b.arms);
+				drawWorm(c, q.x, q.y, tall, b ? b.a : 0, q.k, colour(i), i >= n, bt + i * 1.7, null, true);   // (wobbly cylinders, as in UX Demo: no arms, flat ends)
 			}
 		}
 
