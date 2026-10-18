@@ -3107,7 +3107,7 @@ window.Showtime = function (stage, opts) {
 	// BOOK ANOTHER SESSION AT THE KIOSK. The game hands back as it starts
 	// (extra.enter is the place to call IGB.complete).
 	beatsLib.end = function (extra) {
-		const CAROUSEL = { every: 2.8, w: 640, h: 400, side: 520, words: 80, kiosk: 44, margin: 40 };   // (words: the size of THANKS FOR PLAYING!; kiosk: the kiosk line's, much smaller; margin: their extra room from the screenshots)
+		const CAROUSEL = { every: 2.8, w: 640, h: 400, side: 520, words: 80, kiosk: 44, margin: 40, foot: 24 };   // (words: the size of THANKS FOR PLAYING!; kiosk: the kiosk line's, much smaller; margin: their extra room from the screenshots; foot: the cards' thick white bottom border)
 		let $layer = null;
 		let slides = [];      // every wall's slides, by game: [[$slide, ...], ...]
 		let shownSlide = -1;
@@ -3140,7 +3140,7 @@ window.Showtime = function (stage, opts) {
 					}).appendTo($track);
 					const $shot = $('<div>').css({
 						position: 'relative', width: CAROUSEL.w + 'px', height: CAROUSEL.h + 'px', borderRadius: 0,   // (square corners)
-						background: `#1a1030 url("assets/shared/screens/${g.id}.jpg") center / cover`, border: `6px solid ${TYPE.colours.white}`,
+						background: `#1a1030 url("assets/shared/screens/${g.id}.jpg") center / cover`, border: `6px solid ${TYPE.colours.white}`, borderBottomWidth: CAROUSEL.foot + 'px',   // (a thick white foot, like a print's)
 						boxShadow: '0 18px 40px rgba(0,0,0,0.55)',
 					}).appendTo($slide);
 					// its name, as its title drop has it (manifest: title.lines, title.font): its lines stacked, each in its colour, outlined and dropped, over the screenshot's foot
@@ -3148,7 +3148,7 @@ window.Showtime = function (stage, opts) {
 					const size = lines.length > 1 ? 54 : 64;
 					// (its last line straddling the card's bottom edge: half on the screenshot, half below it)
 					const $title = $('<div>').css({
-						position: 'absolute', left: '50%', bottom: -(size * 0.95 / 2 + 3) + 'px', transform: 'translateX(-50%)', maxWidth: CAROUSEL.w - 40 + 'px', zIndex: 1,
+						position: 'absolute', left: '50%', bottom: -(size * 0.95 / 2 + CAROUSEL.foot) + 'px', transform: 'translateX(-50%)', maxWidth: CAROUSEL.w - 40 + 'px', zIndex: 1,
 						display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
 						fontFamily: `"${(g.title && g.title.font) || FONT}", "${FONT}", sans-serif`, lineHeight: 0.95, whiteSpace: 'nowrap', textAlign: 'center',
 					}).appendTo($shot);
