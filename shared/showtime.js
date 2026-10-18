@@ -1650,7 +1650,7 @@ window.Showtime = function (stage, opts) {
 				if (self.cue(lastLand - 0.15)) self.shake = 0.2;   // (gently: it settles rather than slams; no flash, no sound effects)
 				now = bt;
 				// the START button, on the front wall under the title
-				if (start && !$start && startedAt < 0 && bt > lastLand + 0.5) {
+				if (start && !$start && startedAt < 0 && bt > lastLand - 0.6) {   // (fading in as the last line settles)
 					$start = $('<button start>').text('START').css({
 						position: 'absolute', left: (W + W / 2) + 'px', top: startTop() + 'px', transform: 'translate(-50%, -50%)', opacity: 0,
 						// (the same size as the pause menu's buttons)
