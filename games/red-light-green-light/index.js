@@ -455,15 +455,17 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	// The doll's head: 0 faces the players, PI faces the tree.
 	const head = { yaw: 0, from: 0, to: 0, t: 0, dur: 0 };
-	const HEAD_TURN_SOUND = 1.62;   // seconds the head-turn sound lasts at its own speed
+	const HEAD_TURN_SOUND = 0.76;   // seconds the head-turn sound (just the mechanism) lasts at its own speed
 	function turnHead(to, dur) {
 		head.from = head.yaw;
 		head.to = to;
 		head.t = 0;
 		head.dur = dur;
-		// its sound, sped up (or slowed) to last exactly as long as the turn
+		// its sound, stretched (or squeezed) to last exactly as long as the turn, its pitch kept
 		show.stop('dollTurn');
-		show.play('dollTurn', Math.max(0.5, Math.min(4, HEAD_TURN_SOUND / Math.max(0.05, dur))));
+		const turnSound = show.audio && show.audio.get && show.audio.get('dollTurn');
+		if (turnSound) turnSound.preservesPitch = true;
+		show.play('dollTurn', Math.max(0.25, Math.min(4, HEAD_TURN_SOUND / Math.max(0.05, dur))));
 	}
 
 	function setPhase(p, dur = 0) {
