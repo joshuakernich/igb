@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+	<!-- UX Demo: a blueprint of the box (three walls and a floor) with a play button in it -->
+	<defs>
+		<pattern id="fine" width="16" height="16" patternUnits="userSpaceOnUse">
+			<path d="M16 0 H0 V16" fill="none" stroke="#3ad1ff" stroke-opacity="0.14" stroke-width="1"/>
+		</pattern>
+		<pattern id="coarse" width="64" height="64" patternUnits="userSpaceOnUse">
+			<path d="M64 0 H0 V64" fill="none" stroke="#3ad1ff" stroke-opacity="0.28" stroke-width="1.5"/>
+		</pattern>
+		<radialGradient id="glow" cx="50%" cy="45%" r="60%">
+			<stop offset="0" stop-color="#1b3a78"/>
+			<stop offset="1" stop-color="#0b1022"/>
+		</radialGradient>
+	</defs>
+	<rect width="256" height="256" rx="40" fill="url(#glow)"/>
+	<rect width="256" height="256" rx="40" fill="url(#fine)"/>
+	<rect width="256" height="256" rx="40" fill="url(#coarse)"/>
+	<g fill="none" stroke="#9fe6ff" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+		<!-- the back wall, the side walls, the floor -->
+		<path d="M84 56 H172 V146 H84 Z"/>
+		<path d="M84 56 L40 36 V178 L84 146"/>
+		<path d="M172 56 L216 36 V178 L172 146"/>
+		<path d="M40 178 L216 178" stroke-dasharray="6 6"/>
+	</g>
+	<!-- dimension lines -->
+	<g stroke="#3ad1ff" stroke-width="2" stroke-linecap="round">
+		<path d="M84 200 H172"/>
+		<path d="M84 193 V207 M172 193 V207"/>
+		<path d="M230 36 V178"/>
+		<path d="M223 36 H237 M223 178 H237"/>
+	</g>
+	<g fill="#3ad1ff" font-family="monospace" font-size="13" text-anchor="middle">
+		<text x="128" y="222">3 WALLS</text>
+	</g>
+	<!-- the play button, centre of the front wall -->
+	<circle cx="128" cy="101" r="31" fill="#ffd23f"/>
+	<path d="M118 84 L144 101 L118 118 Z" fill="#0b1022" stroke="#0b1022" stroke-width="4" stroke-linejoin="round"/>
+</svg>

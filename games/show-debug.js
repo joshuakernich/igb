@@ -1,6 +1,7 @@
 /*
- * Show Debug: a blank game that runs the whole shared show (shared/showtime.js)
- * with nothing in the way, for stepping through the choreography quickly.
+ * UX Demo (id show-debug): a blank game that runs the whole shared show
+ * (shared/showtime.js) with nothing in the way, for stepping through the
+ * choreography quickly.
  *
  * Every beat a real game has is here, in order: the squad picker, title
  * drop, clock intro, visor check, a stand-in controls intro and villain
@@ -8,9 +9,10 @@
  * rank, team, leaderboard, replay, rating and the end. The game's own beats
  * are labelled placeholders, so it's clear where a real game fills in.
  *
- * The DEBUG panel at the bottom of the left wall jumps to any beat, sets
- * the clock, shuffles the scores, fakes the visor check passing, restarts,
- * and can be tucked away. The current beat and its time show at its top.
+ * Its debug buttons are on the show's pause screen (the TAP panel on the
+ * left wall; off the box, the pause screen's left wall): jump to any beat,
+ * set the clock, shuffle the scores, fake the visor check passing, restart.
+ * The current beat and its time show at the top.
  */
 IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 
@@ -24,7 +26,6 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	const GAME_SECONDS = 600;
 	const STAND_IN = 5;           // seconds for each placeholder intro
 	const SCORE_RATE = 0.8;       // average points a second per player, in play
-	const PANEL = { x: 30, y: 690, w: W - 60 };   // the debug panel, along the bottom of the left wall
 
 	/* ---------- state ---------- */
 
@@ -42,6 +43,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		rivals: ['Stage Left', 'The Understudies', 'Cue Lights', 'Run Of Show', 'Places Please', 'Tech Week',
 			'Final Dress', 'House Open', 'Blackout Crew', 'The Blocking'],
 		music: false,   // quiet while stepping through
+		menu: { jumps: false },   // (its own beat jumps, on the pause screen: see below)
 	});
 
 	function initGame(count) {
@@ -70,7 +72,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	show.sequence([
 		{ id: 'squad', length: Infinity },
 		show.beats.titleDrop({
-			lines: [{ text: 'SHOW', fill: '#3ad1ff', glow: '#5a4dff' }, { text: 'DEBUG', fill: '#ffd23f', glow: '#ff7a3d' }],
+			lines: [{ text: 'UX', fill: '#3ad1ff', glow: '#5a4dff' }, { text: 'DEMO', fill: '#ffd23f', glow: '#ff7a3d' }],
 		}),
 		show.beats.clockIntro(),
 		show.beats.visors(),
@@ -113,7 +115,9 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 			for (let x = 100; x < W; x += 100) art.rect(ctx, x0 + x, 0, 2, H, { fill: 'rgba(120,150,210,0.12)' });
 			for (let y = 100; y < H; y += 100) art.rect(ctx, x0, y, W, 2, { fill: 'rgba(120,150,210,0.12)' });
 		}
-		// each player, as a ring on the wall they're nearest, across that wall
+		// each player, as a spot on the wall they're nearest, across that wall
+		// (only in play: none over the opening screens)
+		if (show.beat !== 'play') return;
 		for (let i = 0; i < players; i++) {
 			const p = latest[i];
 			if (!p || !p.walls) continue;
@@ -125,39 +129,20 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		}
 	}
 
-	/* ---------- the debug panel ---------- */
+	/* ---------- the debug buttons (on the show's pause screen) ---------- */
 
 	const JUMPS = ['squad', 'title', 'clock', 'visors', 'controls', 'villain', 'play', 'timeup', 'scores', 'rank', 'team', 'board', 'replay', 'rate', 'end'];
-	const font = `"${FONT}", sans-serif`;
-	const $panel = $('<debug-panel>').css({
-		display: 'block', position: 'absolute', left: PANEL.x + 'px', top: PANEL.y + 'px', width: PANEL.w + 'px',
-		padding: '16px 20px', boxSizing: 'border-box', borderRadius: '22px',
-		background: 'rgba(8,12,28,0.88)', border: '3px solid rgba(58,209,255,0.6)',
-		fontFamily: font, color: 'white', pointerEvents: 'auto', zIndex: 20, whiteSpace: 'normal',
-	}).appendTo(stage.$ui);
-	const $head = $('<div>').css({ display: 'flex', alignItems: 'center', gap: '18px', fontSize: '30px', marginBottom: '12px' }).appendTo($panel);
-	$('<span>').text('DEBUG').css({ color: '#3ad1ff' }).appendTo($head);
-	const $now = $('<span>').css({ flex: 1, color: '#9fb6d8', fontFamily: 'monospace', fontSize: '26px' }).appendTo($head);
-	const $body = $('<div>').appendTo($panel);
-	const button = (label, attrs, fn, colour = '#22305a') => $('<button>').text(label).attr(attrs).css({
-		margin: '5px', padding: '10px 18px', borderRadius: '14px', border: 'none', cursor: 'pointer',
-		background: colour, color: 'white', fontFamily: font, fontSize: '24px',
-	}).on('click', function (e) { e.stopPropagation(); fn(); });
-	button('HIDE', { toggle: '' }, function () {
-		const open = $body.is(':visible');
-		$body.toggle(!open);
-		$head.find('[toggle]').text(open ? 'SHOW' : 'HIDE');
-	}, '#3a2a5a').appendTo($head);
-
-	const $jumps = $('<div>').appendTo($body);
-	for (const id of JUMPS) button(id.toUpperCase(), { jump: id }, () => jump(id)).appendTo($jumps);
-	const $acts = $('<div>').css({ marginTop: '6px' }).appendTo($body);
-	button('CLOCK 1:00', { act: 'minute' }, () => show.setTimeLeft(60), '#5a3a22').appendTo($acts);
-	button('CLOCK 0:15', { act: 'final' }, () => show.setTimeLeft(15), '#5a3a22').appendTo($acts);
-	button('SHUFFLE SCORES', { act: 'scores' }, shuffle, '#225a3a').appendTo($acts);
-	button('VISORS OK', { act: 'visors' }, () => { if (show.beat === 'visors') show.next(); }, '#225a3a').appendTo($acts);
-	button('NEXT ▶', { act: 'next' }, () => show.next(), '#22305a').appendTo($acts);
-	button('RESTART', { act: 'restart' }, () => $('[btn=refresh]').trigger('click'), '#5a2232').appendTo($acts);
+	const { drow, dbutton } = show.menu;
+	const $now = show.menu.$now;
+	const $jumps = drow('BEATS');
+	for (const id of JUMPS) dbutton(id.toUpperCase(), () => jump(id)).attr('jump', id).appendTo($jumps);
+	const $acts = drow('TOOLS');
+	dbutton('CLOCK 1:00', () => show.setTimeLeft(60), '#5a3a22').attr('act', 'minute').appendTo($acts);
+	dbutton('CLOCK 0:15', () => show.setTimeLeft(15), '#5a3a22').attr('act', 'final').appendTo($acts);
+	dbutton('SHUFFLE SCORES', shuffle, '#225a3a').attr('act', 'scores').appendTo($acts);
+	dbutton('VISORS OK', () => { if (show.beat === 'visors') show.next(); }, '#225a3a').attr('act', 'visors').appendTo($acts);
+	dbutton('NEXT ▶', () => show.next()).attr('act', 'next').appendTo($acts);
+	dbutton('RESTART', () => $('[btn=refresh]').trigger('click'), '#5a2232').attr('act', 'restart').appendTo($acts);
 
 	function shuffle() {
 		scores = scores.map(() => Math.floor(Math.random() * 60));
@@ -188,7 +173,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		last = now;
 		show.frame(ctx, dt, drawWorld);
 		$now.text(`${show.beat}  ${show.bt.toFixed(1)}s  ${show.mmss(show.timeLeft())}`);
-		$jumps.children().each(function () {
+		$jumps.children('button').each(function () {
 			$(this).css({ background: $(this).attr('jump') === show.beat ? '#3ad1ff' : '#22305a', color: $(this).attr('jump') === show.beat ? '#0b1022' : 'white' });
 		});
 	};
