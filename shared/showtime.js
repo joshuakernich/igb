@@ -1292,10 +1292,12 @@ window.Showtime = function (stage, opts) {
 	}, button(brighter(colour, 0.55), 22), { borderWidth: '3px', boxShadow: '0 5px 0 rgba(0,0,0,0.45)' }))
 		.on('click', function (e) { e.stopPropagation(); setPaused(false); fn(); });   // (a debug button resumes, then does its thing)
 	const $dnow = $('<span>').css({ color: '#9fb6d8', fontFamily: 'monospace', fontSize: '22px' }).appendTo($dhead);
-	// (a group: its name, then its buttons, all in the one flow: display
-	// contents, so they sit in the list itself, in order, even when filled later)
+	// (a group: a new line, its name, then its buttons, all in the one flow:
+	// display contents, so they sit in the list itself, in order, even when
+	// filled later)
 	const drow = (label) => {
 		const $group = $('<span>').css({ display: 'contents' }).appendTo($dbody);
+		$('<span>').css({ flexBasis: '100%', height: 0 }).appendTo($group);   // (each group starts a new line)
 		$('<span>').text(label).css({ color: '#9fb6d8', fontSize: '18px', letterSpacing: '2px', margin: '5px 6px 5px 14px', whiteSpace: 'nowrap' }).appendTo($group);
 		return $group;
 	};
