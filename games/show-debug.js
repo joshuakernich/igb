@@ -40,7 +40,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	const CUBE = { r: 0.22, tall: 0.55, every: 0.55, drop: 26, fall: 8, life: 9, reach: 1.9 };   // a pickup: a little white cylinder, its radius and height (metres); a new one every so often (seconds); how high it falls from and how fast (metres, a second); seconds it lies on the plane; how near a worm must be to grab one (metres)
 	const CUBE_COLOUR = '#ffffff';
 	const GROW = { start: 0.8, each: 0.12, most: 3.2, rate: 8 };   // a worm's height (metres) is down to its pickups alone: this tall with none, this much taller for each, never taller than this; how quickly it grows into it
-	const GOB = { r: 0.6, tall: 3.4, colour: '#1c0b2e', glow: '#ff4fa8', speed: 0.14, reach: 1.5, bite: 3, cool: 1.5, hop: [7, 12], drop: 30 };   // its radius and height (metres); its body and eyes; how fast it wanders (shares of the field a second); how near it must be to eat or bite (metres); pickups a bite takes; seconds before it can bite the same worm again; seconds between hops to another wall; how high it drops in from
+	const GOB = { r: 0.6, tall: 3.4, colour: '#1c0b2e', glow: '#ff4fa8', speed: 0.14, reach: 1.5, bite: 3, cool: 1.5, hop: [7, 12], drop: 30, fly: 32 };   // its radius and height (metres); its body and eyes; how fast it wanders (shares of the field a second); how near it must be to eat or bite (metres); pickups a bite takes; seconds before it can bite the same worm again; seconds between hops to another wall; how high it drops in from (off the top of the wall); how fast it flies up and away, or down (metres a second)
 	const GOB_IN = { land: 1.0, name: 1.4, line: 2.3, warn: 3.1, length: 6.2 };   // its entrance: when it lands, its name, what it does, the warning, and the end
 
 	/* ---------- the backdrop: a sunny valley ---------- */
@@ -323,10 +323,10 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	// A big dark cylinder with glowing eyes, wandering the plane out from one
 	// wall, now and then crossing to another. It eats any cylinder it
 	// reaches, and a worm it touches loses some of its pickups (and shrinks).
-	const gob = { wall: 1, u: 0.5, d: 0.6, to: { u: 0.5, d: 0.6 }, y: 0, hop: 0 };
+	const gob = { wall: 1, u: 0.5, d: 0.6, to: { u: 0.5, d: 0.6 }, y: 0, hop: GOB.hop[0], leaving: false };
 	const bitten = [];   // each worm: when it can next be bitten
 	function gobArrive() {
-		Object.assign(gob, { wall: 1, u: 0.5, d: 0.6, to: { u: 0.5, d: 0.6 }, y: GOB.drop, hop: GOB.hop[0] });
+		Object.assign(gob, { wall: 1, u: 0.5, d: 0.6, to: { u: 0.5, d: 0.6 }, y: GOB.drop, hop: GOB.hop[0], leaving: false });
 		bitten.length = 0;
 	}
 	const gobAt = () => fieldOn(gob.wall, gob.u, gob.d);
@@ -336,14 +336,24 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		if (dist < 0.02) gob.to = { u: 0.1 + Math.random() * 0.8, d: Math.random() };
 		else { const k = Math.min(1, GOB.speed * dt / dist); gob.u += du * k; gob.d += dd * k; }
 		// now and then, over to another wall
-		gob.hop -= dt;
-		if (gob.hop <= 0) {
+		// now and then, up and away off the top of the wall, and down onto another
+		if (gob.leaving) {
+			gob.y += GOB.fly * dt;
+			if (gob.y < GOB.drop) return;
+			gob.leaving = false;
 			gob.wall = (gob.wall + 1 + Math.floor(Math.random() * 2)) % 3;
-			gob.y = GOB.drop * 0.4;
+			gob.u = 0.2 + Math.random() * 0.6;
+			gob.d = 0.3 + Math.random() * 0.6;
+			gob.to = { u: gob.u, d: gob.d };
 			gob.hop = GOB.hop[0] + Math.random() * (GOB.hop[1] - GOB.hop[0]);
-			show.fx('bossDash', 0.6);
 		}
-		if (gob.y > 0) { gob.y = Math.max(0, gob.y - 30 * dt); if (gob.y === 0) { show.fx('stomp', 0.7); show.shake = 0.3; } return; }
+		gob.hop -= dt;
+		if (gob.hop <= 0 && gob.y === 0) {
+			gob.leaving = true;
+			show.fx('bossDash', 0.6);
+			return;
+		}
+		if (gob.y > 0) { gob.y = Math.max(0, gob.y - GOB.fly * dt); if (gob.y === 0) { show.fx('stomp', 0.7); show.shake = 0.3; } return; }
 		const g = gobAt();
 		// it eats the cylinders it reaches
 		for (const k of cubes.slice()) {
@@ -369,18 +379,31 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		ctx.fill();
 		const tall = GOB.tall * at.ppm;
 		show.worms.cylinder(ctx, at.x, at.y, tall, GOB.r * at.ppm / 17, GOB.colour, t * 0.7, null, false);
+		// its eyes, low on its body and angry: glowing, each with a heavy lid
+		// slanting down toward the middle, and a brow over it
 		const blink = Math.sin(t * 1.3) > 0.97 ? 0.15 : 1;
-		const ey = at.y - tall * 0.78, er = GOB.r * at.ppm * 0.22;
-		ctx.save();
-		ctx.shadowColor = GOB.glow;
-		ctx.shadowBlur = er * 3;
-		ctx.fillStyle = GOB.glow;
+		const ey = at.y - tall * 0.55, er = GOB.r * at.ppm * 0.24, gap = GOB.r * at.ppm * 0.4;
 		for (const side of [-1, 1]) {
+			const ex = at.x + side * gap;
+			ctx.save();
+			ctx.shadowColor = GOB.glow;
+			ctx.shadowBlur = er * 3;
+			ctx.fillStyle = GOB.glow;
 			ctx.beginPath();
-			ctx.ellipse(at.x + side * GOB.r * at.ppm * 0.38, ey, er, er * 1.3 * blink, 0, 0, Math.PI * 2);
+			ctx.ellipse(ex, ey, er, er * 1.15 * blink, 0, 0, Math.PI * 2);
 			ctx.fill();
+			ctx.restore();
+			// the lid: the body's colour over the eye's top, sloping down to the middle
+			ctx.save();
+			ctx.translate(ex, ey);
+			ctx.rotate(-side * 0.5);
+			ctx.fillStyle = GOB.colour;
+			ctx.fillRect(-er * 2, -er * 2.6, er * 4, er * 2.2);
+			// and the brow along its edge
+			ctx.fillStyle = '#000';
+			ctx.fillRect(-er * 1.5, -er * 0.62, er * 3, er * 0.3);
+			ctx.restore();
 		}
-		ctx.restore();
 	}
 
 	/* ---------- the debug buttons (on the show's pause screen) ---------- */
