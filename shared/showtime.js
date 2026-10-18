@@ -1049,7 +1049,7 @@ window.Showtime = function (stage, opts) {
 				if (hudShown[i] !== score) { hudShown[i] = score; hudAt[i] = showTime; }
 				const pop = 1 + 0.22 * Math.max(0, 1 - (showTime - (hudAt[i] === undefined ? -9 : hudAt[i])) / 0.3);
 				const lift = hooks.rise ? clamp(hooks.rise(i), 0, 1) : 0;
-				const grow = 1 + Math.min(S.grow, Math.max(0, (W - 80) / total - 1)) * lift;   // (never wider than the wall)
+				const grow = 1;   // (rising, they keep their size)
 				const x = W / 2 + (i * (S.w + S.gap) + S.w / 2 - total / 2) * grow;
 				const y = H - h / 2 - S.rise * lift + (1 - up) * (h + S.sink + 20);
 				const sink = S.sink * (1 - lift);   // (risen clear of the edge, the whole capsule shows)

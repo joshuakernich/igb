@@ -3110,7 +3110,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		img.onload = function () {
 			try {
 				sheets[name] = slice(img, name, name === 'head' || /^(arun|aact|afront|g(circle|triangle|square))$/.test(name) ? 4 : 2);
-				if (name === 'head') sheets.head.frames = sheets.head.frames.slice(0, HEAD_FRAMES);   // (back to face; her turning the other way is the same, mirrored)
+				if (name === 'head') { sheets.head.all = sheets.head.frames; orderHead(); }   // (back to face, in the tuned order; her turning the other way is the same, mirrored)
 			} catch (e) { /* (unreadable: keep drawing them) */ }
 		};
 		img.src = 'assets/red-light-green-light/' + file;
@@ -3934,14 +3934,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const p = at(DOLL_X, dollF);
 		const her = function (c) {
 			dollBody(c, false);
-			art.with(c, { y: -dollHeadY(), scale: 2.1 }, (c2) => dollHead(c2, head.yaw, 0));
+			art.with(c, { x: dollTune.head.x, y: -dollHeadY(), scale: dollTune.head.scale }, (c2) => dollHead(c2, head.yaw, 0));
 		};
 		// her shadow, pigtails and all
 		if (dollBodyImg && sheets.head) castShape(ctx, shapeOf('doll', (g) => art.with(g, { scale: 0.35 }, her), 400 * 0.35 * 2.2, (dollHeadY() + 220) * 0.35), p.x, p.y, dollF, p.s * 0.82 / 0.35, 1, 120 * p.s * 0.82);
 		else softShadow(ctx, p.x, p.y, 150 * p.s * 0.82, 30 * p.s * 0.82, 0.25, 1, 700 * p.s * 0.82, dollF);
 		art.with(ctx, { x: p.x, y: p.y, scale: p.s * 0.82 }, function (c) {
 			dollBody(c, false);
-			art.with(c, { y: -dollHeadY(), scale: 2.1 }, (c2) => dollHead(c2, head.yaw, glare));
+			art.with(c, { x: dollTune.head.x, y: -dollHeadY(), scale: dollTune.head.scale }, (c2) => dollHead(c2, head.yaw, glare));
 		});
 	}
 
@@ -3984,7 +3984,28 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	})();
 
 	// How high her head sits above her feet (in her own units).
-	const dollHeadY = () => (dollBodyImg ? DOLL_BODY.height * (1 - DOLL_BODY.neck) + 128 : 610);   // (her head's middle, above her feet)
+	// Her head on her body (how high above her collar, how far across, how
+	// big), the order of its turning frames (from the back of it to her
+	// face), and where her pupils are on her face: set in the doll lab
+	// (DEBUG ▸ DOLL LAB), baked in here, kept in this browser while being tuned.
+	const DOLL_TUNED = {
+		head: { up: 128, x: 0, scale: 2.1 },
+		order: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+		pupil: { x: 0.149, cx: 0.032, y: 0.016, ring: 0.026 },   // half the gap between her pupils, how far right of the frame's middle they're centred, how far down (shares of the face frame's size); the red ring round each eye (a share of the frame's width)
+	};
+	const DOLL_KEY = 'rlgl-doll-lab';
+	const dollTune = JSON.parse(JSON.stringify(DOLL_TUNED));
+	try {
+		const kept = JSON.parse(localStorage.getItem(DOLL_KEY) || '{}');
+		if (kept.head) Object.assign(dollTune.head, kept.head);
+		if (kept.pupil) Object.assign(dollTune.pupil, kept.pupil);
+		if (Array.isArray(kept.order) && kept.order.length) dollTune.order = kept.order;
+	} catch (e) { /* (no storage: the baked-in tuning) */ }
+	// (her head's frames, in the tuned order, from all the sheet's)
+	function orderHead() {
+		if (sheets.head && sheets.head.all) sheets.head.frames = dollTune.order.map((i) => sheets.head.all[i]).filter(Boolean);
+	}
+	const dollHeadY = () => (dollBodyImg ? DOLL_BODY.height * (1 - DOLL_BODY.neck) + dollTune.head.up : 610);   // (her head's middle, above her feet)
 
 	function dollBody(c, front) {
 		if (dollBodyImg) {
@@ -4271,8 +4292,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// Where her head is, in the world, with the view at the far end.
 	// Where one of her pupils is (side -1: her right, as we look), in her
 	// head's units, when she faces us: measured on the sheet's last frame.
-	const HEAD_FRAMES = 13;   // (the head sheet's frames from the back of her head to her face)
-	const PUPIL = { x: 0.149, cx: 0.032, y: 0.016, ring: 0.026 };   // (measured on the face frame's pupils: half the gap between them, how far right of the frame's middle they're centred, how far down)   // (a share of the frame's width out from its middle, and of its height up or down; the red ring round each eye, as a share of the frame's width)
+	const PUPIL = dollTune.pupil;   // (her pupils on her face frame: see DOLL_TUNED)
 	function pupil(side) {
 		const sheet = sheets.head;
 		const f = sheet && sheet.frames[sheet.frames.length - 1];
@@ -4285,7 +4305,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	function dollEyes() {
 		const p = at(DOLL_X, dollF);
 		const S = p.s * 0.82;
-		return [-1, 1].map((side) => { const e = pupil(side); return { x: p.x + S * 2.1 * e.x, y: p.y + S * (-dollHeadY() + 2.1 * e.y) }; });
+		const hs = dollTune.head.scale;
+		return [-1, 1].map((side) => { const e = pupil(side); return { x: p.x + S * (dollTune.head.x + hs * e.x), y: p.y + S * (-dollHeadY() + hs * e.y) }; });
 	}
 
 	function dollFace() {
@@ -4644,6 +4665,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	dbutton('BOULDER', () => { for (let w = 0; w < 3; w++) rollBoulder(true); }, '#225a3a').appendTo($misc);
 	dbutton('CHARACTER LAB', () => lab.open(), '#5a3a8a').appendTo($misc);
 	dbutton('BOULDER LAB', () => boulderLab.open(), '#5a3a8a').appendTo($misc);
+	dbutton('DOLL LAB', () => dollLab.open(), '#5a3a8a').appendTo($misc);
 	dbutton('MONEY BAG ALL', () => { for (const c of contestants) if (c.alive) popBag(c.x, c.f + 60, c.wall); }, '#225a3a').appendTo($misc);
 
 	// any beat, straight away (a squad of three if none was picked; the
@@ -4798,6 +4820,156 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				c.drawImage(f.img, pw * 0.82 - s2 / 2, ph * 0.45 - s2 / 2, s2, s2);
 				c.fillText(`CHOSEN: ${at + 1} (#${boulderTune.order[at] + 1})`, pw * 0.82, ph * 0.45 + s2 / 2 + 30 * dpr);
 			}
+		}
+		function open() {
+			if (!$lab) build(); else render();
+			$lab.show();
+			t0 = performance.now();
+			if (!timer) timer = stage.interval(draw, 1000 / 30);
+		}
+		function close() {
+			if ($lab) $lab.hide();
+			if (timer) { clearInterval(timer); timer = null; }
+		}
+		return { open, close };
+	})();
+
+	/* ---------- the doll lab ---------- */
+
+	// For tuning the doll: her head on her body (up, across, size), the
+	// order her head's frames turn through (all sixteen from its sheet along
+	// the top: click one to add it to the end; the turn as a timeline, from
+	// the back of her head to her face), and her eyes (where the glow sits on
+	// her pupils, and its size). She's shown whole on the left and her head
+	// big on the right, turned as far as the TURN slider says (or turning
+	// round and round), glaring if asked, her pupils marked. Kept in this
+	// browser; COPY puts it all on the clipboard to be baked into DOLL_TUNED.
+	const dollLab = (function () {
+		let $lab = null, canvas = null, timer = null, at = 0, t0 = 0;
+		let turn = 0, spinning = false, glow = true, marks = true;   // (turn: degrees from facing us)
+		const css = { fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif', color: 'white' };
+		const button = (label, fn, colour = '#22305a') => $('<button>').text(label).css({
+			margin: '2px', padding: '5px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+			background: colour, color: 'white', fontFamily: 'inherit', fontSize: '13px',
+		}).on('click', function (e) { e.stopPropagation(); fn(); });
+		const heading = (text, $to) => $('<div>').text(text).css({ fontSize: '12px', fontWeight: 600, color: '#9fb6d8', margin: '12px 2px 4px', letterSpacing: '0.5px' }).appendTo($to);
+		const save = () => { try { localStorage.setItem(DOLL_KEY, JSON.stringify(dollTune)); } catch (e) { /* (not kept) */ } shapes.clear(); };
+		function slider(label, value, lo, hi, step, onChange, $to) {
+			const $row = $('<label>').css({ display: 'flex', alignItems: 'center', gap: '8px', margin: '3px 2px', fontSize: '12px' }).appendTo($to);
+			$('<span>').text(label).css({ width: '110px' }).appendTo($row);
+			const digits = step < 0.01 ? 3 : step < 1 ? 2 : 0;
+			const $val = $('<span>').text(Number(value).toFixed(digits)).css({ width: '48px', textAlign: 'right', fontFamily: 'monospace' });
+			$('<input type="range">').attr({ min: lo, max: hi, step, value }).css({ flex: 1 }).on('input', function () { const v = parseFloat(this.value); $val.text(v.toFixed(digits)); onChange(v); }).appendTo($row);
+			$val.appendTo($row);
+		}
+		function check(label, value, onChange, $to) {
+			const $row = $('<label>').css({ display: 'flex', alignItems: 'center', gap: '8px', margin: '3px 2px', fontSize: '12px' }).appendTo($to);
+			$('<input type="checkbox">').prop('checked', value).on('change', function () { onChange(this.checked); }).appendTo($row);
+			$('<span>').text(label).appendTo($row);
+		}
+		function thumb(i, size) {
+			const cv = document.createElement('canvas');
+			cv.width = cv.height = size * 2;
+			cv.style.width = cv.style.height = size + 'px';
+			const f = sheets.head && sheets.head.all && sheets.head.all[i];
+			if (f) cv.getContext('2d').drawImage(f.img, 0, 0, size * 2, size * 2);
+			return cv;
+		}
+		function build() {
+			$lab = $('<doll-lab>').css(Object.assign({ position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, zIndex: 10000, display: 'flex', background: 'rgb(8,10,22)', pointerEvents: 'auto' }, css))
+				.appendTo(document.body).on('pointerdown click', (e) => e.stopPropagation());
+			stage.own(() => $lab && $lab.remove());
+			$('<div>').css({ width: '400px', flex: 'none', padding: '14px', boxSizing: 'border-box', overflowY: 'auto', fontSize: '13px' }).appendTo($lab);
+			canvas = $('<canvas>').css({ flex: 1, minWidth: 0, height: '100%', display: 'block' }).appendTo($lab)[0];
+			render();
+		}
+		function render() {
+			const $side = $lab.children().first().empty();
+			$('<div>').text('DOLL LAB').css({ fontSize: '18px', fontWeight: 700, marginBottom: '6px' }).appendTo($side);
+			if (!sheets.head || !sheets.head.all) { $('<div>').text('(her head is still loading)').css({ color: '#d88' }).appendTo($side); return; }
+			heading('VIEW', $side);
+			slider('TURN (° FROM US)', turn, 0, 180, 1, (v) => { turn = v; }, $side);
+			check('TURN ROUND AND ROUND', spinning, (v) => { spinning = v; t0 = performance.now(); }, $side);
+			check('GLARING', glow, (v) => { glow = v; }, $side);
+			check('MARK HER PUPILS', marks, (v) => { marks = v; }, $side);
+			heading('HEAD ON HER BODY', $side);
+			slider('UP', dollTune.head.up, 0, 300, 1, (v) => { dollTune.head.up = v; save(); }, $side);
+			slider('ACROSS', dollTune.head.x, -120, 120, 1, (v) => { dollTune.head.x = v; save(); }, $side);
+			slider('SIZE', dollTune.head.scale, 1, 3.5, 0.01, (v) => { dollTune.head.scale = v; save(); }, $side);
+			heading('EYES (THE GLOW, ON HER FACE FRAME)', $side);
+			slider('APART', dollTune.pupil.x, 0.02, 0.35, 0.001, (v) => { dollTune.pupil.x = v; save(); }, $side);
+			slider('ACROSS', dollTune.pupil.cx, -0.15, 0.15, 0.001, (v) => { dollTune.pupil.cx = v; save(); }, $side);
+			slider('UP / DOWN', dollTune.pupil.y, -0.2, 0.2, 0.001, (v) => { dollTune.pupil.y = v; save(); }, $side);
+			slider('GLOW SIZE', dollTune.pupil.ring, 0.005, 0.08, 0.001, (v) => { dollTune.pupil.ring = v; save(); }, $side);
+			heading('HEAD FRAMES · CLICK ONE TO ADD IT TO THE END', $side);
+			const $pal = $('<div>').css({ display: 'flex', flexWrap: 'wrap', gap: '3px' }).appendTo($side);
+			sheets.head.all.forEach(function (f, i) {
+				$('<button>').attr('title', 'Frame ' + (i + 1)).css({ padding: '2px', borderRadius: '6px', border: '2px solid transparent', background: '#18213a', cursor: 'pointer', color: '#9fb6d8', fontSize: '10px' })
+					.append(thumb(i, 40)).append($('<div>').text(i + 1))
+					.appendTo($pal).on('click', (e) => { e.stopPropagation(); dollTune.order.push(i); at = dollTune.order.length - 1; orderHead(); save(); render(); });
+			});
+			const order = dollTune.order;
+			at = Math.max(0, Math.min(order.length - 1, at));
+			heading(`THE TURN, BACK OF HER HEAD TO HER FACE · ${order.length} FRAMES`, $side);
+			const $tl = $('<div>').css({ display: 'flex', flexWrap: 'wrap', gap: '3px' }).appendTo($side);
+			order.forEach(function (i, k) {
+				$('<button>').css({ padding: '2px', borderRadius: '6px', border: k === at ? '2px solid #d8743a' : '2px solid transparent', background: '#18213a', cursor: 'pointer', color: '#9fb6d8', fontSize: '10px' })
+					.append(thumb(i, 40)).append($('<div>').text((k + 1) + '·#' + (i + 1)))
+					.appendTo($tl).on('click', (e) => { e.stopPropagation(); at = k; turn = 180 - (order.length > 1 ? Math.acos(1 - 2 * (k / (order.length - 1))) * 180 / Math.PI : 0); spinning = false; render(); });
+			});
+			const $ops = $('<div>').css({ display: 'flex', flexWrap: 'wrap', marginTop: '4px' }).appendTo($side);
+			const changed = () => { orderHead(); save(); render(); };
+			button('◀ MOVE', () => { if (at > 0) { [order[at - 1], order[at]] = [order[at], order[at - 1]]; at--; changed(); } }).appendTo($ops);
+			button('MOVE ▶', () => { if (at < order.length - 1) { [order[at + 1], order[at]] = [order[at], order[at + 1]]; at++; changed(); } }).appendTo($ops);
+			button('+ COPY', () => { order.splice(at + 1, 0, order[at]); at++; changed(); }, '#225a3a').appendTo($ops);
+			button('− REMOVE', () => { if (order.length > 1) { order.splice(at, 1); changed(); } }, '#5a2232').appendTo($ops);
+			button('REVERSE', () => { order.reverse(); changed(); }).appendTo($ops);
+			const $end = $('<div>').css({ display: 'flex', flexWrap: 'wrap', marginTop: '12px' }).appendTo($side);
+			const $text = $('<textarea readonly>').css({ width: '100%', height: '90px', marginTop: '6px', fontSize: '11px', fontFamily: 'monospace', background: '#0d1424', color: '#9fd8ff', border: '1px solid #345', borderRadius: '8px' }).hide();
+			const $copy = button('COPY TUNING', function () {
+				const text = JSON.stringify(dollTune);
+				$text.val(text).show()[0].select();
+				try { navigator.clipboard.writeText(text).then(() => $copy.text('COPIED ✓'), () => $copy.text('COPY FROM THE BOX')); } catch (e) { $copy.text('COPY FROM THE BOX'); }
+			}, '#3a6a2a').appendTo($end);
+			button('RESET', () => { const d = JSON.parse(JSON.stringify(DOLL_TUNED)); Object.assign(dollTune.head, d.head); Object.assign(dollTune.pupil, d.pupil); dollTune.order = d.order; orderHead(); save(); render(); }, '#5a2232').appendTo($end);
+			button('CLOSE', close, '#444').appendTo($end);
+			$text.appendTo($side);
+		}
+		function draw() {
+			if (!canvas) return;
+			const dpr = window.devicePixelRatio || 1;
+			const pw = Math.max(1, Math.round(canvas.clientWidth * dpr)), ph = Math.max(1, Math.round(canvas.clientHeight * dpr));
+			if (canvas.width !== pw || canvas.height !== ph) { canvas.width = pw; canvas.height = ph; }
+			const c = canvas.getContext('2d');
+			c.setTransform(1, 0, 0, 1, 0, 0);
+			c.clearRect(0, 0, pw, ph);
+			if (!sheets.head || !sheets.head.all) return;
+			const yaw = spinning ? ((performance.now() - t0) / 1000) * 1.2 : turn * Math.PI / 180;
+			const g = glow ? 1 : 0;
+			const hs = dollTune.head.scale;
+			// her, whole, on the left (feet at the bottom)
+			const tall = dollHeadY() + 90 * hs;
+			const k1 = Math.min(ph * 0.8 / tall, pw * 0.4 / 420);   // (whole, clear of her big head)
+			art.with(c, { x: pw * 0.25, y: ph * 0.94, scale: k1 }, function (c2) {
+				dollBody(c2, false);
+				art.with(c2, { x: dollTune.head.x, y: -dollHeadY(), scale: hs }, (c3) => dollHead(c3, yaw, g));
+			});
+			// her head, big, on the right, her pupils marked
+			const k2 = Math.min(pw * 0.42, ph * 0.8) / SPRITE.head;
+			art.with(c, { x: pw * 0.7, y: ph * 0.48, scale: k2 }, function (c2) {
+				dollHead(c2, yaw, g);
+				if (marks) for (const side of [-1, 1]) {
+					const e = pupil(side);
+					art.circle(c2, e.x, e.y, 3 / k2 * dpr, { fill: '#3dff7a' });
+					art.circle(c2, e.x, e.y, 9 / k2 * dpr, { stroke: '#3dff7a', lineWidth: 1.5 / k2 * dpr });
+				}
+			});
+			c.fillStyle = '#9fb6d8';
+			c.font = `${Math.round(14 * dpr)}px system-ui, sans-serif`;
+			c.textAlign = 'center';
+			const front = (1 + Math.cos(yaw)) / 2;
+			const i = Math.round(front * (sheets.head.frames.length - 1));
+			c.fillText(`FRAME ${i + 1} OF ${sheets.head.frames.length} (#${dollTune.order[i] + 1})  ·  TURNED ${Math.round(((yaw * 180 / Math.PI) % 360 + 360) % 360)}°`, pw * 0.7, ph * 0.92);
 		}
 		function open() {
 			if (!$lab) build(); else render();
