@@ -34,9 +34,10 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 
 	const GAME_SECONDS = 600;
 	const STAND_IN = 5;           // seconds for each placeholder intro
-	// the room, out on the valley floor: its left-right across (metres), and
-	// from the back of the room to the front wall, how far up the valley (metres ahead)
-	const FIELD = { half: 9, near: 6.5, far: 24 };
+	// the room, out on the valley floor, from the back of the room to the
+	// front wall: how far up the valley (metres ahead of the eye). Across, a
+	// worm is always exactly where its player is across the front wall (1:1).
+	const FIELD = { near: 4.5, far: 12 };
 	const WORM = { tall: 2.3, thick: 0.3 };   // a worm's height (metres, for a tall player) and its thickness (radius, metres)
 	const CUBE = { size: 0.75, every: 0.55, drop: 26, fall: 8, life: 9, reach: 1.9, spin: 2.2 };   // a cube's size (metres); a new one every so often (seconds); how high it falls from and how fast (metres, a second); seconds it lies on the grass; how near a worm must be to grab one (metres); how fast it spins as it falls
 	const CUBE_COLOURS = ['#ff4d6d', '#ffd23f', '#3ad1ff', '#7dff9e', '#b388ff', '#ff9f43'];
@@ -143,11 +144,21 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 
 	/* ---------- the play: worms, and cubes falling from the sky ---------- */
 
-	// where a player is, out on the valley floor (room 0..1 across and toward the front wall)
-	const toField = (p) => ({
-		x: (Math.max(0, Math.min(1, p.px)) - 0.5) * 2 * FIELD.half,
-		z: -(FIELD.near + Math.max(0, Math.min(1, p.pz === undefined ? 0.5 : p.pz)) * (FIELD.far - FIELD.near)),
-	});
+	// where a player is, out on the valley floor (room 0..1 across and toward
+	// the front wall): as far ahead as they are up the room, and across, so
+	// they show exactly where they stand across the front wall (its view is
+	// 90° across, so at a depth d it spans 2d)
+	const fieldAt = (px, pz) => {
+		const d = FIELD.near + Math.max(0, Math.min(1, pz)) * (FIELD.far - FIELD.near);
+		const want = Math.max(0.02, Math.min(0.98, px)) * W + W;   // (where they stand, across the front wall; a hair in from its edges, so they never slip off it)
+		// (worked out through the front camera itself: across, the view is
+		// linear at a given distance, so two points give the line)
+		const y = valley.ground(0, -d);
+		const a = valley.project(0, y, -d), b = valley.project(1, y, -d);
+		if (!a || !b || a.wall !== 1 || b.wall !== 1 || b.x === a.x) return { x: (px - 0.5) * 2 * d, z: -d };
+		return { x: (want - a.x) / (b.x - a.x), z: -d };
+	};
+	const toField = (p) => fieldAt(p.px, p.pz === undefined ? 0.5 : p.pz);
 	const worms = [];
 	function stepWorms(dt) {
 		for (let i = 0; i < players; i++) {
@@ -165,8 +176,8 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		const colour = CUBE_COLOURS[Math.floor(Math.random() * CUBE_COLOURS.length)];
 		const mesh = new THREE.Mesh(cubeGeo, new THREE.MeshStandardMaterial({ color: colour, roughness: 0.35, metalness: 0.05, emissive: colour, emissiveIntensity: 0.12 }));
 		mesh.castShadow = true;
-		const x = (Math.random() * 2 - 1) * FIELD.half * 0.92;
-		const z = -(FIELD.near + Math.random() * (FIELD.far - FIELD.near));
+		const spot = fieldAt(0.04 + Math.random() * 0.92, Math.random());   // (somewhere a player could stand)
+		const x = spot.x, z = spot.z;
 		const floor = valley.ground(x, z) + CUBE.size / 2;
 		mesh.position.set(x, floor + CUBE.drop, z);
 		mesh.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
@@ -278,6 +289,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 
 	self.test = {
 		jump,
+		fieldAt: (px, pz) => { const f = fieldAt(px, pz); return Object.assign(f, { at: valley.project(f.x, valley.ground(f.x, f.z), f.z) }); },
 		timeLeft(s) { show.setTimeLeft(s); },
 	};
 

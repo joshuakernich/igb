@@ -1038,7 +1038,7 @@ window.Showtime = function (stage, opts) {
 						c3.fillStyle = colour(i);
 						c3.fillRect(x0, S.h / 2 - S.line, S.w, S.line + sink);
 					});
-					art.text(c2, fmt(score), 0, 2, { size: S.size, font: FONT, weight: 400, fill: 'white', shadow: { color: 'rgba(0,0,0,0.35)', blur: 0, y: 2 } });
+					art.text(c2, fmt(score), 0, -S.line / 2 + 1, { size: S.size, font: FONT, weight: 400, fill: 'white', shadow: { color: 'rgba(0,0,0,0.35)', blur: 0, y: 2 } });   // (in the middle of the dark part, clear of the band)
 				});
 			}
 		});
@@ -1427,10 +1427,18 @@ window.Showtime = function (stage, opts) {
 			ctx.fillRect(x0, y0, x1 - x0, edge - y0 + SCORE_HUD.line);
 			ctx.restore();
 		}
-		// its digits at a step of the scale, sized with the pill by scaling
+		// its digits at a step of the scale, sized with the pill by scaling,
+		// in the middle of the dark part of the capsule (clear of its band:
+		// along the edge it hangs from, or its own top)
+		let mid = 0;
+		if (box > 0 && opts.clockBox !== false) {
+			const pad = size * CLOCK_PAD;
+			const top = (up > 0 ? -y / pulse : -pad - up) + SCORE_HUD.line;
+			mid = (top + pad) / 2 * Math.min(1, box);   // (easing there as the capsule fades in, so the digits never jump)
+		}
 		const ref = self.size(CLOCK.size);
 		ctx.scale(size / ref, size / ref);
-		self.text(ctx, mmss(left), 0, ref * 0.04, ref, { fill: urgent ? TYPE.colours.red : TYPE.colours.white, font: CLOCK_FONT });
+		self.text(ctx, mmss(left), 0, mid * ref / size + ref * 0.04, ref, { fill: urgent ? TYPE.colours.red : TYPE.colours.white, font: CLOCK_FONT });
 		ctx.restore();
 	}
 

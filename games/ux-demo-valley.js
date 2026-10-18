@@ -21,7 +21,7 @@ export function createValley(stage) {
 	/* ---------- tuning ---------- */
 
 	const FOV = 64;                                  // vertical degrees: 90 across each 16:10 wall, so the walls meet
-	const EYE = { up: 3.6, pitch: 11, sway: 1.2 };   // metres above the valley floor; degrees the view tilts down; degrees it gently sways
+	const EYE = { up: 3.6, pitch: 11, sway: 0 };   // (no sway: what's on the floor stays put against the walls)   // metres above the valley floor; degrees the view tilts down; degrees it gently sways
 	const SUN = new THREE.Vector3(-0.22, 0.2, -0.95).normalize();   // toward the sun: ahead, a little left, low enough to see
 	const BUSHES = 420;                              // how many bushes
 	const CLOUDS = 34;                               // how many clouds
