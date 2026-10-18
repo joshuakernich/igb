@@ -138,8 +138,8 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		shown.sort((a, b) => a.z - b.z);
 		for (const { i, p, at } of shown) {
 			const tall = WORM.tall * Math.max(0.2, Math.min(1, (p.Y + 1) / 2)) * at.ppm;
-			// (raised by its thickness, so its round bottom end sits on the grass rather than in it)
-			show.worms.draw(ctx, at.x, at.y - WORM.thick * at.ppm * 0.85, tall, WORM.thick * at.ppm / 17, PLAYER_COLORS[i], t + i * 1.7, worms[i]);
+			// (a wobbly cylinder, its flat foot right on the plane)
+			show.worms.cylinder(ctx, at.x, at.y, tall, WORM.thick * at.ppm / 17, PLAYER_COLORS[i], t + i * 1.7, worms[i]);
 		}
 	}
 
@@ -180,7 +180,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		mesh.castShadow = true;
 		const spot = fieldAt(0.04 + Math.random() * 0.92, Math.random());   // (somewhere a player could stand)
 		const x = spot.x, z = spot.z;
-		const floor = valley.ground(x, z) + CUBE.size * 0.46;   // (resting almost entirely on top of the grass, just settled into it)
+		const floor = valley.ground(x, z) + CUBE.size / 2;   // (sitting flat on the plane)
 		mesh.position.set(x, floor + CUBE.drop, z);
 		mesh.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
 		valley.scene.add(mesh);
@@ -207,9 +207,8 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 				m.rotation.z += k.spin.z * dt;
 				if (m.position.y <= k.floor) { m.position.y = k.floor; k.landed = t; m.rotation.set(0, m.rotation.y, 0); }
 			} else {
-				// on the grass, a little bob, then shrinking away
-				const age = t - k.landed;
-				m.position.y = k.floor + Math.abs(Math.sin(age * 3)) * 0.12 * Math.max(0, 1 - age);
+				// flat on the grass, then shrinking away
+				m.position.y = k.floor;
 				const left = k.landed + CUBE.life - t;
 				if (left < 0.6) m.scale.setScalar(Math.max(0.01, left / 0.6));
 				if (left <= 0) { removeCube(k); continue; }

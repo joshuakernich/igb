@@ -962,7 +962,7 @@ window.Showtime = function (stage, opts) {
 	// A worm standing on its tail at (x, y), so tall, its body curling over
 	// to lean (radians: + to the right) as it rises, swaying a little,
 	// in its player's colour (wrong: ringed in red).
-	function drawWorm(c, x, y, tall, lean, k, fill, wrong, t, arms) {
+	function drawWorm(c, x, y, tall, lean, k, fill, wrong, t, arms, cylinder) {
 		const W2 = VISORS.worm;
 		const r = W2.r * k;
 		const sway = Math.sin(t * 2.2) * 0.06;
@@ -984,7 +984,7 @@ window.Showtime = function (stage, opts) {
 		// angled out from straight down, then bent at the elbow, a little hand
 		const A = VISORS.arms;
 		const sh = pts[Math.round(A.at * (pts.length - 1))];
-		(arms || [{ a: A.rest, e: A.bend }, { a: A.rest, e: A.bend }]).forEach(function (arm, j) {
+		if (!cylinder) (arms || [{ a: A.rest, e: A.bend }, { a: A.rest, e: A.bend }]).forEach(function (arm, j) {
 			const side = j ? 1 : -1;
 			const root = { x: sh.x + side * r * 0.8, y: sh.y };   // (at the body's edge, so they hang beside it)
 			const elbow = { x: root.x + side * Math.sin(arm.a) * r * A.upper, y: root.y + Math.cos(arm.a) * r * A.upper };
@@ -993,7 +993,19 @@ window.Showtime = function (stage, opts) {
 			art.circle(c, hand.x, hand.y, r * A.thick * 1.35, { fill });
 		});
 		// the body: one smooth tube, one thickness all the way, in their colour
-		art.line(c, pts, { stroke: fill, lineWidth: r * 2 });
+		if (cylinder) {
+			// (or a wobbly cylinder: flat ends, its foot flat on the ground and a lighter lid)
+			const top = pts[pts.length - 1], below = pts[pts.length - 2];
+			const tilt = Math.atan2(top.x - below.x, below.y - top.y);
+			art.ellipse(c, x, y, r, r * 0.35, { fill });
+			art.line(c, pts, { stroke: fill, lineWidth: r * 2, lineCap: 'butt' });
+			c.save();
+			c.translate(top.x, top.y);
+			c.rotate(tilt);
+			art.ellipse(c, 0, 0, r, r * 0.35, { fill });
+			art.ellipse(c, 0, 0, r, r * 0.35, { fill: 'rgba(255,255,255,0.35)' });
+			c.restore();
+		} else art.line(c, pts, { stroke: fill, lineWidth: r * 2 });
 		c.restore();
 	}
 
@@ -1002,6 +1014,8 @@ window.Showtime = function (stage, opts) {
 		step: wormStep,
 		// draw(ctx, x, y, tall, scale, colour, time, state): its tail at (x, y), so tall (px); scale: its thickness, against the visor check's
 		draw: (c, x, y, tall, k, colour, t, st) => drawWorm(c, x, y, tall, st ? st.a : 0, k, colour, false, t, st && st.arms),
+		// cylinder(...same): no arms, flat ends, its foot (x, y) flat on the ground
+		cylinder: (c, x, y, tall, k, colour, t, st) => drawWorm(c, x, y, tall, st ? st.a : 0, k, colour, false, t, null, true),
 	};
 
 	/* ---------- the score capsules (in play) ---------- */
