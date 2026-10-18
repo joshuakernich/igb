@@ -583,7 +583,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const show = new Showtime(stage, {
 		score: won,   // scores are in won
 		id: 'red-light-green-light',
-		menu: { restart: () => restartRound(), tutorial: () => debugJump('controls'), jumps: false },
+		menu: { restart: () => restartRound(), tutorial: () => debugJump('controls'), jumps: false, canRestart: () => show.beat === 'play' && !['ready', 'cleared', 'waiting'].includes(phase) },   // (RESTART ROUND only with a round under way)
 		// the score capsules (the show's): up the wall for a round's end, staggered, and down again as its banner goes; faint once out
 		scoreHud: {
 			rise: (i) => (phase === 'cleared' ? ease(between(phaseT, 0.4 + i * 0.07, 0.9 + i * 0.07)) * (1 - ease(between(phaseT, phaseDur - 0.6, phaseDur - 0.1))) : 0),

@@ -1107,7 +1107,16 @@ window.Showtime = function (stage, opts) {
 	const live = !!window.vuplex;
 	const font = `"${FONT}", "${TYPE.font}", sans-serif`;
 	let paused = false;
-	const MENU = Object.assign({ restart: null, tutorial: null }, opts.menu);
+	const MENU = Object.assign({ restart: null, tutorial: null, canRestart: null }, opts.menu);
+	// The menu's rows, only when they make sense: RESTART ROUND while a round
+	// is under way (in 'play', or as the game says: opts.menu.canRestart()),
+	// REPLAY TUTORIAL once the tutorial has been started.
+	function showRows() {
+		const restart = MENU.canRestart ? !!MENU.canRestart() : !!beat && beat.id === 'play';
+		const tutorial = seen.includes('controls');
+		$pause.find('[row=restart]').toggle(restart);
+		$pause.find('[row=tutorial]').toggle(tutorial);
+	}
 	const menuRestart = () => (MENU.restart ? MENU.restart() : beat && self.go(beat.id));
 	// The menu's icons: a white disc with its symbol cut clean out of it (an
 	// SVG mask), so whatever's behind shows through the symbol.
@@ -1244,8 +1253,8 @@ window.Showtime = function (stage, opts) {
 		if (debug) return;
 		rowButton('RESUME', 'play', () => setPaused(false), ROW_COLOURS.resume).appendTo($w);
 		volumeRow().appendTo($w);
-		rowButton('RESTART ROUND', 'restart', () => { setPaused(false); menuRestart(); }, ROW_COLOURS.restart).appendTo($w);
-		if (MENU.tutorial) rowButton('REPLAY TUTORIAL', 'help', () => { setPaused(false); MENU.tutorial(); }, ROW_COLOURS.help).appendTo($w);
+		rowButton('RESTART ROUND', 'restart', () => { setPaused(false); menuRestart(); }, ROW_COLOURS.restart).attr('row', 'restart').appendTo($w);
+		if (MENU.tutorial) rowButton('REPLAY TUTORIAL', 'help', () => { setPaused(false); MENU.tutorial(); }, ROW_COLOURS.help).attr('row', 'tutorial').appendTo($w);
 	}
 	menu($left, !live);
 	menu($front);
@@ -1257,7 +1266,7 @@ window.Showtime = function (stage, opts) {
 		IGB.pauseAudio(on);
 		$pause.toggle(on);
 		showPauseButton();
-		if (on) { showVolume(); tickPause(); }
+		if (on) { showVolume(); tickPause(); showRows(); }
 	}
 	// the button: in the box, only once the clock has started counting down;
 	// off it, always (for the debug buttons); never while paused
