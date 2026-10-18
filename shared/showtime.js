@@ -1086,7 +1086,7 @@ window.Showtime = function (stage, opts) {
 	// it goes (at: { x, y }, its middle, in the world; by default the middle
 	// of the front wall; at: false, the front wall's bottom right).
 	let $skip = null;
-	const SKIP_AT = { x: 1.5 * W, y: 360 };   // (by default: the middle of the front wall, under the captions)
+	const SKIP_AT = { x: 1.5 * W, y: 300 };   // (by default: the middle of the front wall, snug under the tutorial's caption)
 	function skipTo() {
 		if (opts.skip && opts.skip.to) return opts.skip.to;
 		const i = beats.findIndex((b) => b.id === 'controls');
