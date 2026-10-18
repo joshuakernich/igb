@@ -2060,10 +2060,12 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	function spatter(c) {
 		const wall = c.wall;
 		const n = LENS.drops[0] + Math.floor(Math.random() * (LENS.drops[1] - LENS.drops[0] + 1));
-		const cx = W * (0.25 + Math.random() * 0.5), cy = H * (0.2 + Math.random() * 0.35);
+		// (around where they are on the screen: a little above their feet)
+		const p = at(c.x, c.f, 0, c.wall);
+		const cx = Math.max(60, Math.min(W - 60, p.x - wall * W)), cy = Math.max(60, Math.min(H - 120, p.y - 90 * p.s));
 		for (let i = 0; i < n; i++) {
 			const r = LENS.size[0] + Math.pow(Math.random(), 2) * (LENS.size[1] - LENS.size[0]);
-			lens.push({ wall, x: cx + (Math.random() - 0.5) * 260, y: cy + (Math.random() - 0.5) * 180, r, run: LENS.run[0] + Math.random() * (LENS.run[1] - LENS.run[0]) * (r / LENS.size[1]), born: wallT + Math.random() * 0.08 });
+			lens.push({ wall, x: cx + (Math.random() - 0.5) * 200, y: cy + (Math.random() - 0.5) * 140, r, run: LENS.run[0] + Math.random() * (LENS.run[1] - LENS.run[0]) * (r / LENS.size[1]), born: wallT + Math.random() * 0.08 });
 		}
 	}
 	function drawLens(ctx) {
