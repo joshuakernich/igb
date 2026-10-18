@@ -2055,7 +2055,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	// A little blood on the camera, as someone's shot: a few drops land over
 	// their wall, run down in streaks, and fade away.
-	const LENS = { drops: [5, 9], size: [5, 26], life: 3.2, run: [40, 170], fade: 1.1 };   // how many drops; how big (px); seconds they last; how far they run down (px); seconds they fade over at the end
+	const LENS = { drops: [5, 9], size: [16, 72], life: 3.4, run: [60, 260], fade: 1.2, blur: 7 };   // how many drops; how big (px); seconds they last; how far they run down (px); seconds they fade over at the end; how out of focus they are (px: they're right on the lens)
 	let lens = [];
 	function spatter(c) {
 		const wall = c.wall;
@@ -2065,7 +2065,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const cx = Math.max(60, Math.min(W - 60, p.x - wall * W)), cy = Math.max(60, Math.min(H - 120, p.y - 90 * p.s));
 		for (let i = 0; i < n; i++) {
 			const r = LENS.size[0] + Math.pow(Math.random(), 2) * (LENS.size[1] - LENS.size[0]);
-			lens.push({ wall, x: cx + (Math.random() - 0.5) * 200, y: cy + (Math.random() - 0.5) * 140, r, run: LENS.run[0] + Math.random() * (LENS.run[1] - LENS.run[0]) * (r / LENS.size[1]), born: wallT + Math.random() * 0.08 });
+			lens.push({ wall, x: cx + (Math.random() - 0.5) * 380, y: cy + (Math.random() - 0.5) * 260, r, run: LENS.run[0] + Math.random() * (LENS.run[1] - LENS.run[0]) * (r / LENS.size[1]), born: wallT + Math.random() * 0.08 });
 		}
 	}
 	function drawLens(ctx) {
@@ -2078,6 +2078,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const x = d.wall * W + d.x;
 			art.save(ctx, function (c) {
 				c.globalAlpha = alpha * 0.9;
+				c.filter = `blur(${LENS.blur * Math.sqrt(d.r / LENS.size[1])}px)`;   // (out of focus, right on the lens: the big drops most)
 				// the streak it leaves, thinning as it goes
 				if (slide > 1) {
 					c.beginPath();
