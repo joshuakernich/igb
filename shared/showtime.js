@@ -290,8 +290,8 @@ window.Showtime = function (stage, opts) {
 		outro: 2.0,
 		zoom: 1.6,             // the replay, zoomed in this close on the room
 		footroom: 30,          // keeping this much under the feet of anyone at the very back
-		window: { x: 90, y: 230, w: 960, bar: 80 },   // the window it plays in: its left and its top (under its bar), its width; the bar along its top
-		qr: { x: 1150, size: 330, pad: 22, link: 'https://joshuakernich.github.io/igb/' },   // the QR code beside it: its left, its size, the white round it; where it goes (for now: the game, on the hub)
+		window: { x: 250, y: 190, w: 960, bar: 80, tilt: 0.035 },   // the window it plays in: its left and its top (under its bar), its width; the bar along its top; how far it's tipped to the left (radians)
+		qr: { size: 290, pad: 20, over: 150, down: 60, tilt: 0.06, link: 'https://joshuakernich.github.io/igb/' },   // the QR code over its lower right corner: its size, the white round it; how far in over the window's right edge, how far below its foot; tipped the other way; where it goes (for now: the game, on the hub)
 		trail: 30,             // samples of trail behind each player
 	};
 
@@ -2843,6 +2843,12 @@ window.Showtime = function (stage, opts) {
 				self.onWalls(ctx, function (c) {
 					c.save();
 					c.globalAlpha *= out * easeOut(between(bt, 0, 0.4));
+					// the window, tipped a little to the left
+					c.save();
+					const wcx = WIN.x + WIN.w / 2, wcy = WIN.y + (wh - WIN.bar) / 2;
+					c.translate(wcx, wcy);
+					c.rotate(-WIN.tilt);
+					c.translate(-wcx, -wcy);
 					// the window: a bar along its top (the game's name, the team's score), the replay under it
 					art.roundRect(c, WIN.x - 8, WIN.y - WIN.bar - 8, WIN.w + 16, wh + WIN.bar + 16, 30, { fill: 'rgba(0,0,0,0.75)', shadow: { color: 'rgba(0,0,0,0.5)', blur: 40 } });
 					c.save();
@@ -2908,16 +2914,22 @@ window.Showtime = function (stage, opts) {
 					c.restore();
 					self.text(c, String(game.name).toUpperCase(), WIN.x + 26, WIN.y - WIN.bar / 2 - 2, 44, { align: 'left', glow: 'transparent' });
 					self.text(c, fmt(self.teamTotal()), WIN.x + WIN.w - 26, WIN.y - WIN.bar / 2 - 2, 44, { align: 'right', fill: theme.gold, glow: 'transparent' });
-					// and beside it, a QR code: scan to share your gif
+					c.restore();
+					// and a QR code, overlapping the window's lower right corner, tipped the other way: scan to share your gif
 					const Q = REPLAY.qr;
 					const code = qr(Q.link + (opts.id ? '#' + opts.id : ''));
 					const cell = (Q.size - 2 * Q.pad) / code.length;
-					const qy = WIN.y + (wh - WIN.bar) / 2 - Q.size / 2 - 30;
-					art.roundRect(c, Q.x, qy, Q.size, Q.size, 24, { fill: 'white', shadow: { color: 'rgba(0,0,0,0.5)', blur: 30 } });
+					const qx = WIN.x + WIN.w - Q.over, qy = WIN.y + wh - Q.size + Q.down;
+					c.save();
+					c.translate(qx + Q.size / 2, qy + Q.size / 2);
+					c.rotate(Q.tilt);
+					c.translate(-(qx + Q.size / 2), -(qy + Q.size / 2));
+					art.roundRect(c, qx, qy, Q.size, Q.size, 24, { fill: 'white', shadow: { color: 'rgba(0,0,0,0.55)', blur: 40 } });
 					c.fillStyle = '#0b0b14';
-					code.forEach((row, y) => row.forEach((dark, x) => { if (dark) c.fillRect(Q.x + Q.pad + x * cell, qy + Q.pad + y * cell, cell + 0.5, cell + 0.5); }));
-					self.text(c, 'SCAN TO SHARE', Q.x + Q.size / 2, qy + Q.size + 60, 46, { fill: 'white' });
-					self.text(c, 'YOUR GIF', Q.x + Q.size / 2, qy + Q.size + 115, 46, { fill: theme.gold });
+					code.forEach((row, y) => row.forEach((dark, x) => { if (dark) c.fillRect(qx + Q.pad + x * cell, qy + Q.pad + y * cell, cell + 0.5, cell + 0.5); }));
+					self.text(c, 'SCAN TO SHARE', qx + Q.size / 2, qy + Q.size + 50, 42, { fill: 'white' });
+					self.text(c, 'YOUR GIF', qx + Q.size / 2, qy + Q.size + 98, 42, { fill: theme.gold });
+					c.restore();
 					c.restore();
 				});
 			},
