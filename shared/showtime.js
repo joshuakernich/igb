@@ -3144,13 +3144,14 @@ window.Showtime = function (stage, opts) {
 						boxShadow: '0 18px 40px rgba(0,0,0,0.55)',
 					}).appendTo($slide);
 					// its name, as its title drop has it (manifest: title.lines, title.font): its lines stacked, each in its colour, outlined and dropped, over the screenshot's foot
+					const lines = (g.title && g.title.lines) || [{ text: g.name.toUpperCase(), fill: TYPE.colours.white }];
+					const size = lines.length > 1 ? 54 : 64;
+					// (its last line straddling the card's bottom edge: half on the screenshot, half below it)
 					const $title = $('<div>').css({
-						position: 'absolute', left: '50%', bottom: '20px', transform: 'translateX(-50%)', maxWidth: CAROUSEL.w - 40 + 'px',
+						position: 'absolute', left: '50%', bottom: -(size * 0.95 / 2 + 3) + 'px', transform: 'translateX(-50%)', maxWidth: CAROUSEL.w - 40 + 'px', zIndex: 1,
 						display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
 						fontFamily: `"${(g.title && g.title.font) || FONT}", "${FONT}", sans-serif`, lineHeight: 0.95, whiteSpace: 'nowrap', textAlign: 'center',
 					}).appendTo($shot);
-					const lines = (g.title && g.title.lines) || [{ text: g.name.toUpperCase(), fill: TYPE.colours.white }];
-					const size = lines.length > 1 ? 54 : 64;
 					lines.forEach(function (line) {
 						$('<div>').text(line.text).css({
 							fontSize: size + 'px', color: line.fill || 'white',
