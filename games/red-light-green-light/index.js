@@ -71,7 +71,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const DEPTH = 800;          // and right up at the front wall, this much further
 	const MOVE_LIMIT = 0.04;    // how far a player may drift on red light, as a share of the wall, before they're out (the lean grows toward it)
 	const GRACE = 0.2;          // seconds after RED LIGHT before movement counts (tracking lag)
-	const TURN_AWAY = 0.8;      // seconds her head takes to turn away after a red light, before GREEN LIGHT
+	const TURN_AWAY = 0.76;     // seconds her head takes to turn away after a red light, before GREEN LIGHT
 	const BODY = 30;            // a contestant's radius on the plane
 	const LANE = 30;            // contestants keep this far inside their wall's ends
 	const WALL_ORDER = [1, 0, 2];             // hazards are shared out front, left, right, front...
@@ -121,7 +121,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			speed: speed * M,                              // field units per second
 			leg: leg.map((m) => m * M),
 			dash: Math.max(2.6, 4.5 - 0.25 * r),           // on the last leg, seconds to race for the line once it stops
-			warning: Math.max(0.45, 1.5 - 0.15 * r),       // seconds her head takes to turn round
+			warning: Math.max(0.5, 0.85 - 0.07 * r),       // seconds her head takes to turn round (about as long as its sound)
 			red: [2.5, 4.5],                               // seconds she watches
 			length: loops * (leg[0] + leg[1]) / 2 * M,
 			blockDensity: 0.6 + 0.15 * r,                  // blocks per 9 m of field
@@ -169,7 +169,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		eyes: 1.3,            // her ring eyes light up red
 		name: 1.7,            // YOUNG-HEE slams in
 		turn: 3.8,            // her head turns away
-		turnFor: 1.3,
+		turnFor: 0.8,
 		pull: 5.0,            // the camera pulls back from her face
 		pullFor: 1.1,
 		fly: [5.5, 8.5],      // then flies back down the field to the contestants
@@ -947,7 +947,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const again = round + 1;
 			stage.timeout(() => { if (show.beat === 'play') voice('again' + again); }, 1700);
 		}
-		turnHead(0, 1);
+		turnHead(0, HEAD_TURN_SOUND);
 		setPhase('cleared', survivors.length ? ROUND_GAP.cleared : ROUND_GAP.quick);
 	}
 	let cleared = null;      // { round, made }: the last round's result, for its banner
@@ -4281,12 +4281,13 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		show.fx('stepIn');
 		voice('step_' + step.id);
 		// practice cash on the front wall only, just up the field from them
+		// and all of it short of the start line
 		if (step.id === 'cash') {
-			layCash(cam + BACK + DEPTH * 0.25, cam + BACK + DEPTH * 0.9, CONTROLS.cashEvery, true, [1]);
+			layCash(cam + BACK + 30, START_F - 60, CONTROLS.cashEvery, true, [1]);
 		}
-		// a practice pad at every corner end, halfway up the play area
+		// a practice pad at every corner end, the whole hatch short of the start line
 		if (step.id === 'jump') {
-			for (const [wall, to, x] of CORNERS) pads.push({ x, f: cam + BACK + DEPTH * 0.5, wall, to, age: 0, practice: true });
+			for (const [wall, to, x] of CORNERS) pads.push({ x, f: Math.min(cam + BACK + DEPTH * 0.5, START_F - PAD.rf - 40), wall, to, age: 0, practice: true });
 		}
 	}
 
@@ -4558,7 +4559,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				setPhase('over');
 				showInset = false;
 				callout = null;
-				turnHead(0, 1);
+				turnHead(0, HEAD_TURN_SOUND);
 				glare = 1;
 			},
 			update(dt) {
