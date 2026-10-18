@@ -1,7 +1,7 @@
 // Checks the shared rating (Showtime's 'rate' beat), in Gwi-Ma Showdown:
 // five faces on every wall, TERRIBLE to EXCELLENT, one rating for the group
-// (the first tap; later taps are ignored). A low rating (1-3) asks WHAT WENT
-// WRONG? with reasons to toggle and DONE; a high one (4-5) offers PLAY
+// (the first tap; later taps are ignored). A low rating (1-3) asks WHY THE
+// LOW RATING? (tap one), then for most reasons which of them (tap one); a high one (4-5) offers PLAY
 // AGAIN? with the menu's games, this one first, and NO THANKS. Then THANK
 // YOU! and on to 'end'; picking a game starts it.
 //
@@ -44,12 +44,11 @@ await page.click(front('button[rating="2"]'));
 await sleep(300);
 check('a low rating asks what went wrong', await part(page) === 'reasons', await part(page));
 await page.click(front('button[reason="TOO HARD"]'));
-await page.click('showtime-rating > div:nth-child(3) button[reason="HARD TO SEE"]');   // from the right wall
 await sleep(300);
 await shot(page, '2-reasons');
-await page.click(front('button[done]'));
+await page.click('showtime-rating > div:nth-child(3) button[reason="TOO LONG"]');   // from the right wall
 let s = await state(page);
-check('one rating, with its reasons', s.feedback.rating === 2 && s.feedback.reasons.join(',') === 'TOO HARD,HARD TO SEE', JSON.stringify(s.feedback));
+check('one rating, with its reasons', s.feedback.rating === 2 && s.feedback.reasons.join(',') === 'TOO HARD,TOO LONG', JSON.stringify(s.feedback));
 await sleep(500);
 await shot(page, '3-thanks');
 for (let i = 0; i < 60 && s.beat === 'rate'; i++) { await sleep(100); s = await state(page); }

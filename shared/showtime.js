@@ -187,9 +187,12 @@ window.Showtime = function (stage, opts) {
 			{ label: 'EXCELLENT', colour: '#3cbf5a', mouth: 22 },
 		],
 		low: 3,                // a rating this low or lower asks what went wrong; higher offers another game
-		reasons: [             // what went wrong (tap any)
-			'HARD TO UNDERSTAND', 'CONTROLS DIDN\'T WORK', 'TOO HARD', 'TOO EASY',
-			'HARD TO SEE', 'TOO LONG', 'NOT MY KIND OF GAME', 'SOMETHING ELSE',
+		reasons: [             // why the low rating: tap one; those with more to say then ask which
+			{ label: 'ACCIDENTAL TOUCH' },
+			{ label: 'TOO HARD', more: ['NEEDS MORE INSTRUCTION', 'TOO MUCH ENERGY', 'TOO LONG'] },
+			{ label: 'TOO EASY' },
+			{ label: 'DIDN\'T WORK', more: ['TOUCH DIDN\'T WORK', 'TRACKING DIDN\'T WORK', 'SCORING DIDN\'T MAKE SENSE'] },
+			{ label: 'DIDN\'T LIKE IT', more: ['WASN\'T FUN', 'BAD GRAPHICS', 'BAD GAME', 'BAD NARRATIVE', 'BAD SOUND'] },
 		],
 		notAgain: ['show-debug'],   // games never offered to play again
 		wait: { faces: 45, reasons: 40, again: 40 },   // each part moves on after this long untouched
@@ -2858,18 +2861,39 @@ window.Showtime = function (stage, opts) {
 			});
 		}
 
+		// Why the low rating, in steps: the reason (tap one), then, for those
+		// with more to say, which of them (tap one, or BACK). feedback.reasons:
+		// [reason] or [reason, detail].
+		let topic = null;   // the reason picked, while its details are asked
 		function reasons($wall) {
-			big('WHAT WENT WRONG?', 96).appendTo($wall);
-			small('TAP ALL THAT APPLY').appendTo($wall);
-			const $grid = $('<div>').css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '22px', maxWidth: '1400px' }).appendTo($wall);
-			R.reasons.forEach(function (reason) {
-				const on = feedback.reasons.includes(reason);
-				tap(pill(reason, on).attr('reason', reason).appendTo($grid), function () {
-					feedback.reasons = on ? feedback.reasons.filter((r) => r !== reason) : feedback.reasons.concat(reason);
-					render();
+			const $grid = () => $('<div>').css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '22px', maxWidth: '1400px' }).appendTo($wall);
+			if (!topic) {
+				big('WHY THE LOW RATING?', 96).appendTo($wall);
+				small('TAP ONE').appendTo($wall);
+				const $g = $grid();
+				R.reasons.forEach(function (r) {
+					tap(pill(r.label, false).attr('reason', r.label).appendTo($g), function () {
+						feedback.reasons = [r.label];
+						if (r.more) { topic = r; partAt = self.bt; render(); } else finish();
+					});
+				});
+				return;
+			}
+			big(topic.label, 96).appendTo($wall);
+			small('TAP ONE').appendTo($wall);
+			const $g = $grid();
+			topic.more.forEach(function (detail) {
+				tap(pill(detail, false).attr('reason', detail).appendTo($g), function () {
+					feedback.reasons = [topic.label, detail];
+					finish();
 				});
 			});
-			tap(pill('DONE ✓', true, { marginTop: '16px', fontSize: '56px', padding: '24px 70px' }).attr('done', '').appendTo($wall), () => finish());
+			tap(pill('◀ BACK', false, { marginTop: '16px' }).attr('back', '').appendTo($wall), function () {
+				topic = null;
+				feedback.reasons = [];
+				partAt = self.bt;
+				render();
+			});
 		}
 
 		function go(next) {
@@ -2912,6 +2936,7 @@ window.Showtime = function (stage, opts) {
 				part = 'faces';
 				partAt = 0;
 				feedback = null;
+				topic = null;
 				self.blackout = 0.35;
 				render();
 			},
@@ -2960,24 +2985,29 @@ window.Showtime = function (stage, opts) {
 					fontSize: '96px', letterSpacing: '2px', lineHeight: 1, textAlign: 'center',
 					textShadow: '0 9px 0 rgba(0,0,0,0.5)', WebkitTextStroke: `7px ${theme.ink}`, paintOrder: 'stroke fill',
 				}).appendTo($wall);
-				const $track = $('<div>').attr('carousel', '').css({ position: 'relative', width: '1500px', height: CAROUSEL.h + 56 + 'px' }).appendTo($wall);
+				const $track = $('<div>').attr('carousel', '').css({ position: 'relative', width: '1500px', height: CAROUSEL.h + 12 + 'px' }).appendTo($wall);
 				list.forEach(function (g, i) {
 					const $slide = $('<div>').attr('slide', g.id).css({
 						position: 'absolute', left: '50%', top: 0, width: CAROUSEL.w + 'px', marginLeft: -CAROUSEL.w / 2 + 'px',
 						display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px',
 						transition: 'transform 0.7s cubic-bezier(.4,0,.2,1), opacity 0.7s',
 					}).appendTo($track);
-					$('<div>').css({
-						width: CAROUSEL.w + 'px', height: CAROUSEL.h + 'px', borderRadius: '28px',
+					const $shot = $('<div>').css({
+						position: 'relative', width: CAROUSEL.w + 'px', height: CAROUSEL.h + 'px', borderRadius: '28px',
 						background: `#1a1030 url("assets/shared/screens/${g.id}.jpg") center / cover`, border: `6px solid ${TYPE.colours.white}`,
 						boxShadow: '0 18px 40px rgba(0,0,0,0.55)',
 					}).appendTo($slide);
-					$('<div>').text(g.name.toUpperCase()).css({ fontSize: '40px', letterSpacing: '1px', WebkitTextStroke: `5px ${theme.ink}`, paintOrder: 'stroke fill' }).appendTo($slide);
+					// its name in a capsule, inside the screenshot along its bottom
+					$('<div>').text(g.name.toUpperCase()).css({
+						position: 'absolute', left: '50%', bottom: '26px', transform: 'translateX(-50%)', maxWidth: CAROUSEL.w - 60 + 'px',
+						padding: '12px 30px', borderRadius: '60px', ...button(TYPE.colours.white, 36),
+						fontSize: '36px', letterSpacing: '1px', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+					}).appendTo($shot);
 					(slides[i] = slides[i] || []).push($slide);
 				});
 				// the kiosk: book another session
 				$('<div>').text('BOOK ANOTHER SESSION AT THE KIOSK').attr('kiosk', '').css({
-					padding: '20px 46px', borderRadius: '60px', ...button(TYPE.colours.gold, 50),
+					color: TYPE.colours.gold, WebkitTextStroke: `5px ${theme.ink}`, paintOrder: 'stroke fill', textShadow: '0 7px 0 rgba(0,0,0,0.5)',   // (just words: no capsule)
 					fontSize: '50px', letterSpacing: '1px', lineHeight: 1, animation: 'showtime-kiosk 1.6s ease-in-out infinite',
 				}).appendTo($wall);
 			}
