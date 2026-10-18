@@ -2639,9 +2639,9 @@ window.Showtime = function (stage, opts) {
 				+ `<linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${darker(f.colour, GLOSS.dark)}"/><stop offset="1" stop-color="${f.colour}"/></linearGradient>`
 				+ `<clipPath id="${id}c"><circle cx="50" cy="50" r="46"/></clipPath></defs>`
 				+ `<circle cx="50" cy="50" r="46" fill="url(#${id}g)"/>`
-				+ `<circle cx="36" cy="42" r="6.5" fill="${theme.ink}"/><circle cx="64" cy="42" r="6.5" fill="${theme.ink}"/>${brows}${mouth}`
 				+ `<rect x="0" y="0" width="100" height="50" fill="white" fill-opacity="${GLOSS.bar}" clip-path="url(#${id}c)"/>`
-				+ `<circle cx="50" cy="50" r="46" fill="none" stroke="#000" stroke-width="2.2"/><circle cx="50" cy="50" r="44.2" fill="none" stroke="white" stroke-opacity="0.9" stroke-width="1.4"/></svg>`;
+				+ `<circle cx="50" cy="50" r="46" fill="none" stroke="#000" stroke-width="2.2"/><circle cx="50" cy="50" r="44.2" fill="none" stroke="white" stroke-opacity="0.9" stroke-width="1.4"/>`
+				+ `<circle cx="36" cy="42" r="6.5" fill="${theme.ink}"/><circle cx="64" cy="42" r="6.5" fill="${theme.ink}"/>${brows}${mouth}</svg>`;   // (the face on top of it all)
 		}
 		let faceIds = 0;
 
