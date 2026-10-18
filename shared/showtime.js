@@ -909,6 +909,7 @@ window.Showtime = function (stage, opts) {
 		drawBursts(ctx);
 		if (beat && beat.draw) beat.draw(ctx, bt);
 		if (scoreHudShown() && opts.scoreHud !== false) drawScoreHud(ctx);
+		else hudFirst = -1;   // (hidden: next time, they come up one by one again)
 		// the clock, from the clock intro until TIME! (not over the results after it)
 		const timeup = beats.findIndex((b) => b.id === 'timeup');
 		if (clock.shown && !(timeup >= 0 && beats.indexOf(beat) > timeup)) drawClock(ctx);
@@ -1015,6 +1016,8 @@ window.Showtime = function (stage, opts) {
 	// say); opts.scoreHud: false leaves them out.
 	const SCORE_HUD = { w: 176, h: 64, gap: 12, sink: 22, size: 32, rise: 260, grow: 0.35, line: 7, dim: 0.45 };   // a capsule's width and height (the part showing), the gap between them, how far it reaches down past the edge, the figures' size; risen, how far up and how much bigger; how thick the band of colour is; how faint a dimmed one is
 	const hudShown = [];
+	let hudFirst = -1;   // (when they last came up)
+	const WATERFALL = 0.08;   // the score capsules move one at a time: each this many seconds after the one before (coming up, changing size, going down)
 	// (from the moment the squad's picked, the whole way through, until the
 	// score screens take over)
 	function scoreHudShown() {
@@ -1033,17 +1036,22 @@ window.Showtime = function (stage, opts) {
 		// (through the visor check they grow into squares, a visor in each)
 		// (and once everyone's set, they shrink back, READY in each)
 		const setAt = beat && beat.id === 'visors' && self.visorsSetAt ? self.visorsSetAt() : -1;
-		const sq = beat && beat.id === 'visors' ? easeOut(clamp(bt / 0.5, 0, 1)) * (setAt >= 0 ? 1 - easeOut(clamp((bt - setAt - 0.4) / 0.5, 0, 1)) : 1) : 0;
-		const h = S.h + (S.w - S.h) * sq;
+		const squareOf = (i) => (beat && beat.id === 'visors' ? easeOut(clamp((bt - i * WATERFALL) / 0.5, 0, 1)) * (setAt >= 0 ? 1 - easeOut(clamp((bt - setAt - 0.4 - i * WATERFALL) / 0.5, 0, 1)) : 1) : 0);
+		if (hudFirst < 0) hudFirst = showTime;
 		self.onWalls(ctx, function (c) {
 			for (let i = 0; i < n; i++) {
+				// (one at a time: coming up from under the edge, and changing shape)
+				const up = easeOut(clamp((showTime - hudFirst - i * WATERFALL) / 0.35, 0, 1));
+				if (up <= 0) continue;
+				const sq = squareOf(i);
+				const h = S.h + (S.w - S.h) * sq;
 				const score = list[i] || 0;
 				if (hudShown[i] !== score) { hudShown[i] = score; hudAt[i] = showTime; }
 				const pop = 1 + 0.22 * Math.max(0, 1 - (showTime - (hudAt[i] === undefined ? -9 : hudAt[i])) / 0.3);
 				const lift = hooks.rise ? clamp(hooks.rise(i), 0, 1) : 0;
 				const grow = 1 + Math.min(S.grow, Math.max(0, (W - 80) / total - 1)) * lift;   // (never wider than the wall)
 				const x = W / 2 + (i * (S.w + S.gap) + S.w / 2 - total / 2) * grow;
-				const y = H - h / 2 - S.rise * lift;
+				const y = H - h / 2 - S.rise * lift + (1 - up) * (h + S.sink + 20);
 				const sink = S.sink * (1 - lift);   // (risen clear of the edge, the whole capsule shows)
 				const dim = hooks.dim && hooks.dim(i) && lift <= 0;
 				art.with(c, { x, y, scale: pop * grow, alpha: dim ? S.dim : 1 }, function (c2) {
