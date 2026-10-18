@@ -16,7 +16,7 @@
  *
  * Behind it all, a sunny 3D valley (games/ux-demo-valley.js). The play: each
  * player is a worm (the visor check's worms, show.worms) out on the valley
- * floor, right where they are in the room, as tall as they are, leaning and
+ * floor, right where they are in the room, as tall as its pickups make it, leaning and
  * wobbling as they move; little white cylinders fall from the sky, and a worm
  * that gets to one picks it up: a point, and it grows taller. An ES module (manifest: module: true).
  */
@@ -37,10 +37,10 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	// front wall: how far up the valley (metres ahead of the eye). Across, a
 	// worm is always exactly where its player is across the front wall (1:1).
 	const FIELD = { near: 4.5, far: 12 };
-	const WORM = { tall: 2.3, thick: 0.3 };   // a worm's height (metres, for a tall player) and its thickness (radius, metres)
+	const WORM = { thick: 0.3 };   // a worm's thickness (radius, metres; its height: GROW)
 	const CUBE = { r: 0.22, tall: 0.55, every: 0.55, drop: 26, fall: 8, life: 9, reach: 1.9 };   // a pickup: a little white cylinder, its radius and height (metres); a new one every so often (seconds); how high it falls from and how fast (metres, a second); seconds it lies on the plane; how near a worm must be to grab one (metres)
 	const CUBE_COLOUR = '#ffffff';
-	const GROW = { each: 0.08, most: 2, rate: 8 };   // each pickup makes its worm this much taller (a share of its player's height), up to this many times as tall; how quickly it grows into it
+	const GROW = { start: 0.8, each: 0.12, most: 3.2, rate: 8 };   // a worm's height (metres) is down to its pickups alone: this tall with none, this much taller for each, never taller than this; how quickly it grows into it
 
 	/* ---------- the backdrop: a sunny valley ---------- */
 
@@ -153,8 +153,8 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 				show.worms.cylinder(ctx, at.x, at.y, CUBE.tall * at.ppm * k.scale, CUBE.r * at.ppm * k.scale / 17, CUBE_COLOUR, t + k.seed, null, false);
 				continue;
 			}
-			const tall = WORM.tall * Math.max(0.2, Math.min(1, (p.Y + 1) / 2)) * (grown[i] || 1) * at.ppm;
-			// (a wobbly cylinder, its flat foot right on the plane; taller for every pickup)
+			const tall = (grown[i] || GROW.start) * at.ppm;
+			// (a wobbly cylinder, its flat foot right on the plane; only its pickups make it taller, not how tall its player stands)
 			show.worms.cylinder(ctx, at.x, at.y, tall, WORM.thick * at.ppm / 17, PLAYER_COLORS[i], t + i * 1.7, worms[i]);
 		}
 	}
@@ -230,11 +230,11 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		}
 		// each worm's height growing (springily quick) toward what its pickups have earned it
 		for (let i = 0; i < players; i++) {
-			const want = Math.min(GROW.most, 1 + GROW.each * (scores[i] || 0));
-			grown[i] = (grown[i] || 1) + (want - (grown[i] || 1)) * Math.min(1, dt * GROW.rate);
+			const want = Math.min(GROW.most, GROW.start + GROW.each * (scores[i] || 0));
+			grown[i] = (grown[i] || GROW.start) + (want - (grown[i] || GROW.start)) * Math.min(1, dt * GROW.rate);
 		}
 	}
-	const grown = [];   // each worm's height, against its player's own (1: as tall as they are)
+	const grown = [];   // each worm's height (metres), as its pickups have earned it
 
 	/* ---------- the debug buttons (on the show's pause screen) ---------- */
 
