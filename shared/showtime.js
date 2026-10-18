@@ -1061,18 +1061,19 @@ window.Showtime = function (stage, opts) {
 				const up = easeOut(clamp((showTime - hudFirst - i * WATERFALL) / 0.35, 0, 1));
 				if (up <= 0) continue;
 				const sq = squareOf(i);
-				const h = S.h + (S.w - S.h) * sq;
 				const score = list[i] || 0;
 				if (hudShown[i] !== score) { hudShown[i] = score; hudAt[i] = showTime; }
+				// (a new score pops: its number grows and the capsule stands taller for it, never wider)
 				const pop = 1 + 0.22 * Math.max(0, 1 - (showTime - (hudAt[i] === undefined ? -9 : hudAt[i])) / 0.3);
+				const h = S.h * pop + (S.w - S.h * pop) * sq;
 				const lift = hooks.rise ? clamp(hooks.rise(i), 0, 1) : 0;
 				const grow = 1;   // (rising, they keep their size)
 				const x = W / 2 + (i * (S.w + S.gap) + S.w / 2 - total / 2) * grow;
 				const y = H - h / 2 - S.rise * lift + (1 - up) * (h + S.sink + 20);
 				const sink = S.sink * (1 - lift);   // (risen clear of the edge, the whole capsule shows)
 				const dim = hooks.dim && hooks.dim(i) && lift <= 0;
-				art.with(c, { x, y, scale: pop * grow, alpha: dim ? S.dim : 1 }, function (c2) {
-					const r = S.h / 2 + (S.w * 0.16 - S.h / 2) * sq;   // (rounder ends while it's a capsule; softly rounded corners once square)
+				art.with(c, { x, y, scale: grow, alpha: dim ? S.dim : 1 }, function (c2) {
+					const r = h / 2 + (S.w * 0.16 - h / 2) * sq;   // (rounder ends while it's a capsule; softly rounded corners once square)
 					art.save(c2, function (c3) {
 						const x0 = -S.w / 2, y0 = -h / 2, x1 = S.w / 2, y1 = h / 2 + sink;
 						c3.beginPath();
@@ -1089,7 +1090,7 @@ window.Showtime = function (stage, opts) {
 						c3.fillRect(x0, h / 2 - S.line, S.w, S.line + sink);
 					});
 					const inCapsule = beat && beat.id === 'visors' && self.visorInCapsule && self.visorInCapsule(c2, i, S.w, h, S.line, sq, S.size);   // (the visor check: their visor in place of their score)
-					if (!inCapsule) art.text(c2, fmt(score), 0, -S.line / 2 + 1, { size: S.size, font: FONT, weight: 400, fill: 'white', shadow: { color: 'rgba(0,0,0,0.35)', blur: 0, y: 2 } });   // (in the middle of the dark part, clear of the band)
+					if (!inCapsule) art.text(c2, fmt(score), 0, -S.line / 2 + 1, { size: S.size * pop, font: FONT, weight: 400, fill: 'white', shadow: { color: 'rgba(0,0,0,0.35)', blur: 0, y: 2 } });   // (in the middle of the dark part, clear of the band)
 				});
 			}
 		});
