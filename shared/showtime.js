@@ -1128,6 +1128,17 @@ window.Showtime = function (stage, opts) {
 	}
 	// (the pause button: a black panel standing on the left wall, a pause,
 	// a volume and a cog on it, one above the other; anywhere on it opens the pause screen)
+	// The standard button's look, as an icon: dark glass in a ring of the
+	// button's colour, its symbol drawn in that colour.
+	function buttonIcon(name, size, colour) {
+		const sym = SYMBOLS[name].replace(/"black"/g, `"${colour}"`).replace(/fill="white"/g, 'fill="#111"');
+		const line = 100 * BUTTON.line / size;   // (the outline as thick as the buttons', whatever the size)
+		return $(`<svg viewBox="0 0 100 100" width="${size}" height="${size}" style="display:block;flex:none">`
+			+ `<circle cx="50" cy="50" r="${50 - line / 2}" fill="${BUTTON.glass}" stroke="${colour}" stroke-width="${line}"/>`
+			+ `<g fill="${colour}" transform="translate(50 50) scale(0.82) translate(-50 -50)">${sym}</g></svg>`)
+			.css({ filter: `drop-shadow(0 ${BUTTON.drop * 0.6}px 0 rgba(0,0,0,0.45))` });
+	}
+	const PANEL_COLOURS = { pause: TYPE.colours.gold, volume: '#2f7df6', cog: 'white' };   // (each icon on the pause panel, in its own colour)
 	const $pauseBtn = $('<button pause>').attr('title', 'Pause').css({
 		// (the score capsules' look, turned on its side: black glass sunk into
 		// the wall's left edge, a white band along that edge)
@@ -1151,7 +1162,7 @@ window.Showtime = function (stage, opts) {
 	};
 	fitTap();
 	if (document.fonts) document.fonts.load(`100px "${FONT}"`).then(fitTap).catch(() => {});
-	for (const name of ['pause', 'volume', 'cog']) cutIcon(name, PAUSE.button - 38).appendTo($pauseBtn);
+	for (const name of ['pause', 'volume', 'cog']) buttonIcon(name, PAUSE.button - 38, PANEL_COLOURS[name]).appendTo($pauseBtn);
 
 	// the screen: dark glass over all three walls, a panel on each
 	const $pause = $('<pause-screen>').css({
