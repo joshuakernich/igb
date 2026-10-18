@@ -89,7 +89,7 @@
  *                      'wordSlam', 'visorLock', 'fanfare', 'villainReveal'...)
  *   show.sfx.boom() .drum() .roar() .alarm() .riser(s) .sting() .hit()   older synthesised ones
  *   show.state()       the beat, the beats seen in order, and so on, for tests
- *   the score HUD      through 'play', a capsule a player along the bottom of
+ *   the score HUD      from the squad being picked until the score screens, a capsule a player along the bottom of
  *                      every wall (see 'the score capsules');
  *                      opts.scoreHud { rise(i), dim(i) } | false
  *   the pause menu     every show has one: a panel on the left wall opens a
@@ -896,7 +896,7 @@ window.Showtime = function (stage, opts) {
 		if (self.blackout > 0) art.rect(ctx, -60, -60, WIDTH + 120, H + 120, { fill: '#030008', alpha: Math.min(1, self.blackout) });
 		drawBursts(ctx);
 		if (beat && beat.draw) beat.draw(ctx, bt);
-		if (beat && beat.id === 'play' && opts.scoreHud !== false) drawScoreHud(ctx);
+		if (scoreHudShown() && opts.scoreHud !== false) drawScoreHud(ctx);
 		// the clock, from the clock intro until TIME! (not over the results after it)
 		const timeup = beats.findIndex((b) => b.id === 'timeup');
 		if (clock.shown && !(timeup >= 0 && beats.indexOf(beat) > timeup)) drawClock(ctx);
@@ -993,7 +993,8 @@ window.Showtime = function (stage, opts) {
 
 	/* ---------- the score capsules (in play) ---------- */
 
-	// Every show has them through 'play' (the standard in-game score HUD): a
+	// Every show has them from the squad being picked until the score screens
+	// (the standard in-game score HUD): a
 	// row of capsules along the bottom of every wall, one a player, sunk
 	// into the edge: black glass, a band of the player's colour along the
 	// bottom, their score in the middle, popping each time it changes. A game
@@ -1002,6 +1003,13 @@ window.Showtime = function (stage, opts) {
 	// say); opts.scoreHud: false leaves them out.
 	const SCORE_HUD = { w: 176, h: 64, gap: 12, sink: 22, size: 32, rise: 260, grow: 0.35, line: 7, dim: 0.45 };   // a capsule's width and height (the part showing), the gap between them, how far it reaches down past the edge, the figures' size; risen, how far up and how much bigger; how thick the band of colour is; how faint a dimmed one is
 	const hudShown = [];
+	// (from the moment the squad's picked, the whole way through, until the
+	// score screens take over)
+	function scoreHudShown() {
+		if (!beat || !count() || beat.id === 'squad') return false;
+		const results = beats.findIndex((b) => b.id === 'scores');
+		return results < 0 || beats.indexOf(beat) < results;
+	}
 	const hudAt = [];
 	function drawScoreHud(ctx) {
 		const n = count();
@@ -1840,7 +1848,7 @@ window.Showtime = function (stage, opts) {
 					});
 					// any wrong visors join the row, after the squad's, marked
 					const xs = drawVisorRow(c, cx, V.y, n, bt, bad);
-					drawFloor(c, cx, 600, 960, n, bt, wall);
+					drawFloor(c, cx, 580, 905, n, bt, wall);   // (clear of the score capsules along the bottom)
 					// and the first gets the big flag underneath it, over everything
 					if (bad.length) {
 						const i = bad[0];
