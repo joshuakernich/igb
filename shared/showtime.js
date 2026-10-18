@@ -89,6 +89,11 @@
  *                      'wordSlam', 'visorLock', 'fanfare', 'villainReveal'...)
  *   show.sfx.boom() .drum() .roar() .alarm() .riser(s) .sting() .hit()   older synthesised ones
  *   show.state()       the beat, the beats seen in order, and so on, for tests
+ *   the pause menu     every show has one: a panel on the left wall opens a
+ *                      menu over all three walls (see 'the pause panel and
+ *                      menu'); opts.menu { restart(), tutorial() }; show.paused,
+ *                      show.pause(on); off the box, show.menu.drow/dbutton
+ *                      add debug buttons
  *   show.fini()        closes the show's AudioContext (also done when the stage stops)
  *
  * It runs entirely off the frames it is given, so it stops with the game;
@@ -780,6 +785,7 @@ window.Showtime = function (stage, opts) {
 
 	self.sequence = function (list) {
 		beats = list;
+		if (typeof fillJumps === 'function') fillJumps();
 	};
 
 	self.go = function (id) {
@@ -825,6 +831,15 @@ window.Showtime = function (stage, opts) {
 	self.tickClock = function (dt) { stepClock(dt); };
 
 	self.frame = function (ctx, dt, drawWorld) {
+		showPauseButton();
+		if (paused) {
+			// paused: nothing moves but the clock (and if it runs out, the menu goes: on to TIME!)
+			stepClock(dt);
+			tickPause();
+			if (!beat || beat.id !== 'timeup') { draw(ctx, drawWorld); return; }
+			setPaused(false);
+			dt = 0;
+		}
 		showTime += dt;
 		stepClock(dt);
 		if (beat) {
@@ -894,6 +909,214 @@ window.Showtime = function (stage, opts) {
 			$skip = null;
 		}
 	}
+
+	/* ---------- the pause panel and menu ---------- */
+
+	// Every show has it (the standard pause UX): a black panel on the left
+	// wall (TAP over a pause, a volume and a cog), shown in the box once the
+	// clock has started and off the box always. Tapped, everything stops: the
+	// beats, and every sound (the clock keeps counting down; if it runs out,
+	// the menu goes and TIME! comes). A screen comes down over all three walls
+	// with the whole menu on each: PAUSED, the time left, RESUME, the volume
+	// (five levels), RESTART ROUND and REPLAY TUTORIAL. Off the box (not live:
+	// no Vuplex) the left wall has PAUSED, the time and debug buttons instead:
+	// a jump to every beat, and whatever the game adds (show.menu.drow(label)
+	// for a row, show.menu.dbutton(label, fn, colour) for a button in it; a
+	// debug button resumes, then does its thing; show.menu.$now, a status
+	// line). opts.menu: { restart() (default: the beat the show is on, from
+	// its start), tutorial() (none: no REPLAY TUTORIAL) }. show.paused says
+	// whether it's paused; show.pause(on) does it by hand. A game that steps
+	// anything outside its beats should hold it while show.paused.
+	const PAUSE = { button: 130, x: 40, levels: [0.12, 0.3, 0.5, 0.75, 1], row: { w: 760, h: 112, size: 50, inset: 8 } };   // the pause panel's width and its distance in from the left wall's edge; the volume at each of the five levels; the front wall's rows (all alike): their width, height and type size, and the gap round the icon in each one's end
+	const live = !!window.vuplex;
+	const font = `"${FONT}", "${TYPE.font}", sans-serif`;
+	let paused = false;
+	const MENU = Object.assign({ restart: null, tutorial: null }, opts.menu);
+	const menuRestart = () => (MENU.restart ? MENU.restart() : beat && self.go(beat.id));
+	// The menu's icons: a white disc with its symbol cut clean out of it (an
+	// SVG mask), so whatever's behind shows through the symbol.
+	let iconIds = 0;
+	const SYMBOLS = {
+		pause: '<rect x="33" y="28" width="12" height="44" rx="3"/><rect x="55" y="28" width="12" height="44" rx="3"/>',
+		play: '<path d="M39 27 L74 50 L39 73 Z" stroke-linejoin="round" stroke-width="6" stroke="black"/>',
+		restart: '<path d="M71 50 A21 21 0 1 1 64 34" fill="none" stroke="black" stroke-width="10" stroke-linecap="round"/><path d="M57 21 L74 30 L60 43 Z" stroke-linejoin="round" stroke-width="4" stroke="black"/>',
+		help: '<text x="50" y="69" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="56">?</text>',
+		volume: '<path d="M24 41 H35 L51 28 V72 L35 59 H24 Z" stroke-linejoin="round" stroke-width="4" stroke="black"/><path d="M60 39 A14 14 0 0 1 60 61" fill="none" stroke="black" stroke-width="7" stroke-linecap="round"/><path d="M67 30 A25 25 0 0 1 67 70" fill="none" stroke="black" stroke-width="7" stroke-linecap="round"/>',
+		cog: '<rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(0 50 50)"/><rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(45 50 50)"/><rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(90 50 50)"/><rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(135 50 50)"/><rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(180 50 50)"/><rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(225 50 50)"/><rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(270 50 50)"/><rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(315 50 50)"/><circle cx="50" cy="50" r="23"/><circle cx="50" cy="50" r="9" fill="white"/>',   // (its teeth and wheel cut out, the hub left)
+	};
+	function cutIcon(name, size, fill = 'white') {
+		const id = 'cut-icon-' + ++iconIds;
+		return $(`<svg viewBox="0 0 100 100" width="${size}" height="${size}" style="display:block;flex:none">`
+			+ `<defs><mask id="${id}"><rect width="100" height="100" fill="white"/><g fill="black">${SYMBOLS[name]}</g></mask></defs>`
+			+ `<circle cx="50" cy="50" r="48" fill="${fill}" mask="url(#${id})"/></svg>`);
+	}
+	// (the pause button: a black panel standing on the left wall, a pause,
+	// a volume and a cog on it, one above the other; anywhere on it opens the pause screen)
+	const $pauseBtn = $('<button pause>').attr('title', 'Pause').css({
+		position: 'absolute', left: PAUSE.x + 'px', top: H / 2 + 'px', transform: 'translateY(-50%)',
+		width: PAUSE.button + 'px', borderRadius: PAUSE.button / 2 + 'px', border: '5px solid rgba(255,255,255,0.9)',
+		background: 'rgba(0,0,0,0.92)', cursor: 'pointer', pointerEvents: 'auto', zIndex: 20, padding: '14px 0',
+		display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
+		boxShadow: '0 10px 0 rgba(0,0,0,0.45)', transition: 'transform 0.15s',
+	}).hide().appendTo(stage.$ui).on('click', function (e) { e.stopPropagation(); setPaused(true); })
+		.on('mouseenter', function () { $(this).css({ transform: 'translateY(-50%) scale(1.08)' }); })
+		.on('mouseleave', function () { $(this).css({ transform: 'translateY(-50%) scale(1)' }); });
+	const $tap = $('<span>').text('TAP').css({   // (the prompt, standing just above it, as wide as it, outlined and dropped like the other words)
+		position: 'absolute', left: '50%', bottom: 'calc(100% + 14px)', transform: 'translateX(-50%)', whiteSpace: 'nowrap',
+		fontFamily: font, fontSize: '40px', lineHeight: 1, color: 'white', textAlign: 'center',
+		WebkitTextStroke: `5px ${TYPE.colours.ink}`, paintOrder: 'stroke fill', textShadow: '0 4px 0 rgba(0,0,0,0.55)',
+	}).appendTo($pauseBtn);
+	// (sized to the panel's width once the lettering has loaded: measured at 100px, scaled to fit)
+	const fitTap = function () {
+		const g = document.createElement('canvas').getContext('2d');
+		g.font = `400 100px ${font}`;
+		const w = g.measureText('TAP').width;
+		if (w > 0) $tap.css({ fontSize: 100 * PAUSE.button / w + 'px' });
+	};
+	fitTap();
+	if (document.fonts) document.fonts.load(`100px "${FONT}"`).then(fitTap).catch(() => {});
+	for (const name of ['pause', 'volume', 'cog']) cutIcon(name, PAUSE.button - 38).appendTo($pauseBtn);
+
+	// the screen: dark glass over all three walls, a panel on each
+	const $pause = $('<pause-screen>').css({
+		position: 'absolute', left: 0, top: 0, width: 3 * W + 'px', height: H + 'px', zIndex: 30, display: 'none',
+		background: 'rgba(6,3,16,0.84)', backdropFilter: 'blur(6px)', pointerEvents: 'auto', fontFamily: font, color: 'white',
+	}).appendTo(stage.$ui).on('pointerdown click', (e) => e.stopPropagation());
+	const wallPanel = (n) => $('<div>').css({
+		position: 'absolute', left: n * W + 'px', top: 0, width: W + 'px', height: H + 'px', boxSizing: 'border-box', padding: '60px 70px',
+		display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '22px',
+	}).appendTo($pause);
+	const words = (text, size, colour = 'white') => $('<div>').text(text).css({
+		fontSize: size + 'px', lineHeight: 1, letterSpacing: '3px', color: colour,
+		WebkitTextStroke: `${Math.max(4, size * 0.07)}px ${TYPE.colours.ink}`, paintOrder: 'stroke fill', textShadow: `0 ${size * 0.09}px 0 rgba(0,0,0,0.55)`,
+	});
+	const clocks = [];
+	const $left = wallPanel(0), $front = wallPanel(1), $right = wallPanel(2);
+	const R = PAUSE.row;
+	const rowCss = {
+		width: R.w + 'px', height: R.h + 'px', boxSizing: 'border-box', textAlign: 'left', borderRadius: R.h / 2 + 'px', border: '5px solid rgba(255,255,255,0.9)',
+		background: 'rgba(0,0,0,0.92)', color: 'white', fontFamily: font, fontSize: R.size + 'px', lineHeight: 1, letterSpacing: '2px',
+		WebkitTextStroke: `${Math.max(4, R.size * 0.07)}px ${TYPE.colours.ink}`, paintOrder: 'stroke fill',
+		display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', padding: `0 ${R.inset}px 0 52px`,   // (the words on the left, an icon on the right, snug in the capsule's end)
+		boxShadow: '0 10px 0 rgba(0,0,0,0.45)', transition: 'transform 0.12s, background 0.12s',
+	};
+	const icon = (name, colour) => cutIcon(name, R.h - 10 - R.inset * 2, colour);   // (as big as fits inside the border, an even gap all round)
+	const label = (text) => $('<span>').text(text).css({ flex: 1, textAlign: 'left' });   // (hard against the left, whatever the button would do)
+	// (each row black, its border, words and icon in its own colour)
+	const ROW_COLOURS = { resume: '#f5b800', volume: '#2f7df6', restart: '#e8323c', help: '#1fb85c' };
+	const rowButton = (text, glyph, fn, colour) => $('<button>').append(label(text)).append(icon(glyph, colour)).css(Object.assign({ cursor: 'pointer' }, rowCss, { color: colour, borderColor: colour }))
+		.on('mouseenter', function () { $(this).css({ transform: 'scale(1.04)', filter: 'brightness(1.12)' }); })
+		.on('mouseleave', function () { $(this).css({ transform: 'scale(1)', filter: 'none' }); })
+		.on('click', function (e) { e.stopPropagation(); fn(); });
+
+	// The volume, the same shape, its control in the icons' style: a capsule
+	// half the row's width, snug in its end, with five spots cut out of it,
+	// the ones up to the level cut clean through, the rest just outlined;
+	// click a spot for that level. (One on each wall, all kept alike.)
+	const VH = R.h - 10 - R.inset * 2;                  // (as tall as the icons)
+	const VW = R.w / 2;                                  // (half the row's width)
+	const SPOT = { r: VH * 0.29 };                       // (each spot's radius)
+	const N = PAUSE.levels.length;
+	const step = (VW - VH) / (N - 1);                    // (the spots evenly along it, the end ones centred in its round ends)
+	const volSvgs = [];
+	function volumeRow() {
+		const $vol = $('<div>').css(Object.assign({}, rowCss, { color: ROW_COLOURS.volume, borderColor: ROW_COLOURS.volume }));
+		label('VOLUME').appendTo($vol);
+		const $volIcon = $('<div>').css({ position: 'relative', width: VW + 'px', height: VH + 'px', flex: 'none' }).appendTo($vol);
+		const mask = 'cut-icon-' + ++iconIds;
+		volSvgs.push($(`<svg viewBox="0 0 ${VW} ${VH}" width="${VW}" height="${VH}" style="display:block">`
+			+ `<defs><mask id="${mask}"><rect width="${VW}" height="${VH}" fill="white"/>`
+			+ PAUSE.levels.map((v, i) => `<circle class="vbar" cx="${VH / 2 + i * step}" cy="${VH / 2}" r="${SPOT.r}" fill="black"/>`).join('')
+			+ `</mask></defs><rect width="${VW}" height="${VH}" rx="${VH / 2}" fill="${ROW_COLOURS.volume}" mask="url(#${mask})"/></svg>`).appendTo($volIcon));
+		PAUSE.levels.forEach(function (v, i) {
+			$('<button>').attr('title', 'Volume ' + (i + 1)).css({
+				position: 'absolute', left: VH / 2 + (i - 0.5) * step + 'px', top: 0, width: step + 'px', height: '100%',   // (each spot's click zone)
+				background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+			}).appendTo($volIcon).on('click', function (e) { e.stopPropagation(); IGB.setVolume(v); showVolume(); self.fx('pick'); });
+		});
+		return $vol;
+	}
+	function showVolume() {
+		const level = PAUSE.levels.reduce((best, v, i) => (Math.abs(v - IGB.volume) < Math.abs(PAUSE.levels[best] - IGB.volume) ? i : best), 0);
+		// (up to the level: cut clean through; the rest: just their outline cut)
+		for (const $svg of volSvgs) $svg.find('.vbar').each(function (i) {
+			const on = i <= level;
+			this.setAttribute('fill', on ? 'black' : 'white');
+			this.setAttribute('stroke', 'black');
+			this.setAttribute('stroke-width', on ? 0 : VH * 0.07);
+			this.setAttribute('r', on ? SPOT.r : SPOT.r - VH * 0.035);   // (the outline inside the same circle)
+		});
+	}
+
+	// The whole menu, on a wall: PAUSED, the time left, then a stack of rows
+	// all alike. (With debug: just PAUSED and the time, the debug buttons
+	// going under them.)
+	function menu($w, debug) {
+		words('PAUSED', 64).appendTo($w);
+		clocks.push(words('', 96, TYPE.colours.gold).css({ fontFamily: '"Share Tech Mono", monospace', marginBottom: '14px' }).appendTo($w));
+		if (debug) return;
+		rowButton('RESUME', 'play', () => setPaused(false), ROW_COLOURS.resume).appendTo($w);
+		volumeRow().appendTo($w);
+		rowButton('RESTART ROUND', 'restart', () => { setPaused(false); menuRestart(); }, ROW_COLOURS.restart).appendTo($w);
+		if (MENU.tutorial) rowButton('REPLAY TUTORIAL', 'help', () => { setPaused(false); MENU.tutorial(); }, ROW_COLOURS.help).appendTo($w);
+	}
+	menu($left, !live);
+	menu($front);
+	menu($right);
+	if (!live) $left.css({ justifyContent: 'flex-start' });   // (off the box: the debug buttons fill the rest of the left wall)
+
+	function setPaused(on) {
+		if (on === paused) return;
+		paused = on;
+		IGB.pauseAudio(on);
+		$pause.toggle(on);
+		showPauseButton();
+		if (on) { showVolume(); tickPause(); }
+	}
+	// the button: in the box, only once the clock has started counting down;
+	// off it, always (for the debug buttons); never while paused
+	let buttonShown = false;
+	function showPauseButton() {
+		const want = !paused && (!live || self.clockStarted());
+		if (want !== buttonShown) { buttonShown = want; $pauseBtn.toggle(want); }
+	}
+	function tickPause() {
+		const t = mmss(clock.left);
+		for (const $c of clocks) $c.text(t);
+	}
+	stage.own(() => { if (paused) IGB.pauseAudio(false); });   // (never left paused)
+
+	// the debug buttons, on the left wall's panel under PAUSED and the time (off the box only)
+	const $debug = $('<div>').css({
+		display: live ? 'none' : 'block', width: '100%', flex: 1, minHeight: 0, overflowY: 'auto', fontFamily: `"${TYPE.font}", sans-serif`,
+	}).appendTo($left);
+	const $dhead = $('<div>').css({ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '30px', marginBottom: '8px' }).appendTo($debug);
+	$('<span>').text('DEBUG').css({ color: '#3ad1ff', letterSpacing: '2px' }).appendTo($dhead);
+	const $dbody = $('<div>').appendTo($debug);
+	const dbutton = (label, fn, colour = '#22305a') => $('<button>').text(label).css({
+		margin: '4px', padding: '8px 14px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+		background: colour, color: 'white', fontFamily: 'inherit', fontSize: '22px',
+	}).on('click', function (e) { e.stopPropagation(); setPaused(false); fn(); });   // (a debug button resumes, then does its thing)
+	const $dnow = $('<span>').css({ flex: 1, color: '#9fb6d8', fontFamily: 'monospace', fontSize: '22px' }).appendTo($dhead);
+	const drow = (label) => {
+		const $row = $('<div>').css({ display: 'flex', flexWrap: 'wrap', alignItems: 'center' }).appendTo($dbody);
+		$('<span>').text(label).css({ width: '120px', color: '#9fb6d8', fontSize: '20px' }).appendTo($row);
+		return $row;
+	};
+
+	Object.defineProperty(self, 'paused', { get: () => paused });
+	self.pause = setPaused;
+	// the debug panel's own first row (filled once the running order is set:
+	// see sequence): a jump to every beat, and on to the next
+	const $jumps = drow('BEATS');
+	function fillJumps() {
+		$jumps.toggle(MENU.jumps !== false);   // (a game with its own beat jumps can leave these out: opts.menu.jumps = false)
+		$jumps.children('button').remove();
+		for (const b of beats) if (b.id !== 'squad') dbutton(b.id.toUpperCase(), () => { $('showtime-picker').remove(); self.go(b.id); }).appendTo($jumps);
+		dbutton('NEXT BEAT ▶', () => self.next(), '#3a2a5a').appendTo($jumps);
+	}
+	self.menu = { dbutton, drow, $now: $dnow, $body: $dbody };
+
 
 	/* ---------- the squad picker ---------- */
 
