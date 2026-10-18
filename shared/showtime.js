@@ -625,6 +625,17 @@ window.Showtime = function (stage, opts) {
 		boxShadow: `inset 0 0 0 ${GLOSS.inner}px rgba(255,255,255,0.9)`,
 	});
 	self.glossy = glossy;
+	// The button style (as the pause screen's rows): dark glass, an outline
+	// in the button's colour, its words in that colour too (outlined in ink
+	// like the rest of the text), and a drop under it. button(colour, size):
+	// its CSS, size the type size (for the words' outline).
+	const BUTTON = { glass: 'rgba(0,0,0,0.92)', line: 5, drop: 10 };   // the glass; the outline's thickness; the drop under it (px)
+	const button = (colour, size = 50) => ({
+		background: BUTTON.glass, border: `${BUTTON.line}px solid ${colour}`, color: colour,
+		WebkitTextStroke: `${Math.max(4, size * 0.07)}px ${TYPE.colours.ink}`, paintOrder: 'stroke fill',
+		boxShadow: `0 ${BUTTON.drop}px 0 rgba(0,0,0,0.45)`,
+	});
+	self.button = button;
 	const textColour = function (fill) {
 		if (typeof fill !== 'string') return fill;
 		if (playerLits.has(fill)) return fill;
@@ -974,10 +985,10 @@ window.Showtime = function (stage, opts) {
 					? { left: (2 * W - 30) + 'px', top: '880px', transform: 'translateX(-100%)' }
 					: { left: ((opts.skip && opts.skip.at) || SKIP_AT).x + 'px', top: ((opts.skip && opts.skip.at) || SKIP_AT).y + 'px', transform: 'translate(-50%, -50%)' }),
 				padding: '16px 36px', borderRadius: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
-				color: 'white', cursor: 'pointer', pointerEvents: 'auto',
+				cursor: 'pointer', pointerEvents: 'auto',
 				fontFamily: `"${TYPE.font}", sans-serif`, fontSize: '40px', letterSpacing: '2px',
 				opacity: 0, transition: 'opacity 0.4s',
-				...glossy('#2a1a4a'),
+				...button('white', 40),
 			}).appendTo(stage.$ui).on('click', function (e) {
 				e.stopPropagation();
 				self.fx('skip');
@@ -1035,16 +1046,16 @@ window.Showtime = function (stage, opts) {
 	const $pauseBtn = $('<button pause>').attr('title', 'Pause').css({
 		// (the score capsules' look, turned on its side: black glass sunk into
 		// the wall's left edge, a white band along that edge)
-		position: 'absolute', left: -SCORE_HUD.sink + 'px', top: H / 2 + 'px', transform: 'translateY(-50%)', transformOrigin: 'left center',
-		width: PAUSE.button + SCORE_HUD.sink + 'px', borderRadius: (PAUSE.button + SCORE_HUD.sink) / 2 + 'px', border: 'none', boxSizing: 'border-box',
-		background: 'rgba(0,0,0,0.6)', cursor: 'pointer', pointerEvents: 'auto', zIndex: 20, padding: `20px 0 20px ${SCORE_HUD.sink}px`,
+		position: 'absolute', left: 0, top: H / 2 + 'px', transform: 'translateY(-50%)', transformOrigin: 'left center',
+		width: PAUSE.button + 'px', borderRadius: `0 ${PAUSE.button / 2}px ${PAUSE.button / 2}px 0`, border: 'none', boxSizing: 'border-box',   // (flat against the edge, round on the right)
+		background: 'rgba(0,0,0,0.6)', cursor: 'pointer', pointerEvents: 'auto', zIndex: 20, padding: `20px 0 20px ${SCORE_HUD.line}px`,
 		display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
-		boxShadow: `inset ${SCORE_HUD.sink + SCORE_HUD.line}px 0 0 0 white`, transition: 'transform 0.15s',
+		boxShadow: `inset ${SCORE_HUD.line}px 0 0 0 white`, transition: 'transform 0.15s',
 	}).hide().appendTo(stage.$ui).on('click', function (e) { e.stopPropagation(); setPaused(true); })
 		.on('mouseenter', function () { $(this).css({ transform: 'translateY(-50%) scale(1.08)' }); })
 		.on('mouseleave', function () { $(this).css({ transform: 'translateY(-50%) scale(1)' }); });
 	const $tap = $('<span>').text('TAP').css({   // (the prompt, standing just above it, as wide as it, outlined and dropped like the other words)
-		position: 'absolute', left: `calc(50% + ${SCORE_HUD.sink / 2}px)`, bottom: 'calc(100% + 14px)', transform: 'translateX(-50%)', whiteSpace: 'nowrap',
+		position: 'absolute', left: '50%', bottom: 'calc(100% + 14px)', transform: 'translateX(-50%)', whiteSpace: 'nowrap',
 		fontFamily: font, fontSize: '40px', lineHeight: 1, color: 'white', textAlign: 'center',
 		WebkitTextStroke: `5px ${TYPE.colours.ink}`, paintOrder: 'stroke fill', textShadow: '0 4px 0 rgba(0,0,0,0.55)',
 	}).appendTo($pauseBtn);
@@ -1221,9 +1232,9 @@ window.Showtime = function (stage, opts) {
 		const $row = $('<div>').css({ display: 'flex', gap: '44px' }).appendTo($pick);
 		for (let n = 2; n <= 6; n++) {
 			$('<button>').attr('count', n).text(n).css({
-				width: '190px', height: '190px', borderRadius: '50%', boxSizing: 'border-box', ...glossy(TYPE.colours.gold),
+				width: '190px', height: '190px', borderRadius: '50%', boxSizing: 'border-box', ...button(TYPE.colours.gold, 110),
 				display: 'flex', alignItems: 'center', justifyContent: 'center',
-				color: TYPE.colours.ink, fontFamily: font, fontSize: '110px', lineHeight: '1', cursor: 'pointer', padding: 0,
+				fontFamily: font, fontSize: '110px', lineHeight: '1', cursor: 'pointer', padding: 0,
 				transform: 'scale(0)', transition: `transform 0.4s cubic-bezier(.2,1.6,.4,1) ${0.25 + (n - 2) * 0.08}s`,
 			}).appendTo($row)
 				.on('mouseenter', function () { $(this).css({ transform: 'scale(1.12)', transitionDelay: '0s' }); })
@@ -1468,8 +1479,8 @@ window.Showtime = function (stage, opts) {
 				if (start && !$start && startedAt < 0 && bt > lastLand + 0.5) {
 					$start = $('<button start>').text('START').css({
 						position: 'absolute', left: (W + W / 2) + 'px', top: T.startY + 'px', transform: 'translate(-50%, -50%)', opacity: 0,
-						padding: '28px 110px', borderRadius: '90px', cursor: 'pointer', pointerEvents: 'auto', zIndex: 5, ...glossy(TYPE.colours.gold),
-						color: TYPE.colours.ink, fontFamily: `"${FONT}", sans-serif`, fontSize: '120px', lineHeight: 1, letterSpacing: '4px',
+						padding: '28px 110px', borderRadius: '90px', cursor: 'pointer', pointerEvents: 'auto', zIndex: 5, ...button(TYPE.colours.gold, 120),
+						fontFamily: `"${FONT}", sans-serif`, fontSize: '120px', lineHeight: 1, letterSpacing: '4px',
 						transition: `transform 0.25s, opacity ${T.startFade}s`,
 					}).appendTo(stage.$ui)
 						.on('mouseenter', function () { $(this).css({ transform: 'translate(-50%, -50%) scale(1.08)' }); })
@@ -2653,7 +2664,7 @@ window.Showtime = function (stage, opts) {
 		const small = (text) => $('<div>').text(text).css({ fontSize: '40px', color: TYPE.colours.gold, letterSpacing: '2px', WebkitTextStroke: `4px ${theme.ink}`, paintOrder: 'stroke fill' });
 		const pill = (text, on, extraCss) => $('<button>').text(text).css(Object.assign({
 			padding: '22px 44px', borderRadius: '60px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
-			...glossy(on ? TYPE.colours.gold : '#2a1a4a'), color: on ? TYPE.colours.ink : TYPE.colours.white,
+			...button(on ? TYPE.colours.gold : TYPE.colours.white, 40),
 			fontFamily: font, fontSize: '40px', letterSpacing: '1px', cursor: 'pointer', pointerEvents: 'auto',
 			transition: 'transform 0.15s',
 		}, extraCss));
@@ -2813,7 +2824,7 @@ window.Showtime = function (stage, opts) {
 				});
 				// the kiosk: book another session
 				$('<div>').text('BOOK ANOTHER SESSION AT THE KIOSK').attr('kiosk', '').css({
-					padding: '20px 46px', borderRadius: '60px', ...glossy(TYPE.colours.gold), color: TYPE.colours.ink,
+					padding: '20px 46px', borderRadius: '60px', ...button(TYPE.colours.gold, 50),
 					fontSize: '50px', letterSpacing: '1px', lineHeight: 1, animation: 'showtime-kiosk 1.6s ease-in-out infinite',
 				}).appendTo($wall);
 			}
