@@ -150,7 +150,7 @@ window.Showtime = function (stage, opts) {
 		hold: 0.6,             // seconds of wiggling in the zone to tick a visor off
 		pulse: 0.9,            // the rings that pulse from a visor as it's ticked off
 		clear: 1.0,            // everyone ticked and no wrong visors for this long: all set
-		allSet: 1.8,           // "ALL SET!" holds this long, then on
+		allSet: 3,             // "ALL SET!" holds this long, then on
 		length: 45,            // and on regardless after this long
 		y: 300,                // the row of visors
 		floor: { far: 330, near: 620, wall: 150 },  // the floor panel: its far and near widths, how high the walls' glow rises (near)
