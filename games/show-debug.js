@@ -4,7 +4,8 @@
  * choreography quickly.
  *
  * Every beat a real game has is here, in order: the squad picker, title
- * drop, clock intro, visor check, a stand-in controls intro and villain
+ * drop, clock intro, visor check, a tutorial (grab a cylinder, tap a wall to
+ * switch to it), a stand-in villain
  * intro, the play (a little game: see below), TIME!, scores,
  * rank, team, leaderboard, replay, rating and the end. The game's own beats
  * are labelled placeholders, so it's clear where a real game fills in.
@@ -87,6 +88,22 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		};
 	}
 
+	/* ---------- the tutorial ---------- */
+
+	const TUTORIAL_NICE = 1.2;   // seconds a done step shows (its caption green) before the next
+	const TUTORIAL = [
+		{ caption: 'GRAB THE WHITE CYLINDERS', min: 2, max: 10, did: () => everyone((i) => (scores[i] || 0) >= 1) },
+		{ caption: 'TAP ANY WALL TO SWITCH WALLS', min: 2, max: 12, did: () => everyone((i) => switched[i]) },
+	];
+	const tut = { i: 0, age: 0, done: false, doneAge: 0 };
+	const switched = [];   // who has switched walls in the tutorial
+	const everyone = (fn) => players > 0 && Array.from({ length: players }, (_, i) => i).filter((i) => latest[i] && latest[i].px !== undefined).every(fn);
+	function tutStep(i) {
+		Object.assign(tut, { i, age: 0, done: false, doneAge: 0 });
+		if (i === 0) switched.length = 0;
+		if (TUTORIAL[i]) show.fx('stepIn');
+	}
+
 	/* ---------- the beats ---------- */
 
 	show.sequence([
@@ -96,7 +113,34 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		}),
 		show.beats.clockIntro(),
 		show.beats.visors(),
-		standIn('controls', 'CONTROLS INTRO', 'THE GAME TEACHES ITS MOVES HERE'),
+		// the tutorial: out on the plane, each step's caption over every wall
+		// until everyone has done it (or its time's up): grab a cylinder, then
+		// tap a wall to switch to it
+		{
+			id: 'controls',
+			length: TUTORIAL.reduce((a, s) => a + s.max + TUTORIAL_NICE, 0),   // (a safety net: each step has its own limit)
+			done: () => tut.i >= TUTORIAL.length,
+			enter() { tutStep(0); },
+			exit() { clearCubes(); scores = scores.map(() => 0); grown.length = 0; wallOf.length = 0; worms.length = 0; },
+			update(dt) {
+				t += dt;
+				stepWorms(dt);
+				stepCubes(dt);
+				const step = TUTORIAL[tut.i];
+				if (!step) return;
+				tut.age += dt;
+				if (!tut.done && tut.age >= step.min && step.did()) { tut.done = true; show.fx('pick', 0.8); }
+				if (tut.done) tut.doneAge += dt;
+				if ((tut.done && tut.doneAge >= TUTORIAL_NICE) || tut.age >= step.max) tutStep(tut.i + 1);
+			},
+			draw(ctx) {
+				const step = TUTORIAL[tut.i];
+				if (!step) return;
+				show.onWalls(ctx, function (c) {
+					show.slam(c, step.caption, W / 2, 200, 70, tut.age, { fill: tut.done ? '#3cdc7a' : 'white' });
+				});
+			},
+		},
 		standIn('villain', 'VILLAIN INTRO', 'THE GAME INTRODUCES ITS THREAT HERE'),
 		{
 			id: 'play',
@@ -126,7 +170,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 
 	function drawWorld(ctx) {
 		// (the valley is behind, in its own canvas)
-		if (show.beat !== 'play') return;   // (no worms over the opening screens)
+		if (show.beat !== 'play' && show.beat !== 'controls') return;   // (no worms over the opening screens; out there for the tutorial and the play)
 		// each player, a worm out on the valley floor, and the pickups: far ones first
 		const shown = [];
 		for (let i = 0; i < players; i++) {
@@ -311,7 +355,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	// Tapping a wall moves a player there: the one standing nearest the
 	// spot tapped (the tap's place on that wall, in the room).
 	stage.$el.on('click', function (e) {
-		if (show.beat !== 'play' || show.paused) return;
+		if ((show.beat !== 'play' && show.beat !== 'controls') || show.paused) return;
 		const at = IGB.toWorld(e);
 		const wall = Math.floor(at.x / W);
 		if (wall < 0 || wall > 2) return;
@@ -326,6 +370,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		}
 		if (best < 0 || wallOf[best] === wall) return;
 		wallOf[best] = wall;
+		switched[best] = true;
 		worms[best] = null;   // (a fresh worm there, not swinging over from the last wall)
 		show.fx('pick', 0.5);
 	});
