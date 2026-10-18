@@ -2057,7 +2057,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// out-of-focus drops (a few with short streaks under them) round where
 	// they are on the screen. It's painted once, when it lands, and then
 	// only fades away (no running: cheap to draw).
-	const LENS = { drops: [5, 9], size: [16, 72], spread: [380, 260], streak: [30, 140], life: 3.4, fade: 1.2, blur: 7 };   // how many drops; how big (px); how far they spread across and up and down (px); how long their streaks (px); seconds it lasts; seconds it fades over at the end; how out of focus (px, for the biggest drops)
+	const LENS = { drops: [5, 9], size: [16, 72], spread: [380, 260], streak: [30, 140], life: 3.4, fade: 1.2, blur: 7, colour: '#9e0014', alpha: 0.6 };   // how many drops; how big (px); how far they spread across and up and down (px); how long their streaks (px); seconds it lasts; seconds it fades over at the end; how out of focus (px, for the biggest drops); its one flat colour, and how see-through
 	let lens = [];
 	function spatter(c) {
 		const wall = c.wall;
@@ -2077,7 +2077,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const x = pad + Math.random() * LENS.spread[0], y = pad + Math.random() * LENS.spread[1];
 			const run = Math.random() < 0.6 ? LENS.streak[0] + Math.random() * (LENS.streak[1] - LENS.streak[0]) * (r / LENS.size[1]) : 0;
 			g.filter = `blur(${LENS.blur * Math.sqrt(r / LENS.size[1])}px)`;   // (out of focus, right on the lens: the big drops most)
-			g.globalAlpha = 0.9;
+			// (one flat colour, solid here: the whole picture's laid down see-through)
 			if (run > 0) {
 				g.beginPath();
 				g.moveTo(x - r * 0.45, y);
@@ -2085,12 +2085,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				g.lineTo(x + r * 0.2, y + run);
 				g.lineTo(x - r * 0.2, y + run);
 				g.closePath();
-				g.fillStyle = '#7a0010';
+				g.fillStyle = LENS.colour;
 				g.fill();
-				art.circle(g, x, y + run, r * 0.5, { fill: '#9a0016' });
+				art.circle(g, x, y + run, r * 0.5, { fill: LENS.colour });
 			}
-			art.circle(g, x, y, r, { fill: '#8a0012' });
-			art.circle(g, x - r * 0.3, y - r * 0.3, r * 0.25, { fill: 'rgba(255,190,190,0.45)' });   // (a wet glint)
+			art.circle(g, x, y, r, { fill: LENS.colour });
 		}
 		lens.push({ img: cv, x: wall * W + cx - w / 2, y: cy - pad - LENS.spread[1] / 2, born: wallT });
 	}
@@ -2100,7 +2099,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const age = wallT - d.born;
 			const alpha = Math.min(1, age / 0.05) * Math.min(1, (LENS.life - age) / LENS.fade);
 			art.save(ctx, function (c) {
-				c.globalAlpha = alpha;
+				c.globalAlpha = alpha * LENS.alpha;
 				c.drawImage(d.img, d.x, d.y);
 			});
 		}
