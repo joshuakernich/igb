@@ -8,7 +8,7 @@
 	<rect width="256" height="256" rx="40" fill="#1f5fd0"/>
 	<rect width="256" height="256" rx="40" fill="url(#grid)"/>
 	<g fill="none" stroke="white" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
-		<rect x="64" y="64" width="128" height="128" rx="10"/>
+		<rect x="40" y="40" width="176" height="176" rx="14"/>
 		<path d="M108 92 L156 128 L108 164 Z"/>
 	</g>
 </svg>
