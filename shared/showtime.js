@@ -1319,9 +1319,9 @@ window.Showtime = function (stage, opts) {
 		showPauseButton();
 		if (on) { showVolume(); tickPause(); showRows(); }
 	}
-	// the button: in the box, only once the clock has started counting down;
-	// off it, always (for the debug buttons); never while paused, and never
-	// from TIME! on (the game's over: the scores, the rating, the end)
+	// the button: only once the clock has started counting down (in the box
+	// or off it, alike); never while paused, and never from TIME! on (the
+	// game's over: the scores, the rating, the end)
 	let buttonShown = false;
 	const OVER = ['timeup', 'scores', 'rank', 'team', 'board', 'replay', 'rate', 'end'];
 	const over = function () {
@@ -1331,7 +1331,7 @@ window.Showtime = function (stage, opts) {
 		return first >= 0 && at >= first;
 	};
 	function showPauseButton() {
-		const want = !paused && !over() && (!live || self.clockStarted());
+		const want = !paused && !over() && self.clockStarted();
 		if (want !== buttonShown) { buttonShown = want; $pauseBtn.toggle(want); }
 	}
 	function tickPause() {
