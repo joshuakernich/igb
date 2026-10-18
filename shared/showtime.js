@@ -2999,7 +2999,7 @@ window.Showtime = function (stage, opts) {
 	// BOOK ANOTHER SESSION AT THE KIOSK. The game hands back as it starts
 	// (extra.enter is the place to call IGB.complete).
 	beatsLib.end = function (extra) {
-		const CAROUSEL = { every: 2.8, w: 640, h: 400, side: 520, words: 80, margin: 40 };   // (words: the size of THANKS FOR PLAYING! and the kiosk line; margin: their extra room from the screenshots)
+		const CAROUSEL = { every: 2.8, w: 640, h: 400, side: 520, words: 80, kiosk: 44, margin: 40 };   // (words: the size of THANKS FOR PLAYING!; kiosk: the kiosk line's, much smaller; margin: their extra room from the screenshots)
 		let $layer = null;
 		let slides = [];      // every wall's slides, by game: [[$slide, ...], ...]
 		let shownSlide = -1;
@@ -3018,8 +3018,8 @@ window.Showtime = function (stage, opts) {
 					fontFamily: `"${FONT}", sans-serif`, color: 'white',
 				}).appendTo($layer);
 				// the two lines, alike: one size, one treatment (no more than 70% of the wall across, so the kiosk line wraps in two)
-				const words = (text, colour) => $('<div>').text(text).css({
-					fontSize: CAROUSEL.words + 'px', letterSpacing: '2px', lineHeight: 1.05, textAlign: 'center', maxWidth: W * TEXT_FIT + 'px', textWrap: 'balance', color: colour,
+				const words = (text, colour, size = CAROUSEL.words) => $('<div>').text(text).css({
+					fontSize: size + 'px', letterSpacing: '2px', lineHeight: 1.05, textAlign: 'center', maxWidth: W * TEXT_FIT + 'px', textWrap: 'balance', color: colour,
 					textShadow: '0 9px 0 rgba(0,0,0,0.5)', WebkitTextStroke: `7px ${theme.ink}`, paintOrder: 'stroke fill',
 				});
 				words('THANKS FOR PLAYING!', 'white').appendTo($wall);
@@ -3044,7 +3044,7 @@ window.Showtime = function (stage, opts) {
 					(slides[i] = slides[i] || []).push($slide);
 				});
 				// the kiosk: book another session
-				words('BOOK ANOTHER SESSION AT THE KIOSK', TYPE.colours.gold).attr('kiosk', '').appendTo($wall);
+				words('BOOK ANOTHER SESSION AT THE KIOSK', TYPE.colours.gold, CAROUSEL.kiosk).attr('kiosk', '').appendTo($wall);
 			}
 			place(0, true);
 			shownSlide = 0;
