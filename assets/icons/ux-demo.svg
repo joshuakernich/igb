@@ -1,25 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
-	<!-- UX Demo: a blueprint, flat blue, every part a drawn line: the box (three walls and a floor) with a play button in it -->
+	<!-- UX Demo: a blueprint, flat blue, drawn lines only: the grid, a square inset in it, a play button inset in that -->
 	<defs>
-		<pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
-			<path d="M32 0 H0 V32" fill="none" stroke="white" stroke-opacity="0.18" stroke-width="1"/>
+		<pattern id="grid" x="0" y="0" width="32" height="32" patternUnits="userSpaceOnUse">
+			<path d="M32 0 H0 V32" fill="none" stroke="white" stroke-opacity="0.2" stroke-width="1.5"/>
 		</pattern>
 	</defs>
 	<rect width="256" height="256" rx="40" fill="#1f5fd0"/>
 	<rect width="256" height="256" rx="40" fill="url(#grid)"/>
-	<g fill="none" stroke="white" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
-		<!-- the back wall, the side walls, the floor -->
-		<path d="M84 56 H172 V146 H84 Z"/>
-		<path d="M84 56 L40 36 V178 L84 146"/>
-		<path d="M172 56 L216 36 V178 L172 146"/>
-		<path d="M40 178 L216 178" stroke-dasharray="6 6"/>
-		<!-- the play button, centre of the front wall -->
-		<circle cx="128" cy="101" r="30"/>
-		<path d="M119 85 L144 101 L119 117 Z"/>
-	</g>
-	<!-- dimension lines -->
-	<g fill="none" stroke="white" stroke-opacity="0.8" stroke-width="2" stroke-linecap="round">
-		<path d="M84 204 H172 M84 197 V211 M172 197 V211"/>
-		<path d="M232 36 V178 M225 36 H239 M225 178 H239"/>
+	<g fill="none" stroke="white" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+		<rect x="64" y="64" width="128" height="128" rx="10"/>
+		<path d="M108 92 L156 128 L108 164 Z"/>
 	</g>
 </svg>
