@@ -2792,22 +2792,22 @@ window.Showtime = function (stage, opts) {
 
 		function face(i) {
 			const f = R.faces[i];
+			const ink = theme.ink, col = f.colour;
+			// the button style (as the pause screen's rows): dark glass, an outline
+			// in the face's colour, its features in that colour too (outlined in
+			// ink, like the words), and a drop under it
+			const drawn = (d, w) => `<path d="${d}" stroke="${ink}" stroke-width="${w + 5}" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" stroke="${col}" stroke-width="${w}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
 			const mouth = f.mouth >= 20
-				? `<path d="M30 60 Q50 ${60 + f.mouth * 1.6} 70 60 Z" fill="${theme.ink}"/>`
-				: `<path d="M30 ${66 - f.mouth / 3} Q50 ${66 + f.mouth} 70 ${66 - f.mouth / 3}" stroke="${theme.ink}" stroke-width="7" fill="none" stroke-linecap="round"/>`;
-			const brows = f.brows ? `<path d="M28 30 L42 36 M72 30 L58 36" stroke="${theme.ink}" stroke-width="6" stroke-linecap="round"/>` : '';
-			// the button style: one gradient, darker at the top; a white bar over
-			// the top half; a thin black outline, a thin white line inside it
-			const id = 'rate-face-' + i + '-' + ++faceIds;
-			return `<svg viewBox="0 0 100 100" width="100%" height="100%"><defs>`
-				+ `<linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${darker(f.colour, GLOSS.dark)}"/><stop offset="1" stop-color="${f.colour}"/></linearGradient>`
-				+ `<clipPath id="${id}c"><circle cx="50" cy="50" r="46"/></clipPath></defs>`
-				+ `<circle cx="50" cy="50" r="46" fill="url(#${id}g)"/>`
-				+ `<rect x="0" y="0" width="100" height="50" fill="white" fill-opacity="${GLOSS.bar}" clip-path="url(#${id}c)"/>`
-				+ `<circle cx="50" cy="50" r="46" fill="none" stroke="#000" stroke-width="2.2"/><circle cx="50" cy="50" r="44.2" fill="none" stroke="white" stroke-opacity="0.9" stroke-width="1.4"/>`
-				+ `<circle cx="36" cy="42" r="6.5" fill="${theme.ink}"/><circle cx="64" cy="42" r="6.5" fill="${theme.ink}"/>${brows}${mouth}</svg>`;   // (the face on top of it all)
+				? `<path d="M30 58 Q50 ${58 + f.mouth * 1.6} 70 58 Z" fill="${col}" stroke="${ink}" stroke-width="5" stroke-linejoin="round" paint-order="stroke fill"/>`
+				: drawn(`M30 ${64 - f.mouth / 3} Q50 ${64 + f.mouth} 70 ${64 - f.mouth / 3}`, 7);
+			const brows = f.brows ? drawn('M28 28 L42 34 M72 28 L58 34', 6) : '';
+			const eye = (x) => `<circle cx="${x}" cy="40" r="6.5" fill="${col}" stroke="${ink}" stroke-width="5" paint-order="stroke fill"/>`;
+			const ring = 44, line = 100 / 200 * BUTTON.line, drop = 100 / 200 * BUTTON.drop;   // (the face is drawn 200px across)
+			return `<svg viewBox="0 0 100 100" width="100%" height="100%" overflow="visible">`
+				+ `<circle cx="50" cy="${48 + drop}" r="${ring + line / 2}" fill="rgba(0,0,0,0.45)"/>`
+				+ `<circle cx="50" cy="48" r="${ring}" fill="${BUTTON.glass}" stroke="${col}" stroke-width="${line}"/>`
+				+ `<g transform="translate(0 -2)">${eye(36)}${eye(64)}${brows}${mouth}</g></svg>`;   // (the face on top of it all)
 		}
-		let faceIds = 0;
 
 		const big = (text, size = 110) => $('<div>').text(text).css({
 			fontSize: size + 'px', letterSpacing: '2px', lineHeight: 1, textAlign: 'center',
@@ -2853,7 +2853,7 @@ window.Showtime = function (stage, opts) {
 					opacity: feedback && !chosen ? 0.25 : 1, transform: chosen ? 'scale(1.25)' : 'none', transition: 'transform 0.2s, opacity 0.2s',
 				}).appendTo($row);
 				$('<div>').html(face(i)).css({ width: '200px', height: '200px' }).appendTo($b);
-				$('<div>').text(f.label).css({ WebkitTextStroke: `5px ${theme.ink}`, paintOrder: 'stroke fill', whiteSpace: 'nowrap' }).appendTo($b);
+				$('<div>').text(f.label).css({ color: f.colour, WebkitTextStroke: `5px ${theme.ink}`, paintOrder: 'stroke fill', whiteSpace: 'nowrap' }).appendTo($b);
 				tap($b, () => rate(i + 1));
 			});
 		}
