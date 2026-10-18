@@ -1276,7 +1276,7 @@ IGB.register('backrooms', function BackroomsGame(stage, playersMeta) {
 
 		// 1b. the title, crashing in over the buzzing office
 		show.beats.titleDrop({
-			lines: [{ text: 'BACKROOMS', fill: YELLOW, glow: '#c9a227' }],
+			// (its lines: the manifest's title, shared with the end screen's carousel)
 			update(dt) { if (Math.random() < dt * 0.7) stutter = 0.2 + Math.random() * 0.25; },
 			draw(ctx) { camcorder(ctx); },
 		}),

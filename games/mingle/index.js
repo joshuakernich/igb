@@ -1210,7 +1210,7 @@ IGB.register('mingle', function MingleGame(stage, playersMeta) {
 
 		// 1b. the title, crashing in letter by letter
 		show.beats.titleDrop({
-			lines: [{ text: 'MINGLE', fill: LIGHT_PINK, glow: PINK }],
+			// (its lines: the manifest's title, shared with the end screen's carousel)
 			enter() { speed = IDLE_ROLL; },
 			update(dt) { stepWorld(dt); },
 		}),

@@ -1655,7 +1655,9 @@ window.Showtime = function (stage, opts) {
 	// out). lines: [{ text, fill, glow }]. Never a byline under it.
 	beatsLib.titleDrop = function (extra) {
 		const T = TITLE;
-		const lines = (extra && extra.lines) || [{ text: (opts.title || opts.id || '').toUpperCase() }];
+		// (its lines: as given, or the game's title in the manifest, which the end screen's carousel uses too)
+		const listed = IGB.find && opts.id ? IGB.find(opts.id) : null;
+		const lines = (extra && extra.lines) || (listed && listed.title && listed.title.lines) || [{ text: (opts.title || opts.id || '').toUpperCase() }];
 		// when each line sets off, and when the last settles
 		const sets = lines.map((line, li) => T.first + li * T.lineGap);
 		const lastLand = sets[sets.length - 1] + T.glide;
@@ -3141,13 +3143,21 @@ window.Showtime = function (stage, opts) {
 						background: `#1a1030 url("assets/shared/screens/${g.id}.jpg") center / cover`, border: `6px solid ${TYPE.colours.white}`,
 						boxShadow: '0 18px 40px rgba(0,0,0,0.55)',
 					}).appendTo($slide);
-					// its name, a title in the game's own font and colour (manifest: titleFont, box.color), over the screenshot's foot
-					$('<div>').text(g.name).css({
-						position: 'absolute', left: '50%', bottom: '18px', transform: 'translateX(-50%) rotate(-3deg)', maxWidth: CAROUSEL.w - 40 + 'px',
-						fontFamily: `"${g.titleFont || FONT}", "${FONT}", sans-serif`, fontSize: '64px', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center',
-						color: (g.box && g.box.color) || TYPE.colours.gold,
-						WebkitTextStroke: `8px ${theme.ink}`, paintOrder: 'stroke fill', textShadow: `0 7px 0 ${theme.ink}, 0 0 30px rgba(0,0,0,0.6)`,
+					// its name, as its title drop has it (manifest: title.lines, title.font): its lines stacked, each in its colour, outlined and dropped, over the screenshot's foot
+					const $title = $('<div>').css({
+						position: 'absolute', left: '50%', bottom: '20px', transform: 'translateX(-50%)', maxWidth: CAROUSEL.w - 40 + 'px',
+						display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+						fontFamily: `"${(g.title && g.title.font) || FONT}", "${FONT}", sans-serif`, lineHeight: 0.95, whiteSpace: 'nowrap', textAlign: 'center',
 					}).appendTo($shot);
+					const lines = (g.title && g.title.lines) || [{ text: g.name.toUpperCase(), fill: TYPE.colours.white }];
+					const size = lines.length > 1 ? 54 : 64;
+					lines.forEach(function (line) {
+						$('<div>').text(line.text).css({
+							fontSize: size + 'px', color: line.fill || 'white',
+							WebkitTextStroke: `${Math.round(size * 0.14)}px ${theme.ink}`, paintOrder: 'stroke fill',
+							textShadow: `0 ${Math.round(size * 0.09)}px 0 rgba(0,0,0,0.55), 0 0 ${Math.round(size * 0.5)}px ${line.glow || 'transparent'}`,
+						}).appendTo($title);
+					});
 					(slides[i] = slides[i] || []).push($slide);
 				});
 				// the kiosk: book another session

@@ -4391,7 +4391,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 		// 1b. the title, crashing in letter by letter, raised over a big START button
 		show.beats.titleDrop({
-			lines: [{ text: 'RED LIGHT', fill: '#ff3640', glow: '#ff3640' }, { text: 'GREEN LIGHT', fill: '#27d96b', glow: '#27d96b' }],
+			// (its lines: the manifest's title, shared with the end screen's carousel)
 			update(dt) {
 				stepWorld(dt);
 				if (show.cue(1.1)) voice('title');   // ("Red Light. Green Light." as the two lines glide in and settle: the name only, never a byline)

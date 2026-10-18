@@ -1415,7 +1415,7 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 
 		// 1b. the title, crashing in letter by letter
 		show.beats.titleDrop({
-			lines: [{ text: 'GWI-MA', fill: '#ff4fd8', glow: '#ff3d7a' }, { text: 'SHOWDOWN', fill: '#ffe14d', glow: '#ff7a3d' }],
+			// (its lines: the manifest's title, shared with the end screen's carousel)
 			update(dt) { stepWorld(dt); },
 		}),
 

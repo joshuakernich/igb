@@ -94,7 +94,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	show.sequence([
 		{ id: 'squad', length: Infinity },
 		show.beats.titleDrop({
-			lines: [{ text: 'UX', fill: '#3ad1ff', glow: '#5a4dff' }, { text: 'DEMO', fill: '#ffd23f', glow: '#ff7a3d' }],
+			// (its lines: the manifest's title, shared with the end screen's carousel)
 		}),
 		show.beats.clockIntro(),
 		show.beats.visors(),
