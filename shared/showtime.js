@@ -3107,7 +3107,7 @@ window.Showtime = function (stage, opts) {
 	// BOOK ANOTHER SESSION AT THE KIOSK. The game hands back as it starts
 	// (extra.enter is the place to call IGB.complete).
 	beatsLib.end = function (extra) {
-		const CAROUSEL = { every: 2.8, w: 640, h: 400, side: 520, words: 80, kiosk: 44, margin: 40, foot: 24 };   // (words: the size of THANKS FOR PLAYING!; kiosk: the kiosk line's, much smaller; margin: their extra room from the screenshots; foot: the cards' thick white bottom border)
+		const CAROUSEL = { every: 2.8, w: 640, h: 400, side: 520, words: 80, kiosk: 44, margin: 40, foot: 96 };   // (words: the size of THANKS FOR PLAYING!; kiosk: the kiosk line's, much smaller; margin: their extra room from the screenshots; foot: the cards' thick white bottom border, the game's title in it)
 		let $layer = null;
 		let slides = [];      // every wall's slides, by game: [[$slide, ...], ...]
 		let shownSlide = -1;
@@ -3131,7 +3131,7 @@ window.Showtime = function (stage, opts) {
 					textShadow: '0 9px 0 rgba(0,0,0,0.5)', WebkitTextStroke: `7px ${theme.ink}`, paintOrder: 'stroke fill',
 				});
 				words('THANKS FOR PLAYING!', 'white').appendTo($wall);
-				const $track = $('<div>').attr('carousel', '').css({ position: 'relative', width: '1500px', height: CAROUSEL.h + 12 + 'px', margin: CAROUSEL.margin + 'px 0' }).appendTo($wall);
+				const $track = $('<div>').attr('carousel', '').css({ position: 'relative', width: '1500px', height: CAROUSEL.h + CAROUSEL.foot + 12 + 'px', margin: CAROUSEL.margin + 'px 0' }).appendTo($wall);
 				list.forEach(function (g, i) {
 					const $slide = $('<div>').attr('slide', g.id).css({
 						position: 'absolute', left: '50%', top: 0, width: CAROUSEL.w + 'px', marginLeft: -CAROUSEL.w / 2 + 'px',
@@ -3143,13 +3143,14 @@ window.Showtime = function (stage, opts) {
 						background: `#1a1030 url("assets/shared/screens/${g.id}.jpg") center / cover`, border: `6px solid ${TYPE.colours.white}`, borderBottomWidth: CAROUSEL.foot + 'px',   // (a thick white foot, like a print's)
 						boxShadow: '0 18px 40px rgba(0,0,0,0.55)',
 					}).appendTo($slide);
-					// its name, as its title drop has it (manifest: title.lines, title.font): its lines stacked, each in its colour, outlined and dropped, over the screenshot's foot
+					// its name, as its title drop has it (manifest: title.lines, title.font): its lines side by side, each in its colour, outlined and dropped, in the card's white foot
 					const lines = (g.title && g.title.lines) || [{ text: g.name.toUpperCase(), fill: TYPE.colours.white }];
-					const size = lines.length > 1 ? 54 : 64;
-					// (its last line straddling the card's bottom edge: half on the screenshot, half below it)
+					// (all on one line, in the middle of the card's white foot; as big as fits across it)
+					const chars = lines.reduce((a, l) => a + l.text.length + 1, -1);
+					const size = Math.round(Math.min(CAROUSEL.foot * 0.6, (CAROUSEL.w - 50) / (chars * 0.66)));
 					const $title = $('<div>').css({
-						position: 'absolute', left: '50%', bottom: -(size * 0.95 / 2 + CAROUSEL.foot) + 'px', transform: 'translateX(-50%)', maxWidth: CAROUSEL.w - 40 + 'px', zIndex: 1,
-						display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+						position: 'absolute', left: '50%', bottom: -(CAROUSEL.foot / 2 + size * 0.95 / 2) + 'px', transform: 'translateX(-50%)', zIndex: 1,
+						display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Math.round(size * 0.3) + 'px',
 						fontFamily: `"${(g.title && g.title.font) || FONT}", "${FONT}", sans-serif`, lineHeight: 0.95, whiteSpace: 'nowrap', textAlign: 'center',
 					}).appendTo($shot);
 					lines.forEach(function (line) {
