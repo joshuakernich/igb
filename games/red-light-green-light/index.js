@@ -2394,6 +2394,24 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// toward us an eighth of a turn a frame), each frame trimmed when it loads.
 	const BOULDER_ART = { file: 'v3-boulder.png', size: 1.12 };   // how big it's drawn, against the boulder's size
 	let boulderFrames = null;
+	// The order its frames play in as it rolls, and whether each blends into
+	// the next: set in the boulder lab (DEBUG ▸ BOULDER LAB), baked in here,
+	// kept in this browser while being tuned.
+	const BOULDER_TUNED = { order: [0, 1, 2, 3, 4, 5, 6, 7], blend: true };
+	const BOULDER_KEY = 'rlgl-boulder-lab';
+	const boulderTune = JSON.parse(JSON.stringify(BOULDER_TUNED));
+	try { Object.assign(boulderTune, JSON.parse(localStorage.getItem(BOULDER_KEY) || '{}')); } catch (e) { /* (no storage: the baked-in order) */ }
+	// one frame of the roll (k: how far through the sequence, round and round; draw(frame, alpha))
+	function boulderAt(k, draw) {
+		const seq = boulderTune.order.filter((i) => boulderFrames && boulderFrames[i]);
+		if (!seq.length) return;
+		const n = seq.length;
+		const turn = ((k % n) + n) % n;
+		const i = Math.floor(turn);
+		const mix = turn - i;
+		draw(boulderFrames[seq[i]], 1);
+		if (boulderTune.blend && mix > 0.01) draw(boulderFrames[seq[(i + 1) % n]], mix);
+	}
 	(function () {
 		const img = new Image();
 		img.onload = function () {
@@ -2454,17 +2472,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			// turn, each easing into the next (cross-faded, so it never holds
 			// still between frames and then jumps)
 			if (boulderFrames) {
-				const n = boulderFrames.length;
-				const turn = ((((b.spin / (Math.PI * 2)) % 1) + 1) % 1) * n;
-				const i = Math.floor(turn) % n;
-				const mix = turn - Math.floor(turn);
-				const put = function (f, alpha) {
+				boulderAt(b.spin / (Math.PI * 2) * boulderTune.order.length, function (f, alpha) {
 					const d = r * 2 * BOULDER_ART.size / f.fill;   // (the whole box, so the boulder in it comes out the right size)
 					c.globalAlpha = fadeIn(b.f) * alpha;
 					c.drawImage(f.img, p.x - d / 2, p.y - d / 2 * f.h / f.w, d, d * f.h / f.w);
-				};
-				put(boulderFrames[i], 1);
-				if (mix > 0.01) put(boulderFrames[(i + 1) % n], mix);
+				});
 				return;
 			}
 			// (until it's loaded) a lumpy circle
@@ -4629,6 +4641,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	dbutton('MAGNET ALL', () => { for (const c of contestants) c.magnet = MAGNET.time; }, '#225a3a').appendTo($misc);
 	dbutton('BOULDER', () => { for (let w = 0; w < 3; w++) rollBoulder(true); }, '#225a3a').appendTo($misc);
 	dbutton('CHARACTER LAB', () => lab.open(), '#5a3a8a').appendTo($misc);
+	dbutton('BOULDER LAB', () => boulderLab.open(), '#5a3a8a').appendTo($misc);
 	dbutton('MONEY BAG ALL', () => { for (const c of contestants) if (c.alive) popBag(c.x, c.f + 60, c.wall); }, '#225a3a').appendTo($misc);
 
 	// any beat, straight away (a squad of three if none was picked; the
@@ -4670,6 +4683,132 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const ph = show.beat === 'play' ? ` R${round + 1} ${phase}` : '';
 		$dnow.text(`${show.beat}${step}${ph}  ${show.mmss ? show.mmss(show.timeLeft()) : ''}`);
 	}
+
+	/* ---------- the boulder lab ---------- */
+
+	// For putting the boulder's frames in order: all eight from its sheet
+	// along the top (click one to add it to the end of the roll), the roll
+	// as a timeline (click a frame to pick it; move it, copy it, take it
+	// out), how fast it turns, whether frames blend into each other, and the
+	// boulder rolling big beside, as in the game, with the frame it's on
+	// marked. Kept in this browser; COPY puts it on the clipboard to be baked
+	// into BOULDER_TUNED.
+	const boulderLab = (function () {
+		let $lab = null, canvas = null, timer = null, at = 0, t0 = 0;
+		let speed = 1.2;   // (turns a second, while it plays)
+		const css = { fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif', color: 'white' };
+		const button = (label, fn, colour = '#22305a') => $('<button>').text(label).css({
+			margin: '2px', padding: '5px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+			background: colour, color: 'white', fontFamily: 'inherit', fontSize: '13px',
+		}).on('click', function (e) { e.stopPropagation(); fn(); });
+		const heading = (text, $to) => $('<div>').text(text).css({ fontSize: '12px', fontWeight: 600, color: '#9fb6d8', margin: '12px 2px 4px', letterSpacing: '0.5px' }).appendTo($to);
+		const save = () => { try { localStorage.setItem(BOULDER_KEY, JSON.stringify(boulderTune)); } catch (e) { /* (not kept) */ } };
+		function thumb(i, size) {
+			const cv = document.createElement('canvas');
+			cv.width = cv.height = size * 2;
+			cv.style.width = cv.style.height = size + 'px';
+			const f = boulderFrames && boulderFrames[i];
+			if (f) cv.getContext('2d').drawImage(f.img, 0, 0, size * 2, size * 2);
+			return cv;
+		}
+		function build() {
+			$lab = $('<boulder-lab>').css(Object.assign({ position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, zIndex: 10000, display: 'flex', background: 'rgb(8,10,22)', pointerEvents: 'auto' }, css))
+				.appendTo(document.body).on('pointerdown click', (e) => e.stopPropagation());
+			stage.own(() => $lab && $lab.remove());
+			$('<div>').css({ width: '380px', flex: 'none', padding: '14px', boxSizing: 'border-box', overflowY: 'auto', fontSize: '13px' }).appendTo($lab);
+			canvas = $('<canvas>').css({ flex: 1, minWidth: 0, height: '100%', display: 'block' }).appendTo($lab)[0];
+			render();
+		}
+		function render() {
+			const $side = $lab.children().first().empty();
+			$('<div>').text('BOULDER LAB').css({ fontSize: '18px', fontWeight: 700, marginBottom: '6px' }).appendTo($side);
+			if (!boulderFrames) { $('<div>').text('(its sheet is still loading)').css({ color: '#d88' }).appendTo($side); return; }
+			heading('ITS FRAMES · CLICK ONE TO ADD IT TO THE END', $side);
+			const $pal = $('<div>').css({ display: 'flex', flexWrap: 'wrap', gap: '4px' }).appendTo($side);
+			boulderFrames.forEach(function (f, i) {
+				$('<button>').attr('title', 'Frame ' + (i + 1)).css({ padding: '2px', borderRadius: '6px', border: '2px solid transparent', background: '#18213a', cursor: 'pointer', color: '#9fb6d8', fontSize: '11px' })
+					.append(thumb(i, 70)).append($('<div>').text(i + 1))
+					.appendTo($pal).on('click', (e) => { e.stopPropagation(); boulderTune.order.push(i); at = boulderTune.order.length - 1; save(); render(); });
+			});
+			const order = boulderTune.order;
+			at = Math.max(0, Math.min(order.length - 1, at));
+			heading(`THE ROLL · ${order.length} FRAMES`, $side);
+			const $tl = $('<div>').css({ display: 'flex', flexWrap: 'wrap', gap: '4px' }).appendTo($side);
+			order.forEach(function (i, k) {
+				$('<button>').css({ padding: '2px', borderRadius: '6px', border: k === at ? '2px solid #d8743a' : '2px solid transparent', background: '#18213a', cursor: 'pointer', color: '#9fb6d8', fontSize: '11px' })
+					.append(thumb(i, 52)).append($('<div>').text((k + 1) + ' · #' + (i + 1)))
+					.appendTo($tl).on('click', (e) => { e.stopPropagation(); at = k; render(); });
+			});
+			const $ops = $('<div>').css({ display: 'flex', flexWrap: 'wrap', marginTop: '4px' }).appendTo($side);
+			button('◀ MOVE', () => { if (at > 0) { [order[at - 1], order[at]] = [order[at], order[at - 1]]; at--; save(); render(); } }).appendTo($ops);
+			button('MOVE ▶', () => { if (at < order.length - 1) { [order[at + 1], order[at]] = [order[at], order[at + 1]]; at++; save(); render(); } }).appendTo($ops);
+			button('+ COPY', () => { order.splice(at + 1, 0, order[at]); at++; save(); render(); }, '#225a3a').appendTo($ops);
+			button('− REMOVE', () => { if (order.length > 1) { order.splice(at, 1); save(); render(); } }, '#5a2232').appendTo($ops);
+			button('REVERSE', () => { order.reverse(); save(); render(); }).appendTo($ops);
+			heading('PLAYING', $side);
+			const $sp = $('<label>').css({ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }).appendTo($side);
+			$('<span>').text('TURNS A SECOND').css({ width: '120px' }).appendTo($sp);
+			const $val = $('<span>').text(speed.toFixed(2)).css({ width: '40px', fontFamily: 'monospace' });
+			$('<input type="range">').attr({ min: 0, max: 3, step: 0.05, value: speed }).css({ flex: 1 }).on('input', function () { speed = parseFloat(this.value); $val.text(speed.toFixed(2)); }).appendTo($sp);
+			$val.appendTo($sp);
+			const $bl = $('<label>').css({ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', margin: '6px 0' }).appendTo($side);
+			$('<input type="checkbox">').prop('checked', boulderTune.blend).on('change', function () { boulderTune.blend = this.checked; save(); }).appendTo($bl);
+			$('<span>').text('BLEND EACH FRAME INTO THE NEXT').appendTo($bl);
+			const $end = $('<div>').css({ display: 'flex', flexWrap: 'wrap', marginTop: '12px' }).appendTo($side);
+			const $text = $('<textarea readonly>').css({ width: '100%', height: '70px', marginTop: '6px', fontSize: '11px', fontFamily: 'monospace', background: '#0d1424', color: '#9fd8ff', border: '1px solid #345', borderRadius: '8px' }).hide();
+			const $copy = button('COPY ORDER', function () {
+				const text = JSON.stringify(boulderTune);
+				$text.val(text).show()[0].select();
+				try { navigator.clipboard.writeText(text).then(() => $copy.text('COPIED ✓'), () => $copy.text('COPY FROM THE BOX')); } catch (e) { $copy.text('COPY FROM THE BOX'); }
+			}, '#3a6a2a').appendTo($end);
+			button('RESET', () => { Object.assign(boulderTune, JSON.parse(JSON.stringify(BOULDER_TUNED))); save(); render(); }, '#5a2232').appendTo($end);
+			button('CLOSE', close, '#444').appendTo($end);
+			$text.appendTo($side);
+		}
+		function draw() {
+			if (!canvas) return;
+			const dpr = window.devicePixelRatio || 1;
+			const pw = Math.max(1, Math.round(canvas.clientWidth * dpr)), ph = Math.max(1, Math.round(canvas.clientHeight * dpr));
+			if (canvas.width !== pw || canvas.height !== ph) { canvas.width = pw; canvas.height = ph; }
+			const c = canvas.getContext('2d');
+			c.setTransform(1, 0, 0, 1, 0, 0);
+			c.clearRect(0, 0, pw, ph);
+			if (!boulderFrames) return;
+			const t = (performance.now() - t0) / 1000;
+			const n = boulderTune.order.length;
+			const k = t * speed * n;
+			// the roll, big
+			const size = Math.min(pw * 0.55, ph * 0.7);
+			boulderAt(k, function (f, alpha) {
+				c.globalAlpha = alpha;
+				c.drawImage(f.img, pw * 0.38 - size / 2, ph * 0.45 - size / 2, size, size);
+			});
+			c.globalAlpha = 1;
+			c.fillStyle = '#9fb6d8';
+			c.font = `${Math.round(16 * dpr)}px system-ui, sans-serif`;
+			c.textAlign = 'center';
+			const on = Math.floor(((k % n) + n) % n);
+			c.fillText(`FRAME ${on + 1} OF ${n} (#${boulderTune.order[on] + 1})`, pw * 0.38, ph * 0.45 + size / 2 + 30 * dpr);
+			// the chosen frame, still, beside it
+			const f = boulderFrames[boulderTune.order[at]];
+			if (f) {
+				const s2 = size * 0.5;
+				c.drawImage(f.img, pw * 0.82 - s2 / 2, ph * 0.45 - s2 / 2, s2, s2);
+				c.fillText(`CHOSEN: ${at + 1} (#${boulderTune.order[at] + 1})`, pw * 0.82, ph * 0.45 + s2 / 2 + 30 * dpr);
+			}
+		}
+		function open() {
+			if (!$lab) build(); else render();
+			$lab.show();
+			t0 = performance.now();
+			if (!timer) timer = stage.interval(draw, 1000 / 30);
+		}
+		function close() {
+			if ($lab) $lab.hide();
+			if (timer) { clearInterval(timer); timer = null; }
+		}
+		return { open, close };
+	})();
 
 	/* ---------- the character lab ---------- */
 
