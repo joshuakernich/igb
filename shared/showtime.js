@@ -202,10 +202,11 @@ window.Showtime = function (stage, opts) {
 	const TITLE = {
 		dark: 0.4,             // the room goes dark
 		riser: 1.6,            // a rushing build
-		first: 1.5,            // the first letter drops
-		each: 0.075,           // the gap between letters
-		lineGap: 0.35,         // and before the next line starts
-		fall: 0.32,            // how long a letter takes to land
+		first: 1.5,            // the first line sets off
+		lineGap: 0.45,         // and the next after it
+		glide: 1.7,            // how long a line takes to glide into place (easing gently to a stop)
+		from: [0.8, 0.75],     // where it glides from: this far out (shares of the wall's width and height), the top line from the top left, the next from the bottom right
+		startFade: 0.7,        // the START button fading in
 		tagline: 0.5,          // after the last letter
 		hold: 1.6,             // then it holds
 		out: 0.5,              // and fades
@@ -582,6 +583,7 @@ window.Showtime = function (stage, opts) {
 	// colour snaps to the nearest of the palette; players' colours stay
 	// theirs. The outline and drop are the same everywhere (none on dark ink).
 	const TYPE = Object.assign({}, Showtime.TYPE, opts.font ? { font: opts.font } : {});
+	if (document.fonts) document.fonts.load(`500 100px "${TYPE.font}"`).catch(() => {});   // (fetched now, so the first frames aren't in a fallback)
 	// the clock's digits: in a font of their own if the game gives one (a
 	// monospace one keeps them from jiggling as they count)
 	const CLOCK_FONT = opts.clockFont === undefined ? 'Share Tech Mono' : opts.clockFont || null;   // (by default, steady monospace digits)
@@ -1388,25 +1390,18 @@ window.Showtime = function (stage, opts) {
 	const beatsLib = self.beats = {};
 
 	// The title drop: the room goes dark under a rushing build, then the
-	// game's title crashes in letter by letter, a line at a time, each letter
-	// a hit; a boom and a flash as the last lands, the tagline, a hold, and
-	// out. lines: [{ text, fill, glow }]; tagline: a smaller line under.
+	// game's title glides in on every wall, a line at a time: the top line
+	// from the top left, the next from the bottom right (and so on,
+	// alternately), each easing gently into place; a soft boom as the last
+	// settles, the tagline, then the START button fading in (or a hold, and
+	// out). lines: [{ text, fill, glow }]; tagline: a smaller line under.
 	beatsLib.titleDrop = function (extra) {
 		const T = TITLE;
 		const lines = (extra && extra.lines) || [{ text: (opts.title || opts.id || '').toUpperCase() }];
 		const tagline = extra && extra.tagline;
-		// when each letter lands
-		const lands = [];
-		let at = T.first;
-		lines.forEach(function (line, li) {
-			lands.push([...line.text].map(function (ch) {
-				const t0 = at;
-				if (ch !== ' ') at += T.each;
-				return t0;
-			}));
-			at += T.lineGap;
-		});
-		const lastLand = at - T.lineGap - T.each + T.fall;
+		// when each line sets off, and when the last settles
+		const sets = lines.map((line, li) => T.first + li * T.lineGap);
+		const lastLand = sets[sets.length - 1] + T.glide;
 		// By default the title holds, raised, over a big START button that pops
 		// in once it's landed, and fades out once START is pressed (start:
 		// false: it plays through and moves on by itself)
@@ -1430,20 +1425,15 @@ window.Showtime = function (stage, opts) {
 			update(dt, bt) {
 				self.blackout = Math.min(INTRO_DIM, bt / T.dark * INTRO_DIM);   // the game's scene still showing behind
 				if (self.cue(T.first - T.riser)) self.fx('riser', 0.7, 1, T.riser);
-				lands.forEach(function (times, li) {
-					times.forEach(function (t0, i) {
-						if (lines[li].text[i] !== ' ' && self.cue(t0 + T.fall)) { self.fx('letter', 0.8); self.shake = Math.max(self.shake, 0.18); }
-					});
-				});
-				if (self.cue(lastLand)) { self.fx('titleLand'); self.shake = 0.9; self.flash = 0.6; }
+				if (self.cue(lastLand - 0.15)) { self.fx('titleLand', 0.6); self.shake = 0.2; self.flash = 0.2; }   // (gently: it settles rather than slams)
 				now = bt;
 				// the START button, on the front wall under the title
 				if (start && !$start && startedAt < 0 && bt > lastLand + T.tagline) {
 					$start = $('<button start>').text('START').css({
-						position: 'absolute', left: (W + W / 2) + 'px', top: T.startY + 'px', transform: 'translate(-50%, -50%) scale(0)',
+						position: 'absolute', left: (W + W / 2) + 'px', top: T.startY + 'px', transform: 'translate(-50%, -50%)', opacity: 0,
 						padding: '28px 110px', borderRadius: '90px', border: 'none', cursor: 'pointer', pointerEvents: 'auto', zIndex: 5,
 						background: TYPE.colours.gold, color: TYPE.colours.ink, fontFamily: `"${FONT}", sans-serif`, fontSize: '120px', lineHeight: 1, letterSpacing: '4px',
-						boxShadow: `0 12px 0 ${theme.ink}`, transition: 'transform 0.4s cubic-bezier(.2,1.6,.4,1), opacity 0.35s',
+						boxShadow: `0 12px 0 ${theme.ink}`, transition: `transform 0.25s, opacity ${T.startFade}s`,
 					}).appendTo(stage.$ui)
 						.on('mouseenter', function () { $(this).css({ transform: 'translate(-50%, -50%) scale(1.08)' }); })
 						.on('mouseleave', function () { $(this).css({ transform: 'translate(-50%, -50%) scale(1)' }); })
@@ -1454,7 +1444,7 @@ window.Showtime = function (stage, opts) {
 							$(this).css({ transform: 'translate(-50%, -50%) scale(1.25)' });
 							dropStart();
 						});
-					stage.timeout(() => $start && $start.css({ transform: 'translate(-50%, -50%) scale(1)' }), 30);
+					stage.timeout(() => $start && $start.css({ opacity: 1 }), 30);   // (it fades in)
 				}
 			},
 			draw(ctx, bt) {
@@ -1464,31 +1454,15 @@ window.Showtime = function (stage, opts) {
 					lines.forEach(function (line, li) {
 						const size = self.fitSize(c, line.text, T.size * (n > 1 ? 0.85 : 1), W - 140);   // a step of the scale that fits
 						const y = (start ? T.raised : 470) + (li - (n - 1) / 2) * size * 1.05 - (tagline ? 50 : 0);
-						c.save();
-						c.font = `400 ${size}px "${TYPE.font}", sans-serif`;
-						const chars = [...line.text];
-						const widths = chars.map((ch) => c.measureText(ch).width);
-						const total = widths.reduce((a, b) => a + b, 0);
-						const k = 1;
-						c.restore();
-						let x = W / 2 - total * k / 2;
-						chars.forEach(function (ch, i) {
-							const w = widths[i] * k;
-							const t0 = lands[li][i];
-							const age = bt - t0;
-							if (ch !== ' ' && age > 0) {
-								// falls from above, lands with a squash
-								const fall = clamp(age / T.fall, 0, 1);
-								const dy = -700 * (1 - fall) * (1 - fall);
-								const squash = fall >= 1 ? 1 - 0.18 * Math.max(0, 1 - (age - T.fall) / 0.2) : 1;
-								c.save();
-								c.translate(x + w / 2, y + dy);
-								c.scale(1 / squash, squash);
-								self.text(c, ch, 0, 0, size * k, { fill: line.fill || 'white', glow: line.glow || theme.accent, alpha: fade * clamp(age / 0.08, 0, 1), fit: 9999 });
-								c.restore();
-							}
-							x += w;
-						});
+						const age = bt - sets[li];
+						if (age <= 0) return;
+						// gliding in from off the wall's corner, easing gently to a stop
+						const k = clamp(age / T.glide, 0, 1);
+						const left = 1 - Math.pow(1 - k, 4);
+						const side = li % 2 ? 1 : -1;   // (-1: from the top left; 1: from the bottom right)
+						const dx = side * T.from[0] * W * (1 - left);
+						const dy = side * T.from[1] * H * (1 - left);
+						self.text(c, line.text, W / 2 + dx, y + dy, size, { fill: line.fill || 'white', glow: line.glow || theme.accent, alpha: fade * clamp(age / 0.4, 0, 1), fit: 9999 });
 					});
 					if (tagline) self.slam(c, tagline, W / 2, 470 + (n - 1) / 2 * T.size * 0.9 + 150, 64, bt - lastLand - T.tagline, { fill: theme.gold, alpha: fade });
 				});
@@ -2884,7 +2858,7 @@ window.Showtime = function (stage, opts) {
 // The type every show uses: its sizes (world units) and colours. Text of any
 // other size or colour snaps to these; players' colours are kept.
 Showtime.TYPE = {
-	font: 'Paytone One',
+	font: 'Lexend',   // (Lexend Medium: only its 500 weight is loaded, so it's what every weight draws)
 	sizes: [28, 40, 56, 80, 110, 160, 220],   // caption, small, body, large, heading, hero, display
 	colours: {
 		white: '#ffffff',
@@ -2902,7 +2876,7 @@ Showtime.THEME = {
 	gold: '#ffe14d',
 	ink: '#12052a',
 	sky: ['#0a0320', '#2a0d4a'],
-	font: 'Paytone One',
+	font: 'Lexend',   // (Lexend Medium: only its 500 weight is loaded, so it's what every weight draws)
 	panel: 'rgba(30,12,60,0.85)',      // the leaderboard's rows and the replay's room
 	floor: 'rgba(8,2,20,0.7)',         // under the podium
 	glow: 'rgba(255,79,216,0.35)',     // rising from the foot of the backdrop (rgba)

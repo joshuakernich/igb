@@ -35,7 +35,7 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 	const self = this;
 	const { W, H, WIDTH } = IGB;
 	const art = IGB.art;
-	const FONT = 'Paytone One';
+	const FONT = 'Lexend';   // (the show's standard: Lexend Medium)
 
 	/* ---------- tuning: the fight ---------- */
 

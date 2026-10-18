@@ -19,7 +19,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	const self = this;
 	const { W, H, WIDTH } = IGB;
 	const art = IGB.art;
-	const FONT = 'Paytone One';
+	const FONT = 'Lexend';   // (the show's standard: Lexend Medium)
 
 	/* ---------- tuning ---------- */
 
