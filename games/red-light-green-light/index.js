@@ -280,6 +280,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		boulderIn = 2;
 		sentries = [];
 		splats = [];
+		lens = [];
 		pads = [];
 		cash = [];
 		magnets = [];
@@ -1631,7 +1632,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			c.fall.t += dt;
 			if (!c.fall.splat && c.fall.t > 0.25) {
 				c.fall.splat = true;
-				splats.push({ x: c.x + c.fall.dir * 95, f: c.f + 6, t: 0, seed: Math.random() * 100, wall: c.wall });
+				splats.push({ x: c.x + c.fall.dir * 20, f: c.f + 2, t: 0, seed: Math.random() * 100, wall: c.wall });   // (pooling under them, just toward where they fell)
+				spatter(c);
 			}
 			return;
 		}
@@ -1752,6 +1754,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// RED LIGHT called out on every wall, and the white flash of a shot.
 	// (Everyone's score is the show's: its score capsules, see scoreHud.)
 	function drawCalls(ctx) {
+		drawLens(ctx);   // (blood on the camera, under the words)
 		if (showInset) {
 			if (scaleAt(dollF) < SCALE * 0.4) drawInset(ctx, INSET.x);   // while she's small, far off on the horizon
 			drawInset(ctx, CLOCK_AT[0].x, INSET.side);                 // and always on the side walls, where she can't be seen,
@@ -2047,6 +2050,48 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const a = s.seed + i * 2.1;
 			const d = (85 + (i * 37 % 50)) * g;
 			art.ellipse(ctx, p.x + Math.cos(a) * d * p.s, p.y + Math.sin(a) * d * 0.32 * p.s, (9 + i % 3 * 5) * p.s * g, (4 + i % 3 * 2) * p.s * g, { fill: '#b3001b' });
+		}
+	}
+
+	// A little blood on the camera, as someone's shot: a few drops land over
+	// their wall, run down in streaks, and fade away.
+	const LENS = { drops: [5, 9], size: [5, 26], life: 3.2, run: [40, 170], fade: 1.1 };   // how many drops; how big (px); seconds they last; how far they run down (px); seconds they fade over at the end
+	let lens = [];
+	function spatter(c) {
+		const wall = c.wall;
+		const n = LENS.drops[0] + Math.floor(Math.random() * (LENS.drops[1] - LENS.drops[0] + 1));
+		const cx = W * (0.25 + Math.random() * 0.5), cy = H * (0.2 + Math.random() * 0.35);
+		for (let i = 0; i < n; i++) {
+			const r = LENS.size[0] + Math.pow(Math.random(), 2) * (LENS.size[1] - LENS.size[0]);
+			lens.push({ wall, x: cx + (Math.random() - 0.5) * 260, y: cy + (Math.random() - 0.5) * 180, r, run: LENS.run[0] + Math.random() * (LENS.run[1] - LENS.run[0]) * (r / LENS.size[1]), born: wallT + Math.random() * 0.08 });
+		}
+	}
+	function drawLens(ctx) {
+		lens = lens.filter((d) => wallT - d.born < LENS.life);
+		for (const d of lens) {
+			const age = wallT - d.born;
+			if (age < 0) continue;
+			const alpha = Math.min(1, age / 0.05) * Math.min(1, (LENS.life - age) / LENS.fade);
+			const slide = d.run * (1 - Math.pow(1 - Math.min(1, age / (LENS.life * 0.8)), 2));   // (running down, slowing)
+			const x = d.wall * W + d.x;
+			art.save(ctx, function (c) {
+				c.globalAlpha = alpha * 0.9;
+				// the streak it leaves, thinning as it goes
+				if (slide > 1) {
+					c.beginPath();
+					c.moveTo(x - d.r * 0.45, d.y);
+					c.lineTo(x + d.r * 0.45, d.y);
+					c.lineTo(x + d.r * 0.22, d.y + slide);
+					c.lineTo(x - d.r * 0.22, d.y + slide);
+					c.closePath();
+					c.fillStyle = '#7a0010';
+					c.fill();
+				}
+				// the drop where it splashed, and the bead running down
+				art.circle(c, x, d.y, d.r, { fill: '#8a0012' });
+				art.circle(c, x, d.y + slide, d.r * 0.55, { fill: '#9a0016' });
+				art.circle(c, x - d.r * 0.3, d.y - d.r * 0.3, d.r * 0.25, { fill: 'rgba(255,190,190,0.45)' });   // (a wet glint)
+			});
 		}
 	}
 
