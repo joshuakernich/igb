@@ -1680,6 +1680,17 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const a = at(0, finishF + 10);
 			const b = at(0, finishF - 10);
 			art.rect(ctx, -20, a.y, WIDTH + 40, Math.max(1.5, b.y - a.y), { fill: '#d7262e', alpha: dollShown ? 1 : fadeIn(finishF) });
+			// the dash for the line: its time left, laid right over the line on
+			// every wall, exactly as thick, shrinking in toward each wall's middle
+			// (gold; flashing white as it runs out: red would vanish into the line)
+			if (phase === 'dash') {
+				const left = Math.max(0, 1 - phaseT / phaseDur);
+				const h = Math.max(1.5, b.y - a.y);
+				for (let w = 0; w < 3; w++) {
+					const span = W * left;
+					art.rect(ctx, w * W + (W - span) / 2, a.y, span, h, { fill: left < 0.35 && Math.floor(phaseT * 8) % 2 ? '#ffffff' : '#ffd23f' });
+				}
+			}
 		}
 		for (const s of splats) drawSplat(ctx, s);
 		// (while the view is up the field, before a round, the contestants wait
@@ -2439,11 +2450,21 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			// its shadow, in its shape (once its picture's in)
 			if (boulderFrames) castShape(c, shapeOf('boulder', (g) => { const f0 = boulderFrames[0]; const d = 100 / f0.fill; g.drawImage(f0.img, -d / 2, -50 - d / 2, d, d); }, 160, 160), foot.x, foot.y, b.f, r * 2 * BOULDER_ART.size / 100, 1, r * 0.8);
 			else softShadow(c, foot.x, foot.y, r * 0.95, r * 0.3, 0.3, 1, r * 2, b.f);
-			// the stone, rolling: its sprite sheet, a frame for each eighth of a turn
+			// the stone, rolling: its sprite sheet, a frame for each eighth of a
+			// turn, each easing into the next (cross-faded, so it never holds
+			// still between frames and then jumps)
 			if (boulderFrames) {
-				const f = boulderFrames[Math.floor((((b.spin / (Math.PI * 2)) % 1) + 1) % 1 * boulderFrames.length)];
-				const d = r * 2 * BOULDER_ART.size / f.fill;   // (the whole box, so the boulder in it comes out the right size)
-				c.drawImage(f.img, p.x - d / 2, p.y - d / 2 * f.h / f.w, d, d * f.h / f.w);
+				const n = boulderFrames.length;
+				const turn = ((((b.spin / (Math.PI * 2)) % 1) + 1) % 1) * n;
+				const i = Math.floor(turn) % n;
+				const mix = turn - Math.floor(turn);
+				const put = function (f, alpha) {
+					const d = r * 2 * BOULDER_ART.size / f.fill;   // (the whole box, so the boulder in it comes out the right size)
+					c.globalAlpha = fadeIn(b.f) * alpha;
+					c.drawImage(f.img, p.x - d / 2, p.y - d / 2 * f.h / f.w, d, d * f.h / f.w);
+				};
+				put(boulderFrames[i], 1);
+				if (mix > 0.01) put(boulderFrames[(i + 1) % n], mix);
 				return;
 			}
 			// (until it's loaded) a lumpy circle
@@ -4416,13 +4437,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					if (phase === 'ready') {
 						show.slam(c, 'ROUND ' + (round + 1), W / 2, 470, 170, phaseT - 0.1, { fill: PINK, glow: PINK, alpha: 1 - between(phaseT, phaseDur - 0.4, phaseDur) });
 					}
-					// the dash: how long is left to reach the line
-					if (phase === 'dash') {
-						const left = Math.max(0, 1 - phaseT / phaseDur);
-						const bw = 1000;
-						art.roundRect(c, W / 2 - bw / 2, 175, bw, 34, 17, { fill: 'rgba(42,16,32,0.55)' });
-						art.roundRect(c, W / 2 - bw / 2, 175, Math.max(34, bw * left), 34, 17, { fill: left < 0.35 ? '#ff3640' : '#ffd23f' });
-					}
+					// (the dash's time left is drawn on the finish line itself: see drawWorld)
 					if (phase === 'cleared' && cleared) {
 						const fade = 1 - between(phaseT, phaseDur - 0.4, phaseDur);
 						if (cleared.made) {
