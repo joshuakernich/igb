@@ -4272,13 +4272,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// Where one of her pupils is (side -1: her right, as we look), in her
 	// head's units, when she faces us: measured on the sheet's last frame.
 	const HEAD_FRAMES = 13;   // (the head sheet's frames from the back of her head to her face)
-	const PUPIL = { x: 0.196, y: -0.038, ring: 0.026 };   // (a share of the frame's width out from its middle, and of its height up or down; the red ring round each eye, as a share of the frame's width)
+	const PUPIL = { x: 0.149, cx: 0.032, y: 0.016, ring: 0.026 };   // (measured on the face frame's pupils: half the gap between them, how far right of the frame's middle they're centred, how far down)   // (a share of the frame's width out from its middle, and of its height up or down; the red ring round each eye, as a share of the frame's width)
 	function pupil(side) {
 		const sheet = sheets.head;
 		const f = sheet && sheet.frames[sheet.frames.length - 1];
 		if (!f) return { x: side * SPRITE.head * 0.16, y: SPRITE.head * 0.06 };
 		const k = SPRITE.head / sheet.unit;
-		return { x: side * PUPIL.x * f.w * k, y: (PUPIL.y * f.h + f.dy) * k };
+		const flip = Math.sin(head.yaw) < 0 ? -1 : 1;   // (mirrored, as her head's drawn, turning the other way)
+		return { x: (side * PUPIL.x + PUPIL.cx) * flip * f.w * k, y: (PUPIL.y * f.h + f.dy) * k };
 	}
 	// her two pupils, on the screen (as drawDoll draws her)
 	function dollEyes() {
