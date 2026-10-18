@@ -1274,14 +1274,14 @@ window.Showtime = function (stage, opts) {
 
 	// the debug buttons, on the left wall's panel under PAUSED and the time (off the box only)
 	const $debug = $('<div>').css({
-		display: live ? 'none' : 'block', width: '100%', minHeight: 0, maxHeight: '62%', overflowY: 'auto', fontFamily: `"${TYPE.font}", sans-serif`,   // (sized to its buttons, so PAUSED, the time and these sit together in the middle of the wall)
+		display: live ? 'none' : 'block', width: 'fit-content', maxWidth: '100%', minHeight: 0, maxHeight: '62%', overflowY: 'auto',   // (as wide as its longest line, centred on the wall) fontFamily: `"${TYPE.font}", sans-serif`,   // (sized to its buttons, so PAUSED, the time and these sit together in the middle of the wall)
 	}).appendTo($left);
 	// (the heading and status, centred; then every button in one long,
 	// centred, flowing list, each group's name tucked in just before its
 	// buttons; the buttons small capsules in the standard style: dark glass,
 	// an outline and words in their colour)
 	const $dhead = $('<div>').css({ display: 'none' }).appendTo($debug);   // (no heading: just the buttons; the status line kept for games to write to, out of sight)
-	const $dbody = $('<div>').css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center' }).appendTo($debug);
+	const $dbody = $('<div>').css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-start', alignItems: 'center' }).appendTo($debug);   // (the lines start at its left)
 	const brighter = function (colour, k) {   // (the debug colours are dark: lifted toward white, for outlines and words on dark glass)
 		const [r, g, b] = rgbOf(colour);
 		const up = (v) => Math.round(v + (255 - v) * k);
