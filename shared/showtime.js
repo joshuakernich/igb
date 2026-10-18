@@ -1139,7 +1139,7 @@ window.Showtime = function (stage, opts) {
 			.css({ filter: `drop-shadow(0 ${BUTTON.drop * 0.6}px 0 rgba(0,0,0,0.45))` });
 	}
 	const PANEL_ICON = PAUSE.button - 38;   // (the size of each button on the pause panel)
-	const PANEL_COLOURS = { pause: TYPE.colours.gold, volume: '#2f7df6', cog: 'white' };   // (each icon on the pause panel, in its own colour)
+	const PANEL_COLOUR = '#b46bff';   // (the pause panel's colour: its band, its TAP, its buttons)
 	const $pauseBtn = $('<button pause>').attr('title', 'Pause').css({
 		// (the score capsules' look, turned on its side: black glass sunk into
 		// the wall's left edge, a white band along that edge)
@@ -1147,11 +1147,12 @@ window.Showtime = function (stage, opts) {
 		width: PAUSE.button + 'px', borderRadius: `0 ${PAUSE.button / 2}px ${PAUSE.button / 2}px 0`, border: 'none', boxSizing: 'border-box',   // (flat against the edge, round on the right)
 		background: 'rgba(0,0,0,0.6)', cursor: 'pointer', pointerEvents: 'auto', zIndex: 20, padding: `20px 0 20px ${SCORE_HUD.line}px`,
 		display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
-		boxShadow: `inset ${SCORE_HUD.line}px 0 0 0 white`, transition: 'transform 0.15s',
+		boxShadow: `inset ${SCORE_HUD.line}px 0 0 0 ${PANEL_COLOUR}`, transition: 'transform 0.15s',
 	}).hide().appendTo(stage.$ui).on('click', function (e) { e.stopPropagation(); setPaused(true); });
 	const $tap = $('<span>').text('TAP').css({   // (the prompt, standing just above it, as wide as it, outlined and dropped like the other words)
-		position: 'absolute', left: `calc(50% + ${SCORE_HUD.line / 2}px)`, bottom: 'calc(100% + 14px)',   // (centred over the buttons, which sit just right of the edge's band) transform: 'translateX(-50%)', whiteSpace: 'nowrap',
-		fontFamily: font, fontSize: '40px', lineHeight: 1, color: 'white', textAlign: 'center',
+		// (centred over the buttons, which sit just right of the edge's band)
+		position: 'absolute', left: `calc(50% + ${SCORE_HUD.line / 2}px)`, bottom: 'calc(100% + 14px)', transform: 'translateX(-50%)', whiteSpace: 'nowrap',
+		fontFamily: font, fontSize: '40px', lineHeight: 1, color: PANEL_COLOUR, textAlign: 'center',
 		WebkitTextStroke: `5px ${TYPE.colours.ink}`, paintOrder: 'stroke fill', textShadow: '0 4px 0 rgba(0,0,0,0.55)',
 	}).appendTo($pauseBtn);
 	// (sized to the panel's width once the lettering has loaded: measured at 100px, scaled to fit)
@@ -1163,7 +1164,7 @@ window.Showtime = function (stage, opts) {
 	};
 	fitTap();
 	if (document.fonts) document.fonts.load(`100px "${FONT}"`).then(fitTap).catch(() => {});
-	for (const name of ['pause', 'volume', 'cog']) buttonIcon(name, PANEL_ICON, PANEL_COLOURS[name]).appendTo($pauseBtn);
+	for (const name of ['pause', 'volume', 'cog']) buttonIcon(name, PANEL_ICON, PANEL_COLOUR).appendTo($pauseBtn);
 
 	// the screen: dark glass over all three walls, a panel on each
 	const $pause = $('<pause-screen>').css({
