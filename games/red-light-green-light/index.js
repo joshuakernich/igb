@@ -4275,7 +4275,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			lines: [{ text: 'RED LIGHT', fill: '#ff3640', glow: '#ff3640' }, { text: 'GREEN LIGHT', fill: '#27d96b', glow: '#27d96b' }],
 			update(dt) {
 				stepWorld(dt);
-				if (show.cue(2.6)) voice('title');   // ("Red Light. Green Light." as the two lines glide in and settle: the name only, never a byline)
+				if (show.cue(1.1)) voice('title');   // ("Red Light. Green Light." as the two lines glide in and settle: the name only, never a byline)
 			},
 		}),
 
