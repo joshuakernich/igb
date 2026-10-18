@@ -288,6 +288,8 @@ window.Showtime = function (stage, opts) {
 		intro: 1.0,
 		play: 12,              // the whole game, replayed in this long
 		outro: 2.0,
+		window: { x: 90, y: 230, w: 960, bar: 80 },   // the window it plays in: its left and its top (under its bar), its width; the bar along its top
+		qr: { x: 1150, size: 330, pad: 22, link: 'https://joshuakernich.github.io/igb/' },   // the QR code beside it: its left, its size, the white round it; where it goes (for now: the game, on the hub)
 		trail: 30,             // samples of trail behind each player
 	};
 
@@ -2692,6 +2694,98 @@ window.Showtime = function (stage, opts) {
 		for (const side of [-1, 1]) art.ellipse(c, x + side * u * 0.075, y - u * 0.95, u * 0.015, u * 0.025, { fill: skin });
 	}
 
+	// A QR code (byte mode, low error correction, versions 1 to 5, mask 0):
+	// qr(text) is its modules, rows of true (dark) and false.
+	const qr = (function () {
+		const DATA = [0, 19, 34, 55, 80, 108];   // data codewords, by version
+		const ECC = [0, 7, 10, 15, 20, 26];      // error correction codewords (one block)
+		const mul = function (x, y) {
+			let z = 0;
+			for (let i = 7; i >= 0; i--) { z = (z << 1) ^ ((z >>> 7) * 0x11d); z ^= ((y >>> i) & 1) * x; }
+			return z & 255;
+		};
+		const divisor = function (degree) {
+			const r = new Array(degree).fill(0);
+			r[degree - 1] = 1;
+			let root = 1;
+			for (let i = 0; i < degree; i++) {
+				for (let j = 0; j < r.length; j++) { r[j] = mul(r[j], root); if (j + 1 < r.length) r[j] ^= r[j + 1]; }
+				root = mul(root, 2);
+			}
+			return r;
+		};
+		const remainder = function (data, div) {
+			const r = div.map(() => 0);
+			for (const b of data) {
+				const f = b ^ r.shift();
+				r.push(0);
+				div.forEach((d, i) => { r[i] ^= mul(d, f); });
+			}
+			return r;
+		};
+		const cache = {};
+		return function (text) {
+			if (cache[text]) return cache[text];
+			const bytes = Array.from(new TextEncoder().encode(text));
+			let v = 1;
+			while (v < 5 && bytes.length + 2 > DATA[v]) v++;
+			const cap = DATA[v];
+			// the bits: byte mode, the count, the bytes, a terminator, padding
+			const bits = [];
+			const put = (val, n) => { for (let i = n - 1; i >= 0; i--) bits.push((val >>> i) & 1); };
+			put(4, 4);
+			put(Math.min(bytes.length, cap - 2), 8);
+			bytes.slice(0, cap - 2).forEach((b) => put(b, 8));
+			put(0, Math.min(4, cap * 8 - bits.length));
+			while (bits.length % 8) bits.push(0);
+			const data = [];
+			for (let i = 0; i < bits.length; i += 8) data.push(parseInt(bits.slice(i, i + 8).join(''), 2));
+			for (let pad = 0xec; data.length < cap; pad ^= 0xec ^ 0x11) data.push(pad);
+			const all = data.concat(remainder(data, divisor(ECC[v])));
+			// the grid: finders, timing, alignment, format, then the data, masked
+			const size = 17 + 4 * v;
+			const m = [], fn = [];
+			for (let y = 0; y < size; y++) { m.push(new Array(size).fill(false)); fn.push(new Array(size).fill(false)); }
+			const set = (x, y, dark) => { m[y][x] = dark; fn[y][x] = true; };
+			for (let i = 0; i < size; i++) { set(6, i, i % 2 === 0); set(i, 6, i % 2 === 0); }
+			for (const [cx, cy] of [[3, 3], [size - 4, 3], [3, size - 4]]) {
+				for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+					const x = cx + dx, y = cy + dy, d = Math.max(Math.abs(dx), Math.abs(dy));
+					if (x >= 0 && x < size && y >= 0 && y < size) set(x, y, d !== 2 && d !== 4);
+				}
+			}
+			if (v > 1) for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) set(size - 7 + dx, size - 7 + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+			// the format: low error correction (01), mask 0
+			let rem = 1 << 3;
+			const fdata = rem;
+			for (let i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
+			const f = ((fdata << 10) | rem) ^ 0x5412;
+			const fb = (i) => ((f >>> i) & 1) !== 0;
+			for (let i = 0; i <= 5; i++) set(8, i, fb(i));
+			set(8, 7, fb(6)); set(8, 8, fb(7)); set(7, 8, fb(8));
+			for (let i = 9; i < 15; i++) set(14 - i, 8, fb(i));
+			for (let i = 0; i < 8; i++) set(size - 1 - i, 8, fb(i));
+			for (let i = 8; i < 15; i++) set(8, size - 15 + i, fb(i));
+			set(8, size - 8, true);
+			let i = 0;
+			for (let right = size - 1; right >= 1; right -= 2) {
+				if (right === 6) right = 5;
+				for (let vert = 0; vert < size; vert++) {
+					for (let j = 0; j < 2; j++) {
+						const x = right - j;
+						const y = ((right + 1) & 2) === 0 ? size - 1 - vert : vert;
+						if (fn[y][x]) continue;
+						let dark = false;
+						if (i < all.length * 8) { dark = ((all[i >>> 3] >>> (7 - (i & 7))) & 1) !== 0; i++; }
+						m[y][x] = dark !== ((x + y) % 2 === 0);
+					}
+				}
+			}
+			return (cache[text] = m);
+		};
+	})();
+	self.qr = qr;
+
 	beatsLib.replay = function (extra) {
 		let data = [];
 		let span = SECONDS;
@@ -2739,9 +2833,22 @@ window.Showtime = function (stage, opts) {
 					people.push({ p, q, spot, stride: walked * 28 });
 				}
 				people.sort((x, y) => y.spot.z - x.spot.z);   // far first
+				const WIN = REPLAY.window;
+				const wh = WIN.w * H / W;   // (the replay, shrunk into the window whole)
+				const game = (IGB.find && IGB.find(opts.id)) || { name: opts.title || opts.id || '' };
 				self.onWalls(ctx, function (c) {
 					c.save();
-					c.globalAlpha *= out;
+					c.globalAlpha *= out * easeOut(between(bt, 0, 0.4));
+					// the window: a bar along its top (the game's name, the team's score), the replay under it
+					art.roundRect(c, WIN.x - 8, WIN.y - WIN.bar - 8, WIN.w + 16, wh + WIN.bar + 16, 30, { fill: 'rgba(0,0,0,0.75)', shadow: { color: 'rgba(0,0,0,0.5)', blur: 40 } });
+					self.text(c, String(game.name).toUpperCase(), WIN.x + 26, WIN.y - WIN.bar / 2 - 2, 44, { align: 'left', glow: 'transparent' });
+					self.text(c, fmt(self.teamTotal()), WIN.x + WIN.w - 26, WIN.y - WIN.bar / 2 - 2, 44, { align: 'right', fill: theme.gold, glow: 'transparent' });
+					c.save();
+					c.beginPath();
+					c.roundRect ? c.roundRect(WIN.x, WIN.y, WIN.w, wh, [0, 0, 22, 22]) : c.rect(WIN.x, WIN.y, WIN.w, wh);
+					c.clip();
+					c.translate(WIN.x, WIN.y);
+					c.scale(WIN.w / W, WIN.w / W);
 					drawRoom(c);
 					// each player's recent path, glowing faintly on the floor
 					for (const who of people) {
@@ -2783,6 +2890,17 @@ window.Showtime = function (stage, opts) {
 						const past = mk <= k;
 						art.poly(c, star(bx0 + (bx1 - bx0) * mk, by, past ? 26 : 18), { fill: past ? theme.gold : 'rgba(255,255,255,0.4)' });
 					}
+					c.restore();
+					// and beside it, a QR code: scan to share your gif
+					const Q = REPLAY.qr;
+					const code = qr(Q.link + (opts.id ? '#' + opts.id : ''));
+					const cell = (Q.size - 2 * Q.pad) / code.length;
+					const qy = WIN.y + (wh - WIN.bar) / 2 - Q.size / 2 - 30;
+					art.roundRect(c, Q.x, qy, Q.size, Q.size, 24, { fill: 'white', shadow: { color: 'rgba(0,0,0,0.5)', blur: 30 } });
+					c.fillStyle = '#0b0b14';
+					code.forEach((row, y) => row.forEach((dark, x) => { if (dark) c.fillRect(Q.x + Q.pad + x * cell, qy + Q.pad + y * cell, cell + 0.5, cell + 0.5); }));
+					self.text(c, 'SCAN TO SHARE', Q.x + Q.size / 2, qy + Q.size + 60, 46, { fill: 'white' });
+					self.text(c, 'YOUR GIF', Q.x + Q.size / 2, qy + Q.size + 115, 46, { fill: theme.gold });
 					c.restore();
 				});
 			},
