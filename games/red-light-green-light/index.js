@@ -4044,9 +4044,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// face), and where her pupils are on her face: set in the doll lab
 	// (DEBUG ▸ DOLL LAB), baked in here, kept in this browser while being tuned.
 	const DOLL_TUNED = {
-		head: { up: 128, x: 0, scale: 2.1 },
-		order: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-		pupil: { x: 0.149, cx: 0.032, y: 0.016, ring: 0.026 },   // half the gap between her pupils, how far right of the frame's middle they're centred, how far down (shares of the face frame's size); the red ring round each eye (a share of the frame's width)
+		head: { up: 147, x: -5, scale: 2.1 },
+		order: [0, 1, 2, 3, 4, 5, 6, 7, 12],
+		pupil: { x: 0.139, cx: 0.026, y: 0.03, ring: 0.03 },
+		nudge: {},   // each head frame's own nudge, by its number on the sheet: { x, y } (her head's units)   // half the gap between her pupils, how far right of the frame's middle they're centred, how far down (shares of the face frame's size); the red ring round each eye (a share of the frame's width)
 	};
 	const DOLL_KEY = 'rlgl-doll-lab';
 	const dollTune = JSON.parse(JSON.stringify(DOLL_TUNED));
@@ -4055,11 +4056,16 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		if (kept.head) Object.assign(dollTune.head, kept.head);
 		if (kept.pupil) Object.assign(dollTune.pupil, kept.pupil);
 		if (Array.isArray(kept.order) && kept.order.length) dollTune.order = kept.order;
+		if (kept.nudge) dollTune.nudge = kept.nudge;
 	} catch (e) { /* (no storage: the baked-in tuning) */ }
 	// (her head's frames, in the tuned order, from all the sheet's)
 	function orderHead() {
-		if (sheets.head && sheets.head.all) sheets.head.frames = dollTune.order.map((i) => sheets.head.all[i]).filter(Boolean);
+		if (sheets.head && sheets.head.all) {
+			sheets.head.all.forEach((f, i) => { f.index = i; });
+			sheets.head.frames = dollTune.order.map((i) => sheets.head.all[i]).filter(Boolean);
+		}
 	}
+	const headNudge = (f) => (f && dollTune.nudge[f.index]) || { x: 0, y: 0 };   // (a head frame's own nudge)
 	const dollHeadY = () => (dollBodyImg ? DOLL_BODY.height * (1 - DOLL_BODY.neck) + dollTune.head.up : 610);   // (her head's middle, above her feet)
 
 	function dollBody(c, front) {
@@ -4114,7 +4120,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				const k = SPRITE.head / sheets.head.unit;
 				c.save();
 				if (Math.sin(yaw) < 0) c.scale(-1, 1);   // (turning the other way round)
-				c.drawImage(f.img, -f.w * k / 2, (-f.h / 2 + f.dy) * k, f.w * k, f.h * k);   // (each step lifted or dropped to keep her eyes level)
+				const nd = headNudge(f);
+				c.drawImage(f.img, -f.w * k / 2 + nd.x, (-f.h / 2 + f.dy) * k + nd.y, f.w * k, f.h * k);   // (each step lifted or dropped to keep her eyes level, and nudged as tuned)
 				c.restore();
 				// watching: her eyes glow red
 				if (glare > 0 && i === sheets.head.frames.length - 1) {
@@ -4354,7 +4361,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		if (!f) return { x: side * SPRITE.head * 0.16, y: SPRITE.head * 0.06 };
 		const k = SPRITE.head / sheet.unit;
 		const flip = Math.sin(head.yaw) < 0 ? -1 : 1;   // (mirrored, as her head's drawn, turning the other way)
-		return { x: (side * PUPIL.x + PUPIL.cx) * flip * f.w * k, y: (PUPIL.y * f.h + f.dy) * k };
+		const nd = headNudge(f);
+		return { x: ((side * PUPIL.x + PUPIL.cx) * f.w * k + nd.x) * flip, y: (PUPIL.y * f.h + f.dy) * k + nd.y };
 	}
 	// her two pupils, on the screen (as drawDoll draws her)
 	function dollEyes() {
@@ -4972,8 +4980,16 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					.append(thumb(i, 40)).append($('<div>').text((k + 1) + '·#' + (i + 1)))
 					.appendTo($tl).on('click', (e) => { e.stopPropagation(); at = k; turn = 180 - (order.length > 1 ? Math.acos(1 - 2 * (k / (order.length - 1))) * 180 / Math.PI : 0); spinning = false; render(); });
 			});
+			// the picked frame's own nudge (every use of that frame of the sheet)
+			const pick = order[at];
+			const nd = dollTune.nudge[pick] || { x: 0, y: 0 };
+			heading(`FRAME #${pick + 1} · ITS POSITION`, $side);
+			const setNudge = (key, v) => { const cur = dollTune.nudge[pick] || { x: 0, y: 0 }; cur[key] = v; dollTune.nudge[pick] = cur; save(); };
+			slider('ACROSS', nd.x, -40, 40, 0.5, (v) => setNudge('x', v), $side);
+			slider('UP / DOWN', nd.y, -40, 40, 0.5, (v) => setNudge('y', v), $side);
 			const $ops = $('<div>').css({ display: 'flex', flexWrap: 'wrap', marginTop: '4px' }).appendTo($side);
 			const changed = () => { orderHead(); save(); render(); };
+			button('RESET POSITION', () => { delete dollTune.nudge[pick]; save(); render(); }, '#5a2232').appendTo($ops);
 			button('◀ MOVE', () => { if (at > 0) { [order[at - 1], order[at]] = [order[at], order[at - 1]]; at--; changed(); } }).appendTo($ops);
 			button('MOVE ▶', () => { if (at < order.length - 1) { [order[at + 1], order[at]] = [order[at], order[at + 1]]; at++; changed(); } }).appendTo($ops);
 			button('+ COPY', () => { order.splice(at + 1, 0, order[at]); at++; changed(); }, '#225a3a').appendTo($ops);
@@ -4986,7 +5002,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				$text.val(text).show()[0].select();
 				try { navigator.clipboard.writeText(text).then(() => $copy.text('COPIED ✓'), () => $copy.text('COPY FROM THE BOX')); } catch (e) { $copy.text('COPY FROM THE BOX'); }
 			}, '#3a6a2a').appendTo($end);
-			button('RESET', () => { const d = JSON.parse(JSON.stringify(DOLL_TUNED)); Object.assign(dollTune.head, d.head); Object.assign(dollTune.pupil, d.pupil); dollTune.order = d.order; orderHead(); save(); render(); }, '#5a2232').appendTo($end);
+			button('RESET', () => { const d = JSON.parse(JSON.stringify(DOLL_TUNED)); Object.assign(dollTune.head, d.head); Object.assign(dollTune.pupil, d.pupil); dollTune.order = d.order; dollTune.nudge = d.nudge; orderHead(); save(); render(); }, '#5a2232').appendTo($end);
 			button('CLOSE', close, '#444').appendTo($end);
 			$text.appendTo($side);
 		}
