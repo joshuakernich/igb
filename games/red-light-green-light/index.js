@@ -4609,9 +4609,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	dbutton('NEXT ROUND', () => debugRound(round + 1)).appendTo($round);
 	dbutton('ROUND 5', () => debugRound(4)).appendTo($round);
 
-	const $misc = drow('CLOCK');
-	dbutton('1:00 LEFT', () => show.setTimeLeft(60), '#5a3a22').appendTo($misc);
-	dbutton('0:15 LEFT', () => show.setTimeLeft(15), '#5a3a22').appendTo($misc);
+	const $misc = drow('TOOLS');
 	dbutton('+ CASH', () => { for (const c of contestants) c.score += 100 * (1 + Math.floor(Math.random() * 20)); }, '#225a3a').appendTo($misc);
 	dbutton('MAGNET ALL', () => { for (const c of contestants) c.magnet = MAGNET.time; }, '#225a3a').appendTo($misc);
 	dbutton('BOULDER', () => { for (let w = 0; w < 3; w++) rollBoulder(true); }, '#225a3a').appendTo($misc);

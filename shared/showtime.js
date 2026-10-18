@@ -1250,7 +1250,6 @@ window.Showtime = function (stage, opts) {
 	menu($left, !live);
 	menu($front);
 	menu($right);
-	if (!live) $left.css({ justifyContent: 'flex-start' });   // (off the box: the debug buttons fill the rest of the left wall)
 
 	function setPaused(on) {
 		if (on === paused) return;
@@ -1275,14 +1274,13 @@ window.Showtime = function (stage, opts) {
 
 	// the debug buttons, on the left wall's panel under PAUSED and the time (off the box only)
 	const $debug = $('<div>').css({
-		display: live ? 'none' : 'block', width: '100%', flex: 1, minHeight: 0, overflowY: 'auto', fontFamily: `"${TYPE.font}", sans-serif`,
+		display: live ? 'none' : 'block', width: '100%', minHeight: 0, maxHeight: '62%', overflowY: 'auto', fontFamily: `"${TYPE.font}", sans-serif`,   // (sized to its buttons, so PAUSED, the time and these sit together in the middle of the wall)
 	}).appendTo($left);
 	// (the heading and status, centred; then every button in one long,
 	// centred, flowing list, each group's name tucked in just before its
 	// buttons; the buttons small capsules in the standard style: dark glass,
 	// an outline and words in their colour)
-	const $dhead = $('<div>').css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', fontSize: '30px', marginBottom: '12px', textAlign: 'center' }).appendTo($debug);
-	$('<span>').text('DEBUG').css({ color: '#3ad1ff', letterSpacing: '2px' }).appendTo($dhead);
+	const $dhead = $('<div>').css({ display: 'none' }).appendTo($debug);   // (no heading: just the buttons; the status line kept for games to write to, out of sight)
 	const $dbody = $('<div>').css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center' }).appendTo($debug);
 	const brighter = function (colour, k) {   // (the debug colours are dark: lifted toward white, for outlines and words on dark glass)
 		const [r, g, b] = rgbOf(colour);

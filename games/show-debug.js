@@ -231,14 +231,12 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 
 	/* ---------- the debug buttons (on the show's pause screen) ---------- */
 
-	const JUMPS = ['squad', 'title', 'clock', 'visors', 'controls', 'villain', 'play', 'timeup', 'scores', 'rank', 'team', 'board', 'replay', 'rate', 'end'];
+	const JUMPS = ['title', 'clock', 'visors', 'controls', 'villain', 'play', 'timeup', 'scores', 'rank', 'team', 'board', 'replay', 'rate', 'end'];
 	const { drow, dbutton } = show.menu;
 	const $now = show.menu.$now;
 	const $jumps = drow('BEATS');
 	for (const id of JUMPS) dbutton(id.toUpperCase(), () => jump(id)).attr('jump', id).appendTo($jumps);
 	const $acts = drow('TOOLS');
-	dbutton('CLOCK 1:00', () => show.setTimeLeft(60), '#5a3a22').attr('act', 'minute').appendTo($acts);
-	dbutton('CLOCK 0:15', () => show.setTimeLeft(15), '#5a3a22').attr('act', 'final').appendTo($acts);
 	dbutton('SHUFFLE SCORES', shuffle, '#225a3a').attr('act', 'scores').appendTo($acts);
 	dbutton('VISORS OK', () => { if (show.beat === 'visors') show.next(); }, '#225a3a').attr('act', 'visors').appendTo($acts);
 	dbutton('NEXT ▶', () => show.next()).attr('act', 'next').appendTo($acts);
