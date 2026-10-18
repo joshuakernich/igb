@@ -201,7 +201,6 @@ window.Showtime = function (stage, opts) {
 
 	const TITLE = {
 		dark: 0.4,             // the room goes dark
-		riser: 1.6,            // a rushing build
 		first: 1.5,            // the first line sets off
 		lineGap: 0.45,         // and the next after it
 		glide: 1.7,            // how long a line takes to glide into place (easing gently to a stop)
@@ -1309,6 +1308,7 @@ window.Showtime = function (stage, opts) {
 	const clockAt = (n) => (typeof opts.clock === 'function' ? Object.assign({ hang: false }, opts.clock(n)) : { x: W / 2, y: CLOCK.y, hang: true });
 
 	// side: how far the pill reaches out past its left (hung from the corner)
+	const CLOCK_PAD = 0.8;   // the clock capsule's half-height, against the digits' size (room above and below them)
 	function clockPill(ctx, x, y, size, left, alpha = 1, up = 0, box = 1, side = 0) {
 		const urgent = left <= CLOCK.urgent;
 		const pulse = urgent ? 1 + 0.06 * Math.max(0, Math.cos((left % 1) * Math.PI * 2)) : 1;
@@ -1321,7 +1321,8 @@ window.Showtime = function (stage, opts) {
 		if (box > 0 && opts.clockBox !== false) {
 			// the score capsules' look: black glass, sunk into the edge it hangs
 			// from, a band of white (red, at the end) along that edge
-			const x0 = -w / 2 - side, y0 = -size * 0.66 - up, x1 = w / 2, y1 = size * 0.66, r = size * 0.66;
+			const pad = size * CLOCK_PAD;   // (half its height, round the digits)
+			const x0 = -w / 2 - side, y0 = -pad - up, x1 = w / 2, y1 = pad, r = pad;
 			const edge = up > 0 ? -y / pulse : y0;   // (the wall's top edge, here, when it hangs from it)
 			ctx.save();
 			ctx.globalAlpha *= box;
@@ -1466,8 +1467,7 @@ window.Showtime = function (stage, opts) {
 			exit() { dropStart(); },
 			update(dt, bt) {
 				self.blackout = Math.min(INTRO_DIM, bt / T.dark * INTRO_DIM);   // the game's scene still showing behind
-				if (self.cue(T.first - T.riser)) self.fx('riser', 0.7, 1, T.riser);
-				if (self.cue(lastLand - 0.15)) { self.fx('titleLand', 0.6); self.shake = 0.2; }   // (gently: it settles rather than slams; no flash)
+				if (self.cue(lastLand - 0.15)) self.shake = 0.2;   // (gently: it settles rather than slams; no flash, no sound effects)
 				now = bt;
 				// the START button, on the front wall under the title
 				if (start && !$start && startedAt < 0 && bt > lastLand + 0.5) {

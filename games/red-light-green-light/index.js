@@ -460,7 +460,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		head.to = to;
 		head.t = 0;
 		head.dur = dur;
-		sound.whirr(dur);
+		show.stop('dollTurn');
+		show.play('dollTurn');
 	}
 
 	function setPhase(p, dur = 0) {
@@ -599,6 +600,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			'Tracksuit Titans', 'Sandy Sprinters', 'Still Standing', 'Circle Triangle Square', 'The Green Line', 'No Wobble Club'],
 		sounds: Object.assign({
 			dollSong: ['assets/red-light-green-light/doll-song.wav', 0.8],
+			dollTurn: ['assets/red-light-green-light/doll-head-turn.m4a', 0.9],   // her head turning (from the show's clip, cleaned up)
+			dollLaser: ['assets/red-light-green-light/doll-laser.m4a', 0.8],      // her laser starting up (likewise)
 			soundtrack: ['assets/red-light-green-light/soundtrack.mp3', MUSIC.level, true],
 		}, VOICE_SOUNDS),   // her song, once through each green light, fitted to its length (the only music); the voice
 	});
@@ -898,6 +901,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		glare = 1;
 		freeze();
 		aimLasers();
+		show.stop('dollLaser');
+		show.play('dollLaser');   // (the laser starting up)
 		blipAt = 0;
 		setPhase('red', rand(settings.red));
 	}
