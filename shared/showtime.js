@@ -263,9 +263,8 @@ window.Showtime = function (stage, opts) {
 	const TEAM = {
 		fade: [0.2, 0.9],      // the rankings, as they were left: all but the scores fade away
 		fly: [1.1, 2.0],       // the scores fly together
-		count: [2.2, 4.0],     // smooshed, the total shows whole; the party starts after
-		bonus: [4.4, 5.5],     // the bonus is added
-		length: 10.4,
+		bonus: [2.6, 3.4],     // the bonus is added
+		after: 1.4,            // then a moment to read it, and on (no party: that's for the ranking)
 		y: 450,
 	};
 
@@ -2431,14 +2430,15 @@ window.Showtime = function (stage, opts) {
 
 	// The team total: the places fade, the capsules slide together into the
 	// middle and combine into one team capsule (a band of every player's
-	// colour), the total whole in it; the bonus lands on top, and the room
-	// erupts.
+	// colour), the total whole in it; the bonus lands on top, and on.
 	// opts.team (optional): { y, into, decor(c, bt, state) }: where the total
 	// sits, where the capsules gather, and the game's own scene behind it all
 	// (drawn on each wall first; state: { fade, fly, merged, mergedAt, partyAt, total })
 	const TEAM_AT = Object.assign({ y: TEAM.y }, opts.team);
 	if (TEAM_AT.into === undefined) TEAM_AT.into = TEAM_AT.y;
 	const teamBand = () => Array.from({ length: count() }, (_, i) => colour(i));
+	// (just long enough to see the total land, and any bonus)
+	const teamLength = () => (bonus() > 0 ? TEAM.bonus[1] + TEAM.after : TEAM.fly[1] + TEAM.after);
 	beatsLib.team = function (extra) {
 		let shown = 0;
 		let partyAt = 0;
@@ -2446,11 +2446,11 @@ window.Showtime = function (stage, opts) {
 		return extend({
 			id: 'team',
 			world: false,
-			length: TEAM.length,
+			length: () => teamLength(),
 			enter() {
 				shown = 0;
 				st = standings();
-				partyAt = bonus() > 0 ? TEAM.bonus[1] + 0.3 : TEAM.count[1] + 0.3;
+				partyAt = Infinity;   // (no party for the total: the celebrating is for the ranking, on the leaderboard)
 				self.stop('drumroll');
 				self.play('drama');
 			},
@@ -2461,18 +2461,6 @@ window.Showtime = function (stage, opts) {
 				if (self.cue(TEAM.fly[0])) self.fx('gather');
 				if (self.cue(TEAM.fly[1])) { self.fx('smoosh'); self.shake = 0.8; self.flash = 0.4; }
 				if (bonus() > 0 && self.cue(TEAM.bonus[0])) self.fx('bonus');
-				if (self.cue(partyAt)) {
-					self.fx('party');
-					self.shake = 0.7;
-					self.flash = 0.5;
-					self.confetti(400);
-					for (let w = 0; w < 3; w++) { self.burst(w * W + W / 2, TEAM_AT.y, theme.gold); self.burst(w * W + 250, 300, theme.accent); self.burst(w * W + 1350, 300, '#33e0ff'); }
-				}
-				// more light bursts, all round the room, while it celebrates
-				if (bt > partyAt && Math.floor((bt - dt) / 0.45) !== Math.floor(bt / 0.45) && bt < TEAM.length - 1.5) {
-					self.burst(Math.random() * WIDTH, 150 + Math.random() * 500, CONFETTI[Math.floor(Math.random() * 5)]);
-					self.confetti(30);
-				}
 			},
 			draw(ctx, bt) {
 				const n = count();
@@ -2501,13 +2489,12 @@ window.Showtime = function (stage, opts) {
 		function drawTotal(c, bt) {
 			const age = bt - TEAM.fly[1];
 			const sq = Math.exp(-age * 5) * Math.cos(age * 22);
-			const party = bt > partyAt ? 1 + 0.04 * Math.sin(bt * 10) : 1;
 			c.save();
 			c.translate(W / 2, TEAM_AT.y);
-			c.scale((1 + 0.35 * sq) * party, (1 - 0.3 * sq) * party);
-			capsule(c, 0, 0, RESULT.k, teamBand(), fmt(shown), { w: TEAM_CAP.w, h: TEAM_CAP.h, size: TEAM_CAP.size, edge: RESULT.edge, gold: bt > partyAt ? 1 : 0.5 });
+			c.scale(1 + 0.35 * sq, 1 - 0.3 * sq);
+			capsule(c, 0, 0, RESULT.k, teamBand(), fmt(shown), { w: TEAM_CAP.w, h: TEAM_CAP.h, size: TEAM_CAP.size, edge: RESULT.edge, gold: 0.5 });
 			c.restore();
-			if (bonus() > 0) self.slam(c, '+' + fmt(bonus()) + ' ' + (opts.bonusLabel || 'BONUS'), W / 2, 665, 56, bt - TEAM.bonus[0], { fill: 'white', alpha: 1 - between(bt, TEAM.length - 1, TEAM.length) });
+			if (bonus() > 0) self.slam(c, '+' + fmt(bonus()) + ' ' + (opts.bonusLabel || 'BONUS'), W / 2, 665, 56, bt - TEAM.bonus[0], { fill: 'white', alpha: 1 - between(bt, teamLength() - 0.5, teamLength()) });
 		}
 	};
 
