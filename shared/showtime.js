@@ -612,8 +612,9 @@ window.Showtime = function (stage, opts) {
 	};
 	// The button style (faces and buttons alike): one gradient top to bottom,
 	// darker at the top; a single semi-transparent white bar over the top
-	// half; a thin black outline. glossy(colour) is its CSS; GLOSS its numbers.
-	const GLOSS = { dark: 0.62, bar: 0.28, line: 3 };   // how dark the top of the gradient is (a share of the colour); the white bar's opacity; the outline's thickness (px)
+	// half; a thin black outline, a thin white line just inside it.
+	// glossy(colour) is its CSS; GLOSS its numbers.
+	const GLOSS = { dark: 0.62, bar: 0.28, line: 3, inner: 2 };   // how dark the top of the gradient is (a share of the colour); the white bar's opacity; the black outline's thickness, and the thin white line just inside it (px)
 	const darker = function (colour, k) {
 		const [r, g, b] = rgbOf(colour);
 		return `rgb(${Math.round(r * k)},${Math.round(g * k)},${Math.round(b * k)})`;
@@ -621,7 +622,7 @@ window.Showtime = function (stage, opts) {
 	const glossy = (colour) => ({
 		background: `linear-gradient(to bottom, rgba(255,255,255,${GLOSS.bar}) 0%, rgba(255,255,255,${GLOSS.bar}) 50%, rgba(255,255,255,0) 50%), linear-gradient(to bottom, ${darker(colour, GLOSS.dark)}, ${colour})`,
 		border: `${GLOSS.line}px solid #000`,
-		boxShadow: 'none',
+		boxShadow: `inset 0 0 0 ${GLOSS.inner}px rgba(255,255,255,0.9)`,
 	});
 	self.glossy = glossy;
 	const textColour = function (fill) {
@@ -2632,7 +2633,7 @@ window.Showtime = function (stage, opts) {
 				: `<path d="M30 ${66 - f.mouth / 3} Q50 ${66 + f.mouth} 70 ${66 - f.mouth / 3}" stroke="${theme.ink}" stroke-width="7" fill="none" stroke-linecap="round"/>`;
 			const brows = f.brows ? `<path d="M28 30 L42 36 M72 30 L58 36" stroke="${theme.ink}" stroke-width="6" stroke-linecap="round"/>` : '';
 			// the button style: one gradient, darker at the top; a white bar over
-			// the top half; a thin black outline
+			// the top half; a thin black outline, a thin white line inside it
 			const id = 'rate-face-' + i + '-' + ++faceIds;
 			return `<svg viewBox="0 0 100 100" width="100%" height="100%"><defs>`
 				+ `<linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${darker(f.colour, GLOSS.dark)}"/><stop offset="1" stop-color="${f.colour}"/></linearGradient>`
@@ -2640,7 +2641,7 @@ window.Showtime = function (stage, opts) {
 				+ `<circle cx="50" cy="50" r="46" fill="url(#${id}g)"/>`
 				+ `<circle cx="36" cy="42" r="6.5" fill="${theme.ink}"/><circle cx="64" cy="42" r="6.5" fill="${theme.ink}"/>${brows}${mouth}`
 				+ `<rect x="0" y="0" width="100" height="50" fill="white" fill-opacity="${GLOSS.bar}" clip-path="url(#${id}c)"/>`
-				+ `<circle cx="50" cy="50" r="46" fill="none" stroke="#000" stroke-width="2.2"/></svg>`;
+				+ `<circle cx="50" cy="50" r="46" fill="none" stroke="#000" stroke-width="2.2"/><circle cx="50" cy="50" r="44.2" fill="none" stroke="white" stroke-opacity="0.9" stroke-width="1.4"/></svg>`;
 		}
 		let faceIds = 0;
 
