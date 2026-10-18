@@ -223,8 +223,6 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 				if (Math.hypot(w.x - m.position.x, w.z - m.position.z) > CUBE.reach) continue;
 				scores[i] = (scores[i] || 0) + 1;
 				show.fx('pick', 0.7);
-				const at = valley.project(m.position.x, m.position.y, m.position.z);
-				if (at) show.burst(at.x, at.y, k.colour);
 				removeCube(k);
 				break;
 			}
