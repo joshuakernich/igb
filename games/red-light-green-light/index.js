@@ -456,6 +456,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// The doll's head: 0 faces the players, PI faces the tree.
 	const head = { yaw: 0, from: 0, to: 0, t: 0, dur: 0 };
 	const HEAD_TURN_SOUND = 0.76;   // seconds the head-turn sound (just the mechanism) lasts at its own speed
+	const HEAD_TURN_STRETCH = 0.75;   // the slowest it's played (0.75: at most a third longer than it is)
 	function turnHead(to, dur) {
 		head.from = head.yaw;
 		head.to = to;
@@ -465,7 +466,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		show.stop('dollTurn');
 		const turnSound = show.audio && show.audio.get && show.audio.get('dollTurn');
 		if (turnSound) turnSound.preservesPitch = true;
-		show.play('dollTurn', Math.max(0.25, Math.min(4, HEAD_TURN_SOUND / Math.max(0.05, dur))));
+		show.play('dollTurn', Math.max(HEAD_TURN_STRETCH, Math.min(4, HEAD_TURN_SOUND / Math.max(0.05, dur))));   // (never drawn out past a third longer: on a long turn it just ends early)
 	}
 
 	function setPhase(p, dur = 0) {
