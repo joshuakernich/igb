@@ -3137,15 +3137,16 @@ window.Showtime = function (stage, opts) {
 						transition: 'transform 0.7s cubic-bezier(.4,0,.2,1), opacity 0.7s',
 					}).appendTo($track);
 					const $shot = $('<div>').css({
-						position: 'relative', width: CAROUSEL.w + 'px', height: CAROUSEL.h + 'px', borderRadius: '28px',
+						position: 'relative', width: CAROUSEL.w + 'px', height: CAROUSEL.h + 'px', borderRadius: 0,   // (square corners)
 						background: `#1a1030 url("assets/shared/screens/${g.id}.jpg") center / cover`, border: `6px solid ${TYPE.colours.white}`,
 						boxShadow: '0 18px 40px rgba(0,0,0,0.55)',
 					}).appendTo($slide);
-					// its name in a capsule, inside the screenshot along its bottom
-					$('<div>').text(g.name.toUpperCase()).css({
-						position: 'absolute', left: '50%', bottom: '26px', transform: 'translateX(-50%)', maxWidth: CAROUSEL.w - 60 + 'px',
-						padding: '12px 30px', borderRadius: '60px', ...button(TYPE.colours.white, 36),
-						fontSize: '36px', letterSpacing: '1px', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+					// its name, a title in the game's own font and colour (manifest: titleFont, box.color), over the screenshot's foot
+					$('<div>').text(g.name).css({
+						position: 'absolute', left: '50%', bottom: '18px', transform: 'translateX(-50%) rotate(-3deg)', maxWidth: CAROUSEL.w - 40 + 'px',
+						fontFamily: `"${g.titleFont || FONT}", "${FONT}", sans-serif`, fontSize: '64px', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center',
+						color: (g.box && g.box.color) || TYPE.colours.gold,
+						WebkitTextStroke: `8px ${theme.ink}`, paintOrder: 'stroke fill', textShadow: `0 7px 0 ${theme.ink}, 0 0 30px rgba(0,0,0,0.6)`,
 					}).appendTo($shot);
 					(slides[i] = slides[i] || []).push($slide);
 				});
