@@ -252,9 +252,8 @@ window.Showtime = function (stage, opts) {
 		width: 1100,
 	};
 	const RANK = {
-		move: [0.5, 1.7],      // the rows slide into rank order
-		reveal: 2.2,           // then the places show, last first
-		each: 0.65,            // between reveals, each on a drum hit
+		move: [0.5, 1.7],      // the capsules rise into rank order, one after another (each's place showing as it lands)
+		crown: 0.4,            // once they're all in, this long until the winner's moment
 		hold: 3.2,             // the winner's moment
 	};
 
@@ -2366,8 +2365,8 @@ window.Showtime = function (stage, opts) {
 	};
 
 	// The ranking: the score capsules rise from along the bottom, one at a
-	// time, into a list in rank order, then the places are revealed from last
-	// to first, each on a drum hit, and the winner's capsule glows gold. Ties
+	// time, into a list in rank order, each one's place showing as it lands;
+	// then the winner's capsule glows gold. Ties
 	// share a place.
 	beatsLib.rank = function (extra) {
 		let st = { order: [], slot: [], place: [] };
@@ -2380,26 +2379,25 @@ window.Showtime = function (stage, opts) {
 			enter() {
 				st = standings();
 				const n = count();
+				// each place shows as its capsule lands in its row; the winner's moment once they all have
 				reveal = [];
-				st.order.slice().reverse().forEach((p, k) => { reveal[p] = RANK.reveal + k * RANK.each; });
-				winnerAt = RANK.reveal + (n - 1) * RANK.each;
+				for (let p = 0; p < n; p++) reveal[p] = RANK.move[0] + p * WATERFALL * 2 + RESULT.move;
+				winnerAt = Math.max(0, ...reveal) + RANK.crown;
 				self.fx('whooshLong', 0.6);
 			},
 			update(dt, bt) {
 				const n = count();
 				for (let p = 0; p < n; p++) {
 					if (!self.cue(reveal[p])) continue;
-					if (st.place[p] === 0) {
-						self.fx('placeReveal', 1, 1, 1);
-						self.fx('fanfare');
-						self.fx('crowd', 0.8);
-						self.flash = 0.4;
-						self.shake = 0.6;
-						self.confetti(200);
-					} else {
-						self.fx('placeReveal', 0.9, 1, 1 - st.place[p] / Math.max(1, n - 1));
-						self.shake = 0.2;
-					}
+					self.fx('placeReveal', 0.9, 1, 1 - st.place[p] / Math.max(1, n - 1));
+					self.shake = 0.2;
+				}
+				if (self.cue(winnerAt)) {
+					self.fx('fanfare');
+					self.fx('crowd', 0.8);
+					self.flash = 0.4;
+					self.shake = 0.6;
+					self.confetti(200);
 				}
 			},
 			draw(ctx, bt) {
@@ -2417,7 +2415,7 @@ window.Showtime = function (stage, opts) {
 						const m = easeOut(between(bt, RANK.move[0] + p * WATERFALL * 2, RANK.move[0] + p * WATERFALL * 2 + RESULT.move));
 						const x = lerp(from.x, W / 2 + RESULT.x, m), y = lerp(from.y, listY(st.slot[p], n), m);
 						const shown = bt >= reveal[p];
-						const top = st.place[p] === 0 && shown;
+						const top = st.place[p] === 0 && bt >= winnerAt;
 						const pop = shown && bt - reveal[p] < 0.3 ? 1 + 0.12 * Math.sin(Math.PI * (bt - reveal[p]) / 0.3) : 1;
 						capsule(c, x, y, lerp(1, RESULT.k, m) * pop, colour(p), fmt(s[p]), { sink: SCORE_HUD.sink * (1 - m), edge: m > 0 ? RESULT.edge : null, gold: top ? 1 : 0 });
 						// its place, once revealed, on its left
