@@ -1034,7 +1034,7 @@ window.Showtime = function (stage, opts) {
 		const list = scores();
 		const total = n * S.w + (n - 1) * S.gap;
 		// (through the visor check they grow into squares, a visor in each)
-		// (and once everyone's set, they shrink back, READY in each)
+		// (and once everyone's set, they shrink back, to their scores: nothing yet)
 		const setAt = beat && beat.id === 'visors' && self.visorsSetAt ? self.visorsSetAt() : -1;
 		const squareOf = (i) => (beat && beat.id === 'visors' ? easeOut(clamp((bt - i * WATERFALL) / 0.5, 0, 1)) * (setAt >= 0 ? 1 - easeOut(clamp((bt - setAt - 0.4 - i * WATERFALL) / 0.5, 0, 1)) : 1) : 0);
 		if (hudFirst < 0) hudFirst = showTime;
@@ -1071,8 +1071,8 @@ window.Showtime = function (stage, opts) {
 						c3.fillStyle = colour(i);
 						c3.fillRect(x0, h / 2 - S.line, S.w, S.line + sink);
 					});
-					if (beat && beat.id === 'visors' && self.visorInCapsule) self.visorInCapsule(c2, i, S.w, h, S.line, sq, S.size);   // (the visor check: their visor in place of their score)
-					else art.text(c2, fmt(score), 0, -S.line / 2 + 1, { size: S.size, font: FONT, weight: 400, fill: 'white', shadow: { color: 'rgba(0,0,0,0.35)', blur: 0, y: 2 } });   // (in the middle of the dark part, clear of the band)
+					const inCapsule = beat && beat.id === 'visors' && self.visorInCapsule && self.visorInCapsule(c2, i, S.w, h, S.line, sq, S.size);   // (the visor check: their visor in place of their score)
+					if (!inCapsule) art.text(c2, fmt(score), 0, -S.line / 2 + 1, { size: S.size, font: FONT, weight: 400, fill: 'white', shadow: { color: 'rgba(0,0,0,0.35)', blur: 0, y: 2 } });   // (in the middle of the dark part, clear of the band)
 				});
 			}
 		});
@@ -1809,11 +1809,8 @@ window.Showtime = function (stage, opts) {
 		self.visorsSetAt = () => allSetAt;
 		self.visorInCapsule = function (c, i, w, h, line, sq, size) {
 			const done = ticked[i] !== undefined;
-			// all set, and the capsule shrinking back: READY
-			if (allSetAt >= 0 && sq < 0.55) {
-				art.text(c, 'READY', 0, -line / 2 + 1, { size, font: FONT, weight: 400, fill: 'white', shadow: { color: 'rgba(0,0,0,0.35)', blur: 0, y: 2 }, alpha: clamp((0.55 - sq) / 0.25, 0, 1) });
-				return;
-			}
+			// all set, and the capsule shrinking back: back to their score (nothing drawn here)
+			if (allSetAt >= 0 && sq < 0.55) return false;
 			// calibrated: a circle of their colour with a tick in it, popping in
 			if (done) {
 				const pop = easeOut(clamp((visorNow - ticked[i]) / 0.3, 0, 1));
@@ -1831,7 +1828,7 @@ window.Showtime = function (stage, opts) {
 				c.lineTo(R * 0.46, -R * 0.3);
 				c.stroke();
 				c.restore();
-				return;
+				return true;
 			}
 			const bounce = done ? 1 + 0.25 * Math.max(0, 1 - (visorNow - ticked[i]) / 0.35) : visorNow > V.show ? 1 + 0.05 * Math.sin(visorNow * 6 + i) : 1;
 			const k = Math.min(w * 0.8 / 270, (h - line) * 0.8 / 220) * bounce;
@@ -1840,6 +1837,7 @@ window.Showtime = function (stage, opts) {
 			c.scale(k, k);
 			visor(c, colour(i), done || visorNow <= V.show ? 1 : 0.55, visorNow * (done ? 3.2 : 1.4) + i * 0.8);
 			c.restore();
+			return true;
 		};
 		return extend({
 			id: 'visors',
