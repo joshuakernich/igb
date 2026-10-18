@@ -288,6 +288,7 @@ window.Showtime = function (stage, opts) {
 		intro: 1.0,
 		play: 12,              // the whole game, replayed in this long
 		outro: 2.0,
+		headroom: 30,          // zoomed in: this much kept above the top of the front wall
 		window: { x: 90, y: 230, w: 960, bar: 80 },   // the window it plays in: its left and its top (under its bar), its width; the bar along its top
 		qr: { x: 1150, size: 330, pad: 22, link: 'https://joshuakernich.github.io/igb/' },   // the QR code beside it: its left, its size, the white round it; where it goes (for now: the game, on the hub)
 		trail: 30,             // samples of trail behind each player
@@ -2851,6 +2852,13 @@ window.Showtime = function (stage, opts) {
 					c.clip();
 					c.translate(WIN.x, WIN.y);
 					c.scale(WIN.w / W, WIN.w / W);
+					// (zoomed in on the action: everything above the front wall cropped off, the floor kept)
+					const top = roomPoint(-0.5, ROOM.height, ROOM.near + ROOM.depth)[1] - REPLAY.headroom;
+					const zoom = H / (H - top);
+					c.save();
+					c.translate(W / 2, H);
+					c.scale(zoom, zoom);
+					c.translate(-W / 2, -H);
 					drawRoom(c);
 					// each player's recent path, glowing faintly on the floor
 					for (const who of people) {
@@ -2869,7 +2877,7 @@ window.Showtime = function (stage, opts) {
 						const [x, y, s] = roomPoint(who.spot.x, 0, who.spot.z);
 						person(c, who.p, x, y, s, who.stride);
 					}
-					self.slam(c, 'REPLAY', W / 2, 90, 100, bt - 0.05, { fill: theme.gold });
+					c.restore();
 					// ▶▶ ×N, blinking
 					if (k < 1 && Math.floor(bt * 3) % 2 === 0) {
 						c.save();
