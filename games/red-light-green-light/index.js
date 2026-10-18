@@ -2053,9 +2053,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		}
 	}
 
-	// A little blood on the camera, as someone's shot: a few drops land over
-	// their wall, run down in streaks, and fade away.
-	const LENS = { drops: [5, 9], size: [16, 72], life: 3.4, run: [60, 260], fade: 1.2, blur: 7 };   // how many drops; how big (px); seconds they last; how far they run down (px); seconds they fade over at the end; how out of focus they are (px: they're right on the lens)
+	// A little blood on the camera, as someone's shot: a spatter of big,
+	// out-of-focus drops (a few with short streaks under them) round where
+	// they are on the screen. It's painted once, when it lands, and then
+	// only fades away (no running: cheap to draw).
+	const LENS = { drops: [5, 9], size: [16, 72], spread: [380, 260], streak: [30, 140], life: 3.4, fade: 1.2, blur: 7 };   // how many drops; how big (px); how far they spread across and up and down (px); how long their streaks (px); seconds it lasts; seconds it fades over at the end; how out of focus (px, for the biggest drops)
 	let lens = [];
 	function spatter(c) {
 		const wall = c.wall;
@@ -2063,37 +2065,43 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// (around where they are on the screen: a little above their feet)
 		const p = at(c.x, c.f, 0, c.wall);
 		const cx = Math.max(60, Math.min(W - 60, p.x - wall * W)), cy = Math.max(60, Math.min(H - 120, p.y - 90 * p.s));
+		// painted once, into a picture of its own
+		const pad = LENS.size[1] + LENS.blur * 3;
+		const w = LENS.spread[0] + pad * 2, h = LENS.spread[1] + LENS.streak[1] + pad * 2;
+		const cv = document.createElement('canvas');
+		cv.width = Math.ceil(w);
+		cv.height = Math.ceil(h);
+		const g = cv.getContext('2d');
 		for (let i = 0; i < n; i++) {
 			const r = LENS.size[0] + Math.pow(Math.random(), 2) * (LENS.size[1] - LENS.size[0]);
-			lens.push({ wall, x: cx + (Math.random() - 0.5) * 380, y: cy + (Math.random() - 0.5) * 260, r, run: LENS.run[0] + Math.random() * (LENS.run[1] - LENS.run[0]) * (r / LENS.size[1]), born: wallT + Math.random() * 0.08 });
+			const x = pad + Math.random() * LENS.spread[0], y = pad + Math.random() * LENS.spread[1];
+			const run = Math.random() < 0.6 ? LENS.streak[0] + Math.random() * (LENS.streak[1] - LENS.streak[0]) * (r / LENS.size[1]) : 0;
+			g.filter = `blur(${LENS.blur * Math.sqrt(r / LENS.size[1])}px)`;   // (out of focus, right on the lens: the big drops most)
+			g.globalAlpha = 0.9;
+			if (run > 0) {
+				g.beginPath();
+				g.moveTo(x - r * 0.45, y);
+				g.lineTo(x + r * 0.45, y);
+				g.lineTo(x + r * 0.2, y + run);
+				g.lineTo(x - r * 0.2, y + run);
+				g.closePath();
+				g.fillStyle = '#7a0010';
+				g.fill();
+				art.circle(g, x, y + run, r * 0.5, { fill: '#9a0016' });
+			}
+			art.circle(g, x, y, r, { fill: '#8a0012' });
+			art.circle(g, x - r * 0.3, y - r * 0.3, r * 0.25, { fill: 'rgba(255,190,190,0.45)' });   // (a wet glint)
 		}
+		lens.push({ img: cv, x: wall * W + cx - w / 2, y: cy - pad - LENS.spread[1] / 2, born: wallT });
 	}
 	function drawLens(ctx) {
 		lens = lens.filter((d) => wallT - d.born < LENS.life);
 		for (const d of lens) {
 			const age = wallT - d.born;
-			if (age < 0) continue;
 			const alpha = Math.min(1, age / 0.05) * Math.min(1, (LENS.life - age) / LENS.fade);
-			const slide = d.run * (1 - Math.pow(1 - Math.min(1, age / (LENS.life * 0.8)), 2));   // (running down, slowing)
-			const x = d.wall * W + d.x;
 			art.save(ctx, function (c) {
-				c.globalAlpha = alpha * 0.9;
-				c.filter = `blur(${LENS.blur * Math.sqrt(d.r / LENS.size[1])}px)`;   // (out of focus, right on the lens: the big drops most)
-				// the streak it leaves, thinning as it goes
-				if (slide > 1) {
-					c.beginPath();
-					c.moveTo(x - d.r * 0.45, d.y);
-					c.lineTo(x + d.r * 0.45, d.y);
-					c.lineTo(x + d.r * 0.22, d.y + slide);
-					c.lineTo(x - d.r * 0.22, d.y + slide);
-					c.closePath();
-					c.fillStyle = '#7a0010';
-					c.fill();
-				}
-				// the drop where it splashed, and the bead running down
-				art.circle(c, x, d.y, d.r, { fill: '#8a0012' });
-				art.circle(c, x, d.y + slide, d.r * 0.55, { fill: '#9a0016' });
-				art.circle(c, x - d.r * 0.3, d.y - d.r * 0.3, d.r * 0.25, { fill: 'rgba(255,190,190,0.45)' });   // (a wet glint)
+				c.globalAlpha = alpha;
+				c.drawImage(d.img, d.x, d.y);
 			});
 		}
 	}
