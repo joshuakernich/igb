@@ -62,10 +62,10 @@
  *                      a shot is { x, y, z }: the world point at the centre
  *                      of the screen and the zoom. The view never shows past
  *                      the world's edges.
- *   the skip button    "SKIP ▶▶" in the middle of the front wall through every
- *                      beat between the squad picker and 'play'; it jumps to
- *                      'play' (opts.skip: { during, to, label, at: { x, y } };
- *                      at: false puts it in the front wall's bottom corner)
+ *   the skip button    "SKIP TUTORIAL ▶▶" in the middle of the front wall, only
+ *                      through the tutorial (the 'controls' beat); it jumps to
+ *                      the beat after it (opts.skip: { during, to, label,
+ *                      at: { x, y } }; at: false puts it in the bottom corner)
  *   show.pickPlayers(fn)   the squad picker, in the show's own style: buttons
  *                      2-6 on the front wall; fn(count) once one is picked
  *   show.slam(ctx, text, x, y, size, age, style)   a title crashing in
@@ -941,12 +941,18 @@ window.Showtime = function (stage, opts) {
 	// of the front wall; at: false, the front wall's bottom right).
 	let $skip = null;
 	const SKIP_AT = { x: 1.5 * W, y: 360 };   // (by default: the middle of the front wall, under the captions)
+	function skipTo() {
+		if (opts.skip && opts.skip.to) return opts.skip.to;
+		const i = beats.findIndex((b) => b.id === 'controls');
+		return beats[i + 1] ? beats[i + 1].id : 'play';
+	}
 	function showSkip(id) {
-		const play = beats.findIndex((b) => b.id === 'play');
-		const at = beats.findIndex((b) => b.id === id);
-		const intro = opts.skip ? opts.skip.during.includes(id) : id !== 'squad' && play >= 0 && at >= 0 && at < play;
+		// (the standard: only through the tutorial, the 'controls' beat, on to
+		// whatever comes after it; a game can say otherwise with opts.skip)
+		const during = (opts.skip && opts.skip.during) || ['controls'];
+		const intro = during.includes(id);
 		if (intro && !$skip) {
-			$skip = $('<button skip>').text((opts.skip && opts.skip.label) || 'SKIP ▶▶').css({
+			$skip = $('<button skip>').text((opts.skip && opts.skip.label) || 'SKIP TUTORIAL ▶▶').css({
 				position: 'absolute', whiteSpace: 'nowrap', zIndex: 5,
 				...((opts.skip && opts.skip.at === false)
 					? { left: (2 * W - 30) + 'px', top: '880px', transform: 'translateX(-100%)' }
@@ -958,7 +964,7 @@ window.Showtime = function (stage, opts) {
 			}).appendTo(stage.$ui).on('click', function (e) {
 				e.stopPropagation();
 				self.fx('skip');
-				self.go(opts.skip ? opts.skip.to : 'play');
+				self.go(skipTo());
 			});
 			stage.timeout(() => $skip && $skip.css({ opacity: 1 }), 30);
 		} else if (!intro && $skip) {

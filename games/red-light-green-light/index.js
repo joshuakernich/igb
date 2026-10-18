@@ -577,7 +577,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const show = new Showtime(stage, {
 		score: won,   // scores are in won
 		id: 'red-light-green-light',
-		skip: { during: ['controls'], to: 'doll', label: 'SKIP TUTORIAL ▶▶' },   // the skip button: only in the tutorial, on to her entrance
 		menu: { restart: () => restartRound(), tutorial: () => debugJump('controls'), jumps: false },
 		// the score capsules (the show's): up the wall for a round's end, staggered, and down again as its banner goes; faint once out
 		scoreHud: {
