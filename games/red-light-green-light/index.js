@@ -3051,7 +3051,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		circle: 'sheet-guard-circle.png',         // 4-frame walk, attention, aim, fire, lower (facing right)
 		triangle: 'sheet-guard-triangle.png',
 		square: 'sheet-guard-square.png',
-		head: 'v2-doll-head.png',                 // her head turning in 16 steps, from the back of it to her face (4 by 4)
+		head: 'v3-doll-head.png',                 // her head turning, one model in even 12° steps: frames 1-13 from the back of it to her face (4 by 4; the last three, turning on past, unused)
 		// whole-figure animation sheets, 4 by 4, every frame aligned on one baseline (see ANIMS)
 		arun: 'v5-run.png',                       // the contestant from behind: a 16-frame run
 		aact: 'v5-actions.png',                   // idle, freeze, hop, shot: 4 frames each
@@ -3065,7 +3065,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	for (const [name, file] of Object.entries(SHEETS)) {
 		const img = new Image();
 		img.onload = function () {
-			try { sheets[name] = slice(img, name, name === 'head' || /^(arun|aact|afront|g(circle|triangle|square))$/.test(name) ? 4 : 2); } catch (e) { /* (unreadable: keep drawing them) */ }
+			try {
+				sheets[name] = slice(img, name, name === 'head' || /^(arun|aact|afront|g(circle|triangle|square))$/.test(name) ? 4 : 2);
+				if (name === 'head') sheets.head.frames = sheets.head.frames.slice(0, HEAD_FRAMES);   // (back to face; her turning the other way is the same, mirrored)
+			} catch (e) { /* (unreadable: keep drawing them) */ }
 		};
 		img.src = 'assets/red-light-green-light/' + file;
 	}
@@ -4225,7 +4228,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// Where her head is, in the world, with the view at the far end.
 	// Where one of her pupils is (side -1: her right, as we look), in her
 	// head's units, when she faces us: measured on the sheet's last frame.
-	const PUPIL = { x: 0.15, y: -0.012, ring: 0.029 };   // (a share of the frame's width out from its middle, and of its height up or down; the red ring round each eye, as a share of the frame's width)
+	const HEAD_FRAMES = 13;   // (the head sheet's frames from the back of her head to her face)
+	const PUPIL = { x: 0.196, y: -0.038, ring: 0.026 };   // (a share of the frame's width out from its middle, and of its height up or down; the red ring round each eye, as a share of the frame's width)
 	function pupil(side) {
 		const sheet = sheets.head;
 		const f = sheet && sheet.frames[sheet.frames.length - 1];
@@ -4370,7 +4374,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				show.onWalls(ctx, function (c) {
 					// her name, in the middle of the wall, over her
 					show.slam(c, 'YOUNG-HEE', W / 2, 470, 220, bt - E.name, { fill: PINK, glow: PINK, alpha: out });
-					show.slam(c, 'SHE SEES EVERYTHING', W / 2, 610, 56, bt - E.name - 0.4, { fill: 'white', alpha: out });
 					const go = 1 - between(bt, E.length - 0.4, E.length);
 					show.slam(c, 'ROUND 1', W / 2, 330, 90, bt - E.round, { fill: PINK, alpha: go });
 					show.slam(c, 'GREEN LIGHT!', W / 2, 500, 200, bt - E.go, { fill: '#27d96b', glow: '#27d96b', rotate: -0.05, alpha: go });

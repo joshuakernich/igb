@@ -1051,9 +1051,7 @@ window.Showtime = function (stage, opts) {
 		background: 'rgba(0,0,0,0.6)', cursor: 'pointer', pointerEvents: 'auto', zIndex: 20, padding: `20px 0 20px ${SCORE_HUD.line}px`,
 		display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
 		boxShadow: `inset ${SCORE_HUD.line}px 0 0 0 white`, transition: 'transform 0.15s',
-	}).hide().appendTo(stage.$ui).on('click', function (e) { e.stopPropagation(); setPaused(true); })
-		.on('mouseenter', function () { $(this).css({ transform: 'translateY(-50%) scale(1.08)' }); })
-		.on('mouseleave', function () { $(this).css({ transform: 'translateY(-50%) scale(1)' }); });
+	}).hide().appendTo(stage.$ui).on('click', function (e) { e.stopPropagation(); setPaused(true); });
 	const $tap = $('<span>').text('TAP').css({   // (the prompt, standing just above it, as wide as it, outlined and dropped like the other words)
 		position: 'absolute', left: '50%', bottom: 'calc(100% + 14px)', transform: 'translateX(-50%)', whiteSpace: 'nowrap',
 		fontFamily: font, fontSize: '40px', lineHeight: 1, color: 'white', textAlign: 'center',
@@ -1098,8 +1096,6 @@ window.Showtime = function (stage, opts) {
 	// (each row black, its border, words and icon in its own colour)
 	const ROW_COLOURS = { resume: '#f5b800', volume: '#2f7df6', restart: '#e8323c', help: '#1fb85c' };
 	const rowButton = (text, glyph, fn, colour) => $('<button>').append(label(text)).append(icon(glyph, colour)).css(Object.assign({ cursor: 'pointer' }, rowCss, { color: colour, borderColor: colour }))
-		.on('mouseenter', function () { $(this).css({ transform: 'scale(1.04)', filter: 'brightness(1.12)' }); })
-		.on('mouseleave', function () { $(this).css({ transform: 'scale(1)', filter: 'none' }); })
 		.on('click', function (e) { e.stopPropagation(); fn(); });
 
 	// The volume, the same shape, its control in the icons' style: a capsule
@@ -1237,8 +1233,6 @@ window.Showtime = function (stage, opts) {
 				fontFamily: font, fontSize: '110px', lineHeight: '1', cursor: 'pointer', padding: 0,
 				transform: 'scale(0)', transition: `transform 0.4s cubic-bezier(.2,1.6,.4,1) ${0.25 + (n - 2) * 0.08}s`,
 			}).appendTo($row)
-				.on('mouseenter', function () { $(this).css({ transform: 'scale(1.12)', transitionDelay: '0s' }); })
-				.on('mouseleave', function () { $(this).css({ transform: 'scale(1)' }); })
 				.on('click', function () {
 					const count = parseInt($(this).attr('count'), 10);
 					self.fx('pick');
@@ -1483,8 +1477,6 @@ window.Showtime = function (stage, opts) {
 						fontFamily: `"${FONT}", sans-serif`, fontSize: '120px', lineHeight: 1, letterSpacing: '4px',
 						transition: `transform 0.25s, opacity ${T.startFade}s`,
 					}).appendTo(stage.$ui)
-						.on('mouseenter', function () { $(this).css({ transform: 'translate(-50%, -50%) scale(1.08)' }); })
-						.on('mouseleave', function () { $(this).css({ transform: 'translate(-50%, -50%) scale(1)' }); })
 						.on('click', function (e) {
 							e.stopPropagation();
 							self.fx('pick');
