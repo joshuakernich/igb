@@ -1158,7 +1158,7 @@ window.Showtime = function (stage, opts) {
 	const live = !!window.vuplex;
 	const font = `"${FONT}", "${TYPE.font}", sans-serif`;
 	let paused = false;
-	const MENU = Object.assign({ restart: null, tutorial: null, canRestart: null }, opts.menu);
+	const MENU = Object.assign({ restart: null, tutorial: null, canRestart: null, debug: false }, opts.menu);
 	// The menu's rows, only when they make sense: RESTART ROUND while a round
 	// is under way (in 'play', or as the game says: opts.menu.canRestart()),
 	// REPLAY TUTORIAL once the tutorial has been started.
@@ -1225,6 +1225,24 @@ window.Showtime = function (stage, opts) {
 	fitTap();
 	if (document.fonts) document.fonts.load(`100px "${FONT}"`).then(fitTap).catch(() => {});
 	for (const name of ['pause', 'volume', 'cog']) buttonIcon(name, PANEL_ICON, PANEL_COLOUR).appendTo($pauseBtn);
+	// opts.menu.debug: a second panel, the same but smaller, above it and
+	// there all the time (whatever the beat, in the box or off it), just the
+	// word DEBUG in a button; it opens the same menu, the debug buttons on it.
+	const DEBUG_PANEL = { middle: 190, size: 21, h: 54 };   // its middle (px down the left wall); its word's size; its button's height
+	if (MENU.debug) {
+		const $dbg = $('<button debug-panel>').attr('title', 'Debug').css({
+			position: 'absolute', left: 0, top: DEBUG_PANEL.middle + 'px', transform: 'translateY(-50%)',
+			width: PAUSE.button + 'px', borderRadius: `0 ${PAUSE.button / 2}px ${PAUSE.button / 2}px 0`, border: 'none', boxSizing: 'border-box',
+			background: 'rgba(0,0,0,0.6)', cursor: 'pointer', pointerEvents: 'auto', zIndex: 20, padding: `20px 0 20px ${SCORE_HUD.line}px`,
+			display: 'flex', flexDirection: 'column', alignItems: 'center',
+			boxShadow: `inset ${SCORE_HUD.line}px 0 0 0 ${PANEL_COLOUR}`,
+		}).appendTo(stage.$ui).on('click', function (e) { e.stopPropagation(); setPaused(true); });
+		$('<span>').text('DEBUG').css(Object.assign({
+			width: PANEL_ICON + 'px', height: DEBUG_PANEL.h + 'px', boxSizing: 'border-box', borderRadius: DEBUG_PANEL.h / 2 + 'px',
+			display: 'flex', alignItems: 'center', justifyContent: 'center',
+			fontFamily: font, fontSize: DEBUG_PANEL.size + 'px', lineHeight: 1, letterSpacing: '1px',
+		}, button(PANEL_COLOUR, DEBUG_PANEL.size), { borderWidth: '4px', boxShadow: '0 5px 0 rgba(0,0,0,0.45)' })).appendTo($dbg);
+	}
 
 	// the screen: dark glass over all three walls, a panel on each
 	const $pause = $('<pause-screen>').css({
@@ -1307,7 +1325,7 @@ window.Showtime = function (stage, opts) {
 		rowButton('RESTART ROUND', 'restart', () => { setPaused(false); menuRestart(); }, ROW_COLOURS.restart).attr('row', 'restart').appendTo($w);
 		if (MENU.tutorial) rowButton('REPLAY TUTORIAL', 'help', () => { setPaused(false); MENU.tutorial(); }, ROW_COLOURS.help).attr('row', 'tutorial').appendTo($w);
 	}
-	menu($left, !live);
+	menu($left, !live || MENU.debug);
 	menu($front);
 	menu($right);
 
@@ -1342,7 +1360,7 @@ window.Showtime = function (stage, opts) {
 
 	// the debug buttons, on the left wall's panel under PAUSED and the time (off the box only)
 	const $debug = $('<div>').css({
-		display: live ? 'none' : 'block', width: 'fit-content', maxWidth: '100%', minHeight: 0, maxHeight: '62%', overflowY: 'auto',   // (as wide as its longest line, centred on the wall) fontFamily: `"${TYPE.font}", sans-serif`,   // (sized to its buttons, so PAUSED, the time and these sit together in the middle of the wall)
+		display: live && !MENU.debug ? 'none' : 'block', width: 'fit-content', maxWidth: '100%', minHeight: 0, maxHeight: '62%', overflowY: 'auto',   // (as wide as its longest line, centred on the wall) fontFamily: `"${TYPE.font}", sans-serif`,   // (sized to its buttons, so PAUSED, the time and these sit together in the middle of the wall)
 	}).appendTo($left);
 	// (the heading and status, centred; then every button in one long,
 	// centred, flowing list, each group's name tucked in just before its
