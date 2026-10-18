@@ -600,8 +600,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			'Tracksuit Titans', 'Sandy Sprinters', 'Still Standing', 'Circle Triangle Square', 'The Green Line', 'No Wobble Club'],
 		sounds: Object.assign({
 			dollSong: ['assets/red-light-green-light/doll-song.wav', 0.8],
-			dollTurn: ['assets/red-light-green-light/doll-head-turn.m4a', 0.9],   // her head turning (from the show's clip, cleaned up)
-			dollLaser: ['assets/red-light-green-light/doll-laser.m4a', 0.8],      // her laser starting up (likewise)
+			dollTurn: ['assets/red-light-green-light/doll-head-turn.wav', 0.9],   // her head turning (from the show's clip, cleaned up)
+			dollLaser: ['assets/red-light-green-light/doll-laser.wav', 0.8],      // her laser starting up (likewise)
 			soundtrack: ['assets/red-light-green-light/soundtrack.mp3', MUSIC.level, true],
 		}, VOICE_SOUNDS),   // her song, once through each green light, fitted to its length (the only music); the voice
 	});
