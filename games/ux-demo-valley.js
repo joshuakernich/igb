@@ -9,6 +9,9 @@
  *   const valley = createValley(stage);
  *   valley.render(dt);    // every frame (dt 0 to hold it still)
  *   valley.dispose();     // when the game stops
+ *   valley.scene          // to add things to (lit, shadowed)
+ *   valley.ground(x, z)   // the ground's height there (metres; z negative: up the valley)
+ *   valley.project(x, y, z)   // where a point shows: { wall, x, y, ppm } (world px; ppm: pixels a metre there) or null
  */
 import * as THREE from '../lib/three/three.module.min.js';
 
@@ -18,7 +21,7 @@ export function createValley(stage) {
 	/* ---------- tuning ---------- */
 
 	const FOV = 64;                                  // vertical degrees: 90 across each 16:10 wall, so the walls meet
-	const EYE = { up: 7, pitch: 1.5, sway: 1.2 };   // metres above the valley floor; degrees the view tilts down; degrees it gently sways
+	const EYE = { up: 3.6, pitch: 11, sway: 1.2 };   // metres above the valley floor; degrees the view tilts down; degrees it gently sways
 	const SUN = new THREE.Vector3(-0.22, 0.2, -0.95).normalize();   // toward the sun: ahead, a little left, low enough to see
 	const BUSHES = 420;                              // how many bushes
 	const CLOUDS = 34;                               // how many clouds
@@ -288,7 +291,7 @@ export function createValley(stage) {
 		rig.add(cam);
 		return cam;
 	});
-	cams[1].rotation.x = -EYE.pitch * Math.PI / 180;   // (the front looks a touch down the valley; the sides, level)
+	for (const cam of cams) cam.rotation.x = -EYE.pitch * Math.PI / 180;   // (all three look a touch down, onto the valley floor)
 
 	function viewport(x, w) {
 		const x0 = Math.round(x * k), x1 = Math.round((x + w) * k);
@@ -300,6 +303,7 @@ export function createValley(stage) {
 	renderer.shadowMap.needsUpdate = true;
 	function render(dt) {
 		t += dt;
+		renderer.shadowMap.needsUpdate = true;   // (things move: falling cubes)
 		// a gentle sway, the clouds drifting, the rays turning
 		rig.rotation.y = Math.sin(t * 0.07) * EYE.sway * Math.PI / 180;
 		for (const cl of clouds) {
@@ -330,5 +334,22 @@ export function createValley(stage) {
 		$(renderer.domElement).remove();
 	}
 
-	return { render, dispose };
+	// Where a point in the valley shows on the walls (whichever wall's view
+	// it's in), and how many pixels a metre is there.
+	const pv = new THREE.Vector3();
+	function project(x, y, z) {
+		rig.updateMatrixWorld(true);
+		for (const w of [1, 0, 2]) {
+			const cam = cams[w];
+			pv.set(x, y, z).project(cam);
+			if (pv.z > 1 || pv.z < -1 || Math.abs(pv.x) > 1 || Math.abs(pv.y) > 1.2) continue;
+			const sx = w * W + (pv.x + 1) / 2 * W, sy = (1 - pv.y) / 2 * H;
+			pv.set(x, y + 1, z).project(cam);
+			const ppm = Math.abs((1 - pv.y) / 2 * H - sy);
+			return { wall: w, x: sx, y: sy, ppm };
+		}
+		return null;
+	}
+
+	return { render, dispose, scene, ground, project };
 }

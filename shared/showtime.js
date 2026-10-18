@@ -905,6 +905,92 @@ window.Showtime = function (stage, opts) {
 		ctx.restore();
 	}
 
+	/* ---------- the worms (the visor check's, and any game's) ---------- */
+
+	// A worm's springy state, and a step of it: it leans back from the way
+	// it's going across the view (across: where it is, side to side, in any
+	// units a second's movement makes sense in, 0..1 across a room, say), and
+	// springs upright again; its two little arms dangle and flail. (The
+	// numbers: VISORS.worm and VISORS.arms.) show.worms.state(across),
+	// show.worms.step(state, across, dt), show.worms.draw(...) below.
+	function wormState(across) {
+		return { a: 0, v: 0, vx: 0, px: across };
+	}
+	function wormStep(b, across, dt) {
+		const h = Math.min(dt, 0.05);
+		const ks = Math.exp(-dt / VISORS.worm.smooth);
+		const A = VISORS.arms;
+		const Wm = VISORS.worm;
+		const vx = b.vx * ks + (across - b.px) / Math.max(dt, 1e-3) * (1 - ks);
+		b.v -= (vx - b.vx) * Wm.kick * Wm.spring * 0.1;   // (a change of speed shoves it the other way: these add up)
+		b.vx = vx;
+		b.px = across;
+		const want = clamp(-b.vx * Wm.lean, -Wm.most, Wm.most);
+		b.v += (Wm.spring * (want - b.a) - Wm.damp * b.v) * h;
+		b.a += b.v * h;
+		if (Math.abs(b.a) > Wm.swing) { b.a = Math.sign(b.a) * Wm.swing; b.v *= -0.4; }   // (as far as it goes: it bounces back)
+		// its arms: dangling on floppy springs, thrown about by the body's sway and flailing the faster it goes
+		const leanAcc = (b.v - (b.lastV || 0)) / Math.max(h, 1e-3);
+		b.lastV = b.v;
+		b.t = (b.t || 0) + h;
+		b.arms = b.arms || [{ a: A.rest, v: 0, e: A.bend, ev: 0 }, { a: A.rest, v: 0, e: A.bend, ev: 0 }];
+		b.arms.forEach(function (arm, j) {
+			const side = j ? 1 : -1;
+			const speed = Math.min(1.5, Math.abs(b.vx));
+			const wave = Math.sin(b.t * (9 + j * 2.3) + j * 2) + 0.6 * Math.sin(b.t * (14.7 - j * 3.1));
+			const before = arm.v;
+			arm.v += (A.spring * (A.rest - arm.a) - A.damp * arm.v - side * leanAcc * A.shove * 0.1 + wave * speed * A.flail) * h;
+			arm.a = clamp(arm.a + arm.v * h, -0.7, 3.1);
+			arm.ev += (A.spring * 1.4 * (A.bend - arm.e) - A.damp * arm.ev - (arm.v - before) / Math.max(h, 1e-3) * 0.5) * h;
+			arm.e = clamp(arm.e + arm.ev * h, -1.6, 1.6);
+		});
+	}
+
+	// A worm standing on its tail at (x, y), so tall, its body curling over
+	// to lean (radians: + to the right) as it rises, swaying a little,
+	// in its player's colour (wrong: ringed in red).
+	function drawWorm(c, x, y, tall, lean, k, fill, wrong, t, arms) {
+		const W2 = VISORS.worm;
+		const r = W2.r * k;
+		const sway = Math.sin(t * 2.2) * 0.06;
+		// the spine: each segment turned a little more than the last
+		const pts = [{ x, y }];
+		const step = Math.max(1, tall - r) / W2.segs;
+		let a = 0;
+		for (let s = 1; s <= W2.segs; s++) {
+			const u = s / W2.segs;
+			a = (lean + sway) * u * 1.6 * (1 - 0.35 * u);
+			const prev = pts[s - 1];
+			pts.push({ x: prev.x + Math.sin(a) * step, y: prev.y - Math.cos(a) * step });
+		}
+		c.save();
+		// its shadow, and a red ring if it's a visor that isn't playing
+		art.ellipse(c, x, y, r * 1.6, r * 0.55, { fill: 'rgba(0,0,0,0.35)' });
+		if (wrong) art.ellipse(c, x, y, r * 2.2, r * 0.8, { stroke: '#ff3d6a', lineWidth: 6 * k });
+		// its arms (behind it, reaching out from its sides): from the shoulder,
+		// angled out from straight down, then bent at the elbow, a little hand
+		const A = VISORS.arms;
+		const sh = pts[Math.round(A.at * (pts.length - 1))];
+		(arms || [{ a: A.rest, e: A.bend }, { a: A.rest, e: A.bend }]).forEach(function (arm, j) {
+			const side = j ? 1 : -1;
+			const root = { x: sh.x + side * r * 0.8, y: sh.y };   // (at the body's edge, so they hang beside it)
+			const elbow = { x: root.x + side * Math.sin(arm.a) * r * A.upper, y: root.y + Math.cos(arm.a) * r * A.upper };
+			const hand = { x: elbow.x + side * Math.sin(arm.a + arm.e) * r * A.lower, y: elbow.y + Math.cos(arm.a + arm.e) * r * A.lower };
+			art.line(c, [root, elbow, hand], { stroke: fill, lineWidth: r * A.thick * 2 });
+			art.circle(c, hand.x, hand.y, r * A.thick * 1.35, { fill });
+		});
+		// the body: one smooth tube, one thickness all the way, in their colour
+		art.line(c, pts, { stroke: fill, lineWidth: r * 2 });
+		c.restore();
+	}
+
+	self.worms = {
+		state: wormState,
+		step: wormStep,
+		// draw(ctx, x, y, tall, scale, colour, time, state): its tail at (x, y), so tall (px); scale: its thickness, against the visor check's
+		draw: (c, x, y, tall, k, colour, t, st) => drawWorm(c, x, y, tall, st ? st.a : 0, k, colour, false, t, st && st.arms),
+	};
+
 	/* ---------- the score capsules (in play) ---------- */
 
 	// Every show has them through 'play' (the standard in-game score HUD): a
@@ -1646,37 +1732,10 @@ window.Showtime = function (stage, opts) {
 					motion[i] = (motion[i] || 0) * k + moved / Math.max(dt, 1e-3) * (1 - k);   // speed, raw units a second
 					// their worm leans back from the way they're going, on a spring (on
 					// each wall, the way it's going across that wall's view)
-					const h = Math.min(dt, 0.05);
-					const ks = Math.exp(-dt / V.worm.smooth);
-					const A = V.arms;
 					bend[i] = bend[i] || [];
 					for (let w = 0; w < 3; w++) {
-						const across = viewOf(w, p.px, p.pz).x;
-						const b = bend[i][w] || (bend[i][w] = { a: 0, v: 0, vx: 0, px: across });
-						const vx = b.vx * ks + (across - b.px) / Math.max(dt, 1e-3) * (1 - ks);
-						b.v -= (vx - b.vx) * V.worm.kick * V.worm.spring * 0.1;   // (a change of speed shoves it the other way: these add up)
-						b.vx = vx;
-						b.px = across;
-						const want = clamp(-b.vx * V.worm.lean, -V.worm.most, V.worm.most);
-						b.v += (V.worm.spring * (want - b.a) - V.worm.damp * b.v) * h;
-						b.a += b.v * h;
-						if (Math.abs(b.a) > V.worm.swing) { b.a = Math.sign(b.a) * V.worm.swing; b.v *= -0.4; }   // (as far as it goes: it bounces back)
-						// its arms: dangling on floppy springs, thrown about by the body's
-						// sway and flailing the faster they go
-						const leanAcc = (b.v - (b.lastV || 0)) / Math.max(h, 1e-3);
-						b.lastV = b.v;
-						b.t = (b.t || 0) + h;
-						b.arms = b.arms || [{ a: A.rest, v: 0, e: A.bend, ev: 0 }, { a: A.rest, v: 0, e: A.bend, ev: 0 }];
-						b.arms.forEach(function (arm, j) {
-							const side = j ? 1 : -1;
-							const speed = Math.min(1.5, Math.abs(b.vx));
-							const wave = Math.sin(b.t * (9 + j * 2.3) + j * 2) + 0.6 * Math.sin(b.t * (14.7 - j * 3.1));
-							const before = arm.v;
-							arm.v += (A.spring * (A.rest - arm.a) - A.damp * arm.v - side * leanAcc * A.shove * 0.1 + wave * speed * A.flail) * h;
-							arm.a = clamp(arm.a + arm.v * h, -0.7, 3.1);
-							arm.ev += (A.spring * 1.4 * (A.bend - arm.e) - A.damp * arm.ev - (arm.v - before) / Math.max(h, 1e-3) * 0.5) * h;
-							arm.e = clamp(arm.e + arm.ev * h, -1.6, 1.6);
-						});
+						bend[i][w] = bend[i][w] || wormState(viewOf(w, p.px, p.pz).x);
+						wormStep(bend[i][w], viewOf(w, p.px, p.pz).x, dt);
 					}
 					// tick off a squad visor once it's wiggled in the zone a moment
 					if (bt > V.show && i < count() && ticked[i] === undefined) {
@@ -2002,47 +2061,10 @@ window.Showtime = function (stage, opts) {
 				const q = at(v.x, v.d);   // (right where they are, 1:1)
 				const tall = V.worm.tall * clamp((p.Y + 1) / 2, 0.15, 1) * q.k;
 				const b = bend[i] && bend[i][wall];
-				worm(c, q.x, q.y, tall, b ? b.a : 0, q.k, colour(i), i >= n, bt + i * 1.7, b && b.arms);
+				drawWorm(c, q.x, q.y, tall, b ? b.a : 0, q.k, colour(i), i >= n, bt + i * 1.7, b && b.arms);
 			}
 		}
 
-		// A worm standing on its tail at (x, y), so tall, its body curling over
-		// to lean (radians: + to the right) as it rises, swaying a little,
-		// in its player's colour (wrong: ringed in red).
-		function worm(c, x, y, tall, lean, k, fill, wrong, t, arms) {
-			const W2 = V.worm;
-			const r = W2.r * k;
-			const sway = Math.sin(t * 2.2) * 0.06;
-			// the spine: each segment turned a little more than the last
-			const pts = [{ x, y }];
-			const step = Math.max(1, tall - r) / W2.segs;
-			let a = 0;
-			for (let s = 1; s <= W2.segs; s++) {
-				const u = s / W2.segs;
-				a = (lean + sway) * u * 1.6 * (1 - 0.35 * u);
-				const prev = pts[s - 1];
-				pts.push({ x: prev.x + Math.sin(a) * step, y: prev.y - Math.cos(a) * step });
-			}
-			c.save();
-			// its shadow, and a red ring if it's a visor that isn't playing
-			art.ellipse(c, x, y, r * 1.6, r * 0.55, { fill: 'rgba(0,0,0,0.35)' });
-			if (wrong) art.ellipse(c, x, y, r * 2.2, r * 0.8, { stroke: '#ff3d6a', lineWidth: 6 * k });
-			// its arms (behind it, reaching out from its sides): from the shoulder,
-			// angled out from straight down, then bent at the elbow, a little hand
-			const A = V.arms;
-			const sh = pts[Math.round(A.at * (pts.length - 1))];
-			(arms || [{ a: A.rest, e: A.bend }, { a: A.rest, e: A.bend }]).forEach(function (arm, j) {
-				const side = j ? 1 : -1;
-				const root = { x: sh.x + side * r * 0.8, y: sh.y };   // (at the body's edge, so they hang beside it)
-				const elbow = { x: root.x + side * Math.sin(arm.a) * r * A.upper, y: root.y + Math.cos(arm.a) * r * A.upper };
-				const hand = { x: elbow.x + side * Math.sin(arm.a + arm.e) * r * A.lower, y: elbow.y + Math.cos(arm.a + arm.e) * r * A.lower };
-				art.line(c, [root, elbow, hand], { stroke: fill, lineWidth: r * A.thick * 2 });
-				art.circle(c, hand.x, hand.y, r * A.thick * 1.35, { fill });
-			});
-			// the body: one smooth tube, one thickness all the way, in their colour
-			art.line(c, pts, { stroke: fill, lineWidth: r * 2 });
-			c.restore();
-		}
 	};
 
 	// TIME!: an alarm, everything slows to a stop, a giant TIME!, then the

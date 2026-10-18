@@ -5,7 +5,7 @@
  *
  * Every beat a real game has is here, in order: the squad picker, title
  * drop, clock intro, visor check, a stand-in controls intro and villain
- * intro, the play (a bare floor; scores tick up at random), TIME!, scores,
+ * intro, the play (a little game: see below), TIME!, scores,
  * rank, team, leaderboard, replay, rating and the end. The game's own beats
  * are labelled placeholders, so it's clear where a real game fills in.
  *
@@ -14,9 +14,13 @@
  * set the clock, shuffle the scores, fake the visor check passing, restart.
  * The current beat and its time show at the top.
  *
- * Behind it all, a sunny 3D valley (games/ux-demo-valley.js). An ES module
- * (manifest: module: true).
+ * Behind it all, a sunny 3D valley (games/ux-demo-valley.js). The play: each
+ * player is a worm (the visor check's worms, show.worms) out on the valley
+ * floor, right where they are in the room, as tall as they are, leaning and
+ * flailing as they move; little coloured cubes fall from the sky, and a worm
+ * that gets to one picks it up: a point. An ES module (manifest: module: true).
  */
+import * as THREE from '../lib/three/three.module.min.js';
 import { createValley } from './ux-demo-valley.js';
 
 IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
@@ -30,7 +34,12 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 
 	const GAME_SECONDS = 600;
 	const STAND_IN = 5;           // seconds for each placeholder intro
-	const SCORE_RATE = 0.8;       // average points a second per player, in play
+	// the room, out on the valley floor: its left-right across (metres), and
+	// from the back of the room to the front wall, how far up the valley (metres ahead)
+	const FIELD = { half: 9, near: 6.5, far: 24 };
+	const WORM = { tall: 2.3, thick: 0.3 };   // a worm's height (metres, for a tall player) and its thickness (radius, metres)
+	const CUBE = { size: 0.75, every: 0.55, drop: 26, fall: 8, life: 9, reach: 1.9, spin: 2.2 };   // a cube's size (metres); a new one every so often (seconds); how high it falls from and how fast (metres, a second); seconds it lies on the grass; how near a worm must be to grab one (metres); how fast it spins as it falls
+	const CUBE_COLOURS = ['#ff4d6d', '#ffd23f', '#3ad1ff', '#7dff9e', '#b388ff', '#ff9f43'];
 
 	/* ---------- the backdrop: a sunny valley ---------- */
 
@@ -91,16 +100,12 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 			id: 'play',
 			length: Infinity,
 			enter() { show.label('PLAY'); },
+			exit() { clearCubes(); },
 			update(dt) {
 				t += dt;
-				for (let i = 0; i < players; i++) if (Math.random() < SCORE_RATE * dt) scores[i]++;
+				stepWorms(dt);
+				stepCubes(dt);
 				show.record(t, Array.from({ length: players }, (_, i) => latest[i] || null));
-			},
-			draw(ctx) {
-				show.onWalls(ctx, function (c) {
-					show.text(c, 'PLAY', W / 2, 420, 110, { alpha: 0.5 });
-					show.text(c, scores.map((s, i) => show.nameOf(i) + ' ' + s).join('   '), W / 2, 540, 40, { fill: '#9fb6d8', glow: 'transparent' });
-				});
 			},
 		},
 		show.beats.timeUp(),
@@ -118,18 +123,98 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	/* ---------- the world: the valley (behind), and where everyone is ---------- */
 
 	function drawWorld(ctx) {
-		// (the valley is behind, in its own canvas: nothing painted over it here)
-		// each player, as a spot on the wall they're nearest, across that wall
-		// (only in play: none over the opening screens)
-		if (show.beat !== 'play') return;
+		// (the valley, and the cubes in it, are behind, in their own canvas)
+		if (show.beat !== 'play') return;   // (no worms over the opening screens)
+		// each player, a worm out on the valley floor, far ones first
+		const shown = [];
 		for (let i = 0; i < players; i++) {
 			const p = latest[i];
-			if (!p || !p.walls) continue;
-			let wall = 1;
-			for (let w = 0; w < 3; w++) if (p.walls[w].dist < p.walls[wall].dist) wall = w;
-			const x = wall * W + Math.max(0, Math.min(1, p.walls[wall].px)) * W;
-			const y = 300 + (1 - p.walls[wall].dist) * 600;
-			art.circle(ctx, x, y, 34, { fill: PLAYER_COLORS[i], alpha: 0.85 });
+			if (!p || p.px === undefined) continue;
+			const w = toField(p);
+			const at = valley.project(w.x, valley.ground(w.x, w.z), w.z);
+			if (at) shown.push({ i, p, at, z: w.z });
+		}
+		shown.sort((a, b) => a.z - b.z);
+		for (const { i, p, at } of shown) {
+			const tall = WORM.tall * Math.max(0.2, Math.min(1, (p.Y + 1) / 2)) * at.ppm;
+			show.worms.draw(ctx, at.x, at.y, tall, WORM.thick * at.ppm / 17, PLAYER_COLORS[i], t + i * 1.7, worms[i]);
+		}
+	}
+
+	/* ---------- the play: worms, and cubes falling from the sky ---------- */
+
+	// where a player is, out on the valley floor (room 0..1 across and toward the front wall)
+	const toField = (p) => ({
+		x: (Math.max(0, Math.min(1, p.px)) - 0.5) * 2 * FIELD.half,
+		z: -(FIELD.near + Math.max(0, Math.min(1, p.pz === undefined ? 0.5 : p.pz)) * (FIELD.far - FIELD.near)),
+	});
+	const worms = [];
+	function stepWorms(dt) {
+		for (let i = 0; i < players; i++) {
+			const p = latest[i];
+			if (!p || p.px === undefined) continue;
+			worms[i] = worms[i] || show.worms.state(p.px);
+			show.worms.step(worms[i], p.px, dt);
+		}
+	}
+
+	const cubeGeo = new THREE.BoxGeometry(CUBE.size, CUBE.size, CUBE.size);
+	const cubes = [];
+	let nextCube = 0;
+	function dropCube() {
+		const colour = CUBE_COLOURS[Math.floor(Math.random() * CUBE_COLOURS.length)];
+		const mesh = new THREE.Mesh(cubeGeo, new THREE.MeshStandardMaterial({ color: colour, roughness: 0.35, metalness: 0.05, emissive: colour, emissiveIntensity: 0.12 }));
+		mesh.castShadow = true;
+		const x = (Math.random() * 2 - 1) * FIELD.half * 0.92;
+		const z = -(FIELD.near + Math.random() * (FIELD.far - FIELD.near));
+		const floor = valley.ground(x, z) + CUBE.size / 2;
+		mesh.position.set(x, floor + CUBE.drop, z);
+		mesh.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
+		valley.scene.add(mesh);
+		cubes.push({ mesh, colour, floor, landed: -1, spin: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(CUBE.spin) });
+	}
+	function removeCube(k) {
+		valley.scene.remove(k.mesh);
+		k.mesh.material.dispose();
+		cubes.splice(cubes.indexOf(k), 1);
+	}
+	function clearCubes() {
+		while (cubes.length) removeCube(cubes[0]);
+	}
+	function stepCubes(dt) {
+		nextCube -= dt;
+		if (nextCube <= 0 && cubes.length < 40) { dropCube(); nextCube = CUBE.every * (0.6 + Math.random() * 0.8); }
+		for (const k of cubes.slice()) {
+			const m = k.mesh;
+			if (k.landed < 0) {
+				// falling, tumbling
+				m.position.y -= CUBE.fall * dt;
+				m.rotation.x += k.spin.x * dt;
+				m.rotation.y += k.spin.y * dt;
+				m.rotation.z += k.spin.z * dt;
+				if (m.position.y <= k.floor) { m.position.y = k.floor; k.landed = t; m.rotation.set(0, m.rotation.y, 0); }
+			} else {
+				// on the grass, a little bob, then shrinking away
+				const age = t - k.landed;
+				m.position.y = k.floor + Math.abs(Math.sin(age * 3)) * 0.12 * Math.max(0, 1 - age);
+				const left = k.landed + CUBE.life - t;
+				if (left < 0.6) m.scale.setScalar(Math.max(0.01, left / 0.6));
+				if (left <= 0) { removeCube(k); continue; }
+			}
+			// a worm close enough (and the cube low enough) grabs it
+			if (m.position.y - k.floor > 2.5) continue;
+			for (let i = 0; i < players; i++) {
+				const p = latest[i];
+				if (!p || p.px === undefined) continue;
+				const w = toField(p);
+				if (Math.hypot(w.x - m.position.x, w.z - m.position.z) > CUBE.reach) continue;
+				scores[i] = (scores[i] || 0) + 1;
+				show.fx('pick', 0.7);
+				const at = valley.project(m.position.x, m.position.y, m.position.z);
+				if (at) show.burst(at.x, at.y, k.colour);
+				removeCube(k);
+				break;
+			}
 		}
 	}
 
@@ -197,6 +282,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	};
 
 	self.fini = function () {
+		clearCubes();
 		valley.dispose();
 		show.fini();
 	};
