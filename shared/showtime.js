@@ -1566,6 +1566,7 @@ window.Showtime = function (stage, opts) {
 	// n (IGB.players.list); it's in play when it moves.
 	beatsLib.visors = function (extra) {
 		const V = VISORS;
+		let visorScratch = null;   // (up here: the drawing helpers below sit after the beat's return, so a let down there would never be set up)
 		let motion = [];      // per slot: averaged movement
 		let last = [];        // per slot: the last position seen
 		let held = [];        // per slot: seconds wiggled in the zone
@@ -1776,8 +1777,8 @@ window.Showtime = function (stage, opts) {
 		// sticking out the front, built from flat faces drawn back to front,
 		// each shaded by which way it faces (the inside of the band darker).
 		// (faded, it's drawn solid off to one side and laid down at its alpha in
-		// one go, so its faces never show through each other as lines)
-		let visorScratch = null;
+		// one go, so its faces never show through each other as lines; its
+		// scratch canvas is visorScratch, declared at the top of the beat)
 		function visor(c, fill, alpha, yaw) {
 			if (alpha >= 0.999) return visorSolid(c, fill, yaw);
 			const B = { x: -170, y: -150, w: 340, h: 270, k: 2 };   // (its bounds, peak and shadow and all, and the resolution)
