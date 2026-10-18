@@ -273,8 +273,9 @@ window.Showtime = function (stage, opts) {
 
 	const BOARD = {
 		drop: 0.06,            // the other teams' rows drop in, one after another
-		enter: 1.2,            // your row slides in at the bottom
-		climb: 0.2,            // and climbs past each team above it
+		enter: 0.9,            // the team capsule drops from the middle to the bottom of the list
+		settle: 0.5,           // (taking this long)
+		slide: 0.7,            // then slides quickly up it to its standing
 		hold: 4.5,
 		top: 175,
 		row: 70,
@@ -2276,105 +2277,120 @@ window.Showtime = function (stage, opts) {
 		}, extra);
 	};
 
-	// The players as a list: one row each, their avatar, their colour's name
-	// and their score. Row r of n sits at listY(r, n); rows have no podium.
+	// The results are told with the score capsules from along the bottom:
+	// they rise into the standings, combine into one team capsule, and that
+	// slides up the day's leaderboard.
+	const RESULT = { k: 1.8, x: 60, move: 0.6, edge: 'rgba(255,255,255,0.22)' };   // the standings' capsules: this many times their size along the bottom; nudged right of the middle (room for the places on their left); how long each takes to rise into place; a faint edge round them on the dark
+	const TEAM_CAP = { w: 330, h: 104, size: 64 };   // the team capsule (before it's scaled by RESULT.k): its width, its height, its figures' size
+
+	// A score capsule, as along the bottom: dark glass, a band of colour along
+	// its foot (or a band of every player's colour, for the team), its figures
+	// in the middle of the dark part. (x, y) its middle, k its scale; o.w, o.h
+	// its size, o.size its figures', o.sink how far it reaches down past its
+	// foot, o.gold a gold glow round it, o.alpha.
+	function capsule(c, x, y, k, band, text, o = {}) {
+		const S = SCORE_HUD;
+		const w = o.w || S.w, h = o.h || S.h, sink = o.sink || 0;
+		art.with(c, { x, y, scale: k, alpha: o.alpha === undefined ? 1 : o.alpha }, function (c2) {
+			const x0 = -w / 2, y0 = -h / 2, x1 = w / 2, y1 = h / 2 + sink, r = h / 2;
+			const path = function () {
+				c2.beginPath();
+				c2.moveTo(x0 + r, y0);
+				c2.arcTo(x1, y0, x1, y1, r);
+				c2.arcTo(x1, y1, x0, y1, r);
+				c2.arcTo(x0, y1, x0, y0, r);
+				c2.arcTo(x0, y0, x1, y0, r);
+				c2.closePath();
+			};
+			art.save(c2, function (c3) {
+				if (o.gold) { c3.shadowColor = theme.gold; c3.shadowBlur = 40 * o.gold; }
+				path();
+				c3.fillStyle = 'rgba(0,0,0,0.6)';
+				c3.fill();
+				c3.shadowBlur = 0;
+				c3.clip();
+				// the band: one colour, or every player's side by side
+				const bands = Array.isArray(band) ? band : [band];
+				bands.forEach(function (b, j) {
+					c3.fillStyle = b;
+					c3.fillRect(x0 + (w * j) / bands.length, h / 2 - S.line, w / bands.length + 0.5, S.line + sink);
+				});
+			});
+			if (o.edge || o.gold) {
+				path();
+				c2.strokeStyle = o.gold ? theme.gold : o.edge;
+				c2.lineWidth = o.gold ? 3 : 1.5;
+				c2.stroke();
+			}
+			if (text !== '') art.text(c2, text, 0, -S.line / 2 + 1, { size: o.size || S.size, font: FONT, weight: 400, fill: 'white', shadow: { color: 'rgba(0,0,0,0.35)', blur: 0, y: 2 } });
+		});
+	}
+	// where capsule i of n sits along the bottom (as the score HUD has it), and in the standings (by rank r)
+	const hudSpot = function (i, n) {
+		const S = SCORE_HUD;
+		const total = n * S.w + (n - 1) * S.gap;
+		return { x: W / 2 + i * (S.w + S.gap) + S.w / 2 - total / 2, y: H - S.h / 2 };
+	};
 	function listY(r, n) {
 		const gap = Math.min(LIST.row, LIST.height / Math.max(1, n));
 		return LIST.top + (LIST.height - n * gap) / 2 + (r + 0.5) * gap;
 	}
-	function listRow(c, p, y, score, opts = {}) {
+	const SUFFIX = ['1ST', '2ND', '3RD', '4TH', '5TH', '6TH'];
+	// first place first (ties share a place; then player order)
+	function standings() {
+		const s = scores();
 		const n = count();
-		const gap = Math.min(LIST.row, LIST.height / Math.max(1, n));
-		const h = gap * 0.82;
-		const x0 = W / 2 - LIST.width / 2;
-		const gold = opts.winner;
-		c.save();
-		c.globalAlpha *= opts.alpha === undefined ? 1 : opts.alpha;
-		art.roundRect(c, x0, y - h / 2, LIST.width, h, h / 2, { fill: gold ? 'rgba(255,210,63,0.92)' : theme.panel, shadow: undefined });
-		art.roundRect(c, x0, y - h / 2, 22, h, [h / 2, 0, 0, h / 2], { fill: colour(p) });
-		// the place, once revealed
-		// (dark, crisp type on a gold row; light, outlined type on the others)
-		const ink = gold ? { fill: theme.ink, glow: 'transparent', outlineWidth: 0, drop: 'transparent' } : { glow: 'transparent', outlineWidth: 4 };
-		if (opts.place) self.text(c, opts.place, x0 + 110, y + 2, h * 0.5, Object.assign({ fill: 'white' }, ink));
-		avatar(c, p, x0 + 250, y + h * 0.42, h / 170, opts.pose || 'stand');
-		self.text(c, self.nameOf(p), x0 + 330, y + 2, h * 0.42, Object.assign({ fill: lit(p), align: 'left' }, ink));
-		if (!opts.noScore) self.text(c, fmt(score), x0 + LIST.width - 60, y + 2, h * 0.6, Object.assign({ fill: 'white', align: 'right' }, ink));
-		c.restore();
+		const order = [];
+		for (let i = 0; i < n; i++) order.push(i);
+		order.sort((a, b) => s[b] - s[a] || a - b);
+		const slot = [];
+		order.forEach((p, r) => { slot[p] = r; });
+		const place = order.map(() => 0);
+		for (let p = 0; p < n; p++) place[p] = s.filter((w, j) => j < n && w > s[p]).length;
+		return { order, slot, place };
 	}
 
-	// Everyone's score, a row each in player order, counting up.
+	// The scores: straight on to the ranking (the capsules along the bottom
+	// carry everyone's score up into the standings).
 	beatsLib.scores = function (extra) {
-		let shown = [];
 		return extend({
 			id: 'scores',
-			length: SCORES.length,
+			length: 0,
 			world: false,
 			enter() {
 				self.blackout = 0;
 				self.timeScale = 1;
 				camera.wide();
 				self.play('drama');
-				self.fx('whooshLong', 0.6);
-				shown = scores().map(() => 0);
-			},
-			update(dt, bt) {
-				const k = easeOut(between(bt, SCORES.count[0], SCORES.count[1]));
-				const before = shown.join();
-				shown = scores().map((s) => Math.round(s * k));
-				if (shown.join() !== before && Math.floor(bt * 12) % 2 === 0) self.fx('scoreTick');
-				if (self.cue(SCORES.count[1])) { self.fx('scoresIn'); self.shake = 0.3; }
-			},
-			draw(ctx, bt) {
-				const n = count();
-				self.onWalls(ctx, function (c) {
-					self.slam(c, 'SCORES', W / 2, 110, 120, bt - 0.1, { fill: theme.gold });
-					for (let i = 0; i < n; i++) {
-						const enter = easeOut(between(bt, 0.1 + i * 0.1, 0.45 + i * 0.1));
-						c.save();
-						c.translate((1 - enter) * -W * 0.6, 0);
-						listRow(c, i, listY(i, n), shown[i], { alpha: enter });
-						c.restore();
-					}
-				});
 			},
 		}, extra);
 	};
 
-	// The ranking: the same list reorders, rows sliding past each other into
-	// place, then the places are revealed from last to first, each on a drum
-	// hit, and the winner's row lights up gold. Ties share a place.
+	// The ranking: the score capsules rise from along the bottom, one at a
+	// time, into a list in rank order, then the places are revealed from last
+	// to first, each on a drum hit, and the winner's capsule glows gold. Ties
+	// share a place.
 	beatsLib.rank = function (extra) {
-		let place = [];   // place[n]: 0 for first (ties share)
-		let slot = [];    // slot[n]: the row they end up in
-		let label = [];
-		let reveal = [];  // reveal[n]: when their place shows
+		let st = { order: [], slot: [], place: [] };
+		let reveal = [];  // reveal[p]: when their place shows
 		let winnerAt = 0;
-		const SUFFIX = ['1ST', '2ND', '3RD', '4TH', '5TH', '6TH'];
 		return extend({
 			id: 'rank',
 			world: false,
 			length: () => winnerAt + RANK.hold,
 			enter() {
-				const s = scores();
+				st = standings();
 				const n = count();
-				const order = [];
-				for (let i = 0; i < n; i++) order.push(i);
-				order.sort((a, b) => s[b] - s[a] || a - b);   // first place first
-				slot = [];
-				order.forEach((p, r) => { slot[p] = r; });
-				place = s.map((v) => s.filter((w) => w > v).length);
-				label = place.map((k) => SUFFIX[k]);
-				// reveals from the bottom row up
 				reveal = [];
-				order.slice().reverse().forEach((p, k) => { reveal[p] = RANK.reveal + k * RANK.each; });
+				st.order.slice().reverse().forEach((p, k) => { reveal[p] = RANK.reveal + k * RANK.each; });
 				winnerAt = RANK.reveal + (n - 1) * RANK.each;
+				self.fx('whooshLong', 0.6);
 			},
 			update(dt, bt) {
 				const n = count();
-				if (self.cue(RANK.move[0])) self.fx('slide');
 				for (let p = 0; p < n; p++) {
 					if (!self.cue(reveal[p])) continue;
-					if (place[p] === 0) {
+					if (st.place[p] === 0) {
 						self.fx('placeReveal', 1, 1, 1);
 						self.fx('fanfare');
 						self.fx('crowd', 0.8);
@@ -2382,7 +2398,7 @@ window.Showtime = function (stage, opts) {
 						self.shake = 0.6;
 						self.confetti(200);
 					} else {
-						self.fx('placeReveal', 0.9, 1, 1 - place[p] / Math.max(1, n - 1));
+						self.fx('placeReveal', 0.9, 1, 1 - st.place[p] / Math.max(1, n - 1));
 						self.shake = 0.2;
 					}
 				}
@@ -2390,64 +2406,57 @@ window.Showtime = function (stage, opts) {
 			draw(ctx, bt) {
 				const n = count();
 				const s = scores();
-				const firsts = place.filter((k) => k === 0).length;
-				const winner = slot.indexOf(0);
+				const firsts = st.place.filter((k) => k === 0).length;
+				const winner = st.order[0];
 				self.onWalls(ctx, function (c) {
-					if (bt < winnerAt) self.slam(c, 'RANKINGS', W / 2, 110, 120, bt - 0.05, { fill: theme.gold });
+					if (bt < winnerAt) self.slam(c, 'RANKINGS', W / 2, 110, 120, bt - RANK.move[0], { fill: theme.gold });
 					else if (firsts > 1) self.slam(c, 'IT\'S A TIE!', W / 2, 110, 130, bt - winnerAt, { fill: theme.gold });
 					else self.slam(c, self.nameOf(winner) + ' WINS!', W / 2, 110, 130, bt - winnerAt, { fill: lit(winner), glow: colour(winner) });
-					// rows slide from player order into rank order, staggered
-					const rows = [];
+					// each capsule, from along the bottom up to its row (one at a time, the last risen drawn on top)
 					for (let p = 0; p < n; p++) {
-						const k = ease(between(bt, RANK.move[0] + p * 0.08, RANK.move[1] + p * 0.08));
-						const y = lerp(listY(p, n), listY(slot[p], n), k);
-						const sway = Math.sin(Math.PI * k) * 60 * (slot[p] < p ? -1 : 1);   // passing each other
-						rows.push({ p, y, x: sway, shown: bt >= reveal[p] });
-					}
-					rows.sort((a, b) => b.y - a.y);   // the lower rows under the higher ones
-					for (const r of rows) {
-						const top = place[r.p] === 0 && r.shown;
-						c.save();
-						c.translate(r.x, 0);
-						if (r.shown && bt - reveal[r.p] < 0.3) {
-							const pop = 1 + 0.12 * Math.sin(Math.PI * (bt - reveal[r.p]) / 0.3);
-							c.translate(W / 2, r.y);
-							c.scale(pop, pop);
-							c.translate(-W / 2, -r.y);
-						}
-						listRow(c, r.p, r.y, s[r.p], { place: r.shown ? label[r.p] : '', winner: top, pose: top ? 'win' : r.shown ? 'cheer' : 'stand' });
-						c.restore();
+						const from = hudSpot(p, n);
+						const m = easeOut(between(bt, RANK.move[0] + p * WATERFALL * 2, RANK.move[0] + p * WATERFALL * 2 + RESULT.move));
+						const x = lerp(from.x, W / 2 + RESULT.x, m), y = lerp(from.y, listY(st.slot[p], n), m);
+						const shown = bt >= reveal[p];
+						const top = st.place[p] === 0 && shown;
+						const pop = shown && bt - reveal[p] < 0.3 ? 1 + 0.12 * Math.sin(Math.PI * (bt - reveal[p]) / 0.3) : 1;
+						capsule(c, x, y, lerp(1, RESULT.k, m) * pop, colour(p), fmt(s[p]), { sink: SCORE_HUD.sink * (1 - m), edge: m > 0 ? RESULT.edge : null, gold: top ? 1 : 0 });
+						// its place, once revealed, on its left
+						if (shown) self.slam(c, SUFFIX[st.place[p]], x - SCORE_HUD.w * RESULT.k / 2 - 90, y, 64, bt - reveal[p], { fill: top ? theme.gold : 'white' });
 					}
 				});
 			},
 		}, extra);
 	};
 
-	// The team total: it opens on the rankings as they were left; all but the
-	// scores fade away, the scores fly from where they sat to the middle and
-	// smoosh into one number that counts up, the bonus lands on top, and the
-	// room erupts.
+	// The team total: the places fade, the capsules slide together into the
+	// middle and combine into one team capsule (a band of every player's
+	// colour), the total whole in it; the bonus lands on top, and the room
+	// erupts.
 	// opts.team (optional): { y, into, decor(c, bt, state) }: where the total
-	// sits, where the scores fly to, and the game's own scene behind it all
+	// sits, where the capsules gather, and the game's own scene behind it all
 	// (drawn on each wall first; state: { fade, fly, merged, mergedAt, partyAt, total })
 	const TEAM_AT = Object.assign({ y: TEAM.y }, opts.team);
 	if (TEAM_AT.into === undefined) TEAM_AT.into = TEAM_AT.y;
+	const teamBand = () => Array.from({ length: count() }, (_, i) => colour(i));
 	beatsLib.team = function (extra) {
 		let shown = 0;
 		let partyAt = 0;
+		let st = { order: [], slot: [], place: [] };
 		return extend({
 			id: 'team',
 			world: false,
 			length: TEAM.length,
 			enter() {
 				shown = 0;
+				st = standings();
 				partyAt = bonus() > 0 ? TEAM.bonus[1] + 0.3 : TEAM.count[1] + 0.3;
 				self.stop('drumroll');
 				self.play('drama');
 			},
 			update(dt, bt) {
 				const sum = scores().reduce((a, b) => a + b, 0);
-				// the whole total the moment the scores combine; the bonus lands on it whole too
+				// the whole total the moment the capsules combine; the bonus lands on it whole too
 				shown = (bt >= TEAM.fly[1] ? sum : 0) + (bt >= TEAM.bonus[0] ? bonus() : 0);
 				if (self.cue(TEAM.fly[0])) self.fx('gather');
 				if (self.cue(TEAM.fly[1])) { self.fx('smoosh'); self.shake = 0.8; self.flash = 0.4; }
@@ -2471,57 +2480,41 @@ window.Showtime = function (stage, opts) {
 				const fade = between(bt, TEAM.fade[0], TEAM.fade[1]);
 				const fly = easeIn(between(bt, TEAM.fly[0], TEAM.fly[1]));
 				const merged = bt >= TEAM.fly[1];
-				// the rankings' rows, by rank, as the last screen left them
-				const order = [];
-				for (let i = 0; i < n; i++) order.push(i);
-				order.sort((a, b) => s[b] - s[a] || a - b);
-				const SUFFIX = ['1ST', '2ND', '3RD', '4TH', '5TH', '6TH'];
 				self.onWalls(ctx, function (c) {
 					if (TEAM_AT.decor) TEAM_AT.decor(c, bt, { fade, fly, merged, mergedAt: TEAM.fly[1], partyAt, total: s.reduce((a, b) => a + b, 0) });
 					if (bt > TEAM.fade[1]) self.slam(c, 'TEAM TOTAL', W / 2, 150, 110, bt - TEAM.fade[1], { fill: theme.gold });
 					if (merged) return drawTotal(c, bt);
-					const gap = Math.min(LIST.row, LIST.height / Math.max(1, n));
-					const size = self.size(gap * 0.82 * 0.6);
-					const right = W / 2 + LIST.width / 2 - 60;
-					order.forEach(function (p, r) {
-						const y = listY(r, n);
-						const place = s.filter((w) => w > s[p]).length;
-						const winner = place === 0;
-						// everything but the score fades
-						if (fade < 1) listRow(c, p, y, '', { place: SUFFIX[place], winner, pose: winner ? 'win' : 'cheer', alpha: 1 - fade, noScore: true });
-						// the score: from where it sat, flying in to the middle, stretching as it goes
-						const w = measure(c, fmt(s[p]), size);
-						const x0 = right - w / 2;
-						const fx = lerp(x0, W / 2, fly);
-						const fy = lerp(y + 2, TEAM_AT.into, fly);
-						const grow = lerp(1, 1.4, fly);
-						c.save();
-						c.translate(fx, fy);
-						c.scale(grow * (1 + fly * 0.6), grow * (1 - fly * 0.25));
-						self.text(c, fmt(s[p]), 0, 0, size, { fill: winner && fade < 0.5 ? TYPE.colours.ink : TYPE.colours.white });
-						c.restore();
-					});
+					// the standings as the ranking left them: the places fade, the
+					// capsules slide in to the middle, squeezing together as they go
+					for (let p = 0; p < n; p++) {
+						const r = st.slot[p];
+						const y0 = listY(r, n), x0 = W / 2 + RESULT.x;
+						if (fade < 1) self.text(c, SUFFIX[st.place[p]], x0 - SCORE_HUD.w * RESULT.k / 2 - 90, y0, 64, { fill: st.place[p] === 0 ? theme.gold : 'white', alpha: 1 - fade });
+						const x = lerp(x0, W / 2, fly), y = lerp(y0, TEAM_AT.into, fly);
+						capsule(c, x, y, RESULT.k * (1 - 0.25 * fly), colour(p), fmt(s[p]), { edge: RESULT.edge, gold: st.place[p] === 0 ? 1 - fade : 0 });
+					}
 				});
 			},
 		}, extra);
 
-		// smooshed: a squash and bounce, then the total counting up
+		// combined: one team capsule, a squash and bounce, the total in it
 		function drawTotal(c, bt) {
 			const age = bt - TEAM.fly[1];
 			const sq = Math.exp(-age * 5) * Math.cos(age * 22);
-			const party = bt > partyAt ? 1 + 0.06 * Math.sin(bt * 10) : 1;
+			const party = bt > partyAt ? 1 + 0.04 * Math.sin(bt * 10) : 1;
 			c.save();
 			c.translate(W / 2, TEAM_AT.y);
-			c.scale((1 + 0.45 * sq) * party, (1 - 0.4 * sq) * party);
-			self.text(c, fmt(shown), 0, 0, 220, { fill: theme.gold });
+			c.scale((1 + 0.35 * sq) * party, (1 - 0.3 * sq) * party);
+			capsule(c, 0, 0, RESULT.k, teamBand(), fmt(shown), { w: TEAM_CAP.w, h: TEAM_CAP.h, size: TEAM_CAP.size, edge: RESULT.edge, gold: bt > partyAt ? 1 : 0.5 });
 			c.restore();
 			if (bonus() > 0) self.slam(c, '+' + fmt(bonus()) + ' ' + (opts.bonusLabel || 'BONUS'), W / 2, 665, 56, bt - TEAM.bonus[0], { fill: 'white', alpha: 1 - between(bt, TEAM.length - 1, TEAM.length) });
 		}
 	};
 
 	// The leaderboard: today's other teams (made up, seeded from the game
-	// and the total), then your team's row slides in at the bottom and climbs
-	// to its standing.
+	// and the total), a capsule each; then the team capsule drops from the
+	// middle to the bottom of the list and quickly slides up it to its
+	// standing, the teams it passes stepping down.
 	const RIVALS = opts.rivals || ['The Night Owls', 'Glow Getters', 'Team Turbo', 'Squad Goals', 'Thunder Buddies', 'The Wildcards',
 		'Pixel Pirates', 'Moonwalkers', 'High Fivers', 'The Comets', 'Big Energy', 'Rocket Club'];
 	let board = null;
@@ -2543,27 +2536,36 @@ window.Showtime = function (stage, opts) {
 		return { rows, rank, us: { y: 0 }, total };
 	}
 	beatsLib.board = function (extra) {
-		const passes = () => (board ? BOARD.teams - (board.rank - 1) : 0);
-		const landAt = () => BOARD.enter + 0.6 + passes() * BOARD.climb;
+		const rowY = (i) => BOARD.top + i * BOARD.row;
+		const bottom = () => rowY(BOARD.teams) + 30;
+		const slideAt = () => BOARD.enter + BOARD.settle;
+		const landAt = () => slideAt() + BOARD.slide;
+		const x0 = 230, x1 = W - 230;
 		return extend({
 			id: 'board',
 			world: false,
 			length: () => landAt() + BOARD.hold,
 			enter() {
 				board = makeBoard();
-				board.rows.forEach((row, i) => { row.y = BOARD.top + i * BOARD.row; });
-				board.us.y = BOARD.top + BOARD.teams * BOARD.row + 120;
-				self.fx('whooshLong', 0.5);
+				board.rows.forEach((row, i) => { row.y = rowY(i); });
+				board.us.y = TEAM_AT.y;
+				board.passed = 0;
 			},
 			update(dt, bt) {
-				const climbed = clamp(Math.floor((bt - BOARD.enter - 0.6) / BOARD.climb) + 1, 0, passes());
-				const slot = BOARD.teams - climbed;
+				// the team capsule: from the middle down to the bottom of the list, then quickly up it
+				const target = rowY(board.rank - 1);
+				if (bt < slideAt()) board.us.y = lerp(TEAM_AT.y, bottom(), easeOut(between(bt, BOARD.enter, slideAt())));
+				else board.us.y = lerp(bottom(), target, ease(between(bt, slideAt(), landAt())));
+				// the teams it has passed step down a row
+				let passed = 0;
 				board.rows.forEach(function (row, i) {
-					const want = BOARD.top + (i >= slot ? i + 1 : i) * BOARD.row;
-					row.y += (want - row.y) * Math.min(1, dt * 24);
+					const by = board.us.y < rowY(i) + BOARD.row / 2 && bt > slideAt();
+					if (by) passed++;
+					const want = rowY(by ? i + 1 : i);
+					row.y += (want - row.y) * Math.min(1, dt * 30);
 				});
-				if (bt > BOARD.enter) board.us.y += (BOARD.top + slot * BOARD.row - board.us.y) * Math.min(1, dt * 24);
-				for (let k = 1; k <= passes(); k++) if (self.cue(BOARD.enter + 0.6 + (k - 1) * BOARD.climb)) self.fx('climb', 0.8, 1 + k * 0.06);
+				if (passed > board.passed) self.fx('climb', 0.7, 1 + passed * 0.05);
+				board.passed = passed;
 				if (self.cue(BOARD.enter)) self.fx('rowIn');
 				if (self.cue(landAt())) {
 					self.fx('fanfare');
@@ -2578,32 +2580,31 @@ window.Showtime = function (stage, opts) {
 				const land = landAt();
 				self.onWalls(ctx, function (c) {
 					self.slam(c, "TODAY'S TOP TEAMS", W / 2, 88, 84, bt - 0.05, { fill: theme.gold });
-					const x0 = 230;
-					const x1 = W - 230;
+					const rw = (x1 - x0) / RESULT.k, rh = (BOARD.row - 12) / RESULT.k;   // (a row: a capsule, as wide as the list)
 					board.rows.forEach(function (row, i) {
 						const drop = easeOut(between(bt, 0.2 + i * BOARD.drop, 0.6 + i * BOARD.drop));
 						if (drop <= 0) return;
 						const y = row.y - (1 - drop) * 80;
 						const place = Math.round((row.y - BOARD.top) / BOARD.row) + 1;
-						art.roundRect(c, x0, y - BOARD.row / 2 + 5, x1 - x0, BOARD.row - 10, 16, { fill: theme.panel, alpha: drop });
-						self.text(c, String(place), x0 + 50, y, 40, { fill: 'rgba(255,255,255,0.6)', glow: 'transparent', outlineWidth: 3, alpha: drop });
-						self.text(c, row.name, x0 + 110, y, 42, { align: 'left', glow: 'transparent', outlineWidth: 3, alpha: drop });
-						self.text(c, fmt(row.score), x1 - 40, y, 42, { align: 'right', fill: 'rgba(255,255,255,0.85)', glow: 'transparent', outlineWidth: 3, alpha: drop });
+						capsule(c, W / 2, y, RESULT.k, 'rgba(255,255,255,0.35)', '', { w: rw, h: rh, edge: RESULT.edge, alpha: drop });
+						self.text(c, String(place), x0 + 50, y - 2, 36, { fill: 'rgba(255,255,255,0.6)', glow: 'transparent', outlineWidth: 3, alpha: drop });
+						self.text(c, row.name, x0 + 100, y - 2, 38, { align: 'left', glow: 'transparent', outlineWidth: 3, alpha: drop });
+						self.text(c, fmt(row.score), x1 - 50, y - 2, 38, { align: 'right', fill: 'rgba(255,255,255,0.85)', glow: 'transparent', outlineWidth: 3, alpha: drop });
 					});
-					// your row, glowing gold
-					if (bt > BOARD.enter - 0.4) {
-						const slide = easeOut(between(bt, BOARD.enter - 0.4, BOARD.enter));
-						const y = board.us.y;
-						const glow = bt > land ? 1 + 0.04 * Math.sin(bt * 9) : 1;
-						const place = clamp(Math.round((y - BOARD.top) / BOARD.row) + 1, 1, BOARD.teams + 1);
-						c.save();
-						c.translate(W / 2 + (1 - slide) * 1400, y);
-						c.scale(glow * 1.06, glow * 1.06);
-						art.roundRect(c, x0 - W / 2 - 20, -BOARD.row / 2, x1 - x0 + 40, BOARD.row, 20, { fill: art.linear(c, x0 - W / 2, 0, x1 - W / 2, 0, [[0, theme.gold], [1, '#ff9a3d']]), shadow: { color: theme.gold, blur: 40 } });
-						art.text(c, String(place), x0 - W / 2 + 40, 2, { size: 46, font: FONT, weight: 400, fill: theme.ink });
-						art.text(c, 'YOUR TEAM', x0 - W / 2 + 100, 2, { size: 48, font: FONT, weight: 400, fill: theme.ink, align: 'left' });
-						art.text(c, fmt(board.total), x1 - W / 2 - 30, 2, { size: 48, font: FONT, weight: 400, fill: theme.ink, align: 'right' });
-						c.restore();
+					// the team capsule: from its size in the middle to a row's, then up the list
+					const m = easeOut(between(bt, BOARD.enter, slideAt()));
+					const y = board.us.y;
+					const glow = bt > land ? 1 + 0.03 * Math.sin(bt * 9) : 1;
+					const place = clamp(Math.round((y - BOARD.top) / BOARD.row) + 1, 1, BOARD.teams + 1);
+					const k = lerp(RESULT.k, RESULT.k * 1.04, m) * glow;
+					capsule(c, W / 2, y, k, teamBand(), m < 0.5 ? fmt(board.total) : '', {
+						w: lerp(TEAM_CAP.w, rw, m), h: lerp(TEAM_CAP.h, rh, m), size: TEAM_CAP.size, edge: RESULT.edge, gold: 1,
+					});
+					if (m >= 0.5) {
+						const a = Math.min(1, (m - 0.5) * 4);
+						self.text(c, String(place), x0 + 50, y - 2, 38, { fill: theme.gold, glow: 'transparent', outlineWidth: 3, alpha: a });
+						self.text(c, 'YOUR TEAM', x0 + 100, y - 2, 40, { align: 'left', fill: theme.gold, glow: 'transparent', outlineWidth: 3, alpha: a });
+						self.text(c, fmt(board.total), x1 - 50, y - 2, 40, { align: 'right', fill: theme.gold, glow: 'transparent', outlineWidth: 3, alpha: a });
 					}
 					if (bt > land) {
 						// the standing, slammed over the board clear of your own row
