@@ -2397,7 +2397,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// The order its frames play in as it rolls, and whether each blends into
 	// the next: set in the boulder lab (DEBUG ▸ BOULDER LAB), baked in here,
 	// kept in this browser while being tuned.
-	const BOULDER_TUNED = { order: [0, 1, 2, 3, 4, 5, 6, 7], blend: true };
+	const BOULDER_TUNED = { order: [0, 1, 2, 3, 4, 5, 6], blend: false };   // (from the lab: frames 1-7, no blending)
 	const BOULDER_KEY = 'rlgl-boulder-lab';
 	const boulderTune = JSON.parse(JSON.stringify(BOULDER_TUNED));
 	try { Object.assign(boulderTune, JSON.parse(localStorage.getItem(BOULDER_KEY) || '{}')); } catch (e) { /* (no storage: the baked-in order) */ }
