@@ -1178,6 +1178,7 @@ window.Showtime = function (stage, opts) {
 		restart: '<path d="M71 50 A21 21 0 1 1 64 34" fill="none" stroke="black" stroke-width="10" stroke-linecap="round"/><path d="M57 21 L74 30 L60 43 Z" stroke-linejoin="round" stroke-width="4" stroke="black"/>',
 		help: '<text x="50" y="69" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="56">?</text>',
 		volume: '<path d="M24 41 H35 L51 28 V72 L35 59 H24 Z" stroke-linejoin="round" stroke-width="4" stroke="black"/><path d="M60 39 A14 14 0 0 1 60 61" fill="none" stroke="black" stroke-width="7" stroke-linecap="round"/><path d="M67 30 A25 25 0 0 1 67 70" fill="none" stroke="black" stroke-width="7" stroke-linecap="round"/>',
+		bug: '<path d="M44 25 L37 14 M56 25 L63 14 M34 47 L20 40 M33 58 L18 58 M35 69 L22 78 M66 47 L80 40 M67 58 L82 58 M65 69 L78 78" fill="none" stroke="black" stroke-width="6" stroke-linecap="round"/><circle cx="50" cy="33" r="10"/><ellipse cx="50" cy="59" rx="17" ry="21"/><rect x="48.5" y="42" width="3" height="36" fill="white"/>',   // (a little bug: feelers, six legs, a head, its wing cases parted)
 		cog: '<rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(0 50 50)"/><rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(45 50 50)"/><rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(90 50 50)"/><rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(135 50 50)"/><rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(180 50 50)"/><rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(225 50 50)"/><rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(270 50 50)"/><rect x="43" y="14" width="14" height="16" rx="3" transform="rotate(315 50 50)"/><circle cx="50" cy="50" r="23"/><circle cx="50" cy="50" r="9" fill="white"/>',   // (its teeth and wheel cut out, the hub left)
 	};
 	function cutIcon(name, size, fill = 'white') {
@@ -1200,48 +1201,51 @@ window.Showtime = function (stage, opts) {
 	}
 	const PANEL_ICON = PAUSE.button - 38;   // (the size of each button on the pause panel)
 	const PANEL_COLOUR = '#b46bff';   // (the pause panel's colour: its band, its TAP, its buttons)
+	// (the panels, one above the other, all of them together centred down the left wall's edge)
+	const $panels = $('<div panels>').css({
+		position: 'absolute', left: 0, top: H / 2 + 'px', transform: 'translateY(-50%)', zIndex: 20, pointerEvents: 'none',
+		display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '110px', paddingTop: '70px',   // (room for each one's TAP above it)
+	}).appendTo(stage.$ui);
 	const $pauseBtn = $('<button pause>').attr('title', 'Pause').css({
 		// (the score capsules' look, turned on its side: black glass sunk into
 		// the wall's left edge, a white band along that edge)
-		position: 'absolute', left: 0, top: H / 2 + 'px', transform: 'translateY(-50%)', transformOrigin: 'left center',
+		position: 'relative', transformOrigin: 'left center',
 		width: PAUSE.button + 'px', borderRadius: `0 ${PAUSE.button / 2}px ${PAUSE.button / 2}px 0`, border: 'none', boxSizing: 'border-box',   // (flat against the edge, round on the right)
 		background: 'rgba(0,0,0,0.6)', cursor: 'pointer', pointerEvents: 'auto', zIndex: 20, padding: `20px 0 20px ${SCORE_HUD.line}px`,
 		display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
 		boxShadow: `inset ${SCORE_HUD.line}px 0 0 0 ${PANEL_COLOUR}`, transition: 'transform 0.15s',
-	}).hide().appendTo(stage.$ui).on('click', function (e) { e.stopPropagation(); setPaused(true); });
-	const $tap = $('<span>').text('TAP').css({   // (the prompt, standing just above it, as wide as it, outlined and dropped like the other words)
+	}).hide().appendTo($panels).on('click', function (e) { e.stopPropagation(); setPaused(true); });
+	const tapCss = {   // (the prompt, standing just above it, as wide as it, outlined and dropped like the other words)
 		// (centred over the buttons, which sit just right of the edge's band)
 		position: 'absolute', left: `calc(50% + ${SCORE_HUD.line / 2}px)`, bottom: 'calc(100% + 14px)', transform: 'translateX(-50%)', whiteSpace: 'nowrap',
 		fontFamily: font, fontSize: '40px', lineHeight: 1, color: PANEL_COLOUR, textAlign: 'center',
 		WebkitTextStroke: `5px ${TYPE.colours.ink}`, paintOrder: 'stroke fill', textShadow: '0 4px 0 rgba(0,0,0,0.55)',
-	}).appendTo($pauseBtn);
+	};
+	const $tap = $('<span>').text('TAP').css(tapCss).appendTo($pauseBtn);
 	// (sized to the panel's width once the lettering has loaded: measured at 100px, scaled to fit)
 	const fitTap = function () {
 		const g = document.createElement('canvas').getContext('2d');
 		g.font = `400 100px ${font}`;
 		const w = g.measureText('TAP').width;
-		if (w > 0) $tap.css({ fontSize: 100 * PANEL_ICON / w + 'px' });   // (as wide as the buttons on it)
+		if (w > 0) $('[tap-prompt]').add($tap).css({ fontSize: 100 * PANEL_ICON / w + 'px' });   // (as wide as the buttons on it)
 	};
 	fitTap();
 	if (document.fonts) document.fonts.load(`100px "${FONT}"`).then(fitTap).catch(() => {});
 	for (const name of ['pause', 'volume', 'cog']) buttonIcon(name, PANEL_ICON, PANEL_COLOUR).appendTo($pauseBtn);
-	// opts.menu.debug: a second panel, the same but smaller, above it and
-	// there all the time (whatever the beat, in the box or off it), just the
-	// word DEBUG in a button; it opens the same menu, the debug buttons on it.
-	const DEBUG_PANEL = { middle: 190, size: 21, h: 54 };   // its middle (px down the left wall); its word's size; its button's height
+	// opts.menu.debug: a second panel, the same, above it and there all the
+	// time (whatever the beat, in the box or off it), a little bug on it and
+	// TAP over it; it opens the same menu, the debug buttons on it.
 	if (MENU.debug) {
 		const $dbg = $('<button debug-panel>').attr('title', 'Debug').css({
-			position: 'absolute', left: 0, top: DEBUG_PANEL.middle + 'px', transform: 'translateY(-50%)',
+			position: 'relative',
 			width: PAUSE.button + 'px', borderRadius: `0 ${PAUSE.button / 2}px ${PAUSE.button / 2}px 0`, border: 'none', boxSizing: 'border-box',
-			background: 'rgba(0,0,0,0.6)', cursor: 'pointer', pointerEvents: 'auto', zIndex: 20, padding: `20px 0 20px ${SCORE_HUD.line}px`,
+			background: 'rgba(0,0,0,0.6)', cursor: 'pointer', pointerEvents: 'auto', padding: `20px 0 20px ${SCORE_HUD.line}px`,
 			display: 'flex', flexDirection: 'column', alignItems: 'center',
 			boxShadow: `inset ${SCORE_HUD.line}px 0 0 0 ${PANEL_COLOUR}`,
-		}).appendTo(stage.$ui).on('click', function (e) { e.stopPropagation(); setPaused(true); });
-		$('<span>').text('DEBUG').css(Object.assign({
-			width: PANEL_ICON + 'px', height: DEBUG_PANEL.h + 'px', boxSizing: 'border-box', borderRadius: DEBUG_PANEL.h / 2 + 'px',
-			display: 'flex', alignItems: 'center', justifyContent: 'center',
-			fontFamily: font, fontSize: DEBUG_PANEL.size + 'px', lineHeight: 1, letterSpacing: '1px',
-		}, button(PANEL_COLOUR, DEBUG_PANEL.size), { borderWidth: '4px', boxShadow: '0 5px 0 rgba(0,0,0,0.45)' })).appendTo($dbg);
+		}).prependTo($panels).on('click', function (e) { e.stopPropagation(); setPaused(true); });
+		$('<span tap-prompt>').text('TAP').css(tapCss).appendTo($dbg);
+		buttonIcon('bug', PANEL_ICON, PANEL_COLOUR).appendTo($dbg);
+		fitTap();
 	}
 
 	// the screen: dark glass over all three walls, a panel on each
