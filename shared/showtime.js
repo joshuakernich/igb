@@ -1741,7 +1741,29 @@ window.Showtime = function (stage, opts) {
 		// seen from a touch above: a headband all the way round and a peak
 		// sticking out the front, built from flat faces drawn back to front,
 		// each shaded by which way it faces (the inside of the band darker).
+		// (faded, it's drawn solid off to one side and laid down at its alpha in
+		// one go, so its faces never show through each other as lines)
+		let visorScratch = null;
 		function visor(c, fill, alpha, yaw) {
+			if (alpha >= 0.999) return visorSolid(c, fill, yaw);
+			const B = { x: -170, y: -150, w: 340, h: 270, k: 2 };   // (its bounds, peak and shadow and all, and the resolution)
+			if (!visorScratch) {
+				visorScratch = document.createElement('canvas').getContext('2d');
+				visorScratch.canvas.width = B.w * B.k;
+				visorScratch.canvas.height = B.h * B.k;
+			}
+			const g = visorScratch;
+			g.setTransform(1, 0, 0, 1, 0, 0);
+			g.clearRect(0, 0, g.canvas.width, g.canvas.height);
+			g.setTransform(B.k, 0, 0, B.k, -B.x * B.k, -B.y * B.k);
+			visorSolid(g, fill, yaw);
+			c.save();
+			c.globalAlpha *= alpha;
+			c.drawImage(g.canvas, B.x, B.y, B.w, B.h);
+			c.restore();
+		}
+		function visorSolid(c, fill, yaw) {
+			const alpha = 1;
 			const R = 64;           // the headband's radius
 			const BAND = 26;        // and its height
 			const PEAK = 118;       // how far the peak reaches, at its tip
@@ -1791,19 +1813,20 @@ window.Showtime = function (stage, opts) {
 			c.ellipse(0, 70, PEAK * 0.9, 20, 0, 0, Math.PI * 2);
 			c.fill();
 			c.lineJoin = 'round';
+			const [r, g, b] = rgbOf(fill);
 			for (const face of faces) {
 				c.beginPath();
 				face.p.forEach((q, i) => (i ? c.lineTo(q.x, q.y) : c.moveTo(q.x, q.y)));
 				c.closePath();
-				c.fillStyle = fill;
-				c.strokeStyle = fill;
-				c.lineWidth = 1.5;   // (hides the seams between faces)
+				// each face in its own shade, filled and edged alike (so its edge
+				// only closes the seam to its neighbour: no lines drawn round it)
+				const k = 1 - Math.max(0, Math.min(0.7, face.shade));
+				const tone = `rgb(${Math.round(r * k)},${Math.round(g * k)},${Math.round(b * k)})`;
+				c.fillStyle = tone;
+				c.strokeStyle = tone;
+				c.lineWidth = 1.5;
 				c.fill();
 				c.stroke();
-				if (face.shade > 0) {
-					c.fillStyle = `rgba(0,0,0,${Math.min(0.7, face.shade)})`;
-					c.fill();
-				}
 			}
 			c.restore();
 		}
