@@ -1277,12 +1277,13 @@ window.Showtime = function (stage, opts) {
 	const $debug = $('<div>').css({
 		display: live ? 'none' : 'block', width: '100%', flex: 1, minHeight: 0, overflowY: 'auto', fontFamily: `"${TYPE.font}", sans-serif`,
 	}).appendTo($left);
-	// (everything centred: the heading and status, then each row's name over
-	// its buttons; the buttons small capsules in the standard style: dark
-	// glass, an outline and words in their colour)
+	// (the heading and status, centred; then every button in one long,
+	// centred, flowing list, each group's name tucked in just before its
+	// buttons; the buttons small capsules in the standard style: dark glass,
+	// an outline and words in their colour)
 	const $dhead = $('<div>').css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', fontSize: '30px', marginBottom: '12px', textAlign: 'center' }).appendTo($debug);
 	$('<span>').text('DEBUG').css({ color: '#3ad1ff', letterSpacing: '2px' }).appendTo($dhead);
-	const $dbody = $('<div>').appendTo($debug);
+	const $dbody = $('<div>').css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center' }).appendTo($debug);
 	const brighter = function (colour, k) {   // (the debug colours are dark: lifted toward white, for outlines and words on dark glass)
 		const [r, g, b] = rgbOf(colour);
 		const up = (v) => Math.round(v + (255 - v) * k);
@@ -1293,10 +1294,12 @@ window.Showtime = function (stage, opts) {
 	}, button(brighter(colour, 0.55), 22), { borderWidth: '3px', boxShadow: '0 5px 0 rgba(0,0,0,0.45)' }))
 		.on('click', function (e) { e.stopPropagation(); setPaused(false); fn(); });   // (a debug button resumes, then does its thing)
 	const $dnow = $('<span>').css({ color: '#9fb6d8', fontFamily: 'monospace', fontSize: '22px' }).appendTo($dhead);
+	// (a group: its name, then its buttons, all in the one flow: display
+	// contents, so they sit in the list itself, in order, even when filled later)
 	const drow = (label) => {
-		const $block = $('<div>').css({ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '6px 0 10px' }).appendTo($dbody);
-		$('<div>').text(label).css({ color: '#9fb6d8', fontSize: '20px', letterSpacing: '2px', marginBottom: '2px' }).appendTo($block);
-		return $('<div>').css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center' }).appendTo($block);
+		const $group = $('<span>').css({ display: 'contents' }).appendTo($dbody);
+		$('<span>').text(label).css({ color: '#9fb6d8', fontSize: '18px', letterSpacing: '2px', margin: '5px 6px 5px 14px', whiteSpace: 'nowrap' }).appendTo($group);
+		return $group;
 	};
 
 	Object.defineProperty(self, 'paused', { get: () => paused });
@@ -1305,7 +1308,7 @@ window.Showtime = function (stage, opts) {
 	// see sequence): a jump to every beat, and on to the next
 	const $jumps = drow('BEATS');
 	function fillJumps() {
-		$jumps.parent().toggle(MENU.jumps !== false);   // (a game with its own beat jumps can leave these out: opts.menu.jumps = false)
+		$jumps.css({ display: MENU.jumps === false ? 'none' : 'contents' });   // (a game with its own beat jumps can leave these out: opts.menu.jumps = false)
 		$jumps.children('button').remove();
 		for (const b of beats) if (b.id !== 'squad') dbutton(b.id.toUpperCase(), () => { $('showtime-picker').remove(); self.go(b.id); }).appendTo($jumps);
 		dbutton('NEXT BEAT ▶', () => self.next(), '#3a2a5a').appendTo($jumps);
