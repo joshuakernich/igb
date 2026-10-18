@@ -45,7 +45,7 @@ IGB.manifest = [
 			box: { color: '#ff3df0', bg: '#12051f', note: 'BOSS' } },
 		{ id: 'echo', name: 'Echo',
 			box: { color: '#3ad1ff', bg: '#0b1630', note: 'DODGE' } },
-		{ id: 'show-debug', name: 'UX Demo', icon: 'assets/icons/ux-demo.svg',
+		{ id: 'show-debug', name: 'UX Demo', icon: 'assets/icons/ux-demo.svg', file: 'games/show-debug.js', module: true,
 			box: { color: '#3ad1ff', bg: '#0b1022', note: 'DEMO' } },
 		{ id: 'template', name: 'Template', file: 'games/_template.js' },
 	] },

@@ -13,7 +13,12 @@
  * left wall; off the box, the pause screen's left wall): jump to any beat,
  * set the clock, shuffle the scores, fake the visor check passing, restart.
  * The current beat and its time show at the top.
+ *
+ * Behind it all, a sunny 3D valley (games/ux-demo-valley.js). An ES module
+ * (manifest: module: true).
  */
+import { createValley } from './ux-demo-valley.js';
+
 IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 
 	const self = this;
@@ -26,6 +31,10 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	const GAME_SECONDS = 600;
 	const STAND_IN = 5;           // seconds for each placeholder intro
 	const SCORE_RATE = 0.8;       // average points a second per player, in play
+
+	/* ---------- the backdrop: a sunny valley ---------- */
+
+	const valley = createValley(stage);
 
 	/* ---------- state ---------- */
 
@@ -106,15 +115,10 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		}),
 	]);
 
-	/* ---------- the world: a bare floor, and where everyone is ---------- */
+	/* ---------- the world: the valley (behind), and where everyone is ---------- */
 
 	function drawWorld(ctx) {
-		art.rect(ctx, 0, 0, WIDTH, H, { fill: '#0d1428' });
-		for (let wall = 0; wall < 3; wall++) {
-			const x0 = wall * W;
-			for (let x = 100; x < W; x += 100) art.rect(ctx, x0 + x, 0, 2, H, { fill: 'rgba(120,150,210,0.12)' });
-			for (let y = 100; y < H; y += 100) art.rect(ctx, x0, y, W, 2, { fill: 'rgba(120,150,210,0.12)' });
-		}
+		// (the valley is behind, in its own canvas: nothing painted over it here)
 		// each player, as a spot on the wall they're nearest, across that wall
 		// (only in play: none over the opening screens)
 		if (show.beat !== 'play') return;
@@ -171,6 +175,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		const now = (time || performance.now()) / 1000;
 		const dt = last === undefined ? 0 : Math.min(0.05, Math.max(0, now - last));
 		last = now;
+		valley.render(show.paused ? 0 : dt);
 		show.frame(ctx, dt, drawWorld);
 		$now.text(`${show.beat}  ${show.bt.toFixed(1)}s  ${show.mmss(show.timeLeft())}`);
 		$jumps.children('button').each(function () {
@@ -192,6 +197,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	};
 
 	self.fini = function () {
+		valley.dispose();
 		show.fini();
 	};
 

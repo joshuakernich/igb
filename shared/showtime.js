@@ -23,10 +23,10 @@
  *       rivals: ['Team names', ...],      // optional names for the fake leaderboard
  *       sounds: { drama: ['assets/...mp3', 0.3, true] },   // optional overrides
  *       music: false,                     // optional: no music, only the effects
- *       // the clock, by default (the Squid Game look): its digits alone, in a
- *       // steady monospace digital font, outlined and dropped like the rest of
- *       // the text, no capsule behind them
- *       clockBox: true,                   // optional: a dark capsule behind the clock
+ *       // the clock, by default: its digits in a steady monospace digital font,
+ *       // outlined and dropped like the rest of the text, in a capsule like the
+ *       // score capsules (black glass, sunk into the top edge, a white band)
+ *       clockBox: false,                  // optional: no capsule behind the clock (by default, one like the score capsules)
  *       clockOutline: true,               // optional: and a coloured outline round it
  *       clockFont: 'Rubik',               // optional: the digits in another font (null: the show's font)
  *       font: 'Game of Squids',           // optional: one font for everything the show writes (load it first)
@@ -991,7 +991,7 @@ window.Showtime = function (stage, opts) {
 	// its start), tutorial() (none: no REPLAY TUTORIAL) }. show.paused says
 	// whether it's paused; show.pause(on) does it by hand. A game that steps
 	// anything outside its beats should hold it while show.paused.
-	const PAUSE = { button: 130, x: 40, levels: [0.12, 0.3, 0.5, 0.75, 1], row: { w: 760, h: 112, size: 50, inset: 8 } };   // the pause panel's width and its distance in from the left wall's edge; the volume at each of the five levels; the front wall's rows (all alike): their width, height and type size, and the gap round the icon in each one's end
+	const PAUSE = { button: 130, levels: [0.12, 0.3, 0.5, 0.75, 1], row: { w: 760, h: 112, size: 50, inset: 8 } };   // the pause panel's width (the part showing, pinned to the left wall's edge); the volume at each of the five levels; the front wall's rows (all alike): their width, height and type size, and the gap round the icon in each one's end
 	const live = !!window.vuplex;
 	const font = `"${FONT}", "${TYPE.font}", sans-serif`;
 	let paused = false;
@@ -1017,16 +1017,18 @@ window.Showtime = function (stage, opts) {
 	// (the pause button: a black panel standing on the left wall, a pause,
 	// a volume and a cog on it, one above the other; anywhere on it opens the pause screen)
 	const $pauseBtn = $('<button pause>').attr('title', 'Pause').css({
-		position: 'absolute', left: PAUSE.x + 'px', top: H / 2 + 'px', transform: 'translateY(-50%)',
-		width: PAUSE.button + 'px', borderRadius: PAUSE.button / 2 + 'px', border: '5px solid rgba(255,255,255,0.9)',
-		background: 'rgba(0,0,0,0.92)', cursor: 'pointer', pointerEvents: 'auto', zIndex: 20, padding: '14px 0',
+		// (the score capsules' look, turned on its side: black glass sunk into
+		// the wall's left edge, a white band along that edge)
+		position: 'absolute', left: -SCORE_HUD.sink + 'px', top: H / 2 + 'px', transform: 'translateY(-50%)', transformOrigin: 'left center',
+		width: PAUSE.button + SCORE_HUD.sink + 'px', borderRadius: (PAUSE.button + SCORE_HUD.sink) / 2 + 'px', border: 'none', boxSizing: 'border-box',
+		background: 'rgba(0,0,0,0.6)', cursor: 'pointer', pointerEvents: 'auto', zIndex: 20, padding: `20px 0 20px ${SCORE_HUD.sink}px`,
 		display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
-		boxShadow: '0 10px 0 rgba(0,0,0,0.45)', transition: 'transform 0.15s',
+		boxShadow: `inset ${SCORE_HUD.sink + SCORE_HUD.line}px 0 0 0 white`, transition: 'transform 0.15s',
 	}).hide().appendTo(stage.$ui).on('click', function (e) { e.stopPropagation(); setPaused(true); })
 		.on('mouseenter', function () { $(this).css({ transform: 'translateY(-50%) scale(1.08)' }); })
 		.on('mouseleave', function () { $(this).css({ transform: 'translateY(-50%) scale(1)' }); });
 	const $tap = $('<span>').text('TAP').css({   // (the prompt, standing just above it, as wide as it, outlined and dropped like the other words)
-		position: 'absolute', left: '50%', bottom: 'calc(100% + 14px)', transform: 'translateX(-50%)', whiteSpace: 'nowrap',
+		position: 'absolute', left: `calc(50% + ${SCORE_HUD.sink / 2}px)`, bottom: 'calc(100% + 14px)', transform: 'translateX(-50%)', whiteSpace: 'nowrap',
 		fontFamily: font, fontSize: '40px', lineHeight: 1, color: 'white', textAlign: 'center',
 		WebkitTextStroke: `5px ${TYPE.colours.ink}`, paintOrder: 'stroke fill', textShadow: '0 4px 0 rgba(0,0,0,0.55)',
 	}).appendTo($pauseBtn);
@@ -1295,7 +1297,28 @@ window.Showtime = function (stage, opts) {
 		ctx.translate(x, y);
 		ctx.scale(pulse, pulse);
 		const outline = opts.clockOutline === true ? { stroke: urgent ? '#ff3d6a' : theme.accent, lineWidth: size * 0.07 } : {};   // (only if the game asks: clockOutline: true)
-		if (box > 0 && opts.clockBox === true) art.roundRect(ctx, -w / 2 - side, -size * 0.66 - up, w + side, size * 1.32 + up, size * 0.66, Object.assign({ fill: 'rgba(12,4,30,0.78)', alpha: box }, outline));
+		if (box > 0 && opts.clockBox !== false) {
+			// the score capsules' look: black glass, sunk into the edge it hangs
+			// from, a band of white (red, at the end) along that edge
+			const x0 = -w / 2 - side, y0 = -size * 0.66 - up, x1 = w / 2, y1 = size * 0.66, r = size * 0.66;
+			const edge = up > 0 ? -y / pulse : y0;   // (the wall's top edge, here, when it hangs from it)
+			ctx.save();
+			ctx.globalAlpha *= box;
+			ctx.beginPath();
+			ctx.moveTo(x0 + r, y0);
+			ctx.arcTo(x1, y0, x1, y1, r);
+			ctx.arcTo(x1, y1, x0, y1, r);
+			ctx.arcTo(x0, y1, x0, y0, r);
+			ctx.arcTo(x0, y0, x1, y0, r);
+			ctx.closePath();
+			ctx.fillStyle = 'rgba(0,0,0,0.6)';
+			ctx.fill();
+			if (outline.stroke) { ctx.strokeStyle = outline.stroke; ctx.lineWidth = outline.lineWidth; ctx.stroke(); }
+			ctx.clip();
+			ctx.fillStyle = urgent ? TYPE.colours.red : 'white';
+			ctx.fillRect(x0, y0, x1 - x0, edge - y0 + SCORE_HUD.line);
+			ctx.restore();
+		}
 		// its digits at a step of the scale, sized with the pill by scaling
 		const ref = self.size(CLOCK.size);
 		ctx.scale(size / ref, size / ref);
