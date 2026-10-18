@@ -2971,7 +2971,7 @@ window.Showtime = function (stage, opts) {
 	// BOOK ANOTHER SESSION AT THE KIOSK. The game hands back as it starts
 	// (extra.enter is the place to call IGB.complete).
 	beatsLib.end = function (extra) {
-		const CAROUSEL = { every: 2.8, w: 640, h: 400, side: 520 };
+		const CAROUSEL = { every: 2.8, w: 640, h: 400, side: 520, words: 80, margin: 40 };   // (words: the size of THANKS FOR PLAYING! and the kiosk line; margin: their extra room from the screenshots)
 		let $layer = null;
 		let slides = [];      // every wall's slides, by game: [[$slide, ...], ...]
 		let shownSlide = -1;
@@ -2989,11 +2989,13 @@ window.Showtime = function (stage, opts) {
 					display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '34px',
 					fontFamily: `"${FONT}", sans-serif`, color: 'white',
 				}).appendTo($layer);
-				$('<div>').text('THANKS FOR PLAYING!').css({
-					fontSize: '96px', letterSpacing: '2px', lineHeight: 1, textAlign: 'center',
+				// the two lines, alike: one size, one treatment (no more than 70% of the wall across, so the kiosk line wraps in two)
+				const words = (text, colour) => $('<div>').text(text).css({
+					fontSize: CAROUSEL.words + 'px', letterSpacing: '2px', lineHeight: 1.05, textAlign: 'center', maxWidth: W * TEXT_FIT + 'px', textWrap: 'balance', color: colour,
 					textShadow: '0 9px 0 rgba(0,0,0,0.5)', WebkitTextStroke: `7px ${theme.ink}`, paintOrder: 'stroke fill',
-				}).appendTo($wall);
-				const $track = $('<div>').attr('carousel', '').css({ position: 'relative', width: '1500px', height: CAROUSEL.h + 12 + 'px' }).appendTo($wall);
+				});
+				words('THANKS FOR PLAYING!', 'white').appendTo($wall);
+				const $track = $('<div>').attr('carousel', '').css({ position: 'relative', width: '1500px', height: CAROUSEL.h + 12 + 'px', margin: CAROUSEL.margin + 'px 0' }).appendTo($wall);
 				list.forEach(function (g, i) {
 					const $slide = $('<div>').attr('slide', g.id).css({
 						position: 'absolute', left: '50%', top: 0, width: CAROUSEL.w + 'px', marginLeft: -CAROUSEL.w / 2 + 'px',
@@ -3014,10 +3016,7 @@ window.Showtime = function (stage, opts) {
 					(slides[i] = slides[i] || []).push($slide);
 				});
 				// the kiosk: book another session
-				$('<div>').text('BOOK ANOTHER SESSION AT THE KIOSK').attr('kiosk', '').css({
-					color: TYPE.colours.gold, WebkitTextStroke: `5px ${theme.ink}`, paintOrder: 'stroke fill', textShadow: '0 7px 0 rgba(0,0,0,0.5)',   // (just words: no capsule)
-					fontSize: '50px', letterSpacing: '1px', lineHeight: 1, animation: 'showtime-kiosk 1.6s ease-in-out infinite',
-				}).appendTo($wall);
+				words('BOOK ANOTHER SESSION AT THE KIOSK', TYPE.colours.gold).attr('kiosk', '').appendTo($wall);
 			}
 			place(0, true);
 			shownSlide = 0;
@@ -3043,10 +3042,6 @@ window.Showtime = function (stage, opts) {
 				}
 			});
 		}
-		if (!document.getElementById('showtime-kiosk-css')) {
-			$('<style id="showtime-kiosk-css">').text('@keyframes showtime-kiosk { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }').appendTo('head');
-		}
-
 		return extend({
 			id: 'end',
 			world: false,
