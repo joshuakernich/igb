@@ -1201,10 +1201,10 @@ window.Showtime = function (stage, opts) {
 	}
 	const PANEL_ICON = PAUSE.button - 38;   // (the size of each button on the pause panel)
 	const PANEL_COLOUR = '#b46bff';   // (the pause panel's colour: its band, its TAP, its buttons)
-	// (the panels, one above the other, all of them together centred down the left wall's edge)
+	// (the panel showing, centred down the left wall's edge)
 	const $panels = $('<div panels>').css({
 		position: 'absolute', left: 0, top: H / 2 + 'px', transform: 'translateY(-50%)', zIndex: 20, pointerEvents: 'none',
-		display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '110px', paddingTop: '70px',   // (room for each one's TAP above it)
+		display: 'flex', flexDirection: 'column', alignItems: 'flex-start', paddingTop: '70px',   // (room for its TAP above it)
 	}).appendTo(stage.$ui);
 	const $pauseBtn = $('<button pause>').attr('title', 'Pause').css({
 		// (the score capsules' look, turned on its side: black glass sunk into
@@ -1232,11 +1232,12 @@ window.Showtime = function (stage, opts) {
 	fitTap();
 	if (document.fonts) document.fonts.load(`100px "${FONT}"`).then(fitTap).catch(() => {});
 	for (const name of ['pause', 'volume', 'cog']) buttonIcon(name, PANEL_ICON, PANEL_COLOUR).appendTo($pauseBtn);
-	// opts.menu.debug: a second panel, the same, above it and there all the
-	// time (whatever the beat, in the box or off it), a little bug on it and
-	// TAP over it; it opens the same menu, the debug buttons on it.
+	// opts.menu.debug: a second panel, the same, there whenever the pause
+	// panel isn't (whatever the beat, in the box or off it), a little bug on
+	// it and TAP over it; it opens the same menu, the debug buttons on it.
+	let $dbg = null;
 	if (MENU.debug) {
-		const $dbg = $('<button debug-panel>').attr('title', 'Debug').css({
+		$dbg = $('<button debug-panel>').attr('title', 'Debug').css({
 			position: 'relative',
 			width: PAUSE.button + 'px', borderRadius: `0 ${PAUSE.button / 2}px ${PAUSE.button / 2}px 0`, border: 'none', boxSizing: 'border-box',
 			background: 'rgba(0,0,0,0.6)', cursor: 'pointer', pointerEvents: 'auto', padding: `20px 0 20px ${SCORE_HUD.line}px`,
@@ -1345,6 +1346,7 @@ window.Showtime = function (stage, opts) {
 	// or off it, alike); never while paused, and never from TIME! on (the
 	// game's over: the scores, the rating, the end)
 	let buttonShown = false;
+	let dbgShown = true;
 	const OVER = ['timeup', 'scores', 'rank', 'team', 'board', 'replay', 'rate', 'end'];
 	const over = function () {
 		if (!beat) return false;
@@ -1355,6 +1357,8 @@ window.Showtime = function (stage, opts) {
 	function showPauseButton() {
 		const want = !paused && !over() && self.clockStarted();
 		if (want !== buttonShown) { buttonShown = want; $pauseBtn.toggle(want); }
+		const dbgWant = !want && !paused;   // (the debug panel: in its place when it isn't there, and not while paused)
+		if ($dbg && dbgWant !== dbgShown) { dbgShown = dbgWant; $dbg.toggle(dbgWant); }
 	}
 	function tickPause() {
 		const t = mmss(clock.left);
