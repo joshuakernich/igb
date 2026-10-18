@@ -252,7 +252,8 @@ window.Showtime = function (stage, opts) {
 		width: 1100,
 	};
 	const RANK = {
-		move: [0.5, 1.7],      // the capsules rise into rank order, one after another (each's place showing as it lands)
+		move: [0.5, 1.7],      // the capsules rise into rank order, last place first (each's place showing as it lands)
+		apart: 0.5,            // seconds between one capsule rising and the next
 		crown: 0.4,            // once they're all in, this long until the winner's moment
 		hold: 3.2,             // the winner's moment
 	};
@@ -2372,6 +2373,8 @@ window.Showtime = function (stage, opts) {
 		let st = { order: [], slot: [], place: [] };
 		let reveal = [];  // reveal[p]: when their place shows
 		let winnerAt = 0;
+		// (last place rises first, then each up the order, RANK.apart apart)
+		const riseAt = (p) => RANK.move[0] + (count() - 1 - st.slot[p]) * RANK.apart;
 		return extend({
 			id: 'rank',
 			world: false,
@@ -2381,7 +2384,7 @@ window.Showtime = function (stage, opts) {
 				const n = count();
 				// each place shows as its capsule lands in its row; the winner's moment once they all have
 				reveal = [];
-				for (let p = 0; p < n; p++) reveal[p] = RANK.move[0] + p * WATERFALL * 2 + RESULT.move;
+				for (let p = 0; p < n; p++) reveal[p] = riseAt(p) + RESULT.move;
 				winnerAt = Math.max(0, ...reveal) + RANK.crown;
 				self.fx('whooshLong', 0.6);
 			},
@@ -2412,7 +2415,7 @@ window.Showtime = function (stage, opts) {
 					// each capsule, from along the bottom up to its row (one at a time, the last risen drawn on top)
 					for (let p = 0; p < n; p++) {
 						const from = hudSpot(p, n);
-						const m = easeOut(between(bt, RANK.move[0] + p * WATERFALL * 2, RANK.move[0] + p * WATERFALL * 2 + RESULT.move));
+						const m = easeOut(between(bt, riseAt(p), riseAt(p) + RESULT.move));
 						const x = lerp(from.x, W / 2 + RESULT.x, m), y = lerp(from.y, listY(st.slot[p], n), m);
 						const shown = bt >= reveal[p];
 						const top = st.place[p] === 0 && bt >= winnerAt;
