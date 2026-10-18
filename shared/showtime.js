@@ -1277,18 +1277,26 @@ window.Showtime = function (stage, opts) {
 	const $debug = $('<div>').css({
 		display: live ? 'none' : 'block', width: '100%', flex: 1, minHeight: 0, overflowY: 'auto', fontFamily: `"${TYPE.font}", sans-serif`,
 	}).appendTo($left);
-	const $dhead = $('<div>').css({ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '30px', marginBottom: '8px' }).appendTo($debug);
+	// (everything centred: the heading and status, then each row's name over
+	// its buttons; the buttons small capsules in the standard style: dark
+	// glass, an outline and words in their colour)
+	const $dhead = $('<div>').css({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', fontSize: '30px', marginBottom: '12px', textAlign: 'center' }).appendTo($debug);
 	$('<span>').text('DEBUG').css({ color: '#3ad1ff', letterSpacing: '2px' }).appendTo($dhead);
 	const $dbody = $('<div>').appendTo($debug);
-	const dbutton = (label, fn, colour = '#22305a') => $('<button>').text(label).css({
-		margin: '4px', padding: '8px 14px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-		background: colour, color: 'white', fontFamily: 'inherit', fontSize: '22px',
-	}).on('click', function (e) { e.stopPropagation(); setPaused(false); fn(); });   // (a debug button resumes, then does its thing)
-	const $dnow = $('<span>').css({ flex: 1, color: '#9fb6d8', fontFamily: 'monospace', fontSize: '22px' }).appendTo($dhead);
+	const brighter = function (colour, k) {   // (the debug colours are dark: lifted toward white, for outlines and words on dark glass)
+		const [r, g, b] = rgbOf(colour);
+		const up = (v) => Math.round(v + (255 - v) * k);
+		return `rgb(${up(r)},${up(g)},${up(b)})`;
+	};
+	const dbutton = (label, fn, colour = '#22305a') => $('<button>').text(label).css(Object.assign({
+		margin: '5px', padding: '9px 20px', borderRadius: '40px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '22px', lineHeight: 1,
+	}, button(brighter(colour, 0.55), 22), { borderWidth: '3px', boxShadow: '0 5px 0 rgba(0,0,0,0.45)' }))
+		.on('click', function (e) { e.stopPropagation(); setPaused(false); fn(); });   // (a debug button resumes, then does its thing)
+	const $dnow = $('<span>').css({ color: '#9fb6d8', fontFamily: 'monospace', fontSize: '22px' }).appendTo($dhead);
 	const drow = (label) => {
-		const $row = $('<div>').css({ display: 'flex', flexWrap: 'wrap', alignItems: 'center' }).appendTo($dbody);
-		$('<span>').text(label).css({ width: '120px', color: '#9fb6d8', fontSize: '20px' }).appendTo($row);
-		return $row;
+		const $block = $('<div>').css({ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '6px 0 10px' }).appendTo($dbody);
+		$('<div>').text(label).css({ color: '#9fb6d8', fontSize: '20px', letterSpacing: '2px', marginBottom: '2px' }).appendTo($block);
+		return $('<div>').css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center' }).appendTo($block);
 	};
 
 	Object.defineProperty(self, 'paused', { get: () => paused });
@@ -1297,7 +1305,7 @@ window.Showtime = function (stage, opts) {
 	// see sequence): a jump to every beat, and on to the next
 	const $jumps = drow('BEATS');
 	function fillJumps() {
-		$jumps.toggle(MENU.jumps !== false);   // (a game with its own beat jumps can leave these out: opts.menu.jumps = false)
+		$jumps.parent().toggle(MENU.jumps !== false);   // (a game with its own beat jumps can leave these out: opts.menu.jumps = false)
 		$jumps.children('button').remove();
 		for (const b of beats) if (b.id !== 'squad') dbutton(b.id.toUpperCase(), () => { $('showtime-picker').remove(); self.go(b.id); }).appendTo($jumps);
 		dbutton('NEXT BEAT ▶', () => self.next(), '#3a2a5a').appendTo($jumps);
