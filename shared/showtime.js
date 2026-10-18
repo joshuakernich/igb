@@ -142,7 +142,7 @@ window.Showtime = function (stage, opts) {
 	/* ---------- tuning: the visor check ---------- */
 
 	const VISORS = {
-		show: 4.0,             // just the visors to put on, before the wiggle is asked for
+		show: 0.8,             // just the visors to put on (the capsules growing), before the wiggle is asked for and counts
 		zone: { px: 0.5, pz: 0.5, r: 0.24 },   // where to stand: the middle of the room (floor 0..1)
 		settle: 0.8,           // seconds over which a visor's movement is averaged
 		moving: 0.08,          // speed (raw units a second, averaged) that says a visor is in play
