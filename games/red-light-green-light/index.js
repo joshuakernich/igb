@@ -577,12 +577,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const show = new Showtime(stage, {
 		score: won,   // scores are in won
 		id: 'red-light-green-light',
-		skip: { during: ['controls'], to: 'doll', label: 'SKIP TUTORIAL ▶▶', at: { x: 1.5 * W, y: 360 } },   // the skip button: only in the tutorial, on to her entrance; in the middle of the front wall, under the tutorial's steps
+		skip: { during: ['controls'], to: 'doll', label: 'SKIP TUTORIAL ▶▶' },   // the skip button: only in the tutorial, on to her entrance
 		clock: (n) => CLOCK_AT[n],   // the clock, as a capsule: see CLOCK_AT
-		clockOutline: false,         // (no outline round it)
 		font: SQUID_FONT,            // everything the show writes, in the game's own lettering
-		clockFont: 'Share Tech Mono',   // (but the clock: steady monospace digital digits)
-		clockBox: false,             // (its digits alone, outlined and extruded like the rest of the text: no dark capsule behind them)
 		seconds: GAME_SECONDS,
 		players: () => contestants.length,
 		scores: () => contestants.map((c) => c.score),
@@ -4304,7 +4301,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 		// 1b. the title, crashing in letter by letter, raised over a big START button
 		show.beats.titleDrop({
-			start: true,
 			lines: [{ text: 'RED LIGHT', fill: '#ff3640', glow: '#ff3640' }, { text: 'GREEN LIGHT', fill: '#27d96b', glow: '#27d96b' }],
 			update(dt) {
 				stepWorld(dt);

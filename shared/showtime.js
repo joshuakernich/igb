@@ -23,15 +23,18 @@
  *       rivals: ['Team names', ...],      // optional names for the fake leaderboard
  *       sounds: { drama: ['assets/...mp3', 0.3, true] },   // optional overrides
  *       music: false,                     // optional: no music, only the effects
- *       clockOutline: false,              // optional: the clock's capsule without its coloured outline
- *       clockFont: 'Share Tech Mono',     // optional: the clock's digits in their own (monospace) font
- *       clockBox: false,                  // optional: no dark capsule behind the clock, just its digits (styled like the rest of the text)
+ *       // the clock, by default (the Squid Game look): its digits alone, in a
+ *       // steady monospace digital font, outlined and dropped like the rest of
+ *       // the text, no capsule behind them
+ *       clockBox: true,                   // optional: a dark capsule behind the clock
+ *       clockOutline: true,               // optional: and a coloured outline round it
+ *       clockFont: 'Rubik',               // optional: the digits in another font (null: the show's font)
  *       font: 'Game of Squids',           // optional: one font for everything the show writes (load it first)
  *   });
  *
  *   show.sequence([                       // the running order
  *       { id: 'squad', length: Infinity, draw(ctx, bt) {} },   // a game beat
- *       show.beats.titleDrop({ lines: [{ text: 'GAME', fill }], tagline }),
+ *       show.beats.titleDrop({ lines: [{ text: 'GAME', fill }] }),   // raised over a START button it waits for (start: false: on by itself)
  *       show.beats.clockIntro(),
  *       show.beats.visors(),               // visors on, a wiggle in the middle; wrong ones flagged
  *       { id: 'play', update(dt, bt) {}, draw(ctx, bt) {} },
@@ -59,8 +62,10 @@
  *                      a shot is { x, y, z }: the world point at the centre
  *                      of the screen and the zoom. The view never shows past
  *                      the world's edges.
- *   the skip button    "SKIP ▶▶" on the front wall through every beat between
- *                      the squad picker and 'play'; it jumps to 'play'
+ *   the skip button    "SKIP ▶▶" in the middle of the front wall through every
+ *                      beat between the squad picker and 'play'; it jumps to
+ *                      'play' (opts.skip: { during, to, label, at: { x, y } };
+ *                      at: false puts it in the front wall's bottom corner)
  *   show.pickPlayers(fn)   the squad picker, in the show's own style: buttons
  *                      2-6 on the front wall; fn(count) once one is picked
  *   show.slam(ctx, text, x, y, size, age, style)   a title crashing in
@@ -571,7 +576,7 @@ window.Showtime = function (stage, opts) {
 	const TYPE = Object.assign({}, Showtime.TYPE, opts.font ? { font: opts.font } : {});
 	// the clock's digits: in a font of their own if the game gives one (a
 	// monospace one keeps them from jiggling as they count)
-	const CLOCK_FONT = opts.clockFont || null;
+	const CLOCK_FONT = opts.clockFont === undefined ? 'Share Tech Mono' : opts.clockFont || null;   // (by default, steady monospace digits)
 	if (CLOCK_FONT && document.fonts) document.fonts.load(`40px "${CLOCK_FONT}"`).catch(() => {});
 	const snapSize = (size) => TYPE.sizes.reduce((best, s) => (Math.abs(Math.log(s / size)) < Math.abs(Math.log(best / size)) ? s : best), TYPE.sizes[0]);
 	const measure = function (ctx, str, size) {
@@ -860,9 +865,10 @@ window.Showtime = function (stage, opts) {
 	// Through the intros (after the squad is picked, before the first round)
 	// a button on the front wall skips straight to the play. A game can say
 	// otherwise: opts.skip = { during: [beat ids], to: beat id }, and where
-	// it goes (at: { x, y }, its middle, in the world; else the front wall's
-	// bottom right).
+	// it goes (at: { x, y }, its middle, in the world; by default the middle
+	// of the front wall; at: false, the front wall's bottom right).
 	let $skip = null;
+	const SKIP_AT = { x: 1.5 * W, y: 360 };   // (by default: the middle of the front wall, under the captions)
 	function showSkip(id) {
 		const play = beats.findIndex((b) => b.id === 'play');
 		const at = beats.findIndex((b) => b.id === id);
@@ -870,9 +876,9 @@ window.Showtime = function (stage, opts) {
 		if (intro && !$skip) {
 			$skip = $('<button skip>').text((opts.skip && opts.skip.label) || 'SKIP ▶▶').css({
 				position: 'absolute', whiteSpace: 'nowrap', zIndex: 5,
-				...(opts.skip && opts.skip.at
-					? { left: opts.skip.at.x + 'px', top: opts.skip.at.y + 'px', transform: 'translate(-50%, -50%)' }
-					: { left: (2 * W - 30) + 'px', top: '880px', transform: 'translateX(-100%)' }),
+				...((opts.skip && opts.skip.at === false)
+					? { left: (2 * W - 30) + 'px', top: '880px', transform: 'translateX(-100%)' }
+					: { left: ((opts.skip && opts.skip.at) || SKIP_AT).x + 'px', top: ((opts.skip && opts.skip.at) || SKIP_AT).y + 'px', transform: 'translate(-50%, -50%)' }),
 				padding: '16px 36px', borderRadius: '40px', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
 				background: 'rgba(12,4,30,0.94)', color: 'white', cursor: 'pointer', pointerEvents: 'auto',
 				fontFamily: `"${TYPE.font}", sans-serif`, fontSize: '40px', letterSpacing: '2px',
@@ -1001,8 +1007,8 @@ window.Showtime = function (stage, opts) {
 		ctx.globalAlpha *= alpha;
 		ctx.translate(x, y);
 		ctx.scale(pulse, pulse);
-		const outline = opts.clockOutline === false ? {} : { stroke: urgent ? '#ff3d6a' : theme.accent, lineWidth: size * 0.07 };   // (a game can leave it off: clockOutline: false)
-		if (box > 0 && opts.clockBox !== false) art.roundRect(ctx, -w / 2 - side, -size * 0.66 - up, w + side, size * 1.32 + up, size * 0.66, Object.assign({ fill: 'rgba(12,4,30,0.78)', alpha: box }, outline));
+		const outline = opts.clockOutline === true ? { stroke: urgent ? '#ff3d6a' : theme.accent, lineWidth: size * 0.07 } : {};   // (only if the game asks: clockOutline: true)
+		if (box > 0 && opts.clockBox === true) art.roundRect(ctx, -w / 2 - side, -size * 0.66 - up, w + side, size * 1.32 + up, size * 0.66, Object.assign({ fill: 'rgba(12,4,30,0.78)', alpha: box }, outline));
 		// its digits at a step of the scale, sized with the pill by scaling
 		const ref = self.size(CLOCK.size);
 		ctx.scale(size / ref, size / ref);
@@ -1115,9 +1121,10 @@ window.Showtime = function (stage, opts) {
 			at += T.lineGap;
 		});
 		const lastLand = at - T.lineGap - T.each + T.fall;
-		// start: true holds the title, raised, over a big START button that
-		// pops in once it's landed; it fades out once START is pressed
-		const start = !!(extra && extra.start);
+		// By default the title holds, raised, over a big START button that pops
+		// in once it's landed, and fades out once START is pressed (start:
+		// false: it plays through and moves on by itself)
+		const start = !(extra && extra.start === false);   // (by default it waits for START)
 		let startedAt = -1;
 		let $start = null;
 		let now = 0;   // (the beat's time, for the button's click)
@@ -2305,9 +2312,21 @@ window.Showtime = function (stage, opts) {
 				? `<path d="M30 60 Q50 ${60 + f.mouth * 1.6} 70 60 Z" fill="${theme.ink}"/>`
 				: `<path d="M30 ${66 - f.mouth / 3} Q50 ${66 + f.mouth} 70 ${66 - f.mouth / 3}" stroke="${theme.ink}" stroke-width="7" fill="none" stroke-linecap="round"/>`;
 			const brows = f.brows ? `<path d="M28 30 L42 36 M72 30 L58 36" stroke="${theme.ink}" stroke-width="6" stroke-linecap="round"/>` : '';
-			return `<svg viewBox="0 0 100 100" width="100%" height="100%"><circle cx="50" cy="50" r="46" fill="${f.colour}" stroke="${theme.ink}" stroke-width="5"/>`
-				+ `<circle cx="36" cy="42" r="6.5" fill="${theme.ink}"/><circle cx="64" cy="42" r="6.5" fill="${theme.ink}"/>${brows}${mouth}</svg>`;
+			// glassy: a ball of coloured glass, lit through from the top left and
+			// deepening toward the bottom right, a broad gloss across its top, a
+			// glint, light pooling in its lower rim, and the face set into it
+			const id = 'rate-face-' + i + '-' + ++faceIds;
+			return `<svg viewBox="0 0 100 100" width="100%" height="100%" style="overflow:visible;filter:drop-shadow(0 6px 0 rgba(0,0,0,0.35))"><defs>`
+				+ `<radialGradient id="${id}b" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="white" stop-opacity="0.55"/><stop offset="0.35" stop-color="${f.colour}" stop-opacity="1"/><stop offset="1" stop-color="${theme.ink}" stop-opacity="0.55"/></radialGradient>`
+				+ `<linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="white" stop-opacity="0.85"/><stop offset="1" stop-color="white" stop-opacity="0"/></linearGradient>`
+				+ `<radialGradient id="${id}r" cx="50%" cy="100%" r="60%"><stop offset="0" stop-color="white" stop-opacity="0.5"/><stop offset="1" stop-color="white" stop-opacity="0"/></radialGradient>`
+				+ `</defs><circle cx="50" cy="50" r="46" fill="${f.colour}"/><circle cx="50" cy="50" r="46" fill="url(#${id}b)"/>`
+				+ `<ellipse cx="50" cy="84" rx="30" ry="10" fill="url(#${id}r)"/>`
+				+ `<circle cx="36" cy="42" r="6.5" fill="${theme.ink}"/><circle cx="64" cy="42" r="6.5" fill="${theme.ink}"/>${brows}${mouth}`
+				+ `<ellipse cx="46" cy="25" rx="31" ry="15" fill="url(#${id}g)"/><circle cx="27" cy="31" r="4" fill="white" opacity="0.9"/>`
+				+ `<circle cx="50" cy="50" r="46" fill="none" stroke="${theme.ink}" stroke-width="4"/><circle cx="50" cy="50" r="43" fill="none" stroke="white" stroke-opacity="0.35" stroke-width="1.5"/></svg>`;
 		}
+		let faceIds = 0;
 
 		const big = (text, size = 110) => $('<div>').text(text).css({
 			fontSize: size + 'px', letterSpacing: '2px', lineHeight: 1, textAlign: 'center',
