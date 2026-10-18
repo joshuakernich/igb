@@ -66,9 +66,9 @@ export function createValley(stage) {
 	// The ground's height at (x, z) (z negative: up the valley, ahead):
 	// a wide, gently winding floor, hills rising either side, and mountains
 	// far off.
-	// The play area in front of the eye (where the avatars walk and the
-	// cubes land) is a flat plane, the valley rising out of it from its edges.
-	const FLAT = { x: 22, z: [-22, 10], blend: 35 };   // the flat plane's half-width and its near-far extent (metres; z negative: ahead); then how far it eases into the hills
+	// The play area round the eye (where the avatars walk and the pickups
+	// land, out from all three walls) is a flat plane, the valley rising out of it from its edges.
+	const FLAT = { x: 22, z: [-22, 22], blend: 35 };   // the flat plane's half-width and its near-far extent (metres; z negative: ahead); then how far it eases into the hills
 	function ground(x, z) {
 		const out = Math.max(Math.abs(x) - FLAT.x, FLAT.z[0] - z, z - FLAT.z[1], 0);
 		const k = smooth(0, FLAT.blend, out);

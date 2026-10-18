@@ -68,6 +68,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	function initGame(count) {
 		players = count;
 		scores = Array.from({ length: count }, () => 0);
+		wallOf.length = 0;
 		show.go('title');
 	}
 
@@ -131,17 +132,17 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		for (let i = 0; i < players; i++) {
 			const p = latest[i];
 			if (!p || p.px === undefined) continue;
-			const w = toField(p);
+			const w = toField(p, i);
 			const at = valley.project(w.x, valley.ground(w.x, w.z), w.z);
-			if (at) shown.push({ i, p, at, z: w.z });
+			if (at) shown.push({ i, p, at, far: Math.hypot(w.x, w.z) });
 		}
 		for (const k of cubes) {
 			const g = valley.ground(k.x, k.z);
 			const at = valley.project(k.x, g + k.y, k.z), floor = valley.project(k.x, g, k.z);
-			if (at && floor) shown.push({ k, at, floor, z: k.z });
+			if (at && floor) shown.push({ k, at, floor, far: Math.hypot(k.x, k.z) });
 		}
-		shown.sort((a, b) => a.z - b.z);
-		for (const { i, p, at, k, floor } of shown) {
+		shown.sort((a, b) => b.far - a.far);
+		for (const { i, at, k, floor } of shown) {
 			if (k) {
 				// a pickup: its shadow on the plane (smaller the higher it is), it over it
 				const r = CUBE.r * floor.ppm * k.scale;
@@ -165,24 +166,47 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	// the front wall): as far ahead as they are up the room, and across, so
 	// they show exactly where they stand across the front wall (its view is
 	// 90° across, so at a depth d it spans 2d)
-	const fieldAt = (px, pz) => {
-		const d = FIELD.near + Math.max(0, Math.min(1, pz)) * (FIELD.far - FIELD.near);
-		const want = Math.max(0.02, Math.min(0.98, px)) * W + W;   // (where they stand, across the front wall; a hair in from its edges, so they never slip off it)
-		// (worked out through the front camera itself: across, the view is
+	// Each wall looks out its own way from the eye (the box's three sides):
+	// forward, and across its view to the right.
+	const VIEW_DIR = [
+		{ f: [-1, 0], r: [0, -1] },   // the left wall: looking left
+		{ f: [0, -1], r: [1, 0] },    // the front wall: up the valley
+		{ f: [1, 0], r: [0, 1] },     // the right wall: looking right
+	];
+	// A spot out in a wall's view: u across it (0..1, exactly where on that
+	// wall it shows), d01 how far out (0 near, 1 far).
+	const fieldOn = (wall, u, d01) => {
+		const d = FIELD.near + Math.max(0, Math.min(1, d01)) * (FIELD.far - FIELD.near);
+		const want = Math.max(0.02, Math.min(0.98, u)) * W + wall * W;   // (a hair in from its edges, so they never slip off it)
+		const { f, r } = VIEW_DIR[wall];
+		const at = (s) => ({ x: f[0] * d + r[0] * s, z: f[1] * d + r[1] * s });
+		// (worked out through the wall's camera itself: across, the view is
 		// linear at a given distance, so two points give the line)
-		const y = valley.ground(0, -d);
-		const a = valley.project(0, y, -d), b = valley.project(1, y, -d);
-		if (!a || !b || a.wall !== 1 || b.wall !== 1 || b.x === a.x) return { x: (px - 0.5) * 2 * d, z: -d };
-		return { x: (want - a.x) / (b.x - a.x), z: -d };
+		const p0 = at(0), p1 = at(1);
+		const a = valley.project(p0.x, valley.ground(p0.x, p0.z), p0.z), b = valley.project(p1.x, valley.ground(p1.x, p1.z), p1.z);
+		if (!a || !b || a.wall !== wall || b.wall !== wall || b.x === a.x) return at((u - 0.5) * 2 * d);
+		return at((want - a.x) / (b.x - a.x));
 	};
-	const toField = (p) => fieldAt(p.px, p.pz === undefined ? 0.5 : p.pz);
+	const fieldAt = (px, pz) => fieldOn(1, px, pz);
+	// Where a player is, on the wall they're on: across it and how far out,
+	// from where they stand in the room (left wall: across is pz, out is how
+	// far from it; right: the same, mirrored).
+	const wallOf = [];   // each player's wall (0 left, 1 front, 2 right): tapping a wall moves the nearest player there
+	const onWall = (p, wall) => {
+		const px = p.px, pz = p.pz === undefined ? 0.5 : p.pz;
+		if (wall === 0) return { u: pz, d: 1 - px };
+		if (wall === 2) return { u: 1 - pz, d: px };
+		return { u: px, d: pz };
+	};
+	const toField = (p, i) => { const w = wallOf[i] === undefined ? 1 : wallOf[i]; const o = onWall(p, w); return fieldOn(w, o.u, o.d); };
 	const worms = [];
 	function stepWorms(dt) {
 		for (let i = 0; i < players; i++) {
 			const p = latest[i];
 			if (!p || p.px === undefined) continue;
-			worms[i] = worms[i] || show.worms.state(p.px);
-			show.worms.step(worms[i], p.px, dt);
+			const u = onWall(p, wallOf[i] === undefined ? 1 : wallOf[i]).u;
+			worms[i] = worms[i] || show.worms.state(u);
+			show.worms.step(worms[i], u, dt);
 		}
 	}
 
@@ -192,7 +216,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	const cubes = [];   // { x, z, y (metres above the plane), landed, scale, seed }
 	let nextCube = 0;
 	function dropCube() {
-		const spot = fieldAt(0.04 + Math.random() * 0.92, Math.random());   // (somewhere a player could stand)
+		const spot = fieldOn(Math.floor(Math.random() * 3), 0.04 + Math.random() * 0.92, Math.random());   // (somewhere a player could stand, out from any of the walls)
 		cubes.push({ x: spot.x, z: spot.z, y: CUBE.drop, landed: -1, scale: 1, seed: Math.random() * 10 });
 	}
 	function removeCube(k) {
@@ -220,7 +244,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 			for (let i = 0; i < players; i++) {
 				const p = latest[i];
 				if (!p || p.px === undefined) continue;
-				const w = toField(p);
+				const w = toField(p, i);
 				if (Math.hypot(w.x - k.x, w.z - k.z) > CUBE.reach) continue;
 				scores[i] = (scores[i] || 0) + 1;
 				show.fx('pick', 0.7);
@@ -283,6 +307,28 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 			$(this).css({ background: $(this).attr('jump') === show.beat ? '#3ad1ff' : '#22305a', color: $(this).attr('jump') === show.beat ? '#0b1022' : 'white' });
 		});
 	};
+
+	// Tapping a wall moves a player there: the one standing nearest the
+	// spot tapped (the tap's place on that wall, in the room).
+	stage.$el.on('click', function (e) {
+		if (show.beat !== 'play' || show.paused) return;
+		const at = IGB.toWorld(e);
+		const wall = Math.floor(at.x / W);
+		if (wall < 0 || wall > 2) return;
+		const u = at.x / W - wall;
+		const spot = wall === 0 ? { px: 0, pz: u } : wall === 2 ? { px: 1, pz: 1 - u } : { px: u, pz: 1 };
+		let best = -1, bestD = Infinity;
+		for (let i = 0; i < players; i++) {
+			const p = latest[i];
+			if (!p || p.px === undefined) continue;
+			const d = Math.hypot(p.px - spot.px, (p.pz === undefined ? 0.5 : p.pz) - spot.pz);
+			if (d < bestD) { bestD = d; best = i; }
+		}
+		if (best < 0 || wallOf[best] === wall) return;
+		wallOf[best] = wall;
+		worms[best] = null;   // (a fresh worm there, not swinging over from the last wall)
+		show.fx('pick', 0.5);
+	});
 
 	self.setPlayers = function (p) {
 		latest = p;
