@@ -10,7 +10,7 @@
  *   valley.render(dt);    // every frame (dt 0 to hold it still)
  *   valley.dispose();     // when the game stops
  *   valley.scene          // to add things to (lit, shadowed)
- *   valley.ground(x, z)   // the ground's height there (metres; z negative: up the valley)
+ *   valley.ground(x, z)   // the ground's height there, as the grass has it (metres; z negative: up the valley)
  *   valley.project(x, y, z)   // where a point shows: { wall, x, y, ppm } (world px; ppm: pixels a metre there) or null
  */
 import * as THREE from '../lib/three/three.module.min.js';
@@ -77,10 +77,23 @@ export function createValley(stage) {
 		return sides + rolls + Math.max(0, peaks);
 	}
 	const floorY = ground(0, 0);
+	// The ground's height exactly as the mesh has it (its flat triangles, not
+	// the smooth hills they approximate), so things set on it sit on the grass.
+	function surface(x, z) {
+		const cellW = GRID.w / GRID.nx, cellH = GRID.h / GRID.nz;
+		const gx = (x + GRID.w / 2) / cellW, gz = (z - GRID.z + GRID.h / 2) / cellH;
+		const ix = Math.floor(gx), iz = Math.floor(gz);
+		const fx = gx - ix, fz = gz - iz;
+		const vx = (i) => i * cellW - GRID.w / 2, vz = (j) => j * cellH - GRID.h / 2 + GRID.z;
+		const ha = ground(vx(ix), vz(iz)), hb = ground(vx(ix), vz(iz + 1)), hc = ground(vx(ix + 1), vz(iz + 1)), hd = ground(vx(ix + 1), vz(iz));
+		// (each cell is two triangles: a b d, and b c d)
+		return fx + fz <= 1 ? ha + (hd - ha) * fx + (hb - ha) * fz : hc + (hb - hc) * (1 - fx) + (hd - hc) * (1 - fz);
+	}
 
-	const terrainGeo = new THREE.PlaneGeometry(2600, 2700, 260, 270);
+	const GRID = { w: 2600, h: 2700, nx: 260, nz: 270, z: -1150 };   // the ground mesh: its size, its cells, and its middle (from a little behind the eye to far up the valley)
+	const terrainGeo = new THREE.PlaneGeometry(GRID.w, GRID.h, GRID.nx, GRID.nz);
 	terrainGeo.rotateX(-Math.PI / 2);
-	terrainGeo.translate(0, 0, -1150);   // (from a little behind the eye to far up the valley)
+	terrainGeo.translate(0, 0, GRID.z);
 	const pos = terrainGeo.attributes.position;
 	const colours = new Float32Array(pos.count * 3);
 	const grass = [new THREE.Color(0x3f8a2a), new THREE.Color(0x6db33f), new THREE.Color(0x9ccc58)];
@@ -256,7 +269,7 @@ export function createValley(stage) {
 		const z = 40 - Math.pow(hash(b, 11), 1.3) * 760;
 		const x = (hash(b, 12) - 0.5) * (160 + Math.max(0, -z) * 0.7);
 		if (Math.hypot(x, z) < 45) continue;   // (none crowding the eye)
-		const y = ground(x, z);
+		const y = surface(x, z);   // (on the grass as it's drawn)
 		const size = 0.7 + hash(b, 13) * 1.1;
 		const n = 3 + Math.floor(hash(b, 14) * 5);
 		for (let i = 0; i < n; i++) {
@@ -351,5 +364,5 @@ export function createValley(stage) {
 		return null;
 	}
 
-	return { render, dispose, scene, ground, project };
+	return { render, dispose, scene, ground: surface, project };
 }

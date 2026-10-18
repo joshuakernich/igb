@@ -17,7 +17,7 @@
  * Behind it all, a sunny 3D valley (games/ux-demo-valley.js). The play: each
  * player is a worm (the visor check's worms, show.worms) out on the valley
  * floor, right where they are in the room, as tall as they are, leaning and
- * flailing as they move; little coloured cubes fall from the sky, and a worm
+ * flailing as they move; little white cubes fall from the sky, and a worm
  * that gets to one picks it up: a point. An ES module (manifest: module: true).
  */
 import * as THREE from '../lib/three/three.module.min.js';
@@ -40,7 +40,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	const FIELD = { near: 4.5, far: 12 };
 	const WORM = { tall: 2.3, thick: 0.3 };   // a worm's height (metres, for a tall player) and its thickness (radius, metres)
 	const CUBE = { size: 0.75, every: 0.55, drop: 26, fall: 8, life: 9, reach: 1.9, spin: 2.2 };   // a cube's size (metres); a new one every so often (seconds); how high it falls from and how fast (metres, a second); seconds it lies on the grass; how near a worm must be to grab one (metres); how fast it spins as it falls
-	const CUBE_COLOURS = ['#ff4d6d', '#ffd23f', '#3ad1ff', '#7dff9e', '#b388ff', '#ff9f43'];
+	const CUBE_COLOUR = '#ffffff';
 
 	/* ---------- the backdrop: a sunny valley ---------- */
 
@@ -138,7 +138,8 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		shown.sort((a, b) => a.z - b.z);
 		for (const { i, p, at } of shown) {
 			const tall = WORM.tall * Math.max(0.2, Math.min(1, (p.Y + 1) / 2)) * at.ppm;
-			show.worms.draw(ctx, at.x, at.y, tall, WORM.thick * at.ppm / 17, PLAYER_COLORS[i], t + i * 1.7, worms[i]);
+			// (raised by its thickness, so its round bottom end sits on the grass rather than in it)
+			show.worms.draw(ctx, at.x, at.y - WORM.thick * at.ppm * 0.85, tall, WORM.thick * at.ppm / 17, PLAYER_COLORS[i], t + i * 1.7, worms[i]);
 		}
 	}
 
@@ -173,12 +174,13 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	const cubes = [];
 	let nextCube = 0;
 	function dropCube() {
-		const colour = CUBE_COLOURS[Math.floor(Math.random() * CUBE_COLOURS.length)];
-		const mesh = new THREE.Mesh(cubeGeo, new THREE.MeshStandardMaterial({ color: colour, roughness: 0.35, metalness: 0.05, emissive: colour, emissiveIntensity: 0.12 }));
+		const colour = CUBE_COLOUR;
+		const mesh = new THREE.Mesh(cubeGeo, new THREE.MeshStandardMaterial({ color: colour, roughness: 0.4, metalness: 0, emissive: colour, emissiveIntensity: 0.08 }));
+		mesh.receiveShadow = true;
 		mesh.castShadow = true;
 		const spot = fieldAt(0.04 + Math.random() * 0.92, Math.random());   // (somewhere a player could stand)
 		const x = spot.x, z = spot.z;
-		const floor = valley.ground(x, z) + CUBE.size / 2;
+		const floor = valley.ground(x, z) + CUBE.size * 0.46;   // (resting almost entirely on top of the grass, just settled into it)
 		mesh.position.set(x, floor + CUBE.drop, z);
 		mesh.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
 		valley.scene.add(mesh);
