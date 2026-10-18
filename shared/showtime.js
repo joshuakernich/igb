@@ -209,6 +209,7 @@ window.Showtime = function (stage, opts) {
 		hold: 1.6,             // then it holds
 		out: 0.5,              // and fades
 		size: 210,
+		fit: 0.7,              // the widest a line may be: this share of a wall
 		raised: 330,           // with a START button: the title's middle, raised to make room
 		startY: 720,           // and the button's
 	};
@@ -651,7 +652,7 @@ window.Showtime = function (stage, opts) {
 		return best;
 	};
 	self.text = function (ctx, str, x, y, size, style = {}) {
-		size = self.fitSize(ctx, str, size, style.fit || W - 140);
+		if (!style.exact) size = self.fitSize(ctx, str, size, style.fit || W - 140);   // (style.exact: just that size, not snapped to the scale)
 		const fill = textColour(style.fill || TYPE.colours.white);
 		const dark = fill === TYPE.colours.ink;
 		art.text(ctx, str, x, y, {
@@ -1607,8 +1608,10 @@ window.Showtime = function (stage, opts) {
 				if (start && !$start && startedAt < 0 && bt > lastLand + 0.5) {
 					$start = $('<button start>').text('START').css({
 						position: 'absolute', left: (W + W / 2) + 'px', top: T.startY + 'px', transform: 'translate(-50%, -50%)', opacity: 0,
-						padding: '28px 110px', borderRadius: '90px', cursor: 'pointer', pointerEvents: 'auto', zIndex: 5, ...button(TYPE.colours.gold, 120),
-						fontFamily: `"${FONT}", sans-serif`, fontSize: '120px', lineHeight: 1, letterSpacing: '4px',
+						// (the same size as the pause menu's buttons)
+						width: PAUSE.row.w + 'px', height: PAUSE.row.h + 'px', boxSizing: 'border-box', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+						borderRadius: PAUSE.row.h / 2 + 'px', cursor: 'pointer', pointerEvents: 'auto', zIndex: 5, ...button(TYPE.colours.gold, PAUSE.row.size),
+						fontFamily: `"${FONT}", sans-serif`, fontSize: PAUSE.row.size + 'px', lineHeight: 1, letterSpacing: '2px',
 						transition: `transform 0.25s, opacity ${T.startFade}s`,
 					}).appendTo(stage.$ui)
 						.on('click', function (e) {
@@ -1626,7 +1629,10 @@ window.Showtime = function (stage, opts) {
 				const n = lines.length;
 				self.onWalls(ctx, function (c) {
 					lines.forEach(function (line, li) {
-						const size = self.fitSize(c, line.text, T.size * (n > 1 ? 0.85 : 1), W - 140);   // a step of the scale that fits
+						// its full size, shrunk (exactly, not by steps) only as far as it must to fit in 70% of a wall
+						const full = T.size * (n > 1 ? 0.85 : 1);
+						const wide = measure(c, line.text, full);
+						const size = wide > W * T.fit ? full * W * T.fit / wide : full;
 						const y = (start ? T.raised : 470) + (li - (n - 1) / 2) * size * 1.05;
 						const age = bt - sets[li];
 						if (age <= 0) return;
@@ -1636,7 +1642,7 @@ window.Showtime = function (stage, opts) {
 						const side = li % 2 ? 1 : -1;   // (-1: from the top left; 1: from the bottom right)
 						const dx = side * T.from[0] * W * (1 - left);
 						const dy = side * T.from[1] * H * (1 - left);
-						self.text(c, line.text, W / 2 + dx, y + dy, size, { fill: line.fill || 'white', glow: line.glow || theme.accent, alpha: fade * clamp(age / 0.4, 0, 1), fit: 9999 });
+						self.text(c, line.text, W / 2 + dx, y + dy, size, { fill: line.fill || 'white', glow: line.glow || theme.accent, alpha: fade * clamp(age / 0.4, 0, 1), exact: true });
 					});
 				});
 			},
