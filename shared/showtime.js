@@ -143,7 +143,7 @@ window.Showtime = function (stage, opts) {
 
 	const VISORS = {
 		show: 4.0,             // just the visors to put on, before the wiggle is asked for
-		zone: { px: 0.5, pz: 0.5, r: 0.2 },   // where to stand: the middle of the room (floor 0..1)
+		zone: { px: 0.5, pz: 0.5, r: 0.24 },   // where to stand: the middle of the room (floor 0..1)
 		settle: 0.8,           // seconds over which a visor's movement is averaged
 		moving: 0.08,          // speed (raw units a second, averaged) that says a visor is in play
 		wiggle: 0.2,           // and that says it's wiggling
@@ -651,8 +651,17 @@ window.Showtime = function (stage, opts) {
 		}
 		return best;
 	};
+	const TEXT_FIT = 0.7;   // the widest any of the show's words may be: this share of a wall
 	self.text = function (ctx, str, x, y, size, style = {}) {
-		if (!style.exact) size = self.fitSize(ctx, str, size, style.fit || W - 140);   // (style.exact: just that size, not snapped to the scale)
+		// (never wider than 70% of a wall, or style.fit: shrunk exactly, just
+		// enough, rather than a whole step of the scale; style.exact: just
+		// that size)
+		if (!style.exact) {
+			size = snapSize(size);   // (a size on the standard scale, as ever)
+			const fit = Math.min(style.fit || TEXT_FIT * W, TEXT_FIT * W);
+			const wide = measure(ctx, String(str).split('\n').reduce((a, b) => (b.length > a.length ? b : a), ''), size);
+			if (wide > fit) size *= fit / wide;
+		}
 		const fill = textColour(style.fill || TYPE.colours.white);
 		const dark = fill === TYPE.colours.ink;
 		art.text(ctx, str, x, y, {
@@ -683,7 +692,9 @@ window.Showtime = function (stage, opts) {
 	self.slamParts = function (ctx, parts, x, y, size, age, style = {}) {
 		if (age < 0) return;
 		const whole = parts.map((p) => p.text).join('');
-		size = self.fitSize(ctx, whole, size, style.fit || W - 140);
+		const fitW = Math.min(style.fit || TEXT_FIT * W, TEXT_FIT * W);
+		const wideAll = measure(ctx, whole, size);
+		if (wideAll > fitW) size *= fitW / wideAll;   // (no wider than 70% of a wall, shrunk exactly)
 		ctx.save();
 		ctx.font = `400 ${size}px "${style.font || TYPE.font}", sans-serif`;
 		const widths = parts.map((p) => ctx.measureText(p.text).width);
@@ -1019,6 +1030,9 @@ window.Showtime = function (stage, opts) {
 		const hooks = opts.scoreHud || {};
 		const list = scores();
 		const total = n * S.w + (n - 1) * S.gap;
+		// (through the visor check they grow into squares, a visor in each)
+		const sq = beat && beat.id === 'visors' ? easeOut(clamp(bt / 0.5, 0, 1)) : 0;
+		const h = S.h + (S.w - S.h) * sq;
 		self.onWalls(ctx, function (c) {
 			for (let i = 0; i < n; i++) {
 				const score = list[i] || 0;
@@ -1027,13 +1041,13 @@ window.Showtime = function (stage, opts) {
 				const lift = hooks.rise ? clamp(hooks.rise(i), 0, 1) : 0;
 				const grow = 1 + Math.min(S.grow, Math.max(0, (W - 80) / total - 1)) * lift;   // (never wider than the wall)
 				const x = W / 2 + (i * (S.w + S.gap) + S.w / 2 - total / 2) * grow;
-				const y = H - S.h / 2 - S.rise * lift;
+				const y = H - h / 2 - S.rise * lift;
 				const sink = S.sink * (1 - lift);   // (risen clear of the edge, the whole capsule shows)
 				const dim = hooks.dim && hooks.dim(i) && lift <= 0;
 				art.with(c, { x, y, scale: pop * grow, alpha: dim ? S.dim : 1 }, function (c2) {
-					const r = S.h / 2;
+					const r = S.h / 2 + (S.w * 0.16 - S.h / 2) * sq;   // (rounder ends while it's a capsule; softly rounded corners once square)
 					art.save(c2, function (c3) {
-						const x0 = -S.w / 2, y0 = -S.h / 2, x1 = S.w / 2, y1 = S.h / 2 + sink;
+						const x0 = -S.w / 2, y0 = -h / 2, x1 = S.w / 2, y1 = h / 2 + sink;
 						c3.beginPath();
 						c3.moveTo(x0 + r, y0);
 						c3.arcTo(x1, y0, x1, y1, r);
@@ -1045,9 +1059,10 @@ window.Showtime = function (stage, opts) {
 						c3.fill();
 						c3.clip();
 						c3.fillStyle = colour(i);
-						c3.fillRect(x0, S.h / 2 - S.line, S.w, S.line + sink);
+						c3.fillRect(x0, h / 2 - S.line, S.w, S.line + sink);
 					});
-					art.text(c2, fmt(score), 0, -S.line / 2 + 1, { size: S.size, font: FONT, weight: 400, fill: 'white', shadow: { color: 'rgba(0,0,0,0.35)', blur: 0, y: 2 } });   // (in the middle of the dark part, clear of the band)
+					if (beat && beat.id === 'visors' && self.visorInCapsule) self.visorInCapsule(c2, i, S.w, h, S.line);   // (the visor check: their visor in place of their score)
+					else art.text(c2, fmt(score), 0, -S.line / 2 + 1, { size: S.size, font: FONT, weight: 400, fill: 'white', shadow: { color: 'rgba(0,0,0,0.35)', blur: 0, y: 2 } });   // (in the middle of the dark part, clear of the band)
 				});
 			}
 		});
@@ -1772,6 +1787,26 @@ window.Showtime = function (stage, opts) {
 		const missing = () => Array.from({ length: count() }, (_, i) => i).filter((i) => ticked[i] === undefined);
 		self.visorState = () => ({ ticked: ticked.map((t) => t !== undefined), wrong: wrong(), missing: missing(), allSet: allSetAt >= 0 });
 
+		// Each squad visor, in its player's score capsule along the bottom (the
+		// score HUD calls this, in place of the score, through the visor check):
+		// turning, dim until it's ticked off, then bouncing once and lit, with a
+		// gold tick.
+		let visorNow = 0;
+		// (w, h: the square it sits in; line: the band along its bottom. The
+		// visor, peak, band and shadow, spans about 270 by 220 of its own
+		// units, its middle a little below its own origin: centred, it's
+		// lifted by that much)
+		self.visorInCapsule = function (c, i, w, h, line) {
+			const done = ticked[i] !== undefined;
+			const bounce = done ? 1 + 0.25 * Math.max(0, 1 - (visorNow - ticked[i]) / 0.35) : visorNow > V.show ? 1 + 0.05 * Math.sin(visorNow * 6 + i) : 1;
+			const k = Math.min(w * 0.8 / 270, (h - line) * 0.8 / 220) * bounce;
+			c.save();
+			c.translate(0, -line / 2 - 12 * k);   // (the middle of the dark part)
+			c.scale(k, k);
+			visor(c, colour(i), done || visorNow <= V.show ? 1 : 0.55, visorNow * (done ? 3.2 : 1.4) + i * 0.8);
+			c.restore();
+			if (done) art.text(c, '✓', w / 2 - 22, -h / 2 + 22, { size: 30, font: FONT, weight: 400, fill: theme.gold });   // (ticked off: in its corner)
+		};
 		return extend({
 			id: 'visors',
 			length: V.length,
@@ -1818,6 +1853,7 @@ window.Showtime = function (stage, opts) {
 				}
 			},
 			draw(ctx, bt) {
+				visorNow = bt;
 				const n = count();
 				const bad = wrong();
 				const lost = missing();
@@ -1825,9 +1861,8 @@ window.Showtime = function (stage, opts) {
 				self.onWalls(ctx, function (c, wall) {
 					const cx = W / 2;
 					if (allSetAt >= 0) {
-						self.slam(c, 'ALL SET!', cx, 640, 190, bt - allSetAt, { fill: theme.gold, glow: '#ff7a3d' });
-						drawVisorRow(c, cx, V.y, n, bt);
-						return;
+						self.slam(c, 'ALL SET!', cx, 480, 190, bt - allSetAt, { fill: theme.gold, glow: '#ff7a3d' });
+						return;   // (the visors themselves are in the score capsules along the bottom)
 					}
 					// the instructions on one line, all white: the steps under way (and
 					// done) bright, the ones to come dim
@@ -1858,17 +1893,15 @@ window.Showtime = function (stage, opts) {
 						});
 						x += widths[i] * k;
 					});
-					// any wrong visors join the row, after the squad's, marked
-					const xs = drawVisorRow(c, cx, V.y, n, bt, bad);
-					drawFloor(c, cx, 580, 905, n, bt, wall);   // (clear of the score capsules along the bottom)
-					// and the first gets the big flag underneath it, over everything
+					// (the squad's visors are in the score capsules along the bottom: see visorInCapsule)
+					drawFloor(c, cx, 400, 790, n, bt, wall);   // (clear of the square capsules along the bottom)
+					// a wrong visor in play gets the big flag, over everything
 					if (bad.length) {
 						const i = bad[0];
 						const flash = 0.75 + 0.25 * Math.sin(bt * 12);
 						const w = 760;
-						const fx = clamp(xs[i], w / 2 + 30, W - w / 2 - 30);
-						const top = V.y + 175;
-						art.poly(c, [[xs[i] - 34, top + 4], [xs[i], top - 40], [xs[i] + 34, top + 4]], { fill: '#ff3d6a', alpha: flash });
+						const fx = W / 2;
+						const top = 300;
 						art.roundRect(c, fx - w / 2, top, w, 250, 40, { fill: 'rgba(40,0,8,0.95)', stroke: '#ff3d6a', lineWidth: 10, alpha: flash });
 						self.text(c, 'WRONG VISOR!', fx, top + 62, 76, { fill: '#ff5470', glow: '#ff3d6a', fit: w - 60 });
 						self.text(c, self.nameOf(i) + ' ISN\'T PLAYING', fx, top + 140, 50, { fill: lit(i), fit: w - 60 });
@@ -2098,7 +2131,7 @@ window.Showtime = function (stage, opts) {
 			glow(1, 0, 1, 1, 0.7);
 			c.restore();
 			// the circle, pulsing, lying on the floor
-			const r = V.zone.r * (1 + 0.04 * Math.sin(bt * 5));
+			const r = V.zone.r;   // (steady: no pulse)
 			const ring = [];
 			for (let a = 0; a <= 48; a++) ring.push(at(V.zone.px + Math.cos(a / 48 * Math.PI * 2) * r, V.zone.pz + Math.sin(a / 48 * Math.PI * 2) * r));
 			path(ring);

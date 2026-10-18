@@ -1368,6 +1368,7 @@ IGB.register('backrooms', function BackroomsGame(stage, playersMeta) {
 				const out = 1 - between(bt, E.length - 0.5, E.length);
 				show.onWalls(ctx, function (c) {
 					show.slam(c, 'LEVEL 0', W / 2, 450, 260, bt - E.title, { fill: YELLOW, glow: '#c9a227', alpha: out });
+					show.slam(c, 'YOU ARE NOT ALONE', W / 2, 620, 70, bt - E.title - 0.6, { fill: 'white', alpha: out });   // (the boss intro's byline)
 				});
 			},
 		},

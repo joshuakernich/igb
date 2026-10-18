@@ -4417,6 +4417,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 				show.onWalls(ctx, function (c) {
 					// her name, in the middle of the wall, over her
 					show.slam(c, 'YOUNG-HEE', W / 2, 470, 220, bt - E.name, { fill: PINK, glow: PINK, alpha: out });
+					show.slam(c, 'SHE SEES EVERYTHING', W / 2, 610, 56, bt - E.name - 0.4, { fill: 'white', alpha: out });   // (the boss intro's byline)
 					const go = 1 - between(bt, E.length - 0.4, E.length);
 					show.slam(c, 'ROUND 1', W / 2, 330, 90, bt - E.round, { fill: PINK, alpha: go });
 					show.slam(c, 'GREEN LIGHT!', W / 2, 500, 200, bt - E.go, { fill: '#27d96b', glow: '#27d96b', rotate: -0.05, alpha: go });

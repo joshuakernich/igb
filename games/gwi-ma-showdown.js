@@ -1507,6 +1507,7 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 				const out = 1 - between(bt, E.pull + 0.3, E.pull + 0.8);
 				show.onWalls(ctx, function (c) {
 					show.slam(c, 'GWI-MA', W / 2, 840, 230, bt - E.name, { fill: '#ff4fd8', glow: '#ff3d7a', alpha: out });
+					show.slam(c, 'THE DEMON KING', W / 2, 950, 60, bt - E.name - 0.4, { fill: '#ffe14d', alpha: out });   // (the boss intro's byline)
 					show.slam(c, 'FIGHT!', W / 2, 520, 300, bt - E.fight, { fill: '#ffe14d', glow: '#ff7a3d', rotate: -0.06, alpha: 1 - between(bt, E.length - 0.4, E.length) });
 				});
 			},
