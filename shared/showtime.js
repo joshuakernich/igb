@@ -3318,7 +3318,7 @@ window.Showtime = function (stage, opts) {
 
 		// Every wall shows the same thing; any wall's tap counts for all.
 		// dir: 1, the old block flies up off the walls as the new one flies in
-		// from below (-1, the other way: back); 0, straight swap
+		// from below; 0, a straight swap
 		const SWAP = { time: 0.6, ease: 'cubic-bezier(.55,0,.25,1)' };
 		function render(dir = 0) {
 			const $old = $layer;
@@ -3367,7 +3367,7 @@ window.Showtime = function (stage, opts) {
 		}
 
 		// Why the low rating, in steps: the reason (tap one), then, for those
-		// with more to say, which of them (tap one, or BACK). feedback.reasons:
+		// with more to say, which of them (tap one; no going back). feedback.reasons:
 		// [reason] or [reason, detail].
 		let topic = null;   // the reason picked, while its details are asked
 		function reasons($wall) {
@@ -3392,12 +3392,6 @@ window.Showtime = function (stage, opts) {
 					feedback.reasons = [topic.label, detail];
 					finish();
 				});
-			});
-			tap(pill('◀ BACK', false, { marginTop: '16px' }).attr('back', '').appendTo($wall), function () {
-				topic = null;
-				feedback.reasons = [];
-				partAt = self.bt;
-				render(-1);
 			});
 		}
 
