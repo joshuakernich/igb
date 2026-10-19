@@ -3381,7 +3381,7 @@ window.Showtime = function (stage, opts) {
 	// BOOK ANOTHER SESSION AT THE KIOSK. The game hands back as it starts
 	// (extra.enter is the place to call IGB.complete).
 	beatsLib.end = function (extra) {
-		const CAROUSEL = { w: 1120, h: 700, side: 640, small: 0.28, title: 84, every: 2.8, words: 50, kiosk: 40, margin: 22, top: 60 };   // (a card's screenshot size; on each wall, how far its side cards sit from the middle one, and how small they are; the title's size on the featured card; seconds between steps; words: the end's lines' size; kiosk: the kiosk line's, small below them; margin: their extra room from the cards; top: how far down the cards start)
+		const CAROUSEL = { w: 1296, h: 810, side: 668, small: 0.2, title: 92, every: 2.8, words: 50, kiosk: 40, top: 50 };   // (a card's screenshot size; on each wall, how far its side cards sit from the middle one, and how small they are; the title's size on the featured card; seconds between steps; words: the end's lines' size; kiosk: the kiosk line's, small below them; top: how far down the cards start)
 		let $layer = null;
 		const games = () => (IGB.menu || []).filter((id) => !RATE.notAgain.includes(id) && id !== opts.id).map((id) => IGB.find(id)).filter(Boolean);   // (the others: they've just played this one)
 
@@ -3432,9 +3432,10 @@ window.Showtime = function (stage, opts) {
 					fontSize: size + 'px', letterSpacing: '2px', lineHeight: 1.05, textAlign: 'center', maxWidth: W * TEXT_FIT + 'px', textWrap: 'balance', color: colour,
 					textShadow: `0 ${Math.round(size * 0.09)}px 0 rgba(0,0,0,0.5)`, WebkitTextStroke: `${Math.max(4, Math.round(size * 0.1))}px ${theme.ink}`, paintOrder: 'stroke fill',
 				});
-				$space = $('<div>').css({ height: cardH + 'px', width: '10px', margin: CAROUSEL.margin + 'px 0' }).appendTo($wall);   // (room for the cards, flowing past behind)
-				// the kiosk: book another session
-				words('BOOK ANOTHER SESSION AT THE KIOSK', TYPE.colours.gold, CAROUSEL.kiosk).attr('kiosk', '').appendTo($wall);
+				$space = $('<div>').css({ height: cardH + 'px', width: '10px', flex: 'none' }).appendTo($wall);   // (room for the cards, flowing past behind)
+				// the kiosk: book another session, in the middle of the room left under the cards
+				const $rest = $('<div>').css({ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }).appendTo($wall);
+				words('BOOK ANOTHER SESSION AT THE KIOSK', TYPE.colours.gold, CAROUSEL.kiosk).attr('kiosk', '').appendTo($rest);
 			}
 			if (!list.length) return;
 			// the cards: one long line of them across all three walls, three to a
