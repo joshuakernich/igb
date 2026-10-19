@@ -1782,16 +1782,20 @@ window.Showtime = function (stage, opts) {
 	// The sting: the In Gamebox logo animation (assets/shared/sting.mp4, made
 	// for a four-walled box: its first three walls on ours), its black keyed out
 	// over the game's dimmed scene, with its sound; then on.
-	const STING = { src: 'assets/shared/sting.mp4', walls: 4, aspect: 6, most: 6, lead: 1.0, fade: 1.0 };   // the video, made for four walls, its width to its height; on regardless after this long (if it can't play); how long before its end it starts fading, revealing the title as it goes, and how long the fade takes
+	const STING = { src: 'assets/shared/sting.mp4', walls: 4, aspect: 6, most: 6, lead: 1.0 };   // the video, made for four walls, its width to its height; on regardless after this long (if it can't play); how long before its end the title starts under it (it plays on to its end, no fade)
 	beatsLib.sting = function (extra) {
 		let $video = null, ended = false;
-		// (the title starts under it as it fades: it's let go of, fades, and goes)
+		// (the title starts under it for its last second: it's let go of, plays
+		// out to its end, no fade, and goes)
 		const letGo = function () {
 			if (!$video) return;
 			const $v = $video;
 			$video = null;
-			$v.css({ transition: `opacity ${STING.fade}s linear`, opacity: 0 });
-			stage.timeout(() => { $v.find('video')[0].pause(); $v.remove(); }, STING.fade * 1000 + 100);
+			const v = $v.find('video')[0];
+			const gone = () => { v.pause(); $v.remove(); };
+			if (!v || v.ended || !v.duration) return gone();
+			$(v).on('ended error', gone);
+			stage.timeout(gone, (v.duration - v.currentTime) * 1000 + 300);   // (in case it never says it's ended)
 		};
 		return extend({
 			id: 'sting',
