@@ -55,6 +55,22 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	let latest = [];
 	let t = 0;
 
+	// The host: a warm, husky voice designed in ElevenLabs ("UX Demo Host"),
+	// reading out what's on the walls as it's shown (assets/show-debug/vo). One line at a time.
+	const upTo10 = (name) => Array.from({ length: 10 }, (_, i) => name + (i + 1));
+	const VOICE = ['title', 'clock', 'visors', 'allset', 'step_grab', 'step_switch', 'good', 'gob_name', 'gob_line',
+		...upTo10('round'), ...upTo10('clear'), 'timeup', 'scores', 'rankings', 'win0', 'win1', 'win2', 'win3', 'win4', 'win5', 'tie',
+		'team', 'board', 'rate', 'thanks'];
+	const VOICE_SOUNDS = Object.fromEntries(VOICE.map((id) => ['vo_' + id, [`assets/show-debug/vo/${id}.mp3`, 1]]));
+	let speaking = null;
+	let saidAllSet = false;
+	function voice(id) {
+		if (!VOICE.includes(id)) return;
+		if (speaking) show.stop(speaking);
+		speaking = 'vo_' + id;
+		show.play(speaking);
+	}
+
 	const show = new Showtime(stage, {
 		id: 'show-debug',
 		seconds: GAME_SECONDS,
@@ -64,6 +80,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		rivals: ['Stage Left', 'The Understudies', 'Cue Lights', 'Run Of Show', 'Places Please', 'Tech Week',
 			'Final Dress', 'House Open', 'Blackout Crew', 'The Blocking'],
 		music: false,   // quiet while stepping through
+		sounds: VOICE_SOUNDS,   // the host's lines (see voice)
 		menu: { jumps: false },   // (its own beat jumps, on the debug screen: see below)
 	});
 
@@ -78,8 +95,8 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 
 	const TUTORIAL_NICE = 1.2;   // seconds a done step shows (its caption green) before the next
 	const TUTORIAL = [
-		{ caption: 'GRAB THE WHITE CYLINDERS', min: 2, max: 10, did: () => everyone((i) => (scores[i] || 0) >= 1) },
-		{ caption: 'TAP ANY WALL TO SWITCH WALLS', min: 2, max: 12, did: () => everyone((i) => switched[i]) },
+		{ caption: 'GRAB THE WHITE CYLINDERS', vo: 'step_grab', min: 2, max: 10, did: () => everyone((i) => (scores[i] || 0) >= 1) },
+		{ caption: 'TAP ANY WALL TO SWITCH WALLS', vo: 'step_switch', min: 2, max: 12, did: () => everyone((i) => switched[i]) },
 	];
 	const tut = { i: 0, age: 0, done: false, doneAge: 0 };
 	const switched = [];   // who has switched walls in the tutorial
@@ -87,7 +104,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	function tutStep(i) {
 		Object.assign(tut, { i, age: 0, done: false, doneAge: 0 });
 		if (i === 0) switched.length = 0;
-		if (TUTORIAL[i]) show.fx('stepIn');
+		if (TUTORIAL[i]) { show.fx('stepIn'); voice(TUTORIAL[i].vo); }
 	}
 
 	/* ---------- the beats ---------- */
@@ -96,9 +113,19 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		{ id: 'squad', length: Infinity },
 		show.beats.titleDrop({
 			// (its lines: the manifest's title, shared with the end screen's carousel)
+			update() { if (show.cue(1.1)) voice('title'); },
 		}),
-		show.beats.clockIntro(),
-		show.beats.visors(),
+		show.beats.clockIntro({
+			update() { if (show.cue(0.6)) voice('clock'); },
+		}),
+		show.beats.visors({
+			enter() { saidAllSet = false; },
+			update() {
+				if (show.cue(0.6)) voice('visors');
+				const v = show.visorState && show.visorState();
+				if (v && v.allSet && !saidAllSet) { saidAllSet = true; voice('allset'); }
+			},
+		}),
 		// the tutorial: out on the plane, each step's caption over every wall
 		// until everyone has done it (or its time's up): grab a cylinder, then
 		// tap a wall to switch to it
@@ -115,7 +142,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 				const step = TUTORIAL[tut.i];
 				if (!step) return;
 				tut.age += dt;
-				if (!tut.done && tut.age >= step.min && step.did()) { tut.done = true; show.fx('pick', 0.8); }
+				if (!tut.done && tut.age >= step.min && step.did()) { tut.done = true; show.fx('pick', 0.8); voice('good'); }
 				if (tut.done) tut.doneAge += dt;
 				if ((tut.done && tut.doneAge >= TUTORIAL_NICE) || tut.age >= step.max) tutStep(tut.i + 1);
 			},
@@ -141,6 +168,8 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 				gob.y = Math.max(0, GOB.drop * (1 - bt / GOB_IN.land) ** 2 * (bt < GOB_IN.land ? 1 : 0));
 				if (show.cue(GOB_IN.land)) { show.fx('stomp'); show.shake = 0.6; }
 				if (show.cue(GOB_IN.name)) show.fx('beat');
+				if (show.cue(GOB_IN.name - 0.1)) voice('gob_name');
+				if (show.cue(GOB_IN.line)) voice('gob_line');
 			},
 			draw(ctx, bt) {
 				show.onWalls(ctx, function (c) {
@@ -173,15 +202,32 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 				});
 			},
 		},
-		show.beats.timeUp(),
-		show.beats.scores(),
-		show.beats.rank(),
-		show.beats.team(),
-		show.beats.board(),
+		show.beats.timeUp({
+			update() { if (show.cue(0.2)) voice('timeup'); },
+		}),
+		show.beats.scores({
+			update() { if (show.cue(0.15)) voice('scores'); },
+		}),
+		show.beats.rank({
+			update() {
+				if (show.cue(0.2)) voice('rankings');
+				// at the winner's moment: who won, or a tie
+				const best = Math.max(...scores);
+				if (show.winnerAt && show.cue(show.winnerAt + 0.1)) voice(scores.filter((v) => v === best).length > 1 ? 'tie' : 'win' + scores.indexOf(best));
+			},
+		}),
+		show.beats.team({
+			update() { if (show.cue(0.95)) voice('team'); },
+		}),
+		show.beats.board({
+			update() { if (show.cue(0.1)) voice('board'); },
+		}),
 		show.beats.replay(),
-		show.beats.rate(),
+		show.beats.rate({
+			enter() { voice('rate'); },   // HOW WAS IT?
+		}),
 		show.beats.end({
-			enter() { IGB.complete(scoresToRewards(scores)); },
+			enter() { voice('thanks'); IGB.complete(scoresToRewards(scores)); },
 		}),
 	]);
 
@@ -303,6 +349,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	function startRound(n) {
 		Object.assign(round, { n, phase: 'intro', at: t, toDrop: ROUND.first + n * ROUND.more });
 		show.fx('roundStart');
+		voice('round' + (n + 1));   // (up to round ten; quiet after)
 	}
 	function stepRound(dt) {
 		const age = t - round.at;
@@ -312,7 +359,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 			while (nextCube <= 0 && round.toDrop > 0) { dropCube(); round.toDrop--; nextCube += ROUND.gap; }
 			if (round.toDrop <= 0) Object.assign(round, { phase: 'go', at: t });
 		}
-		if (round.phase === 'go' && !cubes.length) { Object.assign(round, { phase: 'clear', at: t }); show.fx('roundClear'); }
+		if (round.phase === 'go' && !cubes.length) { Object.assign(round, { phase: 'clear', at: t }); show.fx('roundClear'); voice('clear' + (round.n + 1)); }
 		if (round.phase === 'clear' && age >= ROUND.clear) startRound(round.n + 1);
 	}
 

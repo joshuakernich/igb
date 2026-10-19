@@ -2919,6 +2919,7 @@ window.Showtime = function (stage, opts) {
 				reveal = [];
 				for (let p = 0; p < n; p++) reveal[p] = riseAt(p) + RESULT.move;
 				winnerAt = Math.max(0, ...reveal) + RANK.crown;
+				self.winnerAt = winnerAt;   // (for a game's own call at the winner's moment)
 				self.fx('whooshLong', 0.6);
 			},
 			update(dt, bt) {
