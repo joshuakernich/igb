@@ -1666,8 +1666,8 @@ window.Showtime = function (stage, opts) {
 	// settles (no flash), then the START button fading in (or a hold, and
 	// out). lines: [{ text, fill, glow }]. Never a byline under it.
 	// The sting: the In Gamebox logo animation (assets/shared/sting.mp4, made
-	// for all three walls), full screen on black, with its sound; then on.
-	const STING = { src: 'assets/shared/sting.mp4', most: 6, fade: 0.8 };   // the video; on regardless after this long (if it can't play); how long before its end it starts fading, revealing the title as it goes
+	// for a four-walled box: its first three walls on ours), on black, with its sound; then on.
+	const STING = { src: 'assets/shared/sting.mp4', walls: 4, aspect: 6, most: 6, fade: 0.8 };   // the video, made for four walls, its width to its height; on regardless after this long (if it can't play); how long before its end it starts fading, revealing the title as it goes
 	beatsLib.sting = function (extra) {
 		let $video = null, ended = false;
 		// (the title starts under it as it fades: it's let go of, fades, and goes)
@@ -1676,7 +1676,7 @@ window.Showtime = function (stage, opts) {
 			const $v = $video;
 			$video = null;
 			$v.css({ transition: `opacity ${STING.fade}s linear`, opacity: 0 });
-			stage.timeout(() => { $v[0].pause(); $v.remove(); }, STING.fade * 1000 + 100);
+			stage.timeout(() => { $v.find('video')[0].pause(); $v.remove(); }, STING.fade * 1000 + 100);
 		};
 		return extend({
 			id: 'sting',
@@ -1686,15 +1686,21 @@ window.Showtime = function (stage, opts) {
 			enter() {
 				ended = false;
 				self.blackout = 1;
-				if ($video) { $video[0].pause(); $video.remove(); }
-				$video = $('<video playsinline preload="auto">').attr('src', STING.src).css({
-					position: 'absolute', left: 0, top: 0, width: 3 * W + 'px', height: H + 'px', objectFit: 'contain', background: '#000', zIndex: 25, pointerEvents: 'none', opacity: 1,
-				}).appendTo(stage.$ui).on('ended error', () => { ended = true; });
-				$video[0].play().catch(() => { ended = true; });
+				if ($video) { $video.find('video')[0].pause(); $video.remove(); }
+				// (it's made for a four-walled box: shown so its first three walls fill
+				// ours, wall for wall, and its fourth runs off past our right wall)
+				$video = $('<div>').css({
+					position: 'absolute', left: 0, top: 0, width: 3 * W + 'px', height: H + 'px', overflow: 'hidden', background: '#000', zIndex: 25, pointerEvents: 'none', opacity: 1,
+				}).appendTo(stage.$ui);
+				const vh = STING.walls * W / STING.aspect;
+				const $v = $('<video playsinline preload="auto">').attr('src', STING.src).css({
+					position: 'absolute', left: 0, top: (H - vh) / 2 + 'px', width: STING.walls * W + 'px', height: vh + 'px',
+				}).appendTo($video).on('ended error', () => { ended = true; });
+				$v[0].play().catch(() => { ended = true; });
 			},
 			update() {
 				self.blackout = 1;
-				const v = $video && $video[0];
+				const v = $video && $video.find('video')[0];
 				if (v && v.duration && v.currentTime >= v.duration - STING.fade) ended = true;   // (on to the title while it fades)
 			},
 			exit: letGo,
