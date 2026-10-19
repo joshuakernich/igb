@@ -2701,7 +2701,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// behind, white trim, their number on the back, their player colour on a
 	// ring round their feet. On red light the whole body tilts toward the
 	// player's drift; shot, they topple sideways.
-	const FLASH = { time: 0.35, strength: 2 };   // a contestant's flash on picking something up: how long it fades over (seconds), how many times over it lights them
+	const FLASH = { time: 0.2, box: 320, feet: 0.8 };   // a contestant's flash on picking something up: how long they're white (seconds); the scratch canvas it's drawn in (figure units, square) and how far down it their feet are
+	let flashCanvas = null;
+	const MARKER = { size: 24, lift: 60 };   // the arrow over each contestant's head: its half-width (figure units), and how far over their head it floats
 	function drawContestant(ctx, c) {
 		const colour = PLAYER_COLORS[c.n];
 		const ground = at(c.x, c.f, 0, c.wall);
@@ -2752,12 +2754,23 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		else if (rigs.back) castShape(ctx, shapeOf('contestant', (g) => assemble(g, rigs.back, { pose: 'stand' }), 160, 150), ground.x, ground.y, c.f, s * Math.max(0.6, air), alpha * Math.max(0.3, air), 18 * s * air);
 		else softShadow(ctx, ground.x, ground.y, 22 * s * air, 8 * s * air, 0.35, alpha, 108 * s * air, c.f);
 		art.with(ctx, { x: p.x, y: p.y, scale: s, scaleY, rotate, alpha }, body);
-		// just picked something up: they flash, lit up (their own picture added over itself)
+		// just picked something up: they flash, the whole figure solid white (their picture, filled in)
 		const flash = c.flashAt === undefined ? 0 : 1 - (clock - c.flashAt) / FLASH.time;
 		if (flash > 0) {
+			const w = Math.ceil(FLASH.box * s), h = w;
+			if (!flashCanvas) flashCanvas = document.createElement('canvas');
+			if (flashCanvas.width < w || flashCanvas.height < h) { flashCanvas.width = Math.max(flashCanvas.width, w); flashCanvas.height = Math.max(flashCanvas.height, h); }
+			const fc = flashCanvas.getContext('2d');
+			fc.setTransform(1, 0, 0, 1, 0, 0);
+			fc.globalCompositeOperation = 'source-over';
+			fc.clearRect(0, 0, w, h);
+			art.with(fc, { x: w / 2, y: h * FLASH.feet, scale: s, scaleY, rotate }, body);
+			fc.globalCompositeOperation = 'source-in';
+			fc.fillStyle = 'white';
+			fc.fillRect(0, 0, w, h);
 			ctx.save();
-			ctx.globalCompositeOperation = 'lighter';
-			for (let k = 0; k < FLASH.strength; k++) art.with(ctx, { x: p.x, y: p.y, scale: s, scaleY, rotate, alpha: alpha * Math.min(1, flash * 1.5) }, body);
+			ctx.globalAlpha = alpha;
+			ctx.drawImage(flashCanvas, 0, 0, w, h, p.x - w / 2, p.y - h * FLASH.feet, w, h);
 			ctx.restore();
 		}
 
@@ -2772,8 +2785,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		if (!c.alive) return;
 		// over their head: a marker in their colour
 		const bob = Math.sin(clock * 4 + c.n) * 4;
-		const top = p.y - (animReady('back') ? animHeight('back') + 30 : rigs.back ? figure('back').height + 34 : sheets.act ? 148 : 175) * s + bob * s;   // (just over their head, however tall the figure is)
-		art.poly(ctx, [[p.x - 14 * s, top - 14 * s], [p.x + 14 * s, top - 14 * s], [p.x, top + 4 * s]], { fill: colour, alpha });
+		const top = p.y - (animReady('back') ? animHeight('back') + MARKER.lift : rigs.back ? figure('back').height + MARKER.lift + 4 : sheets.act ? 118 + MARKER.lift : 145 + MARKER.lift) * s + bob * s;   // (over their head, however tall the figure is)
+		const m = MARKER.size * s;
+		art.poly(ctx, [[p.x - m, top - m], [p.x + m, top - m], [p.x, top + m * 0.3]], { fill: colour, alpha });
 	}
 
 	// Where the player really is, 1:1, even when a block holds the avatar back
