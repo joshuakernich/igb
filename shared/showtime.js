@@ -216,6 +216,7 @@ window.Showtime = function (stage, opts) {
 		raised: 370,           // with a START button: the title's middle, raised to make room (under the logo)
 		logo: { src: 'assets/shared/igb-logo.png', w: 420, top: 50, outline: 7, drop: 9, tilt: -0.05, bob: [7, 1.6], sway: [0.012, 1.1] },   // the Immersive Gamebox logo along the top: its width, how far down; its ink outline and drop (as the words have); tilted (radians), floating up and down (px, speed) and swaying (radians, speed)
 		startGap: 50,          // and the gap between its last line and the START button
+		auto: 10,              // the START button presses itself after this many seconds (its icon counts down)
 	};
 
 	/* ---------- tuning: the corner clock ---------- */
@@ -1747,7 +1748,7 @@ window.Showtime = function (stage, opts) {
 		// false: it plays through and moves on by itself)
 		const start = !(extra && extra.start === false);   // (by default it waits for START)
 		let startedAt = -1;
-		let $start = null;
+		let $start = null, $count = null, shownAt = 0;
 		let now = 0;   // (the beat's time, for the button's click)
 		const length = start ? Infinity : lastLand + T.hold + T.out;
 		const outAt = () => (start ? (startedAt < 0 ? Infinity : startedAt) : length - T.out);
@@ -1768,10 +1769,20 @@ window.Showtime = function (stage, opts) {
 				now = bt;
 				// the START button, on the front wall under the title
 				if (start && !$start && startedAt < 0 && bt > lastLand - 0.6) {   // (fading in as the last line settles)
-					$start = $('<button start>').text('START').css({
+					shownAt = bt;
+					// (its icon, snug in its right end as the pause menu's rows have theirs: a
+					// countdown in a circle, the seconds left in it and a ring running down;
+					// at nought it presses itself)
+					const D = PAUSE.row.h - 10 - PAUSE.row.inset * 2;
+					const gold = TYPE.colours.gold;
+					$count = $(`<svg viewBox="0 0 100 100" width="${D}" height="${D}" style="display:block;flex:none">`
+						+ `<circle cx="50" cy="50" r="44" fill="none" stroke="${gold}" stroke-opacity="0.25" stroke-width="10"/>`
+						+ `<circle class="ring" cx="50" cy="50" r="44" fill="none" stroke="${gold}" stroke-width="10" stroke-linecap="round" pathLength="100" stroke-dasharray="100 100" transform="rotate(-90 50 50)"/>`
+						+ `<text class="secs" x="50" y="52" text-anchor="middle" dominant-baseline="middle" font-family="${CLOCK_FONT}, monospace" font-size="52" fill="${gold}">${TITLE.auto}</text></svg>`);
+					$start = $('<button start>').append($('<span>').text('START').css({ flex: 1, textAlign: 'left' })).append($count).css({
 						position: 'absolute', left: (W + W / 2) + 'px', top: startTop() + 'px', transform: 'translate(-50%, -50%)', opacity: 0,
-						// (the same size as the pause menu's buttons)
-						width: PAUSE.row.w + 'px', height: PAUSE.row.h + 'px', boxSizing: 'border-box', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+						// (the same size and shape as the pause menu's buttons: the word on the left, the icon snug in the right end)
+						width: PAUSE.row.w + 'px', height: PAUSE.row.h + 'px', boxSizing: 'border-box', padding: `0 ${PAUSE.row.inset}px 0 52px`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px',
 						borderRadius: PAUSE.row.h / 2 + 'px', cursor: 'pointer', pointerEvents: 'auto', zIndex: 5, ...button(TYPE.colours.gold, PAUSE.row.size),
 						fontFamily: `"${FONT}", sans-serif`, fontSize: PAUSE.row.size + 'px', lineHeight: 1, letterSpacing: '2px',
 						transition: `transform 0.25s, opacity ${T.startFade}s`,
@@ -1784,6 +1795,13 @@ window.Showtime = function (stage, opts) {
 							dropStart();
 						});
 					stage.timeout(() => $start && $start.css({ opacity: 1 }), 30);   // (it fades in)
+				}
+				// counting down; at nought it presses itself
+				if ($start && $count && startedAt < 0) {
+					const left = Math.max(0, TITLE.auto - (bt - shownAt));
+					$count.find('.secs').text(Math.ceil(left));
+					$count.find('.ring').attr('stroke-dasharray', `${(left / TITLE.auto) * 100} 100`);
+					if (left <= 0) $start.trigger('click');
 				}
 			},
 			draw(ctx, bt) {
