@@ -702,7 +702,7 @@ window.Showtime = function (stage, opts) {
 			if (wide > fit) size *= fit / wide;
 		}
 		const fill = style.exact ? style.fill : textColour(style.fill || TYPE.colours.white);   // (style.exact: that colour as it is, not the palette's nearest)
-		const dark = fill === TYPE.colours.ink;
+		const dark = fill === TYPE.colours.ink || style.plain;   // (style.plain: no outline, no drop)
 		art.text(ctx, str, x, y, {
 			size, font: style.font || TYPE.font, weight: 400, fill,
 			outline: dark ? null : TYPE.colours.ink, outlineWidth: dark ? 0 : Math.max(4, size * 0.07),
@@ -2406,7 +2406,7 @@ window.Showtime = function (stage, opts) {
 			// the floor, with a grid across it
 			path(corners);
 			c.closePath();
-			c.fillStyle = 'rgba(12,4,30,0.8)';
+			c.fillStyle = 'rgba(78,28,140,0.88)';   // (the stage: purple)
 			c.fill();
 			c.strokeStyle = 'rgba(255,255,255,0.14)';
 			c.lineWidth = 2;
@@ -2435,9 +2435,9 @@ window.Showtime = function (stage, opts) {
 					const ha = V.floor.wall * a.k, hb = V.floor.wall * b.k;
 					const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 					const g = c.createLinearGradient(mid.x, mid.y, mid.x, mid.y - (ha + hb) / 2);
-					g.addColorStop(0, `rgba(120,230,255,${0.75 * bright})`);
-					g.addColorStop(0.25, `rgba(90,180,255,${0.35 * bright})`);
-					g.addColorStop(1, 'rgba(60,120,255,0)');
+					g.addColorStop(0, `rgba(255,130,225,${0.8 * bright})`);   // (the walls glowing pink)
+					g.addColorStop(0.25, `rgba(255,90,205,${0.38 * bright})`);
+					g.addColorStop(1, 'rgba(255,60,190,0)');
 					c.beginPath();
 					c.moveTo(a.x, a.y);
 					c.lineTo(b.x + 0.5, b.y);
@@ -2466,7 +2466,7 @@ window.Showtime = function (stage, opts) {
 			c.stroke();
 			c.restore();
 			const label = up({ x: cx, y: top }, far / near * 0.5);
-			self.text(c, ['LEFT WALL', 'FRONT', 'RIGHT WALL'][wall], label.x, label.y, 26, { fill: 'white', outlineWidth: 4, glow: 'transparent' });
+			self.text(c, ['LEFT WALL', 'FRONT', 'RIGHT WALL'][wall], label.x, label.y, 26, { fill: '#ff82e1', exact: true, plain: true });   // (the wall's name, the walls' pink, plain)
 			// everyone in play, a worm each, far ones smaller (and drawn first)
 			const shown = slots().map((p, i) => ({ p, i })).filter(({ p, i }) => p && p.px !== undefined && (motion[i] > V.moving || ticked[i] !== undefined));
 			const seen = (p) => viewOf(wall, clamp(p.px, 0, 1), clamp(p.pz, 0, 1));
