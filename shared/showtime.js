@@ -2893,12 +2893,12 @@ window.Showtime = function (stage, opts) {
 					self.text(c, mmss(SECONDS - gameT), 200, 92, 64, { fill: 'white', font: CLOCK_FONT });
 					// a REC dot, for the camera at the back
 					if (Math.floor(bt * 2) % 2 === 0) art.circle(c, 200 - 150, 92, 14, { fill: '#ff3a3a' });
-					// the timeline, with the big moments marked
-					const bx0 = 260;
-					const bx1 = W - 260;
-					const by = 935;
-					art.roundRect(c, bx0, by - 9, bx1 - bx0, 18, 9, { fill: 'rgba(255,255,255,0.15)' });
-					art.roundRect(c, bx0, by - 9, Math.max(18, (bx1 - bx0) * k), 18, 9, { fill: theme.accent });
+					// the timeline, along the window's bottom edge, edge to edge, with the big moments marked
+					const bx0 = 0;
+					const bx1 = W;
+					const by = H - 12;
+					art.rect(c, bx0, by - 12, bx1 - bx0, 24, { fill: 'rgba(0,0,0,0.45)' });
+					art.rect(c, bx0, by - 12, (bx1 - bx0) * k, 24, { fill: theme.accent });
 					for (const m of marks) {
 						const mk = (m - data[0].t) / span;
 						const past = mk <= k;
