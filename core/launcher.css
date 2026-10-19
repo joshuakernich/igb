@@ -236,30 +236,116 @@ igb-label {
 
 /* ---------- controls and log ---------- */
 
-igb-controls {
+igb-log {
+	display: none;
+}
+
+/* ---------- menu (on the front wall, in world units) ---------- */
+
+/* Centred on the front wall, both ways. */
+igb-menu {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-content: center;
+	position: absolute;
+	left: 1600px;
+	top: 0;
+	width: 1600px;
+	height: 1000px;
+	box-sizing: border-box;
+	padding: 72px;
+	white-space: normal;
+}
+
+/* No panels: the folders melt away, and the apps from every folder flow
+   together, big, straight on the background. */
+igb-folder {
+	display: contents;
+}
+
+igb-folder h1 {
+	display: none;
+}
+
+igb-folder .app {
+	display: inline-block;
+	position: relative;
+	vertical-align: top;
+	width: 200px;
+	margin: 24px 18px 72px;   /* six to a row on the front wall */
+	color: white;
+	text-align: center;
+	text-decoration: none;
+	font-size: 26px;
+}
+
+igb-icon {
+	display: block;
+	width: 200px;
+	height: 200px;
+	border-radius: 40px;
+	background: #999 center / cover;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+	color: rgba(255, 255, 255, 0.8);
+	font-size: 72px;
+	line-height: 200px;
+}
+
+igb-label {
 	display: block;
 	position: absolute;
+	left: -12px;
+	right: -12px;
+	margin-top: 14px;
+	font-weight: 600;
+	white-space: normal;
+	text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+/* ---------- controls and log ---------- */
+
+/* Home and restart: a panel on the right wall's edge, halfway down, the
+   mirror of the show's pause panel on the left (sunk into the edge, a purple
+   band along it, its buttons the standard round ones: dark glass, a purple
+   ring and symbol). Sized in world units: the walls are 4800 across 100vw,
+   so a world pixel is 100vw / 4800. */
+igb-controls {
+	--u: calc(100vw / 4800);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: calc(16 * var(--u));
+	position: absolute;
 	right: 0;
-	top: 0;
-	margin: 2vw;
+	top: calc(500 * var(--u));
+	transform: translateY(-50%);
+	width: calc(130 * var(--u));
+	box-sizing: border-box;
+	padding: calc(20 * var(--u)) calc(7 * var(--u)) calc(20 * var(--u)) 0;
+	border-radius: calc(65 * var(--u)) 0 0 calc(65 * var(--u));
+	background: rgba(0, 0, 0, 0.6);
+	box-shadow: inset calc(-7 * var(--u)) 0 0 0 #b46bff;
 	z-index: 1000;
 }
 
 igb-controls button {
-	display: block;
-	width: 2vw;
-	height: 2vw;
-	margin-bottom: 0.5vw;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: calc(92 * var(--u));
+	height: calc(92 * var(--u));
+	margin: 0;
 	padding: 0;
-	border: none;
-	border-radius: 1vw;
-	background: rgba(255, 255, 255, 0.5);
-	color: white;
+	box-sizing: border-box;
+	border: calc(5 * var(--u)) solid #b46bff;
+	border-radius: 50%;
+	background: rgba(0, 0, 0, 0.92);
+	color: #b46bff;
 	font: inherit;
-	font-size: 1.5vw;
-	line-height: 1.8vw;
-	box-shadow: 0 1px 0 black;
-	text-shadow: 0 -1px black;
+	font-size: calc(52 * var(--u));
+	line-height: 1;
+	box-shadow: 0 calc(6 * var(--u)) 0 rgba(0, 0, 0, 0.45);
 	cursor: pointer;
 }
 
