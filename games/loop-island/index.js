@@ -332,18 +332,23 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 				x.fillRect(i * 16, j * 16, 16, 16);
 				x.fillRect(i * 16, 128 + j * 16, 16, 16);
 			}
-			x.fillStyle = '#ff3d6e';
-			x.fillRect(0, 32, 1024, 96);
-			x.font = '84px "Knewave", "Paytone One", sans-serif';
-			x.textAlign = 'center';
-			x.textBaseline = 'middle';
-			x.lineWidth = 12;
-			x.strokeStyle = '#1a0b2e';
-			x.strokeText(text, 512, 84);
-			x.fillStyle = '#ffe14a';
-			x.fillText(text, 512, 84);
+			const words = function () {
+				x.fillStyle = '#ff3d6e';
+				x.fillRect(0, 32, 1024, 96);
+				x.font = '84px "Nise Sega Sonic", "Knewave", sans-serif';
+				x.textAlign = 'center';
+				x.textBaseline = 'middle';
+				x.lineWidth = 12;
+				x.strokeStyle = '#1a0b2e';
+				x.strokeText(text, 512, 84);
+				x.fillStyle = '#ffe14a';
+				x.fillText(text, 512, 84);
+			};
+			words();
 			const t = new THREE.CanvasTexture(c);
 			t.colorSpace = THREE.SRGBColorSpace;
+			// (written again once the font's in, if it wasn't yet)
+			if (document.fonts) document.fonts.load('84px "Nise Sega Sonic"').then(() => { words(); t.needsUpdate = true; }).catch(() => {});
 			return t;
 		})();
 		const banner = new THREE.Mesh(new THREE.BoxGeometry(HALF * 2 + 1.6, 1.5, 0.3), [glossy(0x1a0b2e), glossy(0x1a0b2e), glossy(0x1a0b2e), glossy(0x1a0b2e), glossy(0xffffff, { map: tex }), glossy(0xffffff, { map: tex })]);
@@ -419,9 +424,14 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 
 	/* ---------- the flow ---------- */
 
+	// The lettering throughout: Nise Sega Sonic (its @font-face in core/launcher.css),
+	// for everything the show writes and the game's own calls, as Red Light does with its font
+	const SONIC_FONT = 'Nise Sega Sonic';
+
 	const sound = createSound();
 	const show = new Showtime(stage, {
 		id: 'loop-island',
+		font: SONIC_FONT,            // everything the show writes, in the game's own lettering
 		seconds: GAME_SECONDS,
 		players: () => runners.length,
 		scores: () => runners.map((r) => r.rings),
@@ -1018,7 +1028,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 			const at = onAnyWall(tmp.copy(p.at).add(v3().set(0, 2.4, 0)));
 			if (!at) continue;
 			const k = p.age / 1.1;
-			art.text(ctx, p.text, at.x, at.y - k * 90, { size: p.size * (k < 0.15 ? k / 0.15 : 1), font: 'Knewave', fill: p.colour, outline: '#1a0b2e', outlineWidth: 7, alpha: 1 - Math.max(0, k - 0.6) / 0.4 });
+			art.text(ctx, p.text, at.x, at.y - k * 90, { size: p.size * (k < 0.15 ? k / 0.15 : 1), font: SONIC_FONT, fill: p.colour, outline: '#1a0b2e', outlineWidth: 7, alpha: 1 - Math.max(0, k - 0.6) / 0.4 });
 		}
 
 		if (phase === 'waiting') return;   // (the title is the show's title drop)
@@ -1030,15 +1040,15 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 				const t = phase === 'run' ? phaseT : 1 - ((READY - phaseT) % 1);
 				const text = n === 0 ? 'GO!' : String(n);
 				const s = 1 + Math.max(0, 0.25 - t) * 2.4;
-				art.text(ctx, text, W * 1.5, 430, { size: (n === 0 ? 260 : 300) * s, font: 'Knewave', fill: n === 0 ? '#3cff8a' : '#ffe14a', outline: '#1a0b2e', outlineWidth: 14, alpha: n === 0 ? 1 - Math.max(0, phaseT - 0.5) / 0.4 : 1 });
+				art.text(ctx, text, W * 1.5, 430, { size: (n === 0 ? 260 : 300) * s, font: SONIC_FONT, fill: n === 0 ? '#3cff8a' : '#ffe14a', outline: '#1a0b2e', outlineWidth: 14, alpha: n === 0 ? 1 - Math.max(0, phaseT - 0.5) / 0.4 : 1 });
 			}
 		}
 
 		// the speed (the clock and everyone's rings are the show's)
 		if (phase === 'run' || phase === 'finish') {
 			const kmh = Math.round(speed * 3.6);
-			art.text(ctx, String(kmh), 2 * W - 150, 72, { size: 84, font: 'Knewave', fill: '#ffffff', outline: '#1a0b2e', outlineWidth: 8, align: 'right', italic: true });
-			art.text(ctx, 'KM/H', 2 * W - 140, 92, { size: 34, font: 'Paytone One', weight: 400, fill: '#ffe14a', outline: '#1a0b2e', outlineWidth: 5, align: 'left' });
+			art.text(ctx, String(kmh), 2 * W - 150, 72, { size: 84, font: SONIC_FONT, fill: '#ffffff', outline: '#1a0b2e', outlineWidth: 8, align: 'right', italic: true });
+			art.text(ctx, 'KM/H', 2 * W - 140, 92, { size: 34, font: SONIC_FONT, weight: 400, fill: '#ffe14a', outline: '#1a0b2e', outlineWidth: 5, align: 'left' });
 		}
 	}
 
