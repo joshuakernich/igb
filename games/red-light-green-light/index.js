@@ -1075,7 +1075,12 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		}
 	}
 	function stepDrops(dt) {
-		for (const list of [cash, magnets, bags]) for (const m of list) if (m.drop && (m.drop.t += dt) >= m.drop.time) m.drop = null;
+		for (const list of [cash, magnets, bags]) {
+			for (const m of list) {
+				if (m.drop && (m.drop.t += dt) >= m.drop.time) { m.drop = null; m.bounce = 0; }
+				else if (m.bounce !== undefined && (m.bounce += dt) >= BOUNCE.time) m.bounce = undefined;
+			}
+		}
 		const live = show.beat === 'play' && ['green', 'dash', 'warning', 'red', 'turning'].includes(phase);
 		if (!live) return;
 		for (const kind of ['cash', 'magnet', 'bag']) {
@@ -1085,7 +1090,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		}
 	}
 	// (how high a falling item still is: dropping faster as it comes)
-	const dropLift = (m) => (m.drop ? m.drop.h * (1 - Math.pow(m.drop.t / m.drop.time, 2)) : 0);
+	// (and once down, a little bounce or two, each lower than the last)
+	const BOUNCE = { time: 0.55, height: 46, hops: 2 };
+	const dropLift = function (m) {
+		if (m.drop) return m.drop.h * (1 - Math.pow(m.drop.t / m.drop.time, 2));
+		if (m.bounce === undefined) return 0;
+		const k = m.bounce / BOUNCE.time;
+		return BOUNCE.height * Math.pow(1 - k, 2) * Math.abs(Math.sin(k * Math.PI * BOUNCE.hops));
+	};
 
 	/* ---------- boulders ---------- */
 
@@ -3104,8 +3116,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// shadow shortens (see groundTilt).
 	const hover = (f) => Math.min(1, groundTilt(f));
 
-	// A wad of cash: a stack of green notes with a paper band, floating above
-	// the sand and bobbing up and down, its shadow shrinking as it rises.
+	// A wad of cash: a stack of green notes with a paper band, resting on the
+	// sand (falling onto it first, and bouncing: see dropLift).
 	function drawCash(ctx, m) {
 		art.save(ctx, (c) => { c.globalAlpha *= fadeIn(m.f); drawCashHere(c, m); });
 	}
@@ -3114,11 +3126,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const k = m.fly ? Math.max(0, m.fly.t) / BAG.fly : 1;
 		const p = m.fly ? at(m.fly.x0 + (m.x - m.fly.x0) * k, m.fly.f0 + (m.f - m.fly.f0) * k) : at(m.x, m.f);
 		const s = p.s * CASH.size * nearer(p.y);
-		const rise = 0.5 + 0.5 * Math.sin(m.spin * 2.4);
-		const lift = ((CASH.float + CASH.bob * rise) * hover(m.f) + (m.fly ? BAG.arc * 4 * k * (1 - k) : 0) + dropLift(m)) * p.s;
-		if (items.cash) itemShadow(ctx, 'cash', p.x, p.y, m.f, s * (1 - 0.15 * rise), -0.35 + Math.sin(m.spin * 1.3) * 0.1, 0.8 - 0.3 * rise);
+		const rise = 0;   // (resting on the sand: no bobbing)
+		const lift = ((m.fly ? BAG.arc * 4 * k * (1 - k) : 0) + dropLift(m)) * p.s;
+		if (items.cash) itemShadow(ctx, 'cash', p.x, p.y, m.f, s, -0.35, 0.8);
 		else softShadow(ctx, p.x, p.y, 26 * s * (1 - 0.25 * rise), 8 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 40 * s, m.f);
-		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: -0.35 + Math.sin(m.spin * 1.3) * 0.1 }, function (c) {
+		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: -0.35 }, function (c) {
 			if (drawItem(c, 'cash')) return;
 			// seen at an angle: tipped back and skewed, a stack of notes with depth
 			c.transform(1, 0, -0.45, 0.72, 0, 0);
@@ -3132,19 +3144,19 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		});
 	}
 
-	// A magnet: a red horseshoe with silver tips, floating and turning a little,
-	// sparks crackling between its tips.
+	// A magnet: a red horseshoe with silver tips, resting on the sand, sparks
+	// crackling between its tips.
 	function drawMagnet(ctx, g) {
 		art.save(ctx, (c) => { c.globalAlpha *= fadeIn(g.f); drawMagnetHere(c, g); });
 	}
 	function drawMagnetHere(ctx, g) {
 		const p = at(g.x, g.f);
 		const s = p.s * CASH.size * nearer(p.y);
-		const rise = 0.5 + 0.5 * Math.sin(g.spin * 2.4);
-		const lift = ((CASH.float + CASH.bob * rise) * hover(g.f) + dropLift(g)) * p.s;
-		if (items.magnet) itemShadow(ctx, 'magnet', p.x, p.y, g.f, s * (1 - 0.15 * rise), Math.sin(g.spin * 1.6) * 0.25, 0.8 - 0.3 * rise);
+		const rise = 0;   // (resting on the sand: no bobbing)
+		const lift = dropLift(g) * p.s;
+		if (items.magnet) itemShadow(ctx, 'magnet', p.x, p.y, g.f, s, 0, 0.8);
 		else softShadow(ctx, p.x, p.y, 22 * s * (1 - 0.25 * rise), 7 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 40 * s, g.f);
-		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: Math.sin(g.spin * 1.6) * 0.25 }, function (c) {
+		art.with(ctx, { x: p.x, y: p.y - lift, scale: s }, function (c) {
 			if (drawItem(c, 'magnet')) return;
 			c.save();
 			c.lineCap = 'butt';
