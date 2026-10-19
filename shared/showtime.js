@@ -290,7 +290,7 @@ window.Showtime = function (stage, opts) {
 		hold: 1.0,             // looping, it holds on the end this long before going again
 		handoff: 0.25,         // this far through the game, it moves up to the corner,
 		move: 0.9,             // taking this long (then the rating comes in beside it)
-		corner: { margin: 130, y: 591, qr: 0.8, left: 50, up: 175 },   // after the move: the QR code, how far in from the right edge, how far down (level with the rating's faces), how small; the gif (shrunk to the QR's size) behind it, this far left and this far up
+		corner: { margin: 130, y: 441, qr: 0.8, left: 50, up: 175 },   // after the move: the QR code, how far in from the right edge, how far down (level with the rating's faces), how small; the gif (shrunk to the QR's size) behind it, this far left and this far up
 		zoom: 1.6,             // the replay, zoomed in this close on the room
 		footroom: 30,          // keeping this much under the feet of anyone at the very back
 		window: { x: 330, y: 150, size: 680, bar: 70, tilt: 0.035 },   // the window it plays in, a square: its left, its top, its size; the band over its top (the name and score); how far it's tipped to the left (radians)
@@ -2974,7 +2974,8 @@ window.Showtime = function (stage, opts) {
 	// (1-3), WHAT WENT WRONG? with reasons to tap (as many as fit) and DONE;
 	// for a high one (4-5), straight on. Each part gives up and moves on if
 	// nobody taps. Then the end: the carousel. self.feedback() is what was said.
-	const RATE_SIDE = { left: 40, width: 1110, scale: 0.88 };   // beside the gif in the corner: the rating's room (from the wall's left), and how much it's shrunk to fit
+	const RATE_SIDE = { left: 40, width: 1110, scale: 0.88 };
+	const RATE_UP = 0.15 * H;   // (everything on the rating screen sits this much above the wall's middle)   // beside the gif in the corner: the rating's room (from the wall's left), and how much it's shrunk to fit
 	beatsLib.rate = function (extra) {
 		const R = RATE;
 		let part = 'faces';     // 'faces' | 'reasons' | 'again' | 'thanks' | 'over'
@@ -3030,7 +3031,7 @@ window.Showtime = function (stage, opts) {
 				const side = gif.on;
 				const k = RATE_SIDE.scale;
 				const $wall = $('<div>').css({
-					position: 'absolute', left: wall * W + (side ? RATE_SIDE.left : 0) + 'px', top: 0, width: (side ? RATE_SIDE.width / k : W) + 'px', height: (side ? H / k : H) + 'px',
+					position: 'absolute', left: wall * W + (side ? RATE_SIDE.left : 0) + 'px', top: -RATE_UP + 'px', width: (side ? RATE_SIDE.width / k : W) + 'px', height: (side ? H / k : H) + 'px',
 					transform: side ? `scale(${k})` : 'none', transformOrigin: 'left top',
 					display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '40px',
 					fontFamily: font, color: 'white',
@@ -3152,8 +3153,8 @@ window.Showtime = function (stage, opts) {
 				if (part !== 'thanks') return;
 				const cx = gif.on ? RATE_SIDE.left + RATE_SIDE.width / 2 : W / 2;
 				self.onWalls(ctx, function (c) {
-					self.slam(c, 'THANK YOU!', cx, 470, gif.on ? 130 : 170, bt - partAt, { fill: theme.gold, glow: '#ff7a3d' });
-					if (feedback && feedback.again) self.text(c, 'NEXT UP: ' + (IGB.find(feedback.again) || { name: '' }).name.toUpperCase(), cx, 650, 60, { fill: 'white', alpha: clamp((bt - partAt - 0.4) * 3, 0, 1) });
+					self.slam(c, 'THANK YOU!', cx, 470 - RATE_UP, gif.on ? 130 : 170, bt - partAt, { fill: theme.gold, glow: '#ff7a3d' });
+					if (feedback && feedback.again) self.text(c, 'NEXT UP: ' + (IGB.find(feedback.again) || { name: '' }).name.toUpperCase(), cx, 650 - RATE_UP, 60, { fill: 'white', alpha: clamp((bt - partAt - 0.4) * 3, 0, 1) });
 				});
 			},
 		}, extra);
