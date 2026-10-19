@@ -3381,7 +3381,7 @@ window.Showtime = function (stage, opts) {
 	// BOOK ANOTHER SESSION AT THE KIOSK. The game hands back as it starts
 	// (extra.enter is the place to call IGB.complete).
 	beatsLib.end = function (extra) {
-		const CAROUSEL = { w: 900, h: 560, side: 610, small: 0.42, title: 72, every: 2.8, words: 80, kiosk: 44, margin: 40 };   // (a card's screenshot size; on each wall, how far its side cards sit from the middle one, and how small they are; the title's size on the featured card; seconds between steps; words: the size of THANKS FOR PLAYING!; kiosk: the kiosk line's, much smaller; margin: their extra room from the cards)
+		const CAROUSEL = { w: 1120, h: 700, side: 640, small: 0.28, title: 84, every: 2.8, words: 50, kiosk: 40, margin: 22 };   // (a card's screenshot size; on each wall, how far its side cards sit from the middle one, and how small they are; the title's size on the featured card; seconds between steps; words: the size of THANKS FOR PLAYING!, small above the cards; kiosk: the kiosk line's, small below them; margin: their extra room from the cards)
 		let $layer = null;
 		const games = () => (IGB.menu || []).filter((id) => !RATE.notAgain.includes(id) && id !== opts.id).map((id) => IGB.find(id)).filter(Boolean);   // (the others: they've just played this one)
 
@@ -3389,10 +3389,14 @@ window.Showtime = function (stage, opts) {
 		function card(g) {
 			const $slide = $('<div>').attr('slide', g.id).css({ flex: 'none' });
 			const $shot = $('<div>').css({
-				position: 'relative', width: CAROUSEL.w + 'px', height: CAROUSEL.h + 'px',   // (no outline, square corners)
-				background: `#1a1030 url("assets/shared/screens/${g.id}.jpg") center / cover`,
+				position: 'relative', width: CAROUSEL.w + 'px', height: CAROUSEL.h + 'px', overflow: 'hidden',   // (no outline, square corners)
+				background: `#1a1030 url("assets/shared/screens/${g.id}.jpg") center / cover`,   // (its screenshot, until its clip is playing)
 				boxShadow: '0 18px 40px rgba(0,0,0,0.55)',
 			}).appendTo($slide);
+			// a short clip of it being played, looping (made by tools/clips.mjs)
+			$('<video muted loop autoplay playsinline preload="auto">').attr('src', `assets/shared/clips/${g.id}.webm`).css({
+				position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', objectFit: 'cover',
+			}).on('error', function () { $(this).remove(); }).appendTo($shot);
 			// its name, as its title drop has it (manifest: title.lines, title.font), in its bottom right corner: shown only while it's the featured card
 			const lines = (g.title && g.title.lines) || [{ text: g.name.toUpperCase(), fill: TYPE.colours.white }];
 			const size = lines.length > 1 ? CAROUSEL.title * 0.85 : CAROUSEL.title;
@@ -3420,13 +3424,13 @@ window.Showtime = function (stage, opts) {
 			for (let wall = 0; wall < 3; wall++) {
 				const $wall = $('<div>').css({
 					position: 'absolute', left: wall * W + 'px', top: 0, width: W + 'px', height: H + 'px',
-					display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '34px',
+					display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0px',
 					fontFamily: `"${FONT}", sans-serif`, color: 'white',
 				}).appendTo($layer);
 				// the two lines, alike: one size, one treatment (no more than 70% of the wall across)
 				const words = (text, colour, size = CAROUSEL.words) => $('<div>').text(text).css({
 					fontSize: size + 'px', letterSpacing: '2px', lineHeight: 1.05, textAlign: 'center', maxWidth: W * TEXT_FIT + 'px', textWrap: 'balance', color: colour,
-					textShadow: '0 9px 0 rgba(0,0,0,0.5)', WebkitTextStroke: `7px ${theme.ink}`, paintOrder: 'stroke fill',
+					textShadow: `0 ${Math.round(size * 0.09)}px 0 rgba(0,0,0,0.5)`, WebkitTextStroke: `${Math.max(4, Math.round(size * 0.1))}px ${theme.ink}`, paintOrder: 'stroke fill',
 				});
 				words('THANKS FOR PLAYING!', 'white').appendTo($wall);
 				$space = $('<div>').css({ height: cardH + 'px', width: '10px', margin: CAROUSEL.margin + 'px 0' }).appendTo($wall);   // (room for the cards, flowing past behind)
