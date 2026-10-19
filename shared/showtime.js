@@ -1590,6 +1590,8 @@ window.Showtime = function (stage, opts) {
 		// 3. the neon strips down its sides
 		const neon = () => { for (const x of [F.box.x - 14, F.box.x + F.box.w]) $('<div>').css({ position: 'absolute', left: x + 'px', top: F.box.y + 'px', width: '14px', height: F.box.h + 'px', background: '#f3e2ff', boxShadow: `0 0 24px 8px ${F.neon}, 0 0 60px 18px ${F.neon}`, zIndex: 4 }).appendTo($front); };
 		// 4. the TVs across the top, each playing one of the trailers inside the box
+		// (a purple panel across the top of the box, the TVs set in it)
+		$('<div>').css({ position: 'absolute', left: F.box.x + 'px', top: F.box.y + 'px', width: F.box.w + 'px', height: F.panel.y - F.box.y + 'px', background: 'linear-gradient(180deg, #7b33e6, #4a17a8)', boxShadow: 'inset 0 0 0 4px rgba(255,255,255,0.12), 0 10px 30px rgba(0,0,0,0.45)', zIndex: 2 }).appendTo($front);
 		const tvW = F.tv.h * 16 / 9;
 		const tvX = (W - (3 * tvW + 2 * F.tv.gap)) / 2;
 		clips.forEach(function (id, i) {
