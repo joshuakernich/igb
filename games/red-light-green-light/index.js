@@ -2751,7 +2751,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// player's drift; shot, they topple sideways.
 	const FLASH = { time: 0.2, box: 320, feet: 0.8 };   // a contestant's flash on picking something up: how long they're white (seconds); the scratch canvas it's drawn in (figure units, square) and how far down it their feet are
 	let flashCanvas = null;
-	const MARKER = { size: 24, tall: 1.6, lift: 30 };   // the arrow over each contestant's head: its half-width (figure units), its height (in half-widths), and how far over their head its tip floats
+	const MARKER = { size: 24, tall: 1.6, lift: 8, round: 7 };   // the arrow over each contestant's head: its half-width (figure units), its height (in half-widths), and how far over their head its tip floats
 	function drawContestant(ctx, c) {
 		const colour = PLAYER_COLORS[c.n];
 		const ground = at(c.x, c.f, 0, c.wall);
@@ -2835,7 +2835,21 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const bob = Math.sin(clock * 4 + c.n) * 4;
 		const top = p.y - (animReady('back') ? animHeight('back') + MARKER.lift : rigs.back ? figure('back').height + MARKER.lift + 4 : sheets.act ? 118 + MARKER.lift : 145 + MARKER.lift) * s + bob * s;   // (over their head, however tall the figure is)
 		const m = MARKER.size * s;
-		art.poly(ctx, [[p.x - m, top - m * MARKER.tall], [p.x + m, top - m * MARKER.tall], [p.x, top]], { fill: colour, alpha });   // (pointing down, its tip at top)
+		// (pointing down, its tip at top; its corners softened by a round-jointed edge of the same colour)
+		const r = MARKER.round * s / 2;
+		ctx.save();
+		ctx.globalAlpha *= alpha;
+		ctx.beginPath();
+		ctx.moveTo(p.x - m + r, top - m * MARKER.tall + r);
+		ctx.lineTo(p.x + m - r, top - m * MARKER.tall + r);
+		ctx.lineTo(p.x, top - r);
+		ctx.closePath();
+		ctx.fillStyle = ctx.strokeStyle = colour;
+		ctx.lineJoin = 'round';
+		ctx.lineWidth = r * 2;
+		ctx.fill();
+		ctx.stroke();
+		ctx.restore();
 	}
 
 	// Where the player really is, 1:1, even when a block holds the avatar back
