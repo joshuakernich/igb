@@ -64,7 +64,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		rivals: ['Stage Left', 'The Understudies', 'Cue Lights', 'Run Of Show', 'Places Please', 'Tech Week',
 			'Final Dress', 'House Open', 'Blackout Crew', 'The Blocking'],
 		music: false,   // quiet while stepping through
-		menu: { jumps: false, debug: true },   // (its own beat jumps, on the pause screen: see below; and the DEBUG panel, always there)
+		menu: { jumps: false },   // (its own beat jumps, on the debug screen: see below)
 	});
 
 	function initGame(count) {

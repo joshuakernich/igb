@@ -136,6 +136,11 @@ $(function () {
 	$('[btn=refresh]').on('click', function () {
 		if (gameKey) launch(gameKey);
 	});
+	// (the game's debug options, where it has them: a Showtime game opens them on its right wall)
+	$('[btn=debug]').on('click', function (e) {
+		e.stopPropagation();
+		if (IGB.debug) IGB.debug();
+	});
 
 	// A ripple wherever you click, so touches show up on recordings.
 	$(document).on('click', function (e) {

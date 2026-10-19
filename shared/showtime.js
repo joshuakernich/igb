@@ -1282,7 +1282,7 @@ window.Showtime = function (stage, opts) {
 	const live = !!window.vuplex;
 	const font = `"${FONT}", "${TYPE.font}", sans-serif`;
 	let paused = false;
-	const MENU = Object.assign({ restart: null, tutorial: null, canRestart: null, debug: false }, opts.menu);
+	const MENU = Object.assign({ restart: null, tutorial: null, canRestart: null }, opts.menu);
 	// The menu's rows, only when they make sense: RESTART ROUND while a round
 	// is under way (in 'play', or as the game says: opts.menu.canRestart()),
 	// REPLAY TUTORIAL once the tutorial has been started.
@@ -1364,23 +1364,6 @@ window.Showtime = function (stage, opts) {
 	fitTap();
 	if (document.fonts) document.fonts.load(`100px "${FONT}"`).then(fitTap).catch(() => {});
 	for (const name of ['pause', 'volume', 'cog']) buttonIcon(name, PANEL_ICON, PANEL_COLOUR).appendTo($pauseBtn);
-	// opts.menu.debug: a second panel, the same, there whenever the pause
-	// panel isn't (whatever the beat, in the box or off it), a little bug on
-	// it and TAP over it; it opens the same menu, the debug buttons on it.
-	let $dbg = null;
-	if (MENU.debug) {
-		$dbg = $('<button debug-panel>').attr('title', 'Debug').css({
-			position: 'relative',
-			width: PAUSE.button + 'px', borderRadius: `0 ${PAUSE.button / 2}px ${PAUSE.button / 2}px 0`, border: 'none', boxSizing: 'border-box',
-			background: 'rgba(0,0,0,0.6)', cursor: 'pointer', pointerEvents: 'auto', padding: `20px 0 20px ${SCORE_HUD.line}px`,
-			display: 'flex', flexDirection: 'column', alignItems: 'center',
-			boxShadow: `inset ${SCORE_HUD.line}px 0 0 0 ${PANEL_COLOUR}`,
-		}).prependTo($panels).on('click', function (e) { e.stopPropagation(); setPaused(true); });
-		$('<span tap-prompt>').text('TAP').css(tapCss).appendTo($dbg);
-		buttonIcon('bug', PANEL_ICON, PANEL_COLOUR).appendTo($dbg);
-		fitTap();
-	}
-
 	// the screen: dark glass over all three walls, a panel on each
 	const $pause = $('<pause-screen>').css({
 		position: 'absolute', left: 0, top: 0, width: 3 * W + 'px', height: H + 'px', zIndex: 30, display: 'none',
@@ -1462,11 +1445,19 @@ window.Showtime = function (stage, opts) {
 		rowButton('RESTART ROUND', 'restart', () => { setPaused(false); menuRestart(); }, ROW_COLOURS.restart).attr('row', 'restart').appendTo($w);
 		if (MENU.tutorial) rowButton('REPLAY TUTORIAL', 'help', () => { setPaused(false); MENU.tutorial(); }, ROW_COLOURS.help).attr('row', 'tutorial').appendTo($w);
 	}
-	menu($left, !live || MENU.debug);
+	menu($left);
 	menu($front);
 	menu($right);
+	// The debug options: a screen of their own, on the right wall, in place of
+	// its menu, opened by the debug button on the right-hand panel (IGB.debug)
+	const $debugWall = wallPanel(2).hide();
+	menu($debugWall, true);
 
-	function setPaused(on) {
+	// paused: the menu on every wall; or (mode 'debug') the debug options on the right wall
+	function setPaused(on, mode) {
+		const debugging = on && mode === 'debug';
+		$right.toggle(!debugging);
+		$debugWall.toggle(debugging);
 		if (on === paused) return;
 		paused = on;
 		IGB.pauseAudio(on);
@@ -1474,11 +1465,14 @@ window.Showtime = function (stage, opts) {
 		showPauseButton();
 		if (on) { showVolume(); tickPause(); showRows(); }
 	}
+	// (the right-hand panel's debug button: open the debug options, or close them)
+	const debugButton = () => (paused && $debugWall.is(':visible') ? setPaused(false) : setPaused(true, 'debug'));
+	IGB.debug = debugButton;
+	stage.own(() => { if (IGB.debug === debugButton) IGB.debug = null; });
 	// the button: only once the clock has started counting down (in the box
 	// or off it, alike); never while paused, and never from TIME! on (the
 	// game's over: the scores, the rating, the end)
 	let buttonShown = false;
-	let dbgShown = true;
 	const OVER = ['timeup', 'scores', 'rank', 'team', 'board', 'replay', 'rate', 'end'];
 	const over = function () {
 		if (!beat) return false;
@@ -1489,8 +1483,6 @@ window.Showtime = function (stage, opts) {
 	function showPauseButton() {
 		const want = !paused && !over() && self.clockStarted();
 		if (want !== buttonShown) { buttonShown = want; $pauseBtn.toggle(want); }
-		const dbgWant = !want && !paused;   // (the debug panel: in its place when it isn't there, and not while paused)
-		if ($dbg && dbgWant !== dbgShown) { dbgShown = dbgWant; $dbg.toggle(dbgWant); }
 	}
 	function tickPause() {
 		const t = mmss(clock.left);
@@ -1498,10 +1490,10 @@ window.Showtime = function (stage, opts) {
 	}
 	stage.own(() => { if (paused) IGB.pauseAudio(false); });   // (never left paused)
 
-	// the debug buttons, on the left wall's panel under PAUSED and the time (off the box only)
+	// the debug buttons, on the right wall's debug screen under PAUSED and the time
 	const $debug = $('<div>').css({
-		display: live && !MENU.debug ? 'none' : 'block', width: 'fit-content', maxWidth: '100%', minHeight: 0, maxHeight: '62%', overflowY: 'auto',   // (as wide as its longest line, centred on the wall) fontFamily: `"${TYPE.font}", sans-serif`,   // (sized to its buttons, so PAUSED, the time and these sit together in the middle of the wall)
-	}).appendTo($left);
+		display: 'block', width: 'fit-content', maxWidth: '100%', minHeight: 0, maxHeight: '62%', overflowY: 'auto',   // (as wide as its longest line, centred on the wall) fontFamily: `"${TYPE.font}", sans-serif`,   // (sized to its buttons, so PAUSED, the time and these sit together in the middle of the wall)
+	}).appendTo($debugWall);
 	// (the heading and status, centred; then every button in one long,
 	// centred, flowing list, each group's name tucked in just before its
 	// buttons; the buttons small capsules in the standard style: dark glass,
