@@ -293,7 +293,7 @@ window.Showtime = function (stage, opts) {
 		corner: { margin: 130, y: 491, qr: 0.8, left: 50, up: 175 },   // after the move: the QR code, how far in from the right edge, how far down (level with the rating's faces), how small; the gif (shrunk to the QR's size) behind it, this far left and this far up
 		zoom: 1.6,             // the replay, zoomed in this close on the room
 		footroom: 30,          // keeping this much under the feet of anyone at the very back
-		window: { x: 330, y: 150, size: 680, bar: 70, tilt: 0.035 },   // the window it plays in, a square: its left, its top, its size; the band over its top (the name and score); how far it's tipped to the left (radians)
+		window: { x: 330, y: 150, size: 680, bar: 70, tilt: 0.035, border: 26 },   // the window it plays in, a square: its left, its top, its size; the band over its top (the name and score); how far it's tipped to the left (radians); its white border
 		view: 900,             // how much of the room (wall pixels) the square shows across
 		qr: { size: 290, pad: 20, over: 90, tilt: 0.06, link: 'https://joshuakernich.github.io/igb/' },   // the QR code over its right edge, halfway down: its size, the white round it; how far in over the window's right edge; tipped the other way; where it goes (for now: the game, on the hub)
 		trail: 30,             // samples of trail behind each player
@@ -2859,7 +2859,8 @@ window.Showtime = function (stage, opts) {
 					c.save();
 					const wcx = WIN.x + S / 2, wcy = WIN.y + S / 2;
 					const C = REPLAY.corner;
-					const fw = S + 16;   // (the whole window, its frame and all)
+					const B = WIN.border;
+					const fw = S + 2 * B;   // (the whole window, its white border and all)
 					const cs = C.qr * REPLAY.qr.size / fw;   // (in the corner, the gif's as big as the QR code under it)
 					const qsx = W - C.margin - C.qr * REPLAY.qr.size / 2;   // (where the QR code ends up: level with the rating's faces)
 					const sx = qsx - C.left, sy = C.y - C.up;   // (the gif, mostly above it, a little to its left, its foot tucked behind it)
@@ -2867,7 +2868,7 @@ window.Showtime = function (stage, opts) {
 					c.scale(lerp(1, cs, m), lerp(1, cs, m));
 					c.rotate(-WIN.tilt);
 					c.translate(-wcx, -wcy);
-					art.rect(c, WIN.x - 8, WIN.y - 8, S + 16, S + 16, { fill: 'white', shadow: { color: 'rgba(0,0,0,0.5)', blur: 40 } });   // (a white border, square corners)
+					art.rect(c, WIN.x - B, WIN.y - B, S + 2 * B, S + 2 * B, { fill: 'white', shadow: { color: 'rgba(0,0,0,0.5)', blur: 40 } });   // (a white border, square corners)
 					c.save();
 					square(c);
 					c.clip();
