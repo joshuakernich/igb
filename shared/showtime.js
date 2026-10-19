@@ -1559,7 +1559,7 @@ window.Showtime = function (stage, opts) {
 		zoom: { x: 465, y: 655 },                                // where the eye looks into it (the middle of what shows of it, left of the panel): the vanishing point, and the rush's centre
 		panel: { x: 874, y: 310, w: 670, h: 690 },               // the purple panel on the right, over the box (the way in 55% of it, the kiosk 45%)
 		screen: { inset: 34 },                                   // its screen, filling the panel but for this margin
-		gate: { gap: 14, post: 26 },                             // the glass barriers, side by side across the whole way in, a third of its height
+		gate: { gap: 14, post: 58, lift: 120 },                  // the glass barriers, side by side across the whole way in, a third of its height, held up off the floor (lift) by chunky posts
 		neon: '#c06bff',                                         // the strips down the box's sides
 		purple: '#6326c8',                                       // the panels, one flat purple
 		swing: 0.55, rush: 0.75, dark: 0.25,                     // the barriers swinging in (the screens fading to black); the view rushing into the box (everything fading to black); a moment in the black, then the sting
@@ -1652,7 +1652,7 @@ window.Showtime = function (stage, opts) {
 		G.w = (open - 2 * G.post - G.gap) / 2;                   // (the barriers between posts at its edges, filling it)
 		const gx = G.post;
 		G.h = (B.y + B.h - F.panel.y) / 3;                       // (a third of the way up the way in, standing on its floor)
-		const gy = B.h - G.h;
+		const gy = B.h - G.h - G.lift;                           // (raised off the floor: a gap under them)
 		const barrier = (left, hinge) => $('<div>').css({
 			position: 'absolute', left: left + 'px', top: gy + 'px', width: G.w + 'px', height: G.h + 'px', transformOrigin: hinge + ' center',
 			background: 'linear-gradient(180deg, rgba(220,235,255,0.42), rgba(200,220,255,0.18))', border: '3px solid rgba(255,255,255,0.7)', borderRadius: '6px', boxSizing: 'border-box',
@@ -1660,7 +1660,7 @@ window.Showtime = function (stage, opts) {
 		}).appendTo($box);
 		const $gl = barrier(gx, 'left'), $gr = barrier(gx + G.w + G.gap, 'right');
 		for (const x of [gx - G.post, gx + 2 * G.w + G.gap]) {
-			$('<div>').css({ position: 'absolute', left: x + 'px', top: gy - 24 + 'px', width: G.post + 'px', height: G.h + 24 + 'px', background: '#120c1c', borderTop: '6px solid #3ad1ff', boxShadow: '0 -4px 14px rgba(58,209,255,0.7)' }).appendTo($box);
+			$('<div>').css({ position: 'absolute', left: x + 'px', top: gy - 30 + 'px', width: G.post + 'px', height: B.h - gy + 30 + 'px', borderRadius: '8px 8px 0 0', background: '#120c1c', borderTop: '6px solid #3ad1ff', boxShadow: '0 -4px 14px rgba(58,209,255,0.7)' }).appendTo($box);
 		}
 
 		// 5. the purple panel on the right, its screen (filling it) asking HOW MANY PLAYERS?
