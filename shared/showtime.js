@@ -1636,6 +1636,8 @@ window.Showtime = function (stage, opts) {
 		// their tops up behind the fascia; as deep as it's wide)
 		const innerW = F.box.w - 2 * F.inner;
 		const B = Object.assign({}, F.box, { x: F.box.x + F.inner, w: innerW, h: innerW * 10 / 16, y: H - innerW * 10 / 16, depth: innerW });
+		// (a purple panel across the top of the box, down to the top of the room's walls; the TVs hang over it)
+		$('<div>').css({ position: 'absolute', left: F.box.x + 'px', top: 0, width: F.box.w + 'px', height: B.y + 'px', background: F.purple, zIndex: 2 }).appendTo($front);
 		$('<div>').css({ position: 'absolute', left: F.box.x + 'px', top: 0, width: F.box.w + 'px', height: H + 'px', background: '#0b0616' }).appendTo($front);   // (the box's body, between its neon edges)
 		const $mouth = $('<div>').css({ position: 'absolute', left: B.x + 'px', top: B.y + 'px', width: B.w + 'px', height: B.h + 'px', perspective: B.lens + 'px', perspectiveOrigin: `${F.zoom.x - B.x}px ${F.zoom.y - B.y}px` }).appendTo($front);
 		const $box = $('<div>').css({ position: 'absolute', inset: 0, transformStyle: 'preserve-3d' }).appendTo($mouth);
