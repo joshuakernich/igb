@@ -290,7 +290,7 @@ window.Showtime = function (stage, opts) {
 		hold: 1.0,             // looping, it holds on the end this long before going again
 		handoff: 0.25,         // this far through the game, it moves up to the corner,
 		move: 0.9,             // taking this long (then the rating comes in beside it)
-		corner: { margin: 40, gap: 34, qr: 0.8 },   // in the corner: how far in from the edges; the QR code under it, how far below, how small (the gif shrinks to the same size)
+		corner: { margin: 40, y: 591, qr: 0.8, left: 70, under: 50 },   // after the move: the QR code, how far in from the right edge, how far down (level with the rating's faces), how small; the gif (shrunk to the QR's size) behind it, this far left and this far lower
 		zoom: 1.6,             // the replay, zoomed in this close on the room
 		footroom: 30,          // keeping this much under the feet of anyone at the very back
 		window: { x: 330, y: 150, size: 680, bar: 70, tilt: 0.035 },   // the window it plays in, a square: its left, its top, its size; the band over its top (the name and score); how far it's tipped to the left (radians)
@@ -2861,7 +2861,8 @@ window.Showtime = function (stage, opts) {
 					const C = REPLAY.corner;
 					const fw = S + 16;   // (the whole window, its frame and all)
 					const cs = C.qr * REPLAY.qr.size / fw;   // (in the corner, the gif's as big as the QR code under it)
-					const sx = W - C.margin - cs * fw / 2, sy = C.margin + cs * fw / 2;
+					const qsx = W - C.margin - C.qr * REPLAY.qr.size / 2;   // (where the QR code ends up: level with the rating's faces)
+					const sx = qsx - C.left, sy = C.y + C.under;   // (the gif, a little left of it and a little lower, behind it)
 					c.translate(lerp(wcx, sx, m), lerp(wcy, sy, m));
 					c.scale(lerp(1, cs, m), lerp(1, cs, m));
 					c.rotate(-WIN.tilt);
@@ -2929,15 +2930,16 @@ window.Showtime = function (stage, opts) {
 					const qx = WIN.x + S - Q.over, qy = WIN.y + S / 2 - Q.size / 2;   // (level with the window's middle)
 					const qcx = qx + Q.size / 2, qcy = qy + Q.size / 2;
 					c.save();
-					c.translate(lerp(qcx, sx, m), lerp(qcy, sy + cs * fw / 2 + C.gap + C.qr * Q.size / 2, m));
+					c.translate(lerp(qcx, qsx, m), lerp(qcy, C.y, m));
 					c.scale(lerp(1, C.qr, m), lerp(1, C.qr, m));
 					c.rotate(Q.tilt);
 					c.translate(-qcx, -qcy);
 					art.rect(c, qx, qy, Q.size, Q.size, { fill: 'white', shadow: { color: 'rgba(0,0,0,0.55)', blur: 40 } });   // (square corners)
 					c.fillStyle = '#0b0b14';
 					code.forEach((row, y) => row.forEach((dark, x) => { if (dark) c.fillRect(qx + Q.pad + x * cell, qy + Q.pad + y * cell, cell + 0.5, cell + 0.5); }));
-					self.text(c, 'SCAN TO SHARE', qx + Q.size / 2, qy + Q.size + 50, 42, { fill: 'white' });
-					self.text(c, 'YOUR GIF', qx + Q.size / 2, qy + Q.size + 98, 42, { fill: theme.gold });
+					const capY = qy + Q.size + m * (C.under + cs * fw / 2 - C.qr * Q.size / 2) / C.qr;   // (in the corner: under the gif too)
+					self.text(c, 'SCAN TO SHARE', qx + Q.size / 2, capY + 50, 42, { fill: 'white' });
+					self.text(c, 'YOUR GIF', qx + Q.size / 2, capY + 98, 42, { fill: theme.gold });
 					c.restore();
 					c.restore();
 				});
