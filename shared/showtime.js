@@ -145,6 +145,7 @@ window.Showtime = function (stage, opts) {
 
 	const VISORS = {
 		steps: [0.1, 0.4, 0.7],   // the three instructions slam in one after another, at these times
+		stepsY: 225,           // in yellow, midway between the clock and the floor view
 		show: 0.8,             // just the visors to put on (the capsules growing), before the wiggle is asked for and counts
 		zone: { px: 0.5, pz: 0.5, r: 0.24 },   // where to stand: the middle of the room (floor 0..1)
 		settle: 0.8,           // seconds over which a visor's movement is averaged
@@ -2191,7 +2192,7 @@ window.Showtime = function (stage, opts) {
 						self.slam(c, 'ALL SET!', cx, 480, 190, bt - allSetAt, { fill: theme.gold, glow: '#ff7a3d' });
 						return;   // (the visors themselves are in the score capsules along the bottom)
 					}
-					// the instructions on one line, all white: the steps under way (and
+					// the instructions on one line, all yellow: the steps under way (and
 					// done) bright, the ones to come dim
 					const steps = [
 						{ text: 'PUT ON A VISOR', done: asking, now: !asking },
@@ -2213,17 +2214,17 @@ window.Showtime = function (stage, opts) {
 						const age = bt - V.steps[i];
 						if (age <= 0) return;
 						if (i) {
-							self.text(c, '>', x + gap * k / 2, 165, SIZE * k, { fill: 'white', alpha: clamp(age * 4, 0, 1) * 0.5, glow: 'transparent', fit: 9999 });
+							self.text(c, '>', x + gap * k / 2, V.stepsY, SIZE * k, { fill: TYPE.colours.gold, alpha: clamp(age * 4, 0, 1) * 0.6, glow: 'transparent', fit: 9999 });
 							x += gap * k;
 						}
-						self.slam(c, s.text, x + widths[i] * k / 2, 165, SIZE * k, age, {
-							fill: 'white', alpha: s.now || s.done ? 1 : 0.4,
-							glow: s.now ? theme.accent : 'transparent', fit: 9999,
+						self.slam(c, s.text, x + widths[i] * k / 2, V.stepsY, SIZE * k, age, {
+							fill: TYPE.colours.gold, alpha: s.now || s.done ? 1 : 0.4,
+							glow: s.now ? '#ff7a3d' : 'transparent', fit: 9999,
 						});
 						x += widths[i] * k;
 					});
 					// (the squad's visors are in the score capsules along the bottom: see visorInCapsule)
-					drawFloor(c, cx, 340, 730, n, bt, wall);   // (well clear of the square capsules along the bottom)
+					drawFloor(c, cx, 380, 770, n, bt, wall);   // (well clear of the square capsules along the bottom)
 					// a wrong visor in play: its own square capsule joins the end of the
 					// row along the bottom, in its colour, its visor struck through with
 					// a big red cross, and the change-hats message just above it

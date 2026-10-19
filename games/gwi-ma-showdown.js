@@ -1451,7 +1451,7 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 				const step = CONTROLS.steps[practice.i];
 				if (!step) return;
 				show.onWalls(ctx, function (c, wall) {
-					show.slam(c, step.caption, W / 2, 210, step.caption.length > 26 ? 82 : 96, practice.age, { fill: 'white' });
+					show.slam(c, step.caption, W / 2, 210, step.caption.length > 26 ? 82 : 96, practice.age, { fill: '#ffd23f' });   // (tutorial captions: yellow)
 					// which step this is, as pips
 					CONTROLS.steps.forEach(function (s, i) {
 						const x = W / 2 + (i - (CONTROLS.steps.length - 1) / 2) * 50;

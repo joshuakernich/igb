@@ -540,7 +540,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 				const step = TUTORIAL[tut.i];
 				if (!step || phase !== 'run' || phaseT < 0.9) return;   // (not over the countdown, nor its GO!)
 				show.onWalls(ctx, function (c) {
-					show.slam(c, step.caption, W / 2, 260, 70, tut.age, { fill: tut.done ? '#3cdc7a' : 'white' });
+					show.slam(c, step.caption, W / 2, 260, 70, tut.age, { fill: tut.done ? '#3cdc7a' : '#ffd23f' });
 				});
 			},
 		},

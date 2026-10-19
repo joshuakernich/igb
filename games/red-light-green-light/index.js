@@ -4443,8 +4443,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					// the step's caption, staying up through the whole step (the
 					// practice red light included: no RED LIGHT! over it)
 					const size = step.caption.length > 24 ? 80 : 96;
-					if (step.parts) show.slamParts(c, step.parts, W / 2, 200, size, practice.age, { fill: 'white' });
-					else show.slam(c, step.caption, W / 2, 200, size, practice.age, { fill: 'white' });
+					if (step.parts) show.slamParts(c, step.parts, W / 2, 200, size, practice.age, { fill: '#ffd23f' });   // (tutorial captions: yellow)
+					else show.slam(c, step.caption, W / 2, 200, size, practice.age, { fill: '#ffd23f' });
 					// which step this is, as pips over the caption, outlined and
 					// dropped like the text (solid: a dim pip is grey, not see-through)
 					CONTROLS.steps.forEach(function (s, i) {

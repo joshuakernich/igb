@@ -1005,7 +1005,7 @@ IGB.register('roll-call', function RollCallGame(stage, playersMeta) {
 				const step = TUTORIAL[tut.i];
 				if (!step) return;
 				show.onWalls(ctx, function (c) {
-					show.slam(c, step.caption, W / 2, 175, step.caption.length > 26 ? 66 : 80, tut.age, { fill: tut.done ? '#3cdc7a' : 'white' });
+					show.slam(c, step.caption, W / 2, 175, step.caption.length > 26 ? 66 : 80, tut.age, { fill: tut.done ? '#3cdc7a' : '#ffd23f' });
 					// which step this is, as pips
 					TUTORIAL.forEach(function (s, i) {
 						const x = W / 2 + (i - (TUTORIAL.length - 1) / 2) * 50;
