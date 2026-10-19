@@ -1723,7 +1723,7 @@ window.Showtime = function (stage, opts) {
 			background: 'radial-gradient(circle at 38% 30%, #5a5a6a 0, #1a1a22 35%, #050508 70%)', boxShadow: '0 4px 8px rgba(0,0,0,0.6)' }).appendTo($front);
 		$('<div>').css({ position: 'absolute', left: camX - 6 + 'px', top: camY + 6 + 'px', width: '12px', height: '12px', borderRadius: '50%', background: 'radial-gradient(circle at 35% 35%, #6af 0, #124 60%, #000 100%)', zIndex: 3 }).appendTo($front);
 		// (and a card reader to the right of the screen)
-		const payX = P.x + F.screen.inset + sw + (P.w - F.screen.inset - sw - K.pay.w) / 2, payY = P.y + K.top + sh * 0.52;
+		const payX = P.x + F.screen.inset + sw + 16, payY = P.y + K.top + sh - K.pay.h;   // (just right of the screen, level with its bottom)
 		const $pay = $('<div>').css({ position: 'absolute', left: payX + 'px', top: payY + 'px', width: K.pay.w + 'px', height: K.pay.h + 'px', borderRadius: '14px', background: 'linear-gradient(180deg, #2a2733, #121018)', boxShadow: '0 8px 14px rgba(0,0,0,0.55), inset 0 0 0 2px rgba(255,255,255,0.06)', zIndex: 3 }).appendTo($front);
 		$('<div>').css({ position: 'absolute', left: '10px', top: '12px', right: '10px', height: '50px', borderRadius: '5px', background: 'linear-gradient(160deg, #3ad1ff, #1b5f9e)', boxShadow: 'inset 0 0 6px rgba(0,0,0,0.5)' }).appendTo($pay);
 		const $keys = $('<div>').css({ position: 'absolute', left: '12px', right: '12px', top: '74px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }).appendTo($pay);
