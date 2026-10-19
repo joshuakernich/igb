@@ -306,12 +306,13 @@ igb-label {
 /* ---------- controls and log ---------- */
 
 /* Home and restart: a panel on the right wall's edge, halfway down, the
-   mirror of the show's pause panel on the left (sunk into the edge, a purple
-   band along it, its buttons the standard round ones: dark glass, a purple
-   ring and symbol). Sized in world units: the walls are 4800 across 100vw,
+   mirror of the show's pause panel on the left, in green (sunk into the edge,
+   a green band along it, its buttons the standard round ones, the same size:
+   dark glass, a green ring and symbol). Sized in world units: the walls are 4800 across 100vw,
    so a world pixel is 100vw / 4800. */
 igb-controls {
 	--u: calc(100vw / 4800);
+	--panel: #2fd36b;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -325,7 +326,7 @@ igb-controls {
 	padding: calc(20 * var(--u)) calc(7 * var(--u)) calc(20 * var(--u)) 0;
 	border-radius: calc(65 * var(--u)) 0 0 calc(65 * var(--u));
 	background: rgba(0, 0, 0, 0.6);
-	box-shadow: inset calc(-7 * var(--u)) 0 0 0 #b46bff;
+	box-shadow: inset calc(-7 * var(--u)) 0 0 0 var(--panel);
 	z-index: 1000;
 }
 
@@ -338,15 +339,20 @@ igb-controls button {
 	margin: 0;
 	padding: 0;
 	box-sizing: border-box;
-	border: calc(5 * var(--u)) solid #b46bff;
+	border: calc(5 * var(--u)) solid var(--panel);
 	border-radius: 50%;
 	background: rgba(0, 0, 0, 0.92);
-	color: #b46bff;
+	color: var(--panel);
 	font: inherit;
-	font-size: calc(52 * var(--u));
 	line-height: 1;
 	box-shadow: 0 calc(6 * var(--u)) 0 rgba(0, 0, 0, 0.45);
 	cursor: pointer;
+}
+
+igb-controls button svg {
+	display: block;
+	width: 100%;
+	height: 100%;
 }
 
 igb-log {
