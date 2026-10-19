@@ -3346,14 +3346,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		back: {
 			clips: {
 				run: [
-					{ s: 'arun', i: 0, x: -7.5, y: 14 },
-					{ s: 'arun', i: 2, x: -7.5, y: 14 },
-					{ s: 'arun', i: 1, x: -7.5, y: 14 },
-					{ s: 'arun', i: 15, x: -10, y: 23.5 },
+					{ s: 'arun', i: 0, x: -7.5, y: -2 },
+					{ s: 'arun', i: 2, x: -7.5, y: -2 },
+					{ s: 'arun', i: 1, x: -7.5, y: -2 },
+					{ s: 'arun', i: 15, x: -10, y: 7.5 },
 				],
 				freeze: [
-					{ s: 'aact', i: 4, y: 16 },
-					{ s: 'aact', i: 5, x: -1, y: 14 },
+					{ s: 'aact', i: 4 },
+					{ s: 'aact', i: 5, x: -1, y: -2 },
 				],
 				idle: [
 					{ s: 'aact', i: 0, x: -0.5, y: -1.5 },
@@ -3395,14 +3395,17 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const clipOf = (fig, name) => (ANIM_TUNE[fig] && ANIM_TUNE[fig].clips && ANIM_TUNE[fig].clips[name]) || ANIMS[fig].clips[name] || [];
 	const animReady = (fig) => ANIM_SHEETS[fig].every((n) => sheets[n]);
 	// One frame of a clip (k: which, round and round), feet at (0, 0).
+	// (whole clips dropped lower on top of their frames' own nudges, the lab's saved ones included)
+	const CLIP_DROP = { back: { run: 24, freeze: 24 } };
 	function drawClip(c, fig, name, k, mask = 'circle') {
 		const frames = clipOf(fig, name);
 		if (!frames.length) return false;
 		const f = frames[((Math.floor(k) % frames.length) + frames.length) % frames.length];
 		const sheet = f.s === 'g' ? 'g' + mask : f.s;
 		if (!sheets[sheet]) return false;
+		const drop = (CLIP_DROP[fig] && CLIP_DROP[fig][name]) || 0;
 		c.save();
-		c.translate(f.x || 0, f.y || 0);
+		c.translate(f.x || 0, (f.y || 0) + drop);
 		drawFrame(c, sheet, f.i, animHeight(fig));
 		c.restore();
 		return true;
