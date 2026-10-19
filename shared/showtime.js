@@ -1743,7 +1743,7 @@ window.Showtime = function (stage, opts) {
 		const chevX = P.x + F.screen.inset + sw + 10, chevW = P.x + P.w - chevX, chevY = P.y + K.top + sh * 0.5;
 		const $chev = $('<div>').css({ position: 'absolute', left: chevX + 'px', top: chevY - 40 + 'px', width: chevW + 'px', height: '80px', overflow: 'hidden', zIndex: 3 }).appendTo($front);
 		for (let n = 0; n < 8; n++) {
-			$('<div>').html('<svg viewBox="0 0 40 80" width="40" height="80"><path d="M34 10 L6 40 L34 70" fill="none" stroke="#efe6ff" stroke-width="13" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"/></svg>')
+			$('<div>').html('<svg viewBox="0 0 40 80" width="40" height="80" style="overflow:visible"><path d="M34 10 L6 40 L34 70" fill="none" stroke="#efe6ff" stroke-width="13" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"/></svg>')
 				.css({ position: 'absolute', left: 8 + n * 46 + 'px', top: 0, opacity: 0.3 - n * 0.03 }).appendTo($chev);
 		}
 
