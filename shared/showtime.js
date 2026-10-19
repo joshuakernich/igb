@@ -202,7 +202,8 @@ window.Showtime = function (stage, opts) {
 		notAgain: ['show-debug'],   // games never offered to play again
 		wait: { faces: 45, reasons: 40, again: 40 },   // each part moves on after this long untouched
 		picked: 1.4,           // the face picked stays up this long before what comes next
-		thanks: 2.4,           // THANK YOU! holds this long
+		thanks: 2.4,           // THANKS FOR THE FEEDBACK holds this long
+		fade: 0.8,             // then everything fades away over this long, before the end fades in
 	};
 
 	/* ---------- tuning: the title drop ---------- */
@@ -3332,7 +3333,7 @@ window.Showtime = function (stage, opts) {
 				$old.css({ transition: move, transform: `translateY(${-dir * H}px)`, pointerEvents: 'none' }).find('*').css('pointer-events', 'none');
 				stage.timeout(() => $old.remove(), SWAP.time * 1000 + 50);
 			} else if ($old) $old.remove();
-			if (part === 'thanks' || part === 'over') return;
+			if (part === 'over' || part === 'fade') return;
 			for (let wall = 0; wall < 3; wall++) {
 				// (beside the gif, when it's up in the top right corner: in the room left of it, shrunk to fit)
 				const side = gif.on;
@@ -3345,6 +3346,7 @@ window.Showtime = function (stage, opts) {
 				}).appendTo($layer);
 				if (part === 'faces') faces($wall);
 				else if (part === 'reasons') reasons($wall);
+				else if (part === 'thanks') big('THANKS FOR THE FEEDBACK', 96).css({ color: TYPE.colours.gold, maxWidth: W * TEXT_FIT + 'px', textWrap: 'balance' }).appendTo($wall);
 			}
 		}
 
@@ -3411,7 +3413,7 @@ window.Showtime = function (stage, opts) {
 			if (IGB.log) IGB.log(`Rated ${f.label} (${rating})`);
 			// a moment to see the face picked, then on
 			render();
-			stage.timeout(() => { if ($layer && part === 'faces') go(rating <= R.low ? 'reasons' : 'over', rating <= R.low ? 1 : 0); }, R.picked * 1000);
+			stage.timeout(() => { if ($layer && part === 'faces') { if (rating <= R.low) go('reasons', 1); else finish(); } }, R.picked * 1000);
 		}
 
 		function finish() {
@@ -3419,7 +3421,7 @@ window.Showtime = function (stage, opts) {
 				console.log('Feedback:', feedback.reasons.join(', '));
 				if (IGB.log) IGB.log('Feedback: ' + feedback.reasons.join(', '));
 			}
-			go('over', 1);   // straight on to the end: the carousel (the question flying up and away)
+			go('thanks', 1);   // THANKS FOR THE FEEDBACK flying in as the last selection flies up and away
 		}
 
 		function clear() {
@@ -3447,16 +3449,20 @@ window.Showtime = function (stage, opts) {
 				const age = bt - partAt;
 				if (part === 'faces' && age > R.wait.faces) go('over');
 				if (part === 'reasons' && age > R.wait.reasons) finish();
-				if (part === 'thanks' && age > R.thanks) part = 'over';
+				// THANKS FOR THE FEEDBACK holds, then everything fades away, then on to the end
+				if (part === 'thanks' && age > R.thanks) {
+					part = 'fade';
+					partAt = bt;
+					if ($layer) $layer.css({ transition: `opacity ${R.fade}s`, opacity: 0 });
+				}
+				if (part === 'fade' && age > R.fade) part = 'over';
 			},
 			draw(ctx, bt) {
+				// (the gif fading away with the rest, at the end)
+				ctx.save();
+				if (part === 'fade' || part === 'over') ctx.globalAlpha = 1 - clamp((bt - partAt) / R.fade, 0, 1);
 				drawGif(ctx, 1);
-				if (part !== 'thanks') return;
-				const cx = gif.on ? RATE_SIDE.left + RATE_SIDE.width / 2 : W / 2;
-				self.onWalls(ctx, function (c) {
-					self.slam(c, 'THANK YOU!', cx, 470 - RATE_UP, gif.on ? 130 : 170, bt - partAt, { fill: theme.gold, glow: '#ff7a3d' });
-					if (feedback && feedback.again) self.text(c, 'NEXT UP: ' + (IGB.find(feedback.again) || { name: '' }).name.toUpperCase(), cx, 650 - RATE_UP, 60, { fill: 'white', alpha: clamp((bt - partAt - 0.4) * 3, 0, 1) });
-				});
+				ctx.restore();
 			},
 		}, extra);
 	};
@@ -3503,7 +3509,8 @@ window.Showtime = function (stage, opts) {
 
 		function build() {
 			if ($layer) $layer.remove();
-			$layer = $('<showtime-end>').css({ position: 'absolute', left: 0, top: 0, width: 3 * W + 'px', height: H + 'px', pointerEvents: 'none' }).appendTo(stage.$ui);
+			$layer = $('<showtime-end>').css({ position: 'absolute', left: 0, top: 0, width: 3 * W + 'px', height: H + 'px', pointerEvents: 'none', opacity: 0, transition: 'opacity 1.6s ease' }).appendTo(stage.$ui);
+			stage.timeout(() => $layer && $layer.css({ opacity: 1 }), 30);   // (fading gently into view)
 			const list = games();
 			const cardH = CAROUSEL.h;
 			let $space = null;
