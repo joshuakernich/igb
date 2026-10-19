@@ -1570,26 +1570,36 @@ window.Showtime = function (stage, opts) {
 	// cabinets with glowing screens, a few hanging lights, a glossy floor.
 	// (an SVG, as a picture; softened when it's used, to sit in the background)
 	function arcadeArt() {
-		const cab = function (x, glow, tall) {
-			const h = tall ? 330 : 280, y = 700 - h;
-			return `<rect x="${x}" y="${y}" width="120" height="${h}" rx="10" fill="#1a1030"/>`
-				+ `<rect x="${x + 16}" y="${y + 30}" width="88" height="70" rx="6" fill="${glow}" opacity="0.9"/>`
-				+ `<rect x="${x + 10}" y="${y + 120}" width="100" height="18" rx="4" fill="#2a1a48"/>`
-				+ `<circle cx="${x + 40}" cy="${y + 129}" r="6" fill="${glow}"/><circle cx="${x + 80}" cy="${y + 129}" r="6" fill="#ffd23f"/>`
-				+ `<ellipse cx="${x + 60}" cy="${y + 65}" rx="90" ry="70" fill="${glow}" opacity="0.18"/>`;
+		// a cabinet, its feet at (x, base), scaled by its distance (s: 1 near, smaller further back; dimmer too)
+		const cab = function (x, base, s, glow, tall) {
+			const h = tall ? 330 : 280, y = -h;
+			return `<g transform="translate(${x} ${base}) scale(${s})" opacity="${(0.35 + 0.65 * s).toFixed(2)}">`
+				+ `<rect x="0" y="${y}" width="120" height="${h}" rx="10" fill="#1a1030"/>`
+				+ `<rect x="16" y="${y + 30}" width="88" height="70" rx="6" fill="${glow}" opacity="0.9"/>`
+				+ `<rect x="10" y="${y + 120}" width="100" height="18" rx="4" fill="#2a1a48"/>`
+				+ `<circle cx="40" cy="${y + 129}" r="6" fill="${glow}"/><circle cx="80" cy="${y + 129}" r="6" fill="#ffd23f"/>`
+				+ `<ellipse cx="60" cy="${y + 65}" rx="90" ry="70" fill="${glow}" opacity="0.18"/></g>`;
 		};
 		const glows = ['#ff4fd8', '#3ad1ff', '#b46bff', '#ffd23f', '#3cdc7a', '#ff7a3d'];
 		let cabs = '';
-		for (let i = 0; i < 12; i++) cabs += cab(40 + i * 130, glows[i % glows.length], i % 3 === 1);
+		// three rows, back to front: far and small near the wall, then nearer, then a few big ones out on the floor
+		const rows = [{ s: 0.5, base: 640, n: 20, step: 82, x0: 10 }, { s: 0.75, base: 680, n: 13, step: 124, x0: 50 }, { s: 1.15, base: 770, n: 7, step: 250, x0: -30 }];
+		rows.forEach((r, k) => {
+			for (let i = 0; i < r.n; i++) {
+				const jit = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453 % 1;   // (a steady wobble: the same every time)
+				cabs += cab(r.x0 + i * r.step + jit * r.step * 0.25, r.base + jit * 14 * r.s, r.s, glows[(i + k * 2) % glows.length], (i + k) % 3 === 1);
+			}
+		});
 		const lights = [180, 520, 860, 1200, 1500].map((x) => `<line x1="${x}" y1="0" x2="${x}" y2="120" stroke="#2a1a48" stroke-width="3"/><circle cx="${x}" cy="130" r="18" fill="#ffd9a8"/><circle cx="${x}" cy="130" r="60" fill="#ffd9a8" opacity="0.14"/>`).join('');
 		const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">`
 			+ `<defs><linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#140826"/><stop offset="1" stop-color="#2a0f4f"/></linearGradient>`
 			+ `<linearGradient id="f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a1a5a"/><stop offset="1" stop-color="#0d0618"/></linearGradient></defs>`
 			+ `<rect width="1600" height="700" fill="url(#w)"/>`
 			+ `<rect y="300" width="1600" height="10" fill="#ff4fd8" opacity="0.5"/><rect y="300" width="1600" height="40" fill="#ff4fd8" opacity="0.08"/>`
-			+ lights + cabs
-			+ `<rect y="700" width="1600" height="300" fill="url(#f)"/>`
-			+ `<rect y="700" width="1600" height="300" fill="#b46bff" opacity="0.06"/></svg>`;
+			+ lights
+			+ `<rect y="620" width="1600" height="380" fill="url(#f)"/>`
+			+ `<rect y="620" width="1600" height="380" fill="#b46bff" opacity="0.06"/>`
+			+ cabs + `</svg>`;
 		return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 	}
 	let arcadeUrl = null;
