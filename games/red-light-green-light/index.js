@@ -4443,10 +4443,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					// the step's caption, staying up through the whole step (the
 					// practice red light included: no RED LIGHT! over it)
 					const size = step.caption.length > 24 ? 80 : 96;
-					if (step.parts) show.slamParts(c, step.parts, W / 2, 200, size, practice.age, { fill: '#ffd23f' });   // (tutorial captions: yellow)
-					else show.slam(c, step.caption, W / 2, 200, size, practice.age, { fill: '#ffd23f' });
+					if (step.parts) show.slamParts(c, step.parts, W / 2, 260, size, practice.age, { fill: '#ffd23f' });   // (tutorial captions: yellow)
+					else show.slam(c, step.caption, W / 2, 260, size, practice.age, { fill: '#ffd23f' });
 					// which step this is, as the standard pips over the caption
-					show.pips(c, CONTROLS.steps.length, practice.i, practice.done, W / 2, 100);
+					show.pips(c, CONTROLS.steps.length, practice.i, practice.done, W / 2, 165);   // (under the clock)
 					if (practice.done) show.slam(c, 'NICE!', W / 2, 490, 140, practice.doneAge, { fill: '#7dff9e', glow: TEAL, rotate: -0.06 });
 				});
 			},

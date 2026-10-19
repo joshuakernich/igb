@@ -1230,7 +1230,7 @@ window.Showtime = function (stage, opts) {
 	// it goes (at: { x, y }, its middle, in the world; by default the middle
 	// of the front wall; at: false, the front wall's bottom right).
 	let $skip = null;
-	const SKIP_AT = { x: 1.5 * W, y: 340 };   // (by default: the middle of the front wall, snug under the tutorial's caption)
+	const SKIP_AT = { x: 1.5 * W, y: 360 };   // (by default: the middle of the front wall, snug under the tutorial's caption)
 	function skipTo() {
 		if (opts.skip && opts.skip.to) return opts.skip.to;
 		const i = beats.findIndex((b) => b.id === 'controls');
@@ -1866,7 +1866,7 @@ window.Showtime = function (stage, opts) {
 	// [{ caption, min, max, did() }]; extra.y: where the caption sits (the pips
 	// 100 above it); extra.enterStep(i): set a step up. SKIP TUTORIAL shows
 	// through it, as standard.
-	const TUT = { nice: 1.2, y: 220 };
+	const TUT = { nice: 1.2, y: 255 };   // (the caption, with the pips 85 above it: the block under the clock)
 	beatsLib.tutorial = function (extra) {
 		const steps = extra.steps;
 		const tut = { i: 0, age: 0, done: false, doneAge: 0 };
@@ -1893,7 +1893,7 @@ window.Showtime = function (stage, opts) {
 				if (!st) return;
 				const y = extra.y || TUT.y;
 				self.onWalls(ctx, function (c) {
-					self.pips(c, steps.length, tut.i, tut.done, W / 2, y - 100);
+					self.pips(c, steps.length, tut.i, tut.done, W / 2, y - 85);
 					self.slam(c, st.caption, W / 2, y, st.caption.length > 26 ? 66 : 80, tut.age, { fill: tut.done ? '#3cdc7a' : '#ffd23f' });
 				});
 			},
