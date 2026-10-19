@@ -4220,10 +4220,10 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// face), and where her pupils are on her face: set in the doll lab
 	// (DEBUG ▸ DOLL LAB), baked in here, kept in this browser while being tuned.
 	const DOLL_TUNED = {
-		head: { up: 66, x: 0, scale: 1.0 },
-		order: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15],
+		head: { up: 52, x: 0, scale: 0.86 },
+		order: [0, 2, 4, 7, 9, 10, 15],
 		pupil: { x: 0.124, cx: -0.003, y: -0.019, ring: 0.03 },
-		nudge: {},   // each head frame's own nudge, by its number on the sheet: { x, y } (her head's units)
+		nudge: { 2: { x: -8, y: 0 }, 4: { x: -9, y: 0 }, 7: { x: -2, y: 0 }, 9: { x: -2.5, y: 0 }, 10: { x: -2, y: 0 } },   // each head frame's own nudge, by its number on the sheet: { x, y } (her head's units)
 	};
 	const DOLL_KEY = 'rlgl-doll-lab-v7';   // (v7: earlier tuning was for the chibi doll)
 	const dollTune = JSON.parse(JSON.stringify(DOLL_TUNED));
