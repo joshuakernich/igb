@@ -3342,7 +3342,49 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		guard: { height: 140, clips: { walk: range('g', 0, 7), stand: range('g', 8, 9), aim: range('g', 10, 11), fire: range('g', 12, 15) } },
 	};
 	const ANIM_SHEETS = { back: ['arun', 'aact'], front: ['afront'], guard: ['gcircle'] };   // (for the lab: which sheets each figure draws from)
-	const ANIM_TUNED = {};   // (the lab's tuning, baked in: none yet for the v7 sheets)
+	const ANIM_TUNED = {   // (the lab's tuning, baked in)
+		back: {
+			clips: {
+				run: [
+					{ s: 'arun', i: 0, x: -7.5, y: -2 },
+					{ s: 'arun', i: 2, x: -7.5, y: -2 },
+					{ s: 'arun', i: 1, x: -7.5, y: -2 },
+					{ s: 'arun', i: 15, x: -10, y: 7.5 },
+				],
+				freeze: [
+					{ s: 'aact', i: 4 },
+					{ s: 'aact', i: 5, x: -1, y: -2 },
+				],
+				idle: [
+					{ s: 'aact', i: 0, x: -0.5, y: -1.5 },
+					{ s: 'aact', i: 1, x: -1, y: -1.5 },
+					{ s: 'aact', i: 2, y: -2.5 },
+					{ s: 'aact', i: 3, x: -2.5, y: -2 },
+				],
+			},
+		},
+		guard: {
+			clips: {
+				walk: [
+					{ s: 'g', i: 2, x: -8.5, y: -2.5 },
+					{ s: 'g', i: 3, x: -5, y: -1.5 },
+					{ s: 'g', i: 4, x: -5.5, y: 0.5 },
+					{ s: 'g', i: 6, x: -1.5 },
+					{ s: 'g', i: 1, x: 2, y: -1 },
+				],
+				stand: [
+					{ s: 'g', i: 8, x: -4 },
+					{ s: 'g', i: 9, x: -3 },
+				],
+				fire: [
+					{ s: 'g', i: 12, x: 3.5, y: 1.5 },
+					{ s: 'g', i: 13, x: 7, y: 1 },
+					{ s: 'g', i: 14, y: 1 },
+					{ s: 'g', i: 15 },
+				],
+			},
+		},
+	};
 	const ANIM_KEY = 'rlgl-animation-lab-v7';   // (v7: earlier tuning was for other sheets)
 	const ANIM_TUNE = JSON.parse(JSON.stringify(ANIM_TUNED));
 	try {
