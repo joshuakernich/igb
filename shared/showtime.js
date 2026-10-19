@@ -3167,7 +3167,7 @@ window.Showtime = function (stage, opts) {
 	// BOOK ANOTHER SESSION AT THE KIOSK. The game hands back as it starts
 	// (extra.enter is the place to call IGB.complete).
 	beatsLib.end = function (extra) {
-		const CAROUSEL = { w: 640, h: 400, gap: 70, speed: 110, words: 80, kiosk: 44, margin: 40, foot: 96 };   // (a card's screenshot size; the gap between cards; how fast they flow, px a second; words: the size of THANKS FOR PLAYING!; kiosk: the kiosk line's, much smaller; margin: their extra room from the cards; foot: the cards' thick white bottom border, the game's title in it)
+		const CAROUSEL = { w: 640, h: 400, side: 530, small: 0.58, every: 2.8, words: 80, kiosk: 44, margin: 40, foot: 96 };   // (a card's screenshot size; on each wall, how far its side cards sit from the middle one, and how small they are; seconds between steps; words: the size of THANKS FOR PLAYING!; kiosk: the kiosk line's, much smaller; margin: their extra room from the cards; foot: the cards' thick white bottom border, the game's title in it)
 		let $layer = null;
 		const games = () => (IGB.menu || []).filter((id) => !RATE.notAgain.includes(id) && id !== opts.id).map((id) => IGB.find(id)).filter(Boolean);   // (the others: they've just played this one)
 
@@ -3222,20 +3222,65 @@ window.Showtime = function (stage, opts) {
 				words('BOOK ANOTHER SESSION AT THE KIOSK', TYPE.colours.gold, CAROUSEL.kiosk).attr('kiosk', '').appendTo($wall);
 			}
 			if (!list.length) return;
-			// the cards: one long line of them flowing across all three walls,
-			// right to left, round and round for ever (repeated enough to fill
-			// the room and then some, so the loop never shows)
-			const pitch = CAROUSEL.w + 12 + CAROUSEL.gap;
-			const lap = list.length * pitch;
-			const reps = Math.ceil((3 * W + lap) / lap) + 1;
-			const $strip = $('<div>').attr('carousel', '').css({ position: 'absolute', left: 0, top: $space[0].offsetTop + 'px', width: 3 * W + 'px', height: cardH + 40 + 'px', overflow: 'visible' }).appendTo($layer);
-			const name = 'showtime-flow-' + lap;
-			if (!document.getElementById(name)) $('<style>').attr('id', name).text(`@keyframes ${name} { from { transform: translateX(0); } to { transform: translateX(-${lap}px); } }`).appendTo('head');
-			const $belt = $('<div>').css({
-				display: 'flex', gap: CAROUSEL.gap + 'px', width: 'max-content', willChange: 'transform',
-				animation: `${name} ${lap / CAROUSEL.speed}s linear infinite`,
-			}).appendTo($strip);
-			for (let r = 0; r < reps; r++) for (const g of list) card(g).appendTo($belt);
+			// the cards: one long line of them across all three walls, three to a
+			// wall (the middle one big, its neighbours smaller and fainter), so
+			// each wall features a different game; every so often the whole line
+			// steps one along, right to left, round and round for ever
+			$strip = $('<div>').attr('carousel', '').css({ position: 'absolute', left: 0, top: $space[0].offsetTop + 'px', width: 3 * W + 'px', height: cardH + 'px' }).appendTo($layer);
+			cards = [];
+			step = 0;
+			cycle = makeCycle(list);
+			for (let i = SLOTS[0]; i <= SLOTS[1]; i++) cards.push(placeCard(card(cycle[mod(i, cycle.length)]).appendTo($strip), i, true));
+		}
+		const SLOTS = [-1, 9];   // (the slots kept filled: one off each end, to slide in from and out to)
+		const mod = (a, n) => ((a % n) + n) % n;
+		let $strip = null;
+		let cards = [];          // { $el, slot }
+		let step = 0;
+		let cycle = [];
+		// The order they come round in: the games, but never a length that would
+		// feature the same game on two walls at once (the walls' middles are 3
+		// apart): when the count's a multiple of 3, one game comes round twice,
+		// placed so it's never next to itself or on two walls together.
+		function makeCycle(list) {
+			const n = list.length;
+			if (n < 3 || n % 3) return list.slice();
+			for (let j = 1; j < n - 1; j++) {
+				const a = n - j, b = n + 1 - a;   // (its two gaps round the loop)
+				if (![3, 6].includes(a) && ![3, 6].includes(b)) return list.concat([list[j]]);
+			}
+			return list.concat(list.slice(0, 1));
+		}
+		// a slot's place: wall floor(slot / 3), and in it left, middle or right
+		function slotX(i) {
+			const w = Math.floor(i / 3), side = mod(i, 3) - 1;
+			return w * W + W / 2 + side * CAROUSEL.side;
+		}
+		function placeCard($el, slot, instant) {
+			const mid = mod(slot, 3) === 1;
+			if (instant) $el.css('transition', 'none');
+			$el.css({
+				position: 'absolute', left: 0, top: 0,
+				transform: `translateX(${slotX(slot) - (CAROUSEL.w + 12) / 2}px) scale(${mid ? 1 : CAROUSEL.small})`, transformOrigin: 'center center',
+				opacity: mid ? 1 : 0.55, zIndex: mid ? 2 : 1,
+			});
+			if (instant) { void $el[0].offsetWidth; $el.css('transition', 'transform 0.8s cubic-bezier(.4,0,.2,1), opacity 0.8s'); }
+			return { $el, slot };
+		}
+		function stepCards() {
+			const list = games();
+			if (!$strip || !list.length) return;
+			step++;
+			for (const c of cards) {
+				c.slot--;
+				if (c.slot < SLOTS[0]) {
+					// off the left end: back in at the right, as the game that's next along
+					c.$el.remove();
+					c.$el = card(cycle[mod(SLOTS[1] + step, cycle.length)]).appendTo($strip);
+					c.slot = SLOTS[1];
+					placeCard(c.$el, c.slot, true);
+				} else placeCard(c.$el, c.slot);
+			}
 		}
 
 		return extend({
@@ -3250,6 +3295,11 @@ window.Showtime = function (stage, opts) {
 			exit() {
 				if ($layer) $layer.remove();
 				$layer = null;
+				$strip = null;
+			},
+			update(dt, bt) {
+				// one step along, every so often
+				if (Math.floor(bt / CAROUSEL.every) !== Math.floor((bt - dt) / CAROUSEL.every)) stepCards();
 			},
 		}, extra);
 	};
