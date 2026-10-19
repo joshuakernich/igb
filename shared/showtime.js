@@ -134,7 +134,7 @@ window.Showtime = function (stage, opts) {
 		words: [100, 112],     // YOU HAVE, MINUTES
 		gap: 0.42,             // how far above and below the time they sit (a share of text)
 		slam: 0.18,            // seconds for a word to crash down into place
-		y: 520,                // the dial's centre
+		y: 450,                // the dial's centre
 	};
 
 	// The intros dim the game's scene behind their titles, never black it out.
@@ -1699,7 +1699,7 @@ window.Showtime = function (stage, opts) {
 	// out). lines: [{ text, fill, glow }]. Never a byline under it.
 	// The sting: the In Gamebox logo animation (assets/shared/sting.mp4, made
 	// for a four-walled box: its first three walls on ours), on black, with its sound; then on.
-	const STING = { src: 'assets/shared/sting.mp4', walls: 4, aspect: 6, most: 6, lead: 1.3, fade: 1.0 };   // the video, made for four walls, its width to its height; on regardless after this long (if it can't play); how long before its end it starts fading, revealing the title as it goes, and how long the fade takes
+	const STING = { src: 'assets/shared/sting.mp4', walls: 4, aspect: 6, most: 6, lead: 1.0, fade: 1.0 };   // the video, made for four walls, its width to its height; on regardless after this long (if it can't play); how long before its end it starts fading, revealing the title as it goes, and how long the fade takes
 	beatsLib.sting = function (extra) {
 		let $video = null, ended = false;
 		// (the title starts under it as it fades: it's let go of, fades, and goes)
