@@ -1147,19 +1147,24 @@ IGB.register('backrooms', function BackroomsGame(stage, playersMeta) {
 			vhsText(ctx, text, W * 1.5, H / 2, 96, { alpha: a });
 			if (phase === 'rewind') for (const wall of [0, 2]) vhsText(ctx, text, wall * W + W / 2, H / 2, 80, { alpha: a * 0.8 });
 		}
-		show.onWalls(ctx, function (c) {
-			if (phase === 'ready') {
-				const fade = 1 - between(phaseT, phaseDur - 0.4, phaseDur);
-				show.slam(c, 'ROUND ' + (level + 1), W / 2, 450, 190, phaseT - 0.1, { fill: YELLOW, alpha: fade });
-				show.slam(c, retry ? 'AGAIN. REMEMBER HARDER' : diffs.length + ' DIFFERENCES BELOW', W / 2, 600, 76, phaseT - 0.5, { fill: 'white', alpha: fade });
+		// the round's start: what's below, on the tape (its LEVEL is already in the corner: no ROUND n over it)
+		if (phase === 'ready') {
+			const a = Math.min(1, phaseT / 0.3) * (1 - between(phaseT, phaseDur - 0.4, phaseDur));
+			const text = retry ? 'AGAIN. REMEMBER HARDER' : diffs.length + ' DIFFERENCES BELOW';
+			band(ctx, W, 260, W, 230, 0.55 * a);
+			vhsText(ctx, text, W * 1.5, 250, 110, { alpha: a });
+			for (const wall of [0, 2]) {
+				band(ctx, wall * W, 240, W, 150, 0.45 * a);
+				vhsText(ctx, text, wall * W + W / 2, 235, 72, { alpha: a * 0.85 });
 			}
+		}
+		show.onWalls(ctx, function (c) {
 			if (phase === 'reveal' && outcome) {
 				const fade = 1 - between(phaseT, 2.6, 3.1);
 				if (outcome.found === outcome.total) {
 					show.slam(c, 'ALL FOUND!', W / 2, 470, 170, phaseT - 0.1, { fill: '#ffe680', glow: YELLOW, rotate: -0.05, alpha: fade });
 				} else if (!outcome.found) {
 					show.slam(c, 'NOTHING FOUND', W / 2, 430, 150, phaseT - 0.1, { fill: RED, glow: RED, alpha: fade });
-					show.slam(c, 'ROUND ' + (level + 1) + ' AGAIN', W / 2, 570, 80, phaseT - 0.5, { fill: 'white', alpha: fade });
 				} else {
 					show.slam(c, outcome.found + ' OF ' + outcome.total + ' FOUND', W / 2, 470, 130, phaseT - 0.1, { fill: 'white', alpha: fade });
 				}
@@ -1224,14 +1229,6 @@ IGB.register('backrooms', function BackroomsGame(stage, playersMeta) {
 		}
 		vhsText(ctx, `LEVEL ${floorN}`, W + W - 70, 118, 44, { align: 'right', flicker: false, split: 2 });
 
-		// each player's finds, bottom right of the front wall (in the rounds)
-		if (show.beat === 'play') {
-			for (let i = 0; i < players; i++) {
-				const x = 2 * W - 90 - (players - 1 - i) * 165;
-				art.roundRect(ctx, x - 70, H - 88, 46, 46, 8, { fill: PLAYER_COLORS[i], stroke: 'rgba(0,0,0,0.6)', lineWidth: 4 });
-				vhsText(ctx, String(scores[i]), x, H - 64, 60, { align: 'left', flicker: false, split: 2 });
-			}
-		}
 	}
 
 	// The controls' captions, step pips and live aids.
