@@ -286,7 +286,7 @@ window.Showtime = function (stage, opts) {
 	const REPLAY = {
 		sample: 0.5,           // record everyone's position this often (game seconds)
 		intro: 1.0,
-		play: 12,              // the whole game, replayed in this long
+		play: 6,               // the whole game, replayed in this long
 		outro: 2.0,
 		zoom: 1.6,             // the replay, zoomed in this close on the room
 		footroom: 30,          // keeping this much under the feet of anyone at the very back
