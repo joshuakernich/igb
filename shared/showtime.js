@@ -1554,13 +1554,14 @@ window.Showtime = function (stage, opts) {
 	// Once a count's tapped the barriers swing inwards, the view rushes into
 	// the box, and the sting begins.
 	const FRONT = {
-		tv: { y: 74, h: 200, gap: 52 },                          // the three TVs across the top (16:9), over the box
+		tv: { y: 74, h: 200, gap: 52, lean: -16 },               // the three TVs across the top (16:9), over the box, leaning forward (degrees)
 		box: { x: 56, y: 44, w: 1488, h: 912, depth: 1100, lens: 1000 },   // the gamebox, filling the wall but for an inset of the arcade round it: its mouth, how deep it goes, its perspective
 		zoom: { x: 465, y: 560 },                                // where the eye looks into it (the middle of what shows of it, left of the panel): the vanishing point, and the rush's centre
 		panel: { x: 874, y: 310, w: 670, h: 646 },               // the purple panel on the right, over the box (the way in 55% of it, the kiosk 45%)
 		screen: { inset: 34 },                                   // its screen, filling the panel but for this margin
-		gate: { h: 150, gap: 14, post: 26 },                     // the glass barriers, side by side across the whole way in
+		gate: { gap: 14, post: 26 },                             // the glass barriers, side by side across the whole way in, a third of its height
 		neon: '#c06bff',                                         // the strips down the box's sides
+		purple: '#6326c8',                                       // the panels, one flat purple
 		swing: 0.55, rush: 0.75,                                 // the barriers swinging in; the view rushing into the box
 	};
 	// The arcade behind it all, drawn simply: a dim purple room, a row of
@@ -1620,11 +1621,13 @@ window.Showtime = function (stage, opts) {
 		const neon = () => { for (const x of [F.box.x - 14, F.box.x + F.box.w]) $('<div>').css({ position: 'absolute', left: x + 'px', top: F.box.y + 'px', width: '14px', height: F.box.h + 'px', background: '#f3e2ff', boxShadow: `0 0 24px 8px ${F.neon}, 0 0 60px 18px ${F.neon}`, zIndex: 4 }).appendTo($front); };
 		// 4. the TVs across the top, each playing one of the trailers inside the box
 		// (a purple panel across the top of the box, the TVs set in it)
-		$('<div>').css({ position: 'absolute', left: F.box.x + 'px', top: F.box.y + 'px', width: F.box.w + 'px', height: F.panel.y - F.box.y + 'px', background: 'linear-gradient(180deg, #7b33e6, #4a17a8)', boxShadow: 'inset 0 0 0 4px rgba(255,255,255,0.12), 0 10px 30px rgba(0,0,0,0.45)', zIndex: 2 }).appendTo($front);
+		$('<div>').css({ position: 'absolute', left: F.box.x + 'px', top: F.box.y + 'px', width: F.box.w + 'px', height: F.panel.y - F.box.y + 'px', background: F.purple, boxShadow: '0 10px 30px rgba(0,0,0,0.45)', zIndex: 2 }).appendTo($front);
 		const tvW = F.tv.h * 16 / 9;
 		const tvX = (W - (3 * tvW + 2 * F.tv.gap)) / 2;
 		clips.forEach(function (id, i) {
-			const $tv = $('<div>').css({ position: 'absolute', left: tvX + i * (tvW + F.tv.gap) + 'px', top: F.tv.y + 'px', width: tvW + 'px', height: F.tv.h + 'px', border: '8px solid #05030a', borderRadius: '8px', boxSizing: 'content-box', overflow: 'hidden', background: '#1a1030', boxShadow: `0 0 30px rgba(192,107,255,0.45)`, zIndex: 3 }).appendTo($front);
+			const $tv = $('<div>').css({ position: 'absolute', left: tvX + i * (tvW + F.tv.gap) + 'px', top: F.tv.y + 'px', width: tvW + 'px', height: F.tv.h + 'px', border: '8px solid #05030a', borderRadius: '8px', boxSizing: 'content-box', overflow: 'hidden', background: '#1a1030', boxShadow: `0 0 30px rgba(192,107,255,0.45)`, zIndex: 3,
+				transformOrigin: '50% 100%', transform: `perspective(1100px) rotateX(${F.tv.lean}deg)`,   // (leaning forward, out over the way in)
+			}).appendTo($front);
 			loop(id).appendTo($tv);
 		});
 
@@ -1648,7 +1651,8 @@ window.Showtime = function (stage, opts) {
 		const open = F.panel.x - B.x;                            // (the way in: the box's mouth left of the panel)
 		G.w = (open - 2 * G.post - G.gap) / 2;                   // (the barriers between posts at its edges, filling it)
 		const gx = G.post;
-		const gy = B.h - G.h - 70;
+		G.h = (B.y + B.h - F.panel.y) / 3;                       // (a third of the way up the way in, standing on its floor)
+		const gy = B.h - G.h;
 		const barrier = (left, hinge) => $('<div>').css({
 			position: 'absolute', left: left + 'px', top: gy + 'px', width: G.w + 'px', height: G.h + 'px', transformOrigin: hinge + ' center',
 			background: 'linear-gradient(180deg, rgba(220,235,255,0.42), rgba(200,220,255,0.18))', border: '3px solid rgba(255,255,255,0.7)', borderRadius: '6px', boxSizing: 'border-box',
@@ -1656,12 +1660,12 @@ window.Showtime = function (stage, opts) {
 		}).appendTo($box);
 		const $gl = barrier(gx, 'left'), $gr = barrier(gx + G.w + G.gap, 'right');
 		for (const x of [gx - G.post, gx + 2 * G.w + G.gap]) {
-			$('<div>').css({ position: 'absolute', left: x + 'px', top: gy - 40 + 'px', width: G.post + 'px', height: G.h + 110 + 'px', background: '#120c1c', borderTop: '6px solid #3ad1ff', boxShadow: '0 -4px 14px rgba(58,209,255,0.7)' }).appendTo($box);
+			$('<div>').css({ position: 'absolute', left: x + 'px', top: gy - 24 + 'px', width: G.post + 'px', height: G.h + 24 + 'px', background: '#120c1c', borderTop: '6px solid #3ad1ff', boxShadow: '0 -4px 14px rgba(58,209,255,0.7)' }).appendTo($box);
 		}
 
 		// 5. the purple panel on the right, its screen (filling it) asking HOW MANY PLAYERS?
 		const P = F.panel;
-		$('<div>').css({ position: 'absolute', left: P.x + 'px', top: P.y + 'px', width: P.w + 'px', height: P.h + 'px', borderRadius: '14px', background: 'linear-gradient(160deg, #7b33e6, #4a17a8)', boxShadow: `inset 0 0 0 4px rgba(255,255,255,0.12), 0 0 40px rgba(123,51,230,0.5)`, zIndex: 3 }).appendTo($front);
+		$('<div>').css({ position: 'absolute', left: P.x + 'px', top: P.y + 'px', width: P.w + 'px', height: P.h + 'px', borderRadius: '14px', background: F.purple, zIndex: 3 }).appendTo($front);
 		const sw = P.w - 2 * F.screen.inset, sh = P.h - 2 * F.screen.inset;
 		const $screen = $('<div>').css({
 			position: 'absolute', left: P.x + (P.w - sw) / 2 + 'px', top: P.y + (P.h - sh) / 2 + 'px', width: sw + 'px', height: sh + 'px', boxSizing: 'border-box', padding: '40px 22px',
@@ -1672,7 +1676,7 @@ window.Showtime = function (stage, opts) {
 			fontSize: '64px', lineHeight: 1.05, textAlign: 'center', letterSpacing: '1px', color: TYPE.colours.gold, width: '100%', textWrap: 'balance',
 			WebkitTextStroke: `5px ${theme.ink}`, paintOrder: 'stroke fill',
 		}).appendTo($screen);
-		const $row = $('<div>').css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '18px', width: '100%' }).appendTo($screen);
+		const $row = $('<div>').css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '18px', width: 3 * 120 + 2 * 18 + 'px' }).appendTo($screen);   // (over two lines: three, then two)
 		let picked = false;
 		for (let n = 2; n <= 6; n++) {
 			$('<button>').attr('count', n).text(n).css({
@@ -1689,8 +1693,9 @@ window.Showtime = function (stage, opts) {
 					press(this);   // (tapped: the standard colour shift)
 					// 7. the barriers swing in, the view rushes into the box, then the sting
 					stage.timeout(function () {
-						$gl.css({ transform: 'rotateY(-80deg)' });
-						$gr.css({ transform: 'rotateY(80deg)' });
+						// (swinging inwards, into the box, in its perspective)
+						$gl.css({ transform: 'rotateY(78deg)' });
+						$gr.css({ transform: 'rotateY(-78deg)' });
 						self.fx('whooshLong', 0.6);
 					}, PRESS.hold * 1000);
 					stage.timeout(function () {
