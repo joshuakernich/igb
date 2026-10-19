@@ -4445,17 +4445,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					const size = step.caption.length > 24 ? 80 : 96;
 					if (step.parts) show.slamParts(c, step.parts, W / 2, 200, size, practice.age, { fill: '#ffd23f' });   // (tutorial captions: yellow)
 					else show.slam(c, step.caption, W / 2, 200, size, practice.age, { fill: '#ffd23f' });
-					// which step this is, as pips over the caption, outlined and
-					// dropped like the text (solid: a dim pip is grey, not see-through)
-					CONTROLS.steps.forEach(function (s, i) {
-						const x = W / 2 + (i - (CONTROLS.steps.length - 1) / 2) * 50;
-						const r = i === practice.i ? 13 : 9;
-						const y = 100;
-						const ring = 5;
-						art.circle(c, x, y + 7, r + ring, { fill: 'rgba(0,0,0,0.55)' });   // (the drop, as the text's)
-						art.circle(c, x, y, r + ring, { fill: Showtime.TYPE.colours.ink });   // (the outline)
-						art.circle(c, x, y, r, { fill: i < practice.i || (i === practice.i && practice.done) ? '#ffd23f' : i === practice.i ? 'white' : '#8a8a96' });
-					});
+					// which step this is, as the standard pips over the caption
+					show.pips(c, CONTROLS.steps.length, practice.i, practice.done, W / 2, 100);
 					if (practice.done) show.slam(c, 'NICE!', W / 2, 490, 140, practice.doneAge, { fill: '#7dff9e', glow: TEAL, rotate: -0.06 });
 				});
 			},

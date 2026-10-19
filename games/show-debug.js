@@ -123,6 +123,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 				const step = TUTORIAL[tut.i];
 				if (!step) return;
 				show.onWalls(ctx, function (c) {
+					show.pips(c, TUTORIAL.length, tut.i, tut.done, W / 2, 100);   // (which step: the standard pips)
 					show.slam(c, step.caption, W / 2, 200, 70, tut.age, { fill: tut.done ? '#3cdc7a' : '#ffd23f' });
 				});
 			},

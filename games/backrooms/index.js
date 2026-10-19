@@ -1253,10 +1253,7 @@ IGB.register('backrooms', function BackroomsGame(stage, playersMeta) {
 		if (step.id === 'wrong') tapeBar(ctx, practice.tape, CONTROLS.tape, 380);
 		show.onWalls(ctx, function (c) {
 			show.slam(c, step.caption, W / 2, 210, step.caption.length > 30 ? 84 : 104, practice.age, { fill: '#ffd23f' });   // (tutorial captions: yellow)
-			CONTROLS.steps.forEach(function (s, i) {
-				const x = W / 2 + (i - (CONTROLS.steps.length - 1) / 2) * 50;
-				art.circle(c, x, 290, i === practice.i ? 13 : 9, { fill: i < practice.i || (i === practice.i && practice.done) ? YELLOW : i === practice.i ? 'white' : 'rgba(255,255,255,0.45)' });
-			});
+			show.pips(c, CONTROLS.steps.length, practice.i, practice.done, W / 2, 290);   // (the standard step pips)
 			if (practice.done) show.slam(c, 'NICE!', W / 2, 760, 140, practice.doneAge, { fill: GREEN, glow: GREEN, rotate: -0.06 });
 		});
 	}

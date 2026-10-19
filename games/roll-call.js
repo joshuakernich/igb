@@ -1006,11 +1006,8 @@ IGB.register('roll-call', function RollCallGame(stage, playersMeta) {
 				if (!step) return;
 				show.onWalls(ctx, function (c) {
 					show.slam(c, step.caption, W / 2, 175, step.caption.length > 26 ? 66 : 80, tut.age, { fill: tut.done ? '#3cdc7a' : '#ffd23f' });
-					// which step this is, as pips
-					TUTORIAL.forEach(function (s, i) {
-						const x = W / 2 + (i - (TUTORIAL.length - 1) / 2) * 50;
-						art.circle(c, x, 248, i === tut.i ? 13 : 9, { fill: i < tut.i || (i === tut.i && tut.done) ? '#FEE955' : i === tut.i ? 'white' : 'rgba(255,255,255,0.3)' });
-					});
+					// which step this is, as the standard pips
+					show.pips(c, TUTORIAL.length, tut.i, tut.done, W / 2, 248);
 					if (tut.done) show.slam(c, 'NICE!', W / 2, 560, 140, tut.doneAge, { fill: '#7dff9e', glow: PURPLE, rotate: -0.06 });
 				});
 			},

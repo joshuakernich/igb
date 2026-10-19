@@ -217,7 +217,8 @@ window.Showtime = function (stage, opts) {
 		fit: 0.7,              // the widest a line may be: this share of a wall
 		raised: 370,           // with a START button: the title's middle, raised to make room (under the logo)
 		logo: { src: 'assets/shared/igb-logo.png', w: 420, top: 50, outline: 0, shade: { size: 0.72, squash: 0.5, alpha: 0.65 }, tilt: -0.05, bob: [7, 1.6], sway: [0.012, 1.1] },   // the Immersive Gamebox logo along the top: its width, how far down; no outline (outline: px of ink round it), a soft dark glow behind it (its size, a share of the logo's width; how flat; how dark); tilted (radians), floating up and down (px, speed) and swaying (radians, speed)
-		startGap: 50,          // and the gap between its last line and the START button
+		startY: 790,           // TAP THE WALL TO START: where it sits (low on the front wall), and its size
+		startSize: 60,
 		auto: 10,              // the START button presses itself after this many seconds (its icon counts down)
 	};
 
@@ -835,11 +836,12 @@ window.Showtime = function (stage, opts) {
 	let showTime = 0;
 	function drawBackdrop(ctx) {
 		art.rect(ctx, 0, 0, WIDTH, H, { fill: art.linear(ctx, 0, 0, 0, H, [theme.sky[0], theme.sky[1]]) });
+		const rays = !(beat && beat.id === 'board');   // (no starburst behind the leaderboard)
 		self.onWalls(ctx, function (c) {
 			c.save();
 			c.translate(W / 2, H + 120);
 			c.rotate(showTime * 0.08);
-			for (let i = 0; i < 18; i++) {
+			for (let i = 0; rays && i < 18; i++) {
 				c.rotate(Math.PI * 2 / 18);
 				c.beginPath();
 				c.moveTo(0, 0);
@@ -1842,6 +1844,62 @@ window.Showtime = function (stage, opts) {
 		return (logoDone = { canvas: out.canvas, h });
 	}
 
+	// The tutorial's step pips: one per step, in a row, centred on x; the
+	// steps done and the one under way yellow (that one bigger), the ones to
+	// come a dim yellow; outlined and dropped like the words (solid, so a dim
+	// pip isn't see-through). show.pips(c, n, i, done, x, y).
+	const PIPS = { gap: 50, r: [9, 13], ring: 5, on: '#ffd23f', off: '#7d6a2c' };
+	self.pips = function (c, n, i, done, x, y) {
+		for (let k = 0; k < n; k++) {
+			const px = x + (k - (n - 1) / 2) * PIPS.gap;
+			const r = k === i ? PIPS.r[1] : PIPS.r[0];
+			art.circle(c, px, y + 7, r + PIPS.ring, { fill: 'rgba(0,0,0,0.55)' });   // (the drop)
+			art.circle(c, px, y, r + PIPS.ring, { fill: TYPE.colours.ink });          // (the outline)
+			art.circle(c, px, y, r, { fill: k < i || k === i ? PIPS.on : PIPS.off });
+		}
+	};
+
+	// The standard tutorial ('controls'): the game's moves, one step at a
+	// time, each caption slammed over every wall in yellow with the step pips
+	// over it; a step moves on once everyone's done it (after its minimum
+	// time: it turns green, NICE!) or when its time runs out. extra.steps:
+	// [{ caption, min, max, did() }]; extra.y: where the caption sits (the pips
+	// 100 above it); extra.enterStep(i): set a step up. SKIP TUTORIAL shows
+	// through it, as standard.
+	const TUT = { nice: 1.2, y: 220 };
+	beatsLib.tutorial = function (extra) {
+		const steps = extra.steps;
+		const tut = { i: 0, age: 0, done: false, doneAge: 0 };
+		const enterStep = function (i) {
+			Object.assign(tut, { i, age: 0, done: false, doneAge: 0 });
+			if (steps[i]) { self.fx('stepIn'); if (extra.enterStep) extra.enterStep(i); }
+		};
+		self.tutorialStep = () => ({ i: tut.i, done: tut.done, step: steps[tut.i] && steps[tut.i].id });
+		return extend({
+			id: 'controls',
+			length: steps.reduce((a, st) => a + st.max + TUT.nice, 0),   // (a safety net: each step has its own limit)
+			done: () => tut.i >= steps.length,
+			enter() { enterStep(0); },
+			update(dt) {
+				const st = steps[tut.i];
+				if (!st) return;
+				tut.age += dt;
+				if (!tut.done && tut.age >= st.min && st.did()) { tut.done = true; self.fx('pick', 0.8); }
+				if (tut.done) tut.doneAge += dt;
+				if ((tut.done && tut.doneAge >= TUT.nice) || tut.age >= st.max) enterStep(tut.i + 1);
+			},
+			draw(ctx) {
+				const st = steps[tut.i];
+				if (!st) return;
+				const y = extra.y || TUT.y;
+				self.onWalls(ctx, function (c) {
+					self.pips(c, steps.length, tut.i, tut.done, W / 2, y - 100);
+					self.slam(c, st.caption, W / 2, y, st.caption.length > 26 ? 66 : 80, tut.age, { fill: tut.done ? '#3cdc7a' : '#ffd23f' });
+				});
+			},
+		}, Object.assign({}, extra, { steps: undefined, y: undefined, enterStep: undefined }));
+	};
+
 	beatsLib.titleDrop = function (extra) {
 		const T = TITLE;
 		// (its lines: as given, or the game's title in the manifest, which the end screen's carousel uses too)
@@ -1857,12 +1915,7 @@ window.Showtime = function (stage, opts) {
 		const backOut = (x) => { const c1 = T.back, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
 		const flyScale = (bt) => { const k = backOut(clamp(bt / T.in, 0, 1)); return k <= 1 ? 1 / lerp(1 / T.far, 1, k) : k; };
 		const flyAlpha = (bt) => clamp(bt / T.in * 4, 0, 1);
-		// the START button's middle: just under the title's last line (a neat gap below it)
-		const startTop = function () {
-			const n = lines.length;
-			const full = T.size * (n > 1 ? 0.85 : 1);
-			return T.raised + (n - 1) / 2 * full * 1.05 + full * 0.5 + T.startGap + PAUSE.row.h / 2;
-		};
+
 		// By default the title holds, raised, over a big START button that pops
 		// in once it's landed, and fades out once START is pressed (start:
 		// false: it plays through and moves on by itself)
@@ -1886,36 +1939,40 @@ window.Showtime = function (stage, opts) {
 			update(dt, bt) {
 				self.blackout = Math.min(INTRO_DIM, bt / T.dark * INTRO_DIM);   // the game's scene still showing behind
 				now = bt;
-				// the START button, on the front wall under the title
+				// TAP THE WALL TO START, low on the front wall
 				if (start && !$start && startedAt < 0) {   // (straight away, flying in with the rest)
 					shownAt = bt;
 					// (its icon, snug in its right end as the pause menu's rows have theirs: a
 					// countdown in a circle, the seconds left in it and a ring running down;
 					// at nought it presses itself)
-					const D = PAUSE.row.h - 10 - PAUSE.row.inset * 2;
+					const D = Math.round(T.startSize * 1.25);
 					const gold = TYPE.colours.gold;
 					$count = $(`<svg viewBox="0 0 100 100" width="${D}" height="${D}" style="display:block;flex:none">`
 						+ `<circle cx="50" cy="50" r="44" fill="none" stroke="${gold}" stroke-opacity="0.25" stroke-width="10"/>`
 						+ `<circle class="ring" cx="50" cy="50" r="44" fill="none" stroke="${gold}" stroke-width="10" stroke-linecap="round" pathLength="100" stroke-dasharray="100 100" transform="rotate(-90 50 50)"/>`
 						+ `<text class="secs" x="50" y="52" text-anchor="middle" dominant-baseline="middle" font-family="${CLOCK_FONT}, monospace" font-size="52" fill="${gold}">${TITLE.auto}</text></svg>`);
-					$start = $('<button start>').append($('<span>').text('TAP TO START').css({ flex: 1, textAlign: 'left', whiteSpace: 'nowrap' })).append($count).css({
-						position: 'absolute', left: (W + W / 2) + 'px', top: startTop() + 'px', transform: `translate(-50%, -50%) scale(${T.far})`, opacity: 0,
-						// (the same size and shape as the pause menu's buttons: the word on the left, the icon snug in the right end)
-						width: PAUSE.row.w + 'px', height: PAUSE.row.h + 'px', boxSizing: 'border-box', padding: `0 ${PAUSE.row.inset}px 0 52px`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px',
-						borderRadius: PAUSE.row.h / 2 + 'px', cursor: 'pointer', pointerEvents: 'auto', zIndex: 5, ...button(TYPE.colours.gold, PAUSE.row.size),
-						fontFamily: `"${FONT}", sans-serif`, fontSize: PAUSE.row.size + 'px', lineHeight: 1, letterSpacing: '2px',
+					// (a whole prompt, not a button: TAP THE WALL TO START, its countdown
+					// beside it; a tap anywhere on the walls starts the game)
+					$start = $('<div start>').append($('<span>').text('TAP THE WALL TO START').css({ whiteSpace: 'nowrap' })).append($count).css({
+						position: 'absolute', left: (W + W / 2) + 'px', top: T.startY + 'px', transform: `translate(-50%, -50%) scale(${T.far})`, opacity: 0,
+						display: 'flex', alignItems: 'center', gap: '26px', pointerEvents: 'none', zIndex: 5,
+						fontFamily: `"${FONT}", sans-serif`, fontSize: T.startSize + 'px', lineHeight: 1, letterSpacing: '2px', color: gold,
+						WebkitTextStroke: `${Math.round(T.startSize * 0.1)}px ${TYPE.colours.ink}`, paintOrder: 'stroke fill', textShadow: `0 ${Math.round(T.startSize * 0.09)}px 0 rgba(0,0,0,0.55)`,
 						transition: 'none',   // (it flies in frame by frame, in step with the logo and title)
-					}).appendTo(stage.$ui)
-						.on('click', function (e) {
-							e.stopPropagation();
-							if (startedAt >= 0) return;   // (once)
-							self.fx('pick');
-							startedAt = now;
-							// (tapped: filled with its colour, its words and icon gone black)
-							press(this);
-							const $b = $(this);
-							stage.timeout(() => { if ($start === $b) dropStart(); }, 250);
-						});
+					}).appendTo(stage.$ui).on('start', function () {
+						if (startedAt >= 0) return;   // (once)
+						self.fx('pick');
+						startedAt = now;
+						// (tapped: it flashes white and swells, then goes)
+						$(this).css({ color: 'white', transition: 'transform 0.25s', transform: 'translate(-50%, -50%) scale(1.15)' });
+						$(this).find('circle, text').attr({ stroke: 'white' }).filter('text').attr({ fill: 'white' });
+						const $b = $(this);
+						stage.timeout(() => { if ($start === $b) dropStart(); }, 250);
+					});
+					// (any tap on the walls, while it's up)
+					const wallTap = (e) => { if ($start && startedAt < 0 && !e.target.closest('button')) $start.trigger('start'); };
+					stage.$el[0].addEventListener('pointerdown', wallTap, true);
+					stage.own(() => stage.$el[0].removeEventListener('pointerdown', wallTap, true));
 				}
 				// flying in, as the logo and title do
 				if ($start && startedAt < 0 && bt <= T.in + 0.1) {
@@ -1926,7 +1983,7 @@ window.Showtime = function (stage, opts) {
 					const left = Math.max(0, TITLE.auto - (bt - shownAt));
 					$count.find('.secs').text(Math.ceil(left));
 					$count.find('.ring').attr('stroke-dasharray', `${(left / TITLE.auto) * 100} 100`);
-					if (left <= 0) $start.trigger('click');
+					if (left <= 0) $start.trigger('start');
 				}
 			},
 			draw(ctx, bt) {
@@ -2518,7 +2575,7 @@ window.Showtime = function (stage, opts) {
 				const out = 1 - between(bt, TIME_UP.dark[0] - 0.4, TIME_UP.dark[1]);
 				self.onWalls(ctx, function (c) {
 					const red = Math.floor(bt * 6) % 2 === 0 && bt < 1.6;
-					self.slam(c, 'TIME!', W / 2, 500, 400, bt - TIME_UP.title, { fill: red ? '#ff5470' : 'white', glow: '#ff3d6a', alpha: out, rotate: -0.05 });
+					self.slam(c, 'TIME UP!', W / 2, 500, 400, bt - TIME_UP.title, { fill: red ? '#ff5470' : 'white', glow: '#ff3d6a', alpha: out, rotate: -0.05 });
 				});
 			},
 		}, extra);
@@ -2809,7 +2866,6 @@ window.Showtime = function (stage, opts) {
 					self.flash = 0.5;
 					self.shake = 0.7;
 					self.confetti(300);
-					for (let w = 0; w < 3; w++) self.burst(w * W + W / 2, 520, theme.gold);
 				}
 			},
 			draw(ctx, bt) {

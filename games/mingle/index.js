@@ -1245,11 +1245,8 @@ IGB.register('mingle', function MingleGame(stage, playersMeta) {
 				if (!step) return;
 				show.onWalls(ctx, function (c) {
 					show.slam(c, step.caption, W / 2, 560, step.caption.length > 24 ? 80 : 96, practice.age, { fill: '#ffd23f' });   // (tutorial captions: yellow)
-					// which step this is, as pips
-					CONTROLS.steps.forEach(function (s, i) {
-						const x = W / 2 + (i - (CONTROLS.steps.length - 1) / 2) * 50;
-						art.circle(c, x, 650, i === practice.i ? 13 : 9, { fill: i < practice.i || (i === practice.i && practice.done) ? '#f7d774' : i === practice.i ? 'white' : 'rgba(255,255,255,0.45)' });
-					});
+					// which step this is, as the standard pips
+					show.pips(c, CONTROLS.steps.length, practice.i, practice.done, W / 2, 650);
 					if (practice.done) show.slam(c, 'NICE!', W / 2, 800, 140, practice.doneAge, { fill: '#7dff9e', glow: '#2bbf6a', rotate: -0.06 });
 				});
 			},

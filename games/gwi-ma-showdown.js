@@ -1452,11 +1452,8 @@ IGB.register('gwi-ma-showdown', function GwiMaShowdownGame(stage, playersMeta) {
 				if (!step) return;
 				show.onWalls(ctx, function (c, wall) {
 					show.slam(c, step.caption, W / 2, 210, step.caption.length > 26 ? 82 : 96, practice.age, { fill: '#ffd23f' });   // (tutorial captions: yellow)
-					// which step this is, as pips
-					CONTROLS.steps.forEach(function (s, i) {
-						const x = W / 2 + (i - (CONTROLS.steps.length - 1) / 2) * 50;
-						art.circle(c, x, 300, i === practice.i ? 13 : 9, { fill: i < practice.i || (i === practice.i && practice.done) ? '#ffe14d' : i === practice.i ? 'white' : 'rgba(255,255,255,0.3)' });
-					});
+					// which step this is, as the standard pips
+					show.pips(c, CONTROLS.steps.length, practice.i, practice.done, W / 2, 300);
 					// the side walls light up to be tapped
 					if (step.id === 'tap' && !practice.done && wall !== 1) {
 						const k = (clockT % 1.2) / 1.2;
