@@ -1714,7 +1714,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 		drawArena(ctx);
 
-		// Lying flat on the sand: rake marks, the lines, blood.
+		// Lying flat on the sand: the lines, blood.
 		const lineAt = function (f, colour, half, always) {
 			if (!always && !onView(f)) return;
 			for (let w = 0; w < 3; w++) {
@@ -2001,13 +2001,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const hz = horizonY();
 		art.rect(ctx, -20, -20, WIDTH + 40, H + 40, { fill: art.linear(ctx, 0, hz, 0, H, ['#c0945e', '#d3ad79', '#e6c592']) });
 		drawGravel(ctx);
-		// rake marks every couple of metres, so the scrolling shows: flat
-		// bands across, bunching up and fading toward the horizon
-		const gap = 110;
-		for (let f = Math.ceil(cam / gap) * gap; fadeIn(f) > 0; f += gap) {
-			const p = at(0, f);
-			art.rect(ctx, -20, p.y - 2 * p.s, WIDTH + 40, 4 * p.s, { fill: 'rgba(120,80,40,0.12)', alpha: fadeIn(f) });
-		}
 		// the haze over the far sand, and the sky
 		art.rect(ctx, -20, hz, WIDTH + 40, 260, { fill: art.linear(ctx, 0, hz, 0, hz + 260, ['rgba(246,236,214,0.9)', 'rgba(246,236,214,0)']) });
 		art.rect(ctx, -20, -20, WIDTH + 40, hz + 20, { fill: art.linear(ctx, 0, 0, 0, hz, ['#2f8fe0', '#5cb2f0', '#a9d8f5']) });   // (a clear blue sky: the sun's the show)
