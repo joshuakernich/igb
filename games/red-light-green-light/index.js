@@ -4178,7 +4178,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	// Her body, drawn in ChatGPT: short and stocky, from behind and from the
 	// front, side by side in one picture. Each half trimmed when it loads.
-	const DOLL_BODY = { file: 'v7-doll-body.png', height: 520, neck: 0.02 };   // how tall to draw it; how far the head sits down into its collar (a share of the body)
+	const DOLL_BODY = { file: 'v7-doll-body.png', height: 420, neck: 0.02 };   // how tall to draw it; how far the head sits down into its collar (a share of the body)
 	let dollBodyImg = null;   // [behind, front]: { img, w, h, cx }
 	(function () {
 		const img = new Image();
@@ -4220,7 +4220,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// face), and where her pupils are on her face: set in the doll lab
 	// (DEBUG ▸ DOLL LAB), baked in here, kept in this browser while being tuned.
 	const DOLL_TUNED = {
-		head: { up: 52, x: 0, scale: 0.8 },
+		head: { up: 66, x: 0, scale: 1.0 },
 		order: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15],
 		pupil: { x: 0.124, cx: -0.003, y: -0.019, ring: 0.03 },
 		nudge: {},   // each head frame's own nudge, by its number on the sheet: { x, y } (her head's units)
