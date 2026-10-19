@@ -3167,7 +3167,7 @@ window.Showtime = function (stage, opts) {
 	// BOOK ANOTHER SESSION AT THE KIOSK. The game hands back as it starts
 	// (extra.enter is the place to call IGB.complete).
 	beatsLib.end = function (extra) {
-		const CAROUSEL = { w: 640, h: 400, side: 530, small: 0.58, every: 2.8, words: 80, kiosk: 44, margin: 40, foot: 96 };   // (a card's screenshot size; on each wall, how far its side cards sit from the middle one, and how small they are; seconds between steps; words: the size of THANKS FOR PLAYING!; kiosk: the kiosk line's, much smaller; margin: their extra room from the cards; foot: the cards' thick white bottom border, the game's title in it)
+		const CAROUSEL = { w: 900, h: 560, side: 610, small: 0.42, title: 72, every: 2.8, words: 80, kiosk: 44, margin: 40 };   // (a card's screenshot size; on each wall, how far its side cards sit from the middle one, and how small they are; the title's size on the featured card; seconds between steps; words: the size of THANKS FOR PLAYING!; kiosk: the kiosk line's, much smaller; margin: their extra room from the cards)
 		let $layer = null;
 		const games = () => (IGB.menu || []).filter((id) => !RATE.notAgain.includes(id) && id !== opts.id).map((id) => IGB.find(id)).filter(Boolean);   // (the others: they've just played this one)
 
@@ -3175,19 +3175,17 @@ window.Showtime = function (stage, opts) {
 		function card(g) {
 			const $slide = $('<div>').attr('slide', g.id).css({ flex: 'none' });
 			const $shot = $('<div>').css({
-				position: 'relative', width: CAROUSEL.w + 'px', height: CAROUSEL.h + 'px', borderRadius: 0,   // (square corners)
-				background: `#1a1030 url("assets/shared/screens/${g.id}.jpg") center / cover`, border: `6px solid ${TYPE.colours.white}`, borderBottomWidth: CAROUSEL.foot + 'px',   // (a thick white foot, like a print's)
+				position: 'relative', width: CAROUSEL.w + 'px', height: CAROUSEL.h + 'px',   // (no outline, square corners)
+				background: `#1a1030 url("assets/shared/screens/${g.id}.jpg") center / cover`,
 				boxShadow: '0 18px 40px rgba(0,0,0,0.55)',
 			}).appendTo($slide);
-			// its name, as its title drop has it (manifest: title.lines, title.font): its lines side by side, each in its colour, outlined and dropped, in the card's white foot
+			// its name, as its title drop has it (manifest: title.lines, title.font), in its bottom right corner: shown only while it's the featured card
 			const lines = (g.title && g.title.lines) || [{ text: g.name.toUpperCase(), fill: TYPE.colours.white }];
-			// (all on one line, in the middle of the card's white foot; as big as fits across it)
-			const chars = lines.reduce((a, l) => a + l.text.length + 1, -1);
-			const size = Math.round(Math.min(CAROUSEL.foot * 0.6, (CAROUSEL.w - 50) / (chars * 0.66)));
-			const $title = $('<div>').css({
-				position: 'absolute', left: '50%', bottom: -(CAROUSEL.foot / 2 + size * 0.95 / 2) + 'px', transform: 'translateX(-50%)', zIndex: 1,
-				display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Math.round(size * 0.3) + 'px',
-				fontFamily: `"${(g.title && g.title.font) || FONT}", "${FONT}", sans-serif`, lineHeight: 0.95, whiteSpace: 'nowrap', textAlign: 'center',
+			const size = lines.length > 1 ? CAROUSEL.title * 0.85 : CAROUSEL.title;
+			const $title = $('<div>').attr('title-drop', '').css({
+				position: 'absolute', right: '26px', bottom: '18px', zIndex: 1, opacity: 0, transition: 'opacity 0.4s',
+				display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
+				fontFamily: `"${(g.title && g.title.font) || FONT}", "${FONT}", sans-serif`, lineHeight: 0.95, whiteSpace: 'nowrap', textAlign: 'right',
 			}).appendTo($shot);
 			lines.forEach(function (line) {
 				$('<div>').text(line.text).css({
@@ -3203,7 +3201,7 @@ window.Showtime = function (stage, opts) {
 			if ($layer) $layer.remove();
 			$layer = $('<showtime-end>').css({ position: 'absolute', left: 0, top: 0, width: 3 * W + 'px', height: H + 'px', pointerEvents: 'none' }).appendTo(stage.$ui);
 			const list = games();
-			const cardH = CAROUSEL.h + 6 + CAROUSEL.foot;
+			const cardH = CAROUSEL.h;
 			let $space = null;
 			for (let wall = 0; wall < 3; wall++) {
 				const $wall = $('<div>').css({
@@ -3261,9 +3259,10 @@ window.Showtime = function (stage, opts) {
 			if (instant) $el.css('transition', 'none');
 			$el.css({
 				position: 'absolute', left: 0, top: 0,
-				transform: `translateX(${slotX(slot) - (CAROUSEL.w + 12) / 2}px) scale(${mid ? 1 : CAROUSEL.small})`, transformOrigin: 'center center',
+				transform: `translateX(${slotX(slot) - CAROUSEL.w / 2}px) scale(${mid ? 1 : CAROUSEL.small})`, transformOrigin: 'center center',
 				opacity: mid ? 1 : 0.55, zIndex: mid ? 2 : 1,
 			});
+			$el.find('[title-drop]').css({ opacity: mid ? 1 : 0, transitionDelay: mid ? '0.6s' : '0s' });   // (its title, only once it's featured)
 			if (instant) { void $el[0].offsetWidth; $el.css('transition', 'transform 0.8s cubic-bezier(.4,0,.2,1), opacity 0.8s'); }
 			return { $el, slot };
 		}
