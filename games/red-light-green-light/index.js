@@ -114,6 +114,11 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const CASH = { every: 300, reach: 60, size: 1.8, float: 50, bob: 22 };   // every so far up each wall; how close to grab it; its size, float height and bob
 	const MAGNET = { every: 1400, time: 2.5, radius: 480, pull: 1200 };   // a magnet every so far up each wall; seconds it lasts; how far it reaches; how fast cash comes
 	const BOULDER = { from: 1, gap: [4, 9], quicker: 0.9, r: [75, 105], speed: [320, 440], ahead: 1700, lead: 900, down: 1.2, spill: 3 };   // boulders from this round (0 is round 1); seconds between them, shrinking by this much a round; their size; how fast they roll; how far up the field they start (and never nearer the players than lead); seconds flattened; wads of cash spilled
+	// Cash, magnets and money bags fall out of the sky through the rounds, now and
+	// then (every: seconds between, give or take half), landing mostly where the
+	// middle third of the room puts the runners (near: a share of the room, 0 the
+	// back, 1 the wall), leaning a little toward its back; some anywhere
+	const DROP = { every: { cash: 0.45, magnet: 9, bag: 12 }, near: [0.33, 0.67], lean: 1.6, stray: 0.2, strayNear: [0.12, 0.8], height: [700, 1100], time: [0.7, 1.1] };
 	const BAG = { every: 1700, count: 9, near: 110, radius: 380, fly: 0.75, arc: 240 };   // a money bag every so far up each wall; wads it bursts into; how near and far they land; seconds in the air; how high they fly
 	const LASER = { hop: 1.2, follow: 20, wobble: 14, search: 50, rx: 150, rf: 60, glow: 50, thin: 0.12, thick: 1.6 };   // red light's target: seconds per contestant, how quickly it follows, its jitter, how far it searches round them, its half-width and half-depth, its glow; how wide the beams are at her eyes, and (times the sand's scale there) at the target
 	const STARE = { chance: 0.45, sweep: 0.4, hold: 0.45, wide: 900, bloom: 1100, wash: 0.22 };   // as the laser darts to the next contestant: how often it sweeps up to look straight out at us; how long the sweep up (and away again) takes and how long it stares (seconds); how wide the beams get as they reach us; how far its bloom of red reaches (world units), and how red it washes the whole view
@@ -352,9 +357,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 		// Jump pads up the track, and cash all over it.
 		layPads(START_F + 200, finishF - 150, PAD.every);
-		layCash(START_F + 80, finishF - 60, CASH.every);
-		layMagnets(START_F + 500, finishF - 200, MAGNET.every);
-		layBags(START_F + 700, finishF - 300, BAG.every);
+		dropIn = { cash: 0.6, magnet: DROP.every.magnet * 0.6, bag: DROP.every.bag * 0.8 };   // (the cash, magnets and bags drop out of the sky as the round goes: see stepDrops)
 
 		// Armed guards line the far ends of the side walls (out of the way
 		// of the contestants playing there), and two flank the doll.
@@ -993,7 +996,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// all over the field: little wads of cash, a point each for whoever walks
 	// over them. Both are laid with the field and fixed to it, so they scroll.
 	let pads = [];              // { x, f, wall, to, age, practice }
-	let cash = [];              // { x, f, wall, spin, taken, practice }
+	let cash = [];              // { x, f, wall, spin, taken, practice, drop }
+	let dropIn = { cash: 0, magnet: 0, bag: 0 };   // seconds until the next of each falls
 	let magnets = [];           // { x, f, wall, spin, taken }
 	let bags = [];              // { x, f, wall, spin, taken }
 	let bursts = [];            // { x, f, t }: a money bag popping
@@ -1050,6 +1054,38 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			}
 		}
 	}
+
+	// One item falling out of the sky onto the field: somewhere along a wall,
+	// clear of blocks, up the field where a runner in the middle of the room
+	// would be. { h: how high it starts, t, time: how long it takes to land }
+	function dropItem(kind) {
+		const stray = Math.random() < DROP.stray;
+		const [lo, hi] = stray ? DROP.strayNear : DROP.near;
+		const near = lo + (hi - lo) * Math.pow(Math.random(), stray ? 1 : DROP.lean);   // (leaning toward the back)
+		const f = Math.min(finishF - 60, cam + BACK + forward(near) * DEPTH);
+		if (f < START_F + 40) return;
+		const wall = Math.floor(Math.random() * 3);
+		for (let tries = 0; tries < 6; tries++) {
+			const x = wall * W + LANE + 100 + Math.random() * (W - 2 * LANE - 200);
+			if (blocks.some((b) => wallOfX(b.x) === wall && Math.abs(b.x - x) < b.rx + 60 && Math.abs(b.f - f) < b.r + 60)) continue;
+			const drop = { t: 0, time: DROP.time[0] + Math.random() * (DROP.time[1] - DROP.time[0]), h: DROP.height[0] + Math.random() * (DROP.height[1] - DROP.height[0]) };
+			const item = { x, f, wall, spin: Math.random() * 6, taken: false, drop };
+			(kind === 'cash' ? cash : kind === 'magnet' ? magnets : bags).push(item);
+			return;
+		}
+	}
+	function stepDrops(dt) {
+		for (const list of [cash, magnets, bags]) for (const m of list) if (m.drop && (m.drop.t += dt) >= m.drop.time) m.drop = null;
+		const live = show.beat === 'play' && ['green', 'dash', 'warning', 'red', 'turning'].includes(phase);
+		if (!live) return;
+		for (const kind of ['cash', 'magnet', 'bag']) {
+			if ((dropIn[kind] -= dt) > 0) continue;
+			dropIn[kind] = DROP.every[kind] * (0.5 + Math.random());
+			dropItem(kind);
+		}
+	}
+	// (how high a falling item still is: dropping faster as it comes)
+	const dropLift = (m) => (m.drop ? m.drop.h * (1 - Math.pow(m.drop.t / m.drop.time, 2)) : 0);
 
 	/* ---------- boulders ---------- */
 
@@ -1159,7 +1195,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		}
 		// a magnet: picked up like cash; it pulls in the cash on their wall for a while
 		for (const g of magnets) {
-			if (g.taken || g.wall !== c.wall || Math.abs(g.x - c.x) > CASH.reach || Math.abs(g.f - c.f) > CASH.reach * 0.7) continue;
+			if (g.taken || g.drop || g.wall !== c.wall || Math.abs(g.x - c.x) > CASH.reach || Math.abs(g.f - c.f) > CASH.reach * 0.7) continue;
 			g.taken = true;
 			c.magnet = MAGNET.time;
 			c.flashAt = clock;
@@ -1168,7 +1204,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		}
 		// a money bag: picked up like cash; it bursts into a cluster of cash round about
 		for (const g of bags) {
-			if (g.taken || g.wall !== c.wall || Math.abs(g.x - c.x) > CASH.reach || Math.abs(g.f - c.f) > CASH.reach * 0.7) continue;
+			if (g.taken || g.drop || g.wall !== c.wall || Math.abs(g.x - c.x) > CASH.reach || Math.abs(g.f - c.f) > CASH.reach * 0.7) continue;
 			g.taken = true;
 			c.flashAt = clock;
 			popOver(c, 'MONEY BAG!', '#ffd23f');
@@ -1176,7 +1212,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		}
 		if (c.magnet > 0) {
 			for (const m of cash) {
-				if (m.taken || m.fly || m.wall !== c.wall) continue;
+				if (m.taken || m.fly || m.drop || m.wall !== c.wall) continue;
 				const dx = c.x - m.x;
 				const df = c.f - m.f;
 				const d = Math.hypot(dx, df);
@@ -1187,7 +1223,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			}
 		}
 		for (const m of cash) {
-			if (m.taken || m.fly || m.wall !== c.wall || Math.abs(m.x - c.x) > CASH.reach || Math.abs(m.f - c.f) > CASH.reach * 0.7) continue;
+			if (m.taken || m.fly || m.drop || m.wall !== c.wall || Math.abs(m.x - c.x) > CASH.reach || Math.abs(m.f - c.f) > CASH.reach * 0.7) continue;
 			m.taken = true;
 			c.score += POINTS.cash;
 			c.grabbed++;
@@ -1469,6 +1505,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			else m.spin += m.dir * m.speed * dt / m.r;
 		}
 		stepBoulders(dt);
+		stepDrops(dt);
 
 		if (phase === 'waiting') {
 			// Standing at the start, following their players.
@@ -3078,7 +3115,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const p = m.fly ? at(m.fly.x0 + (m.x - m.fly.x0) * k, m.fly.f0 + (m.f - m.fly.f0) * k) : at(m.x, m.f);
 		const s = p.s * CASH.size * nearer(p.y);
 		const rise = 0.5 + 0.5 * Math.sin(m.spin * 2.4);
-		const lift = ((CASH.float + CASH.bob * rise) * hover(m.f) + (m.fly ? BAG.arc * 4 * k * (1 - k) : 0)) * p.s;
+		const lift = ((CASH.float + CASH.bob * rise) * hover(m.f) + (m.fly ? BAG.arc * 4 * k * (1 - k) : 0) + dropLift(m)) * p.s;
 		if (items.cash) itemShadow(ctx, 'cash', p.x, p.y, m.f, s * (1 - 0.15 * rise), -0.35 + Math.sin(m.spin * 1.3) * 0.1, 0.8 - 0.3 * rise);
 		else softShadow(ctx, p.x, p.y, 26 * s * (1 - 0.25 * rise), 8 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 40 * s, m.f);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: -0.35 + Math.sin(m.spin * 1.3) * 0.1 }, function (c) {
@@ -3104,7 +3141,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const p = at(g.x, g.f);
 		const s = p.s * CASH.size * nearer(p.y);
 		const rise = 0.5 + 0.5 * Math.sin(g.spin * 2.4);
-		const lift = (CASH.float + CASH.bob * rise) * hover(g.f) * p.s;
+		const lift = ((CASH.float + CASH.bob * rise) * hover(g.f) + dropLift(g)) * p.s;
 		if (items.magnet) itemShadow(ctx, 'magnet', p.x, p.y, g.f, s * (1 - 0.15 * rise), Math.sin(g.spin * 1.6) * 0.25, 0.8 - 0.3 * rise);
 		else softShadow(ctx, p.x, p.y, 22 * s * (1 - 0.25 * rise), 7 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 40 * s, g.f);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: Math.sin(g.spin * 1.6) * 0.25 }, function (c) {
@@ -3138,7 +3175,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const s = p.s * CASH.size * nearer(p.y);
 		// a money bag is heavy: it sits on the sand, no bobbing, no swaying
 		const big = ITEM.bagSize;   // (a money bag is bigger than the rest)
-		const lift = (8 - ITEM.bag * ITEM.bagSink) * s * big;   // (its anchor a little above the sprite's bottom edge, so it sits down into the sand)
+		const lift = (8 - ITEM.bag * ITEM.bagSink) * s * big + dropLift(g) * p.s;   // (its anchor a little above the sprite's bottom edge, so it sits down into the sand)
 		if (items.bag) {
 			itemShadow(ctx, 'bag', p.x, p.y, g.f, s * big);
 			art.ellipse(ctx, p.x, p.y, 22 * s * big, 6.6 * s * big, { fill: `rgba(20,10,30,${SIL.contact})` });
