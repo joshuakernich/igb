@@ -128,9 +128,9 @@ window.Showtime = function (stage, opts) {
 		count: 2.0,            // the clock starts counting down, still in the dial
 		settle: [4.3, 5.2],    // after two ticks it flies up, still counting, to its place at the top of every wall
 		length: 5.7,
-		radius: 420,           // the dial's outer edge
-		size: 300,             // the big number
-		words: [100, 112],     // YOU HAVE, MINUTES
+		radius: 320,           // the dial's outer edge
+		size: 228,             // the big number
+		words: [76, 86],       // YOU HAVE, MINUTES
 		gap: 0.42,             // how far above and below the time they sit (a share of the dial's radius)
 		slam: 0.18,            // seconds for a word to crash down into place
 		y: 520,                // the dial's centre
@@ -1940,7 +1940,6 @@ window.Showtime = function (stage, opts) {
 							c.stroke();
 							c.restore();
 						}
-						if (charged >= 1) art.circle(c, cx, C.y, C.radius * 1.12, { fill: art.radial(c, cx, C.y, C.radius * 0.4, C.radius * 1.16, [[0, 'rgba(255,79,216,0)'], [0.7, 'rgba(255,79,216,0.25)'], [1, 'rgba(255,79,216,0)']]), alpha: fade });
 					}
 					// 2. YOU HAVE, inside the dial just above the 10
 					self.slam(c, 'YOU HAVE', cx, C.y - C.radius * C.gap, C.words[0], bt - C.youHave, look({ alpha: fade, fit: C.radius * 1.45, dur: C.slam, from: 3.2 }));
