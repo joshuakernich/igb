@@ -1544,109 +1544,138 @@ window.Showtime = function (stage, opts) {
 	// "HOW MANY PLAYERS?" and a row of big number buttons on the front wall,
 	// in the show's type and colours. (Buttons, not canvas, so a click or a
 	// tap on the wall picks: <button count="3">, as the HUD's picker had.)
-	// The squad pick: the gamebox's own frontage on the front wall, as it
-	// stands in the venue (its side panel with the logo, the glowing way in
-	// with its gates, three screens over it showing the games, and the
-	// check-in kiosk beside it), HOW MANY PLAYERS? asked on the kiosk's
-	// screen, the counts to tap under it.
-	const KIOSK = { screen: { x: 1214, y: 372, w: 242, h: 330 }, purple: '#b46bff', glow: '#d9b8ff' };
-	function frontage() {
-		const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
-		// the three screens over the way in: this game in the middle, two more either side
-		const listed = (IGB.menu || []).filter((id) => !RATE.notAgain.includes(id)).map((id) => IGB.find(id)).filter(Boolean);
-		const here = IGB.find && opts.id ? IGB.find(opts.id) : null;
-		const others = listed.filter((g) => !here || g.id !== here.id);
-		const shown = [others[0], here || others[1], others[here ? 1 : 2]].map((g) => g || { name: '' });
-		const screen = function (g, x) {
-			const lines = (g.title && g.title.lines) || [{ text: String(g.name || '').toUpperCase(), fill: '#ffffff' }];
-			const size = lines.length > 1 ? 30 : 36;
-			const y0 = 205 - (lines.length - 1) * size * 0.55;
-			return `<rect x="${x}" y="122" width="196" height="166" rx="6" fill="url(#kScreen)" stroke="#0b0614" stroke-width="6"/>`
-				+ lines.map((l, i) => `<text x="${x + 98}" y="${y0 + i * size * 1.05}" text-anchor="middle" dominant-baseline="middle" font-family="${FONT}, sans-serif" font-size="${size}" fill="${l.fill || '#fff'}" stroke="#0b1022" stroke-width="5" paint-order="stroke fill">${esc(l.text)}</text>`).join('')
-				+ `<text x="${x + 98}" y="268" text-anchor="middle" font-family="${FONT}, sans-serif" font-size="13" fill="#ffffff" opacity="0.75">IMMERSIVE GAMEBOX</text>`;
-		};
-		const bolt = (x, y) => `<path d="M${x} ${y - 13} L${x - 7} ${y + 2} L${x - 1} ${y + 2} L${x - 5} ${y + 14} L${x + 7} ${y - 3} L${x + 1} ${y - 3} Z" fill="#ffffff"/>`;
-		return `<svg viewBox="0 0 1600 1000" width="1600" height="1000" style="position:absolute;left:0;top:0">
-			<defs>
-				<linearGradient id="kSide" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2b0f52"/><stop offset="0.6" stop-color="#4a1877"/><stop offset="1" stop-color="#7a2a7e"/></linearGradient>
-				<linearGradient id="kIn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9f86ff"/><stop offset="0.55" stop-color="#c9b8ff"/><stop offset="1" stop-color="#7b5ae6"/></linearGradient>
-				<linearGradient id="kScreen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a1580"/><stop offset="1" stop-color="#8a3ad8"/></linearGradient>
-				<linearGradient id="kFloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b2016"/><stop offset="1" stop-color="#140a07"/></linearGradient>
-				<filter id="kGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7"/></filter>
-			</defs>
-			<rect x="0" y="0" width="1600" height="1000" fill="#07040d" opacity="0.72"/>
-			<polygon points="0,880 1600,880 1600,1000 0,1000" fill="url(#kFloor)"/>
-			<ellipse cx="860" cy="905" rx="520" ry="40" fill="#8a5cff" opacity="0.28" filter="url(#kGlow)"/>
-			<!-- the side panel, receding, its artwork and the logo -->
-			<polygon points="140,180 568,112 568,905 140,840" fill="url(#kSide)"/>
-			<circle cx="300" cy="300" r="70" fill="#ff6ad5" opacity="0.18"/><circle cx="470" cy="560" r="44" fill="#ffffff" opacity="0.08"/>
-			<path d="M170 760 L230 700 L260 730 L320 650 L360 700 L420 620 L470 690 L540 640 L540 860 L170 820 Z" fill="#1a0833" opacity="0.7"/>
-			<image href="${TITLE.logo.src}" x="190" y="440" width="330" height="82" transform="skewY(-9)" preserveAspectRatio="xMidYMid meet" opacity="0.95"/>
-			<!-- the way in: the glowing room, the gates -->
-			<rect x="568" y="300" width="620" height="605" fill="url(#kIn)"/>
-			<polygon points="568,300 650,360 1106,360 1188,300" fill="#ffffff" opacity="0.18"/>
-			<rect x="650" y="360" width="456" height="470" fill="#ffffff" opacity="0.10"/>
-			<polygon points="568,905 650,830 1106,830 1188,905" fill="#e8dcff" opacity="0.5"/>
-			<rect x="598" y="590" width="58" height="315" rx="6" fill="#120c1c"/><rect x="598" y="586" width="58" height="10" rx="4" fill="#3ad1ff"/>
-			<rect x="1100" y="590" width="58" height="315" rx="6" fill="#120c1c"/><rect x="1100" y="586" width="58" height="10" rx="4" fill="#3ad1ff"/>
-			<rect x="868" y="650" width="20" height="255" fill="#2a2238"/>
-			<rect x="656" y="660" width="212" height="150" fill="#dce8ff" opacity="0.22" stroke="#ffffff" stroke-opacity="0.45" stroke-width="3"/>
-			<rect x="888" y="660" width="212" height="150" fill="#dce8ff" opacity="0.22" stroke="#ffffff" stroke-opacity="0.45" stroke-width="3"/>
-			<!-- the fascia, its three screens -->
-			<rect x="568" y="108" width="620" height="192" fill="#120a20"/>
-			${screen(shown[0], 572)}${screen(shown[1], 780)}${screen(shown[2], 988)}
-			<!-- the neon edge -->
-			<line x1="568" y1="112" x2="568" y2="905" stroke="${KIOSK.glow}" stroke-width="14" filter="url(#kGlow)"/>
-			<line x1="568" y1="112" x2="568" y2="905" stroke="#ffffff" stroke-width="5"/>
-			<!-- the kiosk -->
-			<rect x="1196" y="318" width="370" height="600" rx="10" fill="#17121f"/>
-			<rect x="1196" y="900" width="370" height="20" fill="#e9e4f0" opacity="0.85"/>
-			<circle cx="1335" cy="340" r="9" fill="#05030a"/>
-			<rect x="${KIOSK.screen.x - 8}" y="${KIOSK.screen.y - 8}" width="${KIOSK.screen.w + 16}" height="${KIOSK.screen.h + 16}" rx="10" fill="#05030a"/>
-			<text font-family="${FONT}, sans-serif" font-size="30" fill="#ffffff" text-anchor="middle"><tspan x="1512" y="410">CHECK</tspan><tspan x="1512" y="448">IN</tspan><tspan x="1512" y="486">OR</tspan><tspan x="1512" y="524">BOOK</tspan></text>
-			<path d="M1490 560 l22 18 l22 -18 M1490 588 l22 18 l22 -18" stroke="#ffffff" stroke-opacity="0.5" stroke-width="5" fill="none"/>
-			${bolt(1222, 770)}<text x="1240" y="780" font-family="${FONT}, sans-serif" font-size="28" fill="#ffffff">2–6 PLAYERS</text>
-			${bolt(1222, 832)}<text x="1240" y="842" font-family="${FONT}, sans-serif" font-size="28" fill="#ffffff">10–60 MINUTE GAMES</text>
-		</svg>`;
+	// The squad pick: the gamebox, as you'd walk up to it. The side walls
+	// hold a still of the sting's front wall; the front wall is the box's
+	// front: a bright purple neon strip down each side, three TVs across the
+	// top each playing one of the games' trailers, and below them, on the
+	// left, the way in (a little 3D gamebox, the same three trailers playing
+	// on its three inside walls, two glass barriers across its mouth) and on
+	// the right a big purple panel, its 9:16 screen asking HOW MANY PLAYERS?
+	// Once a count's tapped the barriers swing inwards, the view rushes into
+	// the box, and the sting begins.
+	const FRONT = {
+		tv: { y: 34, h: 216, gap: 52 },                          // the three TVs across the top (16:9)
+		box: { x: 70, y: 300, w: 840, h: 620, depth: 760 },      // the way in: its mouth on the wall, and how deep the box goes
+		panel: { x: 960, y: 290, w: 590, h: 680 },               // the purple panel on the right
+		screen: { h: 600 },                                      // its 9:16 screen
+		gate: { w: 190, h: 150, gap: 14, post: 26 },             // the glass barriers, side by side across the mouth
+		neon: '#c06bff', still: 2.0,                             // the strips down the sides; when in the sting the side walls' still is from (seconds)
+		swing: 0.55, rush: 0.75,                                 // the barriers swinging in; the view rushing into the box
+	};
+	function trailers() {
+		const ids = (IGB.menu || []).filter((id) => !RATE.notAgain.includes(id) && id !== opts.id);
+		return [ids[0], ids[1], ids[2]].map((id) => id || ids[0]);
 	}
+	const clipOf = (id) => `assets/shared/clips/${id}.webm`;
+	const loop = (id) => $('<video muted loop autoplay playsinline preload="auto">').attr('src', clipOf(id)).css({ display: 'block', width: '100%', height: '100%', objectFit: 'cover' });
 
 	self.pickPlayers = function (fn) {
 		const font = `"${FONT}", sans-serif`;
-		const S = KIOSK.screen;
+		const F = FRONT;
+		const clips = trailers();
 		const $pick = $('<showtime-picker>').css({
-			position: 'absolute', left: W + 'px', top: 0, width: W + 'px', height: H + 'px',
+			position: 'absolute', left: 0, top: 0, width: 3 * W + 'px', height: H + 'px', overflow: 'hidden',
 			pointerEvents: 'auto', fontFamily: font, color: 'white', opacity: 0, transition: 'opacity 0.5s',
 		}).appendTo(stage.$ui);
-		$(frontage()).appendTo($pick);
-		// the kiosk's screen: HOW MANY PLAYERS?, the counts under it
+
+		// 1. the side walls: a still of the sting's front wall (its second of four walls)
+		for (const wall of [0, 2]) {
+			const $w = $('<div>').css({ position: 'absolute', left: wall * W + 'px', top: 0, width: W + 'px', height: H + 'px', overflow: 'hidden', background: '#000' }).appendTo($pick);
+			const vh = STING.walls * W / STING.aspect;
+			// (played, muted and unseen, up to the still, then held there: a seek isn't always possible)
+			const $v = $('<video muted playsinline autoplay preload="auto">').attr('src', STING.src).css({ position: 'absolute', left: -W + 'px', top: (H - vh) / 2 + 'px', width: STING.walls * W + 'px', height: vh + 'px', opacity: 0, transition: 'opacity 0.4s' }).appendTo($w);
+			$v.on('timeupdate', function () {
+				if (this.currentTime < F.still) return;
+				this.pause();
+				$v.off('timeupdate').css({ opacity: 1 });
+			});
+		}
+
+		// the front wall
+		const $front = $('<div>').css({ position: 'absolute', left: W + 'px', top: 0, width: W + 'px', height: H + 'px', overflow: 'hidden', background: 'linear-gradient(#0d0618, #160a2a)', transformOrigin: `${F.box.x + F.box.w / 2}px ${F.box.y + F.box.h / 2}px` }).appendTo($pick);
+		// 3. the neon strips down its sides
+		for (const x of [0, W - 14]) $('<div>').css({ position: 'absolute', left: x + 'px', top: 0, width: '14px', height: H + 'px', background: '#f3e2ff', boxShadow: `0 0 24px 8px ${F.neon}, 0 0 60px 18px ${F.neon}` }).appendTo($front);
+		// 4. the TVs across the top, each playing one of the trailers inside the box
+		const tvW = F.tv.h * 16 / 9;
+		const tvX = (W - (3 * tvW + 2 * F.tv.gap)) / 2;
+		clips.forEach(function (id, i) {
+			const $tv = $('<div>').css({ position: 'absolute', left: tvX + i * (tvW + F.tv.gap) + 'px', top: F.tv.y + 'px', width: tvW + 'px', height: F.tv.h + 'px', border: '8px solid #05030a', borderRadius: '8px', boxSizing: 'content-box', overflow: 'hidden', background: '#1a1030', boxShadow: `0 0 30px rgba(192,107,255,0.45)` }).appendTo($front);
+			loop(id).appendTo($tv);
+		});
+
+		// 2. the way in: a little gamebox in 3D, its three inside walls playing the trailers
+		const B = F.box;
+		const $mouth = $('<div>').css({ position: 'absolute', left: B.x + 'px', top: B.y + 'px', width: B.w + 'px', height: B.h + 'px', perspective: '900px', perspectiveOrigin: '50% 45%' }).appendTo($front);
+		const $box = $('<div>').css({ position: 'absolute', inset: 0, transformStyle: 'preserve-3d' }).appendTo($mouth);
+		const plane = (css) => $('<div>').css(Object.assign({ position: 'absolute', overflow: 'hidden', backfaceVisibility: 'visible' }, css)).appendTo($box);
+		// (its walls in the order the room has them: left, front, right; the TVs above match)
+		loop(clips[0]).appendTo(plane({ left: 0, top: 0, width: B.depth + 'px', height: B.h + 'px', transformOrigin: 'left center', transform: 'rotateY(90deg)', filter: 'brightness(0.8)' }));
+		loop(clips[1]).appendTo(plane({ left: 0, top: 0, width: B.w + 'px', height: B.h + 'px', transform: `translateZ(${-B.depth}px)` }));
+		loop(clips[2]).appendTo(plane({ left: B.w - B.depth + 'px', top: 0, width: B.depth + 'px', height: B.h + 'px', transformOrigin: 'right center', transform: 'rotateY(-90deg)', filter: 'brightness(0.8)' }));
+		plane({ left: 0, top: B.h - B.depth + 'px', width: B.w + 'px', height: B.depth + 'px', transformOrigin: 'bottom center', transform: 'rotateX(90deg)', background: `radial-gradient(ellipse at 50% 100%, #7a4ad8, #2a1258 70%)` });
+		plane({ left: 0, top: 0, width: B.w + 'px', height: B.depth + 'px', transformOrigin: 'top center', transform: 'rotateX(-90deg)', background: '#0b0616' });
+		// (the box's front edge, framing the way in)
+		$('<div>').css({ position: 'absolute', left: B.x - 12 + 'px', top: B.y - 12 + 'px', width: B.w + 'px', height: B.h + 'px', border: '12px solid #0b0616', pointerEvents: 'none' }).appendTo($front);
+
+		// 6. the gate: two small glass barriers across the mouth, hinged at their posts, swinging inwards
+		const G = F.gate;
+		const gx = B.w / 2 - G.w - G.gap / 2;
+		const gy = B.h - G.h - 70;
+		const barrier = (left, hinge) => $('<div>').css({
+			position: 'absolute', left: left + 'px', top: gy + 'px', width: G.w + 'px', height: G.h + 'px', transformOrigin: hinge + ' center',
+			background: 'linear-gradient(180deg, rgba(220,235,255,0.42), rgba(200,220,255,0.18))', border: '3px solid rgba(255,255,255,0.7)', borderRadius: '6px', boxSizing: 'border-box',
+			transition: `transform ${F.swing}s cubic-bezier(.5,0,.3,1)`,
+		}).appendTo($box);
+		const $gl = barrier(gx, 'left'), $gr = barrier(gx + G.w + G.gap, 'right');
+		for (const x of [gx - G.post, gx + 2 * G.w + G.gap]) {
+			$('<div>').css({ position: 'absolute', left: x + 'px', top: gy - 40 + 'px', width: G.post + 'px', height: G.h + 110 + 'px', background: '#120c1c', borderTop: '6px solid #3ad1ff', boxShadow: '0 -4px 14px rgba(58,209,255,0.7)' }).appendTo($box);
+		}
+
+		// 5. the purple panel on the right, its 9:16 screen asking HOW MANY PLAYERS?
+		const P = F.panel;
+		$('<div>').css({ position: 'absolute', left: P.x + 'px', top: P.y + 'px', width: P.w + 'px', height: P.h + 'px', borderRadius: '14px', background: 'linear-gradient(160deg, #7b33e6, #4a17a8)', boxShadow: `inset 0 0 0 4px rgba(255,255,255,0.12), 0 0 40px rgba(123,51,230,0.5)` }).appendTo($front);
+		const sh = F.screen.h, sw = sh * 9 / 16;
 		const $screen = $('<div>').css({
-			position: 'absolute', left: S.x + 'px', top: S.y + 'px', width: S.w + 'px', height: S.h + 'px', boxSizing: 'border-box', padding: '22px 14px',
-			background: 'linear-gradient(160deg, #2a0f5a, #4b1c8a)', borderRadius: '6px',
-			display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '22px',
-		}).appendTo($pick);
+			position: 'absolute', left: P.x + (P.w - sw) / 2 + 'px', top: P.y + (P.h - sh) / 2 + 'px', width: sw + 'px', height: sh + 'px', boxSizing: 'border-box', padding: '40px 22px',
+			background: 'linear-gradient(180deg, #1a0a36, #2b0f5a)', border: '10px solid #05030a', borderRadius: '16px',
+			display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '40px',
+		}).appendTo($front);
 		$('<div>').text('HOW MANY PLAYERS?').css({
-			fontSize: '30px', lineHeight: 1.05, textAlign: 'center', letterSpacing: '1px', color: TYPE.colours.gold, width: '100%', whiteSpace: 'normal', textWrap: 'balance',   // (two lines, to fit the screen)
-			WebkitTextStroke: `4px ${theme.ink}`, paintOrder: 'stroke fill',
+			fontSize: '44px', lineHeight: 1.05, textAlign: 'center', letterSpacing: '1px', color: TYPE.colours.gold, width: '100%', textWrap: 'balance',
+			WebkitTextStroke: `5px ${theme.ink}`, paintOrder: 'stroke fill',
 		}).appendTo($screen);
-		const $row = $('<div>').css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px', width: '100%' }).appendTo($screen);
+		const $row = $('<div>').css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '18px', width: '100%' }).appendTo($screen);
+		let picked = false;
 		for (let n = 2; n <= 6; n++) {
 			$('<button>').attr('count', n).text(n).css({
-				width: '62px', height: '62px', borderRadius: '50%', boxSizing: 'border-box', ...button(TYPE.colours.gold, 36),
-				borderWidth: '4px', boxShadow: '0 5px 0 rgba(0,0,0,0.45)',
+				width: '82px', height: '82px', borderRadius: '50%', boxSizing: 'border-box', ...button(TYPE.colours.gold, 48),
 				display: 'flex', alignItems: 'center', justifyContent: 'center',
-				fontFamily: font, fontSize: '36px', lineHeight: '1', cursor: 'pointer', padding: 0,
+				fontFamily: font, fontSize: '48px', lineHeight: '1', cursor: 'pointer', padding: 0,
 				transform: 'scale(0)', transition: `transform 0.4s cubic-bezier(.2,1.6,.4,1) ${0.35 + (n - 2) * 0.08}s`,
 			}).appendTo($row)
 				.on('click', function () {
+					if (picked) return;
+					picked = true;
 					const count = parseInt($(this).attr('count'), 10);
 					self.fx('pick');
-					press(this);   // (tapped: the standard colour shift, no growing)
-					$pick.css({ transition: 'opacity 0.45s', opacity: 0, pointerEvents: 'none' });
-					stage.timeout(() => $pick.remove(), 500);
-					fn(count);
+					press(this);   // (tapped: the standard colour shift)
+					// 7. the barriers swing in, the view rushes into the box, then the sting
+					stage.timeout(function () {
+						$gl.css({ transform: 'rotateY(-80deg)' });
+						$gr.css({ transform: 'rotateY(80deg)' });
+						self.fx('whooshLong', 0.6);
+					}, PRESS.hold * 1000);
+					stage.timeout(function () {
+						$front.css({ transition: `transform ${F.rush}s cubic-bezier(.6,0,.9,.4)`, transform: 'scale(4.5)' });
+						$pick.css({ transition: `opacity ${F.rush}s ease-in`, opacity: 0 });
+					}, (PRESS.hold + F.swing) * 1000);
+					stage.timeout(function () {
+						$pick.remove();
+						fn(count);
+					}, (PRESS.hold + F.swing + F.rush) * 1000);
 				});
 		}
-		// in: the frontage fades up, the counts pop in on the kiosk
+		// in: it all fades up, the counts pop in on the screen
 		stage.timeout(function () {
 			$pick.css({ opacity: 1 });
 			$row.children().css({ transform: 'scale(1)' });
