@@ -649,6 +649,30 @@ window.Showtime = function (stage, opts) {
 		boxShadow: `0 ${BUTTON.drop}px 0 rgba(0,0,0,0.45)`,
 	});
 	self.button = button;
+	// The standard pressed look, for every button: filled with its colour
+	// (its outline's), its words and icons gone black; a moment, then back
+	// (for those that stay up). Every outlined button on the show gets it.
+	const PRESS = { hold: 0.25 };
+	const press = function (el) {
+		const cs = getComputedStyle(el);
+		const c = cs.borderTopColor;
+		if (el._pressWas === undefined) el._pressWas = el.getAttribute('style') || '';
+		el.style.background = c;
+		el.style.color = '#000';
+		el.style.webkitTextStroke = '0px transparent';
+		el.style.boxShadow = 'none';
+		$(el).find('svg').css('filter', 'brightness(0)');
+		$(el).find('span, div').css({ color: '#000', webkitTextStroke: '0px transparent' });
+		clearTimeout(el._pressT);
+		el._pressT = setTimeout(function () {
+			if (!el.isConnected || el.hasAttribute('start')) return;
+			el.setAttribute('style', el._pressWas);
+			el._pressWas = undefined;
+			$(el).find('svg').css('filter', '');
+			$(el).find('span, div').css({ color: '', webkitTextStroke: '' });
+		}, PRESS.hold * 1000);
+	};
+	self.press = press;
 	const textColour = function (fill) {
 		if (typeof fill !== 'string') return fill;
 		if (playerLits.has(fill)) return fill;
@@ -1218,6 +1242,14 @@ window.Showtime = function (stage, opts) {
 	}
 	const PANEL_ICON = PAUSE.button - 38;   // (the size of each button on the pause panel)
 	const PANEL_COLOUR = '#b46bff';   // (the pause panel's colour: its band, its TAP, its buttons)
+	// (every outlined button on the show, tapped: the standard pressed look)
+	// (caught on the way down, before anything stops the tap going further)
+	stage.$ui[0].addEventListener('pointerdown', function (e) {
+		const el = e.target.closest && e.target.closest('button');
+		if (!el || el.hasAttribute('start')) return;   // (START does its own, and stays so)
+		const cs = getComputedStyle(el);
+		if (cs.borderTopStyle !== 'none' && parseFloat(cs.borderTopWidth) > 0) press(el);
+	}, true);
 	// (the panel showing, centred down the left wall's edge)
 	const $panels = $('<div panels>').css({
 		position: 'absolute', left: 0, top: H / 2 + 'px', transform: 'translateY(-50%)', zIndex: 20, pointerEvents: 'none',
@@ -1793,9 +1825,7 @@ window.Showtime = function (stage, opts) {
 							self.fx('pick');
 							startedAt = now;
 							// (tapped: filled with its colour, its words and icon gone black)
-							$(this).css({ background: TYPE.colours.gold, color: '#000', WebkitTextStroke: '0px transparent', boxShadow: 'none' });
-							$(this).find('circle').attr('stroke', '#000');
-							$(this).find('text').attr('fill', '#000');
+							press(this);
 							const $b = $(this);
 							stage.timeout(() => { if ($start === $b) dropStart(); }, 250);
 						});
@@ -3095,9 +3125,9 @@ window.Showtime = function (stage, opts) {
 			// this game first
 			.sort((a, b) => (b.id === opts.id) - (a.id === opts.id));
 
-		function face(i) {
+		function face(i, on) {
 			const f = R.faces[i];
-			const ink = theme.ink, col = f.colour;
+			const ink = on ? '#000' : theme.ink, col = on ? '#000' : f.colour;   // (on: tapped, the standard pressed look: filled with its colour, its features black)
 			// the button style (as the pause screen's rows): dark glass, an outline
 			// in the face's colour, its features in that colour too (outlined in
 			// ink, like the words), and a drop under it
@@ -3110,7 +3140,7 @@ window.Showtime = function (stage, opts) {
 			const ring = 44, line = 100 / 200 * BUTTON.line, drop = 100 / 200 * BUTTON.drop;   // (the face is drawn 200px across)
 			return `<svg viewBox="0 0 100 100" width="100%" height="100%" overflow="visible">`
 				+ `<circle cx="50" cy="${48 + drop}" r="${ring + line / 2}" fill="rgba(0,0,0,0.45)"/>`
-				+ `<circle cx="50" cy="48" r="${ring}" fill="${BUTTON.glass}" stroke="${col}" stroke-width="${line}"/>`
+				+ `<circle cx="50" cy="48" r="${ring}" fill="${on ? f.colour : BUTTON.glass}" stroke="${f.colour}" stroke-width="${line}"/>`
 				+ `<g transform="translate(0 -2)">${eye(36)}${eye(64)}${brows}${mouth}</g></svg>`;   // (the face on top of it all)
 		}
 
@@ -3161,7 +3191,7 @@ window.Showtime = function (stage, opts) {
 					fontFamily: font, color: 'white', fontSize: '28px', letterSpacing: '1px',
 					opacity: feedback && !chosen ? 0.25 : 1, transform: chosen ? 'scale(1.25)' : 'none', transition: 'transform 0.2s, opacity 0.2s',
 				}).appendTo($row);
-				$('<div>').html(face(i)).css({ width: '200px', height: '200px' }).appendTo($b);
+				$('<div>').html(face(i, chosen)).css({ width: '200px', height: '200px' }).appendTo($b);
 				$('<div>').text(f.label).css({ color: f.colour, WebkitTextStroke: `5px ${theme.ink}`, paintOrder: 'stroke fill', whiteSpace: 'nowrap' }).appendTo($b);
 				tap($b, () => rate(i + 1));
 			});
