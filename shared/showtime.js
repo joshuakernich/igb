@@ -1562,7 +1562,7 @@ window.Showtime = function (stage, opts) {
 		gate: { gap: 14, post: 26 },                             // the glass barriers, side by side across the whole way in, a third of its height
 		neon: '#c06bff',                                         // the strips down the box's sides
 		purple: '#6326c8',                                       // the panels, one flat purple
-		swing: 0.55, rush: 0.75,                                 // the barriers swinging in; the view rushing into the box
+		swing: 0.55, rush: 0.75, dark: 0.25,                     // the barriers swinging in (the screens fading to black); the view rushing into the box (everything fading to black); a moment in the black, then the sting
 	};
 	// The arcade behind it all, drawn simply: a dim purple room, a row of
 	// cabinets with glowing screens, a few hanging lights, a glossy floor.
@@ -1628,7 +1628,7 @@ window.Showtime = function (stage, opts) {
 			const $tv = $('<div>').css({ position: 'absolute', left: tvX + i * (tvW + F.tv.gap) + 'px', top: F.tv.y + 'px', width: tvW + 'px', height: F.tv.h + 'px', border: '8px solid #05030a', borderRadius: '8px', boxSizing: 'content-box', overflow: 'hidden', background: '#1a1030', boxShadow: `0 0 30px rgba(192,107,255,0.45)`, zIndex: 3,
 				transformOrigin: '50% 100%', transform: `perspective(1100px) rotateX(${F.tv.lean}deg)`,   // (leaning forward, out over the way in)
 			}).appendTo($front);
-			loop(id).appendTo($tv);
+			loop(id).addClass('virtual').appendTo($tv);
 		});
 
 		// 2. the way in: a little gamebox in 3D, its three inside walls playing the trailers
@@ -1637,9 +1637,9 @@ window.Showtime = function (stage, opts) {
 		const $box = $('<div>').css({ position: 'absolute', inset: 0, transformStyle: 'preserve-3d' }).appendTo($mouth);
 		const plane = (css) => $('<div>').css(Object.assign({ position: 'absolute', overflow: 'hidden', backfaceVisibility: 'visible' }, css)).appendTo($box);
 		// (its walls in the order the room has them: left, front, right; the TVs above match)
-		loop(clips[0]).appendTo(plane({ left: 0, top: 0, width: B.depth + 'px', height: B.h + 'px', transformOrigin: 'left center', transform: 'rotateY(90deg)', filter: 'brightness(0.8)' }));
-		loop(clips[1]).appendTo(plane({ left: 0, top: 0, width: B.w + 'px', height: B.h + 'px', transform: `translateZ(${-B.depth}px)` }));
-		loop(clips[2]).appendTo(plane({ left: B.w - B.depth + 'px', top: 0, width: B.depth + 'px', height: B.h + 'px', transformOrigin: 'right center', transform: 'rotateY(-90deg)', filter: 'brightness(0.8)' }));
+		loop(clips[0]).addClass('virtual').appendTo(plane({ left: 0, top: 0, width: B.depth + 'px', height: B.h + 'px', transformOrigin: 'left center', transform: 'rotateY(90deg)', filter: 'brightness(0.8)' }));
+		loop(clips[1]).addClass('virtual').appendTo(plane({ left: 0, top: 0, width: B.w + 'px', height: B.h + 'px', transform: `translateZ(${-B.depth}px)` }));
+		loop(clips[2]).addClass('virtual').appendTo(plane({ left: B.w - B.depth + 'px', top: 0, width: B.depth + 'px', height: B.h + 'px', transformOrigin: 'right center', transform: 'rotateY(-90deg)', filter: 'brightness(0.8)' }));
 		plane({ left: 0, top: B.h - B.depth + 'px', width: B.w + 'px', height: B.depth + 'px', transformOrigin: 'bottom center', transform: 'rotateX(90deg)', background: `radial-gradient(ellipse at 50% 100%, #7a4ad8, #2a1258 70%)` });
 		plane({ left: 0, top: 0, width: B.w + 'px', height: B.depth + 'px', transformOrigin: 'top center', transform: 'rotateX(-90deg)', background: '#0b0616' });
 		// (the box's front edge, framing the way in, and the neon down its sides)
@@ -1698,16 +1698,22 @@ window.Showtime = function (stage, opts) {
 						$gr.css({ transform: 'rotateY(-78deg)' });
 						self.fx('whooshLong', 0.6);
 					}, PRESS.hold * 1000);
+					// (as the barriers swing, the screens all fade to black; as the view
+					// rushes in, everything goes to black; then, out of the black, the sting)
+					stage.timeout(function () {
+						$pick.find('video.virtual').css({ transition: `filter ${F.swing + 0.2}s ease-in`, filter: 'brightness(0)' });
+					}, PRESS.hold * 1000);
 					stage.timeout(function () {
 						$front.css({ transition: `transform ${F.rush}s cubic-bezier(.6,0,.9,.4)`, transform: 'scale(4.5)' });
-						$pick.css({ transition: `opacity ${F.rush}s ease-in`, opacity: 0 });
+						$black.css({ transition: `opacity ${F.rush}s ease-in`, opacity: 1 });
 					}, (PRESS.hold + F.swing) * 1000);
 					stage.timeout(function () {
 						$pick.remove();
 						fn(count);
-					}, (PRESS.hold + F.swing + F.rush) * 1000);
+					}, (PRESS.hold + F.swing + F.rush + F.dark) * 1000);
 				});
 		}
+		const $black = $('<div>').css({ position: 'absolute', inset: 0, background: '#000', opacity: 0, pointerEvents: 'none', zIndex: 10 }).appendTo($pick);   // (the fade to black, into the sting)
 		// in: it all fades up, the counts pop in on the screen
 		stage.timeout(function () {
 			$pick.css({ opacity: 1 });
