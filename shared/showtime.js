@@ -1561,7 +1561,7 @@ window.Showtime = function (stage, opts) {
 		panel: { x: 874, y: 230, w: 670, h: 770 },                 // the kiosk: a purple panel on the right, over the box
 		screen: { inset: 34 },
 		kiosk: { top: 96, size: 0.88, camera: 52, pay: { w: 92, h: 176 } },   // the kiosk's furniture: the screen starts this far down (room for the camera over it); the camera dome's size; the card reader to the right of the screen                                   // its 9:16 screen, this far in from the panel's top left (as tall as the panel allows)
-		gate: { gap: 14, post: 92, inset: 12, lift: 120, depth: 92, thick: 14, rise: 150 },                  // the glass barriers, side by side across the whole way in, a third of its height, held up off the floor (lift) by chunky posts, set in from the way in's edges (inset); the posts this deep, the glass this thick (real 3D blocks); the posts standing this much taller than the glass
+		gate: { gap: 14, post: 92, inset: 12, lift: 175, depth: 92, thick: 14, rise: 150 },                  // the glass barriers, side by side across the whole way in, a third of its height, held up off the floor (lift) by chunky posts, set in from the way in's edges (inset); the posts this deep, the glass this thick (real 3D blocks); the posts standing this much taller than the glass
 		neon: '#c06bff',                                         // the strips down the box's sides
 		purple: '#3a1478',                                       // the panels: a deep purple, textured (see panelSkin)
 		swing: 0.55, rush: 0.75, dark: 0.25,                     // the barriers swinging in (the screens fading to black); the view rushing into the box (everything fading to black); a moment in the black, then the sting
@@ -1750,11 +1750,11 @@ window.Showtime = function (stage, opts) {
 		for (let k = 0; k < 12; k++) $('<div>').css({ height: '14px', borderRadius: '3px', background: k === 9 ? '#e8323c' : k === 11 ? '#3cdc7a' : '#3a3644' }).appendTo($keys);
 		$('<div>').css({ position: 'absolute', left: '50%', bottom: '10px', width: '28px', height: '4px', marginLeft: '-14px', borderRadius: '2px', background: '#05040a' }).appendTo($pay);
 		// (pale chevrons on the panel over the card reader, coming in off its right edge and pointing at the screen)
-		const chevX = payX, chevW = P.x + P.w - chevX, chevY = P.y + K.top + sh * 0.5;
+		const chevX = payX, chevW = P.x + P.w - chevX, chevY = P.y + K.top + sh * 0.57;
 		const $chev = $('<div>').css({ position: 'absolute', left: chevX + 'px', top: chevY - 40 + 'px', width: chevW + 'px', height: '80px', overflow: 'hidden', zIndex: 3 }).appendTo($front);
 		for (let n = 0; n < 8; n++) {
-			$('<div>').html('<svg viewBox="0 0 40 80" width="40" height="80"><path d="M0 40 L20 8 L36 8 L16 40 L36 72 L20 72 Z" fill="#efe6ff"/></svg>')
-				.css({ position: 'absolute', left: n * 46 + 'px', top: 0, opacity: 0.3 - n * 0.03 }).appendTo($chev);
+			$('<div>').html('<svg viewBox="0 0 46 80" width="46" height="80"><path d="M0 40 L30 2 L44 2 L14 40 L44 78 L30 78 Z" fill="#efe6ff"/></svg>')
+				.css({ position: 'absolute', left: n * 52 + 'px', top: 0, opacity: 0.3 - n * 0.03 }).appendTo($chev);
 		}
 
 		$('<div>').text('HOW MANY PLAYERS?').css({
