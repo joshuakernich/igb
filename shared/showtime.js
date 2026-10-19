@@ -205,14 +205,15 @@ window.Showtime = function (stage, opts) {
 
 	const TITLE = {
 		dark: 0.4,             // the room goes dark
-		in: 1.0,               // the logo, title and START all fly in together over this long (as the sting fades out over them)
-		far: 0.06,             // from far away: this big when they set off
+		in: 1.3,               // the logo, title and START all fly in together over this long (as the sting ends over them)
+		far: 0.02,             // from far away: this big when they set off
+		back: 2.2,             // how far they rush past full size before settling (a back ease)
 		hold: 1.6,             // then it holds
 		out: 0.5,              // and fades
 		size: 170,
 		fit: 0.7,              // the widest a line may be: this share of a wall
 		raised: 370,           // with a START button: the title's middle, raised to make room (under the logo)
-		logo: { src: 'assets/shared/igb-logo.png', w: 420, top: 50, outline: 7, drop: 9, tilt: -0.05, bob: [7, 1.6], sway: [0.012, 1.1] },   // the Immersive Gamebox logo along the top: its width, how far down; its ink outline and drop (as the words have); tilted (radians), floating up and down (px, speed) and swaying (radians, speed)
+		logo: { src: 'assets/shared/igb-logo.png', w: 420, top: 50, outline: 0, shade: { size: 0.72, squash: 0.5, alpha: 0.65 }, tilt: -0.05, bob: [7, 1.6], sway: [0.012, 1.1] },   // the Immersive Gamebox logo along the top: its width, how far down; no outline (outline: px of ink round it), a soft dark glow behind it (its size, a share of the logo's width; how flat; how dark); tilted (radians), floating up and down (px, speed) and swaying (radians, speed)
 		startGap: 50,          // and the gap between its last line and the START button
 		auto: 10,              // the START button presses itself after this many seconds (its icon counts down)
 	};
@@ -1841,7 +1842,7 @@ window.Showtime = function (stage, opts) {
 		ink.fillRect(0, 0, w, h);
 		const out = document.createElement('canvas').getContext('2d');
 		out.canvas.width = w + 2 * r + 4; out.canvas.height = h + 2 * r + 4;
-		for (let a = 0; a < 24; a++) out.drawImage(ink.canvas, r + 2 + Math.cos(a / 24 * Math.PI * 2) * r, r + 2 + Math.sin(a / 24 * Math.PI * 2) * r);
+		if (r > 0) for (let a = 0; a < 24; a++) out.drawImage(ink.canvas, r + 2 + Math.cos(a / 24 * Math.PI * 2) * r, r + 2 + Math.sin(a / 24 * Math.PI * 2) * r);
 		out.drawImage(img, r + 2, r + 2, w, h);
 		return (logoDone = { canvas: out.canvas, h });
 	}
@@ -1855,8 +1856,12 @@ window.Showtime = function (stage, opts) {
 		// as the sting fades out over them; when each line sets off, and when they've landed
 		const sets = lines.map(() => 0);
 		const lastLand = T.in;
-		const flyIn = (bt) => 1 - Math.pow(1 - clamp(bt / T.in, 0, 1), 3);   // (0 far, 1 landed: easing in to a stop)
-		const far = (k) => 1 / lerp(1 / T.far, 1, k);   // (how big it looks on the way, as something coming in from far off would: tiny, then rushing up to full size)
+		// (flying in from far off: tiny, rushing up past full size and settling
+		// back to it, a back ease, as something coming in from a distance would
+		// look; fading in over its first quarter)
+		const backOut = (x) => { const c1 = T.back, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
+		const flyScale = (bt) => { const k = backOut(clamp(bt / T.in, 0, 1)); return k <= 1 ? 1 / lerp(1 / T.far, 1, k) : k; };
+		const flyAlpha = (bt) => clamp(bt / T.in * 4, 0, 1);
 		// the START button's middle: just under the title's last line (a neat gap below it)
 		const startTop = function () {
 			const n = lines.length;
@@ -1919,8 +1924,7 @@ window.Showtime = function (stage, opts) {
 				}
 				// flying in, as the logo and title do
 				if ($start && startedAt < 0 && bt <= T.in + 0.1) {
-					const k = flyIn(bt);
-					$start.css({ opacity: k, transform: `translate(-50%, -50%) scale(${far(k)})` });
+					$start.css({ opacity: flyAlpha(bt), transform: `translate(-50%, -50%) scale(${flyScale(bt)})` });
 				}
 				// counting down; at nought it presses itself
 				if ($start && $count && startedAt < 0) {
@@ -1935,18 +1939,26 @@ window.Showtime = function (stage, opts) {
 				const n = lines.length;
 				const logo = outlinedLogo();
 				self.onWalls(ctx, function (c) {
-					// the Immersive Gamebox logo, in white along the top, outlined and dropped like the words, tilted and gently floating
+					// the Immersive Gamebox logo, in white along the top, on a soft dark glow, tilted and gently floating
 					if (logo) {
 						const L = TITLE.logo;
 						const t = showTime;
 						c.save();
-						const k = flyIn(bt);
-						c.globalAlpha *= fade * k;
+						c.globalAlpha *= fade * flyAlpha(bt);
 						c.translate(W / 2, L.top + logo.h / 2 + Math.sin(t * L.bob[1]) * L.bob[0]);
-						c.scale(far(k), far(k));
+						c.scale(flyScale(bt), flyScale(bt));
 						c.rotate(L.tilt + Math.sin(t * L.sway[1]) * L.sway[0]);
-						c.shadowColor = 'rgba(0,0,0,0.5)';
-						c.shadowOffsetY = L.drop;
+						// a soft dark glow behind it, setting it apart from the scene
+						c.save();
+						c.scale(1, L.shade.squash);
+						const R = L.w * L.shade.size;
+						const g = c.createRadialGradient(0, 0, 0, 0, 0, R);
+						g.addColorStop(0, `rgba(6,0,20,${L.shade.alpha})`);
+						g.addColorStop(0.55, `rgba(6,0,20,${L.shade.alpha * 0.55})`);
+						g.addColorStop(1, 'rgba(6,0,20,0)');
+						c.fillStyle = g;
+						c.fillRect(-R, -R, 2 * R, 2 * R);
+						c.restore();
 						c.drawImage(logo.canvas, -logo.canvas.width / 2, -logo.canvas.height / 2);
 						c.restore();
 					}
@@ -1957,11 +1969,10 @@ window.Showtime = function (stage, opts) {
 						const size = wide > W * T.fit ? full * W * T.fit / wide : full;
 						const y = (start ? T.raised : 470) + (li - (n - 1) / 2) * size * 1.05;
 						// flying in from a little way off, with the logo and the button
-						const k = flyIn(bt);
 						c.save();
 						c.translate(W / 2, y);
-						c.scale(far(k), far(k));
-						self.text(c, line.text, 0, 0, size, { fill: line.fill || 'white', glow: line.glow || theme.accent, alpha: fade * k, exact: true });
+						c.scale(flyScale(bt), flyScale(bt));
+						self.text(c, line.text, 0, 0, size, { fill: line.fill || 'white', glow: line.glow || theme.accent, alpha: fade * flyAlpha(bt), exact: true });
 						c.restore();
 					});
 				});
