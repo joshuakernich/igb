@@ -73,6 +73,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const GRACE = 0.2;          // seconds after RED LIGHT before movement counts (tracking lag)
 	const TURN_AWAY = 0.76;     // seconds her head takes to turn away after a red light, before GREEN LIGHT
 	const BODY = 30;            // a contestant's radius on the plane
+	const BLOCK_ROOM = { gap: 28, depth: 0.85 };   // the space a block keeps round a contestant: extra on top of their radius, and how much of it holds along the field (up and down it)
 	const LANE = 30;            // contestants keep this far inside their wall's ends
 	const WALL_ORDER = [1, 0, 2];             // hazards are shared out front, left, right, front...
 	const BLOCK = 116;                        // a square block, side to side: scattered in short runs (a run is one long block)
@@ -1563,9 +1564,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			if (wallOfX(b.x) !== c.wall) continue;
 			// (a long block: straight along its length, rounded at its ends)
 			const dx = Math.max(0, Math.abs(c.x - b.x) - (b.rx - b.r));
-			const min = b.r + BODY;
+			const min = b.r + BODY + BLOCK_ROOM.gap;
 			if (dx >= min) continue;
-			const reach = Math.sqrt(min * min - dx * dx) * 0.7;
+			const reach = Math.sqrt(min * min - dx * dx) * BLOCK_ROOM.depth;
 			if (Math.abs(c.f - b.f) < reach) c.f = c.f < b.f ? b.f - reach : b.f + reach;
 		}
 
