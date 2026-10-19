@@ -1558,11 +1558,12 @@ window.Showtime = function (stage, opts) {
 		box: { x: 56, y: 230, w: 1488, h: 770, lens: 1000 },
 		inner: 24,                                               // the room inside, this far in from the neon edges   // the gamebox's way in, under the fascia with the TVs (the box itself the wall's whole height, the arcade showing either side of it): its mouth, how deep it goes, its perspective
 		zoom: { x: 465, y: 550 },                                // where the eye looks into it (the middle of what shows of it, left of the panel): the vanishing point, and the rush's centre
-		panel: { x: 874, y: 230, w: 670, h: 770 },               // the purple panel on the right, over the box (the way in 55% of it, the kiosk 45%)
-		screen: { inset: 34 },                                   // its 9:16 screen, this far in from the panel's top left (as tall as the panel allows)
+		panel: { x: 954, y: 230, w: 590, h: 770 },               // the kiosk: a purple panel on the right, over the box
+		screen: { inset: 34 },
+		kiosk: { top: 96, camera: 52, pay: { w: 92, h: 176 } },   // the kiosk's furniture: the screen starts this far down (room for the camera over it); the camera dome's size; the card reader to the right of the screen                                   // its 9:16 screen, this far in from the panel's top left (as tall as the panel allows)
 		gate: { gap: 14, post: 92, inset: 12, lift: 120, depth: 92, thick: 14, rise: 70 },                  // the glass barriers, side by side across the whole way in, a third of its height, held up off the floor (lift) by chunky posts, set in from the way in's edges (inset); the posts this deep, the glass this thick (real 3D blocks); the posts standing this much taller than the glass
 		neon: '#c06bff',                                         // the strips down the box's sides
-		purple: '#6326c8',                                       // the panels, one flat purple
+		purple: '#3a1478',                                       // the panels: a deep purple, textured (see panelSkin)
 		swing: 0.55, rush: 0.75, dark: 0.25,                     // the barriers swinging in (the screens fading to black); the view rushing into the box (everything fading to black); a moment in the black, then the sting
 	};
 	// The arcade behind it all, drawn simply: a dim purple room, a row of
@@ -1593,6 +1594,17 @@ window.Showtime = function (stage, opts) {
 	}
 	let arcadeUrl = null;
 	const arcade = () => (arcadeUrl = arcadeUrl || arcadeArt());
+
+	// The kiosk's purple panels: a deep purple with a little texture (a fine
+	// grain, and a faint brushed sheen across it)
+	let skinUrl = null;
+	function panelSkin() {
+		if (!skinUrl) {
+			const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.07 0"/></filter><rect width="240" height="240" filter="url(#n)"/></svg>`;
+			skinUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+		}
+		return `url("${skinUrl}"), repeating-linear-gradient(100deg, rgba(255,255,255,0.025) 0 3px, rgba(0,0,0,0.03) 3px 9px), linear-gradient(170deg, #4a1c94, ${FRONT.purple} 55%, #2a0e5a)`;
+	}
 
 	function trailers() {
 		const ids = (IGB.menu || []).filter((id) => !RATE.notAgain.includes(id) && id !== opts.id);
@@ -1637,7 +1649,7 @@ window.Showtime = function (stage, opts) {
 		const innerW = F.box.w - 2 * F.inner;
 		const B = Object.assign({}, F.box, { x: F.box.x + F.inner, w: innerW, h: innerW * 10 / 16, y: H - innerW * 10 / 16, depth: innerW });
 		// (a purple panel across the top of the box, down to the top of the room's walls; the TVs hang over it)
-		$('<div>').css({ position: 'absolute', left: F.box.x + 'px', top: 0, width: F.box.w + 'px', height: B.y + 'px', background: F.purple, zIndex: 2 }).appendTo($front);
+		$('<div>').css({ position: 'absolute', left: F.box.x + 'px', top: 0, width: F.box.w + 'px', height: B.y + 'px', background: panelSkin(), zIndex: 2 }).appendTo($front);
 		$('<div>').css({ position: 'absolute', left: F.box.x + 'px', top: 0, width: F.box.w + 'px', height: H + 'px', background: '#0b0616' }).appendTo($front);   // (the box's body, between its neon edges)
 		const $mouth = $('<div>').css({ position: 'absolute', left: B.x + 'px', top: B.y + 'px', width: B.w + 'px', height: B.h + 'px', perspective: B.lens + 'px', perspectiveOrigin: `${F.zoom.x - B.x}px ${F.zoom.y - B.y}px` }).appendTo($front);
 		const $box = $('<div>').css({ position: 'absolute', inset: 0, transformStyle: 'preserve-3d' }).appendTo($mouth);
@@ -1696,18 +1708,33 @@ window.Showtime = function (stage, opts) {
 
 		// 5. the purple panel on the right, its screen (filling it) asking HOW MANY PLAYERS?
 		const P = Object.assign({}, F.panel, { y: B.y, h: H - B.y });   // (from the top panel down to the floor)
-		$('<div>').css({ position: 'absolute', left: P.x + 'px', top: P.y + 'px', width: P.w + 'px', height: P.h + 'px', borderRadius: '14px', background: F.purple, zIndex: 3 }).appendTo($front);
-		const sh = P.h - 2 * F.screen.inset, sw = sh * 9 / 16;   // (a 9:16 screen, as tall as fits, in the panel's top left)
+		$('<div>').css({ position: 'absolute', left: P.x + 'px', top: P.y + 'px', width: P.w + 'px', height: P.h + 'px', borderRadius: '14px', background: panelSkin(), zIndex: 3 }).appendTo($front);
+		const K = F.kiosk;
+		const sh = P.h - K.top - F.screen.inset, sw = sh * 9 / 16;   // (a 9:16 screen, as tall as fits under the camera, at the panel's left)
 		const $screen = $('<div>').css({
-			position: 'absolute', left: P.x + F.screen.inset + 'px', top: P.y + F.screen.inset + 'px', width: sw + 'px', height: sh + 'px', boxSizing: 'border-box', padding: '40px 22px',
+			position: 'absolute', left: P.x + F.screen.inset + 'px', top: P.y + K.top + 'px', width: sw + 'px', height: sh + 'px', boxSizing: 'border-box', padding: '40px 22px',
 			background: 'linear-gradient(180deg, #1a0a36, #2b0f5a)', border: '10px solid #05030a', borderRadius: '16px',
 			display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '40px', zIndex: 3,
 		}).appendTo($front);
+		// (a little black dome camera over the screen)
+		const camX = P.x + F.screen.inset + sw / 2, camY = P.y + K.top / 2;
+		$('<div>').css({ position: 'absolute', left: camX - K.camera * 0.7 + 'px', top: camY - 6 + 'px', width: K.camera * 1.4 + 'px', height: '12px', borderRadius: '6px', background: '#0d0a12', zIndex: 3 }).appendTo($front);
+		$('<div>').css({ position: 'absolute', left: camX - K.camera / 2 + 'px', top: camY - 2 + 'px', width: K.camera + 'px', height: K.camera / 2 + 'px', borderRadius: `0 0 ${K.camera / 2}px ${K.camera / 2}px`, zIndex: 3,
+			background: 'radial-gradient(circle at 38% 30%, #5a5a6a 0, #1a1a22 35%, #050508 70%)', boxShadow: '0 4px 8px rgba(0,0,0,0.6)' }).appendTo($front);
+		$('<div>').css({ position: 'absolute', left: camX - 6 + 'px', top: camY + 6 + 'px', width: '12px', height: '12px', borderRadius: '50%', background: 'radial-gradient(circle at 35% 35%, #6af 0, #124 60%, #000 100%)', zIndex: 3 }).appendTo($front);
+		// (and a card reader to the right of the screen)
+		const payX = P.x + F.screen.inset + sw + (P.w - F.screen.inset - sw - K.pay.w) / 2, payY = P.y + K.top + sh * 0.52;
+		const $pay = $('<div>').css({ position: 'absolute', left: payX + 'px', top: payY + 'px', width: K.pay.w + 'px', height: K.pay.h + 'px', borderRadius: '14px', background: 'linear-gradient(180deg, #2a2733, #121018)', boxShadow: '0 8px 14px rgba(0,0,0,0.55), inset 0 0 0 2px rgba(255,255,255,0.06)', zIndex: 3 }).appendTo($front);
+		$('<div>').css({ position: 'absolute', left: '10px', top: '12px', right: '10px', height: '50px', borderRadius: '5px', background: 'linear-gradient(160deg, #3ad1ff, #1b5f9e)', boxShadow: 'inset 0 0 6px rgba(0,0,0,0.5)' }).appendTo($pay);
+		const $keys = $('<div>').css({ position: 'absolute', left: '12px', right: '12px', top: '74px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }).appendTo($pay);
+		for (let k = 0; k < 12; k++) $('<div>').css({ height: '14px', borderRadius: '3px', background: k === 9 ? '#e8323c' : k === 11 ? '#3cdc7a' : '#3a3644' }).appendTo($keys);
+		$('<div>').css({ position: 'absolute', left: '50%', bottom: '10px', width: '28px', height: '4px', marginLeft: '-14px', borderRadius: '2px', background: '#05040a' }).appendTo($pay);
+
 		$('<div>').text('HOW MANY PLAYERS?').css({
 			fontSize: '64px', lineHeight: 1.05, textAlign: 'center', letterSpacing: '1px', color: TYPE.colours.gold, width: '100%', textWrap: 'balance',
 			WebkitTextStroke: `5px ${theme.ink}`, paintOrder: 'stroke fill',
 		}).appendTo($screen);
-		const $row = $('<div>').css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '18px', width: 3 * 120 + 2 * 18 + 'px' }).appendTo($screen);   // (over two lines: three, then two)
+		const $row = $('<div>').css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '18px', width: 2 * 120 + 18 + 'px' }).appendTo($screen);   // (over three lines: two, two, one)
 		let picked = false;
 		for (let n = 2; n <= 6; n++) {
 			$('<button>').attr('count', n).text(n).css({
