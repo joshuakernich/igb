@@ -3317,9 +3317,20 @@ window.Showtime = function (stage, opts) {
 		const tap = ($b, fn) => $b.on('click', function (e) { e.stopPropagation(); self.fx('tap'); fn(); });
 
 		// Every wall shows the same thing; any wall's tap counts for all.
-		function render() {
-			if ($layer) $layer.remove();
+		// dir: 1, the old block flies up off the walls as the new one flies in
+		// from below (-1, the other way: back); 0, straight swap
+		const SWAP = { time: 0.6, ease: 'cubic-bezier(.55,0,.25,1)' };
+		function render(dir = 0) {
+			const $old = $layer;
 			$layer = $('<showtime-rating>').attr('part', part).css({ position: 'absolute', left: 0, top: 0, width: 3 * W + 'px', height: H + 'px', pointerEvents: 'none' }).appendTo(stage.$ui);
+			if ($old && dir) {
+				const move = `transform ${SWAP.time}s ${SWAP.ease}`;
+				$layer.css({ transform: `translateY(${dir * H}px)` });
+				void $layer[0].offsetWidth;
+				$layer.css({ transition: move, transform: 'none' });
+				$old.css({ transition: move, transform: `translateY(${-dir * H}px)`, pointerEvents: 'none' }).find('*').css('pointer-events', 'none');
+				stage.timeout(() => $old.remove(), SWAP.time * 1000 + 50);
+			} else if ($old) $old.remove();
 			if (part === 'thanks' || part === 'over') return;
 			for (let wall = 0; wall < 3; wall++) {
 				// (beside the gif, when it's up in the top right corner: in the room left of it, shrunk to fit)
@@ -3368,7 +3379,7 @@ window.Showtime = function (stage, opts) {
 				R.reasons.forEach(function (r) {
 					tap(pill(r.label, false).attr('reason', r.label).appendTo($g), function () {
 						feedback.reasons = [r.label];
-						if (r.more) { topic = r; partAt = self.bt; render(); } else finish();
+						if (r.more) { topic = r; partAt = self.bt; render(1); } else finish();
 					});
 				});
 				return;
@@ -3386,14 +3397,14 @@ window.Showtime = function (stage, opts) {
 				topic = null;
 				feedback.reasons = [];
 				partAt = self.bt;
-				render();
+				render(-1);
 			});
 		}
 
-		function go(next) {
+		function go(next, dir = 0) {
 			part = next;
 			partAt = self.bt;
-			render();
+			render(dir);
 		}
 
 		function rate(rating) {
@@ -3405,7 +3416,7 @@ window.Showtime = function (stage, opts) {
 			if (IGB.log) IGB.log(`Rated ${f.label} (${rating})`);
 			// a moment to see the face picked, then on
 			render();
-			stage.timeout(() => { if ($layer && part === 'faces') go(rating <= R.low ? 'reasons' : 'over'); }, R.picked * 1000);
+			stage.timeout(() => { if ($layer && part === 'faces') go(rating <= R.low ? 'reasons' : 'over', rating <= R.low ? 1 : 0); }, R.picked * 1000);
 		}
 
 		function finish() {
@@ -3413,7 +3424,7 @@ window.Showtime = function (stage, opts) {
 				console.log('Feedback:', feedback.reasons.join(', '));
 				if (IGB.log) IGB.log('Feedback: ' + feedback.reasons.join(', '));
 			}
-			go('over');   // straight on to the end: the carousel
+			go('over', 1);   // straight on to the end: the carousel (the question flying up and away)
 		}
 
 		function clear() {
