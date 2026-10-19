@@ -333,6 +333,11 @@ igb-controls {
 	z-index: 1000;
 }
 
+/* (not in the hub: it's for a game) */
+igb.home igb-controls {
+	display: none;
+}
+
 igb-controls button {
 	display: flex;
 	align-items: center;
