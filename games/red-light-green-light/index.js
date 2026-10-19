@@ -111,7 +111,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	// Jump pads and cash
 	const PAD = { rx: 70, rf: 70, every: 420, open: 72, throw: 260, sink: 9, chamfer: 0.2, thick: 12 };   // a trapdoor's half-width and half-depth (square); one every so far up the track (field units); how far it springs open (degrees); how high it throws you; how far its lid sits sunk below the sand; its corners cut off (a share of its half-width); how thick its lid is
-	const CASH = { every: 300, reach: 60, size: 1.8, float: 50, bob: 22 };   // every so far up each wall; how close to grab it; its size, float height and bob
+	const CASH = { under: 0.65, every: 300, reach: 60, size: 1.8, float: 50, bob: 22 };   // every so far up each wall; how close to grab it; its size, float height and bob
 	const MAGNET = { every: 1400, time: 2.5, radius: 480, pull: 1200 };   // a magnet every so far up each wall; seconds it lasts; how far it reaches; how fast cash comes
 	const BOULDER = { from: 1, gap: [4, 9], quicker: 0.9, r: [75, 105], speed: [320, 440], ahead: 1700, lead: 900, down: 1.2, spill: 3 };   // boulders from this round (0 is round 1); seconds between them, shrinking by this much a round; their size; how fast they roll; how far up the field they start (and never nearer the players than lead); seconds flattened; wads of cash spilled
 	// The round's cash, magnets and money bags are laid out up the track at its
@@ -3079,14 +3079,15 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	// Its shadow: its dark copy flipped down from (x, y) onto the sand, the
 	// length the ground's tilt allows, as wide as the item drawn at this scale.
-	function itemShadow(ctx, name, x, y, f, scale, rotate = 0, alpha = 1) {
+	function itemShadow(ctx, name, x, y, f, scale, rotate = 0, alpha = 1, under = 0) {
 		const it = items[name];
 		const w = ITEM[name] * scale;
 		const h = w * it.h / it.w;
 		ctx.save();
 		ctx.globalAlpha *= SIL.alpha * alpha;
-		ctx.translate(x, y);
-		ctx.scale(1, SHADOW.f * groundTilt(f));   // (negative: flipped down)
+		const fall = SHADOW.f * groundTilt(f);
+		ctx.translate(x, y + under * h * fall);   // (under: drawn back up under the thing by that share of its length)
+		ctx.scale(1, fall);   // (negative: flipped down)
 		ctx.rotate(rotate * Math.PI / 180);
 		const k = w / it.w;
 		const pad = it.sil.pad * k;
@@ -3122,7 +3123,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const s = p.s * CASH.size * nearer(p.y);
 		const rise = 0;   // (resting on the sand: no bobbing)
 		const lift = ((m.fly ? BAG.arc * 4 * k * (1 - k) : 0) + dropLift(m)) * p.s;
-		if (items.cash) itemShadow(ctx, 'cash', p.x, p.y, m.f, s, -0.35, 0.8);
+		if (items.cash) itemShadow(ctx, 'cash', p.x, p.y, m.f, s, -0.35, 0.8, CASH.under);
 		else softShadow(ctx, p.x, p.y, 26 * s * (1 - 0.25 * rise), 8 * s * (1 - 0.25 * rise), 0.22, 1 - 0.35 * rise, 40 * s, m.f);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s, rotate: -0.35 }, function (c) {
 			if (drawItem(c, 'cash')) return;
