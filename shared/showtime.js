@@ -1679,7 +1679,7 @@ window.Showtime = function (stage, opts) {
 		// the barriers: glass slabs, each hung from its post on a hinge (the hinge
 		// turns, swinging the slab inwards)
 		// (the glass: clear, a less see-through stripe across its middle)
-		const glass = (name) => ({ background: name === 'front' || name === 'back' ? 'linear-gradient(180deg, transparent 43%, rgba(235,245,255,0.78) 43%, rgba(235,245,255,0.78) 57%, transparent 57%), linear-gradient(180deg, rgba(220,235,255,0.40), rgba(200,220,255,0.16))' : 'rgba(225,240,255,0.65)', border: name === 'front' || name === 'back' ? '2px solid rgba(255,255,255,0.65)' : 'none' });
+		const glass = (name) => ({ background: name === 'front' || name === 'back' ? 'linear-gradient(180deg, transparent 37.5%, rgba(235,245,255,0.5) 37.5%, rgba(235,245,255,0.5) 62.5%, transparent 62.5%), linear-gradient(180deg, rgba(220,235,255,0.40), rgba(200,220,255,0.16))' : 'rgba(225,240,255,0.65)', border: name === 'front' || name === 'back' ? '2px solid rgba(255,255,255,0.65)' : 'none' });
 		const barrier = function (left, hinge) {
 			const $h = $('<div>').css({ position: 'absolute', left: left + 'px', top: gy + 'px', width: G.w + 'px', height: G.h + 'px', transformStyle: 'preserve-3d', transformOrigin: hinge + ' center', transform: `translateZ(${-G.depth / 2}px)`, transition: `transform ${F.swing}s cubic-bezier(.5,0,.3,1)` }).appendTo($box);
 			cuboid($h, { x: 0, y: 0, z: 0, w: G.w, h: G.h, d: G.thick }, glass);
