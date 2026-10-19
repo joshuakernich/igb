@@ -1554,10 +1554,10 @@ window.Showtime = function (stage, opts) {
 	// Once a count's tapped the barriers swing inwards, the view rushes into
 	// the box, and the sting begins.
 	const FRONT = {
-		tv: { y: 30, h: 170, gap: 52, lean: -16 },               // the three TVs across the top (16:9), over the box, leaning forward (degrees)
+		tv: { y: -82, h: 170, gap: 52, lean: -16 },               // the three TVs across the top (16:9), nudged up so just their bottoms show, filling the frame over the room, leaning forward (degrees)
 		box: { x: 56, y: 230, w: 1488, h: 770, lens: 1000 },
 		inner: 24,                                               // the room inside, this far in from the neon edges   // the gamebox's way in, under the fascia with the TVs (the box itself the wall's whole height, the arcade showing either side of it): its mouth, how deep it goes, its perspective
-		zoom: { x: 465, y: 615 },                                // where the eye looks into it (the middle of what shows of it, left of the panel): the vanishing point, and the rush's centre
+		zoom: { x: 465, y: 550 },                                // where the eye looks into it (the middle of what shows of it, left of the panel): the vanishing point, and the rush's centre
 		panel: { x: 874, y: 230, w: 670, h: 770 },               // the purple panel on the right, over the box (the way in 55% of it, the kiosk 45%)
 		screen: { inset: 34 },                                   // its screen, filling the panel but for this margin
 		gate: { gap: 14, post: 92, inset: 46, lift: 120 },                  // the glass barriers, side by side across the whole way in, a third of its height, held up off the floor (lift) by chunky posts, set in from the way in's edges (inset)
@@ -1621,8 +1621,6 @@ window.Showtime = function (stage, opts) {
 		// 3. the neon strips down its sides
 		const neon = () => { for (const x of [F.box.x - 14, F.box.x + F.box.w]) $('<div>').css({ position: 'absolute', left: x + 'px', top: 0, width: '14px', height: H + 'px', background: '#f3e2ff', boxShadow: `0 0 24px 8px ${F.neon}, 0 0 60px 18px ${F.neon}`, zIndex: 4 }).appendTo($front); };
 		// 4. the TVs across the top, each playing one of the trailers inside the box
-		// (a purple panel across the top of the box, the TVs set in it)
-		$('<div>').css({ position: 'absolute', left: F.box.x + 'px', top: 0, width: F.box.w + 'px', height: F.box.y + 'px', background: F.purple, boxShadow: '0 10px 30px rgba(0,0,0,0.45)', zIndex: 2 }).appendTo($front);
 		const tvW = F.tv.h * 16 / 9;
 		const tvX = (W - (3 * tvW + 2 * F.tv.gap)) / 2;
 		clips.forEach(function (id, i) {
