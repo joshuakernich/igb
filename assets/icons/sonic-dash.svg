@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+	<!-- Sonic Dash: flat, in the game's colours: a blue sky over the sea, a loop in the road, a gold ring rushing past with speed lines -->
+	<defs>
+		<clipPath id="tile"><rect width="256" height="256" rx="40"/></clipPath>
+		<pattern id="check" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
+			<rect width="24" height="24" fill="#ffe14a"/>
+			<rect width="12" height="12" fill="#ff8a1f"/>
+			<rect x="12" y="12" width="12" height="12" fill="#ff8a1f"/>
+		</pattern>
+	</defs>
+	<g clip-path="url(#tile)">
+		<rect width="256" height="256" fill="#2f7cf0"/>
+		<rect y="150" width="256" height="106" fill="#0b4f8a"/>
+		<rect y="150" width="256" height="8" fill="#3cd6ff"/>
+		<!-- the loop: a thick ring of road, standing on the sea -->
+		<circle cx="150" cy="112" r="68" fill="none" stroke="#1a0b2e" stroke-width="34"/>
+		<circle cx="150" cy="112" r="68" fill="none" stroke="url(#check)" stroke-width="24"/>
+		<rect x="0" y="180" width="256" height="34" fill="#1a0b2e"/>
+		<rect x="0" y="185" width="256" height="24" fill="url(#check)"/>
+		<!-- speed lines -->
+		<g stroke="white" stroke-width="9" stroke-linecap="round">
+			<line x1="18" y1="96" x2="58" y2="96"/>
+			<line x1="10" y1="124" x2="64" y2="124"/>
+			<line x1="22" y1="152" x2="56" y2="152"/>
+		</g>
+		<!-- the gold ring, rushing past -->
+		<circle cx="104" cy="124" r="34" fill="none" stroke="#1a0b2e" stroke-width="28"/>
+		<circle cx="104" cy="124" r="34" fill="none" stroke="#ffe14a" stroke-width="18"/>
+		<path d="M82 104 A30 30 0 0 1 112 94" fill="none" stroke="white" stroke-width="6" stroke-linecap="round"/>
+	</g>
+</svg>
