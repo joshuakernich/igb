@@ -3,6 +3,9 @@
  * the gamebox simulator. Game styles never live here.
  */
 
+/* a title's own lettering (games/manifest.js: title.font), wherever it's shown */
+@font-face { font-family: 'Nise Sega Sonic'; src: url('../assets/loop-island/NiseSegaSonic.ttf') format('truetype'); font-display: swap; }
+
 :root {
 	color-scheme: dark;
 	--igb-purple: #330357;

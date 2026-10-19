@@ -607,9 +607,9 @@ window.Showtime = function (stage, opts) {
 	const CLOCK_FONT = opts.clockFont === undefined ? 'Share Tech Mono' : opts.clockFont || null;   // (by default, steady monospace digits)
 	if (CLOCK_FONT && document.fonts) document.fonts.load(`40px "${CLOCK_FONT}"`).catch(() => {});
 	const snapSize = (size) => TYPE.sizes.reduce((best, s) => (Math.abs(Math.log(s / size)) < Math.abs(Math.log(best / size)) ? s : best), TYPE.sizes[0]);
-	const measure = function (ctx, str, size) {
+	const measure = function (ctx, str, size, font) {
 		ctx.save();
-		ctx.font = `400 ${size}px "${TYPE.font}", sans-serif`;
+		ctx.font = `400 ${size}px "${font || TYPE.font}", sans-serif`;
 		const wide = ctx.measureText(String(str)).width;
 		ctx.restore();
 		return wide;
@@ -2133,6 +2133,7 @@ window.Showtime = function (stage, opts) {
 		// (its lines: as given, or the game's title in the manifest, which the end screen's carousel uses too)
 		const listed = IGB.find && opts.id ? IGB.find(opts.id) : null;
 		const lines = (extra && extra.lines) || (listed && listed.title && listed.title.lines) || [{ text: (opts.title || opts.id || '').toUpperCase() }];
+		for (const line of lines) if (line.font && document.fonts) document.fonts.load(`100px "${line.font}"`).catch(() => {});   // (its own lettering, fetched now)
 		// the logo, the title and the button all fly in together, from a little way off,
 		// as the sting fades out over them; when each line sets off, and when they've landed
 		const sets = lines.map(() => 0);
@@ -2245,14 +2246,14 @@ window.Showtime = function (stage, opts) {
 					lines.forEach(function (line, li) {
 						// its full size, shrunk (exactly, not by steps) only as far as it must to fit in 70% of a wall
 						const full = T.size * (n > 1 ? 0.85 : 1);
-						const wide = measure(c, line.text, full);
+						const wide = measure(c, line.text, full, line.font);   // (a line can have its own lettering: line.font)
 						const size = wide > W * T.fit ? full * W * T.fit / wide : full;
 						const y = (start ? T.raised : 470) + (li - (n - 1) / 2) * size * 1.05;
 						// flying in from a little way off, with the logo and the button
 						c.save();
 						c.translate(W / 2, y);
 						c.scale(flyScale(bt), flyScale(bt));
-						self.text(c, line.text, 0, 0, size, { fill: line.fill || 'white', glow: line.glow || theme.accent, alpha: fade * flyAlpha(bt), exact: true });
+						self.text(c, line.text, 0, 0, size, { fill: line.fill || 'white', glow: line.glow || theme.accent, alpha: fade * flyAlpha(bt), exact: true, font: line.font });
 						c.restore();
 					});
 				});
