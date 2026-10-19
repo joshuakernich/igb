@@ -1560,7 +1560,7 @@ window.Showtime = function (stage, opts) {
 		zoom: { x: 465, y: 550 },                                // where the eye looks into it (the middle of what shows of it, left of the panel): the vanishing point, and the rush's centre
 		panel: { x: 874, y: 230, w: 670, h: 770 },                 // the kiosk: a purple panel on the right, over the box
 		screen: { inset: 34 },
-		kiosk: { top: 96, size: 0.8, camera: 52, pay: { w: 92, h: 176 } },   // the kiosk's furniture: the screen starts this far down (room for the camera over it); the camera dome's size; the card reader to the right of the screen                                   // its 9:16 screen, this far in from the panel's top left (as tall as the panel allows)
+		kiosk: { top: 96, size: 0.88, camera: 52, pay: { w: 92, h: 176 } },   // the kiosk's furniture: the screen starts this far down (room for the camera over it); the camera dome's size; the card reader to the right of the screen                                   // its 9:16 screen, this far in from the panel's top left (as tall as the panel allows)
 		gate: { gap: 14, post: 92, inset: 12, lift: 120, depth: 92, thick: 14, rise: 70 },                  // the glass barriers, side by side across the whole way in, a third of its height, held up off the floor (lift) by chunky posts, set in from the way in's edges (inset); the posts this deep, the glass this thick (real 3D blocks); the posts standing this much taller than the glass
 		neon: '#c06bff',                                         // the strips down the box's sides
 		purple: '#3a1478',                                       // the panels: a deep purple, textured (see panelSkin)
@@ -1731,8 +1731,8 @@ window.Showtime = function (stage, opts) {
 		$('<div>').css({ position: 'absolute', left: '50%', bottom: '10px', width: '28px', height: '4px', marginLeft: '-14px', borderRadius: '2px', background: '#05040a' }).appendTo($pay);
 
 		$('<div>').text('HOW MANY PLAYERS?').css({
-			fontSize: '64px', lineHeight: 1.05, textAlign: 'center', letterSpacing: '1px', color: TYPE.colours.gold, width: '100%', textWrap: 'balance',
-			WebkitTextStroke: `5px ${theme.ink}`, paintOrder: 'stroke fill',
+			fontSize: '36px', lineHeight: 1.05, textAlign: 'center', letterSpacing: '1px', color: TYPE.colours.gold, width: '100%', textWrap: 'balance',
+			WebkitTextStroke: `3px ${theme.ink}`, paintOrder: 'stroke fill',
 		}).appendTo($screen);
 		const $row = $('<div>').css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '18px', width: 2 * 120 + 18 + 'px' }).appendTo($screen);   // (over three lines: two, two, one)
 		let picked = false;
