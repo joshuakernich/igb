@@ -1556,10 +1556,10 @@ window.Showtime = function (stage, opts) {
 	const FRONT = {
 		tv: { y: 74, h: 200, gap: 52 },                          // the three TVs across the top (16:9), over the box
 		box: { x: 56, y: 44, w: 1488, h: 912, depth: 1100, lens: 1000 },   // the gamebox, filling the wall but for an inset of the arcade round it: its mouth, how deep it goes, its perspective
-		zoom: { x: 505, y: 560 },                                // where the eye looks into it (the middle of what shows of it, left of the panel): the vanishing point, and the rush's centre
-		panel: { x: 960, y: 310, w: 584, h: 646 },               // the purple panel on the right, over the box
-		screen: { h: 600 },                                      // its 9:16 screen
-		gate: { w: 190, h: 150, gap: 14, post: 26 },             // the glass barriers, side by side across the mouth
+		zoom: { x: 465, y: 560 },                                // where the eye looks into it (the middle of what shows of it, left of the panel): the vanishing point, and the rush's centre
+		panel: { x: 874, y: 310, w: 670, h: 646 },               // the purple panel on the right, over the box (the way in 55% of it, the kiosk 45%)
+		screen: { inset: 34 },                                   // its screen, filling the panel but for this margin
+		gate: { h: 150, gap: 14, post: 26 },                     // the glass barriers, side by side across the whole way in
 		neon: '#c06bff',                                         // the strips down the box's sides
 		swing: 0.55, rush: 0.75,                                 // the barriers swinging in; the view rushing into the box
 	};
@@ -1645,7 +1645,9 @@ window.Showtime = function (stage, opts) {
 
 		// 6. the gate: two small glass barriers across the mouth, hinged at their posts, swinging inwards
 		const G = F.gate;
-		const gx = (F.zoom.x - B.x) - G.w - G.gap / 2;   // (centred in the part of the way in left showing, left of the panel)
+		const open = F.panel.x - B.x;                            // (the way in: the box's mouth left of the panel)
+		G.w = (open - 2 * G.post - G.gap) / 2;                   // (the barriers between posts at its edges, filling it)
+		const gx = G.post;
 		const gy = B.h - G.h - 70;
 		const barrier = (left, hinge) => $('<div>').css({
 			position: 'absolute', left: left + 'px', top: gy + 'px', width: G.w + 'px', height: G.h + 'px', transformOrigin: hinge + ' center',
@@ -1657,26 +1659,26 @@ window.Showtime = function (stage, opts) {
 			$('<div>').css({ position: 'absolute', left: x + 'px', top: gy - 40 + 'px', width: G.post + 'px', height: G.h + 110 + 'px', background: '#120c1c', borderTop: '6px solid #3ad1ff', boxShadow: '0 -4px 14px rgba(58,209,255,0.7)' }).appendTo($box);
 		}
 
-		// 5. the purple panel on the right, its 9:16 screen asking HOW MANY PLAYERS?
+		// 5. the purple panel on the right, its screen (filling it) asking HOW MANY PLAYERS?
 		const P = F.panel;
 		$('<div>').css({ position: 'absolute', left: P.x + 'px', top: P.y + 'px', width: P.w + 'px', height: P.h + 'px', borderRadius: '14px', background: 'linear-gradient(160deg, #7b33e6, #4a17a8)', boxShadow: `inset 0 0 0 4px rgba(255,255,255,0.12), 0 0 40px rgba(123,51,230,0.5)`, zIndex: 3 }).appendTo($front);
-		const sh = F.screen.h, sw = sh * 9 / 16;
+		const sw = P.w - 2 * F.screen.inset, sh = P.h - 2 * F.screen.inset;
 		const $screen = $('<div>').css({
 			position: 'absolute', left: P.x + (P.w - sw) / 2 + 'px', top: P.y + (P.h - sh) / 2 + 'px', width: sw + 'px', height: sh + 'px', boxSizing: 'border-box', padding: '40px 22px',
 			background: 'linear-gradient(180deg, #1a0a36, #2b0f5a)', border: '10px solid #05030a', borderRadius: '16px',
 			display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '40px', zIndex: 3,
 		}).appendTo($front);
 		$('<div>').text('HOW MANY PLAYERS?').css({
-			fontSize: '44px', lineHeight: 1.05, textAlign: 'center', letterSpacing: '1px', color: TYPE.colours.gold, width: '100%', textWrap: 'balance',
+			fontSize: '64px', lineHeight: 1.05, textAlign: 'center', letterSpacing: '1px', color: TYPE.colours.gold, width: '100%', textWrap: 'balance',
 			WebkitTextStroke: `5px ${theme.ink}`, paintOrder: 'stroke fill',
 		}).appendTo($screen);
 		const $row = $('<div>').css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '18px', width: '100%' }).appendTo($screen);
 		let picked = false;
 		for (let n = 2; n <= 6; n++) {
 			$('<button>').attr('count', n).text(n).css({
-				width: '82px', height: '82px', borderRadius: '50%', boxSizing: 'border-box', ...button(TYPE.colours.gold, 48),
+				width: '120px', height: '120px', borderRadius: '50%', boxSizing: 'border-box', ...button(TYPE.colours.gold, 66),
 				display: 'flex', alignItems: 'center', justifyContent: 'center',
-				fontFamily: font, fontSize: '48px', lineHeight: '1', cursor: 'pointer', padding: 0,
+				fontFamily: font, fontSize: '66px', lineHeight: '1', cursor: 'pointer', padding: 0,
 				transform: 'scale(0)', transition: `transform 0.4s cubic-bezier(.2,1.6,.4,1) ${0.35 + (n - 2) * 0.08}s`,
 			}).appendTo($row)
 				.on('click', function () {
