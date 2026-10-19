@@ -932,6 +932,7 @@ window.Showtime = function (stage, opts) {
 		}
 		camera.step(dt);
 		stepFx(dt);
+		stepWatch(dt);
 		draw(ctx, drawWorld);
 	};
 
@@ -951,6 +952,7 @@ window.Showtime = function (stage, opts) {
 		if (beat && beat.draw) beat.draw(ctx, bt);
 		if (scoreHudShown() && opts.scoreHud !== false) drawScoreHud(ctx);
 		else hudFirst = -1;   // (hidden: next time, they come up one by one again)
+		drawWatch(ctx);
 		// the clock, from the clock intro until TIME! (not over the results after it)
 		const timeup = beats.findIndex((b) => b.id === 'timeup');
 		if (clock.shown && !(timeup >= 0 && beats.indexOf(beat) > timeup)) drawClock(ctx);
@@ -1081,6 +1083,86 @@ window.Showtime = function (stage, opts) {
 		return results < 0 || beats.indexOf(beat) < results;
 	}
 	const hudAt = [];
+	// A wrong visor (one that isn't in the squad) in play: its own square
+	// capsule at the end of the row along the bottom, in its colour, its visor
+	// struck through with a big red cross, and the change-hats message just
+	// above it (over the first only). The visor check shows it; so does the
+	// rest of the game, should one come out later (see stepWatch).
+	let visorDraw = null;
+	function wrongVisor(c, i, j, n, t, since, swapTo) {
+		const S = SCORE_HUD;
+		const total = n * S.w + (n - 1) * S.gap;
+		const x = W / 2 + total / 2 + S.gap * 3 + j * (S.w + S.gap) + S.w / 2;
+		const pop = easeOut(clamp((t - since) / 0.3, 0, 1));
+		if (pop <= 0) return;
+		const y = H - S.w / 2 + (1 - pop) * (S.w + S.sink);
+		capsule(c, x, y, 1, colour(i), '', { w: S.w, h: S.w, sink: S.sink });
+		// its visor, turning
+		if (visorDraw) {
+			const k = Math.min(S.w * 0.8 / 270, (S.w - S.line) * 0.8 / 220);
+			c.save();
+			c.translate(x, y - S.line / 2 - 12 * k);
+			c.scale(k, k);
+			visorDraw(c, colour(i), 1, t * 1.4 + i * 0.8);
+			c.restore();
+		}
+		// the cross, corner to corner, ink-edged
+		const d = S.w * 0.36, cy = y - S.line / 2;
+		for (const [col, wd] of [[theme.ink, 30], ['#ff2f4f', 18]]) {
+			c.save();
+			c.strokeStyle = col;
+			c.lineWidth = wd;
+			c.lineCap = 'round';
+			c.beginPath();
+			c.moveTo(x - d, cy - d); c.lineTo(x + d, cy + d);
+			c.moveTo(x + d, cy - d); c.lineTo(x - d, cy + d);
+			c.stroke();
+			c.restore();
+		}
+		if (j) return;
+		const flash = 0.75 + 0.25 * Math.sin(t * 12);
+		const w = 640, ph = 230;
+		const fx = clamp(x, w / 2 + 20, W - w / 2 - 20);
+		const top = H - S.w - 30 - ph;
+		art.roundRect(c, fx - w / 2, top, w, ph, 40, { fill: 'rgba(40,0,8,0.95)', stroke: '#ff3d6a', lineWidth: 10, alpha: flash * pop });
+		self.text(c, 'WRONG VISOR!', fx, top + 58, 68, { fill: '#ff5470', glow: '#ff3d6a', fit: w - 60, alpha: pop });
+		self.text(c, self.nameOf(i) + ' ISN\'T PLAYING', fx, top + 128, 46, { fill: lit(i), fit: w - 60, alpha: pop });
+		self.text(c, swapTo !== undefined ? 'SWAP IT FOR ' + self.nameOf(swapTo) : 'TAKE IT OFF', fx, top + 188, 46, { fill: swapTo !== undefined ? lit(swapTo) : 'white', fit: w - 60, alpha: pop });
+	}
+	// Watching for a wrong visor through the rest of the game (after the
+	// visor check, until the results): any visor not in the squad that starts
+	// moving gets flagged (with the alarm), until it stops again.
+	const watch = { motion: [], last: [], since: [] };
+	function watching() {
+		if (!beat || beat.id === 'visors' || !scoreHudShown()) return false;
+		const v = beats.findIndex((b) => b.id === 'visors');
+		return v < 0 || beats.indexOf(beat) > v;
+	}
+	function stepWatch(dt) {
+		if (!watching()) { watch.since = []; return; }
+		const list = (IGB.players && IGB.players.list) || [];
+		const k = Math.exp(-dt / VISORS.settle);
+		list.forEach(function (p, i) {
+			if (!p || p.X === undefined) return;
+			const l = watch.last[i];
+			const moved = l ? Math.hypot(p.X - l.X, p.Y - l.Y, p.Z - l.Z) : 0;
+			watch.last[i] = { X: p.X, Y: p.Y, Z: p.Z };
+			watch.motion[i] = (watch.motion[i] || 0) * k + moved / Math.max(dt, 1e-3) * (1 - k);
+			const bad = i >= count() && watch.motion[i] > VISORS.moving;
+			if (bad && watch.since[i] === undefined) { watch.since[i] = showTime; self.fx('wrongVisor'); self.shake = 0.3; }
+			if (!bad) watch.since[i] = undefined;
+		});
+	}
+	function drawWatch(ctx) {
+		if (!watching()) return;
+		const bad = watch.since.map((t, i) => (t === undefined ? -1 : i)).filter((i) => i >= 0);
+		if (!bad.length) return;
+		const n = count();
+		// (swap it for a squad visor that's lying still, if there is one)
+		const idle = Array.from({ length: n }, (_, i) => i).find((i) => !(watch.motion[i] > VISORS.moving));
+		self.onWalls(ctx, (c) => bad.forEach((i, j) => wrongVisor(c, i, j, n, showTime, watch.since[i], idle)));
+	}
+
 	function drawScoreHud(ctx) {
 		const n = count();
 		if (!n) return;
@@ -1979,6 +2061,7 @@ window.Showtime = function (stage, opts) {
 	// swap it for. The clock keeps running. Visor n is tracker slot
 	// n (IGB.players.list); it's in play when it moves.
 	beatsLib.visors = function (extra) {
+		visorDraw = visor;   // (the wrong-visor flag, anywhere in the game, draws visors this way too)
 		const V = VISORS;
 		let visorScratch = null;   // (up here: the drawing helpers below sit after the beat's return, so a let down there would never be set up)
 		let motion = [];      // per slot: averaged movement
@@ -2131,45 +2214,7 @@ window.Showtime = function (stage, opts) {
 					// a wrong visor in play: its own square capsule joins the end of the
 					// row along the bottom, in its colour, its visor struck through with
 					// a big red cross, and the change-hats message just above it
-					bad.forEach(function (i, j) {
-						const S = SCORE_HUD;
-						const total = n * S.w + (n - 1) * S.gap;
-						const x = W / 2 + total / 2 + S.gap * 3 + j * (S.w + S.gap) + S.w / 2;
-						const pop = easeOut(clamp((bt - wrongSince[i]) / 0.3, 0, 1));
-						if (pop <= 0) return;
-						const y = H - S.w / 2 + (1 - pop) * (S.w + S.sink);
-						capsule(c, x, y, 1, colour(i), '', { w: S.w, h: S.w, sink: S.sink });
-						// its visor, turning
-						const k = Math.min(S.w * 0.8 / 270, (S.w - S.line) * 0.8 / 220);
-						c.save();
-						c.translate(x, y - S.line / 2 - 12 * k);
-						c.scale(k, k);
-						visor(c, colour(i), 1, bt * 1.4 + i * 0.8);
-						c.restore();
-						// the cross, corner to corner, ink-edged
-						const d = S.w * 0.36, cy = y - S.line / 2;
-						for (const [col, wd] of [[theme.ink, 30], ['#ff2f4f', 18]]) {
-							c.save();
-							c.strokeStyle = col;
-							c.lineWidth = wd;
-							c.lineCap = 'round';
-							c.beginPath();
-							c.moveTo(x - d, cy - d); c.lineTo(x + d, cy + d);
-							c.moveTo(x + d, cy - d); c.lineTo(x - d, cy + d);
-							c.stroke();
-							c.restore();
-						}
-						// the message, above it (only over the first)
-						if (j) return;
-						const flash = 0.75 + 0.25 * Math.sin(bt * 12);
-						const w = 640, ph = 230;
-						const fx = clamp(x, w / 2 + 20, W - w / 2 - 20);
-						const top = H - S.w - S.sink * 0 - 30 - ph;
-						art.roundRect(c, fx - w / 2, top, w, ph, 40, { fill: 'rgba(40,0,8,0.95)', stroke: '#ff3d6a', lineWidth: 10, alpha: flash * pop });
-						self.text(c, 'WRONG VISOR!', fx, top + 58, 68, { fill: '#ff5470', glow: '#ff3d6a', fit: w - 60, alpha: pop });
-						self.text(c, self.nameOf(i) + ' ISN\'T PLAYING', fx, top + 128, 46, { fill: lit(i), fit: w - 60, alpha: pop });
-						self.text(c, lost.length ? 'SWAP IT FOR ' + self.nameOf(lost[0]) : 'TAKE IT OFF', fx, top + 188, 46, { fill: lost.length ? lit(lost[0]) : 'white', fit: w - 60, alpha: pop });
-					});
+					bad.forEach((i, j) => wrongVisor(c, i, j, n, bt, wrongSince[i], lost[0]));
 				});
 			},
 		}, extra);

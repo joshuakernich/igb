@@ -37,8 +37,9 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	// worm is always exactly where its player is across the front wall (1:1).
 	const FIELD = { near: 4.5, far: 12 };
 	const WORM = { thick: 0.3 };   // a worm's thickness (radius, metres; its height: GROW)
-	const CUBE = { r: 0.22, tall: 0.55, every: 0.55, drop: 26, fall: 8, life: 9, reach: 1.9 };   // a pickup: a little white cylinder, its radius and height (metres); a new one every so often (seconds); how high it falls from and how fast (metres, a second); seconds it lies on the plane; how near a worm must be to grab one (metres)
+	const CUBE = { r: 0.22, tall: 0.55, every: 0.55, drop: 26, fall: 14, life: 9, reach: 1.9 };   // a pickup: a little white cylinder, its radius and height (metres); a new one every so often (seconds); how high it falls from and how fast (metres, a second); seconds it lies on the plane; how near a worm must be to grab one (metres)
 	const CUBE_COLOUR = '#ffffff';
+	const ROUND = { first: 10, more: 4, gap: 0.06, intro: 1.6, clear: 2.4 };   // rounds: cylinders in the first, and how many more each round after; seconds between them raining down; ROUND N, and ROUND N CLEAR!, this long
 	const GROW = { start: 0.8, each: 0.12, most: 3.2, rate: 8 };   // a worm's height (metres) is down to its pickups alone: this tall with none, this much taller for each, never taller than this; how quickly it grows into it
 	const GOB = { r: 0.6, tall: 3.4, colour: '#1c0b2e', glow: '#ff4fa8', speed: 0.14, reach: 1.5, bite: 3, cool: 1.5, hop: [7, 12], drop: 30, fly: 32 };   // its radius and height (metres); its body and eyes; how fast it wanders (shares of the field a second); how near it must be to eat or bite (metres); pickups a bite takes; seconds before it can bite the same worm again; seconds between hops to another wall; how high it drops in from (off the top of the wall); how fast it flies up and away, or down (metres a second)
 	const GOB_IN = { land: 1.0, name: 1.4, line: 2.3, warn: 3.1, length: 6.2 };   // its entrance: when it lands, its name, what it does, the warning, and the end
@@ -151,14 +152,24 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 		{
 			id: 'play',
 			length: Infinity,
-			enter() { show.label('PLAY'); },
+			enter() { show.label('PLAY'); startRound(0); },
 			exit() { clearCubes(); },
 			update(dt) {
 				t += dt;
 				stepWorms(dt);
-				stepCubes(dt);
+				stepRound(dt);
+				stepCubes(dt, true);
 				stepGob(dt);
 				show.record(t, Array.from({ length: players }, (_, i) => latest[i] || null));
+			},
+			draw(ctx) {
+				// ROUND N as each starts; ROUND N CLEAR! once its cylinders are all eaten
+				const age = t - round.at;
+				show.onWalls(ctx, function (c) {
+					if (round.phase === 'intro') show.slam(c, 'ROUND ' + (round.n + 1), W / 2, 300, 150, age, { fill: '#ffd23f', glow: '#ff7a3d' });
+					if (round.phase === 'clear') show.slam(c, 'ROUND ' + (round.n + 1) + ' CLEAR!', W / 2, 300, 120, age, { fill: '#3cdc7a', glow: '#1fb85c' });
+					if (round.phase === 'go' || round.phase === 'drop') show.text(c, cubes.length + ' LEFT', W / 2, 150, 46, { fill: 'white', alpha: 0.85 });
+				});
 			},
 		},
 		show.beats.timeUp(),
@@ -283,15 +294,40 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 	function clearCubes() {
 		cubes.length = 0;
 	}
-	function stepCubes(dt) {
-		nextCube -= dt;
-		if (nextCube <= 0 && cubes.length < 40) { dropCube(); nextCube = CUBE.every * (0.6 + Math.random() * 0.8); }
+	// Rounds: each one, ROUND N, then its whole set of cylinders rains down
+	// quickly, all over the walls; it's over when they've all been eaten
+	// (by the worms, or the Gobbler), ROUND N CLEAR!, and the next, bigger,
+	// begins. On until the clock runs out.
+	const round = { n: 0, phase: 'intro', at: 0, toDrop: 0 };
+	function startRound(n) {
+		Object.assign(round, { n, phase: 'intro', at: t, toDrop: ROUND.first + n * ROUND.more });
+		show.fx('roundStart');
+	}
+	function stepRound(dt) {
+		const age = t - round.at;
+		if (round.phase === 'intro' && age >= ROUND.intro) Object.assign(round, { phase: 'drop', at: t });
+		if (round.phase === 'drop') {
+			nextCube -= dt;
+			while (nextCube <= 0 && round.toDrop > 0) { dropCube(); round.toDrop--; nextCube += ROUND.gap; }
+			if (round.toDrop <= 0) Object.assign(round, { phase: 'go', at: t });
+		}
+		if (round.phase === 'go' && !cubes.length) { Object.assign(round, { phase: 'clear', at: t }); show.fx('roundClear'); }
+		if (round.phase === 'clear' && age >= ROUND.clear) startRound(round.n + 1);
+	}
+
+	// rounds: true, the cylinders come by the round (and stay till eaten);
+	// otherwise (the tutorial) one every so often, each lying a while
+	function stepCubes(dt, rounds) {
+		if (!rounds) {
+			nextCube -= dt;
+			if (nextCube <= 0 && cubes.length < 40) { dropCube(); nextCube = CUBE.every * (0.6 + Math.random() * 0.8); }
+		}
 		for (const k of cubes.slice()) {
 			if (k.landed < 0) {
 				// falling
 				k.y = Math.max(0, k.y - CUBE.fall * dt);
 				if (k.y <= 0) k.landed = t;
-			} else {
+			} else if (!rounds) {
 				// on the plane, then shrinking away
 				const left = k.landed + CUBE.life - t;
 				if (left < 0.6) k.scale = Math.max(0.01, left / 0.6);
