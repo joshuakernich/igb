@@ -1561,7 +1561,7 @@ window.Showtime = function (stage, opts) {
 		panel: { x: 874, y: 230, w: 670, h: 770 },                 // the kiosk: a purple panel on the right, over the box
 		screen: { inset: 34 },
 		kiosk: { top: 96, size: 0.88, camera: 52, pay: { w: 92, h: 176 } },   // the kiosk's furniture: the screen starts this far down (room for the camera over it); the camera dome's size; the card reader to the right of the screen                                   // its 9:16 screen, this far in from the panel's top left (as tall as the panel allows)
-		gate: { gap: 14, post: 92, inset: 12, lift: 120, depth: 92, thick: 14, rise: 70 },                  // the glass barriers, side by side across the whole way in, a third of its height, held up off the floor (lift) by chunky posts, set in from the way in's edges (inset); the posts this deep, the glass this thick (real 3D blocks); the posts standing this much taller than the glass
+		gate: { gap: 14, post: 92, inset: 12, lift: 120, depth: 92, thick: 14, rise: 150 },                  // the glass barriers, side by side across the whole way in, a third of its height, held up off the floor (lift) by chunky posts, set in from the way in's edges (inset); the posts this deep, the glass this thick (real 3D blocks); the posts standing this much taller than the glass
 		neon: '#c06bff',                                         // the strips down the box's sides
 		purple: '#3a1478',                                       // the panels: a deep purple, textured (see panelSkin)
 		swing: 0.55, rush: 0.75, dark: 0.25,                     // the barriers swinging in (the screens fading to black); the view rushing into the box (everything fading to black); a moment in the black, then the sting
@@ -1679,7 +1679,7 @@ window.Showtime = function (stage, opts) {
 		const open = F.panel.x - B.x;                            // (the way in: the box's mouth left of the panel)
 		G.w = (open - 2 * (G.post + G.inset) - G.gap) / 2;       // (the barriers between posts set a little in from its edges, filling the space between)
 		const gx = G.inset + G.post;
-		G.h = (H - F.box.y) / 4.2 * 1.38;                             // (a little under a quarter of the way in's height)
+		G.h = (H - F.box.y) / 4.2 * 1.15;                             // (a little under a quarter of the way in's height)
 		const gy = B.h - G.h - G.lift;                           // (raised off the floor: a gap under them)
 		// (real 3D blocks: a cuboid of faces, x across, y down, z out toward us;
 		// face(name) styles each of front, back, left, right, top, bottom)
