@@ -8,15 +8,25 @@
  * player's colour, across a wide road. Step left or right in the room and
  * your runner glides across the road to match. Grab the gold rings; dodge the spiked
  * barriers and mines (a spill throws half your rings away); hit a boost pad
- * to curl up into a ball and smash through anything. 90 seconds; the most
- * rings wins.
+ * to curl up into a ball and smash through anything. On until the clock
+ * runs out; the most rings wins.
+ *
+ * The whole show is Showtime's standard running order: the squad picker,
+ * the title drop, the clock intro, the visor check, a tutorial on the road
+ * (3, 2, 1, GO! and a practice run: step left and right to steer, step
+ * forward to run ahead, grab the rings), the hazards' entrance (SPIKES &
+ * MINES: hit one and you spill half your rings; a boost pad smashes through
+ * them), the run itself (a fresh GO!, flat out, the GOAL! arch just where
+ * the pack will be when the clock runs out), TIME!, scores, rank, team,
+ * leaderboard, replay, rating and the end.
  *
  * The three walls are one view from just behind the pack: the front wall
  * looks down the road, the side walls look out to sea either side.
  *
  * Input: px (left to right across the room: left to right across the road),
  * pz (toward the front wall: further up the road, ahead of the pack).
- * The squad picker and the scores and rankings are Showtime's.
+ * The squad picker, the clock, the score capsules, the pause menu and
+ * everything after TIME! are Showtime's.
  * An ES module (manifest: module: true).
  */
 import * as THREE from '../../lib/three/three.module.min.js';
@@ -34,12 +44,14 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 
 	/* ---------- tuning ---------- */
 
-	const DURATION = 90;                                 // seconds of running
-	const SPEED = { start: 40, top: 68, ramp: 55 };      // metres a second: at the off, flat out, and seconds to get there
+	const GAME_SECONDS = 600;                             // the show's clock (the intros and tutorial come out of it too; the run goes on till it's out)
+	const SPEED = { start: 40, top: 68, ramp: 55 };      // metres a second: at the off (and all through the practice), flat out, and seconds to get there
 	const SURGE = { boost: 22, decay: 0.7 };             // a boost pad's extra speed, and how fast it fades
 	const CAM = { back: 5.5, up: 2.2, pitch: 7, look: 16, follow: 0.35, kick: 3 };   // metres behind and above the pack, degrees down, metres it looks ahead, how far it follows the pack across, metres it drops back on a boost
 	const FOV = 64;                                      // vertical, degrees: 90 across each 16:10 wall, so the walls meet
-	const READY = 4.2;                                   // seconds of the swoop and countdown
+	const READY = 4.2;                                   // seconds of the swoop and countdown (at the start of the tutorial)
+	const GOAL = 4;                                      // seconds left on the clock when the GOAL! arch goes up ahead
+	const HAZARDS_IN = { name: 0.6, line: 1.6, boost: 2.6, length: 6.2 };   // the hazards' entrance: their name, what they do, the way through them, and the end
 	const START_S = 40;                                  // where the pack starts
 	const CHUNK = 120;                                   // metres of track built at a time
 	const AHEAD = 1000;                                  // metres built ahead of the eye
@@ -373,6 +385,8 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 			off: 0, s: START_S, sWas: START_S,
 			rings: 0, bump: 0,
 			tumble: 0, safe: 0, boost: 0,
+			seen: false,             // (tracked: their player's been seen in the room)
+			reach: { minPx: 0.5, maxPx: 0.5, maxPz: 0.5 },   // how far their player has gone, in a tutorial step
 		};
 	}
 
@@ -408,18 +422,19 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	const sound = createSound();
 	const show = new Showtime(stage, {
 		id: 'loop-island',
-		seconds: DURATION,
+		seconds: GAME_SECONDS,
 		players: () => runners.length,
 		scores: () => runners.map((r) => r.rings),
 		music: false,
 		theme: { accent: '#2f7cf0', accent2: '#3cd6ff', gold: '#ffe14a', ink: '#0a1a3a', sky: ['#04163a', '#0b4f8a'], glow: 'rgba(60,214,255,0.35)' },
+		rivals: ['Ring Runners', 'The Loopers', 'Corkscrew Crew', 'Sea Breeze', 'Boost Pad Kids', 'Palm Dashers',
+			'Gold Rush', 'Helix Heroes', 'Tide Turners', 'The Spinballs'],
 	});
-	let completed = false;
 
-	let phase = 'waiting';       // waiting, ready, run, finish, over
+	let phase = 'waiting';       // waiting (the opening screens), ready (the countdown), run, finish (TIME! and after)
 	let phaseT = 0;
 	let clock = 0;
-	let runT = 0;
+	let runT = 0;                // seconds into the run proper (the play)
 	let sPack = START_S;
 	let speed = 0;
 	let surge = 0;
@@ -428,15 +443,16 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	let flash = { red: 0, white: 0 };
 	let beeped = 0;
 	let goal = null;             // { s, mesh }
-	let finishAt = 0;
 
 	function setPhase(p) {
 		phase = p;
 		phaseT = 0;
 	}
 
-	function initGame(count) {
+	// The pack, one runner a player, spread across the road.
+	function setUp(count) {
 		sound.resume();
+		for (const r of runners) { scene.remove(r.model.root, r.trail); }
 		runners = [];
 		for (let i = 0; i < count; i++) {
 			const r = Runner(i);
@@ -445,42 +461,138 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 			runners.push(r);
 		}
 		for (const r of runners) r.off = offFor(r);
-		setPhase('ready');
-		show.go('play');
 	}
 
+	function initGame(count) {
+		setUp(count);
+		show.go('title');
+	}
+
+	// The countdown's over: off they go.
 	function go() {
 		setPhase('run');
 		sound.music(true);
 	}
 
+	// TIME!: the pack slows to a stop (with the show's slow-motion).
 	function finish() {
+		if (phase === 'finish') return;
 		setPhase('finish');
 		sound.finish();
 		sound.music(false);
 	}
 
-	// Showtime's scores, then its ranking onto the podium, then done.
-	function results() {
-		setPhase('over');
-		show.go('scores');
+	/* ---------- the tutorial ---------- */
+
+	// Once the countdown's done and they're off, a practice run: each step's
+	// caption over every wall until everyone has done it (or its time's up).
+	// Spills in the practice cost nothing; its rings are thrown away after.
+	const TUTORIAL_NICE = 1.2;   // seconds a done step shows (its caption green) before the next
+	const TUTORIAL = [
+		{ caption: 'STEP LEFT AND RIGHT TO STEER', min: 2, max: 10, did: () => everyone((r) => r.reach.maxPx - r.reach.minPx >= 0.35) },
+		{ caption: 'STEP FORWARD TO RUN AHEAD', min: 2, max: 10, did: () => everyone((r) => r.reach.maxPz >= 0.7) },
+		{ caption: 'GRAB THE GOLD RINGS', min: 2, max: 12, did: () => everyone((r) => r.rings >= 3) },
+	];
+	const tut = { i: 0, age: 0, done: false, doneAge: 0 };
+	const everyone = (fn) => runners.length > 0 && runners.filter((r) => r.seen).every(fn);
+	function tutStep(i) {
+		Object.assign(tut, { i, age: 0, done: false, doneAge: 0 });
+		for (const r of runners) r.reach = { minPx: r.px, maxPx: r.px, maxPz: r.pz };   // (how far each has gone, this step)
+		if (TUTORIAL[i]) show.fx('stepIn');
 	}
 
+	/* ---------- the beats ---------- */
+
+	const SCENE = ['squad', 'title', 'clock', 'visors', 'controls', 'hazards', 'play', 'timeup'];   // the beats the road shows behind
+
 	show.sequence([
+		// the pack waiting at the start line, the eye out in front looking back at them
 		{ id: 'squad', length: Infinity },
-		{ id: 'play', length: Infinity },
-		show.beats.scores(),
-		show.beats.rank(),
+		show.beats.titleDrop({
+			// (its lines: the manifest's title, shared with the end screen's carousel)
+		}),
+		show.beats.clockIntro(),
+		show.beats.visors(),
+		// the tutorial: the swoop round behind the pack, 3, 2, 1, GO!, and a
+		// practice run at the starting speed, a step at a time: steer, run
+		// ahead, grab the rings
 		{
-			id: 'done',
-			length: Infinity,
-			world: false,
-			enter() {
-				if (completed) return;
-				completed = true;
-				IGB.complete(scoresToRewards(runners.map((r) => r.rings)));
+			id: 'controls',
+			length: READY + TUTORIAL.reduce((a, s) => a + s.max + TUTORIAL_NICE, 0),   // (a safety net: each step has its own limit)
+			done: () => tut.i >= TUTORIAL.length,
+			enter() { setPhase('ready'); beeped = 0; tutStep(0); },
+			exit() { if (phase !== 'run') go(); for (const r of runners) r.rings = 0; },   // (skipped mid-countdown: off they go anyway)
+			update(dt) {
+				if (phase !== 'run') return;
+				for (const r of runners) {
+					r.reach.minPx = Math.min(r.reach.minPx, r.px);
+					r.reach.maxPx = Math.max(r.reach.maxPx, r.px);
+					r.reach.maxPz = Math.max(r.reach.maxPz, r.pz);
+				}
+				const step = TUTORIAL[tut.i];
+				if (!step) return;
+				tut.age += dt;
+				if (!tut.done && tut.age >= step.min && step.did()) { tut.done = true; show.fx('pick', 0.8); }
+				if (tut.done) tut.doneAge += dt;
+				if ((tut.done && tut.doneAge >= TUTORIAL_NICE) || tut.age >= step.max) tutStep(tut.i + 1);
+			},
+			draw(ctx) {
+				const step = TUTORIAL[tut.i];
+				if (!step || phase !== 'run' || phaseT < 0.9) return;   // (not over the countdown, nor its GO!)
+				show.onWalls(ctx, function (c) {
+					show.slam(c, step.caption, W / 2, 260, 70, tut.age, { fill: tut.done ? '#3cdc7a' : 'white' });
+				});
 			},
 		},
+		// the hazards: SPIKES & MINES slammed in over every wall, what they do,
+		// and the way through them, the pack still running (nothing hits yet)
+		{
+			id: 'hazards',
+			length: HAZARDS_IN.length,
+			enter() { if (phase !== 'run') go(); show.fx('villainReveal'); },
+			update(dt, bt) {
+				show.blackout = 0.45 * Math.min(1, bt * 2);
+				if (show.cue(HAZARDS_IN.name)) { show.fx('stomp'); show.shake = 0.5; shake = Math.max(shake, 0.4); }
+				if (show.cue(HAZARDS_IN.line)) show.fx('beat');
+				if (show.cue(HAZARDS_IN.boost)) show.fx('beat');
+			},
+			draw(ctx, bt) {
+				show.onWalls(ctx, function (c) {
+					if (bt > HAZARDS_IN.name) show.slam(c, 'SPIKES & MINES', W / 2, 220, 120, bt - HAZARDS_IN.name, { fill: '#ff3d4a', glow: '#ff3d4a' });
+					if (bt > HAZARDS_IN.line) show.text(c, 'HIT ONE AND YOU SPILL HALF YOUR RINGS', W / 2, 340, 56, { fill: 'white', alpha: Math.min(1, (bt - HAZARDS_IN.line) * 3) });
+					if (bt > HAZARDS_IN.boost) show.text(c, 'HIT A BOOST PAD TO SMASH RIGHT THROUGH!', W / 2, 420, 56, { fill: '#ffe14a', alpha: Math.min(1, (bt - HAZARDS_IN.boost) * 3) });
+				});
+			},
+		},
+		// the run: a fresh GO!, building up to flat out, on till the clock's out
+		// (with the GOAL! arch just where the pack will be when it is)
+		{
+			id: 'play',
+			length: Infinity,
+			enter() {
+				if (phase === 'ready' || phase === 'waiting') sound.music(true);
+				setPhase('run');
+				sound.beep(true);
+				runT = 0;
+				for (const r of runners) { r.rings = 0; r.tumble = 0; r.safe = 0; }
+				if (goal) { scene.remove(goal.mesh); goal = null; }
+			},
+			update() {
+				show.record(runT, runners.map((r) => (r.seen ? { px: r.px, pz: r.pz } : null)));
+			},
+		},
+		show.beats.timeUp({
+			enter() { finish(); },
+		}),
+		show.beats.scores(),
+		show.beats.rank(),
+		show.beats.team(),
+		show.beats.board(),
+		show.beats.replay(),
+		show.beats.rate(),
+		show.beats.end({
+			enter() { IGB.complete(scoresToRewards(runners.map((r) => r.rings))); },
+		}),
 	]);
 
 	/* ---------- every frame ---------- */
@@ -499,24 +611,22 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 		clock += dt;
 		phaseT += dt;
 
-		// how fast the pack goes
+		// how fast the pack goes (the practice and the hazards' entrance at the
+		// starting speed; the run builds up from it to flat out)
 		if (phase === 'run') {
-			runT += dt;
+			const playing = show.beat === 'play';
+			if (playing) runT += dt;
 			const t = Math.min(1, runT / SPEED.ramp);
 			speed = SPEED.start + (SPEED.top - SPEED.start) * t * t * (3 - 2 * t) + surge;
 			surge *= Math.exp(-dt * SURGE.decay);
-			if (!goal && runT > DURATION - 4) {
+			if (playing && !goal && show.timeLeft() < GOAL) {
 				// the goal arch, just where they'll be when time's up
-				const left = DURATION - runT;
-				const sGoal = sPack + speed * left + 8;
+				const sGoal = sPack + speed * show.timeLeft() + 8;
 				goal = { s: sGoal, mesh: arch('GOAL!', sGoal) };
 				scene.add(goal.mesh);
 			}
-			if (goal && sPack + runners.reduce((m, r) => Math.max(m, r.off), -99) >= goal.s) finish();
-			else if (runT > DURATION + 1.5) finish();
-		} else if (phase === 'finish' || phase === 'over') {
+		} else if (phase === 'finish') {
 			speed *= Math.exp(-dt * 1.4);
-			if (phase === 'finish' && phaseT > 2.6) results();
 		} else speed = 0;
 		kick *= Math.exp(-dt * 2.5);
 		shake *= Math.exp(-dt * 6);
@@ -567,7 +677,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 			trail(r, dt, pace);
 		}
 
-		if (phase === 'run') touch();
+		if (phase === 'run' && (show.beat === 'controls' || show.beat === 'play')) touch();   // (not through the hazards' entrance)
 
 		// things on the road come alive
 		for (const t of things) {
@@ -656,7 +766,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 		sun.position.copy(tmp).addScaledVector(SUN, 80);
 
 		world.update(clock, eye);
-		sound.wind(phase === 'waiting' ? 0.1 : pace);
+		sound.wind(phase === 'waiting' ? 0.1 : phase === 'finish' ? (show.beat === 'timeup' ? pace * show.timeScale : 0) : pace);   // (dying away with TIME!, quiet over the results)
 		sound.tick();
 	}
 
@@ -701,9 +811,9 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 		}
 	}
 
-	// A spill: tumble, and throw half your rings away.
+	// A spill: tumble, and throw half your rings away (none in the practice).
 	function spill(r) {
-		const lose = Math.ceil(r.rings / 2);
+		const lose = show.beat === 'play' ? Math.ceil(r.rings / 2) : 0;
 		r.rings -= lose;
 		r.tumble = HIT.tumble;
 		r.safe = HIT.safe;
@@ -888,21 +998,6 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 		}
 	}
 
-	function ringIcon(ctx, x, y, r) {
-		ctx.save();
-		ctx.lineWidth = r * 0.36;
-		ctx.strokeStyle = '#b8860b';
-		ctx.beginPath();
-		ctx.ellipse(x, y + r * 0.08, r, r * 0.92, 0, 0, TAU);
-		ctx.stroke();
-		ctx.lineWidth = r * 0.26;
-		ctx.strokeStyle = '#ffd23a';
-		ctx.beginPath();
-		ctx.ellipse(x, y, r, r * 0.92, 0, 0, TAU);
-		ctx.stroke();
-		ctx.restore();
-	}
-
 	function overlay(ctx, dt) {
 		flare(ctx);
 		speedLines(ctx, dt);
@@ -925,10 +1020,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 			art.text(ctx, p.text, at.x, at.y - k * 90, { size: p.size * (k < 0.15 ? k / 0.15 : 1), font: 'Knewave', fill: p.colour, outline: '#1a0b2e', outlineWidth: 7, alpha: 1 - Math.max(0, k - 0.6) / 0.4 });
 		}
 
-		if (phase === 'waiting') {
-			art.text(ctx, 'LOOP ISLAND', W * 1.5, 150, { size: 170, font: 'Knewave', fill: '#ffe14a', outline: '#1a0b2e', outlineWidth: 12, drop: 'rgba(0,0,0,0.35)' });
-			return;
-		}
+		if (phase === 'waiting') return;   // (the title is the show's title drop)
 
 		// the countdown
 		if (phase === 'ready' || (phase === 'run' && phaseT < 0.9)) {
@@ -938,37 +1030,15 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 				const text = n === 0 ? 'GO!' : String(n);
 				const s = 1 + Math.max(0, 0.25 - t) * 2.4;
 				art.text(ctx, text, W * 1.5, 430, { size: (n === 0 ? 260 : 300) * s, font: 'Knewave', fill: n === 0 ? '#3cff8a' : '#ffe14a', outline: '#1a0b2e', outlineWidth: 14, alpha: n === 0 ? 1 - Math.max(0, phaseT - 0.5) / 0.4 : 1 });
-			} else {
-				art.text(ctx, 'LOOP ISLAND', W * 1.5, 300, { size: 170, font: 'Knewave', fill: '#ffe14a', outline: '#1a0b2e', outlineWidth: 12, alpha: Math.max(0, 1 - phaseT) });
 			}
 		}
 
-		// the clock, the speed, everyone's rings
+		// the speed (the clock and everyone's rings are the show's)
 		if (phase === 'run' || phase === 'finish') {
-			const left = Math.max(0, Math.ceil(DURATION - runT));
-			const label = Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
-			art.roundRect(ctx, W * 1.5 - 130, -30, 260, 120, 34, { fill: 'rgba(16,10,40,0.78)', stroke: left <= 10 ? '#ff3d6e' : '#ffffff', lineWidth: 5 });
-			art.text(ctx, label, W * 1.5, 45, { size: 66, font: 'Paytone One', weight: 400, fill: left <= 10 && Math.floor(clock * 4) % 2 ? '#ff3d6e' : '#ffffff' });
 			const kmh = Math.round(speed * 3.6);
 			art.text(ctx, String(kmh), 2 * W - 150, 72, { size: 84, font: 'Knewave', fill: '#ffffff', outline: '#1a0b2e', outlineWidth: 8, align: 'right', italic: true });
 			art.text(ctx, 'KM/H', 2 * W - 140, 92, { size: 34, font: 'Paytone One', weight: 400, fill: '#ffe14a', outline: '#1a0b2e', outlineWidth: 5, align: 'left' });
 		}
-		if (phase !== 'waiting') {
-			const n = runners.length;
-			const w = 168;
-			const x0 = W * 1.5 - (n * w + (n - 1) * 14) / 2;
-			runners.forEach(function (r, i) {
-				const x = x0 + i * (w + 14);
-				const y = phase === 'over' ? -200 : 120;
-				const s = 1 + r.bump * 0.25;
-				art.with(ctx, { x: x + w / 2, y: y + 36, scale: s }, function (c) {
-					art.roundRect(c, -w / 2, -34, w, 68, 34, { fill: r.colour, stroke: '#ffffff', lineWidth: 4, shadow: { color: 'rgba(0,0,0,0.35)', blur: 8, y: 4 } });
-					ringIcon(c, -w / 2 + 38, 0, 19);
-					art.text(c, String(r.rings), 22, 2, { size: 46, font: 'Paytone One', weight: 400, fill: '#ffffff', outline: 'rgba(0,0,0,0.35)', outlineWidth: 4 });
-				});
-			});
-		}
-		if (phase === 'finish') art.text(ctx, 'FINISH!', W * 1.5, 420, { size: 220 * (1 + Math.max(0, 0.3 - phaseT)), font: 'Knewave', fill: '#ffe14a', outline: '#1a0b2e', outlineWidth: 14 });
 	}
 
 	let last;
@@ -976,8 +1046,8 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 		const now = (time || performance.now()) / 1000;
 		const dt = last === undefined ? 0 : Math.min(0.05, Math.max(0, now - last));
 		last = now;
-		simulate(dt);
-		if (show.beat === 'squad' || show.beat === 'play') render();
+		simulate(show.paused ? 0 : dt * show.timeScale);   // (still while paused; slowing to a stop with TIME!)
+		if (SCENE.includes(show.beat)) render();   // (the results are on the show's own backdrop)
 		show.frame(ctx, dt, (c) => overlay(c, dt));
 	};
 
@@ -985,19 +1055,31 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 
 	self.setPlayers = function (p) {
 		runners.forEach(function (r, i) {
-			if (p[i] && p[i].px !== undefined) r.px = Math.max(0, Math.min(1, p[i].px));
+			if (p[i] && p[i].px !== undefined) { r.px = Math.max(0, Math.min(1, p[i].px)); r.seen = true; }
 			if (p[i] && p[i].pz !== undefined) r.pz = Math.max(0, Math.min(1, p[i].pz));   // (1 at the front wall, 0 at the back)
 		});
 	};
 
 	// For tests and the console: where the game is up to.
 	self.state = function () {
-		return {
+		return Object.assign(show.state(), {
 			phase, phaseT, runT, sPack, speed,
+			step: TUTORIAL[tut.i] ? tut.i : null, stepDone: tut.done,
 			runners: runners.map((r) => ({ n: r.n, x: r.x, s: r.s, rings: r.rings, boost: r.boost, tumble: r.tumble })),
 			ahead: things.filter((t) => !t.taken && t.s > sPack).slice(0, 12).map((t) => ({ type: t.type, s: t.s, x: t.x })),
 			chunks: [...chunks.keys()],
-		};
+			timeLeft: show.timeLeft(),
+		});
+	};
+
+	self.test = {
+		// jump to any beat (past the squad, a squad is needed: three, unless one's been given)
+		jump(id) {
+			$('showtime-picker').remove();
+			if (!runners.length) setUp(playersMeta ? playersMeta.length : 3);
+			show.go(id);
+		},
+		timeLeft(s) { show.setTimeLeft(s); },   // the show's clock
 	};
 
 	self.fini = function () {
