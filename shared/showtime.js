@@ -1228,7 +1228,7 @@ window.Showtime = function (stage, opts) {
 	// it goes (at: { x, y }, its middle, in the world; by default the middle
 	// of the front wall; at: false, the front wall's bottom right).
 	let $skip = null;
-	const SKIP_AT = { x: 1.5 * W, y: 300 };   // (by default: the middle of the front wall, snug under the tutorial's caption)
+	const SKIP_AT = { x: 1.5 * W, y: 340 };   // (by default: the middle of the front wall, snug under the tutorial's caption)
 	function skipTo() {
 		if (opts.skip && opts.skip.to) return opts.skip.to;
 		const i = beats.findIndex((b) => b.id === 'controls');
@@ -1249,7 +1249,7 @@ window.Showtime = function (stage, opts) {
 				cursor: 'pointer', pointerEvents: 'auto',
 				fontFamily: `"${TYPE.font}", sans-serif`, fontSize: '40px', letterSpacing: '2px',
 				opacity: 0, transition: 'opacity 0.4s',
-				...button('white', 40),
+				...button(TYPE.colours.gold, 40),   // (yellow, as the tutorial's captions are)
 			}).appendTo(stage.$ui).on('click', function (e) {
 				e.stopPropagation();
 				self.fx('skip');
