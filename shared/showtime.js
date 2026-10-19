@@ -3381,7 +3381,7 @@ window.Showtime = function (stage, opts) {
 	// BOOK ANOTHER SESSION AT THE KIOSK. The game hands back as it starts
 	// (extra.enter is the place to call IGB.complete).
 	beatsLib.end = function (extra) {
-		const CAROUSEL = { w: 1120, h: 700, side: 640, small: 0.28, title: 84, every: 2.8, words: 50, kiosk: 40, margin: 22 };   // (a card's screenshot size; on each wall, how far its side cards sit from the middle one, and how small they are; the title's size on the featured card; seconds between steps; words: the size of THANKS FOR PLAYING!, small above the cards; kiosk: the kiosk line's, small below them; margin: their extra room from the cards)
+		const CAROUSEL = { w: 1120, h: 700, side: 640, small: 0.28, title: 84, every: 2.8, words: 50, kiosk: 40, margin: 22, top: 60 };   // (a card's screenshot size; on each wall, how far its side cards sit from the middle one, and how small they are; the title's size on the featured card; seconds between steps; words: the end's lines' size; kiosk: the kiosk line's, small below them; margin: their extra room from the cards; top: how far down the cards start)
 		let $layer = null;
 		const games = () => (IGB.menu || []).filter((id) => !RATE.notAgain.includes(id) && id !== opts.id).map((id) => IGB.find(id)).filter(Boolean);   // (the others: they've just played this one)
 
@@ -3424,7 +3424,7 @@ window.Showtime = function (stage, opts) {
 			for (let wall = 0; wall < 3; wall++) {
 				const $wall = $('<div>').css({
 					position: 'absolute', left: wall * W + 'px', top: 0, width: W + 'px', height: H + 'px',
-					display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0px',
+					display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: '0px', paddingTop: CAROUSEL.top + 'px', boxSizing: 'border-box',   // (the cards up near the top, the kiosk line small under them)
 					fontFamily: `"${FONT}", sans-serif`, color: 'white',
 				}).appendTo($layer);
 				// the two lines, alike: one size, one treatment (no more than 70% of the wall across)
@@ -3432,7 +3432,6 @@ window.Showtime = function (stage, opts) {
 					fontSize: size + 'px', letterSpacing: '2px', lineHeight: 1.05, textAlign: 'center', maxWidth: W * TEXT_FIT + 'px', textWrap: 'balance', color: colour,
 					textShadow: `0 ${Math.round(size * 0.09)}px 0 rgba(0,0,0,0.5)`, WebkitTextStroke: `${Math.max(4, Math.round(size * 0.1))}px ${theme.ink}`, paintOrder: 'stroke fill',
 				});
-				words('THANKS FOR PLAYING!', 'white').appendTo($wall);
 				$space = $('<div>').css({ height: cardH + 'px', width: '10px', margin: CAROUSEL.margin + 'px 0' }).appendTo($wall);   // (room for the cards, flowing past behind)
 				// the kiosk: book another session
 				words('BOOK ANOTHER SESSION AT THE KIOSK', TYPE.colours.gold, CAROUSEL.kiosk).attr('kiosk', '').appendTo($wall);
