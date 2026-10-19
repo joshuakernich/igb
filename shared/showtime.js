@@ -1780,7 +1780,8 @@ window.Showtime = function (stage, opts) {
 	// settles (no flash), then the START button fading in (or a hold, and
 	// out). lines: [{ text, fill, glow }]. Never a byline under it.
 	// The sting: the In Gamebox logo animation (assets/shared/sting.mp4, made
-	// for a four-walled box: its first three walls on ours), on black, with its sound; then on.
+	// for a four-walled box: its first three walls on ours), its black keyed out
+	// over the game's dimmed scene, with its sound; then on.
 	const STING = { src: 'assets/shared/sting.mp4', walls: 4, aspect: 6, most: 6, lead: 1.0, fade: 1.0 };   // the video, made for four walls, its width to its height; on regardless after this long (if it can't play); how long before its end it starts fading, revealing the title as it goes, and how long the fade takes
 	beatsLib.sting = function (extra) {
 		let $video = null, ended = false;
@@ -1794,17 +1795,17 @@ window.Showtime = function (stage, opts) {
 		};
 		return extend({
 			id: 'sting',
-			world: false,
 			length: STING.most,
 			done: () => ended,
 			enter() {
 				ended = false;
-				self.blackout = 1;
+				self.blackout = INTRO_DIM;
 				if ($video) { $video.find('video')[0].pause(); $video.remove(); }
 				// (it's made for a four-walled box: shown so its first three walls fill
 				// ours, wall for wall, and its fourth runs off past our right wall)
 				$video = $('<div>').css({
-					position: 'absolute', left: 0, top: 0, width: 3 * W + 'px', height: H + 'px', overflow: 'hidden', background: '#000', zIndex: 25, pointerEvents: 'none', opacity: 1,
+					position: 'absolute', left: 0, top: 0, width: 3 * W + 'px', height: H + 'px', overflow: 'hidden', zIndex: 25, pointerEvents: 'none', opacity: 1,
+					mixBlendMode: 'screen',   // (its black keyed out: the game's scene, dimmed, shows through it)
 				}).appendTo(stage.$ui);
 				const vh = STING.walls * W / STING.aspect;
 				const $v = $('<video playsinline preload="auto">').attr('src', STING.src).css({
@@ -1813,7 +1814,7 @@ window.Showtime = function (stage, opts) {
 				$v[0].play().catch(() => { ended = true; });
 			},
 			update() {
-				self.blackout = 1;
+				self.blackout = INTRO_DIM;
 				const v = $video && $video.find('video')[0];
 				if (v && v.duration && v.currentTime >= v.duration - STING.lead) ended = true;   // (on to the title while it fades)
 			},
