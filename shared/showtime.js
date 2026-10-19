@@ -1723,12 +1723,20 @@ window.Showtime = function (stage, opts) {
 			background: 'radial-gradient(circle at 38% 30%, #5a5a6a 0, #1a1a22 35%, #050508 70%)', boxShadow: '0 4px 8px rgba(0,0,0,0.6)' }).appendTo($front);
 		$('<div>').css({ position: 'absolute', left: camX - 6 + 'px', top: camY + 6 + 'px', width: '12px', height: '12px', borderRadius: '50%', background: 'radial-gradient(circle at 35% 35%, #6af 0, #124 60%, #000 100%)', zIndex: 3 }).appendTo($front);
 		// (and a card reader to the right of the screen)
-		const payX = P.x + F.screen.inset + sw + 16, payY = P.y + K.top + sh - K.pay.h;   // (just right of the screen, level with its bottom)
+		const payX = P.x + F.screen.inset + sw + 34, payY = P.y + K.top + sh - K.pay.h;   // (just right of the screen, level with its bottom)
 		const $pay = $('<div>').css({ position: 'absolute', left: payX + 'px', top: payY + 'px', width: K.pay.w + 'px', height: K.pay.h + 'px', borderRadius: '14px', background: 'linear-gradient(180deg, #2a2733, #121018)', boxShadow: '0 8px 14px rgba(0,0,0,0.55), inset 0 0 0 2px rgba(255,255,255,0.06)', zIndex: 3 }).appendTo($front);
 		$('<div>').css({ position: 'absolute', left: '10px', top: '12px', right: '10px', height: '50px', borderRadius: '5px', background: 'linear-gradient(160deg, #3ad1ff, #1b5f9e)', boxShadow: 'inset 0 0 6px rgba(0,0,0,0.5)' }).appendTo($pay);
 		const $keys = $('<div>').css({ position: 'absolute', left: '12px', right: '12px', top: '74px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }).appendTo($pay);
 		for (let k = 0; k < 12; k++) $('<div>').css({ height: '14px', borderRadius: '3px', background: k === 9 ? '#e8323c' : k === 11 ? '#3cdc7a' : '#3a3644' }).appendTo($keys);
 		$('<div>').css({ position: 'absolute', left: '50%', bottom: '10px', width: '28px', height: '4px', marginLeft: '-14px', borderRadius: '2px', background: '#05040a' }).appendTo($pay);
+		// (pale chevrons on the panel over the card reader, coming in off its right edge and pointing at the screen)
+		const chevX = P.x + F.screen.inset + sw + 10, chevW = P.x + P.w - chevX, chevY = P.y + K.top + sh * 0.3;
+		const $chev = $('<div>').css({ position: 'absolute', left: chevX + 'px', top: chevY - 40 + 'px', width: chevW + 'px', height: '80px', overflow: 'hidden', zIndex: 3 }).appendTo($front);
+		for (let n = 0; n < 8; n++) {
+			$('<div>').html('<svg viewBox="0 0 40 80" width="40" height="80"><path d="M30 8 L8 40 L30 72" fill="none" stroke="#efe6ff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg>')
+				.css({ position: 'absolute', left: 8 + n * 46 + 'px', top: 0, opacity: 0.85 - n * 0.09, animation: `kioskChevron 1.2s ${-n * 0.15}s ease-in-out infinite` }).appendTo($chev);
+		}
+		if (!document.getElementById('kiosk-chevron-css')) $('<style id="kiosk-chevron-css">@keyframes kioskChevron { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-10px); } }</style>').appendTo(document.head);
 
 		$('<div>').text('HOW MANY PLAYERS?').css({
 			fontSize: '36px', lineHeight: 1.05, textAlign: 'center', letterSpacing: '1px', color: TYPE.colours.gold, width: '100%', textWrap: 'balance',
