@@ -836,11 +836,17 @@ window.Showtime = function (stage, opts) {
 	const seen = [];
 
 	self.sequence = function (list) {
+		// (the standard: the In Gamebox sting plays just before the title drop;
+		// a game can leave it out with opts.sting = false)
+		const t = list.findIndex((b) => b.id === 'title');
+		if (t >= 0 && opts.sting !== false && !list.some((b) => b.id === 'sting')) list = list.slice(0, t).concat([beatsLib.sting()], list.slice(t));
 		beats = list;
 		if (typeof fillJumps === 'function') fillJumps();
 	};
 
 	self.go = function (id) {
+		// (a game going straight to its title from the squad pick gets the sting first)
+		if (id === 'title' && beat && beat.id === 'squad' && beats.some((b) => b.id === 'sting')) id = 'sting';
 		const next = beats.find((b) => b.id === id);
 		if (!next) throw new Error('Showtime: no beat called ' + id);
 		// jumping past the clock intro (tests skip straight to play) starts the clock
@@ -1046,7 +1052,7 @@ window.Showtime = function (stage, opts) {
 	// (from the moment the squad's picked, the whole way through, until the
 	// score screens take over)
 	function scoreHudShown() {
-		if (!beat || !count() || beat.id === 'squad') return false;
+		if (!beat || !count() || beat.id === 'squad' || beat.id === 'sting') return false;
 		const results = beats.findIndex((b) => b.id === 'scores');
 		return results < 0 || beats.indexOf(beat) < results;
 	}
@@ -1659,6 +1665,31 @@ window.Showtime = function (stage, opts) {
 	// alternately), each easing gently into place; a soft boom as the last
 	// settles (no flash), then the START button fading in (or a hold, and
 	// out). lines: [{ text, fill, glow }]. Never a byline under it.
+	// The sting: the In Gamebox logo animation (assets/shared/sting.mp4, made
+	// for all three walls), full screen on black, with its sound; then on.
+	const STING = { src: 'assets/shared/sting.mp4', most: 6 };   // the video; on regardless after this long (if it can't play)
+	beatsLib.sting = function (extra) {
+		let $video = null, ended = false;
+		const clear = () => { if ($video) { $video[0].pause(); $video.remove(); } $video = null; };
+		return extend({
+			id: 'sting',
+			world: false,
+			length: STING.most,
+			done: () => ended,
+			enter() {
+				ended = false;
+				self.blackout = 1;
+				clear();
+				$video = $('<video playsinline preload="auto">').attr('src', STING.src).css({
+					position: 'absolute', left: 0, top: 0, width: 3 * W + 'px', height: H + 'px', objectFit: 'contain', background: '#000', zIndex: 25, pointerEvents: 'none',
+				}).appendTo(stage.$ui).on('ended error', () => { ended = true; });
+				$video[0].play().catch(() => { ended = true; });
+			},
+			update() { self.blackout = 1; },
+			exit: clear,
+		}, extra);
+	};
+
 	beatsLib.titleDrop = function (extra) {
 		const T = TITLE;
 		// (its lines: as given, or the game's title in the manifest, which the end screen's carousel uses too)
