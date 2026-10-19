@@ -3339,7 +3339,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const ANIMS = {
 		back: { height: 132, clips: { run: range('arun', 0, 15), idle: range('aact', 0, 3), freeze: range('aact', 4, 7), hop: range('aact', 8, 11), shot: range('aact', 12, 15) } },
 		front: { height: 132, clips: { idle: range('afront', 0, 3), cheer: range('afront', 4, 7), win: range('afront', 8, 11), sad: range('afront', 12, 15) } },
-		guard: { height: 140, clips: { walk: range('g', 0, 7), stand: range('g', 8, 9), aim: range('g', 10, 11), fire: range('g', 12, 15) } },
+		guard: { height: 140, clips: { walk: range('g', 0, 7), stand: range('g', 9, 9), aim: range('g', 10, 11), fire: range('g', 12, 15) } },
 	};
 	const ANIM_SHEETS = { back: ['arun', 'aact'], front: ['afront'], guard: ['gcircle'] };   // (for the lab: which sheets each figure draws from)
 	const ANIM_TUNED = {   // (the lab's tuning, baked in)
