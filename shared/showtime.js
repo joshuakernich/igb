@@ -1779,7 +1779,7 @@ window.Showtime = function (stage, opts) {
 						+ `<circle cx="50" cy="50" r="44" fill="none" stroke="${gold}" stroke-opacity="0.25" stroke-width="10"/>`
 						+ `<circle class="ring" cx="50" cy="50" r="44" fill="none" stroke="${gold}" stroke-width="10" stroke-linecap="round" pathLength="100" stroke-dasharray="100 100" transform="rotate(-90 50 50)"/>`
 						+ `<text class="secs" x="50" y="52" text-anchor="middle" dominant-baseline="middle" font-family="${CLOCK_FONT}, monospace" font-size="52" fill="${gold}">${TITLE.auto}</text></svg>`);
-					$start = $('<button start>').append($('<span>').text('START').css({ flex: 1, textAlign: 'left' })).append($count).css({
+					$start = $('<button start>').append($('<span>').text('TAP TO START').css({ flex: 1, textAlign: 'left', whiteSpace: 'nowrap' })).append($count).css({
 						position: 'absolute', left: (W + W / 2) + 'px', top: startTop() + 'px', transform: 'translate(-50%, -50%)', opacity: 0,
 						// (the same size and shape as the pause menu's buttons: the word on the left, the icon snug in the right end)
 						width: PAUSE.row.w + 'px', height: PAUSE.row.h + 'px', boxSizing: 'border-box', padding: `0 ${PAUSE.row.inset}px 0 52px`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px',
