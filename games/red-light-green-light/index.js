@@ -3261,7 +3261,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		circle: 'sheet-guard-circle.png',         // 4-frame walk, attention, aim, fire, lower (facing right)
 		triangle: 'sheet-guard-triangle.png',
 		square: 'sheet-guard-square.png',
-		head: 'v3-doll-head.png',                 // her head turning, one model in even 12° steps: frames 1-13 from the back of it to her face (4 by 4; the last three, turning on past, unused)
+		head: 'v7-doll-head.png',                 // her head turning (v7, a real child's proportions): 4 by 4, frames 1-11 from the back of it round toward her face and 16 face on (12-15 turn the wrong way: unused, see DOLL_TUNED.order)
 		// whole-figure animation sheets, 4 by 4, every frame aligned on one baseline (see ANIMS)
 		// (v7: human proportions, seen from about 40° above)
 		arun: 'v7-run.png',                       // the contestant from behind: a 16-frame run
@@ -4179,7 +4179,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	// Her body, drawn in ChatGPT: short and stocky, from behind and from the
 	// front, side by side in one picture. Each half trimmed when it loads.
-	const DOLL_BODY = { file: 'v2-doll-body.png', height: 340, neck: 0.04 };   // how tall to draw it; how far the head sits down into its collar (a share of the body)
+	const DOLL_BODY = { file: 'v7-doll-body.png', height: 520, neck: 0.02 };   // how tall to draw it; how far the head sits down into its collar (a share of the body)
 	let dollBodyImg = null;   // [behind, front]: { img, w, h, cx }
 	(function () {
 		const img = new Image();
@@ -4221,12 +4221,12 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// face), and where her pupils are on her face: set in the doll lab
 	// (DEBUG ▸ DOLL LAB), baked in here, kept in this browser while being tuned.
 	const DOLL_TUNED = {
-		head: { up: 147, x: -5, scale: 2.1 },
-		order: [0, 1, 2, 3, 4, 5, 6, 7, 12],
+		head: { up: 52, x: 0, scale: 0.8 },
+		order: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15],
 		pupil: { x: 0.139, cx: 0.026, y: 0.03, ring: 0.03 },
-		nudge: { 0: { x: 0, y: 0.5 }, 1: { x: -3, y: 2 }, 2: { x: 0, y: 3.5 }, 3: { x: 0, y: 3 }, 4: { x: -2, y: 4.5 }, 5: { x: -6, y: 3.5 }, 6: { x: -4, y: 4 }, 7: { x: -2.5, y: 2.5 } },   // each head frame's own nudge, by its number on the sheet: { x, y } (her head's units)
+		nudge: {},   // each head frame's own nudge, by its number on the sheet: { x, y } (her head's units)
 	};
-	const DOLL_KEY = 'rlgl-doll-lab';
+	const DOLL_KEY = 'rlgl-doll-lab-v7';   // (v7: earlier tuning was for the chibi doll)
 	const dollTune = JSON.parse(JSON.stringify(DOLL_TUNED));
 	try {
 		const kept = JSON.parse(localStorage.getItem(DOLL_KEY) || '{}');
@@ -5127,7 +5127,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			heading('HEAD ON HER BODY', $side);
 			slider('UP', dollTune.head.up, 0, 300, 1, (v) => { dollTune.head.up = v; save(); }, $side);
 			slider('ACROSS', dollTune.head.x, -120, 120, 1, (v) => { dollTune.head.x = v; save(); }, $side);
-			slider('SIZE', dollTune.head.scale, 1, 3.5, 0.01, (v) => { dollTune.head.scale = v; save(); }, $side);
+			slider('SIZE', dollTune.head.scale, 0.2, 3.5, 0.01, (v) => { dollTune.head.scale = v; save(); }, $side);
 			heading('EYES (THE GLOW, ON HER FACE FRAME)', $side);
 			slider('APART', dollTune.pupil.x, 0.02, 0.35, 0.001, (v) => { dollTune.pupil.x = v; save(); }, $side);
 			slider('ACROSS', dollTune.pupil.cx, -0.15, 0.15, 0.001, (v) => { dollTune.pupil.cx = v; save(); }, $side);

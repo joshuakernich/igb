@@ -293,3 +293,8 @@ v7 figures by their whole standing height rather than by head width.
   light and dark patches, a handful of tiny pebbles; no footprints, rake lines,
   ripples, directional lighting or vignette). Saved as a 1024 px JPEG; the game
   makes it truly seamless on load by blending it into a half-tile-shifted copy.
+
+## v7 doll (2026-10-20, one ChatGPT chat)
+
+- **v7-doll-body.png:** her body only (cut at the neck), a girl of about 8 with REALISTIC CHILD PROPORTIONS (slim, long thin arms at her sides, long legs), orange pinafore #f07b1f with straps over a yellow puffed-sleeve blouse #f7c934, white Peter Pan collar, white knee socks, black Mary Janes; standing stiff like a statue; drawn twice side by side, BEHIND (crossed straps) on the left and FRONT on the right; lineless painted vinyl-toy style; straight on, looking very slightly down (about 15 degrees); landscape 3:2, transparent. It came back as a jointed doll (visible elbow and wrist joints), which suits her.
+- **v7-doll-head.png:** her head only, in proportion with that body, as a 16-frame turntable in even 12° steps from directly behind to face on, same style and camera, 4x4, transparent. It came back uneven: frames 1-11 turn from the back round toward her face (facing our left), 12-15 face the other way, 16 is face on. The game uses 1-11 and 16 (DOLL_TUNED.order [0-10, 15]).
