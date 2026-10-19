@@ -2127,7 +2127,7 @@ window.Showtime = function (stage, opts) {
 						x += widths[i] * k;
 					});
 					// (the squad's visors are in the score capsules along the bottom: see visorInCapsule)
-					drawFloor(c, cx, 310, 700, n, bt, wall);   // (well clear of the square capsules along the bottom)
+					drawFloor(c, cx, 340, 730, n, bt, wall);   // (well clear of the square capsules along the bottom)
 					// a wrong visor in play gets the big flag, over everything
 					if (bad.length) {
 						const i = bad[0];
