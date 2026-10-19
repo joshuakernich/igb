@@ -3458,7 +3458,7 @@ window.Showtime = function (stage, opts) {
 	// The end, where the show stays until the game is stopped: THANKS FOR
 	// PLAYING!, the other games going round in a carousel of screenshots
 	// (assets/shared/screens/<id>.jpg, made by tools/screens.mjs) for ever, and
-	// BOOK ANOTHER SESSION AT THE KIOSK. The game hands back as it starts
+	// BOOK YOUR SESSION AT THE KIOSK. The game hands back as it starts
 	// (extra.enter is the place to call IGB.complete).
 	beatsLib.end = function (extra) {
 		const CAROUSEL = { w: 1296, h: 810, side: 668, small: 0.2, title: 92, every: 2.8, words: 50, kiosk: 40, top: 50 };   // (a card's screenshot size; on each wall, how far its side cards sit from the middle one, and how small they are; the title's size on the featured card; seconds between steps; words: the end's lines' size; kiosk: the kiosk line's, small below them; top: how far down the cards start)
@@ -3515,7 +3515,7 @@ window.Showtime = function (stage, opts) {
 				$space = $('<div>').css({ height: cardH + 'px', width: '10px', flex: 'none' }).appendTo($wall);   // (room for the cards, flowing past behind)
 				// the kiosk: book another session, in the middle of the room left under the cards
 				const $rest = $('<div>').css({ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }).appendTo($wall);
-				words('BOOK ANOTHER SESSION AT THE KIOSK', TYPE.colours.gold, CAROUSEL.kiosk).attr('kiosk', '').appendTo($rest);
+				words('BOOK YOUR SESSION AT THE KIOSK', TYPE.colours.gold, CAROUSEL.kiosk).attr('kiosk', '').appendTo($rest);
 			}
 			if (!list.length) return;
 			// the cards: one long line of them across all three walls, three to a
