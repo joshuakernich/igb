@@ -129,9 +129,10 @@ window.Showtime = function (stage, opts) {
 		settle: [4.3, 5.2],    // after two ticks it flies up, still counting, to its place at the top of every wall
 		length: 5.7,
 		radius: 320,           // the dial's outer edge
-		size: 228,             // the big number
-		words: [76, 86],       // YOU HAVE, MINUTES
-		gap: 0.42,             // how far above and below the time they sit (a share of the dial's radius)
+		text: 420,             // the words and number are laid out as for a dial this big (they keep their size, the dial smaller behind them)
+		size: 300,             // the big number
+		words: [100, 112],     // YOU HAVE, MINUTES
+		gap: 0.42,             // how far above and below the time they sit (a share of text)
 		slam: 0.18,            // seconds for a word to crash down into place
 		y: 520,                // the dial's centre
 	};
@@ -1941,7 +1942,7 @@ window.Showtime = function (stage, opts) {
 						}
 					}
 					// 2. YOU HAVE, inside the dial just above the 10
-					self.slam(c, 'YOU HAVE', cx, C.y - C.radius * C.gap, C.words[0], bt - C.youHave, look({ alpha: fade, fit: C.radius * 1.45, dur: C.slam, from: 3.2 }));
+					self.slam(c, 'YOU HAVE', cx, C.y - C.text * C.gap, C.words[0], bt - C.youHave, look({ alpha: fade, fit: C.text * 1.45, dur: C.slam, from: 3.2 }));
 					// 3. the 10, in the dial; it becomes the clock and flies up to its corner
 					if (bt > C.number) {
 						const age = bt - C.number;
@@ -1954,14 +1955,14 @@ window.Showtime = function (stage, opts) {
 						// the clock's size is a step of the scale that fits 10:00 (its widest), so it
 						// keeps its size as it counts; it flies up shrinking (by scaling) to the corner
 						// clock's digits, where the corner clock takes over, its pill then appearing
-						const ts = self.fitSize(c, mmss(SECONDS), C.size, C.radius * 1.62);
+						const ts = self.fitSize(c, mmss(SECONDS), C.size, C.text * 1.62);
 						const k = lerp(1, CLOCK.size / ts, fly);
 						c.scale(k, k);
 						self.text(c, mmss(clock.left), 0, ts * 0.04, ts, Object.assign(look({ fit: 99999 }), { font: CLOCK_FONT }));
 						c.restore();
 					}
 					// 4. MINUTES, just under the 10
-					self.slam(c, unit, cx, C.y + C.radius * C.gap * 1.03, C.words[1], bt - C.unit, look({ alpha: fade, fit: C.radius * 1.4, dur: C.slam, from: 3.2 }));
+					self.slam(c, unit, cx, C.y + C.text * C.gap * 1.03, C.words[1], bt - C.unit, look({ alpha: fade, fit: C.text * 1.4, dur: C.slam, from: 3.2 }));
 				});
 			},
 		}, extra);
