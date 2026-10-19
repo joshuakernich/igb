@@ -264,3 +264,32 @@ Guard: a chibi Squid Game style guard: hot-pink hooded jumpsuit (#e8336f) with a
 ## v3 doll head (same chat)
 
 - **v3-doll-head.png:** the HEAD ONLY (a short neck stub) of a giant chibi doll inspired by the playground doll: round pale face, glossy black bob with straight bangs, two short pigtails with orange bobbles, big dark eyes, rosy cheeks, small pink mouth. A 16-frame TURNTABLE in equal 12° steps, from directly behind (frame 1) turning to her left until facing us head-on, with a strict demand for perfect consistency (one 3D model from 16 angles: same size, same centre, same eye height, same lighting). Level camera, lineless painted vinyl-toy style, a strict 4×4 grid, transparent background. It came back facing us on frame 13 and turning on past; the game uses frames 1–13.
+
+## v7 (2026-10-20): human proportions, semi top-down; GPT sand
+
+Generated in ChatGPT (driven from Claude in Chrome), two chats: the contestant
+sheets in one, the guards in another. Same 4x4 layouts and frame orders as v5
+(run; idle / freeze / hop / shot; front idle / cheer / celebrate / sad) and v6
+(guards facing us: strafing walk, stand, aim, fire), with:
+
+- **STYLE:** REALISTIC HUMAN PROPORTIONS, not chibi (the head about one seventh
+  of the height, a normal adult build, long arms and legs), still the lineless
+  painted vinyl-toy look.
+- **CAMERA:** a three-quarter overhead view looking DOWN at about 40 degrees:
+  the top of the head and shoulders show, with the back (or front), legs and
+  feet clearly visible below. Asking for 50 degrees came out nearly straight
+  down (the head hid the body); a straight-behind level view was the first try.
+- The front sheet came back with a painted checkerboard the first time; asking
+  again for a genuinely transparent background fixed it. The cut-outs have a
+  faint coloured fringe and stray specks: the game clears them on load
+  (despeckle in index.js).
+
+Files: v7-run.png, v7-actions.png, v7-front.png, v7-guard-circle.png,
+v7-guard-triangle.png, v7-guard-square.png (1254 px square). The game sizes the
+v7 figures by their whole standing height rather than by head width.
+
+- **v7-sand.jpg:** a SEAMLESS, TILEABLE top-down ground texture of fine smooth
+  arena sand, base #e3c08a, VERY SUBTLE (low contrast, soft fine grain, faint
+  light and dark patches, a handful of tiny pebbles; no footprints, rake lines,
+  ripples, directional lighting or vignette). Saved as a 1024 px JPEG; the game
+  makes it truly seamless on load by blending it into a half-tile-shifted copy.

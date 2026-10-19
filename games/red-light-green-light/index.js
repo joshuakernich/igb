@@ -1811,7 +1811,40 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// fading as it gets too fine to see.
 	const GRAVEL = { tile: 512, grains: 9000, grit: 900, stones: 150, blotches: 26, band: 4, fade: 0.4 };   // the tile, in field units; fine grains, coarser grit, little stones and soft light/dark patches on it; screen pixels per band past the flat; below this size (a share of near size) the grit fades out
 	let gravelPattern = null;
+	// The sand itself, painted in ChatGPT (v7-sand.jpg: a subtle, opaque tile),
+	// laid as the tile once it's loaded; till then (or without it) the grain
+	// drawn below. Made truly seamless here: blended into a copy of itself
+	// shifted half a tile, which shows alone at the edges, where it wraps.
+	const SAND_ART = { file: 'v7-sand.jpg' };
+	let sandTile = null;
+	(function () {
+		const img = new Image();
+		img.onload = function () {
+			const T = GRAVEL.tile;
+			const cv = document.createElement('canvas');
+			cv.width = cv.height = T;
+			const g = cv.getContext('2d');
+			const h = T / 2;
+			for (const [dx, dy] of [[-h, -h], [h, -h], [-h, h], [h, h]]) g.drawImage(img, dx, dy, T, T);   // (the shifted copy)
+			const top = document.createElement('canvas');
+			top.width = top.height = T;
+			const t = top.getContext('2d');
+			t.drawImage(img, 0, 0, T, T);
+			// (the unshifted one, faded out toward every edge)
+			t.globalCompositeOperation = 'destination-in';
+			const fade = (a, b, c, d) => { const gr = t.createLinearGradient(a, b, c, d); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.3, '#000'); gr.addColorStop(0.7, '#000'); gr.addColorStop(1, 'rgba(0,0,0,0)'); return gr; };
+			t.fillStyle = fade(0, 0, T, 0);
+			t.fillRect(0, 0, T, T);
+			t.fillStyle = fade(0, 0, 0, T);
+			t.fillRect(0, 0, T, T);
+			g.drawImage(top, 0, 0);
+			sandTile = cv;
+			gravelPattern = null;
+		};
+		img.src = 'assets/red-light-green-light/' + SAND_ART.file;
+	})();
 	function gravelTile() {
+		if (sandTile) return sandTile;
 		const T = GRAVEL.tile;
 		const cv = document.createElement('canvas');
 		cv.width = cv.height = T;
@@ -1912,6 +1945,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	function drawArena(ctx) {
 		const hz = horizonY();
 		art.rect(ctx, -20, -20, WIDTH + 40, H + 40, { fill: art.linear(ctx, 0, hz, 0, H, ['#c0945e', '#d3ad79', '#e6c592']) });
+		drawGravel(ctx);
 		// rake marks every couple of metres, so the scrolling shows: flat
 		// bands across, bunching up and fading toward the horizon
 		const gap = 110;
@@ -1919,7 +1953,6 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			const p = at(0, f);
 			art.rect(ctx, -20, p.y - 2 * p.s, WIDTH + 40, 4 * p.s, { fill: 'rgba(120,80,40,0.12)', alpha: fadeIn(f) });
 		}
-		drawGravel(ctx);
 		// the haze over the far sand, and the sky
 		art.rect(ctx, -20, hz, WIDTH + 40, 260, { fill: art.linear(ctx, 0, hz, 0, hz + 260, ['rgba(246,236,214,0.9)', 'rgba(246,236,214,0)']) });
 		art.rect(ctx, -20, -20, WIDTH + 40, hz + 20, { fill: art.linear(ctx, 0, 0, 0, hz, ['#2f8fe0', '#5cb2f0', '#a9d8f5']) });   // (a clear blue sky: the sun's the show)
@@ -3151,12 +3184,13 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		square: 'sheet-guard-square.png',
 		head: 'v3-doll-head.png',                 // her head turning, one model in even 12° steps: frames 1-13 from the back of it to her face (4 by 4; the last three, turning on past, unused)
 		// whole-figure animation sheets, 4 by 4, every frame aligned on one baseline (see ANIMS)
-		arun: 'v5-run.png',                       // the contestant from behind: a 16-frame run
-		aact: 'v5-actions.png',                   // idle, freeze, hop, shot: 4 frames each
-		afront: 'v5-front.png',                   // from the front: idle, cheer, celebrate, sad
-		gcircle: 'v6-guard-circle.png',           // a guard (each mask), facing us: an 8-frame side-stepping walk, stand, aim, fire
-		gtriangle: 'v6-guard-triangle.png',
-		gsquare: 'v6-guard-square.png',
+		// (v7: human proportions, seen from about 40° above)
+		arun: 'v7-run.png',                       // the contestant from behind: a 16-frame run
+		aact: 'v7-actions.png',                   // idle, freeze, hop, shot: 4 frames each
+		afront: 'v7-front.png',                   // from the front: idle, cheer, celebrate, sad
+		gcircle: 'v7-guard-circle.png',           // a guard (each mask), facing us: an 8-frame side-stepping walk, stand, aim, fire
+		gtriangle: 'v7-guard-triangle.png',
+		gsquare: 'v7-guard-square.png',
 	};
 	const SPRITE = { contestant: 112, guard: 124, head: 150 };   // heights to draw at (the contestants and guards, feet to top, as the drawn ones; her head, across)
 	const sheets = {};   // name: { frames: [{ img, x, y, w, h, patch }], unit } once cut up
@@ -3171,6 +3205,45 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		img.src = 'assets/red-light-green-light/' + file;
 	}
 
+	// ChatGPT's cut-outs (the v7 sheets) come with a faint fringe and stray
+	// coloured specks round the figures: anything nearly clear is cleared,
+	// and in each cell only the figure (the biggest solid island, and any
+	// near its size: a muzzle flash) is kept.
+	function despeckle(g, W, H, cw, ch, rows) {
+		const im = g.getImageData(0, 0, W, H);
+		const d = im.data;
+		for (let i = 3; i < d.length; i += 4) if (d[i] < 70) d[i] = 0;
+		const seen = new Uint8Array(W * H);
+		const stack = new Int32Array(W * H);
+		for (let c = 0; c < rows * 4; c++) {
+			const x0 = Math.round((c % 4) * cw), y0 = Math.round(Math.floor(c / 4) * ch);
+			const x1 = Math.min(W, Math.round(x0 + cw)), y1 = Math.min(H, Math.round(y0 + ch));
+			const islands = [];
+			for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+				const p = y * W + x;
+				if (seen[p] || !d[p * 4 + 3]) continue;
+				const pts = [];
+				let n = 0;
+				stack[n++] = p;
+				seen[p] = 1;
+				while (n) {
+					const q = stack[--n];
+					pts.push(q);
+					const qx = q % W, qy = (q - qx) / W;
+					for (const [nx, ny] of [[qx - 1, qy], [qx + 1, qy], [qx, qy - 1], [qx, qy + 1]]) {
+						if (nx < x0 || nx >= x1 || ny < y0 || ny >= y1) continue;
+						const r = ny * W + nx;
+						if (!seen[r] && d[r * 4 + 3]) { seen[r] = 1; stack[n++] = r; }
+					}
+				}
+				islands.push(pts);
+			}
+			const big = Math.max(0, ...islands.map((l) => l.length));
+			for (const l of islands) if (l.length < big * 0.02) for (const q of l) d[q * 4 + 3] = 0;
+		}
+		g.putImageData(im, 0, 0);
+	}
+
 	function slice(img, name, rows = 2) {
 		const cw = img.width / 4;
 		const ch = img.height / rows;
@@ -3179,6 +3252,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		cv.height = img.height;
 		const g = cv.getContext('2d');
 		g.drawImage(img, 0, 0);
+		if (/^v7-/.test(SHEETS[name])) despeckle(g, img.width, img.height, cw, ch, rows);
 		const data = g.getImageData(0, 0, img.width, img.height).data;
 		const solid = (x, y) => data[(y * img.width + x) * 4 + 3] > 40;
 		const frames = [];
@@ -3232,7 +3306,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// every sheet), measured in their upright frames: so a crouch or a fall
 		// is drawn at the same scale as the run, whatever else is on its sheet.
 		const upright = { arun: 16, aact: 4, afront: 4, gcircle: 8, gtriangle: 8, gsquare: 8 }[name];
-		if (upright) sheet.unit = median(boxes.slice(0, upright).map((b) => (b ? b.hw : null))) * HEAD_TO_HEIGHT;
+		// (v7's human-proportioned figures by their whole standing height: their heads are too small to measure by)
+		if (upright) sheet.unit = /^v7-/.test(SHEETS[name]) ? median(boxes.slice(0, upright).map((b) => (b ? b.y1 - b.y0 : null))) : median(boxes.slice(0, upright).map((b) => (b ? b.hw : null))) * HEAD_TO_HEIGHT;
 		// a guard's rifle: its muzzle is the furthest-right thing in the firing frame
 		const fireAt = { circle: 6, gcircle: 13 }[name];
 		if (fireAt !== undefined && frames[fireAt] && boxes[fireAt]) {
@@ -3260,37 +3335,15 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// clips[name]), and each figure's height.
 	const HEAD_TO_HEIGHT = 2.15;   // (a figure's standing height, in head widths: the run sheet's)
 	const range = (s, a, b) => Array.from({ length: b - a + 1 }, (_, k) => ({ s, i: a + k }));
-	// (height: the figure's size, as 2.15 head widths: a standing contestant's
-	// height, but more than a guard's, whose hood is wider)
+	// (height: the figure's standing height, feet to the top of the head)
 	const ANIMS = {
-		back: { height: 100, clips: { run: range('arun', 0, 15), idle: range('aact', 0, 3), freeze: range('aact', 4, 7), hop: range('aact', 8, 11), shot: range('aact', 12, 15) } },
-		front: { height: 127, clips: { idle: range('afront', 0, 3), cheer: range('afront', 4, 7), win: range('afront', 8, 11), sad: range('afront', 12, 15) } },
-		guard: { height: 143, clips: { walk: range('g', 0, 7), stand: range('g', 8, 9), aim: range('g', 10, 11), fire: range('g', 12, 15) } },
+		back: { height: 132, clips: { run: range('arun', 0, 15), idle: range('aact', 0, 3), freeze: range('aact', 4, 7), hop: range('aact', 8, 11), shot: range('aact', 12, 15) } },
+		front: { height: 132, clips: { idle: range('afront', 0, 3), cheer: range('afront', 4, 7), win: range('afront', 8, 11), sad: range('afront', 12, 15) } },
+		guard: { height: 140, clips: { walk: range('g', 0, 7), stand: range('g', 8, 9), aim: range('g', 10, 11), fire: range('g', 12, 15) } },
 	};
 	const ANIM_SHEETS = { back: ['arun', 'aact'], front: ['afront'], guard: ['gcircle'] };   // (for the lab: which sheets each figure draws from)
-	const ANIM_TUNED = {   // (the lab's tuning, baked in)
-		back: {
-			clips: {
-				run: [
-					{ s: 'arun', i: 1, x: -1.5 },
-					{ s: 'arun', i: 13, x: -0.5 },
-					{ s: 'arun', i: 3 },
-					{ s: 'arun', i: 4 },
-					{ s: 'arun', i: 14 },
-				],
-			},
-		},
-		guard: {
-			clips: {
-				walk: [
-					{ s: 'g', i: 1 },
-					{ s: 'g', i: 4 },
-					{ s: 'g', i: 6 },
-				],
-			},
-		},
-	};
-	const ANIM_KEY = 'rlgl-animation-lab';
+	const ANIM_TUNED = {};   // (the lab's tuning, baked in: none yet for the v7 sheets)
+	const ANIM_KEY = 'rlgl-animation-lab-v7';   // (v7: earlier tuning was for other sheets)
 	const ANIM_TUNE = JSON.parse(JSON.stringify(ANIM_TUNED));
 	try {
 		const saved = JSON.parse(localStorage.getItem(ANIM_KEY) || '{}');
