@@ -191,6 +191,7 @@ window.Showtime = function (stage, opts) {
 			{ label: 'EXCELLENT', colour: '#3cbf5a', mouth: 22 },
 		],
 		low: 3,                // a rating this low or lower asks what went wrong; higher offers another game
+		reasonW: 760,          // the follow-up options, stacked, this wide
 		reasons: [             // why the low rating: tap one; those with more to say then ask which
 			{ label: 'ACCIDENTAL TOUCH' },
 			{ label: 'TOO HARD', more: ['NEEDS MORE INSTRUCTION', 'TOO MUCH ENERGY', 'TOO LONG'] },
@@ -3371,13 +3372,13 @@ window.Showtime = function (stage, opts) {
 		// [reason] or [reason, detail].
 		let topic = null;   // the reason picked, while its details are asked
 		function reasons($wall) {
-			const $grid = () => $('<div>').css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '22px', maxWidth: '1400px' }).appendTo($wall);
+			const $grid = () => $('<div>').css({ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '16px', width: R.reasonW + 'px' }).appendTo($wall);   // (the options stacked, one above another, all as wide)
 			if (!topic) {
 				big('WHY THE LOW RATING?', 96).appendTo($wall);
 				small('TAP ONE').appendTo($wall);
 				const $g = $grid();
 				R.reasons.forEach(function (r) {
-					tap(pill(r.label, false).attr('reason', r.label).appendTo($g), function () {
+					tap(pill(r.label, false, { width: '100%' }).attr('reason', r.label).appendTo($g), function () {
 						feedback.reasons = [r.label];
 						if (r.more) { topic = r; partAt = self.bt; render(1); } else finish();
 					});
@@ -3388,7 +3389,7 @@ window.Showtime = function (stage, opts) {
 			small('TAP ONE').appendTo($wall);
 			const $g = $grid();
 			topic.more.forEach(function (detail) {
-				tap(pill(detail, false).attr('reason', detail).appendTo($g), function () {
+				tap(pill(detail, false, { width: '100%' }).attr('reason', detail).appendTo($g), function () {
 					feedback.reasons = [topic.label, detail];
 					finish();
 				});
