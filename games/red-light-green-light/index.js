@@ -3346,14 +3346,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		back: {
 			clips: {
 				run: [
-					{ s: 'arun', i: 0, x: -7.5, y: 2 },
-					{ s: 'arun', i: 2, x: -7.5, y: 2 },
-					{ s: 'arun', i: 1, x: -7.5, y: 2 },
-					{ s: 'arun', i: 15, x: -10, y: 11.5 },
+					{ s: 'arun', i: 0, x: -7.5, y: 6 },
+					{ s: 'arun', i: 2, x: -7.5, y: 6 },
+					{ s: 'arun', i: 1, x: -7.5, y: 6 },
+					{ s: 'arun', i: 15, x: -10, y: 15.5 },
 				],
 				freeze: [
-					{ s: 'aact', i: 4, y: 4 },
-					{ s: 'aact', i: 5, x: -1, y: 2 },
+					{ s: 'aact', i: 4, y: 8 },
+					{ s: 'aact', i: 5, x: -1, y: 6 },
 				],
 				idle: [
 					{ s: 'aact', i: 0, x: -0.5, y: -1.5 },
