@@ -1554,10 +1554,10 @@ window.Showtime = function (stage, opts) {
 	// Once a count's tapped the barriers swing inwards, the view rushes into
 	// the box, and the sting begins.
 	const FRONT = {
-		tv: { y: 74, h: 200, gap: 52, lean: -16 },               // the three TVs across the top (16:9), over the box, leaning forward (degrees)
-		box: { x: 56, y: 44, w: 1488, h: 912, depth: 1100, lens: 1000 },   // the gamebox, filling the wall but for an inset of the arcade round it: its mouth, how deep it goes, its perspective
-		zoom: { x: 465, y: 560 },                                // where the eye looks into it (the middle of what shows of it, left of the panel): the vanishing point, and the rush's centre
-		panel: { x: 874, y: 310, w: 670, h: 646 },               // the purple panel on the right, over the box (the way in 55% of it, the kiosk 45%)
+		tv: { y: 60, h: 200, gap: 52, lean: -16 },               // the three TVs across the top (16:9), over the box, leaning forward (degrees)
+		box: { x: 56, y: 0, w: 1488, h: 1000, depth: 1100, lens: 1000 },   // the gamebox, the wall's whole height, the arcade showing either side of it: its mouth, how deep it goes, its perspective
+		zoom: { x: 465, y: 655 },                                // where the eye looks into it (the middle of what shows of it, left of the panel): the vanishing point, and the rush's centre
+		panel: { x: 874, y: 310, w: 670, h: 690 },               // the purple panel on the right, over the box (the way in 55% of it, the kiosk 45%)
 		screen: { inset: 34 },                                   // its screen, filling the panel but for this margin
 		gate: { gap: 14, post: 26 },                             // the glass barriers, side by side across the whole way in, a third of its height
 		neon: '#c06bff',                                         // the strips down the box's sides
@@ -1598,7 +1598,7 @@ window.Showtime = function (stage, opts) {
 		return [ids[0], ids[1], ids[2]].map((id) => id || ids[0]);
 	}
 	const clipOf = (id) => `assets/shared/clips/${id}.webm`;
-	const loop = (id) => $('<video muted loop autoplay playsinline preload="auto">').attr('src', clipOf(id)).css({ display: 'block', width: '100%', height: '100%', objectFit: 'cover' });
+	const loop = (id) => $('<video muted loop autoplay playsinline preload="auto">').attr('src', clipOf(id)).css({ display: 'block', width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 100%' });   // (the picture down to its foot: the box's inside walls run right down to its floor)
 
 	self.pickPlayers = function (fn) {
 		const font = `"${FONT}", sans-serif`;
