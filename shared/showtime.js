@@ -144,6 +144,7 @@ window.Showtime = function (stage, opts) {
 	/* ---------- tuning: the visor check ---------- */
 
 	const VISORS = {
+		steps: [0.1, 0.4, 0.7],   // the three instructions slam in one after another, at these times
 		show: 0.8,             // just the visors to put on (the capsules growing), before the wiggle is asked for and counts
 		zone: { px: 0.5, pz: 0.5, r: 0.24 },   // where to stand: the middle of the room (floor 0..1)
 		settle: 0.8,           // seconds over which a visor's movement is averaged
@@ -2152,6 +2153,7 @@ window.Showtime = function (stage, opts) {
 			},
 			update(dt, bt) {
 				self.blackout = INTRO_DIM;
+				for (const at of V.steps) if (self.cue(at)) self.fx('stepIn', 0.6);
 				const k = Math.exp(-dt / V.settle);
 				slots().forEach(function (p, i) {
 					if (!p || p.X === undefined) return;
@@ -2215,13 +2217,15 @@ window.Showtime = function (stage, opts) {
 					const k = 1;
 					let x = cx - total * k / 2;
 					steps.forEach(function (s, i) {
-						const alpha = clamp((bt - i * 0.25) * 3, 0, 1);
+						// (one after another in quick succession, each slamming into place)
+						const age = bt - V.steps[i];
+						if (age <= 0) return;
 						if (i) {
-							self.text(c, '>', x + gap * k / 2, 165, SIZE * k, { fill: 'white', alpha: alpha * 0.5, glow: 'transparent', fit: 9999 });
+							self.text(c, '>', x + gap * k / 2, 165, SIZE * k, { fill: 'white', alpha: clamp(age * 4, 0, 1) * 0.5, glow: 'transparent', fit: 9999 });
 							x += gap * k;
 						}
-						self.text(c, s.text, x + widths[i] * k / 2, 165, SIZE * k, {
-							fill: 'white', alpha: alpha * (s.now || s.done ? 1 : 0.4),
+						self.slam(c, s.text, x + widths[i] * k / 2, 165, SIZE * k, age, {
+							fill: 'white', alpha: s.now || s.done ? 1 : 0.4,
 							glow: s.now ? theme.accent : 'transparent', fit: 9999,
 						});
 						x += widths[i] * k;
