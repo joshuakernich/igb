@@ -203,6 +203,7 @@ window.Showtime = function (stage, opts) {
 		wait: { faces: 45, reasons: 40, again: 40 },   // each part moves on after this long untouched
 		picked: 1.4,           // the face picked stays up this long before what comes next
 		thanks: 2.4,           // THANKS FOR THE FEEDBACK holds this long
+		glad: 2.2,             // (a good rating: then GLAD YOU LIKED IT! for this long)
 		fade: 0.8,             // then everything fades away over this long, before the end fades in
 	};
 
@@ -3347,6 +3348,7 @@ window.Showtime = function (stage, opts) {
 				if (part === 'faces') faces($wall);
 				else if (part === 'reasons') reasons($wall);
 				else if (part === 'thanks') big('THANKS FOR THE FEEDBACK', 96).css({ color: TYPE.colours.gold, maxWidth: W * TEXT_FIT + 'px', textWrap: 'balance' }).appendTo($wall);
+				else if (part === 'glad') big('GLAD YOU LIKED IT!', 110).css({ color: TYPE.colours.gold, maxWidth: W * TEXT_FIT + 'px', textWrap: 'balance' }).appendTo($wall);
 			}
 		}
 
@@ -3449,8 +3451,10 @@ window.Showtime = function (stage, opts) {
 				const age = bt - partAt;
 				if (part === 'faces' && age > R.wait.faces) go('over');
 				if (part === 'reasons' && age > R.wait.reasons) finish();
-				// THANKS FOR THE FEEDBACK holds, then everything fades away, then on to the end
-				if (part === 'thanks' && age > R.thanks) {
+				// THANKS FOR THE FEEDBACK holds (and, for a good rating, scrolls up to
+				// GLAD YOU LIKED IT!), then everything fades away, then on to the end
+				if (part === 'thanks' && age > R.thanks && feedback && feedback.rating > R.low) go('glad', 1);
+				else if ((part === 'thanks' && age > R.thanks) || (part === 'glad' && age > R.glad)) {
 					part = 'fade';
 					partAt = bt;
 					if ($layer) $layer.css({ transition: `opacity ${R.fade}s`, opacity: 0 });
