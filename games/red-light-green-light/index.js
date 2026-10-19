@@ -72,7 +72,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// (stepping toward the wall moves you up the field, but less and less near
 	// it: straight on until FORWARD.ease, then easing off to nothing by
 	// FORWARD.flat; the last of the room barely moves you)
-	const FORWARD = { ease: 0.6, flat: 0.8 };
+	const FORWARD = { ease: 0.5, flat: 0.8 };
 	const forward = function (near) {
 		const { ease: a, flat: b } = FORWARD;
 		const n = Math.max(0, Math.min(1, near));
