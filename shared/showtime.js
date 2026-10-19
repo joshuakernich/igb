@@ -1560,7 +1560,7 @@ window.Showtime = function (stage, opts) {
 		zoom: { x: 465, y: 550 },                                // where the eye looks into it (the middle of what shows of it, left of the panel): the vanishing point, and the rush's centre
 		panel: { x: 874, y: 230, w: 670, h: 770 },                 // the kiosk: a purple panel on the right, over the box
 		screen: { inset: 34 },
-		kiosk: { top: 96, camera: 52, pay: { w: 92, h: 176 } },   // the kiosk's furniture: the screen starts this far down (room for the camera over it); the camera dome's size; the card reader to the right of the screen                                   // its 9:16 screen, this far in from the panel's top left (as tall as the panel allows)
+		kiosk: { top: 96, size: 0.8, camera: 52, pay: { w: 92, h: 176 } },   // the kiosk's furniture: the screen starts this far down (room for the camera over it); the camera dome's size; the card reader to the right of the screen                                   // its 9:16 screen, this far in from the panel's top left (as tall as the panel allows)
 		gate: { gap: 14, post: 92, inset: 12, lift: 120, depth: 92, thick: 14, rise: 70 },                  // the glass barriers, side by side across the whole way in, a third of its height, held up off the floor (lift) by chunky posts, set in from the way in's edges (inset); the posts this deep, the glass this thick (real 3D blocks); the posts standing this much taller than the glass
 		neon: '#c06bff',                                         // the strips down the box's sides
 		purple: '#3a1478',                                       // the panels: a deep purple, textured (see panelSkin)
@@ -1710,7 +1710,7 @@ window.Showtime = function (stage, opts) {
 		const P = Object.assign({}, F.panel, { y: B.y, h: H - B.y });   // (from the top panel down to the floor)
 		$('<div>').css({ position: 'absolute', left: P.x + 'px', top: P.y + 'px', width: P.w + 'px', height: P.h + 'px', borderRadius: '14px', background: panelSkin(), zIndex: 3 }).appendTo($front);
 		const K = F.kiosk;
-		const sh = P.h - K.top - F.screen.inset, sw = sh * 9 / 16;   // (a 9:16 screen, as tall as fits under the camera, at the panel's left)
+		const sh = (P.h - K.top - F.screen.inset) * K.size, sw = sh * 9 / 16;   // (a 9:16 screen, K.size of the height under the camera, at the panel's left)
 		const $screen = $('<div>').css({
 			position: 'absolute', left: P.x + F.screen.inset + 'px', top: P.y + K.top + 'px', width: sw + 'px', height: sh + 'px', boxSizing: 'border-box', padding: '40px 22px',
 			background: 'linear-gradient(180deg, #1a0a36, #2b0f5a)', border: '10px solid #05030a', borderRadius: '16px',
