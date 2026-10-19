@@ -201,9 +201,9 @@ window.Showtime = function (stage, opts) {
 		],
 		notAgain: ['show-debug'],   // games never offered to play again
 		wait: { faces: 45, reasons: 40, again: 40 },   // each part moves on after this long untouched
-		picked: 1.4,           // the face picked stays up this long before what comes next
+		picked: 0.25,          // the face picked stays up this long before what comes next (the standard press)
 		thanks: 2.4,           // THANKS FOR THE FEEDBACK holds this long
-		glad: 2.2,             // (a good rating: then GLAD YOU LIKED IT! for this long)
+		glad: 2.2,             // (a good rating: GLAD YOU LIKED IT! instead, this long)
 		fade: 0.8,             // then everything fades away over this long, before the end fades in
 	};
 
@@ -1568,7 +1568,7 @@ window.Showtime = function (stage, opts) {
 				.on('click', function () {
 					const count = parseInt($(this).attr('count'), 10);
 					self.fx('pick');
-					$(this).css({ transform: 'scale(1.35)', transitionDelay: '0s' });
+					press(this);   // (tapped: the standard colour shift, no growing)
 					$pick.css({ transition: 'opacity 0.35s', opacity: 0, pointerEvents: 'none' });
 					stage.timeout(() => $pick.remove(), 400);
 					fn(count);
@@ -1966,8 +1966,8 @@ window.Showtime = function (stage, opts) {
 						if (startedAt >= 0) return;   // (once)
 						self.fx('pick');
 						startedAt = now;
-						// (tapped: it flashes white and swells, then goes)
-						$(this).css({ color: 'white', transition: 'transform 0.25s', transform: 'translate(-50%, -50%) scale(1.15)' });
+						// (tapped: it flashes white, then goes)
+						$(this).css({ color: 'white' });
 						$(this).find('circle, text').attr({ stroke: 'white' }).filter('text').attr({ fill: 'white' });
 						const $b = $(this);
 						stage.timeout(() => { if ($start === $b) dropStart(); }, 250);
@@ -3363,7 +3363,7 @@ window.Showtime = function (stage, opts) {
 					display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px',
 					width: '230px', padding: 0, border: 'none', background: 'none', cursor: 'pointer', pointerEvents: 'auto',
 					fontFamily: font, color: 'white', fontSize: '28px', letterSpacing: '1px',
-					opacity: feedback && !chosen ? 0.25 : 1, transform: chosen ? 'scale(1.25)' : 'none', transition: 'transform 0.2s, opacity 0.2s',
+					opacity: feedback && !chosen ? 0.25 : 1, transition: 'opacity 0.2s',   // (the chosen face: filled, never grown)
 				}).appendTo($row);
 				$('<div>').html(face(i, chosen)).css({ width: '200px', height: '200px' }).appendTo($b);
 				$('<div>').text(f.label).css({ color: f.colour, WebkitTextStroke: `5px ${theme.ink}`, paintOrder: 'stroke fill', whiteSpace: 'nowrap' }).appendTo($b);
@@ -3415,7 +3415,7 @@ window.Showtime = function (stage, opts) {
 			if (IGB.log) IGB.log(`Rated ${f.label} (${rating})`);
 			// a moment to see the face picked, then on
 			render();
-			stage.timeout(() => { if ($layer && part === 'faces') { if (rating <= R.low) go('reasons', 1); else finish(); } }, R.picked * 1000);
+			stage.timeout(() => { if ($layer && part === 'faces') { if (rating <= R.low) go('reasons', 1); else go('glad', 1); } }, R.picked * 1000);   // (a good rating: straight to GLAD YOU LIKED IT!)
 		}
 
 		function finish() {
@@ -3451,10 +3451,9 @@ window.Showtime = function (stage, opts) {
 				const age = bt - partAt;
 				if (part === 'faces' && age > R.wait.faces) go('over');
 				if (part === 'reasons' && age > R.wait.reasons) finish();
-				// THANKS FOR THE FEEDBACK holds (and, for a good rating, scrolls up to
-				// GLAD YOU LIKED IT!), then everything fades away, then on to the end
-				if (part === 'thanks' && age > R.thanks && feedback && feedback.rating > R.low) go('glad', 1);
-				else if ((part === 'thanks' && age > R.thanks) || (part === 'glad' && age > R.glad)) {
+				// THANKS FOR THE FEEDBACK (a low rating) or GLAD YOU LIKED IT! (a good
+				// one) holds, then everything fades away, then on to the end
+				if ((part === 'thanks' && age > R.thanks) || (part === 'glad' && age > R.glad)) {
 					part = 'fade';
 					partAt = bt;
 					if ($layer) $layer.css({ transition: `opacity ${R.fade}s`, opacity: 0 });
