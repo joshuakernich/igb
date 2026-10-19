@@ -67,8 +67,19 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	const GAME_SECONDS = 600;
 	const M = 55;               // field units per metre (about the front wall's pixels per metre too)
-	const BACK = 70;            // a player at the back of the room stands this far up from the near edge
+	const BACK = -130;          // a player at the back of the room stands this far up from the near edge (below it: off the bottom of the walls)
 	const DEPTH = 800;          // and right up at the front wall, this much further
+	// (stepping toward the wall moves you up the field, but less and less near
+	// it: straight on until FORWARD.ease, then easing off to nothing by
+	// FORWARD.flat; the last of the room barely moves you)
+	const FORWARD = { ease: 0.6, flat: 0.8 };
+	const forward = function (near) {
+		const { ease: a, flat: b } = FORWARD;
+		const n = Math.max(0, Math.min(1, near));
+		const top = a + (b - a) / 2;
+		const g = n <= a ? n : n >= b ? top : a + (n - a) - (n - a) * (n - a) / (2 * (b - a));
+		return g / top;
+	};
 	const MOVE_LIMIT = 0.04;    // how far a player may drift on red light, as a share of the wall, before they're out (the lean grows toward it)
 	const GRACE = 0.2;          // seconds after RED LIGHT before movement counts (tracking lag)
 	const TURN_AWAY = 0.76;     // seconds her head takes to turn away after a red light, before GREEN LIGHT
@@ -274,7 +285,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		settings = settingsFor(r);
 		finishF = START_F + 255 + settings.length;
 		dollF = finishF + FINISH_GAP;
-		camEnd = finishF - BACK - DEPTH * 0.45;   // the last stop: the finish line part way up the play area
+		camEnd = finishF - 70 - DEPTH * 0.45;   // the last stop: the finish line part way up the walls
 		blocks = [];
 		movers = [];
 		boulders = [];
@@ -412,7 +423,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const vp = vanishOf(c.wall);
 		return vp + (screenXOf(c) - vp) * SCALE / scaleAt(f);
 	};
-	const bandF = (c) => cam + BACK + nearOf(c.wall, c.px, c.pz) * DEPTH;
+	const bandF = (c) => cam + BACK + forward(nearOf(c.wall, c.px, c.pz)) * DEPTH;
 
 	function resetContestant(c) {
 		c.alive = true;
@@ -430,7 +441,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		c.lift = 0;
 		c.pass = false;
 		c.warned = false;
-		c.f = c.lastF = BACK + c.pz * DEPTH;
+		c.f = c.lastF = BACK + forward(c.pz) * DEPTH;
 		c.x = c.lastX = xOf(c);
 	}
 
@@ -1461,7 +1472,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		if (phase === 'waiting') {
 			// Standing at the start, following their players.
 			for (const c of contestants) {
-				c.f = BACK + nearOf(c.wall, c.px, c.pz) * DEPTH;
+				c.f = BACK + forward(nearOf(c.wall, c.px, c.pz)) * DEPTH;
 				c.x = xOf(c);
 			}
 			separate();
@@ -4396,7 +4407,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		// practice cash on the front wall only, just up the field from them
 		// and all of it short of the start line
 		if (step.id === 'cash') {
-			layCash(cam + BACK + 30, START_F - 60, CONTROLS.cashEvery, true, [1]);
+			layCash(cam + 100, START_F - 60, CONTROLS.cashEvery, true, [1]);
 		}
 		// a practice pad at every corner end, the whole hatch short of the start line
 		if (step.id === 'jump') {
