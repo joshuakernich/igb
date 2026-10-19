@@ -1652,6 +1652,16 @@ window.Showtime = function (stage, opts) {
 			loop(id).addClass('virtual').appendTo($tv);
 		});
 
+		// (the room's floor: dark rubber matting, speckled, in big square tiles, lit a little from the way in)
+		function floorSkin() {
+			const grain = `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 0.75  0 0 0 0 0.6  0 0 0 0 1  0 0 0 0.55 0"/></filter><rect width="240" height="240" filter="url(#n)" opacity="0.5"/></svg>`;
+			return [
+				`url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(grain)}")`,
+				'repeating-linear-gradient(0deg, rgba(0,0,0,0.55) 0 3px, transparent 3px 160px)',
+				'repeating-linear-gradient(90deg, rgba(0,0,0,0.55) 0 3px, transparent 3px 160px)',
+				'radial-gradient(ellipse at 50% 100%, #3a1f6a, #1a0c34 55%, #0c0619 90%)',
+			].join(', ');
+		}
 		// 2. the way in: a little gamebox in 3D, its three inside walls playing the trailers
 		// (inside, a real gamebox's room: its three walls each 16:10, as wide as the
 		// box between its neon edges (less a little inset), standing on the floor,
@@ -1668,7 +1678,7 @@ window.Showtime = function (stage, opts) {
 		loop(clips[0]).addClass('virtual').appendTo(plane({ left: 0, top: 0, width: B.depth + 'px', height: B.h + 'px', transformOrigin: 'left center', transform: 'rotateY(90deg)', filter: 'brightness(0.8)' }));
 		loop(clips[1]).addClass('virtual').appendTo(plane({ left: 0, top: 0, width: B.w + 'px', height: B.h + 'px', transform: `translateZ(${-B.depth}px)` }));
 		loop(clips[2]).addClass('virtual').appendTo(plane({ left: B.w - B.depth + 'px', top: 0, width: B.depth + 'px', height: B.h + 'px', transformOrigin: 'right center', transform: 'rotateY(-90deg)', filter: 'brightness(0.8)' }));
-		plane({ left: 0, top: B.h - B.depth + 'px', width: B.w + 'px', height: B.depth + 'px', transformOrigin: 'bottom center', transform: 'rotateX(90deg)', background: `radial-gradient(ellipse at 50% 100%, #7a4ad8, #2a1258 70%)` });
+		plane({ left: 0, top: B.h - B.depth + 'px', width: B.w + 'px', height: B.depth + 'px', transformOrigin: 'bottom center', transform: 'rotateX(90deg)', background: floorSkin() });   // (a dark, textured floor)
 		plane({ left: 0, top: 0, width: B.w + 'px', height: B.depth + 'px', transformOrigin: 'top center', transform: 'rotateX(-90deg)', background: '#0b0616' });
 		// (the box's front edge, framing the way in, and the neon down its sides)
 		$('<div>').css({ position: 'absolute', left: B.x - 12 + 'px', top: B.y - 12 + 'px', width: B.w + 'px', height: B.h + 'px', border: '12px solid #0b0616', pointerEvents: 'none', zIndex: 2 }).appendTo($front);
