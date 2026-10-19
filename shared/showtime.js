@@ -204,11 +204,8 @@ window.Showtime = function (stage, opts) {
 
 	const TITLE = {
 		dark: 0.4,             // the room goes dark
-		first: 0,              // the first line sets off (straight away)
-		lineGap: 0.3,          // and the next after it
-		glide: 1.0,            // how long a line takes to glide into place (easing gently to a stop)
-		from: [0.8, 0.75],     // where it glides from: this far out (shares of the wall's width and height), the top line from the top left, the next from the bottom right
-		startFade: 0.7,        // the START button fading in
+		in: 1.0,               // the logo, title and START all fly in together over this long (as the sting fades out over them)
+		far: 0.82,             // from a little way off: this big when they set off
 		hold: 1.6,             // then it holds
 		out: 0.5,              // and fades
 		size: 170,
@@ -1766,9 +1763,12 @@ window.Showtime = function (stage, opts) {
 		// (its lines: as given, or the game's title in the manifest, which the end screen's carousel uses too)
 		const listed = IGB.find && opts.id ? IGB.find(opts.id) : null;
 		const lines = (extra && extra.lines) || (listed && listed.title && listed.title.lines) || [{ text: (opts.title || opts.id || '').toUpperCase() }];
-		// when each line sets off, and when the last settles
-		const sets = lines.map((line, li) => T.first + li * T.lineGap);
-		const lastLand = sets[sets.length - 1] + T.glide;
+		// the logo, the title and the button all fly in together, from a little way off,
+		// as the sting fades out over them; when each line sets off, and when they've landed
+		const sets = lines.map(() => 0);
+		const lastLand = T.in;
+		const flyIn = (bt) => 1 - Math.pow(1 - clamp(bt / T.in, 0, 1), 3);   // (0 far, 1 landed: easing in to a stop)
+		const far = (k) => lerp(T.far, 1, k);   // (how big it looks on the way: small far off, full size landed)
 		// the START button's middle: just under the title's last line (a neat gap below it)
 		const startTop = function () {
 			const n = lines.length;
@@ -1797,10 +1797,9 @@ window.Showtime = function (stage, opts) {
 			exit() { dropStart(); },
 			update(dt, bt) {
 				self.blackout = Math.min(INTRO_DIM, bt / T.dark * INTRO_DIM);   // the game's scene still showing behind
-				if (self.cue(lastLand - 0.15)) self.shake = 0.2;   // (gently: it settles rather than slams; no flash, no sound effects)
 				now = bt;
 				// the START button, on the front wall under the title
-				if (start && !$start && startedAt < 0 && bt > lastLand - 0.6) {   // (fading in as the last line settles)
+				if (start && !$start && startedAt < 0) {   // (straight away, flying in with the rest)
 					shownAt = bt;
 					// (its icon, snug in its right end as the pause menu's rows have theirs: a
 					// countdown in a circle, the seconds left in it and a ring running down;
@@ -1812,12 +1811,12 @@ window.Showtime = function (stage, opts) {
 						+ `<circle class="ring" cx="50" cy="50" r="44" fill="none" stroke="${gold}" stroke-width="10" stroke-linecap="round" pathLength="100" stroke-dasharray="100 100" transform="rotate(-90 50 50)"/>`
 						+ `<text class="secs" x="50" y="52" text-anchor="middle" dominant-baseline="middle" font-family="${CLOCK_FONT}, monospace" font-size="52" fill="${gold}">${TITLE.auto}</text></svg>`);
 					$start = $('<button start>').append($('<span>').text('TAP TO START').css({ flex: 1, textAlign: 'left', whiteSpace: 'nowrap' })).append($count).css({
-						position: 'absolute', left: (W + W / 2) + 'px', top: startTop() + 'px', transform: 'translate(-50%, -50%)', opacity: 0,
+						position: 'absolute', left: (W + W / 2) + 'px', top: startTop() + 'px', transform: `translate(-50%, -50%) scale(${T.far})`, opacity: 0,
 						// (the same size and shape as the pause menu's buttons: the word on the left, the icon snug in the right end)
 						width: PAUSE.row.w + 'px', height: PAUSE.row.h + 'px', boxSizing: 'border-box', padding: `0 ${PAUSE.row.inset}px 0 52px`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px',
 						borderRadius: PAUSE.row.h / 2 + 'px', cursor: 'pointer', pointerEvents: 'auto', zIndex: 5, ...button(TYPE.colours.gold, PAUSE.row.size),
 						fontFamily: `"${FONT}", sans-serif`, fontSize: PAUSE.row.size + 'px', lineHeight: 1, letterSpacing: '2px',
-						transition: `transform 0.25s, opacity ${T.startFade}s`,
+						transition: `transform ${T.in}s cubic-bezier(.2,.7,.3,1), opacity ${T.in}s`,
 					}).appendTo(stage.$ui)
 						.on('click', function (e) {
 							e.stopPropagation();
@@ -1829,7 +1828,7 @@ window.Showtime = function (stage, opts) {
 							const $b = $(this);
 							stage.timeout(() => { if ($start === $b) dropStart(); }, 250);
 						});
-					stage.timeout(() => $start && $start.css({ opacity: 1 }), 30);   // (it fades in)
+					stage.timeout(() => $start && $start.css({ opacity: 1, transform: 'translate(-50%, -50%) scale(1)' }), 30);   // (it flies in)
 				}
 				// counting down; at nought it presses itself
 				if ($start && $count && startedAt < 0) {
@@ -1849,8 +1848,10 @@ window.Showtime = function (stage, opts) {
 						const L = TITLE.logo;
 						const t = showTime;
 						c.save();
-						c.globalAlpha *= fade * clamp(bt / 0.5, 0, 1);
+						const k = flyIn(bt);
+						c.globalAlpha *= fade * k;
 						c.translate(W / 2, L.top + logo.h / 2 + Math.sin(t * L.bob[1]) * L.bob[0]);
+						c.scale(far(k), far(k));
 						c.rotate(L.tilt + Math.sin(t * L.sway[1]) * L.sway[0]);
 						c.shadowColor = 'rgba(0,0,0,0.5)';
 						c.shadowOffsetY = L.drop;
@@ -1863,15 +1864,13 @@ window.Showtime = function (stage, opts) {
 						const wide = measure(c, line.text, full);
 						const size = wide > W * T.fit ? full * W * T.fit / wide : full;
 						const y = (start ? T.raised : 470) + (li - (n - 1) / 2) * size * 1.05;
-						const age = bt - sets[li];
-						if (age <= 0) return;
-						// gliding in from off the wall's corner, easing gently to a stop
-						const k = clamp(age / T.glide, 0, 1);
-						const left = 1 - Math.pow(1 - k, 4);
-						const side = li % 2 ? 1 : -1;   // (-1: from the top left; 1: from the bottom right)
-						const dx = side * T.from[0] * W * (1 - left);
-						const dy = side * T.from[1] * H * (1 - left);
-						self.text(c, line.text, W / 2 + dx, y + dy, size, { fill: line.fill || 'white', glow: line.glow || theme.accent, alpha: fade * clamp(age / 0.4, 0, 1), exact: true });
+						// flying in from a little way off, with the logo and the button
+						const k = flyIn(bt);
+						c.save();
+						c.translate(W / 2, y);
+						c.scale(far(k), far(k));
+						self.text(c, line.text, 0, 0, size, { fill: line.fill || 'white', glow: line.glow || theme.accent, alpha: fade * k, exact: true });
+						c.restore();
 					});
 				});
 			},
