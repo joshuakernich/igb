@@ -3431,8 +3431,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 					{ s: 'arun', i: 15, x: -10, y: 7.5 },
 				],
 				freeze: [
-					{ s: 'aact', i: 4 },
-					{ s: 'aact', i: 5, x: -1, y: -2 },
+					{ s: 'aact', i: 7, y: -2.5 },
+					{ s: 'aact', i: 6, x: 2, y: -2 },
 				],
 				idle: [
 					{ s: 'aact', i: 0, x: -0.5, y: -1.5 },
