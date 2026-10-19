@@ -1679,7 +1679,7 @@ window.Showtime = function (stage, opts) {
 		const open = F.panel.x - B.x;                            // (the way in: the box's mouth left of the panel)
 		G.w = (open - 2 * (G.post + G.inset) - G.gap) / 2;       // (the barriers between posts set a little in from its edges, filling the space between)
 		const gx = G.inset + G.post;
-		G.h = (H - F.box.y) / 4.2 * 1.15;                             // (a little under a quarter of the way in's height)
+		G.h = (H - F.box.y) / 4.2 * 1.38;                             // (a little under a quarter of the way in's height)
 		const gy = B.h - G.h - G.lift;                           // (raised off the floor: a gap under them)
 		// (real 3D blocks: a cuboid of faces, x across, y down, z out toward us;
 		// face(name) styles each of front, back, left, right, top, bottom)
