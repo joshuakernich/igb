@@ -1789,10 +1789,15 @@ window.Showtime = function (stage, opts) {
 					}).appendTo(stage.$ui)
 						.on('click', function (e) {
 							e.stopPropagation();
+							if (startedAt >= 0) return;   // (once)
 							self.fx('pick');
 							startedAt = now;
-							$(this).css({ transform: 'translate(-50%, -50%) scale(1.25)' });
-							dropStart();
+							// (tapped: filled with its colour, its words and icon gone black)
+							$(this).css({ background: TYPE.colours.gold, color: '#000', WebkitTextStroke: '0px transparent', boxShadow: 'none' });
+							$(this).find('circle').attr('stroke', '#000');
+							$(this).find('text').attr('fill', '#000');
+							const $b = $(this);
+							stage.timeout(() => { if ($start === $b) dropStart(); }, 250);
 						});
 					stage.timeout(() => $start && $start.css({ opacity: 1 }), 30);   // (it fades in)
 				}
