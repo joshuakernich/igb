@@ -1555,7 +1555,7 @@ window.Showtime = function (stage, opts) {
 	// the box, and the sting begins.
 	const FRONT = {
 		tv: { y: 30, h: 170, gap: 52, lean: -16 },               // the three TVs across the top (16:9), over the box, leaning forward (degrees)
-		box: { x: 56, y: 230, w: 1488, h: 770, depth: 1100, lens: 1000 },   // the gamebox's way in, under the fascia with the TVs (the box itself the wall's whole height, the arcade showing either side of it): its mouth, how deep it goes, its perspective
+		box: { x: 56, y: 230, w: 1488, h: 770, lens: 1000 },   // the gamebox's way in, under the fascia with the TVs (the box itself the wall's whole height, the arcade showing either side of it): its mouth, how deep it goes, its perspective
 		zoom: { x: 465, y: 615 },                                // where the eye looks into it (the middle of what shows of it, left of the panel): the vanishing point, and the rush's centre
 		panel: { x: 874, y: 230, w: 670, h: 770 },               // the purple panel on the right, over the box (the way in 55% of it, the kiosk 45%)
 		screen: { inset: 34 },                                   // its screen, filling the panel but for this margin
@@ -1632,7 +1632,8 @@ window.Showtime = function (stage, opts) {
 		});
 
 		// 2. the way in: a little gamebox in 3D, its three inside walls playing the trailers
-		const B = F.box;
+		// (inside, a real gamebox's room: its three walls each 16:10, as tall as the way in, as deep as it's wide)
+		const B = Object.assign({}, F.box, { w: F.box.h * 16 / 10, depth: F.box.h * 16 / 10 });
 		const $mouth = $('<div>').css({ position: 'absolute', left: B.x + 'px', top: B.y + 'px', width: B.w + 'px', height: B.h + 'px', perspective: B.lens + 'px', perspectiveOrigin: `${F.zoom.x - B.x}px ${F.zoom.y - B.y}px` }).appendTo($front);
 		const $box = $('<div>').css({ position: 'absolute', inset: 0, transformStyle: 'preserve-3d' }).appendTo($mouth);
 		const plane = (css) => $('<div>').css(Object.assign({ position: 'absolute', overflow: 'hidden', backfaceVisibility: 'visible' }, css)).appendTo($box);
