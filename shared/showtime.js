@@ -1544,39 +1544,111 @@ window.Showtime = function (stage, opts) {
 	// "HOW MANY PLAYERS?" and a row of big number buttons on the front wall,
 	// in the show's type and colours. (Buttons, not canvas, so a click or a
 	// tap on the wall picks: <button count="3">, as the HUD's picker had.)
+	// The squad pick: the gamebox's own frontage on the front wall, as it
+	// stands in the venue (its side panel with the logo, the glowing way in
+	// with its gates, three screens over it showing the games, and the
+	// check-in kiosk beside it), HOW MANY PLAYERS? asked on the kiosk's
+	// screen, the counts to tap under it.
+	const KIOSK = { screen: { x: 1214, y: 372, w: 242, h: 330 }, purple: '#b46bff', glow: '#d9b8ff' };
+	function frontage() {
+		const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+		// the three screens over the way in: this game in the middle, two more either side
+		const listed = (IGB.menu || []).filter((id) => !RATE.notAgain.includes(id)).map((id) => IGB.find(id)).filter(Boolean);
+		const here = IGB.find && opts.id ? IGB.find(opts.id) : null;
+		const others = listed.filter((g) => !here || g.id !== here.id);
+		const shown = [others[0], here || others[1], others[here ? 1 : 2]].map((g) => g || { name: '' });
+		const screen = function (g, x) {
+			const lines = (g.title && g.title.lines) || [{ text: String(g.name || '').toUpperCase(), fill: '#ffffff' }];
+			const size = lines.length > 1 ? 30 : 36;
+			const y0 = 205 - (lines.length - 1) * size * 0.55;
+			return `<rect x="${x}" y="122" width="196" height="166" rx="6" fill="url(#kScreen)" stroke="#0b0614" stroke-width="6"/>`
+				+ lines.map((l, i) => `<text x="${x + 98}" y="${y0 + i * size * 1.05}" text-anchor="middle" dominant-baseline="middle" font-family="${FONT}, sans-serif" font-size="${size}" fill="${l.fill || '#fff'}" stroke="#0b1022" stroke-width="5" paint-order="stroke fill">${esc(l.text)}</text>`).join('')
+				+ `<text x="${x + 98}" y="268" text-anchor="middle" font-family="${FONT}, sans-serif" font-size="13" fill="#ffffff" opacity="0.75">IMMERSIVE GAMEBOX</text>`;
+		};
+		const bolt = (x, y) => `<path d="M${x} ${y - 13} L${x - 7} ${y + 2} L${x - 1} ${y + 2} L${x - 5} ${y + 14} L${x + 7} ${y - 3} L${x + 1} ${y - 3} Z" fill="#ffffff"/>`;
+		return `<svg viewBox="0 0 1600 1000" width="1600" height="1000" style="position:absolute;left:0;top:0">
+			<defs>
+				<linearGradient id="kSide" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2b0f52"/><stop offset="0.6" stop-color="#4a1877"/><stop offset="1" stop-color="#7a2a7e"/></linearGradient>
+				<linearGradient id="kIn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9f86ff"/><stop offset="0.55" stop-color="#c9b8ff"/><stop offset="1" stop-color="#7b5ae6"/></linearGradient>
+				<linearGradient id="kScreen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a1580"/><stop offset="1" stop-color="#8a3ad8"/></linearGradient>
+				<linearGradient id="kFloor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b2016"/><stop offset="1" stop-color="#140a07"/></linearGradient>
+				<filter id="kGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7"/></filter>
+			</defs>
+			<rect x="0" y="0" width="1600" height="1000" fill="#07040d" opacity="0.72"/>
+			<polygon points="0,880 1600,880 1600,1000 0,1000" fill="url(#kFloor)"/>
+			<ellipse cx="860" cy="905" rx="520" ry="40" fill="#8a5cff" opacity="0.28" filter="url(#kGlow)"/>
+			<!-- the side panel, receding, its artwork and the logo -->
+			<polygon points="140,180 568,112 568,905 140,840" fill="url(#kSide)"/>
+			<circle cx="300" cy="300" r="70" fill="#ff6ad5" opacity="0.18"/><circle cx="470" cy="560" r="44" fill="#ffffff" opacity="0.08"/>
+			<path d="M170 760 L230 700 L260 730 L320 650 L360 700 L420 620 L470 690 L540 640 L540 860 L170 820 Z" fill="#1a0833" opacity="0.7"/>
+			<image href="${TITLE.logo.src}" x="190" y="440" width="330" height="82" transform="skewY(-9)" preserveAspectRatio="xMidYMid meet" opacity="0.95"/>
+			<!-- the way in: the glowing room, the gates -->
+			<rect x="568" y="300" width="620" height="605" fill="url(#kIn)"/>
+			<polygon points="568,300 650,360 1106,360 1188,300" fill="#ffffff" opacity="0.18"/>
+			<rect x="650" y="360" width="456" height="470" fill="#ffffff" opacity="0.10"/>
+			<polygon points="568,905 650,830 1106,830 1188,905" fill="#e8dcff" opacity="0.5"/>
+			<rect x="598" y="590" width="58" height="315" rx="6" fill="#120c1c"/><rect x="598" y="586" width="58" height="10" rx="4" fill="#3ad1ff"/>
+			<rect x="1100" y="590" width="58" height="315" rx="6" fill="#120c1c"/><rect x="1100" y="586" width="58" height="10" rx="4" fill="#3ad1ff"/>
+			<rect x="868" y="650" width="20" height="255" fill="#2a2238"/>
+			<rect x="656" y="660" width="212" height="150" fill="#dce8ff" opacity="0.22" stroke="#ffffff" stroke-opacity="0.45" stroke-width="3"/>
+			<rect x="888" y="660" width="212" height="150" fill="#dce8ff" opacity="0.22" stroke="#ffffff" stroke-opacity="0.45" stroke-width="3"/>
+			<!-- the fascia, its three screens -->
+			<rect x="568" y="108" width="620" height="192" fill="#120a20"/>
+			${screen(shown[0], 572)}${screen(shown[1], 780)}${screen(shown[2], 988)}
+			<!-- the neon edge -->
+			<line x1="568" y1="112" x2="568" y2="905" stroke="${KIOSK.glow}" stroke-width="14" filter="url(#kGlow)"/>
+			<line x1="568" y1="112" x2="568" y2="905" stroke="#ffffff" stroke-width="5"/>
+			<!-- the kiosk -->
+			<rect x="1196" y="318" width="370" height="600" rx="10" fill="#17121f"/>
+			<rect x="1196" y="900" width="370" height="20" fill="#e9e4f0" opacity="0.85"/>
+			<circle cx="1335" cy="340" r="9" fill="#05030a"/>
+			<rect x="${KIOSK.screen.x - 8}" y="${KIOSK.screen.y - 8}" width="${KIOSK.screen.w + 16}" height="${KIOSK.screen.h + 16}" rx="10" fill="#05030a"/>
+			<text font-family="${FONT}, sans-serif" font-size="30" fill="#ffffff" text-anchor="middle"><tspan x="1512" y="410">CHECK</tspan><tspan x="1512" y="448">IN</tspan><tspan x="1512" y="486">OR</tspan><tspan x="1512" y="524">BOOK</tspan></text>
+			<path d="M1490 560 l22 18 l22 -18 M1490 588 l22 18 l22 -18" stroke="#ffffff" stroke-opacity="0.5" stroke-width="5" fill="none"/>
+			${bolt(1222, 770)}<text x="1240" y="780" font-family="${FONT}, sans-serif" font-size="28" fill="#ffffff">2–6 PLAYERS</text>
+			${bolt(1222, 832)}<text x="1240" y="842" font-family="${FONT}, sans-serif" font-size="28" fill="#ffffff">10–60 MINUTE GAMES</text>
+		</svg>`;
+	}
+
 	self.pickPlayers = function (fn) {
 		const font = `"${FONT}", sans-serif`;
+		const S = KIOSK.screen;
 		const $pick = $('<showtime-picker>').css({
 			position: 'absolute', left: W + 'px', top: 0, width: W + 'px', height: H + 'px',
-			display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '70px',
-			pointerEvents: 'auto', fontFamily: font, color: 'white',
+			pointerEvents: 'auto', fontFamily: font, color: 'white', opacity: 0, transition: 'opacity 0.5s',
 		}).appendTo(stage.$ui);
-		$('<div>').text('HOW MANY PLAYERS?').css({
-			fontSize: '110px', letterSpacing: '2px', lineHeight: 1,
-			textShadow: '0 9px 0 rgba(0,0,0,0.5)',
-			WebkitTextStroke: `7px ${theme.ink}`, paintOrder: 'stroke fill',
-			transform: 'scale(0.6)', opacity: 0, transition: 'transform 0.45s cubic-bezier(.2,1.6,.4,1), opacity 0.3s',
+		$(frontage()).appendTo($pick);
+		// the kiosk's screen: HOW MANY PLAYERS?, the counts under it
+		const $screen = $('<div>').css({
+			position: 'absolute', left: S.x + 'px', top: S.y + 'px', width: S.w + 'px', height: S.h + 'px', boxSizing: 'border-box', padding: '22px 14px',
+			background: 'linear-gradient(160deg, #2a0f5a, #4b1c8a)', borderRadius: '6px',
+			display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '22px',
 		}).appendTo($pick);
-		const $row = $('<div>').css({ display: 'flex', gap: '44px' }).appendTo($pick);
+		$('<div>').text('HOW MANY PLAYERS?').css({
+			fontSize: '30px', lineHeight: 1.05, textAlign: 'center', letterSpacing: '1px', color: TYPE.colours.gold, width: '100%', whiteSpace: 'normal', textWrap: 'balance',   // (two lines, to fit the screen)
+			WebkitTextStroke: `4px ${theme.ink}`, paintOrder: 'stroke fill',
+		}).appendTo($screen);
+		const $row = $('<div>').css({ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px', width: '100%' }).appendTo($screen);
 		for (let n = 2; n <= 6; n++) {
 			$('<button>').attr('count', n).text(n).css({
-				width: '190px', height: '190px', borderRadius: '50%', boxSizing: 'border-box', ...button(TYPE.colours.gold, 110),
+				width: '62px', height: '62px', borderRadius: '50%', boxSizing: 'border-box', ...button(TYPE.colours.gold, 36),
+				borderWidth: '4px', boxShadow: '0 5px 0 rgba(0,0,0,0.45)',
 				display: 'flex', alignItems: 'center', justifyContent: 'center',
-				fontFamily: font, fontSize: '110px', lineHeight: '1', cursor: 'pointer', padding: 0,
-				transform: 'scale(0)', transition: `transform 0.4s cubic-bezier(.2,1.6,.4,1) ${0.25 + (n - 2) * 0.08}s`,
+				fontFamily: font, fontSize: '36px', lineHeight: '1', cursor: 'pointer', padding: 0,
+				transform: 'scale(0)', transition: `transform 0.4s cubic-bezier(.2,1.6,.4,1) ${0.35 + (n - 2) * 0.08}s`,
 			}).appendTo($row)
 				.on('click', function () {
 					const count = parseInt($(this).attr('count'), 10);
 					self.fx('pick');
 					press(this);   // (tapped: the standard colour shift, no growing)
-					$pick.css({ transition: 'opacity 0.35s', opacity: 0, pointerEvents: 'none' });
-					stage.timeout(() => $pick.remove(), 400);
+					$pick.css({ transition: 'opacity 0.45s', opacity: 0, pointerEvents: 'none' });
+					stage.timeout(() => $pick.remove(), 500);
 					fn(count);
 				});
 		}
-		// in: the question pops, the numbers pop in after it
+		// in: the frontage fades up, the counts pop in on the kiosk
 		stage.timeout(function () {
-			$pick.children().first().css({ transform: 'scale(1)', opacity: 1 });
+			$pick.css({ opacity: 1 });
 			$row.children().css({ transform: 'scale(1)' });
 		}, 30);
 		return $pick;
