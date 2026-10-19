@@ -1785,7 +1785,7 @@ window.Showtime = function (stage, opts) {
 		let now = 0;   // (the beat's time, for the button's click)
 		const length = start ? Infinity : lastLand + T.hold + T.out;
 		const outAt = () => (start ? (startedAt < 0 ? Infinity : startedAt) : length - T.out);
-		const dropStart = () => { if ($start) { const $b = $start; $start = null; $b.css({ opacity: 0, pointerEvents: 'none' }); stage.timeout(() => $b.remove(), 400); } };
+		const dropStart = () => { if ($start) { const $b = $start; $start = null; $b.css({ transition: 'opacity 0.4s', opacity: 0, pointerEvents: 'none' }); stage.timeout(() => $b.remove(), 400); } };
 		return extend({
 			id: 'title',
 			length,
@@ -1817,7 +1817,7 @@ window.Showtime = function (stage, opts) {
 						width: PAUSE.row.w + 'px', height: PAUSE.row.h + 'px', boxSizing: 'border-box', padding: `0 ${PAUSE.row.inset}px 0 52px`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px',
 						borderRadius: PAUSE.row.h / 2 + 'px', cursor: 'pointer', pointerEvents: 'auto', zIndex: 5, ...button(TYPE.colours.gold, PAUSE.row.size),
 						fontFamily: `"${FONT}", sans-serif`, fontSize: PAUSE.row.size + 'px', lineHeight: 1, letterSpacing: '2px',
-						transition: `transform ${T.in}s cubic-bezier(.2,.7,.3,1), opacity ${T.in}s`,
+						transition: 'none',   // (it flies in frame by frame, in step with the logo and title)
 					}).appendTo(stage.$ui)
 						.on('click', function (e) {
 							e.stopPropagation();
@@ -1829,7 +1829,11 @@ window.Showtime = function (stage, opts) {
 							const $b = $(this);
 							stage.timeout(() => { if ($start === $b) dropStart(); }, 250);
 						});
-					stage.timeout(() => $start && $start.css({ opacity: 1, transform: 'translate(-50%, -50%) scale(1)' }), 30);   // (it flies in)
+				}
+				// flying in, as the logo and title do
+				if ($start && startedAt < 0 && bt <= T.in + 0.1) {
+					const k = flyIn(bt);
+					$start.css({ opacity: k, transform: `translate(-50%, -50%) scale(${far(k)})` });
 				}
 				// counting down; at nought it presses itself
 				if ($start && $count && startedAt < 0) {
