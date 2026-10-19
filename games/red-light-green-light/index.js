@@ -4159,6 +4159,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// The giant doll: orange pinafore over a yellow top, black bob with
 	// pigtails, small beady eyes. As in the show her body faces the tree,
 	// back to the players; only her head turns round to watch them.
+	const DOLL_SIZE = 1.05;   // how big she's drawn, all of her (against the field's scale where she stands)
 	function drawDoll(ctx) {
 		const p = at(DOLL_X, dollF);
 		const her = function (c) {
@@ -4166,9 +4167,9 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			art.with(c, { x: dollTune.head.x, y: -dollHeadY(), scale: dollTune.head.scale }, (c2) => dollHead(c2, head.yaw, 0));
 		};
 		// her shadow, pigtails and all
-		if (dollBodyImg && sheets.head) castShape(ctx, shapeOf('doll', (g) => art.with(g, { scale: 0.35 }, her), 400 * 0.35 * 2.2, (dollHeadY() + 220) * 0.35), p.x, p.y, dollF, p.s * 0.82 / 0.35, 1);   // (just the cast shadow: no dark patch under her)
-		else softShadow(ctx, p.x, p.y, 150 * p.s * 0.82, 30 * p.s * 0.82, 0.25, 1, 700 * p.s * 0.82, dollF);
-		art.with(ctx, { x: p.x, y: p.y, scale: p.s * 0.82 }, function (c) {
+		if (dollBodyImg && sheets.head) castShape(ctx, shapeOf('doll', (g) => art.with(g, { scale: 0.35 }, her), 400 * 0.35 * 2.2, (dollHeadY() + 220) * 0.35), p.x, p.y, dollF, p.s * DOLL_SIZE / 0.35, 1);   // (just the cast shadow: no dark patch under her)
+		else softShadow(ctx, p.x, p.y, 150 * p.s * DOLL_SIZE, 30 * p.s * DOLL_SIZE, 0.25, 1, 700 * p.s * DOLL_SIZE, dollF);
+		art.with(ctx, { x: p.x, y: p.y, scale: p.s * DOLL_SIZE }, function (c) {
 			dollBody(c, false);
 			art.with(c, { x: dollTune.head.x, y: -dollHeadY(), scale: dollTune.head.scale }, (c2) => dollHead(c2, head.yaw, glare));
 		});
@@ -4542,14 +4543,14 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// her two pupils, on the screen (as drawDoll draws her)
 	function dollEyes() {
 		const p = at(DOLL_X, dollF);
-		const S = p.s * 0.82;
+		const S = p.s * DOLL_SIZE;
 		const hs = dollTune.head.scale;
 		return [-1, 1].map((side) => { const e = pupil(side); return { x: p.x + S * (dollTune.head.x + hs * e.x), y: p.y + S * (-dollHeadY() + hs * e.y) }; });
 	}
 
 	function dollFace() {
 		const p = at(DOLL_X, dollF);
-		return { x: DOLL_X, y: p.y - dollHeadY() * 0.82 * p.s + 20 };
+		return { x: DOLL_X, y: p.y - dollHeadY() * DOLL_SIZE * p.s + 20 };
 	}
 
 	// The running order. Each beat has its length and its own update and
