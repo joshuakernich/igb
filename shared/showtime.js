@@ -1559,7 +1559,7 @@ window.Showtime = function (stage, opts) {
 		inner: 24,                                               // the room inside, this far in from the neon edges   // the gamebox's way in, under the fascia with the TVs (the box itself the wall's whole height, the arcade showing either side of it): its mouth, how deep it goes, its perspective
 		zoom: { x: 465, y: 550 },                                // where the eye looks into it (the middle of what shows of it, left of the panel): the vanishing point, and the rush's centre
 		panel: { x: 874, y: 230, w: 670, h: 770 },               // the purple panel on the right, over the box (the way in 55% of it, the kiosk 45%)
-		screen: { inset: 34 },                                   // its screen, filling the panel but for this margin
+		screen: { inset: 34 },                                   // its 9:16 screen, this far in from the panel's top left (as tall as the panel allows)
 		gate: { gap: 14, post: 92, inset: 46, lift: 120 },                  // the glass barriers, side by side across the whole way in, a third of its height, held up off the floor (lift) by chunky posts, set in from the way in's edges (inset)
 		neon: '#c06bff',                                         // the strips down the box's sides
 		purple: '#6326c8',                                       // the panels, one flat purple
@@ -1670,11 +1670,11 @@ window.Showtime = function (stage, opts) {
 		}
 
 		// 5. the purple panel on the right, its screen (filling it) asking HOW MANY PLAYERS?
-		const P = F.panel;
+		const P = Object.assign({}, F.panel, { y: B.y, h: H - B.y });   // (from the top panel down to the floor)
 		$('<div>').css({ position: 'absolute', left: P.x + 'px', top: P.y + 'px', width: P.w + 'px', height: P.h + 'px', borderRadius: '14px', background: F.purple, zIndex: 3 }).appendTo($front);
-		const sw = P.w - 2 * F.screen.inset, sh = P.h - 2 * F.screen.inset;
+		const sh = P.h - 2 * F.screen.inset, sw = sh * 9 / 16;   // (a 9:16 screen, as tall as fits, in the panel's top left)
 		const $screen = $('<div>').css({
-			position: 'absolute', left: P.x + (P.w - sw) / 2 + 'px', top: P.y + (P.h - sh) / 2 + 'px', width: sw + 'px', height: sh + 'px', boxSizing: 'border-box', padding: '40px 22px',
+			position: 'absolute', left: P.x + F.screen.inset + 'px', top: P.y + F.screen.inset + 'px', width: sw + 'px', height: sh + 'px', boxSizing: 'border-box', padding: '40px 22px',
 			background: 'linear-gradient(180deg, #1a0a36, #2b0f5a)', border: '10px solid #05030a', borderRadius: '16px',
 			display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '40px', zIndex: 3,
 		}).appendTo($front);
