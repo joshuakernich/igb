@@ -288,11 +288,13 @@ window.Showtime = function (stage, opts) {
 		intro: 1.0,
 		play: 6,               // the whole game, replayed in this long
 		hold: 1.0,             // looping, it holds on the end this long before going again
-		move: 0.9,             // halfway through, it moves up to the corner in this long (then the rating comes in beside it)
+		handoff: 0.25,         // this far through the game, it moves up to the corner,
+		move: 0.9,             // taking this long (then the rating comes in beside it)
 		corner: { scale: 0.52, margin: 40, gap: 34, qr: 0.8 },   // in the corner: how small, how far in from the edges; the QR code under it, how far below, how small
 		zoom: 1.6,             // the replay, zoomed in this close on the room
 		footroom: 30,          // keeping this much under the feet of anyone at the very back
-		window: { x: 250, y: 190, w: 960, bar: 80, tilt: 0.035 },   // the window it plays in: its left and its top (under its bar), its width; the bar along its top; how far it's tipped to the left (radians)
+		window: { x: 330, y: 150, size: 680, bar: 70, tilt: 0.035 },   // the window it plays in, a square: its left, its top, its size; the band over its top (the name and score); how far it's tipped to the left (radians)
+		view: 900,             // how much of the room (wall pixels) the square shows across
 		qr: { size: 290, pad: 20, over: 90, tilt: 0.06, link: 'https://joshuakernich.github.io/igb/' },   // the QR code over its right edge, halfway down: its size, the white round it; how far in over the window's right edge; tipped the other way; where it goes (for now: the game, on the hub)
 		trail: 30,             // samples of trail behind each player
 	};
@@ -2792,8 +2794,8 @@ window.Showtime = function (stage, opts) {
 	})();
 	self.qr = qr;
 
-	// The replay, as a gif: the whole game, fast, looping. It plays big in
-	// the middle, then halfway through moves up to the top right corner (the
+	// The replay, as a gif: the whole game, fast, looping, in a square. It plays big in
+	// the middle, then a quarter of the way through moves up to the top right corner (the
 	// QR code under it), where it keeps playing through the rating beside it.
 	const gif = { data: [], span: SECONDS, t: 0, on: false, stopped: false };
 	function gifStart() {
@@ -2844,35 +2846,36 @@ window.Showtime = function (stage, opts) {
 				}
 				people.sort((x, y) => y.spot.z - x.spot.z);   // far first
 				const WIN = REPLAY.window;
-				const wh = WIN.w * H / W;   // (the replay, shrunk into the window whole)
+				const S = WIN.size;   // (a square: the replay fills it, the name and score over its top)
 				const game = (IGB.find && IGB.find(opts.id)) || { name: opts.title || opts.id || '' };
+				const square = function (c) {
+					c.beginPath();
+					c.roundRect ? c.roundRect(WIN.x, WIN.y, S, S, 22) : c.rect(WIN.x, WIN.y, S, S);
+				};
 				self.onWalls(ctx, function (c) {
 					c.save();
 					c.globalAlpha *= easeOut(between(bt, 0, 0.4));
 					// the window, tipped a little to the left: in the middle, or (m 1) small in the top right corner
 					c.save();
-					const wcx = WIN.x + WIN.w / 2, wcy = WIN.y + (wh - WIN.bar) / 2;
+					const wcx = WIN.x + S / 2, wcy = WIN.y + S / 2;
 					const C = REPLAY.corner;
-					const fw = WIN.w + 16, fh = wh + WIN.bar + 16;   // (the whole window, its frame and all)
-					const sx = W - C.margin - C.scale * fw / 2, sy = C.margin + C.scale * fh / 2;
+					const fw = S + 16;   // (the whole window, its frame and all)
+					const sx = W - C.margin - C.scale * fw / 2, sy = C.margin + C.scale * fw / 2;
 					c.translate(lerp(wcx, sx, m), lerp(wcy, sy, m));
 					c.scale(lerp(1, C.scale, m), lerp(1, C.scale, m));
 					c.rotate(-WIN.tilt);
 					c.translate(-wcx, -wcy);
-					// the window: a bar along its top (the game's name, the team's score), the replay under it
-					art.roundRect(c, WIN.x - 8, WIN.y - WIN.bar - 8, WIN.w + 16, wh + WIN.bar + 16, 30, { fill: 'rgba(0,0,0,0.75)', shadow: { color: 'rgba(0,0,0,0.5)', blur: 40 } });
+					art.roundRect(c, WIN.x - 8, WIN.y - 8, S + 16, S + 16, 30, { fill: 'rgba(0,0,0,0.75)', shadow: { color: 'rgba(0,0,0,0.5)', blur: 40 } });
 					c.save();
-					c.beginPath();
-					c.roundRect ? c.roundRect(WIN.x, WIN.y - WIN.bar, WIN.w, wh + WIN.bar, 22) : c.rect(WIN.x, WIN.y - WIN.bar, WIN.w, wh + WIN.bar);   // (the replay right up to the window's top edge, under the title)
+					square(c);
 					c.clip();
-					c.translate(WIN.x, WIN.y);
-					c.scale(WIN.w / W, WIN.w / W);
-					// (zoomed in close on the action: down to the feet of anyone at the very back of the room, the space above cropped off)
+					// the room, close on the action: REPLAY.view of it across (and down), down to the feet of anyone at the very back
 					const foot = roomPoint(0, 0, roomSpot([0.5, 0]).z)[1] + REPLAY.footroom;
 					c.save();
-					c.translate(W / 2, 0);
-					c.scale(REPLAY.zoom, REPLAY.zoom);
-					c.translate(-W / 2, -(foot - H / REPLAY.zoom));
+					c.translate(WIN.x + S / 2, WIN.y + S);
+					c.scale(S / REPLAY.view, S / REPLAY.view);
+					c.translate(-W / 2, -foot);
+					art.rect(c, -W, -H, 3 * W, 3 * H, { fill: '#140e1c' });
 					drawRoom(c);
 					// each player's recent path, glowing faintly on the floor
 					for (const who of people) {
@@ -2892,47 +2895,40 @@ window.Showtime = function (stage, opts) {
 						person(c, who.p, x, y, s, who.stride);
 					}
 					c.restore();
-					// ▶▶ ×N, blinking
+					// over the top: a soft shade, the game's name and the team's score; under them the time (a REC dot) and ▶▶ ×N
+					const top = WIN.y;
+					art.rect(c, WIN.x, top, S, WIN.bar * 2, { fill: art.linear(c, 0, top, 0, top + WIN.bar * 2, ['rgba(0,0,0,0.65)', 'rgba(0,0,0,0)']) });
+					const row2 = top + WIN.bar + 8;
+					if (Math.floor(bt * 2) % 2 === 0) art.circle(c, WIN.x + 34, row2, 9, { fill: '#ff3a3a' });
+					self.text(c, mmss(SECONDS - gameT), WIN.x + 54, row2, 38, { align: 'left', fill: 'white', font: CLOCK_FONT });
 					if (k < 1 && Math.floor(bt * 3) % 2 === 0) {
 						c.save();
-						c.translate(1270, 90);
-						for (const dx of [0, 44]) art.poly(c, [[dx, -26], [dx + 40, 0], [dx, 26]], { fill: 'white' });
+						c.translate(WIN.x + S - 150, row2);
+						for (const dx of [0, 26]) art.poly(c, [[dx, -15], [dx + 24, 0], [dx, 15]], { fill: 'white' });
 						c.restore();
-						self.text(c, '×' + speed, 1420, 92, 64, { glow: theme.accent });
+						self.text(c, '×' + speed, WIN.x + S - 26, row2, 38, { align: 'right', glow: theme.accent });
 					}
-					self.text(c, mmss(SECONDS - gameT), 200, 92, 64, { fill: 'white', font: CLOCK_FONT });
-					// a REC dot, for the camera at the back
-					if (Math.floor(bt * 2) % 2 === 0) art.circle(c, 200 - 150, 92, 14, { fill: '#ff3a3a' });
 					// the timeline, along the window's bottom edge, edge to edge, with the big moments marked
-					const bx0 = 0;
-					const bx1 = W;
-					const by = H - 12;
-					art.rect(c, bx0, by - 12, bx1 - bx0, 24, { fill: 'rgba(0,0,0,0.45)' });
-					art.rect(c, bx0, by - 12, (bx1 - bx0) * k, 24, { fill: theme.accent });
-					for (const m of marks) {
-						const mk = (m - data[0].t) / span;
+					const by = WIN.y + S - 7;
+					art.rect(c, WIN.x, by - 7, S, 14, { fill: 'rgba(0,0,0,0.45)' });
+					art.rect(c, WIN.x, by - 7, S * k, 14, { fill: theme.accent });
+					for (const mm of marks) {
+						const mk = (mm - data[0].t) / span;
 						const past = mk <= k;
-						art.poly(c, star(bx0 + (bx1 - bx0) * mk, by, past ? 26 : 18), { fill: past ? theme.gold : 'rgba(255,255,255,0.4)' });
+						art.poly(c, star(WIN.x + S * mk, by, past ? 16 : 11), { fill: past ? theme.gold : 'rgba(255,255,255,0.4)' });
 					}
 					c.restore();
-					// over the top of it: a soft shade, the game's name, the team's score
-					c.save();
-					c.beginPath();
-					c.roundRect ? c.roundRect(WIN.x, WIN.y - WIN.bar, WIN.w, wh + WIN.bar, 22) : c.rect(WIN.x, WIN.y - WIN.bar, WIN.w, wh + WIN.bar);
-					c.clip();
-					art.rect(c, WIN.x, WIN.y - WIN.bar, WIN.w, WIN.bar * 1.6, { fill: art.linear(c, 0, WIN.y - WIN.bar, 0, WIN.y - WIN.bar + WIN.bar * 1.6, ['rgba(0,0,0,0.6)', 'rgba(0,0,0,0)']) });
-					c.restore();
-					self.text(c, String(game.name).toUpperCase(), WIN.x + 26, WIN.y - WIN.bar / 2 - 2, 44, { align: 'left', glow: 'transparent' });
-					self.text(c, fmt(self.teamTotal()), WIN.x + WIN.w - 26, WIN.y - WIN.bar / 2 - 2, 44, { align: 'right', fill: theme.gold, glow: 'transparent' });
+					self.text(c, String(game.name).toUpperCase(), WIN.x + 26, top + WIN.bar / 2 - 2, 40, { align: 'left', glow: 'transparent' });
+					self.text(c, fmt(self.teamTotal()), WIN.x + S - 26, top + WIN.bar / 2 - 2, 40, { align: 'right', fill: theme.gold, glow: 'transparent' });
 					c.restore();
 					// and a QR code, tipped the other way: overlapping the window's right edge, halfway down it; or (m 1) under it in the corner. Scan to share your gif
 					const Q = REPLAY.qr;
 					const code = qr(Q.link + (opts.id ? '#' + opts.id : ''));
 					const cell = (Q.size - 2 * Q.pad) / code.length;
-					const qx = WIN.x + WIN.w - Q.over, qy = WIN.y + (wh - WIN.bar) / 2 - Q.size / 2;   // (level with the window's middle)
+					const qx = WIN.x + S - Q.over, qy = WIN.y + S / 2 - Q.size / 2;   // (level with the window's middle)
 					const qcx = qx + Q.size / 2, qcy = qy + Q.size / 2;
 					c.save();
-					c.translate(lerp(qcx, sx, m), lerp(qcy, sy + C.scale * fh / 2 + C.gap + C.qr * Q.size / 2, m));
+					c.translate(lerp(qcx, sx, m), lerp(qcy, sy + C.scale * fw / 2 + C.gap + C.qr * Q.size / 2, m));
 					c.scale(lerp(1, C.qr, m), lerp(1, C.qr, m));
 					c.rotate(Q.tilt);
 					c.translate(-qcx, -qcy);
@@ -2948,7 +2944,7 @@ window.Showtime = function (stage, opts) {
 	self.gifCorner = () => gif.on;   // (whether the gif is up in the corner: the rating makes room for it)
 
 	beatsLib.replay = function (extra) {
-		const half = REPLAY.intro + REPLAY.play / 2;
+		const half = REPLAY.intro + REPLAY.play * REPLAY.handoff;
 		return extend({
 			id: 'replay',
 			world: false,
@@ -2975,7 +2971,7 @@ window.Showtime = function (stage, opts) {
 	// (1-3), WHAT WENT WRONG? with reasons to tap (as many as fit) and DONE;
 	// for a high one (4-5), straight on. Each part gives up and moves on if
 	// nobody taps. Then the end: the carousel. self.feedback() is what was said.
-	const RATE_SIDE = { left: 30, width: 960, scale: 0.72 };   // beside the gif in the corner: the rating's room (from the wall's left), and how much it's shrunk to fit
+	const RATE_SIDE = { left: 30, width: 1120, scale: 0.8 };   // beside the gif in the corner: the rating's room (from the wall's left), and how much it's shrunk to fit
 	beatsLib.rate = function (extra) {
 		const R = RATE;
 		let part = 'faces';     // 'faces' | 'reasons' | 'again' | 'thanks' | 'over'
