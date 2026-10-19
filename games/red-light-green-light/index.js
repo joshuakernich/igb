@@ -2704,7 +2704,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// player's drift; shot, they topple sideways.
 	const FLASH = { time: 0.2, box: 320, feet: 0.8 };   // a contestant's flash on picking something up: how long they're white (seconds); the scratch canvas it's drawn in (figure units, square) and how far down it their feet are
 	let flashCanvas = null;
-	const MARKER = { size: 24, lift: 60 };   // the arrow over each contestant's head: its half-width (figure units), and how far over their head it floats
+	const MARKER = { size: 24, tall: 2.1, lift: 50 };   // the arrow over each contestant's head: its half-width (figure units), its height (in half-widths), and how far over their head its tip floats
 	function drawContestant(ctx, c) {
 		const colour = PLAYER_COLORS[c.n];
 		const ground = at(c.x, c.f, 0, c.wall);
@@ -2788,7 +2788,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const bob = Math.sin(clock * 4 + c.n) * 4;
 		const top = p.y - (animReady('back') ? animHeight('back') + MARKER.lift : rigs.back ? figure('back').height + MARKER.lift + 4 : sheets.act ? 118 + MARKER.lift : 145 + MARKER.lift) * s + bob * s;   // (over their head, however tall the figure is)
 		const m = MARKER.size * s;
-		art.poly(ctx, [[p.x - m, top - m], [p.x + m, top - m], [p.x, top + m * 0.3]], { fill: colour, alpha });
+		art.poly(ctx, [[p.x - m, top - m * MARKER.tall], [p.x + m, top - m * MARKER.tall], [p.x, top]], { fill: colour, alpha });   // (pointing down, its tip at top)
 	}
 
 	// Where the player really is, 1:1, even when a block holds the avatar back
