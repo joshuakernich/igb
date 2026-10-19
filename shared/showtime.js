@@ -1740,11 +1740,11 @@ window.Showtime = function (stage, opts) {
 		for (let k = 0; k < 12; k++) $('<div>').css({ height: '14px', borderRadius: '3px', background: k === 9 ? '#e8323c' : k === 11 ? '#3cdc7a' : '#3a3644' }).appendTo($keys);
 		$('<div>').css({ position: 'absolute', left: '50%', bottom: '10px', width: '28px', height: '4px', marginLeft: '-14px', borderRadius: '2px', background: '#05040a' }).appendTo($pay);
 		// (pale chevrons on the panel over the card reader, coming in off its right edge and pointing at the screen)
-		const chevX = P.x + F.screen.inset + sw + 10, chevW = P.x + P.w - chevX, chevY = P.y + K.top + sh * 0.5;
+		const chevX = payX, chevW = P.x + P.w - chevX, chevY = P.y + K.top + sh * 0.5;
 		const $chev = $('<div>').css({ position: 'absolute', left: chevX + 'px', top: chevY - 40 + 'px', width: chevW + 'px', height: '80px', overflow: 'hidden', zIndex: 3 }).appendTo($front);
 		for (let n = 0; n < 8; n++) {
-			$('<div>').html('<svg viewBox="0 0 40 80" width="40" height="80" style="overflow:visible"><path d="M34 10 L6 40 L34 70" fill="none" stroke="#efe6ff" stroke-width="13" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"/></svg>')
-				.css({ position: 'absolute', left: 8 + n * 46 + 'px', top: 0, opacity: 0.3 - n * 0.03 }).appendTo($chev);
+			$('<div>').html('<svg viewBox="0 0 40 80" width="40" height="80"><path d="M0 40 L20 8 L36 8 L16 40 L36 72 L20 72 Z" fill="#efe6ff"/></svg>')
+				.css({ position: 'absolute', left: n * 46 + 'px', top: 0, opacity: 0.3 - n * 0.03 }).appendTo($chev);
 		}
 
 		$('<div>').text('HOW MANY PLAYERS?').css({
