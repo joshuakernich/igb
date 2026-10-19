@@ -205,7 +205,7 @@ window.Showtime = function (stage, opts) {
 	const TITLE = {
 		dark: 0.4,             // the room goes dark
 		in: 1.0,               // the logo, title and START all fly in together over this long (as the sting fades out over them)
-		far: 0.82,             // from a little way off: this big when they set off
+		far: 0.25,             // from a distance: this big when they set off
 		hold: 1.6,             // then it holds
 		out: 0.5,              // and fades
 		size: 170,
