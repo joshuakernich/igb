@@ -4246,7 +4246,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 
 	function dollBody(c, front) {
 		if (dollBodyImg) {
-			const v = dollBodyImg[front ? 1 : 0];
+			const v = dollBodyImg[1];   // (always her front: the body never turns, only her head)
 			const k = DOLL_BODY.height / v.h;
 			c.drawImage(v.img, -v.w * k / 2, -DOLL_BODY.height, v.w * k, DOLL_BODY.height);
 			return;
