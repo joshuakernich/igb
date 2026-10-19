@@ -1450,7 +1450,7 @@ window.Showtime = function (stage, opts) {
 	menu($right);
 	// The debug options: a screen of their own, on the right wall, in place of
 	// its menu, opened by the debug button on the right-hand panel (IGB.debug)
-	const $debugWall = wallPanel(2).hide();
+	const $debugWall = wallPanel(2).css({ paddingRight: '240px' }).hide();   // (well clear of the right-hand panel on the wall's edge)
 	menu($debugWall, true);
 
 	// paused: the menu on every wall; or (mode 'debug') the debug options on the right wall
