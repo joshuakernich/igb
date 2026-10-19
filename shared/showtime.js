@@ -290,7 +290,7 @@ window.Showtime = function (stage, opts) {
 		hold: 1.0,             // looping, it holds on the end this long before going again
 		handoff: 0.25,         // this far through the game, it moves up to the corner,
 		move: 0.9,             // taking this long (then the rating comes in beside it)
-		corner: { margin: 130, y: 441, qr: 0.8, left: 50, up: 175 },   // after the move: the QR code, how far in from the right edge, how far down (level with the rating's faces), how small; the gif (shrunk to the QR's size) behind it, this far left and this far up
+		corner: { margin: 130, y: 491, qr: 0.8, left: 50, up: 175 },   // after the move: the QR code, how far in from the right edge, how far down (level with the rating's faces), how small; the gif (shrunk to the QR's size) behind it, this far left and this far up
 		zoom: 1.6,             // the replay, zoomed in this close on the room
 		footroom: 30,          // keeping this much under the feet of anyone at the very back
 		window: { x: 330, y: 150, size: 680, bar: 70, tilt: 0.035 },   // the window it plays in, a square: its left, its top, its size; the band over its top (the name and score); how far it's tipped to the left (radians)
@@ -2975,7 +2975,7 @@ window.Showtime = function (stage, opts) {
 	// for a high one (4-5), straight on. Each part gives up and moves on if
 	// nobody taps. Then the end: the carousel. self.feedback() is what was said.
 	const RATE_SIDE = { left: 40, width: 1110, scale: 0.88 };
-	const RATE_UP = 0.15 * H;   // (everything on the rating screen sits this much above the wall's middle)   // beside the gif in the corner: the rating's room (from the wall's left), and how much it's shrunk to fit
+	const RATE_UP = 0.1 * H;   // (everything on the rating screen sits this much above the wall's middle)   // beside the gif in the corner: the rating's room (from the wall's left), and how much it's shrunk to fit
 	beatsLib.rate = function (extra) {
 		const R = RATE;
 		let part = 'faces';     // 'faces' | 'reasons' | 'again' | 'thanks' | 'over'
