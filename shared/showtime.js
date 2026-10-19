@@ -2214,7 +2214,7 @@ window.Showtime = function (stage, opts) {
 						const age = bt - V.steps[i];
 						if (age <= 0) return;
 						if (i) {
-							self.text(c, '>', x + gap * k / 2, V.stepsY, SIZE * k, { fill: TYPE.colours.gold, alpha: clamp(age * 4, 0, 1) * 0.6, glow: 'transparent', fit: 9999 });
+							self.text(c, '>', x + gap * k / 2, V.stepsY, SIZE * k, { fill: TYPE.colours.gold, alpha: clamp(age * 4, 0, 1), glow: 'transparent', fit: 9999 });
 							x += gap * k;
 						}
 						self.slam(c, s.text, x + widths[i] * k / 2, V.stepsY, SIZE * k, age, {
