@@ -2435,9 +2435,9 @@ window.Showtime = function (stage, opts) {
 					const ha = V.floor.wall * a.k, hb = V.floor.wall * b.k;
 					const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 					const g = c.createLinearGradient(mid.x, mid.y, mid.x, mid.y - (ha + hb) / 2);
-					g.addColorStop(0, `rgba(255,130,225,${0.8 * bright})`);   // (the walls glowing pink)
-					g.addColorStop(0.25, `rgba(255,90,205,${0.38 * bright})`);
-					g.addColorStop(1, 'rgba(255,60,190,0)');
+					g.addColorStop(0, `rgba(200,140,255,${0.8 * bright})`);   // (the walls glowing purple)
+					g.addColorStop(0.25, `rgba(170,100,255,${0.38 * bright})`);
+					g.addColorStop(1, 'rgba(140,70,255,0)');
 					c.beginPath();
 					c.moveTo(a.x, a.y);
 					c.lineTo(b.x + 0.5, b.y);
@@ -2466,7 +2466,7 @@ window.Showtime = function (stage, opts) {
 			c.stroke();
 			c.restore();
 			const label = up({ x: cx, y: top }, far / near * 0.5);
-			self.text(c, ['LEFT WALL', 'FRONT', 'RIGHT WALL'][wall], label.x, label.y, 26, { fill: '#ff82e1', exact: true, plain: true });   // (the wall's name, the walls' pink, plain)
+			self.text(c, ['LEFT WALL', 'FRONT', 'RIGHT WALL'][wall], label.x, label.y, 26, { fill: '#c792ff', exact: true, plain: true });   // (the wall's name, the walls' purple, plain)
 			// everyone in play, a worm each, far ones smaller (and drawn first)
 			const shown = slots().map((p, i) => ({ p, i })).filter(({ p, i }) => p && p.px !== undefined && (motion[i] > V.moving || ticked[i] !== undefined));
 			const seen = (p) => viewOf(wall, clamp(p.px, 0, 1), clamp(p.pz, 0, 1));
