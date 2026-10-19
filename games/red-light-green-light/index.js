@@ -3186,8 +3186,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		const big = ITEM.bagSize;   // (a money bag is bigger than the rest)
 		const lift = (8 - ITEM.bag * ITEM.bagSink) * s * big + dropLift(g) * p.s;   // (its anchor a little above the sprite's bottom edge, so it sits down into the sand)
 		if (items.bag) {
-			itemShadow(ctx, 'bag', p.x, p.y, g.f, s * big);
-			art.ellipse(ctx, p.x, p.y, 22 * s * big, 6.6 * s * big, { fill: `rgba(20,10,30,${SIL.contact})` });
+			itemShadow(ctx, 'bag', p.x, p.y, g.f, s * big);   // (just the cast shadow: no dark patch under it)
 		}
 		else softShadow(ctx, p.x, p.y, 30 * s * big, 9 * s * big, 0.3, 1, 40 * s * big, g.f);
 		art.with(ctx, { x: p.x, y: p.y - lift, scale: s * big }, function (c) {
@@ -4163,7 +4162,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 			art.with(c, { x: dollTune.head.x, y: -dollHeadY(), scale: dollTune.head.scale }, (c2) => dollHead(c2, head.yaw, 0));
 		};
 		// her shadow, pigtails and all
-		if (dollBodyImg && sheets.head) castShape(ctx, shapeOf('doll', (g) => art.with(g, { scale: 0.35 }, her), 400 * 0.35 * 2.2, (dollHeadY() + 220) * 0.35), p.x, p.y, dollF, p.s * 0.82 / 0.35, 1, 120 * p.s * 0.82);
+		if (dollBodyImg && sheets.head) castShape(ctx, shapeOf('doll', (g) => art.with(g, { scale: 0.35 }, her), 400 * 0.35 * 2.2, (dollHeadY() + 220) * 0.35), p.x, p.y, dollF, p.s * 0.82 / 0.35, 1);   // (just the cast shadow: no dark patch under her)
 		else softShadow(ctx, p.x, p.y, 150 * p.s * 0.82, 30 * p.s * 0.82, 0.25, 1, 700 * p.s * 0.82, dollF);
 		art.with(ctx, { x: p.x, y: p.y, scale: p.s * 0.82 }, function (c) {
 			dollBody(c, false);
