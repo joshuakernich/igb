@@ -3445,21 +3445,20 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		guard: {
 			clips: {
 				walk: [
-					{ s: 'g', i: 2, x: -8.5, y: -2.5 },
-					{ s: 'g', i: 3, x: -5, y: -1.5 },
-					{ s: 'g', i: 4, x: -5.5, y: 0.5 },
-					{ s: 'g', i: 6, x: -1.5 },
-					{ s: 'g', i: 1, x: 2, y: -1 },
+					{ s: 'g', i: 2, x: -1.5, y: 6.5 },
+					{ s: 'g', i: 3, y: 9 },
+					{ s: 'g', i: 5, x: 0.5, y: 10 },
+					{ s: 'g', i: 6, x: -1.5, y: 9.5 },
+					{ s: 'g', i: 1, x: 2, y: 8 },
 				],
 				stand: [
-					{ s: 'g', i: 8, x: -4 },
-					{ s: 'g', i: 9, x: -3 },
+					{ s: 'g', i: 9, x: -1.5, y: 8.5 },
+				],
+				aim: [
+					{ s: 'g', i: 10, y: 9.5 },
 				],
 				fire: [
-					{ s: 'g', i: 12, x: 3.5, y: 1.5 },
-					{ s: 'g', i: 13, x: 7, y: 1 },
-					{ s: 'g', i: 14, y: 1 },
-					{ s: 'g', i: 15 },
+					{ s: 'g', i: 13, x: 7, y: 12.5 },
 				],
 			},
 		},
