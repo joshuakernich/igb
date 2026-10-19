@@ -444,7 +444,7 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 
 	/* ---------- the debug buttons (on the show's pause screen) ---------- */
 
-	const JUMPS = ['title', 'clock', 'visors', 'controls', 'villain', 'play', 'timeup', 'scores', 'rank', 'team', 'board', 'replay', 'rate', 'end'];
+	const JUMPS = ['sting', 'title', 'clock', 'visors', 'controls', 'villain', 'play', 'timeup', 'scores', 'rank', 'team', 'board', 'replay', 'rate', 'end'];
 	const { drow, dbutton } = show.menu;
 	const $now = show.menu.$now;
 	const $jumps = drow('BEATS');

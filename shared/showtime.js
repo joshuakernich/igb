@@ -129,6 +129,7 @@ window.Showtime = function (stage, opts) {
 		settle: [4.3, 5.2],    // after two ticks it flies up, still counting, to its place at the top of every wall
 		length: 5.7,
 		radius: 320,           // the dial's outer edge
+		ticks: ['#b46bff', '#dcb4ff'],   // its ticks, lit: purple, the five-minute ones paler
 		text: 420,             // the words and number are laid out as for a dial this big (they keep their size, the dial smaller behind them)
 		size: 300,             // the big number
 		words: [100, 112],     // YOU HAVE, MINUTES
@@ -2033,7 +2034,7 @@ window.Showtime = function (stage, opts) {
 							const r1 = C.radius * grow;
 							c.save();
 							c.globalAlpha = fade * (on ? 1 : 0.22) * clamp((bt - C.dial) * 4, 0, 1);
-							c.strokeStyle = on ? (i % 5 ? theme.accent : theme.gold) : 'white';
+							c.strokeStyle = on ? (i % 5 ? C.ticks[0] : C.ticks[1]) : 'white';
 							c.lineWidth = i % 5 ? 8 : 14;
 							c.lineCap = 'round';
 							c.beginPath();
