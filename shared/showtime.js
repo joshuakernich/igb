@@ -290,7 +290,7 @@ window.Showtime = function (stage, opts) {
 		hold: 1.0,             // looping, it holds on the end this long before going again
 		handoff: 0.25,         // this far through the game, it moves up to the corner,
 		move: 0.9,             // taking this long (then the rating comes in beside it)
-		corner: { scale: 0.52, margin: 40, gap: 34, qr: 0.8 },   // in the corner: how small, how far in from the edges; the QR code under it, how far below, how small
+		corner: { margin: 40, gap: 34, qr: 0.8 },   // in the corner: how far in from the edges; the QR code under it, how far below, how small (the gif shrinks to the same size)
 		zoom: 1.6,             // the replay, zoomed in this close on the room
 		footroom: 30,          // keeping this much under the feet of anyone at the very back
 		window: { x: 330, y: 150, size: 680, bar: 70, tilt: 0.035 },   // the window it plays in, a square: its left, its top, its size; the band over its top (the name and score); how far it's tipped to the left (radians)
@@ -2850,7 +2850,7 @@ window.Showtime = function (stage, opts) {
 				const game = (IGB.find && IGB.find(opts.id)) || { name: opts.title || opts.id || '' };
 				const square = function (c) {
 					c.beginPath();
-					c.roundRect ? c.roundRect(WIN.x, WIN.y, S, S, 22) : c.rect(WIN.x, WIN.y, S, S);
+					c.rect(WIN.x, WIN.y, S, S);   // (square corners)
 				};
 				self.onWalls(ctx, function (c) {
 					c.save();
@@ -2860,12 +2860,13 @@ window.Showtime = function (stage, opts) {
 					const wcx = WIN.x + S / 2, wcy = WIN.y + S / 2;
 					const C = REPLAY.corner;
 					const fw = S + 16;   // (the whole window, its frame and all)
-					const sx = W - C.margin - C.scale * fw / 2, sy = C.margin + C.scale * fw / 2;
+					const cs = C.qr * REPLAY.qr.size / fw;   // (in the corner, the gif's as big as the QR code under it)
+					const sx = W - C.margin - cs * fw / 2, sy = C.margin + cs * fw / 2;
 					c.translate(lerp(wcx, sx, m), lerp(wcy, sy, m));
-					c.scale(lerp(1, C.scale, m), lerp(1, C.scale, m));
+					c.scale(lerp(1, cs, m), lerp(1, cs, m));
 					c.rotate(-WIN.tilt);
 					c.translate(-wcx, -wcy);
-					art.roundRect(c, WIN.x - 8, WIN.y - 8, S + 16, S + 16, 30, { fill: 'rgba(0,0,0,0.75)', shadow: { color: 'rgba(0,0,0,0.5)', blur: 40 } });
+					art.rect(c, WIN.x - 8, WIN.y - 8, S + 16, S + 16, { fill: 'white', shadow: { color: 'rgba(0,0,0,0.5)', blur: 40 } });   // (a white border, square corners)
 					c.save();
 					square(c);
 					c.clip();
@@ -2928,11 +2929,11 @@ window.Showtime = function (stage, opts) {
 					const qx = WIN.x + S - Q.over, qy = WIN.y + S / 2 - Q.size / 2;   // (level with the window's middle)
 					const qcx = qx + Q.size / 2, qcy = qy + Q.size / 2;
 					c.save();
-					c.translate(lerp(qcx, sx, m), lerp(qcy, sy + C.scale * fw / 2 + C.gap + C.qr * Q.size / 2, m));
+					c.translate(lerp(qcx, sx, m), lerp(qcy, sy + cs * fw / 2 + C.gap + C.qr * Q.size / 2, m));
 					c.scale(lerp(1, C.qr, m), lerp(1, C.qr, m));
 					c.rotate(Q.tilt);
 					c.translate(-qcx, -qcy);
-					art.roundRect(c, qx, qy, Q.size, Q.size, 24, { fill: 'white', shadow: { color: 'rgba(0,0,0,0.55)', blur: 40 } });
+					art.rect(c, qx, qy, Q.size, Q.size, { fill: 'white', shadow: { color: 'rgba(0,0,0,0.55)', blur: 40 } });   // (square corners)
 					c.fillStyle = '#0b0b14';
 					code.forEach((row, y) => row.forEach((dark, x) => { if (dark) c.fillRect(qx + Q.pad + x * cell, qy + Q.pad + y * cell, cell + 0.5, cell + 0.5); }));
 					self.text(c, 'SCAN TO SHARE', qx + Q.size / 2, qy + Q.size + 50, 42, { fill: 'white' });
@@ -2971,7 +2972,7 @@ window.Showtime = function (stage, opts) {
 	// (1-3), WHAT WENT WRONG? with reasons to tap (as many as fit) and DONE;
 	// for a high one (4-5), straight on. Each part gives up and moves on if
 	// nobody taps. Then the end: the carousel. self.feedback() is what was said.
-	const RATE_SIDE = { left: 30, width: 1120, scale: 0.8 };   // beside the gif in the corner: the rating's room (from the wall's left), and how much it's shrunk to fit
+	const RATE_SIDE = { left: 40, width: 1240, scale: 0.88 };   // beside the gif in the corner: the rating's room (from the wall's left), and how much it's shrunk to fit
 	beatsLib.rate = function (extra) {
 		const R = RATE;
 		let part = 'faces';     // 'faces' | 'reasons' | 'again' | 'thanks' | 'over'
