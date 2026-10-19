@@ -214,7 +214,7 @@ window.Showtime = function (stage, opts) {
 		size: 210,
 		fit: 0.7,              // the widest a line may be: this share of a wall
 		raised: 400,           // with a START button: the title's middle, raised to make room (under the logo)
-		logo: { src: 'assets/shared/igb-logo.png', w: 520, top: 40 },   // the Immersive Gamebox logo along the top: its width, how far down
+		logo: { src: 'assets/shared/igb-logo.png', w: 520, top: 40, outline: 7, drop: 9, tilt: -0.05, bob: [7, 1.6], sway: [0.012, 1.1] },   // the Immersive Gamebox logo along the top: its width, how far down; its ink outline and drop (as the words have); tilted (radians), floating up and down (px, speed) and swaying (radians, speed)
 		startGap: 50,          // and the gap between its last line and the START button
 	};
 
@@ -1708,6 +1708,26 @@ window.Showtime = function (stage, opts) {
 		}, extra);
 	};
 
+	// The logo, white, with an ink outline round it (made once, when it's loaded)
+	let logoDone = null;
+	function outlinedLogo() {
+		if (logoDone) return logoDone;
+		const img = IGB.image(TITLE.logo.src);
+		if (!img.complete || !img.naturalWidth) return null;
+		const L = TITLE.logo, w = L.w, h = Math.round(w * img.naturalHeight / img.naturalWidth), r = L.outline;
+		const ink = document.createElement('canvas').getContext('2d');
+		ink.canvas.width = w; ink.canvas.height = h;
+		ink.drawImage(img, 0, 0, w, h);
+		ink.globalCompositeOperation = 'source-in';
+		ink.fillStyle = TYPE.colours.ink;
+		ink.fillRect(0, 0, w, h);
+		const out = document.createElement('canvas').getContext('2d');
+		out.canvas.width = w + 2 * r + 4; out.canvas.height = h + 2 * r + 4;
+		for (let a = 0; a < 24; a++) out.drawImage(ink.canvas, r + 2 + Math.cos(a / 24 * Math.PI * 2) * r, r + 2 + Math.sin(a / 24 * Math.PI * 2) * r);
+		out.drawImage(img, r + 2, r + 2, w, h);
+		return (logoDone = { canvas: out.canvas, h });
+	}
+
 	beatsLib.titleDrop = function (extra) {
 		const T = TITLE;
 		// (its lines: as given, or the game's title in the manifest, which the end screen's carousel uses too)
@@ -1769,14 +1789,19 @@ window.Showtime = function (stage, opts) {
 			draw(ctx, bt) {
 				const fade = 1 - between(bt, outAt(), outAt() + T.out);
 				const n = lines.length;
-				const logo = IGB.image(TITLE.logo.src);
+				const logo = outlinedLogo();
 				self.onWalls(ctx, function (c) {
-					// the Immersive Gamebox logo, in white, along the top
-					if (logo.complete && logo.naturalWidth) {
-						const L = TITLE.logo, lh = L.w * logo.naturalHeight / logo.naturalWidth;
+					// the Immersive Gamebox logo, in white along the top, outlined and dropped like the words, tilted and gently floating
+					if (logo) {
+						const L = TITLE.logo;
+						const t = showTime;
 						c.save();
 						c.globalAlpha *= fade * clamp(bt / 0.5, 0, 1);
-						c.drawImage(logo, W / 2 - L.w / 2, L.top, L.w, lh);
+						c.translate(W / 2, L.top + logo.h / 2 + Math.sin(t * L.bob[1]) * L.bob[0]);
+						c.rotate(L.tilt + Math.sin(t * L.sway[1]) * L.sway[0]);
+						c.shadowColor = 'rgba(0,0,0,0.5)';
+						c.shadowOffsetY = L.drop;
+						c.drawImage(logo.canvas, -logo.canvas.width / 2, -logo.canvas.height / 2);
 						c.restore();
 					}
 					lines.forEach(function (line, li) {
