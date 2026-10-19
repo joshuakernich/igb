@@ -206,7 +206,7 @@ window.Showtime = function (stage, opts) {
 	const TITLE = {
 		dark: 0.4,             // the room goes dark
 		in: 1.0,               // the logo, title and START all fly in together over this long (as the sting fades out over them)
-		far: 0.25,             // from a distance: this big when they set off
+		far: 0.06,             // from far away: this big when they set off
 		hold: 1.6,             // then it holds
 		out: 0.5,              // and fades
 		size: 170,
@@ -1769,7 +1769,7 @@ window.Showtime = function (stage, opts) {
 		const sets = lines.map(() => 0);
 		const lastLand = T.in;
 		const flyIn = (bt) => 1 - Math.pow(1 - clamp(bt / T.in, 0, 1), 3);   // (0 far, 1 landed: easing in to a stop)
-		const far = (k) => lerp(T.far, 1, k);   // (how big it looks on the way: small far off, full size landed)
+		const far = (k) => 1 / lerp(1 / T.far, 1, k);   // (how big it looks on the way, as something coming in from far off would: tiny, then rushing up to full size)
 		// the START button's middle: just under the title's last line (a neat gap below it)
 		const startTop = function () {
 			const n = lines.length;
