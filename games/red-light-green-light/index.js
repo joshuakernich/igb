@@ -3469,7 +3469,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const animReady = (fig) => ANIM_SHEETS[fig].every((n) => sheets[n]);
 	// One frame of a clip (k: which, round and round), feet at (0, 0).
 	// (whole clips dropped lower on top of their frames' own nudges, the lab's saved ones included)
-	const CLIP_DROP = { back: { run: 18, freeze: 24 } };
+	const CLIP_DROP = { back: { run: 18, freeze: 24, shot: 24 } };
 	function drawClip(c, fig, name, k, mask = 'circle') {
 		const frames = clipOf(fig, name);
 		if (!frames.length) return false;
