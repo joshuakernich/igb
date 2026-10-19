@@ -3385,7 +3385,7 @@ window.Showtime = function (stage, opts) {
 				});
 				return;
 			}
-			big(topic.label, 96).appendTo($wall);
+			big(topic.label + '?', 96).appendTo($wall);   // (the reason picked, asked back: TOO HARD?)
 			small('TAP ONE').appendTo($wall);
 			const $g = $grid();
 			topic.more.forEach(function (detail) {
