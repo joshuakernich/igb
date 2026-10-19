@@ -2751,7 +2751,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// player's drift; shot, they topple sideways.
 	const FLASH = { time: 0.2, box: 320, feet: 0.8 };   // a contestant's flash on picking something up: how long they're white (seconds); the scratch canvas it's drawn in (figure units, square) and how far down it their feet are
 	let flashCanvas = null;
-	const MARKER = { size: 24, tall: 1.6, lift: 8, round: 7 };   // the arrow over each contestant's head: its half-width (figure units), its height (in half-widths), and how far over their head its tip floats
+	const MARKER = { size: 19, tall: 1.6, lift: 8, round: 6 };   // the arrow over each contestant's head: its half-width (figure units), its height (in half-widths), and how far over their head its tip floats
 	function drawContestant(ctx, c) {
 		const colour = PLAYER_COLORS[c.n];
 		const ground = at(c.x, c.f, 0, c.wall);
