@@ -1558,12 +1558,40 @@ window.Showtime = function (stage, opts) {
 		box: { x: 56, y: 44, w: 1488, h: 912, depth: 1100, lens: 1000 },   // the gamebox, filling the wall but for an inset of the arcade round it: its mouth, how deep it goes, its perspective
 		zoom: { x: 505, y: 560 },                                // where the eye looks into it (the middle of what shows of it, left of the panel): the vanishing point, and the rush's centre
 		panel: { x: 960, y: 310, w: 584, h: 646 },               // the purple panel on the right, over the box
-		arcade: 'assets/shared/arcade.jpg',                      // the arcade it all stands in (side walls, and round the box)
 		screen: { h: 600 },                                      // its 9:16 screen
 		gate: { w: 190, h: 150, gap: 14, post: 26 },             // the glass barriers, side by side across the mouth
 		neon: '#c06bff',                                         // the strips down the box's sides
 		swing: 0.55, rush: 0.75,                                 // the barriers swinging in; the view rushing into the box
 	};
+	// The arcade behind it all, drawn simply: a dim purple room, a row of
+	// cabinets with glowing screens, a few hanging lights, a glossy floor.
+	// (an SVG, as a picture; softened when it's used, to sit in the background)
+	function arcadeArt() {
+		const cab = function (x, glow, tall) {
+			const h = tall ? 330 : 280, y = 700 - h;
+			return `<rect x="${x}" y="${y}" width="120" height="${h}" rx="10" fill="#1a1030"/>`
+				+ `<rect x="${x + 16}" y="${y + 30}" width="88" height="70" rx="6" fill="${glow}" opacity="0.9"/>`
+				+ `<rect x="${x + 10}" y="${y + 120}" width="100" height="18" rx="4" fill="#2a1a48"/>`
+				+ `<circle cx="${x + 40}" cy="${y + 129}" r="6" fill="${glow}"/><circle cx="${x + 80}" cy="${y + 129}" r="6" fill="#ffd23f"/>`
+				+ `<ellipse cx="${x + 60}" cy="${y + 65}" rx="90" ry="70" fill="${glow}" opacity="0.18"/>`;
+		};
+		const glows = ['#ff4fd8', '#3ad1ff', '#b46bff', '#ffd23f', '#3cdc7a', '#ff7a3d'];
+		let cabs = '';
+		for (let i = 0; i < 12; i++) cabs += cab(40 + i * 130, glows[i % glows.length], i % 3 === 1);
+		const lights = [180, 520, 860, 1200, 1500].map((x) => `<line x1="${x}" y1="0" x2="${x}" y2="120" stroke="#2a1a48" stroke-width="3"/><circle cx="${x}" cy="130" r="18" fill="#ffd9a8"/><circle cx="${x}" cy="130" r="60" fill="#ffd9a8" opacity="0.14"/>`).join('');
+		const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">`
+			+ `<defs><linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#140826"/><stop offset="1" stop-color="#2a0f4f"/></linearGradient>`
+			+ `<linearGradient id="f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a1a5a"/><stop offset="1" stop-color="#0d0618"/></linearGradient></defs>`
+			+ `<rect width="1600" height="700" fill="url(#w)"/>`
+			+ `<rect y="300" width="1600" height="10" fill="#ff4fd8" opacity="0.5"/><rect y="300" width="1600" height="40" fill="#ff4fd8" opacity="0.08"/>`
+			+ lights + cabs
+			+ `<rect y="700" width="1600" height="300" fill="url(#f)"/>`
+			+ `<rect y="700" width="1600" height="300" fill="#b46bff" opacity="0.06"/></svg>`;
+		return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+	}
+	let arcadeUrl = null;
+	const arcade = () => (arcadeUrl = arcadeUrl || arcadeArt());
+
 	function trailers() {
 		const ids = (IGB.menu || []).filter((id) => !RATE.notAgain.includes(id) && id !== opts.id);
 		return [ids[0], ids[1], ids[2]].map((id) => id || ids[0]);
@@ -1580,13 +1608,14 @@ window.Showtime = function (stage, opts) {
 			pointerEvents: 'auto', fontFamily: font, color: 'white', opacity: 0, transition: 'opacity 0.5s',
 		}).appendTo(stage.$ui);
 
-		// the side walls: the arcade the box stands in, out of focus behind it (mirrored on the right)
+		// the side walls: the arcade the box stands in (drawn simply: arcadeArt), soft behind it (mirrored on the right)
 		for (const wall of [0, 2]) {
-			$('<div>').css({ position: 'absolute', left: wall * W + 'px', top: 0, width: W + 'px', height: H + 'px', background: `url("${F.arcade}") center / cover`, transform: wall === 2 ? 'scaleX(-1)' : 'none' }).appendTo($pick);
+			$('<div>').css({ position: 'absolute', left: wall * W + 'px', top: 0, width: W + 'px', height: H + 'px', overflow: 'hidden', background: '#140826' }).append($('<div>').css({ position: 'absolute', inset: '-20px', background: `url("${arcade()}") center / cover`, filter: 'blur(5px)', transform: wall === 2 ? 'scaleX(-1)' : 'none' })).appendTo($pick);
 		}
 
 		// the front wall
-		const $front = $('<div>').css({ position: 'absolute', left: W + 'px', top: 0, width: W + 'px', height: H + 'px', overflow: 'hidden', background: `url("${F.arcade}") center / cover`, transformOrigin: `${F.zoom.x}px ${F.zoom.y}px` }).appendTo($pick);
+		const $front = $('<div>').css({ position: 'absolute', left: W + 'px', top: 0, width: W + 'px', height: H + 'px', overflow: 'hidden', background: '#140826', transformOrigin: `${F.zoom.x}px ${F.zoom.y}px` }).appendTo($pick);
+		$('<div>').css({ position: 'absolute', inset: '-20px', background: `url("${arcade()}") center / cover`, filter: 'blur(5px)' }).appendTo($front);   // (the arcade, round the box)
 		// 3. the neon strips down its sides
 		const neon = () => { for (const x of [F.box.x - 14, F.box.x + F.box.w]) $('<div>').css({ position: 'absolute', left: x + 'px', top: F.box.y + 'px', width: '14px', height: F.box.h + 'px', background: '#f3e2ff', boxShadow: `0 0 24px 8px ${F.neon}, 0 0 60px 18px ${F.neon}`, zIndex: 4 }).appendTo($front); };
 		// 4. the TVs across the top, each playing one of the trailers inside the box
