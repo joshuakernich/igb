@@ -157,7 +157,7 @@ window.Showtime = function (stage, opts) {
 		allSet: 3,             // "ALL SET!" holds this long, then on
 		length: 45,            // and on regardless after this long
 		y: 300,                // the row of visors
-		floor: { far: 330, near: 620, wall: 150 },  // the floor panel: its far and near widths, how high the walls' glow rises (near)
+		floor: { far: 330, near: 620, wall: 150, inset: 0.04, grid: 16 },  // the floor panel: its far and near widths, how high the walls' glow rises (near); its faint inset line (a share in from the edge) and grid (lines across)
 		// each player in play, a worm standing on the floor panel right where
 		// they are, as tall as the player (by their visor's height), leaning back
 		// away from the way they're moving and springing upright again when they
@@ -2408,18 +2408,28 @@ window.Showtime = function (stage, opts) {
 			c.closePath();
 			c.fillStyle = 'rgba(78,28,140,0.88)';   // (the stage: purple)
 			c.fill();
-			c.strokeStyle = 'rgba(255,255,255,0.14)';
-			c.lineWidth = 2;
-			for (let g = 0.25; g < 1; g += 0.25) {
-				path([at(g, 0), at(g, 1)]);
+			// (drawn like a schematic: a thin outline, a faint line inset inside it,
+			// and a fine grid within that, every fourth line a touch stronger)
+			const m = V.floor.inset, lo = m, hi = 1 - m;
+			const inner = (u) => lo + (hi - lo) * u;
+			for (let i = 1; i < V.floor.grid; i++) {
+				const g = inner(i / V.floor.grid);
+				c.strokeStyle = i % 4 ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.16)';
+				c.lineWidth = 1.2;
+				path([at(g, lo), at(g, hi)]);
 				c.stroke();
-				path([at(0, g), at(1, g)]);
+				path([at(lo, g), at(hi, g)]);
 				c.stroke();
 			}
+			path([at(lo, hi), at(hi, hi), at(hi, lo), at(lo, lo)]);
+			c.closePath();
+			c.strokeStyle = 'rgba(255,255,255,0.32)';
+			c.lineWidth = 1.5;
+			c.stroke();
 			path(corners);
 			c.closePath();
 			c.strokeStyle = 'rgba(255,255,255,0.85)';
-			c.lineWidth = 5;
+			c.lineWidth = 2.5;
 			c.stroke();
 			// the walls: light glowing up off the floor's far and side edges,
 			// fading to nothing as it rises (the wall faced, at the far edge, the brightest)
