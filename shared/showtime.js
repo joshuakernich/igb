@@ -1560,7 +1560,7 @@ window.Showtime = function (stage, opts) {
 		zoom: { x: 465, y: 550 },                                // where the eye looks into it (the middle of what shows of it, left of the panel): the vanishing point, and the rush's centre
 		panel: { x: 874, y: 230, w: 670, h: 770 },               // the purple panel on the right, over the box (the way in 55% of it, the kiosk 45%)
 		screen: { inset: 34 },                                   // its 9:16 screen, this far in from the panel's top left (as tall as the panel allows)
-		gate: { gap: 14, post: 92, inset: 46, lift: 120, depth: 92, thick: 14 },                  // the glass barriers, side by side across the whole way in, a third of its height, held up off the floor (lift) by chunky posts, set in from the way in's edges (inset); the posts this deep, the glass this thick (real 3D blocks)
+		gate: { gap: 14, post: 92, inset: 12, lift: 120, depth: 92, thick: 14, rise: 70 },                  // the glass barriers, side by side across the whole way in, a third of its height, held up off the floor (lift) by chunky posts, set in from the way in's edges (inset); the posts this deep, the glass this thick (real 3D blocks); the posts standing this much taller than the glass
 		neon: '#c06bff',                                         // the strips down the box's sides
 		purple: '#6326c8',                                       // the panels, one flat purple
 		swing: 0.55, rush: 0.75, dark: 0.25,                     // the barriers swinging in (the screens fading to black); the view rushing into the box (everything fading to black); a moment in the black, then the sting
@@ -1657,7 +1657,7 @@ window.Showtime = function (stage, opts) {
 		const open = F.panel.x - B.x;                            // (the way in: the box's mouth left of the panel)
 		G.w = (open - 2 * (G.post + G.inset) - G.gap) / 2;       // (the barriers between posts set a little in from its edges, filling the space between)
 		const gx = G.inset + G.post;
-		G.h = (H - F.box.y) / 3;                                 // (a third of the way in's height, as it shows under the fascia)
+		G.h = (H - F.box.y) / 4.2;                               // (a little under a quarter of the way in's height)
 		const gy = B.h - G.h - G.lift;                           // (raised off the floor: a gap under them)
 		// (real 3D blocks: a cuboid of faces, x across, y down, z out toward us;
 		// face(name) styles each of front, back, left, right, top, bottom)
@@ -1678,7 +1678,8 @@ window.Showtime = function (stage, opts) {
 		};
 		// the barriers: glass slabs, each hung from its post on a hinge (the hinge
 		// turns, swinging the slab inwards)
-		const glass = (name) => ({ background: name === 'front' || name === 'back' ? 'linear-gradient(180deg, rgba(220,235,255,0.40), rgba(200,220,255,0.16))' : 'rgba(225,240,255,0.65)', border: name === 'front' || name === 'back' ? '2px solid rgba(255,255,255,0.65)' : 'none' });
+		// (the glass: clear, a less see-through stripe across its middle)
+		const glass = (name) => ({ background: name === 'front' || name === 'back' ? 'linear-gradient(180deg, transparent 43%, rgba(235,245,255,0.78) 43%, rgba(235,245,255,0.78) 57%, transparent 57%), linear-gradient(180deg, rgba(220,235,255,0.40), rgba(200,220,255,0.16))' : 'rgba(225,240,255,0.65)', border: name === 'front' || name === 'back' ? '2px solid rgba(255,255,255,0.65)' : 'none' });
 		const barrier = function (left, hinge) {
 			const $h = $('<div>').css({ position: 'absolute', left: left + 'px', top: gy + 'px', width: G.w + 'px', height: G.h + 'px', transformStyle: 'preserve-3d', transformOrigin: hinge + ' center', transform: `translateZ(${-G.depth / 2}px)`, transition: `transform ${F.swing}s cubic-bezier(.5,0,.3,1)` }).appendTo($box);
 			cuboid($h, { x: 0, y: 0, z: 0, w: G.w, h: G.h, d: G.thick }, glass);
@@ -1690,7 +1691,7 @@ window.Showtime = function (stage, opts) {
 			? { background: '#c8f6ff', boxShadow: '0 0 22px 8px #3ad1ff, 0 0 50px 14px rgba(58,209,255,0.55)' }
 			: { background: name === 'front' ? '#1b1428' : name === 'back' ? '#0a0612' : '#120c1c', borderTop: name === 'top' || name === 'bottom' ? 'none' : '6px solid #7fe7ff' });
 		for (const x of [gx - G.post, gx + 2 * G.w + G.gap]) {
-			cuboid($box, { x, y: gy - 30, z: -G.depth / 2, w: G.post, h: B.h - gy + 30, d: G.depth }, post);
+			cuboid($box, { x, y: gy - G.rise, z: -G.depth / 2, w: G.post, h: B.h - gy + G.rise, d: G.depth }, post);   // (standing a little taller than the glass)
 		}
 
 		// 5. the purple panel on the right, its screen (filling it) asking HOW MANY PLAYERS?
