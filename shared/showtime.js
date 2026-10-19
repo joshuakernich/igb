@@ -213,7 +213,8 @@ window.Showtime = function (stage, opts) {
 		out: 0.5,              // and fades
 		size: 210,
 		fit: 0.7,              // the widest a line may be: this share of a wall
-		raised: 330,           // with a START button: the title's middle, raised to make room
+		raised: 400,           // with a START button: the title's middle, raised to make room (under the logo)
+		logo: { src: 'assets/shared/igb-logo.png', w: 520, top: 40 },   // the Immersive Gamebox logo along the top: its width, how far down
 		startGap: 50,          // and the gap between its last line and the START button
 	};
 
@@ -1667,7 +1668,7 @@ window.Showtime = function (stage, opts) {
 	// out). lines: [{ text, fill, glow }]. Never a byline under it.
 	// The sting: the In Gamebox logo animation (assets/shared/sting.mp4, made
 	// for a four-walled box: its first three walls on ours), on black, with its sound; then on.
-	const STING = { src: 'assets/shared/sting.mp4', walls: 4, aspect: 6, most: 6, fade: 0.8 };   // the video, made for four walls, its width to its height; on regardless after this long (if it can't play); how long before its end it starts fading, revealing the title as it goes
+	const STING = { src: 'assets/shared/sting.mp4', walls: 4, aspect: 6, most: 6, lead: 1.3, fade: 1.0 };   // the video, made for four walls, its width to its height; on regardless after this long (if it can't play); how long before its end it starts fading, revealing the title as it goes, and how long the fade takes
 	beatsLib.sting = function (extra) {
 		let $video = null, ended = false;
 		// (the title starts under it as it fades: it's let go of, fades, and goes)
@@ -1701,7 +1702,7 @@ window.Showtime = function (stage, opts) {
 			update() {
 				self.blackout = 1;
 				const v = $video && $video.find('video')[0];
-				if (v && v.duration && v.currentTime >= v.duration - STING.fade) ended = true;   // (on to the title while it fades)
+				if (v && v.duration && v.currentTime >= v.duration - STING.lead) ended = true;   // (on to the title while it fades)
 			},
 			exit: letGo,
 		}, extra);
@@ -1768,7 +1769,16 @@ window.Showtime = function (stage, opts) {
 			draw(ctx, bt) {
 				const fade = 1 - between(bt, outAt(), outAt() + T.out);
 				const n = lines.length;
+				const logo = IGB.image(TITLE.logo.src);
 				self.onWalls(ctx, function (c) {
+					// the Immersive Gamebox logo, in white, along the top
+					if (logo.complete && logo.naturalWidth) {
+						const L = TITLE.logo, lh = L.w * logo.naturalHeight / logo.naturalWidth;
+						c.save();
+						c.globalAlpha *= fade * clamp(bt / 0.5, 0, 1);
+						c.drawImage(logo, W / 2 - L.w / 2, L.top, L.w, lh);
+						c.restore();
+					}
 					lines.forEach(function (line, li) {
 						// its full size, shrunk (exactly, not by steps) only as far as it must to fit in 70% of a wall
 						const full = T.size * (n > 1 ? 0.85 : 1);
