@@ -4223,7 +4223,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const DOLL_TUNED = {
 		head: { up: 52, x: 0, scale: 0.8 },
 		order: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15],
-		pupil: { x: 0.139, cx: 0.026, y: 0.03, ring: 0.03 },
+		pupil: { x: 0.124, cx: -0.003, y: -0.019, ring: 0.03 },
 		nudge: {},   // each head frame's own nudge, by its number on the sheet: { x, y } (her head's units)
 	};
 	const DOLL_KEY = 'rlgl-doll-lab-v7';   // (v7: earlier tuning was for the chibi doll)
