@@ -1560,7 +1560,7 @@ window.Showtime = function (stage, opts) {
 		zoom: { x: 465, y: 550 },                                // where the eye looks into it (the middle of what shows of it, left of the panel): the vanishing point, and the rush's centre
 		panel: { x: 874, y: 230, w: 670, h: 770 },               // the purple panel on the right, over the box (the way in 55% of it, the kiosk 45%)
 		screen: { inset: 34 },                                   // its 9:16 screen, this far in from the panel's top left (as tall as the panel allows)
-		gate: { gap: 14, post: 92, inset: 46, lift: 120 },                  // the glass barriers, side by side across the whole way in, a third of its height, held up off the floor (lift) by chunky posts, set in from the way in's edges (inset)
+		gate: { gap: 14, post: 92, inset: 46, lift: 120, depth: 92, thick: 14 },                  // the glass barriers, side by side across the whole way in, a third of its height, held up off the floor (lift) by chunky posts, set in from the way in's edges (inset); the posts this deep, the glass this thick (real 3D blocks)
 		neon: '#c06bff',                                         // the strips down the box's sides
 		purple: '#6326c8',                                       // the panels, one flat purple
 		swing: 0.55, rush: 0.75, dark: 0.25,                     // the barriers swinging in (the screens fading to black); the view rushing into the box (everything fading to black); a moment in the black, then the sting
@@ -1659,14 +1659,38 @@ window.Showtime = function (stage, opts) {
 		const gx = G.inset + G.post;
 		G.h = (H - F.box.y) / 3;                                 // (a third of the way in's height, as it shows under the fascia)
 		const gy = B.h - G.h - G.lift;                           // (raised off the floor: a gap under them)
-		const barrier = (left, hinge) => $('<div>').css({
-			position: 'absolute', left: left + 'px', top: gy + 'px', width: G.w + 'px', height: G.h + 'px', transformOrigin: hinge + ' center',
-			background: 'linear-gradient(180deg, rgba(220,235,255,0.42), rgba(200,220,255,0.18))', border: '3px solid rgba(255,255,255,0.7)', borderRadius: '6px', boxSizing: 'border-box',
-			transition: `transform ${F.swing}s cubic-bezier(.5,0,.3,1)`,
-		}).appendTo($box);
+		// (real 3D blocks: a cuboid of faces, x across, y down, z out toward us;
+		// face(name) styles each of front, back, left, right, top, bottom)
+		const cuboid = function ($in, c, face) {
+			const $c = $('<div>').css({ position: 'absolute', left: c.x + 'px', top: c.y + 'px', width: c.w + 'px', height: c.h + 'px', transformStyle: 'preserve-3d', transform: `translateZ(${c.z}px)` }).appendTo($in);
+			const sides = {
+				front: { w: c.w, h: c.h, t: `translateZ(${c.d / 2}px)` },
+				back: { w: c.w, h: c.h, t: `rotateY(180deg) translateZ(${c.d / 2}px)` },
+				left: { w: c.d, h: c.h, t: `rotateY(-90deg) translateZ(${c.w / 2}px)` },
+				right: { w: c.d, h: c.h, t: `rotateY(90deg) translateZ(${c.w / 2}px)` },
+				top: { w: c.w, h: c.d, t: `rotateX(90deg) translateZ(${c.h / 2}px)` },
+				bottom: { w: c.w, h: c.d, t: `rotateX(-90deg) translateZ(${c.h / 2}px)` },
+			};
+			for (const [name, f] of Object.entries(sides)) {
+				$('<div>').css(Object.assign({ position: 'absolute', left: (c.w - f.w) / 2 + 'px', top: (c.h - f.h) / 2 + 'px', width: f.w + 'px', height: f.h + 'px', transform: f.t, boxSizing: 'border-box' }, face(name))).appendTo($c);
+			}
+			return $c;
+		};
+		// the barriers: glass slabs, each hung from its post on a hinge (the hinge
+		// turns, swinging the slab inwards)
+		const glass = (name) => ({ background: name === 'front' || name === 'back' ? 'linear-gradient(180deg, rgba(220,235,255,0.40), rgba(200,220,255,0.16))' : 'rgba(225,240,255,0.65)', border: name === 'front' || name === 'back' ? '2px solid rgba(255,255,255,0.65)' : 'none' });
+		const barrier = function (left, hinge) {
+			const $h = $('<div>').css({ position: 'absolute', left: left + 'px', top: gy + 'px', width: G.w + 'px', height: G.h + 'px', transformStyle: 'preserve-3d', transformOrigin: hinge + ' center', transform: `translateZ(${-G.depth / 2}px)`, transition: `transform ${F.swing}s cubic-bezier(.5,0,.3,1)` }).appendTo($box);
+			cuboid($h, { x: 0, y: 0, z: 0, w: G.w, h: G.h, d: G.thick }, glass);
+			return $h;
+		};
 		const $gl = barrier(gx, 'left'), $gr = barrier(gx + G.w + G.gap, 'right');
+		// the posts: chunky blocks standing on the floor, a glowing blue neon top
+		const post = (name) => (name === 'top'
+			? { background: '#c8f6ff', boxShadow: '0 0 22px 8px #3ad1ff, 0 0 50px 14px rgba(58,209,255,0.55)' }
+			: { background: name === 'front' ? '#1b1428' : name === 'back' ? '#0a0612' : '#120c1c', borderTop: name === 'top' || name === 'bottom' ? 'none' : '6px solid #7fe7ff' });
 		for (const x of [gx - G.post, gx + 2 * G.w + G.gap]) {
-			$('<div>').css({ position: 'absolute', left: x + 'px', top: gy - 30 + 'px', width: G.post + 'px', height: B.h - gy + 30 + 'px', borderRadius: '10px 10px 0 0', background: '#120c1c', borderTop: '10px solid #c8f6ff', boxShadow: '0 -6px 18px 4px #3ad1ff, 0 -14px 40px 6px rgba(58,209,255,0.55)' }).appendTo($box);   // (a glowing blue neon top)
+			cuboid($box, { x, y: gy - 30, z: -G.depth / 2, w: G.post, h: B.h - gy + 30, d: G.depth }, post);
 		}
 
 		// 5. the purple panel on the right, its screen (filling it) asking HOW MANY PLAYERS?
@@ -1700,8 +1724,8 @@ window.Showtime = function (stage, opts) {
 					// 7. the barriers swing in, the view rushes into the box, then the sting
 					stage.timeout(function () {
 						// (swinging inwards, into the box, in its perspective)
-						$gl.css({ transform: 'rotateY(78deg)' });
-						$gr.css({ transform: 'rotateY(-78deg)' });
+						$gl.css({ transform: `translateZ(${-G.depth / 2}px) rotateY(78deg)` });
+						$gr.css({ transform: `translateZ(${-G.depth / 2}px) rotateY(-78deg)` });
 						self.fx('whooshLong', 0.6);
 					}, PRESS.hold * 1000);
 					// (as the barriers swing, the screens all fade to black; as the view
