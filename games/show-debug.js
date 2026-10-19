@@ -445,11 +445,11 @@ IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 
 	/* ---------- the debug buttons (on the show's pause screen) ---------- */
 
-	const JUMPS = ['sting', 'title', 'clock', 'visors', 'controls', 'villain', 'play', 'timeup', 'scores', 'rank', 'team', 'board', 'replay', 'rate', 'end'];
+	const JUMPS = ['squad', 'sting', 'title', 'clock', 'visors', 'controls', 'villain', 'play', 'timeup', 'scores', 'rank', 'team', 'board', 'replay', 'rate', 'end'];
 	const { drow, dbutton } = show.menu;
 	const $now = show.menu.$now;
 	const $jumps = drow('BEATS');
-	for (const id of JUMPS) dbutton(id.toUpperCase(), () => jump(id)).attr('jump', id).appendTo($jumps);
+	for (const id of JUMPS) dbutton(id === 'squad' ? 'KIOSK' : id.toUpperCase(), () => jump(id)).attr('jump', id).appendTo($jumps);   // (the squad pick: the kiosk)
 	const $acts = drow('TOOLS');
 	dbutton('SHUFFLE SCORES', shuffle, '#225a3a').attr('act', 'scores').appendTo($acts);
 	dbutton('VISORS OK', () => { if (show.beat === 'visors') show.next(); }, '#225a3a').attr('act', 'visors').appendTo($acts);
