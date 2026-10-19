@@ -1667,10 +1667,17 @@ window.Showtime = function (stage, opts) {
 	// out). lines: [{ text, fill, glow }]. Never a byline under it.
 	// The sting: the In Gamebox logo animation (assets/shared/sting.mp4, made
 	// for all three walls), full screen on black, with its sound; then on.
-	const STING = { src: 'assets/shared/sting.mp4', most: 6 };   // the video; on regardless after this long (if it can't play)
+	const STING = { src: 'assets/shared/sting.mp4', most: 6, fade: 0.8 };   // the video; on regardless after this long (if it can't play); how long before its end it starts fading, revealing the title as it goes
 	beatsLib.sting = function (extra) {
 		let $video = null, ended = false;
-		const clear = () => { if ($video) { $video[0].pause(); $video.remove(); } $video = null; };
+		// (the title starts under it as it fades: it's let go of, fades, and goes)
+		const letGo = function () {
+			if (!$video) return;
+			const $v = $video;
+			$video = null;
+			$v.css({ transition: `opacity ${STING.fade}s linear`, opacity: 0 });
+			stage.timeout(() => { $v[0].pause(); $v.remove(); }, STING.fade * 1000 + 100);
+		};
 		return extend({
 			id: 'sting',
 			world: false,
@@ -1679,14 +1686,18 @@ window.Showtime = function (stage, opts) {
 			enter() {
 				ended = false;
 				self.blackout = 1;
-				clear();
+				if ($video) { $video[0].pause(); $video.remove(); }
 				$video = $('<video playsinline preload="auto">').attr('src', STING.src).css({
-					position: 'absolute', left: 0, top: 0, width: 3 * W + 'px', height: H + 'px', objectFit: 'contain', background: '#000', zIndex: 25, pointerEvents: 'none',
+					position: 'absolute', left: 0, top: 0, width: 3 * W + 'px', height: H + 'px', objectFit: 'contain', background: '#000', zIndex: 25, pointerEvents: 'none', opacity: 1,
 				}).appendTo(stage.$ui).on('ended error', () => { ended = true; });
 				$video[0].play().catch(() => { ended = true; });
 			},
-			update() { self.blackout = 1; },
-			exit: clear,
+			update() {
+				self.blackout = 1;
+				const v = $video && $video[0];
+				if (v && v.duration && v.currentTime >= v.duration - STING.fade) ended = true;   // (on to the title while it fades)
+			},
+			exit: letGo,
 		}, extra);
 	};
 
