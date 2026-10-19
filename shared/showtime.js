@@ -2128,18 +2128,48 @@ window.Showtime = function (stage, opts) {
 					});
 					// (the squad's visors are in the score capsules along the bottom: see visorInCapsule)
 					drawFloor(c, cx, 340, 730, n, bt, wall);   // (well clear of the square capsules along the bottom)
-					// a wrong visor in play gets the big flag, over everything
-					if (bad.length) {
-						const i = bad[0];
+					// a wrong visor in play: its own square capsule joins the end of the
+					// row along the bottom, in its colour, its visor struck through with
+					// a big red cross, and the change-hats message just above it
+					bad.forEach(function (i, j) {
+						const S = SCORE_HUD;
+						const total = n * S.w + (n - 1) * S.gap;
+						const x = W / 2 + total / 2 + S.gap * 3 + j * (S.w + S.gap) + S.w / 2;
+						const pop = easeOut(clamp((bt - wrongSince[i]) / 0.3, 0, 1));
+						if (pop <= 0) return;
+						const y = H - S.w / 2 + (1 - pop) * (S.w + S.sink);
+						capsule(c, x, y, 1, colour(i), '', { w: S.w, h: S.w, sink: S.sink });
+						// its visor, turning
+						const k = Math.min(S.w * 0.8 / 270, (S.w - S.line) * 0.8 / 220);
+						c.save();
+						c.translate(x, y - S.line / 2 - 12 * k);
+						c.scale(k, k);
+						visor(c, colour(i), 1, bt * 1.4 + i * 0.8);
+						c.restore();
+						// the cross, corner to corner, ink-edged
+						const d = S.w * 0.36, cy = y - S.line / 2;
+						for (const [col, wd] of [[theme.ink, 30], ['#ff2f4f', 18]]) {
+							c.save();
+							c.strokeStyle = col;
+							c.lineWidth = wd;
+							c.lineCap = 'round';
+							c.beginPath();
+							c.moveTo(x - d, cy - d); c.lineTo(x + d, cy + d);
+							c.moveTo(x + d, cy - d); c.lineTo(x - d, cy + d);
+							c.stroke();
+							c.restore();
+						}
+						// the message, above it (only over the first)
+						if (j) return;
 						const flash = 0.75 + 0.25 * Math.sin(bt * 12);
-						const w = 760;
-						const fx = W / 2;
-						const top = 300;
-						art.roundRect(c, fx - w / 2, top, w, 250, 40, { fill: 'rgba(40,0,8,0.95)', stroke: '#ff3d6a', lineWidth: 10, alpha: flash });
-						self.text(c, 'WRONG VISOR!', fx, top + 62, 76, { fill: '#ff5470', glow: '#ff3d6a', fit: w - 60 });
-						self.text(c, self.nameOf(i) + ' ISN\'T PLAYING', fx, top + 140, 50, { fill: lit(i), fit: w - 60 });
-						self.text(c, lost.length ? 'SWAP IT FOR ' + self.nameOf(lost[0]) : 'TAKE IT OFF', fx, top + 206, 50, { fill: lost.length ? lit(lost[0]) : 'white', fit: w - 60 });
-					}
+						const w = 640, ph = 230;
+						const fx = clamp(x, w / 2 + 20, W - w / 2 - 20);
+						const top = H - S.w - S.sink * 0 - 30 - ph;
+						art.roundRect(c, fx - w / 2, top, w, ph, 40, { fill: 'rgba(40,0,8,0.95)', stroke: '#ff3d6a', lineWidth: 10, alpha: flash * pop });
+						self.text(c, 'WRONG VISOR!', fx, top + 58, 68, { fill: '#ff5470', glow: '#ff3d6a', fit: w - 60, alpha: pop });
+						self.text(c, self.nameOf(i) + ' ISN\'T PLAYING', fx, top + 128, 46, { fill: lit(i), fit: w - 60, alpha: pop });
+						self.text(c, lost.length ? 'SWAP IT FOR ' + self.nameOf(lost[0]) : 'TAKE IT OFF', fx, top + 188, 46, { fill: lost.length ? lit(lost[0]) : 'white', fit: w - 60, alpha: pop });
+					});
 				});
 			},
 		}, extra);
