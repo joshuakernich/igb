@@ -1554,7 +1554,7 @@ window.Showtime = function (stage, opts) {
 	// Once a count's tapped the barriers swing inwards, the view rushes into
 	// the box, and the sting begins.
 	const FRONT = {
-		tv: { y: -82, h: 170, gap: 52, lean: -16 },               // the three TVs across the top (16:9), nudged up so just their bottoms show, filling the frame over the room, leaning forward (degrees)
+		tv: { y: -196, h: 258, gap: 20, lean: -16 },               // the three TVs across the top (16:9), nudged up so just their bottoms show, filling the frame over the room, leaning forward (degrees)
 		box: { x: 56, y: 230, w: 1488, h: 770, lens: 1000 },
 		inner: 24,                                               // the room inside, this far in from the neon edges   // the gamebox's way in, under the fascia with the TVs (the box itself the wall's whole height, the arcade showing either side of it): its mouth, how deep it goes, its perspective
 		zoom: { x: 465, y: 550 },                                // where the eye looks into it (the middle of what shows of it, left of the panel): the vanishing point, and the rush's centre
