@@ -211,10 +211,10 @@ window.Showtime = function (stage, opts) {
 		startFade: 0.7,        // the START button fading in
 		hold: 1.6,             // then it holds
 		out: 0.5,              // and fades
-		size: 210,
+		size: 170,
 		fit: 0.7,              // the widest a line may be: this share of a wall
-		raised: 400,           // with a START button: the title's middle, raised to make room (under the logo)
-		logo: { src: 'assets/shared/igb-logo.png', w: 520, top: 40, outline: 7, drop: 9, tilt: -0.05, bob: [7, 1.6], sway: [0.012, 1.1] },   // the Immersive Gamebox logo along the top: its width, how far down; its ink outline and drop (as the words have); tilted (radians), floating up and down (px, speed) and swaying (radians, speed)
+		raised: 370,           // with a START button: the title's middle, raised to make room (under the logo)
+		logo: { src: 'assets/shared/igb-logo.png', w: 420, top: 50, outline: 7, drop: 9, tilt: -0.05, bob: [7, 1.6], sway: [0.012, 1.1] },   // the Immersive Gamebox logo along the top: its width, how far down; its ink outline and drop (as the words have); tilted (radians), floating up and down (px, speed) and swaying (radians, speed)
 		startGap: 50,          // and the gap between its last line and the START button
 	};
 
