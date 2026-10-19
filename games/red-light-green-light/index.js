@@ -68,7 +68,8 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	const GAME_SECONDS = 600;
 	const M = 55;               // field units per metre (about the front wall's pixels per metre too)
 	const BACK = -130;          // a player at the back of the room stands this far up from the near edge (below it: off the bottom of the walls)
-	const DEPTH = 800;          // and right up at the front wall, this much further
+	const DEPTH = 575;          // and right up at the front wall, this much further (tuned with FINISH_AT: the finish line about 30% of the room from the wall, and not much past it)
+	const FINISH_AT = 430;      // where the finish line stops, once the field's run out: this far up from the near edge
 	// (stepping toward the wall moves you up the field, but less and less near
 	// it: straight on until FORWARD.ease, then easing off to nothing by
 	// FORWARD.flat; the last of the room barely moves you)
@@ -285,7 +286,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 		settings = settingsFor(r);
 		finishF = START_F + 255 + settings.length;
 		dollF = finishF + FINISH_GAP;
-		camEnd = finishF - 70 - DEPTH * 0.45;   // the last stop: the finish line part way up the walls
+		camEnd = finishF - FINISH_AT;   // the last stop: the finish line part way up the walls
 		blocks = [];
 		movers = [];
 		boulders = [];
