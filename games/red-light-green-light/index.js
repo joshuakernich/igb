@@ -119,7 +119,7 @@ IGB.register('red-light-green-light', function RedLightGreenLightGame(stage, pla
 	// runner somewhere in the middle third of the room (near: a share of the room,
 	// 0 the back, 1 the wall; each picks its own, leaning toward the back, some
 	// anywhere), a moment later (wait, seconds), from so high, taking so long
-	const DROP = { near: [0.33, 0.67], lean: 1.6, stray: 0.2, strayNear: [0.12, 0.8], wait: [0, 1.2], height: [700, 1100], time: [0.7, 1.1] };
+	const DROP = { near: [0.45, 0.75], lean: 1.2, stray: 0.2, strayNear: [0.3, 0.85], wait: [0, 0.5], height: [700, 1100], time: [0.7, 1.1] };
 	const BAG = { every: 1700, count: 9, near: 110, radius: 380, fly: 0.75, arc: 240 };   // a money bag every so far up each wall; wads it bursts into; how near and far they land; seconds in the air; how high they fly
 	const LASER = { hop: 1.2, follow: 20, wobble: 14, search: 50, rx: 150, rf: 60, glow: 50, thin: 0.12, thick: 1.6 };   // red light's target: seconds per contestant, how quickly it follows, its jitter, how far it searches round them, its half-width and half-depth, its glow; how wide the beams are at her eyes, and (times the sand's scale there) at the target
 	const STARE = { chance: 0.45, sweep: 0.4, hold: 0.45, wide: 900, bloom: 1100, wash: 0.22 };   // as the laser darts to the next contestant: how often it sweeps up to look straight out at us; how long the sweep up (and away again) takes and how long it stares (seconds); how wide the beams get as they reach us; how far its bloom of red reaches (world units), and how red it washes the whole view
