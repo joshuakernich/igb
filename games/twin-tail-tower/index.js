@@ -36,15 +36,17 @@
  * itself until the clock runs out, TIME!, scores, rank, team, leaderboard,
  * replay, rating and the end (IGB.complete there).
  *
- * Three cameras on one rig at the middle of the room, one per wall, all
- * level (one shared pitch: none) with the same fixed 90-degree field of view
- * across (64 down), so the walls meet seamlessly.
+ * Drawn with Glint, the gamebox's own engine (lib/glint: physically based,
+ * HDR, bloom, filmic tone mapping). Three cameras on one rig at the middle
+ * of the room, one per wall (G.createWallRig), all level (one shared pitch:
+ * none) with the same fixed 90-degree field of view across (64 down), so the
+ * walls meet seamlessly.
  *
  * Input: px (left to right across the room: round the ring, left wall to
  * right wall). pz isn't used for steering (only for the replay).
  * An ES module (manifest: module: true).
  */
-import * as THREE from '../../lib/three/three.module.min.js';
+import * as G from '../../lib/glint/glint.js';
 import { createSky } from './sky.js';
 import { buildFox, buildPlatform, buildSpring, buildRotor, buildRobot, buildRing, buildBubble, buildIsland, buildMarker, sparkleTexture } from './models.js';
 import { createSound } from './sound.js';
@@ -99,44 +101,36 @@ IGB.register('twin-tail-tower', function TwinTailTowerGame(stage, playersMeta) {
 
 	/* ---------- renderer, scene, cameras ---------- */
 
-	const renderer = new THREE.WebGLRenderer({ antialias: true });
-	renderer.toneMapping = THREE.ACESFilmicToneMapping;
+	// Glint: physically based, HDR, bloom, ACES filmic tone mapping, soft shadows.
+	const renderer = new G.Renderer();
 	renderer.toneMappingExposure = 1.05;
-	renderer.shadowMap.enabled = true;
-	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-	renderer.shadowMap.autoUpdate = false;
+	Object.assign(renderer.bloom, { strength: 0.45, radius: 0.65, threshold: 1.2 });
+	Object.assign(renderer.grade, { saturation: 1.08, contrast: 1.04, vignette: 0.12 });
+	renderer.shadowsEnabled = true;
 	$(renderer.domElement).css({ position: 'absolute', left: 0, top: 0, width: WIDTH + 'px', height: H + 'px' }).appendTo(stage.$bg);
 
-	let k = 1;
 	function resize() {
-		k = Math.min(IGB.scale * IGB.pixelRatio, 1);
+		const k = Math.min(IGB.scale * IGB.pixelRatio, 1);
 		renderer.setPixelRatio(1);
 		renderer.setSize(Math.round(WIDTH * k), Math.round(H * k), false);
-	}
-	function viewport(x, y, w, h) {
-		const x0 = Math.round(x * k);
-		const x1 = Math.round((x + w) * k);
-		const y0 = Math.round((H - y - h) * k);
-		const y1 = Math.round((H - y) * k);
-		renderer.setViewport(x0, y0, x1 - x0, y1 - y0);
-		renderer.setScissor(x0, y0, x1 - x0, y1 - y0);
 	}
 	const unlisten = IGB.onResize(resize);
 	resize();
 
-	const scene = new THREE.Scene();
-	scene.fog = new THREE.Fog(0xa9d6f6, 120, 1400);
+	const scene = new G.Scene();
+	scene.fog = new G.Fog(0xa9d6f6, 120, 1400);
 	const world = createSky(renderer, scene, ZONES);
 
-	const hemi = new THREE.HemisphereLight(0xcfe9ff, 0x2a7a8a, 0.8);
+	const hemi = new G.HemisphereLight(0xcfe9ff, 0x2a7a8a, 0.8);
 	scene.add(hemi);
-	const sun = new THREE.DirectionalLight(0xfff0d8, 3.2);
+	const sun = new G.DirectionalLight(0xfff0d8, 3.2);
 	sun.castShadow = true;
 	sun.shadow.mapSize.set(2048, 2048);
 	Object.assign(sun.shadow.camera, { left: -17, right: 17, top: 17, bottom: -17, near: 1, far: 140 });
 	sun.shadow.camera.updateProjectionMatrix();
 	sun.shadow.bias = -0.0004;
 	sun.shadow.normalBias = 0.03;
+	sun.shadow.radius = 2;
 	scene.add(sun, sun.target);
 
 	// One eye in the middle of the room, climbing the tower: the front camera
@@ -144,17 +138,10 @@ IGB.register('twin-tail-tower', function TwinTailTowerGame(stage, playersMeta) {
 	// level, with the same fixed field of view (90 degrees across), so they're
 	// the sides of one box and the walls meet seamlessly. Never tilt or zoom
 	// one alone.
-	const rig = new THREE.Group();
+	const walls = G.createWallRig({ fov: FOV, aspect: W / H, near: 0.1, far: 6000 });   // left, front, right
+	const rig = walls.rig;
 	scene.add(rig);
-	const frontCam = new THREE.PerspectiveCamera(FOV, W / H, 0.1, 6000);
-	rig.add(frontCam);
-	const sideCams = [Math.PI / 2, -Math.PI / 2].map(function (yaw) {
-		const cam = new THREE.PerspectiveCamera(FOV, W / H, 0.1, 6000);
-		cam.rotation.y = yaw;
-		rig.add(cam);
-		return cam;
-	});
-	const cams = [sideCams[0], frontCam, sideCams[1]];
+	const cams = walls.cameras;
 
 	// How far up and down a wall shows, from eye level, at an angle round the
 	// ring (0 straight ahead): the most at a wall's middle, less toward its
@@ -184,7 +171,7 @@ IGB.register('twin-tail-tower', function TwinTailTowerGame(stage, playersMeta) {
 	const rand = (a, b) => a + Math.random() * (b - a);
 	const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 	const lerp = (a, b, t) => a + (b - a) * t;
-	const v3 = () => new THREE.Vector3();
+	const v3 = () => new G.Vector3();
 	const hard = (y) => clamp(y / HARD_AT, 0, 1);
 
 	let platforms = [];   // { s, s0, y, w, type, look, mesh, alive, move: { amp, speed, ph }, item, fall }
@@ -359,7 +346,7 @@ IGB.register('twin-tail-tower', function TwinTailTowerGame(stage, playersMeta) {
 	let flashRed = 0;
 
 	function sparkle(at, colour = 0xffffff, size = 2) {
-		const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTex, color: colour, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+		const s = new G.Sprite(new G.SpriteMaterial({ map: sparkTex, color: colour, transparent: true, depthWrite: false, blending: G.AdditiveBlending, toneMapped: false }));
 		s.position.copy(at);
 		s.scale.setScalar(size);
 		scene.add(s);
@@ -818,21 +805,16 @@ IGB.register('twin-tail-tower', function TwinTailTowerGame(stage, playersMeta) {
 	}
 
 	function render() {
-		renderer.setScissorTest(true);
-		renderer.shadowMap.needsUpdate = true;
-		cams.forEach(function (cam, w) {
-			viewport(w * W, 0, W, H);
-			renderer.render(scene, cam);
-		});
+		// (one shadow pass, then all three walls into one HDR frame, then bloom and tone mapping)
+		renderer.render(scene, walls.views(renderer.width, renderer.height));
 	}
 
 	/* ---------- the 2D layer: words, the height ---------- */
 
-	const pv = v3();
 	function onWall(v, wall) {
-		pv.copy(v).project(cams[wall]);
-		if (pv.z > 1 || Math.abs(pv.x) > 1 || Math.abs(pv.y) > 1.3) return null;
-		return { x: wall * W + (pv.x + 1) / 2 * W, y: (1 - pv.y) / 2 * H };
+		const p = G.toScreen(v, cams[wall], wall * W, 0, W, H);
+		if (!p || Math.abs(p.ndc.x) > 1 || Math.abs(p.ndc.y) > 1.3) return null;
+		return p;
 	}
 	function onAnyWall(v) {
 		for (const w of [1, 0, 2]) {

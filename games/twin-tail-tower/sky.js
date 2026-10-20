@@ -4,15 +4,15 @@
  * clouds (a deck of them to climb through and look down on); a blazing
  * sunset; then night, the stars coming out; and space, black and starry,
  * the sun sharp and white again and a ringed planet hanging off to one side.
- * The sky and the sea are ShaderMaterials sharing one set of uniforms, and an
- * environment map of the sky (PMREM, rebuilt as the colours change) keeps
- * everything shiny reflecting it.
+ * The sky is a Glint SkyDome and the sea a ShaderMaterial, sharing one set of
+ * uniforms; the dome's environment (rebuilt every few metres as the colours
+ * change) keeps everything shiny reflecting the sky of the moment.
  *
  *   const world = createSky(renderer, scene, { clouds, sunset, night, space });   // heights, metres
  *   world.update(time, eye, height);    // every frame
  *   world.light                         // the sun, sky light and haze for this height
  */
-import * as THREE from '../../lib/three/three.module.min.js';
+import * as G from '../../lib/glint/glint.js';
 
 const TAU = Math.PI * 2;
 const SUN_AZ = -0.6;   // radians round from straight ahead (the front wall's middle): ahead and to the left
@@ -48,59 +48,40 @@ const SKY_GLSL = /* glsl */`
 	}
 `;
 
-function skyMaterial(uniforms, sunBoost) {
-	return new THREE.ShaderMaterial({
-		uniforms: Object.assign({}, uniforms, { sunBoost: { value: sunBoost } }),   // (the same uniforms, all but the sun's brightness)
-		vertexShader: /* glsl */`
-			varying vec3 vDir;
-			void main() {
-				vec4 w = modelMatrix * vec4(position, 1.0);
-				vDir = w.xyz - cameraPosition;
-				gl_Position = projectionMatrix * viewMatrix * w;
-				gl_Position.z = gl_Position.w * 0.99999;   // always the furthest thing
-			}
-		`,
-		fragmentShader: /* glsl */`
-			uniform float sunBoost;
-			uniform float uStars;
-			varying vec3 vDir;
-			${SKY_GLSL}
-			float hash(vec3 p) {
-				p = fract(p * 0.3183099 + 0.1);
-				p *= 17.0;
-				return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
-			}
-			// a starfield: one star in a few of the cells round the sky
-			vec3 stars(vec3 d) {
-				vec3 p = d * 150.0;
-				vec3 c = floor(p);
-				float h = hash(c);
-				if (h < 0.972) return vec3(0.0);
-				vec3 o = vec3(hash(c + 1.3), hash(c + 2.7), hash(c + 5.1)) * 0.6 + 0.2;
-				float dd = length(fract(p) - o);
-				float b = smoothstep(0.2, 0.0, dd) * (h - 0.972) / 0.028 * 3.0;
-				b *= 0.7 + 0.3 * sin(dot(c, vec3(1.0)) + h * 40.0);
-				return vec3(b) * mix(vec3(0.75, 0.85, 1.0), vec3(1.0, 0.9, 0.75), hash(c + 9.0));
-			}
-			void main() {
-				vec3 d = normalize(vDir);
-				vec3 col = skyColor(d);
-				float s = dot(d, sunDir);
-				col += uSun * smoothstep(0.9993, 0.99965, s) * sunBoost;   // the sun's disc
-				col += uSun * pow(max(s, 0.0), 900.0) * sunBoost * 0.3;
-				col += stars(d) * uStars * smoothstep(-0.02, 0.06, d.y);
-				gl_FragColor = vec4(col, 1.0);
-				#include <tonemapping_fragment>
-				#include <colorspace_fragment>
-			}
-		`,
-		side: THREE.BackSide,
-		depthWrite: false,
-	});
-}
+// The dome's own extras, seen but never reflected: the sun's blazing disc,
+// and the stars.
+const EXTRA_GLSL = /* glsl */`
+	uniform float sunBoost;
+	uniform float uStars;
+	float hash(vec3 p) {
+		p = fract(p * 0.3183099 + 0.1);
+		p *= 17.0;
+		return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+	}
+	// a starfield: one star in a few of the cells round the sky
+	vec3 stars(vec3 d) {
+		vec3 p = d * 150.0;
+		vec3 c = floor(p);
+		float h = hash(c);
+		if (h < 0.972) return vec3(0.0);
+		vec3 o = vec3(hash(c + 1.3), hash(c + 2.7), hash(c + 5.1)) * 0.6 + 0.2;
+		float dd = length(fract(p) - o);
+		float b = smoothstep(0.2, 0.0, dd) * (h - 0.972) / 0.028 * 3.0;
+		b *= 0.7 + 0.3 * sin(dot(c, vec3(1.0)) + h * 40.0);
+		return vec3(b) * mix(vec3(0.75, 0.85, 1.0), vec3(1.0, 0.9, 0.75), hash(c + 9.0));
+	}
+	#define SKY_EXTRA
+	vec3 skyExtra(vec3 d) {
+		float s = dot(d, sunDir);
+		vec3 col = uSun * smoothstep(0.9993, 0.99965, s) * sunBoost;   // the sun's disc
+		col += uSun * pow(max(s, 0.0), 900.0) * sunBoost * 0.3;
+		col += stars(d) * uStars * smoothstep(-0.02, 0.06, d.y);
+		return col;
+	}
+`;
 
 function oceanMaterial(uniforms) {
-	return new THREE.ShaderMaterial({
+	return new G.ShaderMaterial({
 		uniforms: Object.assign({}, uniforms, { uTime: { value: 0 } }),
 		vertexShader: /* glsl */`
 			varying vec3 vWorld;
@@ -147,9 +128,7 @@ function oceanMaterial(uniforms) {
 				vec3 col = mix(water, refl, F) + sun;
 				vec3 hz = skyColor(normalize(vec3(-V.x, -0.001, -V.z)));
 				col = mix(col, hz, smoothstep(400.0, 3000.0, dist) * 0.9);
-				gl_FragColor = vec4(col, 1.0);
-				#include <tonemapping_fragment>
-				#include <colorspace_fragment>
+				gl_FragColor = vec4(col, 1.0);   // (linear HDR: the engine tone maps)
 			}
 		`,
 	});
@@ -177,8 +156,8 @@ function cloudTexture() {
 	g.globalCompositeOperation = 'source-atop';
 	g.fillStyle = shade;
 	g.fillRect(0, 0, 256, 128);
-	const t = new THREE.CanvasTexture(c);
-	t.colorSpace = THREE.SRGBColorSpace;
+	const t = new G.CanvasTexture(c);
+	t.colorSpace = G.SRGBColorSpace;
 	return t;
 }
 
@@ -199,16 +178,16 @@ function deckTexture() {
 			g.fillRect(x + dx - r, y + dy - r, r * 2, r * 2);
 		}
 	}
-	const t = new THREE.CanvasTexture(c);
-	t.colorSpace = THREE.SRGBColorSpace;
-	t.wrapS = t.wrapT = THREE.RepeatWrapping;
+	const t = new G.CanvasTexture(c);
+	t.colorSpace = G.SRGBColorSpace;
+	t.wrapS = t.wrapT = G.RepeatWrapping;
 	t.repeat.set(30, 30);
 	return t;
 }
 
 // A banded gas giant with a ring.
 function buildPlanet() {
-	const g = new THREE.Group();
+	const g = new G.Group();
 	const c = document.createElement('canvas');
 	c.width = 256;
 	c.height = 128;
@@ -218,13 +197,13 @@ function buildPlanet() {
 		x.fillStyle = bands[Math.floor(Math.random() * bands.length)];
 		x.fillRect(0, y, 256, 8 + Math.random() * 6);
 	}
-	const tex = new THREE.CanvasTexture(c);
-	tex.colorSpace = THREE.SRGBColorSpace;
-	const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, fog: false, depthWrite: false });
-	const ball = new THREE.Mesh(new THREE.SphereGeometry(130, 48, 32), mat);
+	const tex = new G.CanvasTexture(c);
+	tex.colorSpace = G.SRGBColorSpace;
+	const mat = new G.MeshBasicMaterial({ map: tex, transparent: true, fog: false, depthWrite: false });
+	const ball = new G.Mesh(new G.SphereGeometry(130, 48, 32), mat);
 	g.add(ball);
-	const ringMat = new THREE.MeshBasicMaterial({ color: 0xe8d2b0, transparent: true, opacity: 0.6, side: THREE.DoubleSide, fog: false, depthWrite: false });
-	const ring = new THREE.Mesh(new THREE.RingGeometry(170, 260, 96), ringMat);
+	const ringMat = new G.MeshBasicMaterial({ color: 0xe8d2b0, transparent: true, opacity: 0.6, side: G.DoubleSide, fog: false, depthWrite: false });
+	const ring = new G.Mesh(new G.RingGeometry(170, 260, 96), ringMat);
 	ring.rotation.set(-1.25, 0.25, 0);
 	g.add(ring);
 	g.rotation.z = 0.3;
@@ -236,24 +215,23 @@ function buildPlanet() {
 export function createSky(renderer, scene, Z) {
 	const STOPS = stops(Z);
 	const uniforms = {
-		uZenith: { value: new THREE.Vector3() },
-		uHorizon: { value: new THREE.Vector3() },
-		uBelow: { value: new THREE.Vector3() },
-		sunDir: { value: new THREE.Vector3(0, 1, 0) },
-		uSun: { value: new THREE.Vector3(1, 1, 1) },
+		uZenith: { value: new G.Vector3() },
+		uHorizon: { value: new G.Vector3() },
+		uBelow: { value: new G.Vector3() },
+		sunDir: { value: new G.Vector3(0, 1, 0) },
+		sunBoost: { value: 30 },
+		uSun: { value: new G.Vector3(1, 1, 1) },
 		uGlow: { value: 1 },
 		uStars: { value: 0 },
 		uSea: { value: 1 },
 	};
 
 	// the sky, round the eye
-	const sky = new THREE.Mesh(new THREE.SphereGeometry(3000, 48, 24), skyMaterial(uniforms, 30));
-	sky.renderOrder = -10;
-	sky.frustumCulled = false;
+	const sky = new G.SkyDome(SKY_GLSL + EXTRA_GLSL, uniforms, 3000);
 	scene.add(sky);
 
 	// the sea, a wide disc under the eye
-	const ocean = new THREE.Mesh(new THREE.CircleGeometry(3600, 96), oceanMaterial(uniforms));
+	const ocean = new G.Mesh(new G.CircleGeometry(3600, 96), oceanMaterial(uniforms));
 	ocean.rotation.x = -Math.PI / 2;
 	ocean.position.y = -0.3;
 	ocean.frustumCulled = false;
@@ -261,19 +239,15 @@ export function createSky(renderer, scene, Z) {
 	ocean.material.depthWrite = false;
 	scene.add(ocean);
 
-	// the environment everything shiny reflects: the same sky, the sun tamer
-	const envScene = new THREE.Scene();
-	envScene.add(new THREE.Mesh(new THREE.SphereGeometry(50, 48, 24), skyMaterial(uniforms, 10)));
-	const pmrem = new THREE.PMREMGenerator(renderer);
-	let env = null;
+	// (the environment everything shiny reflects: the dome's sky, remade as it changes)
 	let envAt = -Infinity;
 
 	// clouds: far ones low over the sea; a band of them to climb through; a deck of cloud to look down on
 	const tex = cloudTexture();
-	const clouds = new THREE.Group();
+	const clouds = new G.Group();
 	scene.add(clouds);
 	const puff = (x, y, z, w, opacity) => {
-		const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: false, opacity }));
+		const s = new G.Sprite(new G.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: false, opacity }));
 		s.position.set(x, y, z);
 		s.scale.set(w, w * 0.45, 1);
 		clouds.add(s);
@@ -290,7 +264,7 @@ export function createSky(renderer, scene, Z) {
 	}
 	const deckY = Z.clouds + 60;
 	const deckTex = deckTexture();
-	const deck = new THREE.Mesh(new THREE.CircleGeometry(3000, 64), new THREE.MeshBasicMaterial({ map: deckTex, transparent: true, depthWrite: false, fog: false, side: THREE.DoubleSide, opacity: 0 }));
+	const deck = new G.Mesh(new G.CircleGeometry(3000, 64), new G.MeshBasicMaterial({ map: deckTex, transparent: true, depthWrite: false, fog: false, side: G.DoubleSide, opacity: 0 }));
 	deck.rotation.x = -Math.PI / 2;
 	deck.position.y = deckY;
 	deck.renderOrder = -4;
@@ -299,12 +273,13 @@ export function createSky(renderer, scene, Z) {
 	const planet = buildPlanet();
 	scene.add(planet);
 
-	const light = { dir: new THREE.Vector3(), sun: new THREE.Color(), sunI: 3, hemiSky: new THREE.Color(), hemiGround: new THREE.Color(), hemiI: 0.8, fog: new THREE.Color() };
+	const WHITE = new G.Color(1, 1, 1);
+	const light = { dir: new G.Vector3(), sun: new G.Color(), sunI: 3, hemiSky: new G.Color(), hemiGround: new G.Color(), hemiI: 0.8, fog: new G.Color() };
 	const world = { sky, ocean, light };
 
 	const mix3 = (out, a, b, k) => out.set(a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k);
 	const mix = (a, b, k) => a + (b - a) * k;
-	const lin = (v) => new THREE.Color().setRGB(v.x, v.y, v.z, THREE.SRGBColorSpace);
+	const lin = (v) => new G.Color(Math.pow(v.x, 2.2), Math.pow(v.y, 2.2), Math.pow(v.z, 2.2));   // (the stops are sRGB-ish; the lights want linear)
 	const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 	world.update = function (time, eye, height) {
@@ -331,12 +306,12 @@ export function createSky(renderer, scene, Z) {
 		light.dir.set(Math.sin(SUN_AZ) * Math.cos(lel), Math.sin(lel), -Math.cos(SUN_AZ) * Math.cos(lel)).normalize();
 		light.sun.copy(lin(u.uSun.value));
 		light.sunI = mix(a.light, b.light, k);
-		light.hemiSky.copy(lin(u.uZenith.value)).lerp(new THREE.Color(1, 1, 1), 0.45);
+		light.hemiSky.copy(lin(u.uZenith.value)).lerp(WHITE, 0.45);
 		light.hemiGround.copy(lin(u.uHorizon.value)).multiplyScalar(0.6);
 		light.hemiI = mix(a.hemi, b.hemi, k);
 		light.fog.copy(lin(u.uHorizon.value));
 
-		sky.position.copy(eye);
+		sky.follow(eye);
 		ocean.position.set(eye.x, -0.3, eye.z);
 		ocean.material.uniforms.uTime.value = time;
 		ocean.visible = height < Z.night + 200;
@@ -357,16 +332,12 @@ export function createSky(renderer, scene, Z) {
 		// a fresh reflection of the sky, now and then as it changes
 		if (Math.abs(height - envAt) > 12) {
 			envAt = height;
-			const next = pmrem.fromScene(envScene, 0, 0.1, 200);
-			scene.environment = next.texture;
-			if (env) env.dispose();
-			env = next;
+			scene.environment = sky.environment(renderer);   // (it refills the same cubes)
 		}
 	};
 
 	world.dispose = function () {
-		if (env) env.dispose();
-		pmrem.dispose();
+		if (sky.env) sky.env.dispose();
 		tex.dispose();
 		deckTex.dispose();
 		planet.userData.tex.dispose();
