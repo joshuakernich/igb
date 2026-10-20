@@ -30,7 +30,8 @@
  *
  * The show is Showtime's standard running order: the squad picker, the
  * title drop (the Strider seen from outside), the clock intro, the visor
- * check, boarding (the eye flies into the cockpit: SYSTEMS ONLINE), the
+ * check, boarding (the eye sweeps round the Strider, comes round behind its
+ * head facing its way and pushes in through the dome: SYSTEMS ONLINE), the
  * tutorial (walk, turn, fire at practice drones), Doctor Klank's
  * transmission, the battle in waves until the clock runs out, TIME!,
  * scores, rank, team, leaderboard, replay, rating and the end.
@@ -78,7 +79,7 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 	const HULL = { bolt: 8, shell: 15, ram: 12, regen: 5, wait: 4, reboot: 3.5, after: 60 };   // damage per hit; regen a second after `wait` seconds unhit; seconds offline; hull after a reboot
 	const SHOTS = { bolt: 34, shell: 2.3, gravity: 18, range: 90, buzz: [3.5, 6.5], crab: [4.5, 7.5] };   // bolt m/s, a shell's flight time, gravity, range they fire from, seconds between shots
 	const SWARM = { start: 6, perWave: 3, max: 24, gap: 0.6, near: 90, far: 160, arc: 120, wave: 75 };   // Klankbots about at once (first wave, more each wave, most), seconds between arrivals, how far off they arrive and how far round from ahead (degrees), seconds a wave
-	const BOARD = { fly: 2.4, dark: [1.8, 2.3], light: [2.5, 3.2], online: 2.6, length: 4.2 };   // boarding: the fly-in, the dark, SYSTEMS ONLINE, the end
+	const BOARD = { orbit: 3.6, push: 1.2, inside: 0.82, behind: 9, online: 5.2, length: 6.6 };   // boarding: seconds sweeping round the Strider (ending behind its head, facing its way), seconds pushing in through the dome, how far through the push the cockpit appears, metres behind the head the sweep ends, SYSTEMS ONLINE, the end
 	const CALL = { on: 0.3, name: 1.2, line: 2.8, list: 4.0, length: 7.5 };   // Doctor Klank's transmission
 	const PRACTICE = 5;                // practice drones in the tutorial
 	const CHEVRONS = { mid: 500 };     // where the throttle bars' zero sits on the front window (ahead above it, astern below)
@@ -555,13 +556,20 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		{
 			id: 'boarding',
 			length: BOARD.length,
-			enter() { boardT = 0; mode = 'outside'; show.fx('clockFly'); },
+			enter() {
+				boardT = 0;
+				mode = 'outside';
+				// (the sweep: from wherever the slow circling has got to, at
+				// least half way round, ending right behind the Strider's head)
+				boardFrom = orbitAngle();
+				let d = (((Math.PI - boardFrom) % TAU) + TAU) % TAU;
+				if (d < Math.PI) d += TAU;
+				boardSweep = d;
+				show.fx('clockFly');
+			},
 			update(dt, bt) {
 				boardT = bt;
-				if (bt < BOARD.dark[0]) show.blackout = 0;
-				else if (bt < BOARD.dark[1]) show.blackout = (bt - BOARD.dark[0]) / (BOARD.dark[1] - BOARD.dark[0]);
-				else if (bt < BOARD.light[0]) { show.blackout = 1; if (mode !== 'cockpit') { mode = 'cockpit'; sound.powerUp(); } }
-				else show.blackout = Math.max(0, 1 - (bt - BOARD.light[0]) / (BOARD.light[1] - BOARD.light[0]));
+				if (show.cue(BOARD.orbit)) show.fx('whoosh');
 				if (show.cue(BOARD.online)) { show.fx('wordSlam'); show.shake = 0.4; }
 			},
 			draw(ctx, bt) {
@@ -673,20 +681,43 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 
 	const eye = new G.Vector3();
 	const eyeQ = new G.Quaternion();
-	const fromPos = new G.Vector3();
-	const fromQ = new G.Quaternion();
 	const lookM = new G.Matrix4();
 	const UP = new G.Vector3(0, 1, 0);
 	const euler = new G.Euler(0, 0, 0, 'YXZ');
-	let boardFrom = false;
+	let boardFrom = 0;        // the boarding sweep: where round the Strider it starts (radians; 0 in front, PI behind)
+	let boardSweep = TAU;     // and how far round it goes
+	const qLook = new G.Quaternion(), qAhead = new G.Quaternion(), behind = new G.Vector3();
 
 	// Where the outside eye is: circling slowly, looking up at the Strider.
-	function outsidePose(pos, q) {
-		const a = clock * 0.07 + 0.35;
-		pos.set(bot.pos.x - Math.sin(bot.heading + a) * 18, bot.pos.y + 4.2, bot.pos.z - Math.cos(bot.heading + a) * 18);
+	const orbitAngle = () => clock * 0.07 + 0.35;
+	function outsidePose(pos, q, a = orbitAngle(), R = 18, up = 4.2) {
+		pos.set(bot.pos.x - Math.sin(bot.heading + a) * R, bot.pos.y + up, bot.pos.z - Math.cos(bot.heading + a) * R);
 		pos.y = Math.max(pos.y, heightAt(pos.x, pos.z) + 2);
 		lookM.lookAt(pos, tmp.set(bot.pos.x, bot.pos.y + 6.4, bot.pos.z), UP);
 		q.setFromRotationMatrix(lookM);
+	}
+
+	// Boarding, t seconds in: sweeping round the Strider, closing in and
+	// rising to its head, turning to face its way as it comes round behind
+	// it; then pushing straight in through the dome to the cockpit.
+	// Returns how far through the push it is (0..1).
+	function boardingPose(t, pos, q) {
+		const ease = (k) => k * k * (3 - 2 * k);
+		const e = ease(Math.min(1, t / BOARD.orbit));
+		cockpitPose(behind, qAhead);
+		if (t < BOARD.orbit) {
+			outsidePose(pos, qLook, boardFrom + boardSweep * e, 18 + (BOARD.behind - 18) * e, 4.2 + (EYE + 0.6 - 4.2) * e);
+			const w = ease(Math.max(0, Math.min(1, (e - 0.55) / 0.45)));
+			q.slerpQuaternions(qLook, qAhead, w);
+			return 0;
+		}
+		const k = Math.min(1, (t - BOARD.orbit) / BOARD.push);
+		const from = tmp2.copy(bot.pos).addScaledVector(fwdOf(bot.heading, tmp3), -BOARD.behind);
+		from.y = bot.pos.y + EYE + 0.6;
+		const p = k * k * (3 - 2 * k);
+		pos.lerpVectors(from, behind, p);
+		q.copy(qAhead);
+		return k;
 	}
 
 	function cockpitPose(pos, q) {
@@ -756,16 +787,15 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		strider.walk(bot.phaseL, bot.phaseR, bot.amountL, bot.amountR, clock);
 
 		// the eye
-		if (mode === 'outside' && boardT < 0) {
-			outsidePose(eye, eyeQ);
-			boardFrom = false;
-		} else if (mode === 'outside' || (boardT >= 0 && boardT < BOARD.dark[1])) {
-			if (!boardFrom) { outsidePose(fromPos, fromQ); boardFrom = true; }
-			const kk = Math.min(1, boardT / BOARD.fly);
-			const e = kk * kk * (3 - 2 * kk);
-			cockpitPose(eye, eyeQ);
-			eye.lerpVectors(fromPos, eye, e);
-			eyeQ.slerpQuaternions(fromQ, eyeQ, e);
+		if (mode === 'outside' && boardT < 0) outsidePose(eye, eyeQ);
+		else if (mode === 'outside' && show.beat === 'boarding') {
+			// round the Strider and in: the cockpit comes up as the eye passes into the dome
+			if (boardingPose(boardT, eye, eyeQ) >= BOARD.inside) {
+				mode = 'cockpit';
+				sound.powerUp();
+				show.flash = Math.max(show.flash || 0, 0.7);
+				cockpitPose(eye, eyeQ);
+			}
 		} else cockpitPose(eye, eyeQ);
 		strider.root.visible = mode === 'outside';
 		rig.position.copy(eye);
