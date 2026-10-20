@@ -13,9 +13,9 @@
  * Controls (tank steering, one driver a leg):
  *   - Player 1 drives the LEFT leg and player 2 the RIGHT leg, always; no
  *     one else ever does. Everyone else (players 3+) taps to shoot. On the
- *     front window an arrow in each driver's colour points out to their
- *     side, beside a bar of chevrons that fills in their colour with their
- *     throttle; a little wireframe Strider in the bottom middle walks each
+ *     front window a strip of chevrons laid back in perspective against
+ *     each edge fills in its driver's colour with their throttle, a
+ *     triangle beside it showing where they stand; a little wireframe Strider in the bottom middle walks each
  *     leg at that leg's own speed.
  *   - A driver's throttle comes from how far forward they stand (pz:
  *     1 at the front wall, 0 at the back): a dead zone across the middle
@@ -1169,8 +1169,9 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		// each leg's driver: an arrow in their colour pointing out to their
 		// side, and a bar of chevrons filling in their colour with their throttle
 		const drv = (i) => (i < count && seen[i] ? PLAYER_COLORS[i] : '#6a6f7a');
-		chevronBar(ctx, W + 200, CHEVRONS.mid, bot.tL, drv(DRIVERS.left), -1, clock);
-		chevronBar(ctx, 2 * W - 200, CHEVRONS.mid, bot.tR, drv(DRIVERS.right), 1, clock);
+		const posOf = (i) => (i < count && seen[i] && latest[i] && latest[i].pz !== undefined ? (latest[i].pz - 0.5) / DRIVE.full : null);   // (where they stand: -1 back .. 1 front)
+		chevronBar(ctx, W + FRAME.sides[1][0], CHEVRONS.mid, bot.tL, posOf(DRIVERS.left), drv(DRIVERS.left), 1);
+		chevronBar(ctx, 2 * W - FRAME.sides[1][1], CHEVRONS.mid, bot.tR, posOf(DRIVERS.right), drv(DRIVERS.right), -1);
 		// the little wireframe Strider, its legs keeping step with the real ones
 		wireStrider(ctx, W * 1.5, 895, 15, [
 			{ phase: bot.phaseL, amount: bot.amountL, colour: drv(DRIVERS.left) },

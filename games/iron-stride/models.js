@@ -146,19 +146,38 @@ export function buildRobot() {
 			const pose = legPose(left ? phaseL : phaseR, left ? amountL : amountR);
 			leg.hip.rotation.x = pose.hip;
 			leg.knee.rotation.x = pose.knee;
-			leg.ankle.rotation.x = -pose.hip - pose.knee * 0.6;
+			leg.ankle.rotation.x = pose.ankle;
 		}
 		for (const arm of arms) arm.sh.rotation.x = Math.sin((arm.side > 0 ? phaseL : phaseR)) * 0.25 * (arm.side > 0 ? amountL : amountR) + Math.sin(t * 1.3 + arm.side) * 0.04;
 		const amount = (amountL + amountR) / 2;
-		body.position.y = -Math.abs(Math.sin((phaseL + phaseR) / 2)) * 0.25 * amount + Math.sin(t * 2) * 0.03;
+		body.position.y = -Math.abs(Math.sin((phaseL + phaseR) / 2)) * 0.08 * amount + Math.sin(t * 2) * 0.03;
 	};
 	return robot;
 }
 
-// A leg's angles partway through its stride: the hip (rotation about x;
-// positive swings the foot back) and the knee (bending back as it lifts).
+// A leg partway through its stride. The ankle goes round a loop: lifted and
+// swinging forward for half the stride, planted and pushing back for the
+// other half (backward when the phase runs backward), and the hip, knee and
+// ankle are solved to reach it (two-bone IK, the knee forward), the foot
+// flat on the ground while it's planted and its toe up as it swings.
+// Angles are rotations about x (positive swings a part's far end back):
+// hip, knee (relative to the thigh), ankle (relative to the shin), and
+// foot (the foot's own angle in the world).
+export const LEG = { hip: 4.4, thigh: 2.2, shin: 2.15, ankle: 0.35, stride: 1.4, lift: 0.95 };
 export function legPose(phase, amount) {
-	return { hip: -Math.sin(phase) * 0.45 * amount, knee: Math.max(0, Math.cos(phase)) * 0.7 * amount };
+	const L = LEG;
+	const up = Math.sin(phase);
+	const z = -Math.cos(phase) * L.stride * amount;        // ahead of the hip (+) or behind it
+	const y = L.ankle + Math.max(0, up) * L.lift * amount;   // above the ground
+	const dz = z, dy = y - L.hip;
+	const d = Math.min(L.thigh + L.shin - 0.001, Math.hypot(dz, dy));
+	const aim = Math.atan2(-dz, -dy);                        // the hip-to-ankle line (0: straight down)
+	const atHip = Math.acos(Math.max(-1, Math.min(1, (L.thigh * L.thigh + d * d - L.shin * L.shin) / (2 * L.thigh * d))));
+	const atKnee = Math.acos(Math.max(-1, Math.min(1, (L.thigh * L.thigh + L.shin * L.shin - d * d) / (2 * L.thigh * L.shin))));
+	const hip = aim - atHip;                                 // (the thigh forward of the line: the knee forward)
+	const knee = Math.PI - atKnee;
+	const foot = -Math.max(0, up) * 0.35 * amount;           // (toe up as it swings)
+	return { hip, knee, ankle: foot - hip - knee, foot };
 }
 
 /* ---------- the Klankbots ---------- */

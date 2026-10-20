@@ -8,7 +8,7 @@
  *
  *   const frame = paintFrame(W, H);      // a canvas 3W x H
  *   ctx.drawImage(frame, 0, 0);
- *   chevronBar(ctx, x, mid, value, colour, dir, t)
+ *   chevronBar(ctx, edge, mid, value, pos, colour, dir)
  *   wireStrider(ctx, cx, ground, s, legs, t)
  *   radar(ctx, cx, cy, r, blips, sweep)
  *   hullDial(ctx, cx, cy, r, hull, alarm)
@@ -179,74 +179,65 @@ export function paintFrame(W, H) {
 	return c;
 }
 
-// A leg's throttle, for its driver: a column of chevrons, seven pointing up
-// above the zero line (ahead) and four pointing down below it (astern),
-// lighting up in the driver's colour as they lean into it; beside it a big
-// arrow in their colour pointing out to their side (dir -1 left, 1 right).
-const CHEV = { ahead: 7, astern: 4, gap: 46, w: 76, h: 24, thick: 13, first: 30 };
-export function chevronBar(ctx, x, mid, value, colour, dir, t) {
+// A leg's throttle, for its driver: a strip of chevrons hard up against
+// the window's edge, laid back away from you in perspective like a runway,
+// seven pointing ahead beyond the zero line and four pointing back on the
+// near side of it, lighting up in the driver's colour (fill and glow, no
+// outlines); and on its inner side a triangle in their colour pointing at
+// it, where the driver is standing between the back wall and the front
+// (pos -1..1; null: not tracked). edge: the window's edge; dir: 1 to lay the
+// strip rightward from a left edge, -1 leftward from a right edge.
+const CHEV = { ahead: 7, astern: 4, gap: 54, w: 92, h: 30, thick: 15, first: 30, tilt: 52, focal: 720, mark: 26 };
+export function chevronBar(ctx, edge, mid, value, pos, colour, dir) {
 	const C = CHEV;
-	ctx.save();
-	const chevron = (cy, up, lit) => {
-		// a band bent into a ^ (or a v), C.thick deep
-		const s = up ? 1 : -1, T = C.thick / 2, Y = (dy) => cy + s * dy;
+	const ca = Math.cos(C.tilt * Math.PI / 180), sa = Math.sin(C.tilt * Math.PI / 180);
+	// (u across the strip from the edge, v along it, ahead positive) on screen
+	const P = (u, v) => {
+		const k = C.focal / (C.focal + v * sa);
+		return [edge + dir * u * k, mid - v * ca * k];
+	};
+	const poly = (pts) => {
 		ctx.beginPath();
-		ctx.moveTo(x - C.w / 2, Y(C.h / 2 - T));
-		ctx.lineTo(x, Y(-C.h / 2 - T));
-		ctx.lineTo(x + C.w / 2, Y(C.h / 2 - T));
-		ctx.lineTo(x + C.w / 2, Y(C.h / 2 + T));
-		ctx.lineTo(x, Y(-C.h / 2 + T));
-		ctx.lineTo(x - C.w / 2, Y(C.h / 2 + T));
+		pts.forEach(([u, v], i) => { const [x, y] = P(u, v); if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
 		ctx.closePath();
-		ctx.lineJoin = 'round';
+		ctx.fill();
+	};
+	const U = C.w / 2 + 6;   // (the strip's middle, across)
+	const chevron = (v0, ahead, lit) => {
+		// a band bent into a ^ (pointing ahead) or a v (back), C.thick deep
+		const s = ahead ? 1 : -1, T = C.thick / 2, V = (dv) => v0 + s * dv;
+		const pts = [[U - C.w / 2, V(-C.h / 2 + T)], [U, V(C.h / 2 + T)], [U + C.w / 2, V(-C.h / 2 + T)], [U + C.w / 2, V(-C.h / 2 - T)], [U, V(C.h / 2 - T)], [U - C.w / 2, V(-C.h / 2 - T)]];
 		if (lit > 0) {
-			ctx.globalAlpha = 0.35 + 0.65 * lit;
+			ctx.globalAlpha = 0.3 + 0.7 * lit;
 			ctx.fillStyle = colour;
 			ctx.shadowColor = colour;
-			ctx.shadowBlur = 16 * lit;
-			ctx.fill();
+			ctx.shadowBlur = 22 * lit;
+			poly(pts);
 			ctx.shadowBlur = 0;
 			ctx.globalAlpha = 1;
-			ctx.lineWidth = 4;
-			ctx.strokeStyle = '#140a0a';
-			ctx.stroke();
 		} else {
-			ctx.fillStyle = 'rgba(255,255,255,0.13)';
-			ctx.fill();
-			ctx.lineWidth = 2;
-			ctx.strokeStyle = 'rgba(0,0,0,0.45)';
-			ctx.stroke();
+			ctx.fillStyle = 'rgba(255,255,255,0.12)';
+			poly(pts);
 		}
 	};
-	const v = Math.max(-1, Math.min(1, value));
-	for (let k = 0; k < C.ahead; k++) chevron(mid - C.first - k * C.gap, true, Math.max(0, Math.min(1, v * C.ahead - k)));
-	for (let k = 0; k < C.astern; k++) chevron(mid + C.first + k * C.gap, false, Math.max(0, Math.min(1, -v * C.astern - k)));
-	// the zero line
-	ctx.fillStyle = 'rgba(255,255,255,0.55)';
-	ctx.fillRect(x - C.w / 2 - 8, mid - 2, C.w + 16, 4);
-	// the arrow, pointing out to the driver's side
-	const ax = x + dir * 96, len = 104, hw = 46, shaft = 20;
-	const tip = ax + dir * len / 2, back = ax - dir * len / 2, neck = tip - dir * 48;
-	ctx.beginPath();
-	ctx.moveTo(tip, mid);
-	ctx.lineTo(neck, mid - hw);
-	ctx.lineTo(neck, mid - shaft);
-	ctx.lineTo(back, mid - shaft);
-	ctx.lineTo(back, mid + shaft);
-	ctx.lineTo(neck, mid + shaft);
-	ctx.lineTo(neck, mid + hw);
-	ctx.closePath();
-	ctx.lineJoin = 'round';
-	ctx.fillStyle = 'rgba(0,0,0,0.5)';
 	ctx.save();
-	ctx.translate(0, 7);
-	ctx.fill();
-	ctx.restore();
-	ctx.fillStyle = colour;
-	ctx.fill();
-	ctx.lineWidth = 7;
-	ctx.strokeStyle = '#140a0a';
-	ctx.stroke();
+	const v = Math.max(-1, Math.min(1, value));
+	for (let k = C.astern - 1; k >= 0; k--) chevron(-C.first - k * C.gap, false, Math.max(0, Math.min(1, -v * C.astern - k)));
+	for (let k = 0; k < C.ahead; k++) chevron(C.first + k * C.gap, true, Math.max(0, Math.min(1, v * C.ahead - k)));
+	// the zero line
+	ctx.fillStyle = 'rgba(255,255,255,0.4)';
+	poly([[0, -2.5], [C.w + 12, -2.5], [C.w + 12, 2.5], [0, 2.5]]);
+	// the driver: a triangle on the inner side, level with where they stand
+	if (pos !== null && pos !== undefined) {
+		const p = Math.max(-1, Math.min(1, pos));
+		const at = p >= 0 ? C.first + p * (C.ahead - 1) * C.gap + C.h / 2 : -(C.first + -p * (C.astern - 1) * C.gap + C.h / 2);
+		const u0 = C.w + 22, M = C.mark;
+		ctx.fillStyle = colour;
+		ctx.shadowColor = colour;
+		ctx.shadowBlur = 20;
+		poly([[u0, at], [u0 + M * 1.7, at + M], [u0 + M * 1.7, at - M]]);
+		ctx.shadowBlur = 0;
+	}
 	ctx.restore();
 }
 
@@ -315,7 +306,7 @@ export function wireStrider(ctx, cx, ground, s, legs, t) {
 	legs.forEach(function (leg, i) {
 		const side = i === 0 ? -1 : 1;
 		const pose = legPose(leg.phase, leg.amount);
-		const a = pose.hip, k = pose.knee, f = 0.4 * k;
+		const a = pose.hip, k = pose.knee, f = pose.foot;
 		const hip = [side * 1.25, 4.4, 0];
 		const knee = [hip[0], hip[1] - 2.2 * Math.cos(a), hip[2] - 2.2 * Math.sin(a)];
 		const ankle = [hip[0], knee[1] - 2.15 * Math.cos(a + k), knee[2] - 2.15 * Math.sin(a + k)];
