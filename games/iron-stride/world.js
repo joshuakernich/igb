@@ -1,6 +1,6 @@
 /*
- * Iron Stride: the world outside the cockpit. A bright sky with a PMREM
- * environment map (after Loop Island's sky), rolling green hills that rise
+ * Iron Stride: the world outside the cockpit (drawn with Glint). A bright
+ * sky whose own GLSL also lights the scene (after Loop Island's sky), rolling green hills that rise
  * into a ring of mountains at the arena's edge, puffball trees, pines,
  * rocks, sandstone buttes and arches, and Doctor Klank's factory smoking on
  * the far hills.
@@ -9,12 +9,12 @@
  *   heightAt(x, z)                   // the ground's height anywhere
  *   world.update(time, eye, dt);     // every frame: follow the eye, puff the smoke
  */
-import * as THREE from '../../lib/three/three.module.min.js';
+import * as G from '../../lib/glint/glint.js';
 
-export const SUN = new THREE.Vector3(-0.42, 0.62, -0.66).normalize();
-export const HORIZON = new THREE.Color(0xbfe0f2);
+export const SUN = new G.Vector3(-0.42, 0.62, -0.66).normalize();
+export const HORIZON = new G.Color(0xbfe0f2);
 export const ARENA = 470;          // metres from the middle the robot can walk
-export const FACTORY = new THREE.Vector3(0, 0, -760);   // Doctor Klank's factory (dead ahead at the start)
+export const FACTORY = new G.Vector3(0, 0, -760);   // Doctor Klank's factory (dead ahead at the start)
 
 const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
@@ -58,7 +58,7 @@ const SKY_GLSL = /* glsl */`
 `;
 
 function skyMaterial(sunBoost) {
-	return new THREE.ShaderMaterial({
+	return new G.ShaderMaterial({
 		uniforms: { sunDir: { value: SUN }, sunBoost: { value: sunBoost } },
 		vertexShader: /* glsl */`
 			varying vec3 vDir;
@@ -80,11 +80,9 @@ function skyMaterial(sunBoost) {
 				col += vec3(1.0, 0.95, 0.85) * smoothstep(0.9993, 0.9996, s) * sunBoost;
 				col += vec3(1.0, 0.9, 0.7) * pow(max(s, 0.0), 900.0) * sunBoost * 0.3;
 				gl_FragColor = vec4(col, 1.0);
-				#include <tonemapping_fragment>
-				#include <colorspace_fragment>
 			}
 		`,
-		side: THREE.BackSide,
+		side: G.BackSide,
 		depthWrite: false,
 	});
 }
@@ -92,13 +90,7 @@ function skyMaterial(sunBoost) {
 // Soft canvas textures: a cloud, the grass (grey stripes, the hue comes from
 // the ground's vertex colours), a bullseye.
 function canvasTex(w, h, paint, srgb = true) {
-	const c = document.createElement('canvas');
-	c.width = w;
-	c.height = h;
-	paint(c.getContext('2d'), w, h);
-	const t = new THREE.CanvasTexture(c);
-	if (srgb) t.colorSpace = THREE.SRGBColorSpace;
-	return t;
+	return G.canvasTexture(w, h, paint, srgb);
 }
 
 export function cloudTexture() {
@@ -130,7 +122,7 @@ function grassTexture(aniso) {
 			g.fillRect(rand() * w, rand() * h, 1 + rand() * 2, 2 + rand() * 4);
 		}
 	});
-	t.wrapS = t.wrapT = THREE.RepeatWrapping;
+	t.wrapS = t.wrapT = G.RepeatWrapping;
 	t.anisotropy = aniso;
 	return t;
 }
@@ -142,29 +134,28 @@ export function createWorld(renderer, scene) {
 	const disposables = [];
 
 	// the sky
-	const sky = new THREE.Mesh(new THREE.SphereGeometry(2600, 48, 24), skyMaterial(30));
+	const sky = new G.Mesh(new G.SphereGeometry(2600, 48, 24), skyMaterial(30));
 	sky.renderOrder = -10;
 	sky.frustumCulled = false;
 	scene.add(sky);
 
-	const envScene = new THREE.Scene();
-	envScene.add(new THREE.Mesh(new THREE.SphereGeometry(50, 48, 24), skyMaterial(10)));
-	const pmrem = new THREE.PMREMGenerator(renderer);
-	const env = pmrem.fromScene(envScene, 0, 0.1, 200);
-	scene.environment = env.texture;
-	pmrem.dispose();
+	// the light from all round: the same sky, its sun a little tamer
+	const env = renderer.environmentFromShader(SKY_GLSL + `
+		vec3 envColor(vec3 d) { return skyColor(d) + vec3(1.0, 0.95, 0.85) * smoothstep(0.9993, 0.9996, dot(d, sunDir)) * 10.0; }
+	`, { uniforms: { sunDir: { value: SUN } } });
+	scene.environment = env;
 
 	// the ground
 	const SIZE = 2400;
 	const SEG = 300;
-	const geo = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG);
+	const geo = new G.PlaneGeometry(SIZE, SIZE, SEG, SEG);
 	geo.rotateX(-Math.PI / 2);
 	const pos = geo.attributes.position;
 	for (let i = 0; i < pos.count; i++) pos.setY(i, heightAt(pos.getX(i), pos.getZ(i)));
 	geo.computeVertexNormals();
 	const nrm = geo.attributes.normal;
 	const cols = new Float32Array(pos.count * 3);
-	const grassA = new THREE.Color(0x6cc644), grassB = new THREE.Color(0x3f9e3a), dirt = new THREE.Color(0xc9925a), rock = new THREE.Color(0x9c8f84), c = new THREE.Color();
+	const grassA = new G.Color(0x6cc644), grassB = new G.Color(0x3f9e3a), dirt = new G.Color(0xc9925a), rock = new G.Color(0x9c8f84), c = new G.Color();
 	for (let i = 0; i < pos.count; i++) {
 		const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
 		const n = 0.5 + 0.5 * Math.sin(x * 0.021 + Math.cos(z * 0.017) * 2) * Math.cos(z * 0.019 - x * 0.007);
@@ -174,10 +165,10 @@ export function createWorld(renderer, scene) {
 		c.lerp(rock, smooth(25, 70, y) * 0.8);
 		cols[i * 3] = c.r; cols[i * 3 + 1] = c.g; cols[i * 3 + 2] = c.b;
 	}
-	geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+	geo.setAttribute('color', new G.BufferAttribute(cols, 3));
 	const grass = grassTexture(aniso);
 	grass.repeat.set(SIZE / 22, SIZE / 22);
-	const ground = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, map: grass, roughness: 0.95, metalness: 0 }));
+	const ground = new G.Mesh(geo, new G.MeshStandardMaterial({ vertexColors: true, map: grass, roughness: 0.95, metalness: 0 }));
 	ground.receiveShadow = true;
 	scene.add(ground);
 	disposables.push(geo, ground.material, grass);
@@ -194,15 +185,15 @@ export function createWorld(renderer, scene) {
 		return null;
 	}
 
-	const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = new THREE.Vector3(), P = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0);
+	const M = new G.Matrix4(), Q = new G.Quaternion(), S = new G.Vector3(), P = new G.Vector3(), UP = new G.Vector3(0, 1, 0);
 	function instanced(geometry, material, n, place, colours) {
-		const mesh = new THREE.InstancedMesh(geometry, material, n);
+		const mesh = new G.InstancedMesh(geometry, material, n);
 		let k = 0;
 		for (let i = 0; i < n; i++) {
 			const at = place(i);
 			if (!at) continue;
 			Q.setFromAxisAngle(UP, at.rot || 0);
-			if (at.tilt) Q.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(at.tilt[0], 0, at.tilt[1])));
+			if (at.tilt) Q.multiply(new G.Quaternion().setFromEuler(new G.Euler(at.tilt[0], 0, at.tilt[1])));
 			S.set(at.sx || at.s, at.sy || at.s, at.sz || at.s);
 			P.set(at.x, at.y, at.z);
 			mesh.setMatrixAt(k, M.compose(P, Q, S));
@@ -210,6 +201,8 @@ export function createWorld(renderer, scene) {
 			k++;
 		}
 		mesh.count = k;
+		mesh.instanceMatrix.needsUpdate = true;
+		if (colours) mesh.instanceColor.needsUpdate = true;
 		mesh.castShadow = true;
 		mesh.receiveShadow = true;
 		scene.add(mesh);
@@ -220,29 +213,29 @@ export function createWorld(renderer, scene) {
 	// puffball trees: a trunk and a round canopy
 	const trees = [];
 	for (let i = 0; i < 420; i++) { const s = spot(35, ARENA + 120); if (s) trees.push(Object.assign(s, { s: R(0.8, 1.9), rot: rand() * 6.3 })); }
-	const trunkGeo = new THREE.CylinderGeometry(0.35, 0.55, 4.2, 7).translate(0, 2.1, 0);
-	instanced(trunkGeo, new THREE.MeshStandardMaterial({ color: 0x7a4a2a, roughness: 0.9 }), trees.length, (i) => trees[i]);
-	const crownGeo = new THREE.IcosahedronGeometry(2.7, 1).scale(1, 0.9, 1).translate(0, 5.6, 0);
-	const leafColours = [0x3fbf4a, 0x58d04a, 0x2fa86a, 0x8bd43a].map((h) => new THREE.Color(h));
-	instanced(crownGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.75, flatShading: true }), trees.length, (i) => trees[i], leafColours);
+	const trunkGeo = new G.CylinderGeometry(0.35, 0.55, 4.2, 7).translate(0, 2.1, 0);
+	instanced(trunkGeo, new G.MeshStandardMaterial({ color: 0x7a4a2a, roughness: 0.9 }), trees.length, (i) => trees[i]);
+	const crownGeo = new G.IcosahedronGeometry(2.7, 1).scale(1, 0.9, 1).translate(0, 5.6, 0);
+	const leafColours = [0x3fbf4a, 0x58d04a, 0x2fa86a, 0x8bd43a].map((h) => new G.Color(h));
+	instanced(crownGeo, new G.MeshStandardMaterial({ color: 0xffffff, roughness: 0.75, flatShading: true }), trees.length, (i) => trees[i], leafColours);
 
 	// pines
 	const pines = [];
 	for (let i = 0; i < 240; i++) { const s = spot(60, ARENA + 160); if (s) pines.push(Object.assign(s, { s: R(0.9, 2.2), rot: rand() * 6.3 })); }
-	const pineGeo = new THREE.ConeGeometry(2.4, 6, 7).translate(0, 5, 0);
-	instanced(pineGeo, new THREE.MeshStandardMaterial({ color: 0x2d8a4e, roughness: 0.8, flatShading: true }), pines.length, (i) => pines[i]);
-	const pineTop = new THREE.ConeGeometry(1.7, 4.5, 7).translate(0, 8.6, 0);
-	instanced(pineTop, new THREE.MeshStandardMaterial({ color: 0x37a05a, roughness: 0.8, flatShading: true }), pines.length, (i) => pines[i]);
-	instanced(new THREE.CylinderGeometry(0.3, 0.4, 2.2, 6).translate(0, 1.1, 0), new THREE.MeshStandardMaterial({ color: 0x6a3f22 }), pines.length, (i) => pines[i]);
+	const pineGeo = new G.ConeGeometry(2.4, 6, 7).translate(0, 5, 0);
+	instanced(pineGeo, new G.MeshStandardMaterial({ color: 0x2d8a4e, roughness: 0.8, flatShading: true }), pines.length, (i) => pines[i]);
+	const pineTop = new G.ConeGeometry(1.7, 4.5, 7).translate(0, 8.6, 0);
+	instanced(pineTop, new G.MeshStandardMaterial({ color: 0x37a05a, roughness: 0.8, flatShading: true }), pines.length, (i) => pines[i]);
+	instanced(new G.CylinderGeometry(0.3, 0.4, 2.2, 6).translate(0, 1.1, 0), new G.MeshStandardMaterial({ color: 0x6a3f22 }), pines.length, (i) => pines[i]);
 
 	// rocks
 	const rocks = [];
 	for (let i = 0; i < 180; i++) { const s = spot(25, ARENA + 150); if (s) rocks.push(Object.assign(s, { s: R(0.6, 2.6), sy: R(0.4, 1.4), rot: rand() * 6.3, tilt: [R(-0.3, 0.3), R(-0.3, 0.3)] })); }
 	for (const r of rocks) r.sy *= r.s;
-	instanced(new THREE.DodecahedronGeometry(1.4, 0), new THREE.MeshStandardMaterial({ color: 0xa79d92, roughness: 0.85, flatShading: true }), rocks.length, (i) => rocks[i]);
+	instanced(new G.DodecahedronGeometry(1.4, 0), new G.MeshStandardMaterial({ color: 0xa79d92, roughness: 0.85, flatShading: true }), rocks.length, (i) => rocks[i]);
 
 	// sandstone buttes: banded columns with a grassy cap
-	const buttes = new THREE.Group();
+	const buttes = new G.Group();
 	scene.add(buttes);
 	const bands = [0xd9884a, 0xe8a862, 0xc8703c, 0xf0bf7a];
 	for (let i = 0; i < 14; i++) {
@@ -251,14 +244,14 @@ export function createWorld(renderer, scene) {
 		const rad = R(8, 16), tall = R(22, 55), sides = 7 + Math.floor(rand() * 3);
 		const n = 4 + Math.floor(rand() * 3);
 		for (let b = 0; b < n; b++) {
-			const g = new THREE.CylinderGeometry(rad * (1 - b * 0.03), rad * (1 - (b - 1) * 0.03), tall / n, sides);
-			const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: bands[(b + i) % bands.length], roughness: 0.9, flatShading: true }));
+			const g = new G.CylinderGeometry(rad * (1 - b * 0.03), rad * (1 - (b - 1) * 0.03), tall / n, sides);
+			const m = new G.Mesh(g, new G.MeshStandardMaterial({ color: bands[(b + i) % bands.length], roughness: 0.9, flatShading: true }));
 			m.position.set(s.x, s.y - 4 + tall / n * (b + 0.5), s.z);
 			m.castShadow = m.receiveShadow = true;
 			buttes.add(m);
 			disposables.push(g, m.material);
 		}
-		const cap = new THREE.Mesh(new THREE.CylinderGeometry(rad * 0.9, rad * 0.88, 1.6, sides), new THREE.MeshStandardMaterial({ color: 0x58c044, roughness: 0.9, flatShading: true }));
+		const cap = new G.Mesh(new G.CylinderGeometry(rad * 0.9, rad * 0.88, 1.6, sides), new G.MeshStandardMaterial({ color: 0x58c044, roughness: 0.9, flatShading: true }));
 		cap.position.set(s.x, s.y - 4 + tall + 0.6, s.z);
 		cap.castShadow = true;
 		buttes.add(cap);
@@ -268,8 +261,8 @@ export function createWorld(renderer, scene) {
 	for (let i = 0; i < 6; i++) {
 		const s = spot(110, ARENA - 30);
 		if (!s) continue;
-		const g = new THREE.TorusGeometry(R(12, 18), R(2.6, 3.8), 7, 18, Math.PI);
-		const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0xd39058, roughness: 0.9, flatShading: true }));
+		const g = new G.TorusGeometry(R(12, 18), R(2.6, 3.8), 7, 18, Math.PI);
+		const m = new G.Mesh(g, new G.MeshStandardMaterial({ color: 0xd39058, roughness: 0.9, flatShading: true }));
 		m.position.set(s.x, s.y - 1, s.z);
 		m.rotation.y = rand() * Math.PI;
 		m.castShadow = m.receiveShadow = true;
@@ -278,14 +271,14 @@ export function createWorld(renderer, scene) {
 	}
 
 	// far mountains, beyond the hills
-	const far = new THREE.Group();
+	const far = new G.Group();
 	scene.add(far);
 	for (let i = 0; i < 46; i++) {
 		const a = i / 46 * Math.PI * 2 + R(-0.05, 0.05);
 		const r = R(1050, 1350);
 		const h = R(160, 380);
-		const g = new THREE.ConeGeometry(R(140, 260), h, 6 + Math.floor(rand() * 3));
-		const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: rand() < 0.5 ? 0x7c9a8a : 0x8a9ab0, roughness: 1, flatShading: true }));
+		const g = new G.ConeGeometry(R(140, 260), h, 6 + Math.floor(rand() * 3));
+		const m = new G.Mesh(g, new G.MeshStandardMaterial({ color: rand() < 0.5 ? 0x7c9a8a : 0x8a9ab0, roughness: 1, flatShading: true }));
 		m.position.set(Math.cos(a) * r, h / 2 + 40, Math.sin(a) * r);
 		m.rotation.y = rand() * 6;
 		far.add(m);
@@ -293,39 +286,39 @@ export function createWorld(renderer, scene) {
 	}
 
 	// Doctor Klank's factory, smoking on the far hills
-	const factory = new THREE.Group();
+	const factory = new G.Group();
 	const fy = heightAt(FACTORY.x, FACTORY.z) - 6;
 	factory.position.set(FACTORY.x, fy, FACTORY.z);
 	scene.add(factory);
-	const steel = new THREE.MeshStandardMaterial({ color: 0x5b5470, roughness: 0.5, metalness: 0.6 });
-	const dark = new THREE.MeshStandardMaterial({ color: 0x2a2633, roughness: 0.6, metalness: 0.5 });
-	const glow = new THREE.MeshBasicMaterial({ color: 0xff3b2a, toneMapped: false });
+	const steel = new G.MeshStandardMaterial({ color: 0x5b5470, roughness: 0.5, metalness: 0.6 });
+	const dark = new G.MeshStandardMaterial({ color: 0x2a2633, roughness: 0.6, metalness: 0.5 });
+	const glow = new G.MeshBasicMaterial({ color: 0xff3b2a, toneMapped: false });
 	const stripeTex = canvasTex(64, 256, function (g, w, h) {
 		for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? '#f2f2f2' : '#d8262a'; g.fillRect(0, i * h / 8, w, h / 8); }
 	});
 	disposables.push(steel, dark, glow, stripeTex);
-	const add = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); factory.add(m); disposables.push(geo); return m; };
-	add(new THREE.BoxGeometry(180, 50, 70), steel, 0, 25, 0);
-	add(new THREE.BoxGeometry(120, 30, 60), dark, 0, 65, 0);
-	add(new THREE.SphereGeometry(36, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), dark, 0, 80, 0);
-	add(new THREE.SphereGeometry(18, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), steel, -70, 50, 10);
-	add(new THREE.SphereGeometry(18, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), steel, 70, 50, 10);
-	for (let i = 0; i < 12; i++) add(new THREE.BoxGeometry(8, 4, 1), glow, -66 + i * 12, 30, 35.6);
+	const add = (geo, mat, x, y, z) => { const m = new G.Mesh(geo, mat); m.position.set(x, y, z); factory.add(m); disposables.push(geo); return m; };
+	add(new G.BoxGeometry(180, 50, 70), steel, 0, 25, 0);
+	add(new G.BoxGeometry(120, 30, 60), dark, 0, 65, 0);
+	add(new G.SphereGeometry(36, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), dark, 0, 80, 0);
+	add(new G.SphereGeometry(18, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), steel, -70, 50, 10);
+	add(new G.SphereGeometry(18, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), steel, 70, 50, 10);
+	for (let i = 0; i < 12; i++) add(new G.BoxGeometry(8, 4, 1), glow, -66 + i * 12, 30, 35.6);
 	const stacks = [];
 	for (const [x, z, h] of [[-60, -20, 130], [-25, -25, 160], [30, -22, 145], [65, -18, 120]]) {
-		const s = add(new THREE.CylinderGeometry(6, 8, h, 16), new THREE.MeshStandardMaterial({ map: stripeTex, roughness: 0.6 }), x, h / 2, z);
+		const s = add(new G.CylinderGeometry(6, 8, h, 16), new G.MeshStandardMaterial({ map: stripeTex, roughness: 0.6 }), x, h / 2, z);
 		disposables.push(s.material);
-		add(new THREE.SphereGeometry(2.2, 8, 6), glow, x, h + 1, z);
+		add(new G.SphereGeometry(2.2, 8, 6), glow, x, h + 1, z).userData.stackTop = true;
 	}
 	// his emblem: a gear with a monocle
-	add(new THREE.TorusGeometry(22, 5, 8, 12), glow, 0, 80, 34);
+	add(new G.TorusGeometry(22, 5, 8, 12), glow, 0, 80, 34);
 	for (let i = 0; i < 10; i++) {
-		const tooth = add(new THREE.BoxGeometry(6, 8, 6), dark, 0, 0, 0);
+		const tooth = add(new G.BoxGeometry(6, 8, 6), dark, 0, 0, 0);
 		const a = i / 10 * Math.PI * 2;
 		tooth.position.set(Math.cos(a) * 28, 80 + Math.sin(a) * 28, 34);
 		tooth.rotation.z = a;
 	}
-	add(new THREE.CircleGeometry(10, 24), new THREE.MeshBasicMaterial({ color: 0xffd23f, toneMapped: false }), 6, 84, 39.6);
+	add(new G.CircleGeometry(10, 24), new G.MeshBasicMaterial({ color: 0xffd23f, toneMapped: false }), 6, 84, 39.6);
 	// (it faces the arena)
 	factory.lookAt(0, fy, 0);
 
@@ -334,8 +327,8 @@ export function createWorld(renderer, scene) {
 	disposables.push(cloudTex);
 	const smoke = [];
 	for (let i = 0; i < 36; i++) {
-		const m = new THREE.SpriteMaterial({ map: cloudTex, color: 0x6a6470, transparent: true, depthWrite: false, opacity: 0 });
-		const s = new THREE.Sprite(m);
+		const m = new G.SpriteMaterial({ map: cloudTex, color: 0x6a6470, transparent: true, depthWrite: false, opacity: 0 });
+		const s = new G.Sprite(m);
 		scene.add(s);
 		smoke.push({ s, age: rand() * 6, stack: i % 4, life: 6 });
 		disposables.push(m);
@@ -344,15 +337,15 @@ export function createWorld(renderer, scene) {
 	factory.updateMatrixWorld(true);
 	stacks.length = 0;
 	factory.children.forEach(function (m) {
-		if (m.geometry && m.geometry.type === 'SphereGeometry' && m.geometry.parameters.radius === 2.2) stacks.push(m.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 3, 0)));
+		if (m.userData.stackTop) stacks.push(m.getWorldPosition(new G.Vector3()).add(new G.Vector3(0, 3, 0)));
 	});
 
 	// clouds: far ones that keep pace with the eye
-	const clouds = new THREE.Group();
+	const clouds = new G.Group();
 	scene.add(clouds);
 	for (let i = 0; i < 44; i++) {
-		const m = new THREE.SpriteMaterial({ map: cloudTex, transparent: true, depthWrite: false, fog: false, opacity: 0.8 + rand() * 0.2 });
-		const s = new THREE.Sprite(m);
+		const m = new G.SpriteMaterial({ map: cloudTex, transparent: true, depthWrite: false, fog: false, opacity: 0.8 + rand() * 0.2 });
+		const s = new G.Sprite(m);
 		const a = rand() * Math.PI * 2;
 		const r = 900 + rand() * 1200;
 		const w = 300 + rand() * 500;

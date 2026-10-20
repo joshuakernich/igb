@@ -36,9 +36,10 @@
  *
  * Input: px, pz (each player's throttle and side); wall taps (clicks on
  * the stage: the desk simulator's "click a wall to touch it").
- * An ES module (manifest: module: true).
+ * Drawn with Glint (lib/glint), the in-house engine the Sonic-family games
+ * share. An ES module (manifest: module: true).
  */
-import * as THREE from '../../lib/three/three.module.min.js';
+import * as G from '../../lib/glint/glint.js';
 import { createWorld, heightAt, SUN, HORIZON, ARENA } from './world.js';
 import { buildRobot, buildBeetle, buildBuzzer, buildCrab, buildTarget, buildMissile, buildBolt, buildShell, glowTexture, fireTexture, smokeTexture, glossy } from './models.js';
 import { paintFrame, legGauge, radar, hullDial, readout, klank, FRAME, MONO } from './cockpit.js';
@@ -82,12 +83,11 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 
 	/* ---------- renderer, scene, cameras ---------- */
 
-	const renderer = new THREE.WebGLRenderer({ antialias: true });
-	renderer.toneMapping = THREE.ACESFilmicToneMapping;
+	const renderer = new G.Renderer({ antialias: true });
 	renderer.toneMappingExposure = 1.0;
-	renderer.shadowMap.enabled = true;
-	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-	renderer.shadowMap.autoUpdate = false;
+	renderer.shadowsEnabled = true;
+	Object.assign(renderer.bloom, { strength: 0.45, radius: 0.6, threshold: 1.0, knee: 0.6, enabled: true });
+	Object.assign(renderer.grade, { saturation: 1.08, contrast: 1.04, vignette: 0.12, lift: 0 });
 	$(renderer.domElement).css({ position: 'absolute', left: 0, top: 0, width: WIDTH + 'px', height: H + 'px' }).appendTo(stage.$bg);
 
 	let k = 1;
@@ -96,48 +96,33 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		renderer.setPixelRatio(1);
 		renderer.setSize(Math.round(WIDTH * k), Math.round(H * k), false);
 	}
-	function viewport(x, y, w, h) {
-		const x0 = Math.round(x * k);
-		const x1 = Math.round((x + w) * k);
-		const y0 = Math.round((H - y - h) * k);
-		const y1 = Math.round((H - y) * k);
-		renderer.setViewport(x0, y0, x1 - x0, y1 - y0);
-		renderer.setScissor(x0, y0, x1 - x0, y1 - y0);
-	}
 	const unlisten = IGB.onResize(resize);
 	resize();
 
-	const scene = new THREE.Scene();
-	scene.fog = new THREE.Fog(HORIZON, 220, 1500);
+	const scene = new G.Scene();
+	scene.fog = new G.Fog(HORIZON, 220, 1500);
 	const world = createWorld(renderer, scene);
 
-	scene.add(new THREE.HemisphereLight(0xd8efff, 0x4a7a3a, 0.8));
-	const sun = new THREE.DirectionalLight(0xfff2dc, 3.0);
+	scene.add(new G.HemisphereLight(0xd8efff, 0x4a7a3a, 0.8));
+	const sun = new G.DirectionalLight(0xfff2dc, 3.0);
 	sun.castShadow = true;
-	sun.shadow.mapSize.set(2048, 2048);
+	sun.shadow.mapSize.set(4096, 4096);
 	Object.assign(sun.shadow.camera, { left: -70, right: 70, top: 70, bottom: -70, near: 1, far: 320 });
 	sun.shadow.camera.updateProjectionMatrix();
 	sun.shadow.bias = -0.0005;
 	sun.shadow.normalBias = 0.05;
 	scene.add(sun, sun.target);
-	const boomLight = new THREE.PointLight(0xffa040, 0, 90, 2);
+	const boomLight = new G.PointLight(0xffa040, 0, 90, 2);
 	scene.add(boomLight);
 
 	// One eye: the front camera out of the front window, the side cameras
 	// square to it, all on one rig. They share one tilt (the rig's) and one
 	// field of view (90 degrees across), so they're the sides of one box and
 	// the windows meet seamlessly. Never tilt or zoom one alone.
-	const rig = new THREE.Group();
+	const walls = G.createWallRig({ fov: FOV, aspect: W / H, near: 0.1, far: 4000 });
+	const rig = walls.rig;
 	scene.add(rig);
-	const frontCam = new THREE.PerspectiveCamera(FOV, W / H, 0.1, 4000);
-	rig.add(frontCam);
-	const sideCams = [Math.PI / 2, -Math.PI / 2].map(function (yaw) {
-		const cam = new THREE.PerspectiveCamera(FOV, W / H, 0.1, 4000);
-		cam.rotation.y = yaw;
-		rig.add(cam);
-		return cam;
-	});
-	const cams = [sideCams[0], frontCam, sideCams[1]];
+	const cams = walls.cameras;   // left, front, right
 
 	/* ---------- the Strider ---------- */
 
@@ -146,7 +131,7 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 	scene.add(strider.root);
 
 	const bot = {
-		pos: new THREE.Vector3(0, heightAt(0, 0), 0),
+		pos: new G.Vector3(0, heightAt(0, 0), 0),
 		heading: 0,             // radians; forward is (-sin, -cos): -Z at the start, toward the factory
 		vL: 0, vR: 0, v: 0, turn: 0,
 		phase: 0, steps: 0, eyeY: heightAt(0, 0) + EYE,
@@ -154,8 +139,8 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		hull: 100, lastHit: -99, offline: 0,
 		tL: 0, tR: 0,           // the legs' throttles (-1..1)
 	};
-	const fwdOf = (h, out = new THREE.Vector3()) => out.set(-Math.sin(h), 0, -Math.cos(h));
-	const rightOf = (h, out = new THREE.Vector3()) => out.set(Math.cos(h), 0, -Math.sin(h));
+	const fwdOf = (h, out = new G.Vector3()) => out.set(-Math.sin(h), 0, -Math.cos(h));
+	const rightOf = (h, out = new G.Vector3()) => out.set(Math.cos(h), 0, -Math.sin(h));
 
 	/* ---------- players, throttles ---------- */
 
@@ -204,7 +189,7 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		const pool = o.additive ? freeParts.add : freeParts.normal;
 		let s = pool.pop();
 		if (!s) {
-			s = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false, toneMapped: !o.additive, blending: o.additive ? THREE.AdditiveBlending : THREE.NormalBlending }));
+			s = new G.Sprite(new G.SpriteMaterial({ transparent: true, depthWrite: false, toneMapped: !o.additive, blending: o.additive ? G.AdditiveBlending : G.NormalBlending }));
 			s.userData.additive = !!o.additive;
 		}
 		s.material.map = tex;
@@ -213,22 +198,22 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		s.position.copy(at);
 		s.visible = true;
 		scene.add(s);
-		parts.push({ s, age: 0, life: o.life || 0.6, size: o.size || [1, 3], vel: o.vel ? o.vel.clone() : new THREE.Vector3(), grav: o.gravity || 0, drag: o.drag || 0, alpha: o.alpha === undefined ? 1 : o.alpha, spin: (Math.random() - 0.5) * (o.spin || 1) });
+		parts.push({ s, age: 0, life: o.life || 0.6, size: o.size || [1, 3], vel: o.vel ? o.vel.clone() : new G.Vector3(), grav: o.gravity || 0, drag: o.drag || 0, alpha: o.alpha === undefined ? 1 : o.alpha, spin: (Math.random() - 0.5) * (o.spin || 1) });
 	}
 
-	const DEBRIS_GEO = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+	const DEBRIS_GEO = new G.BoxGeometry(0.6, 0.6, 0.6);
 	const DEBRIS_MAT = { beetle: glossy(0x1fa4c9), buzzer: glossy(0xffcf1f), crab: glossy(0xff6a2b), target: glossy(0xff3b30), dark: glossy(0x1b1b20) };
 	const debris = [];
 
 	function chunks(at, kind, n) {
 		for (let i = 0; i < n; i++) {
-			const m = new THREE.Mesh(DEBRIS_GEO, i % 3 ? DEBRIS_MAT[kind] : DEBRIS_MAT.dark);
+			const m = new G.Mesh(DEBRIS_GEO, i % 3 ? DEBRIS_MAT[kind] : DEBRIS_MAT.dark);
 			m.position.copy(at);
 			m.scale.setScalar(0.5 + Math.random() * 1.2);
 			m.castShadow = true;
 			scene.add(m);
 			const a = Math.random() * TAU;
-			debris.push({ m, vel: new THREE.Vector3(Math.cos(a) * (6 + Math.random() * 10), 8 + Math.random() * 14, Math.sin(a) * (6 + Math.random() * 10)), spin: new THREE.Vector3(Math.random() * 10, Math.random() * 10, Math.random() * 10), age: 0 });
+			debris.push({ m, vel: new G.Vector3(Math.cos(a) * (6 + Math.random() * 10), 8 + Math.random() * 14, Math.sin(a) * (6 + Math.random() * 10)), spin: new G.Vector3(Math.random() * 10, Math.random() * 10, Math.random() * 10), age: 0 });
 		}
 	}
 
@@ -275,7 +260,7 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 	let practiceKills = 0;
 	let smashed = 0;
 
-	const centreOf = (b, out = new THREE.Vector3()) => out.copy(b.pos).setY(b.pos.y + b.model.centre);
+	const centreOf = (b, out = new G.Vector3()) => out.copy(b.pos).setY(b.pos.y + b.model.centre);
 
 	function spawn(kind, o = {}) {
 		const model = BUILD[kind]();
@@ -297,7 +282,7 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		const alt = kind === 'buzzer' ? 9 + Math.random() * 8 : kind === 'target' ? 6 + Math.random() * 6 : 0;
 		const b = {
 			kind, model, hp: KINDS[kind].hp,
-			pos: new THREE.Vector3(x, ground + alt, z),
+			pos: new G.Vector3(x, ground + alt, z),
 			alt, flying, t: Math.random() * 10, speed: 0,
 			fire: (kind === 'buzzer' ? SHOTS.buzz : SHOTS.crab)[0] + Math.random() * 3,
 			orbit: Math.random() < 0.5 ? 1 : -1, ring: 28 + Math.random() * 20, stand: 42 + Math.random() * 18,
@@ -332,8 +317,8 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 
 	/* ---------- missiles ---------- */
 
-	const raycaster = new THREE.Raycaster();
-	const ndc = new THREE.Vector2();
+	const raycaster = new G.Raycaster();
+	const ndc = new G.Vector2();
 
 	// The player standing nearest a point on the walls (taps carry no player).
 	function nearest(at) {
@@ -357,7 +342,7 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		return wall === 0 ? -0.8 : wall === 2 ? 0.8 : ((at.x - W) / W - 0.5) * 0.8;
 	}
 
-	const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), tmp3 = new THREE.Vector3();
+	const tmp = new G.Vector3(), tmp2 = new G.Vector3(), tmp3 = new G.Vector3();
 
 	function tap(at) {
 		if (show.paused || mode !== 'cockpit') return;
@@ -385,7 +370,7 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 			if (perp < b.model.radius + MISSILE.lock + t * 0.012 && t < best) { best = t; target = b; }
 		}
 		// otherwise where the line meets the ground (or far off)
-		const aim = new THREE.Vector3();
+		const aim = new G.Vector3();
 		if (target) centreOf(target, aim);
 		else {
 			let hit = null;
@@ -405,11 +390,11 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 			aim.copy(hit || tmp.copy(ray.origin).addScaledVector(ray.direction, 600));
 		}
 
-		const start = new THREE.Vector3().copy(ray.origin).addScaledVector(ray.direction, 2).add(tmp.set(0, -1.5, 0));
+		const start = new G.Vector3().copy(ray.origin).addScaledVector(ray.direction, 2).add(tmp.set(0, -1.5, 0));
 		const mesh = buildMissile();
 		mesh.position.copy(start);
 		scene.add(mesh);
-		const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.glow, color: 0xffb040, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, toneMapped: false }));
+		const glow = new G.Sprite(new G.SpriteMaterial({ map: TEX.glow, color: 0xffb040, blending: G.AdditiveBlending, transparent: true, depthWrite: false, toneMapped: false }));
 		glow.scale.setScalar(2.2);
 		glow.position.set(0, 0, -0.9);
 		mesh.add(glow);
@@ -437,7 +422,7 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 			particle(TEX.fire, tmp.copy(at).add(off), { additive: true, life: 0.4 + Math.random() * 0.4, size: [2 * big, 7 * big], vel: off.clone().multiplyScalar(2) });
 		}
 		for (let i = 0; i < 6; i++) {
-			const v = new THREE.Vector3((Math.random() - 0.5) * 6, 3 + Math.random() * 4, (Math.random() - 0.5) * 6);
+			const v = new G.Vector3((Math.random() - 0.5) * 6, 3 + Math.random() * 4, (Math.random() - 0.5) * 6);
 			particle(TEX.smoke, at, { colour: 0x55504c, life: 1.6 + Math.random(), size: [3 * big, 11 * big], vel: v, drag: 1.2, alpha: 0.75 });
 		}
 		boomLight.position.copy(at).y += 2;
@@ -469,7 +454,7 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 			particle(TEX.glow, centreOf(b, tmp), { additive: true, life: 0.25, size: [2, 6] });
 			return;
 		}
-		const at = centreOf(b, new THREE.Vector3());
+		const at = centreOf(b, new G.Vector3());
 		removeBot(b);
 		chunks(at, b.kind, b.kind === 'crab' ? 12 : 8);
 		particle(TEX.fire, at, { additive: true, life: 0.5, size: [4, 14] });
@@ -693,13 +678,13 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 
 	/* ---------- every frame ---------- */
 
-	const eye = new THREE.Vector3();
-	const eyeQ = new THREE.Quaternion();
-	const fromPos = new THREE.Vector3();
-	const fromQ = new THREE.Quaternion();
-	const lookM = new THREE.Matrix4();
-	const UP = new THREE.Vector3(0, 1, 0);
-	const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+	const eye = new G.Vector3();
+	const eyeQ = new G.Quaternion();
+	const fromPos = new G.Vector3();
+	const fromQ = new G.Quaternion();
+	const lookM = new G.Matrix4();
+	const UP = new G.Vector3(0, 1, 0);
+	const euler = new G.Euler(0, 0, 0, 'YXZ');
 	let boardFrom = false;
 
 	// Where the outside eye is: circling slowly, looking up at the Strider.
@@ -887,7 +872,7 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		const mesh = kind === 'bolt' ? buildBolt() : buildShell();
 		mesh.position.copy(from);
 		scene.add(mesh);
-		const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.glow, color: kind === 'bolt' ? 0xff4a9a : 0xff8a1a, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, toneMapped: false }));
+		const glow = new G.Sprite(new G.SpriteMaterial({ map: TEX.glow, color: kind === 'bolt' ? 0xff4a9a : 0xff8a1a, blending: G.AdditiveBlending, transparent: true, depthWrite: false, toneMapped: false }));
 		glow.scale.setScalar(kind === 'bolt' ? 3 : 3.5);
 		mesh.add(glow);
 		shots.push({ kind, mesh, glow, pos: from.clone(), vel, age: 0 });
@@ -913,7 +898,7 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 
 	function panToward(p) {
 		const rel = tmp3.copy(p).sub(bot.pos);
-		return rel.dot(rightOf(bot.heading, new THREE.Vector3())) / Math.max(1, rel.length());
+		return rel.dot(rightOf(bot.heading, new G.Vector3())) / Math.max(1, rel.length());
 	}
 
 	function updateShots(dt) {
@@ -946,7 +931,7 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		shots = shots.filter((s) => !s.dead);
 	}
 
-	const seg = new THREE.Line3();
+	const seg = new G.Line3();
 	function updateMissiles(dt) {
 		for (const m of missiles) {
 			if (m.dead) continue;
@@ -964,10 +949,10 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 			for (const b of bots) {
 				if (b.dead) continue;
 				const c = centreOf(b, tmp3);
-				if (seg.closestPointToPoint(c, true, new THREE.Vector3()).distanceTo(c) < b.model.radius * 0.85 + 0.3) { hit = b; break; }
+				if (seg.closestPointToPoint(c, true, new G.Vector3()).distanceTo(c) < b.model.radius * 0.85 + 0.3) { hit = b; break; }
 			}
 			let at = null;
-			if (hit) at = seg.closestPointToPoint(centreOf(hit, tmp3), true, new THREE.Vector3());
+			if (hit) at = seg.closestPointToPoint(centreOf(hit, tmp3), true, new G.Vector3());
 			else if (m.pos.y < heightAt(m.pos.x, m.pos.z)) at = m.pos.clone().setY(heightAt(m.pos.x, m.pos.z) + 0.3);
 			else if ((!m.target || m.target.dead) && m.pos.distanceTo(m.aim) < m.speed * dt * 1.2) at = m.aim.clone();
 			else if (m.age > MISSILE.life) at = m.pos.clone();
@@ -1026,17 +1011,12 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 	}
 
 	function render() {
-		renderer.setScissorTest(true);
-		renderer.shadowMap.needsUpdate = true;
-		cams.forEach(function (cam, w) {
-			viewport(w * W, 0, W, H);
-			renderer.render(scene, cam);
-		});
+		renderer.render(scene, walls.views(renderer.width, renderer.height));   // (all three walls in one call)
 	}
 
 	/* ---------- the 2D layer: the cockpit ---------- */
 
-	const pv = new THREE.Vector3();
+	const pv = new G.Vector3();
 	function onWall(v, wall) {
 		pv.copy(v).project(cams[wall]);
 		if (pv.z > 1 || Math.abs(pv.x) > 1.3 || Math.abs(pv.y) > 1.3) return null;
