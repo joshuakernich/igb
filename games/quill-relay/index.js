@@ -62,13 +62,14 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 	const COURSE = {
 		depth: 6,                         // metres from the middle of the room to the hero's running line (each wall's stretch is twice this long)
 		ground: -1.8,                     // the ground's base height, metres below the eye
-		near: 5, far: 11,                 // the slab of earth runs from this close to this far
+		near: 5.4, far: 6.6,              // the track's top runs from this close to this far (metres from the middle of the room)
 		ringSize: 0.2,                    // a ring's radius (metres)
 		ringLift: 0.55,                   // how high the rings float over the ground
 		slots: [[1.7, 4.5], [4.7, 7.5], [7.7, 10.3]],   // where along a stretch its three features go (a loop takes two)
 		checkpoint: 10.7,                 // where the checkpoint post stands (metres along)
+		post: 0.4,                        // and how far behind the running line
 		hill: [0.5, 1.1], dip: [0.45, 0.8],   // metres high / deep
-		loop: { radius: 1.75, width: 1.7 },
+		loop: { radius: 1.75, width: 1.2 },
 		loopChance: 0.45,                 // the chance a stretch has a loop
 		bots: { walk: 0.9, hover: 2.0 },  // the Gearhog's walking speed, the Buzzdrone's height
 	};
@@ -190,8 +191,9 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 	const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 	seed = 1 + Math.floor(Math.random() * 1e6);
 
-	// a wide grassy plain below the course, out to the sea
-	const plain = new G.Mesh(new G.RingGeometry(10, 95, 72, 1), BG.plain);
+	// a wide grassy plain below the course, out to the sea (from just behind
+	// the track's front edge, so nothing shows through behind its back edge)
+	const plain = new G.Mesh(new G.RingGeometry(COURSE.depth, 95, 72, 1), BG.plain);
 	plain.rotation.x = -Math.PI / 2;
 	plain.position.y = GROUND - 1.2;
 	plain.receiveShadow = true;

@@ -267,7 +267,7 @@ export function buildSection({ C, mats, rand, gentle }) {
 	/* ---------- the checkpoint ---------- */
 
 	const post = buildCheckpoint();
-	post.position.copy(at(C.checkpoint, GROUND + height(C.checkpoint), C.depth + 0.9));
+	post.position.copy(at(C.checkpoint, GROUND + height(C.checkpoint), C.depth + C.post));
 	group.add(post);
 	const checkpoint = { u: C.checkpoint, mesh: post, spin: 0, hit: false };
 
