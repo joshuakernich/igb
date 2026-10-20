@@ -4,13 +4,13 @@
  * flatter you look) with a blazing path of sun glitter; soft clouds; and an
  * environment map of the sky, so everything shiny reflects it.
  *
- *   const world = createSky(renderer, scene);
+ *   const world = createSky(renderer, scene);   // renderer: a Glint Renderer
  *   world.update(time, camPos);      // every frame: follow the eye
  */
-import * as THREE from '../../lib/three/three.module.min.js';
+import * as G from '../../lib/glint/glint.js';
 
-export const SUN = new THREE.Vector3(-0.45, 0.32, -0.83).normalize();   // toward the sun (ahead and to the left, as it sets off)
-export const HORIZON = new THREE.Color(0xa9d6f6);
+export const SUN = new G.Vector3(-0.45, 0.32, -0.83).normalize();   // toward the sun (ahead and to the left, as it sets off)
+export const HORIZON = new G.Color(0xa9d6f6);
 
 // The sky's colour in a direction (shared by the sky, the sea's reflection
 // and the haze). Worked in sRGB-ish values, returned linear; the sun's own
@@ -31,7 +31,7 @@ const SKY_GLSL = /* glsl */`
 `;
 
 function skyMaterial(sunBoost) {
-	return new THREE.ShaderMaterial({
+	return new G.ShaderMaterial({
 		uniforms: { sunDir: { value: SUN }, sunBoost: { value: sunBoost } },
 		vertexShader: /* glsl */`
 			varying vec3 vDir;
@@ -52,18 +52,16 @@ function skyMaterial(sunBoost) {
 				float s = dot(d, sunDir);
 				col += vec3(1.0, 0.95, 0.85) * smoothstep(0.99935, 0.99965, s) * sunBoost;   // the sun's disc
 				col += vec3(1.0, 0.9, 0.7) * pow(max(s, 0.0), 900.0) * sunBoost * 0.3;
-				gl_FragColor = vec4(col, 1.0);
-				#include <tonemapping_fragment>
-				#include <colorspace_fragment>
+				gl_FragColor = vec4(col, 1.0);   // (linear HDR: the engine tone maps)
 			}
 		`,
-		side: THREE.BackSide,
+		side: G.BackSide,
 		depthWrite: false,
 	});
 }
 
 function oceanMaterial() {
-	return new THREE.ShaderMaterial({
+	return new G.ShaderMaterial({
 		uniforms: { sunDir: { value: SUN }, uTime: { value: 0 } },
 		vertexShader: /* glsl */`
 			varying vec3 vWorld;
@@ -112,9 +110,7 @@ function oceanMaterial() {
 				// haze toward the horizon
 				vec3 hz = skyColor(normalize(vec3(-V.x, 0.0, -V.z)));
 				col = mix(col, hz, smoothstep(500.0, 3200.0, dist) * 0.85);
-				gl_FragColor = vec4(col, 1.0);
-				#include <tonemapping_fragment>
-				#include <colorspace_fragment>
+				gl_FragColor = vec4(col, 1.0);   // (linear HDR: the engine tone maps)
 			}
 		`,
 	});
@@ -144,39 +140,41 @@ function cloudTexture() {
 	g.globalCompositeOperation = 'source-atop';
 	g.fillStyle = shade;
 	g.fillRect(0, 0, 256, 128);
-	const t = new THREE.CanvasTexture(c);
-	t.colorSpace = THREE.SRGBColorSpace;
+	const t = new G.CanvasTexture(c);
+	t.colorSpace = G.SRGBColorSpace;
 	return t;
 }
 
 export function createSky(renderer, scene) {
 	// the sky, round the eye
-	const sky = new THREE.Mesh(new THREE.SphereGeometry(3000, 48, 24), skyMaterial(30));
+	const sky = new G.Mesh(new G.SphereGeometry(3000, 48, 24), skyMaterial(30));
 	sky.renderOrder = -10;
 	sky.frustumCulled = false;
 	scene.add(sky);
 
 	// the sea: a wide disc that follows the eye
-	const ocean = new THREE.Mesh(new THREE.CircleGeometry(3600, 96), oceanMaterial());
+	const ocean = new G.Mesh(new G.CircleGeometry(3600, 96), oceanMaterial());
 	ocean.rotation.x = -Math.PI / 2;
 	ocean.frustumCulled = false;
 	scene.add(ocean);
 
-	// the environment everything shiny reflects: the same sky, sun a little tamer
-	const envScene = new THREE.Scene();
-	envScene.add(new THREE.Mesh(new THREE.SphereGeometry(50, 48, 24), skyMaterial(12)));
-	const pmrem = new THREE.PMREMGenerator(renderer);
-	const env = pmrem.fromScene(envScene, 0, 0.1, 200);
-	scene.environment = env.texture;
-	pmrem.dispose();
+	// the environment everything shiny reflects: the same sky, sun a little
+	// tamer, prefiltered by the engine into blurrier reflections for rougher things
+	const env = renderer.environmentFromShader(SKY_GLSL + `
+		vec3 envColor(vec3 d) {
+			float s = dot(d, sunDir);
+			return skyColor(d) + vec3(1.0, 0.95, 0.85) * smoothstep(0.9990, 0.9996, s) * 12.0 + vec3(1.0, 0.9, 0.7) * pow(max(s, 0.0), 900.0) * 3.6;
+		}
+	`, { size: 256, uniforms: { sunDir: { value: SUN } } });
+	scene.environment = env;
 
 	// far clouds, so far off they keep pace with the eye
 	const tex = cloudTexture();
-	const far = new THREE.Group();
+	const far = new G.Group();
 	scene.add(far);
 	for (let i = 0; i < 40; i++) {
-		const m = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: false, opacity: 0.85 + Math.random() * 0.15 });
-		const s = new THREE.Sprite(m);
+		const m = new G.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: false, opacity: 0.85 + Math.random() * 0.15 });
+		const s = new G.Sprite(m);
 		const a = Math.random() * Math.PI * 2;
 		const r = 1300 + Math.random() * 1300;
 		const w = 260 + Math.random() * 420;
@@ -196,7 +194,7 @@ export function createSky(renderer, scene) {
 
 	// a cloud close enough to whip past
 	world.cloud = function (x, y, z, size) {
-		const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: 0.9 }));
+		const s = new G.Sprite(new G.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: 0.9 }));
 		s.position.set(x, y, z);
 		s.scale.set(size, size * 0.45, 1);
 		return s;

@@ -11,7 +11,7 @@
  *   track.frame(s, pos, quat)        // the frame there
  *   track.samples[i]                 // { pos, quat, right, up, fwd, kind }
  */
-import * as THREE from '../../lib/three/three.module.min.js';
+import * as G from '../../lib/glint/glint.js';
 
 export const STEP = 1;               // metres between samples
 export const HALF = 4.4;             // the road's half width
@@ -32,9 +32,9 @@ export function createTrack() {
 	let segAt = 0;              // metres into the current piece
 	let made = 0;               // pieces laid so far
 	let lastKind = '';
-	const pos = new THREE.Vector3(0, ALT.start, 0);
-	const euler = new THREE.Euler(0, 0, 0, 'YXZ');
-	const flat = new THREE.Vector3();
+	const pos = new G.Vector3(0, ALT.start, 0);
+	const euler = new G.Euler(0, 0, 0, 'YXZ');
+	const flat = new G.Vector3();
 
 	const rand = (a, b) => a + Math.random() * (b - a);
 	const pick = (list) => list[Math.floor(Math.random() * list.length)];
@@ -110,10 +110,10 @@ export function createTrack() {
 		const t = segAt / seg.len;
 		const yaw = seg.yaw ? seg.yaw(t) : yaw0;
 		euler.set(seg.pitch ? seg.pitch(t) : 0, yaw, seg.roll ? seg.roll(t) : 0, 'YXZ');
-		const quat = new THREE.Quaternion().setFromEuler(euler);
-		const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(quat);
-		const right = new THREE.Vector3(1, 0, 0).applyQuaternion(quat);
-		const up = new THREE.Vector3(0, 1, 0).applyQuaternion(quat);
+		const quat = new G.Quaternion().setFromEuler(euler);
+		const fwd = new G.Vector3(0, 0, -1).applyQuaternion(quat);
+		const right = new G.Vector3(1, 0, 0).applyQuaternion(quat);
+		const up = new G.Vector3(0, 1, 0).applyQuaternion(quat);
 		pos.addScaledVector(fwd, STEP);
 		if (seg.side) {
 			flat.set(Math.cos(yaw), 0, -Math.sin(yaw));   // across, level, whatever the pitch and roll
@@ -124,8 +124,8 @@ export function createTrack() {
 
 	// the first sample, at the start
 	samples.push({
-		pos: pos.clone(), quat: new THREE.Quaternion(), kind: 'straight',
-		fwd: new THREE.Vector3(0, 0, -1), right: new THREE.Vector3(1, 0, 0), up: new THREE.Vector3(0, 1, 0),
+		pos: pos.clone(), quat: new G.Quaternion(), kind: 'straight',
+		fwd: new G.Vector3(0, 0, -1), right: new G.Vector3(1, 0, 0), up: new G.Vector3(0, 1, 0),
 	});
 
 	const track = { samples };
@@ -134,7 +134,7 @@ export function createTrack() {
 		while ((samples.length - 1) * STEP < s) lay();
 	};
 
-	const qa = new THREE.Quaternion();
+	const qa = new G.Quaternion();
 	track.frame = function (s, outPos, outQuat) {
 		track.ensure(s + STEP * 2);
 		const f = Math.max(0, s / STEP);
@@ -147,7 +147,7 @@ export function createTrack() {
 		return outQuat;
 	};
 
-	const fp = new THREE.Vector3();
+	const fp = new G.Vector3();
 	track.at = function (s, x, y, out) {
 		track.frame(s, fp, qa);
 		out.set(x, y, 0).applyQuaternion(qa).add(fp);
@@ -172,8 +172,8 @@ export function sweep(samples, i0, i1, pieces, vLen) {
 	const nor = [];
 	const uv = [];
 	const idx = [];
-	const p = new THREE.Vector3();
-	const n = new THREE.Vector3();
+	const p = new G.Vector3();
+	const n = new G.Vector3();
 	for (const [x0, y0, x1, y1, u0, u1] of pieces) {
 		const base = pos.length / 3;
 		const dx = x1 - x0;
@@ -197,10 +197,10 @@ export function sweep(samples, i0, i1, pieces, vLen) {
 			idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
 		}
 	}
-	const g = new THREE.BufferGeometry();
-	g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-	g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
-	g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+	const g = new G.BufferGeometry();
+	g.setAttribute('position', new G.Float32BufferAttribute(pos, 3));
+	g.setAttribute('normal', new G.Float32BufferAttribute(nor, 3));
+	g.setAttribute('uv', new G.Float32BufferAttribute(uv, 2));
 	g.setIndex(idx);
 	g.computeBoundingSphere();
 	return g;
