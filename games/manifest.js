@@ -23,6 +23,8 @@ IGB.manifest = [
 			title: { lines: [{ text: 'SONIC', fill: '#2f7cf0', glow: '#3cd6ff', font: 'Nise Sega Sonic' }, { text: 'DASH', fill: '#ff3d3d', glow: '#ff7a3d', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#ffe14a', bg: '#2f7cf0', note: 'SPEED' } },
 		{ id: 'twin-tail-tower', name: 'Twin Tail Tower', icon: 'assets/icons/twin-tail-tower.svg', file: 'games/twin-tail-tower/index.js', module: true,
 			title: { lines: [{ text: 'TWIN TAIL', fill: '#ff9a2b', glow: '#ffd23f' }, { text: 'TOWER', fill: '#3ad1ff', glow: '#5a8dff' }] }, box: { color: '#ff9a2b', bg: '#5fb8ff', note: 'CLIMB' } },
+		{ id: 'iron-stride', name: 'Iron Stride', file: 'games/iron-stride/index.js', module: true,
+			title: { lines: [{ text: 'IRON', fill: '#ff3b30', glow: '#e23a2e' }, { text: 'STRIDE', fill: '#ffd23f', glow: '#ff7a3d' }] }, box: { color: '#e23a2e', bg: '#16171b', note: 'MECH' } },
 		{ id: 'mingle', name: 'Mingle', icon: 'assets/icons/mingle.png', file: 'games/mingle/index.js', module: true,
 			title: { lines: [{ text: 'MINGLE', fill: '#ff7eb6', glow: '#e5287a' }] }, box: { color: '#e5287a', bg: '#f3a6c8', note: 'SURVIVAL' } },
 		{ id: 'tether-net', name: 'Tether Net',
@@ -151,7 +153,7 @@ IGB.manifest = [
 
 // The only games the menu shows (in their folders above); the rest stay
 // playable by #id. Remove this (or set it to null) to show everything.
-IGB.menu = ['red-light-green-light', 'loop-island', 'twin-tail-tower', 'mingle', 'backrooms', 'gwi-ma-showdown', 'roll-call', 'show-debug'];
+IGB.menu = ['red-light-green-light', 'loop-island', 'iron-stride', 'twin-tail-tower', 'mingle', 'backrooms', 'gwi-ma-showdown', 'roll-call', 'show-debug'];
 
 // The music tracks, on or off everywhere: every music-*.mp3 (the show's music
 // included). Tunes the games synthesise (the doll's song, Mingle's waltz),
