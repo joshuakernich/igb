@@ -15,18 +15,22 @@
  */
 IGB.manifest = [
 
-	{ folder: 'New', games: [
+	// (the Sonic games, together on a row of their own)
+	{ folder: 'Sonic', games: [
+		{ id: 'loop-island', name: 'Sonic Dash', icon: 'assets/icons/sonic-dash.png', file: 'games/loop-island/index.js', module: true,
+			title: { lines: [{ text: 'SONIC', fill: '#2f7cf0', glow: '#3cd6ff', font: 'Nise Sega Sonic' }, { text: 'DASH', fill: '#ff3d3d', glow: '#ff7a3d', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#ffe14a', bg: '#2f7cf0', note: 'SPEED' } },
 		{ id: 'quill-relay', name: 'Sonic Classic', file: 'games/quill-relay/index.js', module: true,
 			title: { lines: [{ text: 'SONIC', fill: '#2f7cf0', glow: '#3cd6ff', font: 'Nise Sega Sonic' }, { text: 'CLASSIC', fill: '#ffd23a', glow: '#ff7a3d', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#ffd23a', bg: '#2f7cf0', note: 'RELAY' } },
+		{ id: 'twin-tail-tower', name: 'Sonic Tails', icon: 'assets/icons/twin-tail-tower.svg', file: 'games/twin-tail-tower/index.js', module: true,
+			title: { lines: [{ text: 'SONIC', fill: '#2f7cf0', glow: '#3cd6ff', font: 'Nise Sega Sonic' }, { text: 'TAILS', fill: '#ff9a2b', glow: '#ffd23f', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#ff9a2b', bg: '#5fb8ff', note: 'CLIMB' } },
+		{ id: 'iron-stride', name: 'Sonic Robot', file: 'games/iron-stride/index.js', module: true,
+			title: { lines: [{ text: 'SONIC', fill: '#2f7cf0', glow: '#3cd6ff', font: 'Nise Sega Sonic' }, { text: 'ROBOT', fill: '#ff3b30', glow: '#e23a2e', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#e23a2e', bg: '#16171b', note: 'MECH' } },
+	] },
+
+	{ folder: 'New', games: [
 		{ id: 'red-light-green-light', name: 'Red Light Green Light', icon: 'assets/icons/red-light-green-light.png',
 			file: 'games/red-light-green-light/index.js', module: true,
 			title: { lines: [{ text: 'RED LIGHT', fill: '#ff3640', glow: '#ff3640' }, { text: 'GREEN LIGHT', fill: '#27d96b', glow: '#27d96b' }] }, box: { color: '#e5287a', bg: '#1d7a63', note: 'SURVIVAL' } },
-		{ id: 'loop-island', name: 'Sonic Dash', icon: 'assets/icons/sonic-dash.png', file: 'games/loop-island/index.js', module: true,
-			title: { lines: [{ text: 'SONIC', fill: '#2f7cf0', glow: '#3cd6ff', font: 'Nise Sega Sonic' }, { text: 'DASH', fill: '#ff3d3d', glow: '#ff7a3d', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#ffe14a', bg: '#2f7cf0', note: 'SPEED' } },
-		{ id: 'twin-tail-tower', name: 'Twin Tail Tower', icon: 'assets/icons/twin-tail-tower.svg', file: 'games/twin-tail-tower/index.js', module: true,
-			title: { lines: [{ text: 'TWIN TAIL', fill: '#ff9a2b', glow: '#ffd23f' }, { text: 'TOWER', fill: '#3ad1ff', glow: '#5a8dff' }] }, box: { color: '#ff9a2b', bg: '#5fb8ff', note: 'CLIMB' } },
-		{ id: 'iron-stride', name: 'Sonic Robot', file: 'games/iron-stride/index.js', module: true,
-			title: { lines: [{ text: 'SONIC', fill: '#2f7cf0', glow: '#3cd6ff', font: 'Nise Sega Sonic' }, { text: 'ROBOT', fill: '#ff3b30', glow: '#e23a2e', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#e23a2e', bg: '#16171b', note: 'MECH' } },
 		{ id: 'mingle', name: 'Mingle', icon: 'assets/icons/mingle.png', file: 'games/mingle/index.js', module: true,
 			title: { lines: [{ text: 'MINGLE', fill: '#ff7eb6', glow: '#e5287a' }] }, box: { color: '#e5287a', bg: '#f3a6c8', note: 'SURVIVAL' } },
 		{ id: 'tether-net', name: 'Tether Net',
