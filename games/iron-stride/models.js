@@ -139,17 +139,26 @@ export function buildRobot() {
 	}
 
 	const robot = { root, legs, arms, body, head };
-	robot.walk = function (phase, amount, t) {
+	// Each leg on its own stride (phase), as hard as it's working (amount 0..1).
+	robot.walk = function (phaseL, phaseR, amountL, amountR, t) {
 		for (const leg of legs) {
-			const p = phase + (leg.side > 0 ? Math.PI : 0);
-			leg.hip.rotation.x = -Math.sin(p) * 0.45 * amount;
-			leg.knee.rotation.x = Math.max(0, Math.cos(p)) * 0.7 * amount;
-			leg.ankle.rotation.x = -leg.hip.rotation.x - leg.knee.rotation.x * 0.6;
+			const left = leg.side < 0;
+			const pose = legPose(left ? phaseL : phaseR, left ? amountL : amountR);
+			leg.hip.rotation.x = pose.hip;
+			leg.knee.rotation.x = pose.knee;
+			leg.ankle.rotation.x = -pose.hip - pose.knee * 0.6;
 		}
-		for (const arm of arms) arm.sh.rotation.x = Math.sin(phase + (arm.side > 0 ? 0 : Math.PI)) * 0.25 * amount + Math.sin(t * 1.3 + arm.side) * 0.04;
-		body.position.y = -Math.abs(Math.sin(phase)) * 0.25 * amount + Math.sin(t * 2) * 0.03;
+		for (const arm of arms) arm.sh.rotation.x = Math.sin((arm.side > 0 ? phaseL : phaseR)) * 0.25 * (arm.side > 0 ? amountL : amountR) + Math.sin(t * 1.3 + arm.side) * 0.04;
+		const amount = (amountL + amountR) / 2;
+		body.position.y = -Math.abs(Math.sin((phaseL + phaseR) / 2)) * 0.25 * amount + Math.sin(t * 2) * 0.03;
 	};
 	return robot;
+}
+
+// A leg's angles partway through its stride: the hip (rotation about x;
+// positive swings the foot back) and the knee (bending back as it lifts).
+export function legPose(phase, amount) {
+	return { hip: -Math.sin(phase) * 0.45 * amount, knee: Math.max(0, Math.cos(phase)) * 0.7 * amount };
 }
 
 /* ---------- the Klankbots ---------- */

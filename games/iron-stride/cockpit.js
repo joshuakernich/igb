@@ -2,24 +2,27 @@
  * Iron Stride: the cockpit, drawn in 2D over the three windows. The frame
  * (painted once: gunmetal beams and pillars, rivets, red trim round each
  * window, the console along the bottom, the glass's own shading) and the
- * instruments drawn every frame: the two leg throttles on the front
- * pillars, the radar, the hull dial, the readouts, and Doctor Klank on the
+ * instruments drawn every frame: the two drivers' chevron throttles and
+ * arrows, the little wireframe Strider, the radar, the hull dial, the readouts, and Doctor Klank on the
  * screen when he calls.
  *
  *   const frame = paintFrame(W, H);      // a canvas 3W x H
  *   ctx.drawImage(frame, 0, 0);
- *   legGauge(ctx, x, top, bottom, value, dots, label, colour)
+ *   chevronBar(ctx, x, mid, value, colour, dir, t)
+ *   wireStrider(ctx, cx, ground, s, legs, t)
  *   radar(ctx, cx, cy, r, blips, sweep)
  *   hullDial(ctx, cx, cy, r, hull, alarm)
  *   readout(ctx, x, y, label, value, align)
  *   klank(ctx, cx, cy, size, t, talking)
  */
 
+import { legPose } from './models.js';
+
 const TAU = Math.PI * 2;
 export const MONO = 'Share Tech Mono';
 
 // Each window's opening on its wall: [left, right], and the beams above and below.
-export const FRAME = { top: 56, bottom: 128, sides: [[44, 36], [64, 64], [36, 44]], radius: 34 };
+export const FRAME = { top: 56, bottom: 128, sides: [[44, 36], [36, 36], [36, 44]], radius: 34 };
 
 function windowRect(n, W, H) {
 	const [l, r] = FRAME.sides[n];
@@ -176,59 +179,165 @@ export function paintFrame(W, H) {
 	return c;
 }
 
-// A leg's throttle: a slot up a front pillar, lit up from the middle (ahead)
-// or down from it (astern); a dot for each player driving it.
-export function legGauge(ctx, x, top, bottom, value, dots, label, colour) {
-	const mid = (top + bottom) / 2;
-	const w = 30;
+// A leg's throttle, for its driver: a column of chevrons, seven pointing up
+// above the zero line (ahead) and four pointing down below it (astern),
+// lighting up in the driver's colour as they lean into it; beside it a big
+// arrow in their colour pointing out to their side (dir -1 left, 1 right).
+const CHEV = { ahead: 7, astern: 4, gap: 46, w: 76, h: 24, thick: 13, first: 30 };
+export function chevronBar(ctx, x, mid, value, colour, dir, t) {
+	const C = CHEV;
 	ctx.save();
-	ctx.fillStyle = '#08090b';
-	ctx.beginPath();
-	ctx.roundRect(x - w / 2 - 4, top - 4, w + 8, bottom - top + 8, 12);
-	ctx.fill();
-	// ticks
-	ctx.fillStyle = 'rgba(255,255,255,0.18)';
-	for (let i = 0; i <= 10; i++) ctx.fillRect(x - w / 2, top + (bottom - top) * i / 10 - 1, i === 5 ? w : 8, 2);
-	// the fill
+	const chevron = (cy, up, lit) => {
+		// a band bent into a ^ (or a v), C.thick deep
+		const s = up ? 1 : -1, T = C.thick / 2, Y = (dy) => cy + s * dy;
+		ctx.beginPath();
+		ctx.moveTo(x - C.w / 2, Y(C.h / 2 - T));
+		ctx.lineTo(x, Y(-C.h / 2 - T));
+		ctx.lineTo(x + C.w / 2, Y(C.h / 2 - T));
+		ctx.lineTo(x + C.w / 2, Y(C.h / 2 + T));
+		ctx.lineTo(x, Y(-C.h / 2 + T));
+		ctx.lineTo(x - C.w / 2, Y(C.h / 2 + T));
+		ctx.closePath();
+		ctx.lineJoin = 'round';
+		if (lit > 0) {
+			ctx.globalAlpha = 0.35 + 0.65 * lit;
+			ctx.fillStyle = colour;
+			ctx.shadowColor = colour;
+			ctx.shadowBlur = 16 * lit;
+			ctx.fill();
+			ctx.shadowBlur = 0;
+			ctx.globalAlpha = 1;
+			ctx.lineWidth = 4;
+			ctx.strokeStyle = '#140a0a';
+			ctx.stroke();
+		} else {
+			ctx.fillStyle = 'rgba(255,255,255,0.13)';
+			ctx.fill();
+			ctx.lineWidth = 2;
+			ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+			ctx.stroke();
+		}
+	};
 	const v = Math.max(-1, Math.min(1, value));
-	const h = Math.abs(v) * (bottom - top) / 2;
-	ctx.fillStyle = v >= 0 ? '#3cdc7a' : '#ff8a1a';
-	ctx.shadowColor = ctx.fillStyle;
-	ctx.shadowBlur = 14;
-	if (v >= 0) ctx.fillRect(x - w / 2 + 4, mid - h, w - 8, h);
-	else ctx.fillRect(x - w / 2 + 4, mid, w - 8, h);
-	ctx.shadowBlur = 0;
-	// the players on it
-	dots.forEach(function (d, i) {
-		const y = mid - Math.max(-1, Math.min(1, d.t)) * (bottom - top) / 2;
-		const dx = (i - (dots.length - 1) / 2) * 8;
-		ctx.fillStyle = '#0a0a0c';
-		ctx.beginPath();
-		ctx.arc(x + dx, y, 13, 0, TAU);
-		ctx.fill();
-		ctx.fillStyle = d.colour;
-		ctx.beginPath();
-		ctx.arc(x + dx, y, 10, 0, TAU);
-		ctx.fill();
-	});
-	// arrows and the label
-	ctx.fillStyle = 'rgba(255,255,255,0.5)';
-	tri(ctx, x, top - 22, 11, -1);
-	tri(ctx, x, bottom + 22, 11, 1);
-	ctx.font = `48px "${MONO}", monospace`;
-	ctx.textAlign = 'center';
-	ctx.textBaseline = 'middle';
-	ctx.fillStyle = colour || '#ffffff';
-	ctx.fillText(label, x, bottom + 72);
+	for (let k = 0; k < C.ahead; k++) chevron(mid - C.first - k * C.gap, true, Math.max(0, Math.min(1, v * C.ahead - k)));
+	for (let k = 0; k < C.astern; k++) chevron(mid + C.first + k * C.gap, false, Math.max(0, Math.min(1, -v * C.astern - k)));
+	// the zero line
+	ctx.fillStyle = 'rgba(255,255,255,0.55)';
+	ctx.fillRect(x - C.w / 2 - 8, mid - 2, C.w + 16, 4);
+	// the arrow, pointing out to the driver's side
+	const ax = x + dir * 96, len = 104, hw = 46, shaft = 20;
+	const tip = ax + dir * len / 2, back = ax - dir * len / 2, neck = tip - dir * 48;
+	ctx.beginPath();
+	ctx.moveTo(tip, mid);
+	ctx.lineTo(neck, mid - hw);
+	ctx.lineTo(neck, mid - shaft);
+	ctx.lineTo(back, mid - shaft);
+	ctx.lineTo(back, mid + shaft);
+	ctx.lineTo(neck, mid + shaft);
+	ctx.lineTo(neck, mid + hw);
+	ctx.closePath();
+	ctx.lineJoin = 'round';
+	ctx.fillStyle = 'rgba(0,0,0,0.5)';
+	ctx.save();
+	ctx.translate(0, 7);
+	ctx.fill();
+	ctx.restore();
+	ctx.fillStyle = colour;
+	ctx.fill();
+	ctx.lineWidth = 7;
+	ctx.strokeStyle = '#140a0a';
+	ctx.stroke();
 	ctx.restore();
 }
 
-function tri(ctx, x, y, s, dir) {
+// A little wireframe of the Strider on a screen in the bottom middle, seen
+// from behind and a little to one side, its legs on their own strides (each
+// in its driver's colour). (cx, ground): the middle of its feet; s pixels a
+// metre; legs: [left, right] { phase, amount, colour }.
+export function wireStrider(ctx, cx, ground, s, legs, t) {
+	const yaw = 35 * Math.PI / 180, pitch = 18 * Math.PI / 180;
+	const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+	const P = (x, y, z) => {
+		const xr = x * cy + z * sy;
+		const zr = -x * sy + z * cy;
+		return [cx + xr * s, ground - (y * cp + zr * sp) * s];
+	};
+	const line = (pts) => {
+		ctx.beginPath();
+		pts.forEach((p, i) => { const [x, y] = P(...p); if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
+		ctx.stroke();
+	};
+	const ring = (f, n = 20, a0 = 0, a1 = TAU) => {
+		const pts = [];
+		for (let i = 0; i <= n; i++) pts.push(f(a0 + (a1 - a0) * i / n));
+		line(pts);
+	};
+	ctx.save();
+	// the screen
+	const w = 300, h = 222, x0 = cx - w / 2, y0 = ground + 26 - h;
+	ctx.fillStyle = 'rgba(4,14,20,0.82)';
+	ctx.strokeStyle = '#b5221a';
+	ctx.lineWidth = 6;
 	ctx.beginPath();
-	ctx.moveTo(x - s, y - dir * s * 0.5);
-	ctx.lineTo(x + s, y - dir * s * 0.5);
-	ctx.lineTo(x, y + dir * s * 0.7);
+	ctx.roundRect(x0, y0, w, h, 18);
 	ctx.fill();
+	ctx.stroke();
+	ctx.clip();
+	ctx.strokeStyle = 'rgba(120,230,255,0.12)';
+	ctx.lineWidth = 1;
+	for (let gx = -6; gx <= 6; gx += 2) line([[gx, 0, -6], [gx, 0, 6]]);
+	for (let gz = -6; gz <= 6; gz += 2) line([[-6, 0, gz], [6, 0, gz]]);
+	ctx.font = `20px "${MONO}", monospace`;
+	ctx.fillStyle = 'rgba(120,230,255,0.6)';
+	ctx.textBaseline = 'top';
+	ctx.fillText('STRIDER', x0 + 14, y0 + 10);
+
+	// the body, in a cool cyan
+	ctx.lineJoin = 'round';
+	ctx.lineCap = 'round';
+	ctx.strokeStyle = 'rgba(140,235,255,0.85)';
+	ctx.shadowColor = 'rgba(140,235,255,0.8)';
+	ctx.shadowBlur = 6;
+	ctx.lineWidth = 2;
+	const bob = Math.sin(t * 2) * 0.05;
+	ring((a) => [2.4 * Math.cos(a), 6.5 + bob, 2.0 * Math.sin(a)]);
+	ring((a) => [2.4 * Math.cos(a), 6.5 + bob + 2.0 * Math.sin(a), 0]);
+	ring((a) => [0, 6.5 + bob + 2.0 * Math.sin(a), 2.0 * Math.cos(a)]);
+	ring((a) => [1.45 * Math.cos(a), 8.2 + bob, 1.45 * Math.sin(a)], 16);
+	ring((a) => [1.45 * Math.cos(a), 8.2 + bob + 1.45 * Math.sin(a), 0], 10, 0, Math.PI);
+	ring((a) => [0, 8.2 + bob + 1.45 * Math.sin(a), 1.45 * Math.cos(a)], 10, 0, Math.PI);
+	for (const side of [-1, 1]) {
+		line([[side * 2.4, 7.3 + bob, 0], [side * 2.7, 5.5 + bob, 0.3], [side * 2.7, 5.5 + bob, side > 0 ? 3.6 : 2.6]]);
+	}
+	line([[-1.4, 4.5, -0.9], [1.4, 4.5, -0.9], [1.4, 4.5, 0.9], [-1.4, 4.5, 0.9], [-1.4, 4.5, -0.9]]);
+
+	// the legs, each in its driver's colour, on its own stride
+	legs.forEach(function (leg, i) {
+		const side = i === 0 ? -1 : 1;
+		const pose = legPose(leg.phase, leg.amount);
+		const a = pose.hip, k = pose.knee, f = 0.4 * k;
+		const hip = [side * 1.25, 4.4, 0];
+		const knee = [hip[0], hip[1] - 2.2 * Math.cos(a), hip[2] - 2.2 * Math.sin(a)];
+		const ankle = [hip[0], knee[1] - 2.15 * Math.cos(a + k), knee[2] - 2.15 * Math.sin(a + k)];
+		const toe = [hip[0], ankle[1] - 1.7 * Math.sin(f), ankle[2] + 1.7 * Math.cos(f)];
+		const heel = [hip[0], ankle[1] + 0.8 * Math.sin(f), ankle[2] - 0.8 * Math.cos(f)];
+		ctx.shadowColor = leg.colour;
+		ctx.shadowBlur = 10;
+		ctx.strokeStyle = leg.colour;
+		ctx.lineWidth = 6;
+		line([hip, knee, ankle]);
+		line([heel, toe]);
+		ctx.lineWidth = 3;
+		line([[heel[0] - 0.5, heel[1], heel[2]], [toe[0] - 0.5, toe[1], toe[2]], [toe[0] + 0.5, toe[1], toe[2]], [heel[0] + 0.5, heel[1], heel[2]], [heel[0] - 0.5, heel[1], heel[2]]]);
+		ctx.fillStyle = leg.colour;
+		for (const j of [hip, knee, ankle]) {
+			const [jx, jy] = P(...j);
+			ctx.beginPath();
+			ctx.arc(jx, jy, 5, 0, TAU);
+			ctx.fill();
+		}
+	});
+	ctx.restore();
 }
 
 function bezel(ctx, cx, cy, r) {

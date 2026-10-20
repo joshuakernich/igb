@@ -10,13 +10,14 @@
  * clock runs out. Hits dent the hull; if it gives out, the Strider goes
  * offline for a few seconds (no walking, no missiles) while it reboots.
  *
- * Controls (tank steering, shared):
- *   - The room is split down the middle. Whoever stands in the LEFT half
- *     (px < 0.5) drives the LEFT leg; the RIGHT half drives the RIGHT leg.
- *     With several players on a side, that leg takes their average.
- *     (If one side has nobody on it, it follows the other side, so the
- *     Strider walks straight rather than going round in circles.)
- *   - Each player's throttle comes from how far forward they stand (pz:
+ * Controls (tank steering, one driver a leg):
+ *   - Player 1 drives the LEFT leg and player 2 the RIGHT leg, always; no
+ *     one else ever does. Everyone else (players 3+) taps to shoot. On the
+ *     front window an arrow in each driver's colour points out to their
+ *     side, beside a bar of chevrons that fills in their colour with their
+ *     throttle; a little wireframe Strider in the bottom middle walks each
+ *     leg at that leg's own speed.
+ *   - A driver's throttle comes from how far forward they stand (pz:
  *     1 at the front wall, 0 at the back): a dead zone across the middle
  *     of the room, full ahead toward the front wall, full astern toward the
  *     back (DRIVE below).
@@ -34,7 +35,7 @@
  * transmission, the battle in waves until the clock runs out, TIME!,
  * scores, rank, team, leaderboard, replay, rating and the end.
  *
- * Input: px, pz (each player's throttle and side); wall taps (clicks on
+ * Input: pz (players 1 and 2: their legs' throttles); wall taps (clicks on
  * the stage: the desk simulator's "click a wall to touch it").
  * Drawn with Glint (lib/glint), the in-house engine the Sonic-family games
  * share. An ES module (manifest: module: true).
@@ -42,7 +43,7 @@
 import * as G from '../../lib/glint/glint.js';
 import { createWorld, heightAt, SUN, HORIZON, ARENA } from './world.js';
 import { buildRobot, buildBeetle, buildBuzzer, buildCrab, buildTarget, buildMissile, buildBolt, buildShell, glowTexture, fireTexture, smokeTexture, glossy } from './models.js';
-import { paintFrame, legGauge, radar, hullDial, readout, klank, FRAME, MONO } from './cockpit.js';
+import { paintFrame, chevronBar, wireStrider, radar, hullDial, readout, klank, FRAME, MONO } from './cockpit.js';
 import { createSound } from './sound.js';
 
 IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
@@ -80,6 +81,7 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 	const BOARD = { fly: 2.4, dark: [1.8, 2.3], light: [2.5, 3.2], online: 2.6, length: 4.2 };   // boarding: the fly-in, the dark, SYSTEMS ONLINE, the end
 	const CALL = { on: 0.3, name: 1.2, line: 2.8, list: 4.0, length: 7.5 };   // Doctor Klank's transmission
 	const PRACTICE = 5;                // practice drones in the tutorial
+	const CHEVRONS = { mid: 500 };     // where the throttle bars' zero sits on the front window (ahead above it, astern below)
 
 	/* ---------- renderer, scene, cameras ---------- */
 
@@ -134,7 +136,7 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		pos: new G.Vector3(0, heightAt(0, 0), 0),
 		heading: 0,             // radians; forward is (-sin, -cos): -Z at the start, toward the factory
 		vL: 0, vR: 0, v: 0, turn: 0,
-		phase: 0, steps: 0, eyeY: heightAt(0, 0) + EYE,
+		phase: 0, phaseL: 0, phaseR: Math.PI,   /* (the legs a half-stride apart) */ amountL: 0, amountR: 0, steps: 0, eyeY: heightAt(0, 0) + EYE,
 		odo: 0, turned: 0,      // metres walked ahead and radians turned (for the tutorial)
 		hull: 100, lastHit: -99, offline: 0,
 		tL: 0, tR: 0,           // the legs' throttles (-1..1)
@@ -158,25 +160,16 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		return Math.sign(d) * Math.min(1, (a - DRIVE.dead) / (DRIVE.full - DRIVE.dead));
 	}
 
-	// Who's driving which leg, and how hard: [{ i, t }] a side.
-	function drivers() {
-		const left = [], right = [];
-		for (let i = 0; i < count; i++) {
-			const p = latest[i];
-			if (!p || p.px === undefined || !seen[i]) continue;
-			(p.px < 0.5 ? left : right).push({ i, t: throttleOf(p.pz) });
-		}
-		return { left, right };
+	// The legs' drivers: player 1 the left, player 2 the right (and no one
+	// else, ever). A leg whose driver isn't tracked stands still.
+	const DRIVERS = { left: 0, right: 1 };
+	function throttleFor(i) {
+		const p = latest[i];
+		if (i >= count || !p || p.pz === undefined || !seen[i]) return 0;
+		return throttleOf(p.pz);
 	}
-
 	function legThrottles() {
-		const { left, right } = drivers();
-		const avg = (a) => a.reduce((s, d) => s + d.t, 0) / a.length;
-		let tL = left.length ? avg(left) : null;
-		let tR = right.length ? avg(right) : null;
-		if (tL === null) tL = tR === null ? 0 : tR;   // (nobody on a side: it follows the other)
-		if (tR === null) tR = tL;
-		return { tL, tR, left, right };
+		return { tL: throttleFor(DRIVERS.left), tR: throttleFor(DRIVERS.right) };
 	}
 
 	/* ---------- effects: particles, debris, words ---------- */
@@ -544,8 +537,8 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 
 	const tut = { odo: 0, turned: 0, kills: 0 };
 	const TUTORIAL = [
-		{ caption: 'STEP FORWARD TOGETHER TO WALK', sub: 'LEFT HALF OF THE ROOM DRIVES THE LEFT LEG · RIGHT HALF, THE RIGHT LEG', min: 2, max: 14, did: () => bot.odo - tut.odo >= 10 },
-		{ caption: 'ONE FORWARD, ONE BACK: TURN!', sub: 'STEP BACK TOWARD THE BACK WALL TO REVERSE YOUR LEG', min: 2, max: 14, did: () => bot.turned - tut.turned >= 1.4 },
+		{ caption: 'STEP FORWARD TOGETHER TO WALK', sub: 'FOLLOW YOUR ARROW: YOU DRIVE THAT LEG · EVERYONE ELSE, GET READY TO SHOOT', min: 2, max: 14, did: () => bot.odo - tut.odo >= 10 },
+		{ caption: 'ONE FORWARD, ONE BACK: TURN!', sub: 'STEP BACK TOWARD THE BACK WALL TO RUN YOUR LEG BACKWARDS', min: 2, max: 14, did: () => bot.turned - tut.turned >= 1.4 },
 		{ caption: 'TAP THE WINDOWS TO FIRE MISSILES', sub: 'TAP ON A PRACTICE DRONE TO BLAST IT', min: 2, max: 20, did: () => practiceKills - tut.kills >= 3 },
 	];
 
@@ -744,6 +737,13 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 			}
 		}
 
+		// each leg's own stride (for the wireframe and the Strider outside):
+		// forward or backward at that leg's own speed
+		bot.phaseL += dt * bot.vL / STRIDE * Math.PI;
+		bot.phaseR += dt * bot.vR / STRIDE * Math.PI;
+		bot.amountL += (Math.min(1, Math.abs(bot.vL) / 4) - bot.amountL) * Math.min(1, dt * 5);
+		bot.amountR += (Math.min(1, Math.abs(bot.vR) / 4) - bot.amountR) * Math.min(1, dt * 5);
+
 		// the hull and the reboot
 		if (bot.offline > 0) {
 			bot.offline -= dt;
@@ -753,7 +753,7 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		// the Strider seen from outside
 		strider.root.position.copy(bot.pos);
 		strider.root.rotation.y = bot.heading + Math.PI;
-		strider.walk(bot.phase, Math.min(1, gait / 5), clock);
+		strider.walk(bot.phaseL, bot.phaseR, bot.amountL, bot.amountR, clock);
 
 		// the eye
 		if (mode === 'outside' && boardT < 0) {
@@ -1166,9 +1166,16 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		ctx.drawImage(frameArt, 0, 0);
 
 		// the instruments
-		const th = drivers();
-		legGauge(ctx, W + FRAME.sides[1][0] / 2, 150, H - FRAME.bottom - 90, bot.tL, th.left.map((d) => ({ t: d.t, colour: PLAYER_COLORS[d.i] })), 'L', '#ffffff');
-		legGauge(ctx, 2 * W - FRAME.sides[1][1] / 2, 150, H - FRAME.bottom - 90, bot.tR, th.right.map((d) => ({ t: d.t, colour: PLAYER_COLORS[d.i] })), 'R', '#ffffff');
+		// each leg's driver: an arrow in their colour pointing out to their
+		// side, and a bar of chevrons filling in their colour with their throttle
+		const drv = (i) => (i < count && seen[i] ? PLAYER_COLORS[i] : '#6a6f7a');
+		chevronBar(ctx, W + 200, CHEVRONS.mid, bot.tL, drv(DRIVERS.left), -1, clock);
+		chevronBar(ctx, 2 * W - 200, CHEVRONS.mid, bot.tR, drv(DRIVERS.right), 1, clock);
+		// the little wireframe Strider, its legs keeping step with the real ones
+		wireStrider(ctx, W * 1.5, 895, 15, [
+			{ phase: bot.phaseL, amount: bot.amountL, colour: drv(DRIVERS.left) },
+			{ phase: bot.phaseR, amount: bot.amountR, colour: drv(DRIVERS.right) },
+		], clock);
 
 		const RANGE = 160;
 		const f = fwdOf(bot.heading, tmp2), rt = rightOf(bot.heading, tmp3);
