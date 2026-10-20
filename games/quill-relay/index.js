@@ -1,5 +1,6 @@
 /*
- * Quill Relay
+ * Quill Relay (shown as SONIC CLASSIC: the manifest's name and title; the id,
+ * folder and code stay quill-relay)
  *
  * A classic side-on speedster platformer run as a relay round the room. The
  * course is one continuous level on the three walls: the left wall's stretch
@@ -62,6 +63,8 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 		depth: 6,                         // metres from the middle of the room to the hero's running line (each wall's stretch is twice this long)
 		ground: -1.8,                     // the ground's base height, metres below the eye
 		near: 5, far: 11,                 // the slab of earth runs from this close to this far
+		ringSize: 0.2,                    // a ring's radius (metres)
+		ringLift: 0.55,                   // how high the rings float over the ground
 		slots: [[1.7, 4.5], [4.7, 7.5], [7.7, 10.3]],   // where along a stretch its three features go (a loop takes two)
 		checkpoint: 10.7,                 // where the checkpoint post stands (metres along)
 		hill: [0.5, 1.1], dip: [0.45, 0.8],   // metres high / deep
@@ -89,7 +92,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 	const HANDOVER = { zip: 0.7, banner: 1.8, start: 1.0 };   // seconds round the corner, seconds of PLAYER N, GO! (and calibration), metres along the next stretch the hero waits
 	const REBUILD = { after: 1.6, sink: 0.5, rise: 0.7 };     // a stretch left behind: seconds before it sinks, sinking, rising anew
 	const SCORE = { ring: 1, bot: 5, monitor: 10 };          // points a ring, a robot; rings in a monitor
-	const HERO = { scale: 0.9, turn: 0.4 };                   // his size, and how far he turns toward the room (radians)
+	const HERO = { scale: 0.5, turn: 0.4 };                   // his size (1: about 2 m tall), and how far he turns toward the room (radians)
 
 	const GROUND = COURSE.ground;
 	const HALF = COURSE.span / 2;
@@ -509,7 +512,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 		for (let i = 0; i < n; i++) {
 			const a = Math.PI * (0.15 + 0.7 * (i + 0.5) / n);
 			const sp = 4 + (i % 3) * 1.5;
-			const m = buildRing();
+			const m = buildRing(COURSE.ringSize);
 			wall.group.add(m);
 			wall.spill.push({ mesh: m, u: hero.u, y: hero.y + 1, vu: Math.cos(a) * sp * (i % 2 ? 1 : -1), vy: Math.sin(a) * sp + 2, age: 0 });
 		}
@@ -643,7 +646,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 			if (!it.alive) continue;
 			const du = it.u - hero.u;
 			if (it.type === 'ring') {
-				if (du * du + (it.y - cy) * (it.y - cy) < 0.75 * 0.75) {
+				if (du * du + (it.y - cy) * (it.y - cy) < 0.5 * 0.5) {
 					it.alive = false;
 					it.mesh.visible = false;
 					collect(1, it.mesh.getWorldPosition(tmp));
@@ -661,7 +664,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 					sound.spring();
 				}
 			} else if (it.type === 'monitor') {
-				const over = Math.abs(du) < it.half + 0.35 && hero.y - it.y < it.tall + 0.1;
+				const over = Math.abs(du) < it.half + 0.25 && hero.y - it.y < it.tall + 0.1;
 				if (!over) continue;
 				if (ball || (!hero.grounded && hero.vy < 0 && hero.y - it.y > it.tall * 0.6)) {
 					it.alive = false;
@@ -679,13 +682,13 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 					}
 				} else if (hero.grounded) {
 					// solid: he bumps up against it
-					hero.u = it.u - Math.sign(du || 1) * (it.half + 0.35);
+					hero.u = it.u - Math.sign(du || 1) * (it.half + 0.25);
 					hero.v = 0;
 				}
 			} else if (it.type === 'gearhog' || it.type === 'drone') {
 				const by = it.type === 'drone' ? it.y : it.y + 0.7;
 				const dy = by - cy;
-				if (du * du + dy * dy > 1.0) continue;
+				if (du * du + dy * dy > 0.75 * 0.75) continue;
 				if (ball || (!hero.grounded && hero.vy < 0 && cy > by)) {
 					// popped
 					it.alive = false;
@@ -706,7 +709,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 			if (s.age < 0.6 || s.gone) continue;
 			const du = s.u - hero.u;
 			const dy = s.y - cy;
-			if (du * du + dy * dy < 0.8) {
+			if (du * du + dy * dy < 0.45 * 0.45) {
 				s.gone = true;
 				collect(1, s.mesh.getWorldPosition(tmp));
 			}
@@ -781,7 +784,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 				s.u += s.vu * dt;
 				s.y += s.vy * dt;
 				if (s.u < 0.3 || s.u > COURSE.span - 0.3) { s.vu = -s.vu; s.u = Math.max(0.3, Math.min(COURSE.span - 0.3, s.u)); }
-				const floor = sec.height(s.u) + 0.4;
+				const floor = sec.height(s.u) + COURSE.ringSize;
 				if (s.y < floor) { s.y = floor; s.vy = Math.abs(s.vy) * 0.6; s.vu *= 0.8; }
 				s.mesh.position.set(s.u - HALF, GROUND + s.y, -COURSE.depth + 0.2);
 				s.mesh.rotation.y += dt * 8;

@@ -349,11 +349,13 @@ export function buildHero(colour) {
 
 /* ---------- rings ---------- */
 
-const RING_GEO = shared(new G.TorusGeometry(0.36, 0.075, 12, 32));
+const RING_R = 0.36;
+const RING_GEO = shared(new G.TorusGeometry(RING_R, 0.075, 12, 32));
 let ringMat = null;
-export function buildRing() {
+export function buildRing(size = RING_R) {
 	if (!ringMat) { ringMat = gold(); ringMat.userData.shared = true; }
 	const m = new G.Mesh(RING_GEO, ringMat);
+	m.scale.setScalar(size / RING_R);
 	m.castShadow = true;
 	return m;
 }

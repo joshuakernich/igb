@@ -65,7 +65,7 @@ export function buildSection({ C, mats, rand, gentle }) {
 		return it;
 	}
 	function ring(u, y) {
-		const it = add('ring', u, y, buildRing());
+		const it = add('ring', u, y, buildRing(C.ringSize));
 		it.spin = rand() * TAU;
 		return it;
 	}
@@ -117,7 +117,7 @@ export function buildSection({ C, mats, rand, gentle }) {
 		const w = p.b - p.a;
 		switch (p.thing) {
 			case 'rings':
-				ringLine(p.a + 0.4, p.b - 0.4, 5, (t) => 1.0 + Math.sin(Math.PI * t) * (p.ground === 'hill' ? 0.6 : 0.2));
+				ringLine(p.a + 0.4, p.b - 0.4, 5, (t) => C.ringLift + Math.sin(Math.PI * t) * (p.ground === 'hill' ? 0.5 : 0.15));
 				break;
 			case 'loop': {
 				const r = C.loop.radius;
@@ -126,17 +126,17 @@ export function buildSection({ C, mats, rand, gentle }) {
 				// rings round the inside of the loop, and a few leading in
 				for (let i = 1; i < 10; i++) {
 					const a = i / 10 * TAU;
-					ring(mid + Math.sin(a) * (r - 0.75), r - Math.cos(a) * (r - 0.75));
+					ring(mid + Math.sin(a) * (r - C.ringLift), r - Math.cos(a) * (r - C.ringLift));
 				}
-				ringLine(p.a, mid - 0.4, 3, () => 0.9);
+				ringLine(p.a, mid - 0.4, 3, () => C.ringLift);
 				break;
 			}
 			case 'spring': {
 				const it = add('spring', mid, height(mid), buildSpring());
 				it.squash = 0;
 				// a fountain of rings above it
-				for (let i = 0; i < 5; i++) ring(mid + (i - 2) * 0.55, 2.0 + (2 - Math.abs(i - 2)) * 0.5 + 0.5);
-				ringLine(p.a + 0.2, mid - 0.8, 2, () => 0.9);
+				for (let i = 0; i < 5; i++) ring(mid + (i - 2) * 0.4, 2.0 + (2 - Math.abs(i - 2)) * 0.4 + 0.5);
+				ringLine(p.a + 0.2, mid - 0.8, 2, () => C.ringLift);
 				break;
 			}
 			case 'spikes': {
@@ -144,33 +144,33 @@ export function buildSection({ C, mats, rand, gentle }) {
 				const u = mid;
 				add('spikes', u, height(u), buildSpikes(n), { half: n * 0.15 + 0.05 });
 				// rings in an arc over them, to show the jump
-				ringLine(u - 1.1, u + 1.1, 5, (t) => 1.0 + Math.sin(Math.PI * t) * 1.2);
+				ringLine(u - 1.1, u + 1.1, 5, (t) => C.ringLift + Math.sin(Math.PI * t) * 1.3);
 				break;
 			}
 			case 'gearhog': {
 				const range = Math.min(1.1, w / 2 - 0.5);
 				const m = buildGearhog();
 				add('gearhog', mid, height(mid), m, { u0: mid, range, dir: rand() < 0.5 ? -1 : 1, speed: C.bots.walk });
-				ringLine(p.a + 0.2, p.a + 0.9, 2, () => 0.9);
+				ringLine(p.a + 0.2, p.a + 0.9, 2, () => C.ringLift);
 				break;
 			}
 			case 'drone': {
 				const m = buildBuzzdrone();
 				const y = height(mid) + C.bots.hover;
 				add('drone', mid, y, m, { u0: mid, y0: y, range: Math.min(0.9, w / 2 - 0.6), phase: rand() * TAU, dir: 1 });
-				ringLine(p.a + 0.3, p.b - 0.3, 4, () => 0.8);
+				ringLine(p.a + 0.3, p.b - 0.3, 4, () => C.ringLift);
 				break;
 			}
 			case 'monitor': {
 				const kind = rand() < 0.65 ? 'rings' : 'shield';
 				add('monitor', mid, height(mid), buildMonitor(kind), { kind, half: 0.45, tall: 0.95 });
-				ringLine(p.a + 0.2, mid - 0.9, 2, () => 0.9);
+				ringLine(p.a + 0.2, mid - 0.9, 2, () => C.ringLift);
 				break;
 			}
 		}
 	}
 	// a few rings on the run-up and the run-out
-	ringLine(0.9, 1.5, 2, () => 0.9);
+	ringLine(0.9, 1.5, 2, () => C.ringLift);
 
 	/* ---------- the slab ---------- */
 

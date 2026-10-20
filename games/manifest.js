@@ -16,8 +16,8 @@
 IGB.manifest = [
 
 	{ folder: 'New', games: [
-		{ id: 'quill-relay', name: 'Quill Relay', file: 'games/quill-relay/index.js', module: true,
-			title: { lines: [{ text: 'QUILL', fill: '#2f7cf0', glow: '#3cd6ff' }, { text: 'RELAY', fill: '#ffd23a', glow: '#ff7a3d' }] }, box: { color: '#ffd23a', bg: '#2f7cf0', note: 'RELAY' } },
+		{ id: 'quill-relay', name: 'Sonic Classic', file: 'games/quill-relay/index.js', module: true,
+			title: { lines: [{ text: 'SONIC', fill: '#2f7cf0', glow: '#3cd6ff', font: 'Nise Sega Sonic' }, { text: 'CLASSIC', fill: '#ffd23a', glow: '#ff7a3d', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#ffd23a', bg: '#2f7cf0', note: 'RELAY' } },
 		{ id: 'red-light-green-light', name: 'Red Light Green Light', icon: 'assets/icons/red-light-green-light.png',
 			file: 'games/red-light-green-light/index.js', module: true,
 			title: { lines: [{ text: 'RED LIGHT', fill: '#ff3640', glow: '#ff3640' }, { text: 'GREEN LIGHT', fill: '#27d96b', glow: '#27d96b' }] }, box: { color: '#e5287a', bg: '#1d7a63', note: 'SURVIVAL' } },
