@@ -91,7 +91,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 	const SCORE = { ring: 1, bot: 5, monitor: 10 };          // points a ring, a robot; rings in a monitor
 	const HERO = { scale: 0.9, turn: 0.4 };                   // his size, and how far he turns toward the room (radians)
 
-	const G = COURSE.ground;
+	const GROUND = COURSE.ground;
 	const HALF = COURSE.span / 2;
 	const YAW = [Math.PI / 2, 0, -Math.PI / 2];   // each wall's stretch turned to face its camera
 
@@ -124,7 +124,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 
 	const scene = new G.Scene();
 	scene.fog = new G.Fog(HORIZON, 45, 260);
-	const world = createSky(renderer, scene, G - 3);
+	const world = createSky(renderer, scene, GROUND - 3);
 	world.ocean.renderOrder = -5;
 	world.ocean.material.depthWrite = false;
 
@@ -137,7 +137,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 	sun.shadow.bias = -0.0004;
 	sun.shadow.normalBias = 0.03;
 	sun.position.copy(SUN).multiplyScalar(45);
-	sun.target.position.set(0, G, 0);
+	sun.target.position.set(0, GROUND, 0);
 	scene.add(sun, sun.target);
 
 	// One rig in the middle of the room, three cameras in it: the left wall's
@@ -190,7 +190,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 	// a wide grassy plain below the course, out to the sea
 	const plain = new G.Mesh(new G.RingGeometry(10, 95, 72, 1), BG.plain);
 	plain.rotation.x = -Math.PI / 2;
-	plain.position.y = G - 1.2;
+	plain.position.y = GROUND - 1.2;
 	plain.receiveShadow = true;
 	scene.add(plain);
 
@@ -198,7 +198,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 		const g = new G.Group();
 		g.rotation.y = yaw;
 		scene.add(g);
-		const at = (x, d) => new G.Vector3(x, G - 1.2, -d);
+		const at = (x, d) => new G.Vector3(x, GROUND - 1.2, -d);
 		// palms just behind the course, toy hills and a waterfall cliff further off
 		for (let i = 0; i < 4; i++) {
 			const d = 12 + rand() * 6;
@@ -240,7 +240,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 		const z = -d;
 		const c = Math.cos(YAW[w]);
 		const s = Math.sin(YAW[w]);
-		return out.set(x * c + z * s, G + y, -x * s + z * c);
+		return out.set(x * c + z * s, GROUND + y, -x * s + z * c);
 	}
 
 	/* ---------- the hero ---------- */
@@ -751,7 +751,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 					it.u += it.dir * it.speed * dt;
 					if (Math.abs(it.u - it.u0) > it.range) { it.u = it.u0 + Math.sign(it.u - it.u0) * it.range; it.dir = -it.dir; }
 					it.y = sec.height(it.u);
-					it.mesh.position.set(it.u - HALF, G + it.y, -COURSE.depth);
+					it.mesh.position.set(it.u - HALF, GROUND + it.y, -COURSE.depth);
 					it.mesh.rotation.y = facingYaw(it.dir, 0.5);
 					it.mesh.rotation.z = -sec.slope(it.u) * 0.5 * it.dir;
 					it.mesh.userData.gear.rotation.y += dt * 6;
@@ -760,7 +760,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 					const was = it.u;
 					it.u = it.u0 + Math.sin(it.phase * 0.8) * it.range;
 					it.y = it.y0 + Math.sin(it.phase * 2.3) * 0.25;
-					it.mesh.position.set(it.u - HALF, G + it.y, -COURSE.depth);
+					it.mesh.position.set(it.u - HALF, GROUND + it.y, -COURSE.depth);
 					it.mesh.rotation.y = facingYaw(it.u >= was ? 1 : -1, 0.5);
 					it.mesh.userData.rotor.rotation.y += dt * 30;
 				} else if (it.type === 'spring') {
@@ -783,7 +783,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 				if (s.u < 0.3 || s.u > COURSE.span - 0.3) { s.vu = -s.vu; s.u = Math.max(0.3, Math.min(COURSE.span - 0.3, s.u)); }
 				const floor = sec.height(s.u) + 0.4;
 				if (s.y < floor) { s.y = floor; s.vy = Math.abs(s.vy) * 0.6; s.vu *= 0.8; }
-				s.mesh.position.set(s.u - HALF, G + s.y, -COURSE.depth + 0.2);
+				s.mesh.position.set(s.u - HALF, GROUND + s.y, -COURSE.depth + 0.2);
 				s.mesh.rotation.y += dt * 8;
 				s.mesh.visible = !s.gone && !(s.age > HURT.linger - 1 && Math.floor(s.age * 12) % 2);
 			}
@@ -846,7 +846,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 	function poseHero(dt) {
 		const m = hero.model;
 		hero.holder.rotation.y = YAW[hero.wall];
-		m.root.position.set(hero.u - HALF, G + hero.y, -COURSE.depth);
+		m.root.position.set(hero.u - HALF, GROUND + hero.y, -COURSE.depth);
 		hero.turn += ((hero.loop ? 0 : HERO.turn) - hero.turn) * Math.min(1, dt * 10);
 		const goal = facingYaw(hero.facing, hero.turn);
 		let d = goal - hero.yaw;

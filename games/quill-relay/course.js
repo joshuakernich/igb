@@ -30,7 +30,7 @@ const PAD = 7;              // samples run this far past each end (for the mitre
 export function buildSection({ C, mats, rand, gentle }) {
 	const SPAN = C.span;
 	const half = SPAN / 2;
-	const G = C.ground;
+	const GROUND = C.ground;
 	const N = Math.round((SPAN + PAD * 2) / STEP) + 1;
 	const H = new Float32Array(N);
 	const idx = (u) => (u + PAD) / STEP;
@@ -58,7 +58,7 @@ export function buildSection({ C, mats, rand, gentle }) {
 	const at = (u, y, d = C.depth) => new G.Vector3(u - half, y, -d);
 
 	function add(type, u, y, mesh, extra) {
-		mesh.position.copy(at(u, G + y));   // (y: metres above the base height)
+		mesh.position.copy(at(u, GROUND + y));   // (y: metres above the base height)
 		group.add(mesh);
 		const it = Object.assign({ type, u, y, mesh, alive: true, age: 0 }, extra);
 		items.push(it);
@@ -187,7 +187,7 @@ export function buildSection({ C, mats, rand, gentle }) {
 			for (let i = 0; i <= NU; i++) {
 				const x = -d + 2 * d * i / NU;
 				const u = x + half;
-				pos.push(x, G + height(u), -d);
+				pos.push(x, GROUND + height(u), -d);
 				uv.push(u * 0.35, d * 0.35);
 			}
 		}
@@ -216,7 +216,7 @@ export function buildSection({ C, mats, rand, gentle }) {
 		for (let i = 0; i <= NU; i++) {
 			const x = -d + 2 * d * i / NU;
 			const u = x + half;
-			const y = G + height(u) + lip;
+			const y = GROUND + height(u) + lip;
 			const yb = lip ? y - bottom : bottom;
 			pos.push(x, y, -d, x, yb, -d);
 			uv.push(u * scale, lip ? 1 : y * scale, u * scale, lip ? 0 : yb * scale);
@@ -235,14 +235,14 @@ export function buildSection({ C, mats, rand, gentle }) {
 		group.add(m);
 		return m;
 	}
-	face(C.near, G - 5, mats.earth, 0.5);
+	face(C.near, GROUND - 5, mats.earth, 0.5);
 	face(C.near - 0.01, 0.42, mats.fringe, 0.4, 0.02);   // (the lip of grass over the earth)
 
 	/* ---------- loops ---------- */
 
 	function buildLoop(u, r) {
 		const g = new G.Group();
-		g.position.copy(at(u, G + r));
+		g.position.copy(at(u, GROUND + r));
 		const width = C.loop.width;
 		const inner = new G.Mesh(new G.CylinderGeometry(r, r, width, 64, 1, true), mats.loopInner);
 		inner.rotation.x = Math.PI / 2;
@@ -267,7 +267,7 @@ export function buildSection({ C, mats, rand, gentle }) {
 	/* ---------- the checkpoint ---------- */
 
 	const post = buildCheckpoint();
-	post.position.copy(at(C.checkpoint, G + height(C.checkpoint), C.depth + 0.9));
+	post.position.copy(at(C.checkpoint, GROUND + height(C.checkpoint), C.depth + 0.9));
 	group.add(post);
 	const checkpoint = { u: C.checkpoint, mesh: post, spin: 0, hit: false };
 
