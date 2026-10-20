@@ -689,8 +689,9 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 	const qLook = new G.Quaternion(), qAhead = new G.Quaternion(), behind = new G.Vector3();
 
 	// Where the outside eye is: circling slowly, looking up at the Strider.
-	const orbitAngle = () => clock * 0.07 + 0.35;
-	function outsidePose(pos, q, a = orbitAngle(), R = 18, up = 4.2) {
+	let hero = null;          // (tests: a fixed outside shot { a, R, up, walk }; see self.test.hero)
+	const orbitAngle = () => (hero ? hero.a : clock * 0.07 + 0.35);
+	function outsidePose(pos, q, a = orbitAngle(), R = hero ? hero.R : 18, up = hero ? hero.up : 4.2) {
 		pos.set(bot.pos.x - Math.sin(bot.heading + a) * R, bot.pos.y + up, bot.pos.z - Math.cos(bot.heading + a) * R);
 		pos.y = Math.max(pos.y, heightAt(pos.x, pos.z) + 2);
 		lookM.lookAt(pos, tmp.set(bot.pos.x, bot.pos.y + 6.4, bot.pos.z), UP);
@@ -784,7 +785,8 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		// the Strider seen from outside
 		strider.root.position.copy(bot.pos);
 		strider.root.rotation.y = bot.heading + Math.PI;
-		strider.walk(bot.phaseL, bot.phaseR, bot.amountL, bot.amountR, clock);
+		if (hero && hero.walk) strider.walk(hero.walk, hero.walk + Math.PI, 1, 1, clock);   // (a posed stride, for a still)
+		else strider.walk(bot.phaseL, bot.phaseR, bot.amountL, bot.amountR, clock);
 
 		// the eye
 		if (mode === 'outside' && boardT < 0) outsidePose(eye, eyeQ);
@@ -1279,6 +1281,9 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		},
 		timeLeft(s) { show.setTimeLeft(s); },
 		tap(x, y) { tap({ x, y }); },
+		// hold the outside eye still for a hero shot: a radians round from the
+		// front, R metres off, up metres high; walk: a stride phase to pose the legs at
+		hero(a = 0.6, R = 15, up = 3.2, walk = 0) { hero = { a, R, up, walk }; },
 	};
 
 	self.fini = function () {

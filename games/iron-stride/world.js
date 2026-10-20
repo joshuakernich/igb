@@ -27,8 +27,10 @@ export function heightAt(x, z) {
 		+ 1.0 * Math.cos(x * 0.09 + z * 0.071);
 	const r = Math.hypot(x, z);
 	h *= 0.3 + 0.7 * smooth(0, 90, r);
+	// (hills rising past the edge, levelling off at about 90 m, so they ring
+	// the arena without walling off the sky)
 	const edge = Math.max(0, r - (ARENA + 40));
-	h += edge * edge * 0.0016 + edge * 0.05 * (1 + Math.sin(Math.atan2(z, x) * 7) * 0.5);
+	h += 90 * smooth(0, 320, edge) * (1 + Math.sin(Math.atan2(z, x) * 7) * 0.35);
 	return h;
 }
 
