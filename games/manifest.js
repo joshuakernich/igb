@@ -19,11 +19,11 @@ IGB.manifest = [
 	{ folder: 'Sonic', games: [
 		{ id: 'loop-island', name: 'Sonic Dash', icon: 'assets/icons/sonic-dash.png', file: 'games/loop-island/index.js', module: true,
 			title: { lines: [{ text: 'SONIC', fill: '#2f7cf0', glow: '#3cd6ff', font: 'Nise Sega Sonic' }, { text: 'DASH', fill: '#ff3d3d', glow: '#ff7a3d', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#ffe14a', bg: '#2f7cf0', note: 'SPEED' } },
-		{ id: 'quill-relay', name: 'Sonic Classic', file: 'games/quill-relay/index.js', module: true,
+		{ id: 'quill-relay', name: 'Sonic Classic', icon: 'assets/icons/sonic-classic.png', file: 'games/quill-relay/index.js', module: true,
 			title: { lines: [{ text: 'SONIC', fill: '#2f7cf0', glow: '#3cd6ff', font: 'Nise Sega Sonic' }, { text: 'CLASSIC', fill: '#ffd23a', glow: '#ff7a3d', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#ffd23a', bg: '#2f7cf0', note: 'RELAY' } },
 		{ id: 'twin-tail-tower', name: 'Sonic Tails', icon: 'assets/icons/twin-tail-tower.svg', file: 'games/twin-tail-tower/index.js', module: true,
 			title: { lines: [{ text: 'SONIC', fill: '#2f7cf0', glow: '#3cd6ff', font: 'Nise Sega Sonic' }, { text: 'TAILS', fill: '#ff9a2b', glow: '#ffd23f', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#ff9a2b', bg: '#5fb8ff', note: 'CLIMB' } },
-		{ id: 'iron-stride', name: 'Sonic Robot', file: 'games/iron-stride/index.js', module: true,
+		{ id: 'iron-stride', name: 'Sonic Robot', icon: 'assets/icons/sonic-robot.png', file: 'games/iron-stride/index.js', module: true,
 			title: { lines: [{ text: 'SONIC', fill: '#2f7cf0', glow: '#3cd6ff', font: 'Nise Sega Sonic' }, { text: 'ROBOT', fill: '#ff3b30', glow: '#e23a2e', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#e23a2e', bg: '#16171b', note: 'MECH' } },
 	] },
 
@@ -55,9 +55,13 @@ IGB.manifest = [
 			title: { lines: [{ text: 'GWI-MA', fill: '#ff4fd8', glow: '#ff3d7a' }, { text: 'SHOWDOWN', fill: '#ffe14d', glow: '#ff7a3d' }] }, box: { color: '#ff3df0', bg: '#12051f', note: 'BOSS' } },
 		{ id: 'echo', name: 'Echo',
 			box: { color: '#3ad1ff', bg: '#0b1630', note: 'DODGE' } },
+		{ id: 'template', name: 'Template', file: 'games/_template.js' },
+	] },
+
+	// (the UX Demo, on a row of its own)
+	{ folder: 'UX Demo', games: [
 		{ id: 'show-debug', name: 'UX Demo', icon: 'assets/icons/ux-demo.svg', file: 'games/show-debug.js', module: true,
 			title: { lines: [{ text: 'UX', fill: '#3ad1ff', glow: '#5a4dff' }, { text: 'DEMO', fill: '#ffd23f', glow: '#ff7a3d' }] }, box: { color: '#3ad1ff', bg: '#0b1022', note: 'DEMO' } },
-		{ id: 'template', name: 'Template', file: 'games/_template.js' },
 	] },
 
 	{ folder: 'Experiments', games: [

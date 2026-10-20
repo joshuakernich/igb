@@ -19,8 +19,10 @@ const CROPS = {
 	backrooms: { x: 1300, y: 150, s: 440 },                          // the office (it's seen through your own eyes)
 	'gwi-ma-showdown': { x: 2502, y: 0, s: 396 },                    // the Gwi-Ma
 	'roll-call': { x: 1925, y: 400, s: 310 },                        // the voters
+	'quill-relay': { x: 1368, y: 270, s: 342, icon: 'sonic-classic' },    // the loop, rings round it
+	'iron-stride': { x: 1584, y: 270, s: 432, icon: 'sonic-robot' },      // the field ahead, and the strider on its screen
 };
-const WARM = { 'red-light-green-light': 9, mingle: 8, backrooms: 8, 'gwi-ma-showdown': 7, 'roll-call': 6, 'loop-island': 6 };
+const WARM = { 'red-light-green-light': 9, mingle: 8, backrooms: 8, 'gwi-ma-showdown': 7, 'roll-call': 6, 'loop-island': 6, 'quill-relay': 7, 'iron-stride': 7 };
 
 const [mode, ...rest] = process.argv.slice(2);
 const server = await serve(PROJECT);
