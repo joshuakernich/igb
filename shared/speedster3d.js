@@ -260,6 +260,56 @@ function faceTexture(withMuzzle = true) {
 	return tex;
 }
 
+/* ---------- geometry helpers ---------- */
+
+// Split a non-indexed geometry's triangles (positions and UVs) until no edge is
+// longer than maxEdge, so it bends smoothly when its points are moved.
+function subdivide(geo, maxEdge) {
+	const P = geo.attributes.position.array, U = geo.attributes.uv.array;
+	const outP = [], outU = [];
+	const split = (a, b, c, ua, ub, uc, depth) => {
+		const d = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+		if (depth > 7 || Math.max(d(a, b), d(b, c), d(c, a)) <= maxEdge) {
+			outP.push(...a, ...b, ...c);
+			outU.push(...ua, ...ub, ...uc);
+			return;
+		}
+		const m = (p, q) => p.map((v, k) => (v + q[k]) / 2);
+		const ab = m(a, b), bc = m(b, c), ca = m(c, a), uab = m(ua, ub), ubc = m(ub, uc), uca = m(uc, ua);
+		split(a, ab, ca, ua, uab, uca, depth + 1);
+		split(ab, b, bc, uab, ub, ubc, depth + 1);
+		split(ca, bc, c, uca, ubc, uc, depth + 1);
+		split(ab, bc, ca, uab, ubc, uca, depth + 1);
+	};
+	for (let t = 0; t < P.length / 3; t += 3) {
+		const v = (i) => [P[(t + i) * 3], P[(t + i) * 3 + 1], P[(t + i) * 3 + 2]], w = (i) => [U[(t + i) * 2], U[(t + i) * 2 + 1]];
+		split(v(0), v(1), v(2), w(0), w(1), w(2), 0);
+	}
+	const g = new THREE.BufferGeometry();
+	g.setAttribute('position', new THREE.Float32BufferAttribute(outP, 3));
+	g.setAttribute('uv', new THREE.Float32BufferAttribute(outU, 2));
+	return g;
+}
+
+// Weld matching points of a triangle soup into an indexed geometry (so normals
+// average across triangles: smooth shading, no facets).
+function weld(geo) {
+	const P = geo.attributes.position.array, U = geo.attributes.uv.array;
+	const keys = new Map(), pos = [], uv = [], idx = [];
+	for (let i = 0; i < P.length / 3; i++) {
+		const key = Math.round(P[i * 3] * 1e4) + ',' + Math.round(P[i * 3 + 1] * 1e4) + ',' + Math.round(P[i * 3 + 2] * 1e4);
+		let k = keys.get(key);
+		if (k === undefined) { k = pos.length / 3; keys.set(key, k); pos.push(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]); uv.push(U[i * 2], U[i * 2 + 1]); }
+		idx.push(k);
+	}
+	const g = new THREE.BufferGeometry();
+	g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+	g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+	g.setIndex(idx);
+	g.computeVertexNormals();
+	return g;
+}
+
 /* ---------- fur ---------- */
 
 // A normal map of short, soft strands (mostly lying one way, a few crossing),
@@ -345,6 +395,8 @@ function fur(color, extra = {}) {
 	const sheenColor = new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.45);
 	return new THREE.MeshPhysicalMaterial(Object.assign({ color, roughness: 0.62, metalness: 0, sheen: 1, sheenColor, sheenRoughness: 0.42, map: furStreakMap(), normalMap: furNormalMap(), normalScale: new THREE.Vector2(1.0, 1.0), clearcoat: 0.12, clearcoatRoughness: 0.4, envMapIntensity: 0.9 }, extra));
 }
+
+let muzzleCache = null;   // (the muzzle's shapes, built once for every speedster)
 
 /* ---------- the speedster ---------- */
 
@@ -452,39 +504,72 @@ export function buildSpeedster(colour) {
 		rim.castShadow = true;
 		head.add(rim);
 
-		// the muzzle: a solid 3D bean of tan fur (a capsule bent up at both ends like the
-		// drawing's crescent, a little flattened front to back), its back half sunk into
-		// the face so it sits flush; the smile and the nose sit right on its front
+		// the muzzle: a solid of tan fur in the drawing's muzzle shape; the smile and the
+		// nose sit right on its front
 		const { px, span, s: sc, ox, oy, cy } = FACE;
 		const drawToHead = (rx, ry) => [(0.5 - (px / 2 + (rx - ox) * sc) / px) * span, ((1 - (cy + (ry - oy) * sc) / px) - 0.5) * span];
 		const onHead = (x, y) => bean(flatten(V(x, y, -Math.sqrt(Math.max(0, 0.16 - x * x - y * y))))).add(V(0, 0, 0.02));
-		const MUZZLE = { r: 0.105, len: 0.34, bend: 1.4, depth: 0.78, sink: 0.035 };   // its thickness, length between its round ends, how much its ends curve up, front-to-back squash, and how far into the face it sits
-		const mgeo = new THREE.CapsuleGeometry(MUZZLE.r, MUZZLE.len, 12, 32);
-		mgeo.rotateZ(Math.PI / 2);   // (lying across the face)
-		{
-			const pos = mgeo.attributes.position;
-			for (let i = 0; i < pos.count; i++) {
-				const x = pos.getX(i);
-				pos.setY(i, pos.getY(i) + MUZZLE.bend * x * x);   // (the ends curve up: a smile of a bean)
-				pos.setZ(i, pos.getZ(i) * MUZZLE.depth);
+		// its shape: the drawing's muzzle outline, exactly, given thickness with softly
+		// rounded edges all round (a pillow), its back following the face's curve and
+		// sitting just inside it so it's flush
+		// (the same for every speedster: built once, then shared)
+		const mz = muzzleCache || (muzzleCache = (() => {
+		const MUZZLE = { body: 0.012, round: 0.042, edge: 0.03, sink: 0.012 };   // its flat middle's thickness, how far its rounded edges bulge (front and back), how far in from its outline they start rounding, how far into the face its back sits
+		const outline = (() => {
+			const segs = [
+				[[20, 400], [130, 424], [270, 446], [368, 448]],
+				[[368, 448], [460, 446], [600, 418], [716, 390]],
+				[[716, 390], [745, 470], [705, 590], [600, 645]],
+				[[600, 645], [500, 700], [250, 705], [140, 640]],
+				[[140, 640], [40, 585], [-5, 480], [20, 400]],
+			];
+			const pts = [];
+			for (const [a, b, c, d] of segs) for (let i = 0; i < 24; i++) {
+				const t = i / 24, u = 1 - t;
+				pts.push(new THREE.Vector2(...drawToHead(
+					u * u * u * a[0] + 3 * u * u * t * b[0] + 3 * u * t * t * c[0] + t * t * t * d[0],
+					u * u * u * a[1] + 3 * u * u * t * b[1] + 3 * u * t * t * c[1] + t * t * t * d[1])));
 			}
-			mgeo.computeVertexNormals();
+			return pts;
+		})();
+		let mgeo = new THREE.ExtrudeGeometry(new THREE.Shape(outline), {
+			depth: MUZZLE.body, curveSegments: 24, steps: 1,
+			bevelEnabled: true, bevelThickness: MUZZLE.round, bevelSize: MUZZLE.edge, bevelOffset: -MUZZLE.edge, bevelSegments: 10,
+		});
+		mgeo = subdivide(mgeo.index ? mgeo.toNonIndexed() : mgeo, 0.018);   // (fine enough to bend smoothly onto the face)
+		{
+			// lay it on the face: each point goes to where its (x, y) lands on the face,
+			// its depth measured out from the face (the back just inside it)
+			const pos = mgeo.attributes.position, uv = mgeo.attributes.uv;
+			const back = -MUZZLE.round;
+			for (let i = 0; i < pos.count; i++) {
+				const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+				const at = onHead(x, y);
+				pos.setXYZ(i, at.x, at.y, at.z + MUZZLE.sink - (z - back));
+				uv.setXY(i, uv.getX(i) * 3, uv.getY(i) * 3);   // (fur at the same scale as the rest of him)
+			}
+			// (measuring depth out from the face mirrored it front to back: turn each
+			// triangle round again so its outside faces out)
+			for (const attr of [pos, uv]) {
+				const n = attr.itemSize, a = attr.array;
+				for (let t = 0; t < attr.count; t += 3) for (let k = 0; k < n; k++) {
+					const i1 = (t + 1) * n + k, i2 = (t + 2) * n + k, tmpv = a[i1];
+					a[i1] = a[i2];
+					a[i2] = tmpv;
+				}
+			}
 		}
-		const [mcx, mcy] = drawToHead(368, 560);
-		const muzzle = new THREE.Mesh(mgeo, fur(0xf6d2a2, { normalScale: new THREE.Vector2(0.7, 0.7) }));
-		muzzle.position.copy(onHead(mcx, mcy)).add(V(0, 0.015, MUZZLE.sink));
-		muzzle.castShadow = true;
-		head.add(muzzle);
+		mgeo = weld(mgeo);   // (smooth shading)
 		// (points on its front: cast straight back at its shape from in front of where the
 		// drawing's point lands on the face)
 		const caster = new THREE.Raycaster(), probe = new THREE.Mesh(mgeo);
 		const onMuzzle = (rx, ry) => {
 			const at = onHead(...drawToHead(rx, ry));
-			caster.set(V(at.x - muzzle.position.x, at.y - muzzle.position.y, -1), V(0, 0, 1));
+			caster.set(V(at.x, at.y, -2), V(0, 0, 1));
 			const hit = caster.intersectObject(probe, false)[0];
-			return hit ? hit.point.add(muzzle.position) : null;
+			return hit ? hit.point : null;
 		};
-		// the smile: a fine dark line on the bean, with its little tick at the corner
+		// the smile: a fine dark line on the muzzle, with its little tick at the corner
 		const curve = (a, c, b, n = 24) => {
 			const out = [];
 			for (let i = 0; i <= n; i++) {
@@ -494,14 +579,20 @@ export function buildSpeedster(colour) {
 			}
 			return out;
 		};
-		const lineMat = new THREE.MeshStandardMaterial({ color: 0x14100c, roughness: 0.6 });
+		const lines = [];
 		for (const pts of [curve([428, 612], [560, 592], [600, 508]), curve([552, 498], [596, 490], [630, 522], 10)]) {
-			if (pts.length < 2) continue;
-			head.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.0055, 6, false), lineMat));
+			if (pts.length >= 2) lines.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.0055, 6, false));
 		}
-		// the nose: a glossy black ball on the bean's top, where it meets the eyes
+		// the nose: a glossy black ball on the muzzle's top, where it meets the eyes
 		const nosePt = onMuzzle(362, 470) || onHead(...drawToHead(362, 470));
-		const nose = add(head, new THREE.SphereGeometry(0.05, 24, 16), black, nosePt.x, nosePt.y, nosePt.z - 0.02);
+		return { mgeo, lines, nosePt };
+		})());
+		const muzzle = new THREE.Mesh(mz.mgeo, fur(0xf6d2a2, { normalScale: new THREE.Vector2(0.7, 0.7) }));
+		muzzle.castShadow = true;
+		head.add(muzzle);
+		const lineMat = new THREE.MeshStandardMaterial({ color: 0x14100c, roughness: 0.6 });
+		for (const g of mz.lines) head.add(new THREE.Mesh(g, lineMat));
+		add(head, new THREE.SphereGeometry(0.05, 24, 16), black, mz.nosePt.x, mz.nosePt.y, mz.nosePt.z - 0.02);
 	}
 	// the quills: each starts as a fine point on the head (short of the flat front),
 	// swells as it hugs the head's curve, and tapers to its tip behind
