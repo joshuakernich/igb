@@ -2,7 +2,7 @@
  * The speedster: a glossy, spiky little runner in any colour, built for
  * three.js (shared by Sonic Dash, Quill Relay and the Sonic Characters
  * sandbox). A bean of a head with thick quills flaring out of it and a
- * smooth flattened front with the classic face laid flat on it; a small bean of a
+ * smooth flattened front with the classic face laid flat on it; soft fur; a small bean of a
  * body; big puffy gloves; simple red shoes (a dome on a white sole, a white
  * sock); and noodly rubber-hose arms and legs, rebuilt every frame as
  * smooth tapered tubes bowing at the knee and elbow.
@@ -51,6 +51,11 @@ export function hose(mat, r0, r1, { segs = 16, radial = 10, swell = 0.12, capA =
 	geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
 	geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3).setUsage(THREE.DynamicDrawUsage));
 	geo.setIndex(idx);
+	{
+		const uv = new Float32Array(count * 2);
+		for (let i = 0; i < rings; i++) for (let j = 0; j <= radial; j++) { const k = (i * ringVerts + j) * 2; uv[k] = j / radial; uv[k + 1] = i / segs * 2; }
+		geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+	}
 	const mesh = new THREE.Mesh(geo, mat);
 	mesh.frustumCulled = false;
 	mesh.castShadow = true;
@@ -147,12 +152,7 @@ function faceTexture() {
 	g.fillStyle = '#ffffff';
 	maskPath(g);
 	g.fill();
-	g.strokeStyle = '#0c0c14';
-	g.lineWidth = 9;
-	muzzlePath(g);
-	g.stroke();
-	maskPath(g);
-	g.stroke();
+	g.strokeStyle = '#0c0c14';   // (for the smirk: no outlines round the mask or muzzle)
 	// the eyes: tall green irises (darker at the rim, finely streaked), a black
 	// oval pupil in each, and a white glint over the lower-left of the rim
 	for (const [x, y, rot] of [[234, 306, 0.04], [468, 306, -0.04]]) {
@@ -191,10 +191,6 @@ function faceTexture() {
 		g.fillStyle = shine;
 		g.fillRect(-rx, ry * 0.5, rx * 2, ry * 0.5);
 		g.restore();
-		// a dark edge
-		g.strokeStyle = 'rgba(5,40,8,0.8)';
-		g.lineWidth = 3;
-		g.stroke();
 		// the pupil
 		g.fillStyle = '#121214';
 		g.beginPath();
@@ -233,6 +229,60 @@ function faceTexture() {
 	return tex;
 }
 
+/* ---------- fur ---------- */
+
+// A normal map of short, soft strands (mostly lying one way, a few crossing),
+// made once from a painted height field; and a material that wears it with a
+// velvety sheen at the edges, like a plush toy's fur.
+let furMap = null;
+function furNormalMap() {
+	if (furMap) return furMap;
+	const N = 512;
+	const c = document.createElement('canvas');
+	c.width = c.height = N;
+	const g = c.getContext('2d');
+	g.fillStyle = '#808080';
+	g.fillRect(0, 0, N, N);
+	g.lineCap = 'round';
+	for (let i = 0; i < 14000; i++) {
+		const x = Math.random() * N, y = Math.random() * N;
+		const a = Math.PI / 2 + (Math.random() - 0.5) * 0.9;   // (mostly lying along v)
+		const len = 5 + Math.random() * 9;
+		const v = Math.floor(90 + Math.random() * 120);
+		g.strokeStyle = `rgba(${v},${v},${v},0.55)`;
+		g.lineWidth = 0.8 + Math.random() * 1.4;
+		for (const [ox, oy] of [[0, 0], [N, 0], [-N, 0], [0, N], [0, -N]]) {   // (wrapped, so it tiles)
+			g.beginPath();
+			g.moveTo(x + ox, y + oy);
+			g.lineTo(x + ox + Math.cos(a) * len, y + oy + Math.sin(a) * len);
+			g.stroke();
+		}
+	}
+	// height to normals
+	const h = g.getImageData(0, 0, N, N).data;
+	const out = g.createImageData(N, N);
+	const H = (x, y) => h[(((y + N) % N) * N + ((x + N) % N)) * 4] / 255;
+	for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+		const dx = (H(x + 1, y) - H(x - 1, y)) * 2.2, dy = (H(x, y + 1) - H(x, y - 1)) * 2.2;
+		const l = Math.hypot(dx, dy, 1);
+		const k = (y * N + x) * 4;
+		out.data[k] = (-dx / l * 0.5 + 0.5) * 255;
+		out.data[k + 1] = (dy / l * 0.5 + 0.5) * 255;
+		out.data[k + 2] = (1 / l * 0.5 + 0.5) * 255;
+		out.data[k + 3] = 255;
+	}
+	g.putImageData(out, 0, 0);
+	furMap = new THREE.CanvasTexture(c);
+	furMap.wrapS = furMap.wrapT = THREE.RepeatWrapping;
+	furMap.repeat.set(3, 3);
+	furMap.anisotropy = 4;
+	return furMap;
+}
+function fur(color, extra = {}) {
+	const sheenColor = new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.45);
+	return new THREE.MeshPhysicalMaterial(Object.assign({ color, roughness: 0.62, metalness: 0, sheen: 1, sheenColor, sheenRoughness: 0.42, normalMap: furNormalMap(), normalScale: new THREE.Vector2(0.55, 0.55), clearcoat: 0.12, clearcoatRoughness: 0.4, envMapIntensity: 0.9 }, extra));
+}
+
 /* ---------- the speedster ---------- */
 
 export function buildSpeedster(colour) {
@@ -240,8 +290,8 @@ export function buildSpeedster(colour) {
 	const lean = new THREE.Group();   // tilts, leans and tumbles
 	root.add(lean);
 
-	const skin = glossy(colour);
-	const tan = glossy(0xf6d2a2, { clearcoat: 0.5, roughness: 0.38 });
+	const skin = fur(colour);   // (soft fur all over)
+	const tan = fur(0xf6d2a2, { normalScale: new THREE.Vector2(0.4, 0.4) });
 	const white = glossy(0xffffff, { clearcoat: 0.9, roughness: 0.25 });
 	const glove = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.55, sheen: 1, sheenColor: 0xffffff, sheenRoughness: 0.4 });
 	const black = glossy(0x0c0c14, { roughness: 0.15 });
@@ -334,10 +384,22 @@ export function buildSpeedster(colour) {
 	quill(B(0, 0.315, -0.215), B(0, 0.52, 0.17), B(0, 0.25, 0.76), 0.2);              // over the top
 	for (const s of [-1, 1]) quill(B(s * 0.27, 0.12, -0.16), B(s * 0.27, 0.1, 0.22), B(s * 0.13, -0.02, 0.68), 0.16);   // round each side, close in toward the top one (shorter than it)
 	quill(B(0, -0.24, 0.22), B(0, -0.27, 0.46), B(0, -0.2, 0.66), 0.16);              // low at the back (shorter, tucked in under the side ones)
-	// ears: a skin cone with a tan inside
+	// ears: big, forward, just above the eyes, flattened front to back, the tan inside facing forward
 	for (const s of [-1, 1]) {
-		head.add(spike(skin, B(s * 0.19, 0.25, 0.06), B(s * 0.26, 0.38, 0.06), B(s * 0.28, 0.5, 0.12), 0.1, 0.004, 14, 0.35));
-		head.add(spike(tan, B(s * 0.2, 0.29, 0.02), B(s * 0.25, 0.37, 0.02), B(s * 0.27, 0.46, 0.08), 0.055));
+		const ear = new THREE.Group();
+		ear.position.copy(B(s * 0.2, 0.27, -0.1));
+		ear.rotation.z = -s * 0.22;
+		ear.scale.z = 0.45;   // (flattened at the front)
+		head.add(ear);
+		// (rounded: full most of the way up, then a dome over the top)
+		const round = (R) => (t) => Math.max(0.004, R * Math.sqrt(Math.max(0, 1 - Math.pow(t, 2.6))));
+		for (const [mat, a, c, b, R] of [[skin, V(0, -0.02, 0), V(s * 0.03, 0.16, 0), V(s * 0.04, 0.33, 0.02), 0.15], [tan, V(0, 0.04, -0.07), V(s * 0.03, 0.16, -0.07), V(s * 0.036, 0.28, -0.06), 0.09]]) {
+			const e = hose(mat, 0, 0, { segs: 24, radial: 16, capA: true, capB: false, profile: round(R) });
+			e.update(a, c, b);
+			e.geometry.computeBoundingSphere();
+			e.frustumCulled = true;
+			ear.add(e);
+		}
 	}
 
 	// gloves: a puffy hand, a thumb and a rolled cuff
@@ -550,6 +612,7 @@ export function buildSpeedster(colour) {
 
 	function setColour(c) {
 		skin.color.set(c);
+		skin.sheenColor.set(c).lerp(new THREE.Color(0xffffff), 0.45);
 		whirlMat.color.set(c);
 	}
 
