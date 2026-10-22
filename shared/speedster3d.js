@@ -444,6 +444,52 @@ export function buildSpeedster(colour) {
 		const rim = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 160, 0.014, 10, false), skin);
 		rim.castShadow = true;
 		head.add(rim);
+
+		// the muzzle in 3D: a soft cushion cut to the drawing's muzzle outline, swelling
+		// out of the face (most in its middle, nothing at its edges, so it grows out of
+		// the face with no step); it wears the same painting (the tan, the smirk), and the
+		// nose is a glossy ball on it
+		const MUZZLE = 0.075;   // how far it swells out
+		const { px, span, s: sc, ox, oy, cy } = FACE;
+		const drawToHead = (rx, ry) => [(0.5 - (px / 2 + (rx - ox) * sc) / px) * span, ((1 - (cy + (ry - oy) * sc) / px) - 0.5) * span];
+		const toRef = (g) => { g.translate(px / 2 - ox * sc, cy - oy * sc); g.scale(sc, sc); };
+		const canvas = (size, blur, draw) => { const c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d'); g.filter = blur ? 'blur(' + blur + 'px)' : 'none'; g.scale(size / px, size / px); toRef(g); g.fillStyle = '#fff'; draw(g); return c; };
+		const soft = canvas(256, 6, (g) => { muzzlePath(g); g.fill(); }).getContext('2d').getImageData(0, 0, 256, 256).data;
+		const at = (x, y) => soft[(Math.max(0, Math.min(255, y)) * 256 + Math.max(0, Math.min(255, x))) * 4] / 255;
+		const swell = (u, v) => {
+			const fx = u * 255, fy = (1 - v) * 255, x = Math.floor(fx), y = Math.floor(fy), tx = fx - x, ty = fy - y;
+			const m = (at(x, y) * (1 - tx) + at(x + 1, y) * tx) * (1 - ty) + (at(x, y + 1) * (1 - tx) + at(x + 1, y + 1) * tx) * ty;
+			const k = Math.max(0, Math.min(1, (m - 0.56) / 0.4));   // (starts just inside the outline: it meets the face flush)
+			return MUZZLE * Math.pow(k * k * (3 - 2 * k), 0.7);
+		};
+		const surface = (x, y, out) => {
+			const u = 0.5 - x / span, v = y / span + 0.5;
+			out.set(x, y, -Math.sqrt(Math.max(0, 0.16 - x * x - y * y)));
+			flatten(out);
+			out.z -= swell(u, v);
+			return bean(out).add(V(0, 0, 0.02 - 0.004));
+		};
+		const [x0, y0] = drawToHead(-10, 380), [x1, y1] = drawToHead(750, 710);
+		const mg = new THREE.PlaneGeometry(Math.abs(x1 - x0), Math.abs(y1 - y0), 140, 70);
+		const mpos = mg.attributes.position, muv = mg.attributes.uv, q = V(0, 0, 0);
+		const cx = (x0 + x1) / 2, cyy = (y0 + y1) / 2;
+		for (let i = 0; i < mpos.count; i++) {
+			const x = mpos.getX(i) + cx, y = mpos.getY(i) + cyy;
+			muv.setXY(i, 0.5 - x / span, y / span + 0.5);
+			surface(x, y, q);
+			mpos.setXYZ(i, q.x, q.y, q.z);
+		}
+		mg.computeVertexNormals();
+		const alpha = new THREE.CanvasTexture(canvas(1024, 0, (g) => { muzzlePath(g); g.fill(); }));
+		const mmat = new THREE.MeshPhysicalMaterial({ map: mat.map, alphaMap: alpha, alphaTest: 0.5, roughness: 0.45, sheen: 0.6, sheenColor: 0xfff0dc, sheenRoughness: 0.5, clearcoat: 0.2, clearcoatRoughness: 0.4, side: THREE.DoubleSide });
+		const muzzle = new THREE.Mesh(mg, mmat);
+		muzzle.castShadow = true;
+		head.add(muzzle);
+		// the nose: a glossy black ball on the muzzle where it meets the mask
+		const [nx, ny] = drawToHead(362, 470);
+		const nose = add(head, new THREE.SphereGeometry(0.05, 24, 16), black, 0, 0, 0);
+		surface(nx, ny, nose.position);
+		nose.position.z -= 0.02;
 	}
 	// the quills: each starts as a fine point on the head (short of the flat front),
 	// swells as it hugs the head's curve, and tapers to its tip behind
