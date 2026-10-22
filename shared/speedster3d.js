@@ -452,7 +452,7 @@ export function buildSpeedster(colour) {
 		// out of the face (most in its middle, nothing at its edges, so it grows out of
 		// the face with no step); it wears the same painting (the tan, the smirk), and the
 		// nose is a glossy ball on it
-		const MUZZLE = 0.075;   // how far it swells out
+		const MUZZLE = 0.1;   // how far it swells out
 		const { px, span, s: sc, ox, oy, cy } = FACE;
 		const drawToHead = (rx, ry) => [(0.5 - (px / 2 + (rx - ox) * sc) / px) * span, ((1 - (cy + (ry - oy) * sc) / px) - 0.5) * span];
 		const toRef = (g) => { g.translate(px / 2 - ox * sc, cy - oy * sc); g.scale(sc, sc); };
@@ -463,7 +463,7 @@ export function buildSpeedster(colour) {
 			const fx = u * 255, fy = (1 - v) * 255, x = Math.floor(fx), y = Math.floor(fy), tx = fx - x, ty = fy - y;
 			const m = (at(x, y) * (1 - tx) + at(x + 1, y) * tx) * (1 - ty) + (at(x, y + 1) * (1 - tx) + at(x + 1, y + 1) * tx) * ty;
 			const k = Math.max(0, Math.min(1, (m - 0.56) / 0.4));   // (starts just inside the outline: it meets the face flush)
-			return MUZZLE * Math.pow(k * k * (3 - 2 * k), 0.7);
+			return MUZZLE * Math.pow(k * k * (3 - 2 * k), 0.5);   // (full: a plump cushion, easing to nothing at its edge)
 		};
 		const surface = (x, y, out) => {
 			const u = 0.5 - x / span, v = y / span + 0.5;
@@ -484,10 +484,23 @@ export function buildSpeedster(colour) {
 		}
 		mg.computeVertexNormals();
 		const alpha = new THREE.CanvasTexture(canvas(1024, 0, (g) => { muzzlePath(g); g.fill(); }));
-		const mmat = new THREE.MeshPhysicalMaterial({ map: faceTexture(true), alphaMap: alpha, alphaTest: 0.5, roughness: 0.45, sheen: 0.6, sheenColor: 0xfff0dc, sheenRoughness: 0.5, clearcoat: 0.2, clearcoatRoughness: 0.4, side: THREE.DoubleSide });
+		const mmat = fur(0xf6d2a2, { alphaMap: alpha, alphaTest: 0.5, normalScale: new THREE.Vector2(0.7, 0.7), side: THREE.DoubleSide });   // (the tan as fur, like the tummy)
 		const muzzle = new THREE.Mesh(mg, mmat);
 		muzzle.castShadow = true;
 		head.add(muzzle);
+		// the smile: a fine dark line on the muzzle, its little tick at the corner
+		const curve = (a, c, b, n = 24) => Array.from({ length: n + 1 }, (_, i) => {
+			const t = i / n, u = 1 - t;
+			const [x, y] = drawToHead(u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]);
+			const p = surface(x, y, V(0, 0, 0));
+			p.z -= 0.003;
+			return p;
+		});
+		const lineMat = new THREE.MeshStandardMaterial({ color: 0x14100c, roughness: 0.6 });
+		for (const pts of [curve([428, 612], [560, 592], [600, 508]), curve([552, 498], [596, 490], [630, 522], 10)]) {
+			const line = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.0055, 6, false), lineMat);
+			head.add(line);
+		}
 		// the nose: a glossy black ball on the muzzle where it meets the mask
 		const [nx, ny] = drawToHead(362, 470);
 		const nose = add(head, new THREE.SphereGeometry(0.05, 24, 16), black, 0, 0, 0);
