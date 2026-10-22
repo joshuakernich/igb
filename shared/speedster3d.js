@@ -470,7 +470,7 @@ export function buildSpeedster(colour, { knuckles = false, tails = false } = {})
 	if (knuckles) {
 		// a flat white crescent painted across the chest, its horns up to sharp points:
 		// the drawn shape (a 630-unit square), laid onto the body's front
-		const k = 0.18 / 510, cy = BODY.y + 0.12;
+		const k = 0.22 / 510, cy = BODY.y + 0.12;
 		const P = (x, y) => new THREE.Vector2((x - 315) * k, cy - (y - 300) * k);
 		const shape = new THREE.Shape();
 		shape.moveTo(...P(60, 220).toArray());
