@@ -548,7 +548,7 @@ export function buildSpeedster(colour) {
 		// sitting just inside it so it's flush
 		// (the same for every speedster: built once, then shared)
 		const mz = muzzleCache || (muzzleCache = (() => {
-		const MUZZLE = { body: 0.012 * FACE_K, round: 0.042 * FACE_K, edge: 0.03 * FACE_K, sink: 0.012 * FACE_K };   // its flat middle's thickness, how far its rounded edges bulge (front and back), how far in from its outline they start rounding, how far into the face its back sits
+		const MUZZLE = { narrow: 0.93, bulge: 0.035 * FACE_K, bulgeW: 0.34 * FACE_K, body: 0.012 * FACE_K, round: 0.042 * FACE_K, edge: 0.03 * FACE_K, sink: 0.012 * FACE_K };   // its flat middle's thickness, how far its rounded edges bulge (front and back), how far in from its outline they start rounding, how far into the face its back sits
 		const outline = (() => {
 			// (the drawing's right half, and the same mirrored for the left: the drawn left end sagged)
 			const right = [
@@ -564,7 +564,7 @@ export function buildSpeedster(colour) {
 			for (const [a, b, c, d] of segs) for (let i = 0; i < 24; i++) {
 				const t = i / 24, u = 1 - t;
 				pts.push(new THREE.Vector2(...drawToHead(
-					u * u * u * a[0] + 3 * u * u * t * b[0] + 3 * u * t * t * c[0] + t * t * t * d[0],
+					368 + (u * u * u * a[0] + 3 * u * u * t * b[0] + 3 * u * t * t * c[0] + t * t * t * d[0] - 368) * MUZZLE.narrow,
 					u * u * u * a[1] + 3 * u * u * t * b[1] + 3 * u * t * t * c[1] + t * t * t * d[1])));
 			}
 			return pts;
@@ -582,7 +582,9 @@ export function buildSpeedster(colour) {
 			for (let i = 0; i < pos.count; i++) {
 				const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
 				const at = onHead(x, y);
-				pos.setXYZ(i, at.x, at.y, at.z + MUZZLE.sink - (z - back));
+				// (its front swells forward toward the middle, so seen from above it curves round the face)
+				const swell = MUZZLE.bulge * Math.max(0, 1 - (x / MUZZLE.bulgeW) ** 2) * (z - back) / (MUZZLE.body + 2 * MUZZLE.round);
+				pos.setXYZ(i, at.x, at.y, at.z + MUZZLE.sink - (z - back) - swell);
 				uv.setXY(i, uv.getX(i) * 3, uv.getY(i) * 3);   // (fur at the same scale as the rest of him)
 			}
 			// (measuring depth out from the face mirrored it front to back: turn each
