@@ -108,7 +108,10 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 // mask holding both eyes, the green eyes, the muzzle crescent, the nose and
 // the smirk), painted on a canvas that maps straight on from the front onto
 // the head's flattened face.
-const FACE = { px: 1024, span: 0.84, s: 0.95, ox: 368, oy: 230, cy: 414 };   // canvas size, metres across it, drawing-to-canvas scale, the drawing's point that lands at (512, cy)
+// (FACE_K: the face and its features drawn bigger on the head by as much as the head's
+// been shrunk, so they stay the same size while the head round them gets smaller)
+const HEAD_SCALE = 0.76, FACE_K = 0.88 / HEAD_SCALE;
+const FACE = { px: 1024, span: 0.84 * FACE_K, s: 0.95, ox: 368, oy: 230, cy: 414 };   // canvas size, metres across it, drawing-to-canvas scale, the drawing's point that lands at (512, cy)
 
 function maskPath(g) {
 	g.beginPath();
@@ -448,13 +451,13 @@ export function buildSpeedster(colour) {
 
 	// the head
 	const head = new THREE.Group();
-	head.position.set(0, 0.74, -0.02);
-	head.scale.setScalar(0.88);   // (a little smaller than it was built)
+	head.position.set(0, 0.71, -0.02);
+	head.scale.setScalar(HEAD_SCALE);   // (smaller than it was built; the face and its features are drawn up to match: FACE_K)
 	torso.add(head);
 	// a bean: a little long front to back, a little wide, arched (seen from the side, its
 	// top rounds over and its underside curves in), its front pressed smoothly flat
 	// (where a face will go). The quills and ears bend with it.
-	const FLAT = { at: 0.31, soft: 0.07 };   // how far forward of the middle the flat face sits, and how softly it rounds into the head
+	const FLAT = { at: 0.29, soft: 0.07 };   // how far forward of the middle the flat face sits, and how softly it rounds into the head
 	const flatten = (v) => {
 		const d = -v.z, knee = FLAT.at - FLAT.soft;
 		if (d > knee) v.z = -(knee + FLAT.soft * Math.tanh((d - knee) / FLAT.soft));   // (eases into the flat: no crease)
@@ -503,7 +506,7 @@ export function buildSpeedster(colour) {
 		// the rim swells over the tops of the eyes and through the middle of the face, and
 		// thins down the outer edges to the muzzle: each ring of the tube is scaled about its centre
 		const rimCurve = new THREE.CatmullRomCurve3(pts);
-		const rimGeo = new THREE.TubeGeometry(rimCurve, 160, 0.014, 10, false);
+		const rimGeo = new THREE.TubeGeometry(rimCurve, 160, 0.014 * FACE_K, 10, false);
 		{
 			let yLo = Infinity, yHi = -Infinity;
 			for (const p of pts) { yLo = Math.min(yLo, p.y); yHi = Math.max(yHi, p.y); }
@@ -511,7 +514,7 @@ export function buildSpeedster(colour) {
 			for (let i = 0; i <= 160; i++) {
 				rimCurve.getPointAt(i / 160, c);
 				const top = THREE.MathUtils.smoothstep(c.y, yLo + (yHi - yLo) * 0.45, yHi);   // (over the tops of the eyes)
-				const mid = Math.exp(-((c.x / 0.07) ** 2));                                  // (the middle of the face)
+				const mid = Math.exp(-((c.x / (0.07 * FACE_K)) ** 2));                                // (the middle of the face)
 				const k = 0.55 + 0.85 * Math.max(top, mid);
 				for (let j = 0; j <= 10; j++) {
 					const n = i * 11 + j;
@@ -534,7 +537,7 @@ export function buildSpeedster(colour) {
 		// sitting just inside it so it's flush
 		// (the same for every speedster: built once, then shared)
 		const mz = muzzleCache || (muzzleCache = (() => {
-		const MUZZLE = { body: 0.012, round: 0.042, edge: 0.03, sink: 0.012 };   // its flat middle's thickness, how far its rounded edges bulge (front and back), how far in from its outline they start rounding, how far into the face its back sits
+		const MUZZLE = { body: 0.012 * FACE_K, round: 0.042 * FACE_K, edge: 0.03 * FACE_K, sink: 0.012 * FACE_K };   // its flat middle's thickness, how far its rounded edges bulge (front and back), how far in from its outline they start rounding, how far into the face its back sits
 		const outline = (() => {
 			const segs = [
 				[[20, 400], [130, 424], [270, 446], [368, 448]],
@@ -601,7 +604,7 @@ export function buildSpeedster(colour) {
 		};
 		const lines = [];
 		for (const pts of [curve([428, 612], [560, 592], [600, 508]), curve([552, 498], [596, 490], [630, 522], 10)]) {
-			if (pts.length >= 2) lines.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.0055, 6, false));
+			if (pts.length >= 2) lines.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.0055 * FACE_K, 6, false));
 		}
 		// the nose: a glossy black ball on the muzzle's top, where it meets the eyes
 		const nosePt = onMuzzle(362, 470) || onHead(...drawToHead(362, 470));
@@ -612,7 +615,7 @@ export function buildSpeedster(colour) {
 		head.add(muzzle);
 		const lineMat = new THREE.MeshStandardMaterial({ color: 0x14100c, roughness: 0.6 });
 		for (const g of mz.lines) head.add(new THREE.Mesh(g, lineMat));
-		add(head, new THREE.SphereGeometry(0.05, 24, 16), black, mz.nosePt.x, mz.nosePt.y, mz.nosePt.z - 0.02);
+		add(head, new THREE.SphereGeometry(0.05 * FACE_K, 24, 16), black, mz.nosePt.x, mz.nosePt.y, mz.nosePt.z - 0.02);
 	}
 	// the quills: each starts as a fine point on the head (short of the flat front),
 	// swells as it hugs the head's curve, and tapers to its tip behind
@@ -631,7 +634,7 @@ export function buildSpeedster(colour) {
 		const ear = new THREE.Group();
 		ear.position.copy(B(s * 0.24, 0.26, -0.09));
 		ear.rotation.z = -s * 0.22;
-		ear.scale.z = 0.45;   // (flattened at the front)
+		ear.scale.set(FACE_K, FACE_K, 0.45 * FACE_K);   // (flattened at the front; kept their size as the head shrank)
 		head.add(ear);
 		// (full low down, easing to a soft point: between a cone and a dome)
 		const round = (R) => (t) => Math.max(0.004, R * Math.pow(Math.max(0, 1 - Math.pow(t, 1.7)), 0.75));
