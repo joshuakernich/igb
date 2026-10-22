@@ -13,6 +13,7 @@
  *   radar(ctx, cx, cy, r, blips, sweep)
  *   hullDial(ctx, cx, cy, r, hull, alarm)
  *   readout(ctx, x, y, label, value, align)
+ *   emeraldGauge(ctx, cx, cy, r, got, total, t)
  *   klank(ctx, cx, cy, size, t, talking)
  */
 
@@ -476,6 +477,77 @@ export function readout(ctx, x, y, label, value, align = 'left', colour = '#ff5a
 	ctx.font = `26px "${MONO}", monospace`;
 	ctx.fillStyle = 'rgba(255,255,255,0.6)';
 	ctx.fillText(label, x0 + vw / 2, y - 62);
+	ctx.restore();
+}
+
+// The emerald being pieced back together: a gem split into `total` wedges
+// round its middle, the fragments found so far lit up green, and the count.
+const GEM = [[0, -1.15], [0.7, -0.78], [1, -0.12], [0.74, 0.46], [0, 1.2], [-0.74, 0.46], [-1, -0.12], [-0.7, -0.78]];
+export function emeraldGauge(ctx, cx, cy, r, got, total, t) {
+	const pts = GEM.map(([x, y]) => [cx + x * r, cy + y * r]);
+	const lens = pts.map((p, i) => Math.hypot(pts[(i + 1) % pts.length][0] - p[0], pts[(i + 1) % pts.length][1] - p[1]));
+	const perim = lens.reduce((a, b) => a + b, 0);
+	const at = (u) => {   // (a point u of the way round the outline)
+		let d = ((u % 1) + 1) % 1 * perim;
+		for (let i = 0; i < pts.length; i++) {
+			if (d <= lens[i]) {
+				const k = d / lens[i], a = pts[i], b = pts[(i + 1) % pts.length];
+				return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+			}
+			d -= lens[i];
+		}
+		return pts[0];
+	};
+	ctx.save();
+	// the backing
+	ctx.fillStyle = 'rgba(0,0,0,0.55)';
+	ctx.beginPath();
+	pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+	ctx.closePath();
+	ctx.fill();
+	// the wedges
+	for (let k = 0; k < total; k++) {
+		ctx.beginPath();
+		ctx.moveTo(cx, cy);
+		for (let s = 0; s <= 6; s++) {
+			const [x, y] = at((k + s / 6) / total);
+			ctx.lineTo(x, y);
+		}
+		ctx.closePath();
+		if (k < got) {
+			const pulse = k === got - 1 ? 0.75 + 0.25 * Math.sin(t * 6) : 1;
+			ctx.fillStyle = k % 2 ? '#2fe07a' : '#4dff95';
+			ctx.globalAlpha = pulse;
+			ctx.shadowColor = '#3cff8a';
+			ctx.shadowBlur = 18;
+			ctx.fill();
+			ctx.shadowBlur = 0;
+			ctx.globalAlpha = 1;
+		} else {
+			ctx.fillStyle = 'rgba(255,255,255,0.07)';
+			ctx.fill();
+		}
+		ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+		ctx.lineWidth = 2;
+		ctx.stroke();
+	}
+	// a glint
+	ctx.fillStyle = 'rgba(255,255,255,0.35)';
+	ctx.beginPath();
+	ctx.moveTo(cx - r * 0.45, cy - r * 0.62);
+	ctx.lineTo(cx - r * 0.1, cy - r * 0.8);
+	ctx.lineTo(cx - r * 0.3, cy - r * 0.3);
+	ctx.fill();
+	ctx.font = `26px "${MONO}", monospace`;
+	ctx.textAlign = 'center';
+	ctx.textBaseline = 'middle';
+	ctx.fillStyle = 'rgba(255,255,255,0.65)';
+	ctx.fillText('EMERALD', cx, cy - r * 1.15 - 22);
+	ctx.font = `40px "${MONO}", monospace`;
+	ctx.fillStyle = '#4dff95';
+	ctx.shadowColor = '#3cff8a';
+	ctx.shadowBlur = 12;
+	ctx.fillText(`${got}/${total}`, cx, cy + r * 1.2 + 30);
 	ctx.restore();
 }
 

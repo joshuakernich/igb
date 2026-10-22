@@ -9,6 +9,7 @@
  *   sound.stomp(); sound.launch(pan); sound.boom(near, pan); sound.zap(pan);
  *   sound.thunk(pan); sound.clang(); sound.alarm(); sound.powerDown();
  *   sound.powerUp(); sound.lock(); sound.wave(); sound.servo(0..1);
+ *   sound.chime(); sound.shield(pan); sound.shieldDown();
  *   sound.music(on); sound.tick();   // every frame
  */
 export function createSound() {
@@ -212,6 +213,36 @@ export function createSound() {
 			tone(t + i * 0.5, 0.42, 'sawtooth', 300, 420, 0.1, 0.03);
 			tone(t + i * 0.5, 0.42, 'sawtooth', 302, 424, 0.08, 0.03);
 		}
+	};
+
+	// An emerald fragment picked up: a bright, rising sparkle.
+	sound.chime = function () {
+		sound.resume();
+		const t = now();
+		[1318.5, 1760, 2093, 2637].forEach((f, i) => {
+			tone(t + i * 0.07, 0.5, 'sine', f, f, 0.09, 0.003);
+			tone(t + i * 0.07, 0.3, 'triangle', f * 2, f * 2, 0.03, 0.003);
+		});
+		noise(t + 0.25, 0.6, 'highpass', 9000, 6000, 0.05);
+	};
+
+	// A missile splashing harmlessly off a shield.
+	sound.shield = function (pan = 0) {
+		sound.resume();
+		const t = now();
+		const o = out(pan);
+		tone(t, 0.35, 'sine', 320, 180, 0.2, 0.003, o);
+		tone(t, 0.35, 'square', 643, 361, 0.03, 0.003, o);
+		noise(t, 0.3, 'bandpass', 2500, 900, 0.15, 3, o);
+	};
+
+	// A shield failing: a falling whine and a fizz.
+	sound.shieldDown = function () {
+		sound.resume();
+		const t = now();
+		tone(t, 1.1, 'sawtooth', 900, 70, 0.1, 0.01);
+		tone(t, 1.1, 'sine', 450, 35, 0.2, 0.01);
+		noise(t, 0.9, 'highpass', 6000, 800, 0.2);
 	};
 
 	/* ---------- the tune ---------- */

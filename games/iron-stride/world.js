@@ -16,18 +16,33 @@ export const SUN = new THREE.Vector3(-0.42, 0.62, -0.66).normalize();
 export const HORIZON = new THREE.Color(0xbfe0f2);
 export const ARENA = 470;          // metres from the middle the robot can walk
 export const FACTORY = new THREE.Vector3(0, 0, -760);   // Doctor Klank's factory (dead ahead at the start)
+// Doctor Klank's compounds, in the order the mission takes them (the first
+// dead ahead at the start); the ground is levelled round each.
+export const SITES = [[0, -200], [240, -320], [-300, -150], [210, 170], [-170, 300]].map(([x, z]) => ({ x, z }));
+const SITE_FLAT = [44, 78];   // metres from a site's middle: flat out to here, blending back to the hills by here
 
 const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 // The ground's height: rolling hills, a gentle basin at the start, and
 // steep hills past the arena's edge.
-export function heightAt(x, z) {
+function rolling(x, z) {
 	let h = 7 * Math.sin(x * 0.011 + 1.3) * Math.cos(z * 0.009 - 0.4)
 		+ 4 * Math.sin((x + z) * 0.017 + 2.1)
 		+ 2.2 * Math.sin(x * 0.043 - z * 0.037)
 		+ 1.0 * Math.cos(x * 0.09 + z * 0.071);
 	const r = Math.hypot(x, z);
-	h *= 0.3 + 0.7 * smooth(0, 90, r);
+	return h * (0.3 + 0.7 * smooth(0, 90, r));
+}
+for (const s of SITES) s.y = rolling(s.x, s.z);
+
+export function heightAt(x, z) {
+	let h = rolling(x, z);
+	const r = Math.hypot(x, z);
+	// (levelled round the compounds)
+	for (const s of SITES) {
+		const d = Math.hypot(x - s.x, z - s.z);
+		if (d < SITE_FLAT[1]) h = s.y + (h - s.y) * smooth(SITE_FLAT[0], SITE_FLAT[1], d);
+	}
 	// (hills rising past the edge, levelling off at about 90 m, so they ring
 	// the arena without walling off the sky)
 	const edge = Math.max(0, r - (ARENA + 40));
@@ -182,6 +197,7 @@ export function createWorld(renderer, scene) {
 			const a = rand() * Math.PI * 2;
 			const r = Math.sqrt(R(rMin * rMin, rMax * rMax));
 			const x = Math.cos(a) * r, z = Math.sin(a) * r;
+			if (SITES.some((s) => Math.hypot(x - s.x, z - s.z) < SITE_FLAT[1])) continue;   // (not on a compound)
 			const slope = Math.abs(heightAt(x + 2, z) - heightAt(x - 2, z)) + Math.abs(heightAt(x, z + 2) - heightAt(x, z - 2));
 			if (slope < 3.5) return { x, z, y: heightAt(x, z) };
 		}

@@ -5,10 +5,19 @@
  * an arm cannon. The three walls are its cockpit windows (front, left and
  * right), looking out over rolling green hills overrun by Doctor Klank's
  * Klankbots: Beetle Bots that roll in and ram, Buzz Drones that circle and
- * zap, and Crab Tanks that lob mortar shells. Walk the Strider together,
- * tap the windows to fire missiles, and smash as many as you can before the
- * clock runs out. Hits dent the hull; if it gives out, the Strider goes
- * offline for a few seconds (no walking, no missiles) while it reboots.
+ * zap, and Crab Tanks that lob mortar shells.
+ *
+ * The mission: march on Doctor Klank's compounds one by one (the next is
+ * always marked on the windows, with its distance). Each is a walled fort
+ * guarded by four gun turrets, a garrison that rolls out as you close in,
+ * and a reactor core under a shield. Knock out the turrets and the shield
+ * drops; blast the core and the compound blows apart. Then walk the
+ * Strider into the rubble to pick up the emerald fragments that fly out of
+ * it (everyone scores for each), piecing the emerald back together, and on
+ * to the next compound, until the clock runs out (when all five are down,
+ * Klank rebuilds them, tougher). Hits dent the hull; if it gives out, the
+ * Strider goes offline for a few seconds (no walking, no missiles) while
+ * it reboots.
  *
  * Controls (tank steering, one driver a leg):
  *   - Player 1 drives the LEFT leg and player 2 the RIGHT leg, always; no
@@ -33,7 +42,7 @@
  * check, boarding (the eye sweeps round the Strider, comes round behind its
  * head facing its way and pushes in through the dome: SYSTEMS ONLINE), the
  * tutorial (walk, turn, fire at practice drones), Doctor Klank's
- * transmission, the battle in waves until the clock runs out, TIME!,
+ * transmission (the mission), the assault on the compounds until the clock runs out, TIME!,
  * scores, rank, team, leaderboard, replay, rating and the end.
  *
  * Input: pz (players 1 and 2: their legs' throttles); wall taps (clicks on
@@ -43,9 +52,10 @@
  */
 import * as THREE from '../../lib/three/three.module.min.js';
 import { createWallComposer, createWallRig } from '../../lib/three/walls.js';
-import { createWorld, heightAt, SUN, HORIZON, ARENA } from './world.js';
+import { createWorld, heightAt, SUN, HORIZON, ARENA, SITES } from './world.js';
+import { buildCompound, buildTurret, buildCore, buildFragment, COMPOUND } from './compounds.js';
 import { buildRobot, buildBeetle, buildBuzzer, buildCrab, buildTarget, buildMissile, buildBolt, buildShell, glowTexture, fireTexture, smokeTexture, glossy } from './models.js';
-import { paintFrame, chevronBar, wireStrider, radar, hullDial, readout, klank, FRAME, MONO } from './cockpit.js';
+import { paintFrame, chevronBar, wireStrider, radar, hullDial, readout, emeraldGauge, klank, FRAME, MONO } from './cockpit.js';
 import { createSound } from './sound.js';
 
 IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
@@ -76,10 +86,24 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		buzzer: { pts: 150, hp: 1, speed: 11 },
 		crab: { pts: 250, hp: 2, speed: 3.6 },
 		target: { pts: 0, hp: 1, speed: 0 },
+		turret: { pts: 300, hp: 2, speed: 0 },
+		core: { pts: 1000, hp: 8, speed: 0 },    // (plus 2 a level)
+	};
+	const MISSION = {
+		garrison: 170,         // metres from a compound when its garrison rolls out to meet you
+		guards: 3,             // Klankbots in a garrison (plus one a level)
+		turretRange: 130,      // metres a turret fires from
+		turretFire: [2.2, 4],  // seconds between a turret's shots
+		ruin: 2.6,             // seconds for a destroyed compound to fall in
+		booms: 9,              // blasts as it goes
+		fragments: 3,          // emerald fragments in each compound's rubble
+		fragmentPts: 250,      // points to every player for each one picked up
+		reach: 10,             // metres the Strider must come within to pick one up
+		emerald: 15,           // fragments in the whole emerald (three a compound, five compounds)
 	};
 	const HULL = { bolt: 8, shell: 15, ram: 12, regen: 5, wait: 4, reboot: 3.5, after: 60 };   // damage per hit; regen a second after `wait` seconds unhit; seconds offline; hull after a reboot
 	const SHOTS = { bolt: 34, shell: 2.3, gravity: 18, range: 90, buzz: [3.5, 6.5], crab: [4.5, 7.5] };   // bolt m/s, a shell's flight time, gravity, range they fire from, seconds between shots
-	const SWARM = { start: 6, perWave: 3, max: 24, gap: 0.6, near: 90, far: 160, arc: 120, wave: 75 };   // Klankbots about at once (first wave, more each wave, most), seconds between arrivals, how far off they arrive and how far round from ahead (degrees), seconds a wave
+	const SWARM = { start: 4, perWave: 2, max: 16, gap: 0.8, near: 90, far: 160, arc: 120 };   // Klankbots roaming at once (at the first compound, more each compound after, most), seconds between arrivals, how far off they arrive and how far round from ahead (degrees)
 	const BOARD = { orbit: 3.6, push: 1.2, inside: 0.82, behind: 9, online: 5.2, length: 6.6 };   // boarding: seconds sweeping round the Strider (ending behind its head, facing its way), seconds pushing in through the dome, how far through the push the cockpit appears, metres behind the head the sweep ends, SYSTEMS ONLINE, the end
 	const CALL = { on: 0.3, name: 1.2, line: 2.8, list: 4.0, length: 7.5 };   // Doctor Klank's transmission
 	const PRACTICE = 5;                // practice drones in the tutorial
@@ -202,7 +226,7 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 	}
 
 	const DEBRIS_GEO = new THREE.BoxGeometry(0.6, 0.6, 0.6);
-	const DEBRIS_MAT = { beetle: glossy(0x1fa4c9), buzzer: glossy(0xffcf1f), crab: glossy(0xff6a2b), target: glossy(0xff3b30), dark: glossy(0x1b1b20) };
+	const DEBRIS_MAT = { beetle: glossy(0x1fa4c9), buzzer: glossy(0xffcf1f), crab: glossy(0xff6a2b), target: glossy(0xff3b30), turret: glossy(0x7b3fd1), core: glossy(0xffc21a), dark: glossy(0x1b1b20) };
 	const debris = [];
 
 	function chunks(at, kind, n) {
@@ -253,7 +277,7 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 	/* ---------- Klankbots ---------- */
 
 	const BUILD = { beetle: buildBeetle, buzzer: buildBuzzer, crab: buildCrab, target: buildTarget };
-	const COLOUR = { beetle: '#3ad1ff', buzzer: '#ffd23f', crab: '#ff7a3d', target: '#ff3b30' };
+	const COLOUR = { beetle: '#3ad1ff', buzzer: '#ffd23f', crab: '#ff7a3d', target: '#ff3b30', turret: '#ff3b30', core: '#ffd23f' };
 	let bots = [];
 	let shots = [];        // theirs: { kind, mesh, glow, pos, vel, age }
 	let missiles = [];     // ours: { mesh, glow, pos, vel, speed, target, aim, age, by, puff }
@@ -266,7 +290,8 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		const model = BUILD[kind]();
 		model.root.traverse((m) => { if (m.isMesh) m.castShadow = true; });
 		let x = 0, z = 0;
-		for (let tries = 0; tries < 12; tries++) {
+		if (o.at) { x = o.at.x; z = o.at.z; }
+		else for (let tries = 0; tries < 12; tries++) {
 			const arc = (o.arc || SWARM.arc) * Math.PI / 180;
 			const a = bot.heading + (Math.random() * 2 - 1) * arc;
 			const d = (o.near || SWARM.near) + Math.random() * ((o.far || SWARM.far) - (o.near || SWARM.near));
@@ -313,6 +338,198 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		let r = Math.random() * total;
 		for (const kind of ['beetle', 'buzzer', 'crab']) { if ((r -= w[kind]) < 0) return kind; }
 		return 'beetle';
+	}
+
+	/* ---------- the mission: Doctor Klank's compounds ---------- */
+
+	let compounds = [];       // { n, site, level, parts, turrets, core, shieldUp, shieldK, shieldFlash, destroyed, ruinT, booms, dropped, garrisoned, gone }
+	let fragments = [];       // { model, from, to, born, pos, compound, collected }
+	let target = 0;           // the compound the mission's on (an index into compounds)
+	let step = 'assault';     // assault (turrets, then the core), collect (the fragments in its rubble)
+	let emeralds = 0;         // fragments picked up
+	let message = null;       // a slam over every wall: { text, colour, at }
+	const say = (text, colour = '#ffd23f') => { message = { text, colour, at: clock }; };
+	const current = () => compounds[target];
+
+	// A turret or a core: a Klankbot that stays put (and is part of a compound).
+	function fixedBot(kind, model, pos, c) {
+		model.root.position.copy(pos);
+		model.root.traverse((m) => { if (m.isMesh) m.castShadow = true; });
+		scene.add(model.root);
+		const b = {
+			kind, model, pos: pos.clone(), compound: c, fixed: true, flying: true,
+			hp: KINDS[kind].hp + (kind === 'core' ? c.level * 2 : 0),
+			t: Math.random() * 10, speed: 0, hurt: 0,
+			fire: MISSION.turretFire[0] + Math.random() * 2,
+		};
+		bots.push(b);
+		return b;
+	}
+
+	// (while its shield's up, the core is as big as the shield: missiles burst on it)
+	function shieldCore(c) {
+		const m = c.core.model;
+		m.radius = c.shieldUp ? COMPOUND.shield : 8;
+		m.centre = c.shieldUp ? 4 : 9;
+	}
+
+	// The k-th compound of the mission, at its site (a ruin there gives way to it).
+	function raiseCompound(k) {
+		const site = SITES[k % SITES.length];
+		const old = compounds[k - SITES.length];
+		if (old && !old.gone) {
+			old.gone = true;
+			scene.remove(old.parts.group);
+			old.parts.dispose();
+		}
+		const level = k + 1;
+		const parts = buildCompound(new THREE.Vector3(site.x, site.y, site.z), level);
+		scene.add(parts.group);
+		const c = { n: k + 1, site, level, parts, turrets: [], core: null, shieldUp: true, shieldK: 1, shieldFlash: 0, destroyed: false, ruinT: -1, booms: 0, dropped: false, garrisoned: false, gone: false };
+		c.turrets = parts.turretSpots.map((p) => fixedBot('turret', buildTurret(), p, c));
+		c.core = fixedBot('core', buildCore(), parts.coreAt, c);
+		shieldCore(c);
+		compounds[k] = c;
+		return c;
+	}
+	for (let k = 0; k < SITES.length; k++) raiseCompound(k);
+
+	function nextCompound() {
+		target++;
+		if (!compounds[target]) raiseCompound(target);   // (all five down: Klank builds them again, tougher)
+		step = 'assault';
+		say('ON TO COMPOUND ' + current().n);
+		sound.wave();
+	}
+
+	// Its turrets are all down: the shield fails.
+	function shieldDown(c) {
+		c.shieldUp = false;
+		shieldCore(c);
+		say('SHIELD DOWN! BLAST THE CORE!', '#5ad8ff');
+		sound.shieldDown();
+	}
+
+	// Its core is gone: the compound falls in, and the fragments fly out.
+	function compoundDown(c) {
+		c.destroyed = true;
+		c.ruinT = 0;
+		if (c === current()) step = 'collect';
+		say('COMPOUND DESTROYED!', '#ff7a3d');
+		show.shake = 0.9;
+		explode(new THREE.Vector3(c.site.x, c.site.y + 10, c.site.z), null, 3);
+	}
+
+	function dropFragments(c) {
+		c.dropped = true;
+		for (let i = 0; i < MISSION.fragments; i++) {
+			const a = Math.random() * TAU, r = 9 + Math.random() * 14;
+			const model = buildFragment();
+			scene.add(model.root);
+			const from = new THREE.Vector3(c.site.x, c.site.y + 12, c.site.z);
+			const to = new THREE.Vector3(c.site.x + Math.cos(a) * r, c.site.y, c.site.z + Math.sin(a) * r);
+			model.root.position.copy(from);
+			fragments.push({ model, from, to, pos: from.clone(), born: clock + i * 0.25, compound: c, collected: false });
+		}
+	}
+
+	function pickUp(f) {
+		f.collected = true;
+		scene.remove(f.model.root);
+		disposeMesh(f.model.root);
+		emeralds++;
+		sound.chime();
+		for (let i = 0; i < 10; i++) particle(TEX.glow, f.pos, { additive: true, colour: 0x3cff8a, life: 0.7, size: [1, 4], vel: new THREE.Vector3((Math.random() - 0.5) * 14, 6 + Math.random() * 10, (Math.random() - 0.5) * 14), gravity: 10 });
+		if (show.beat === 'play') {
+			for (let i = 0; i < count; i++) scores[i] += MISSION.fragmentPts;
+			pop('+' + MISSION.fragmentPts + ' EACH', '#4dff95', f.pos, 70);
+		}
+		const left = fragments.filter((g) => g.compound === f.compound && !g.collected).length;
+		if (left === 0 && f.compound === current()) {
+			say('ALL FRAGMENTS FOUND!', '#4dff95');
+			step = 'next';
+			nextAt = clock + 2.2;
+		}
+	}
+	let nextAt = -1;
+
+	function updateMission(dt) {
+		const playing = show.beat === 'play';
+		for (const c of compounds) {
+			if (!c || c.gone) continue;
+			// the shield
+			c.shieldFlash = Math.max(0, c.shieldFlash - dt * 3);
+			c.shieldK = c.shieldUp ? 1 : Math.max(0, c.shieldK - dt * 1.4);
+			c.parts.setShield(c.shieldK, clock, c.shieldFlash);
+			// the garrison rolls out to meet you
+			if (playing && c === current() && step === 'assault' && !c.garrisoned && Math.hypot(bot.pos.x - c.site.x, bot.pos.z - c.site.z) < MISSION.garrison) {
+				c.garrisoned = true;
+				const toward = Math.atan2(bot.pos.z - c.site.z, bot.pos.x - c.site.x);
+				for (let i = 0; i < MISSION.guards + c.level; i++) {
+					const a = toward + (Math.random() - 0.5) * 1.6, r = COMPOUND.keepOut + 4 + Math.random() * 10;
+					spawn(Math.random() < 0.6 ? 'beetle' : 'crab', { at: { x: c.site.x + Math.cos(a) * r, z: c.site.z + Math.sin(a) * r } });
+				}
+				say('THE GARRISON ROLLS OUT!', '#ff3b30');
+				sound.alarm();
+			}
+			// falling in
+			if (c.destroyed && c.ruinT < 12) {
+				c.ruinT += dt;
+				c.parts.collapse(Math.min(1, c.ruinT / MISSION.ruin));
+				while (c.booms < MISSION.booms && c.ruinT > c.booms * 0.24) {
+					const a = Math.random() * TAU, r = Math.random() * COMPOUND.wall;
+					explode(new THREE.Vector3(c.site.x + Math.cos(a) * r, c.site.y + 2 + Math.random() * 6, c.site.z + Math.sin(a) * r), null, 1.2 + Math.random());
+					c.booms++;
+				}
+				if (!c.dropped && c.ruinT > 1.2) dropFragments(c);
+				if (Math.random() < dt * 6) {
+					const a = Math.random() * TAU, r = Math.random() * COMPOUND.wall;
+					particle(TEX.smoke, new THREE.Vector3(c.site.x + Math.cos(a) * r, c.site.y + 2, c.site.z + Math.sin(a) * r), { colour: 0x4a4644, life: 4, size: [5, 18], vel: new THREE.Vector3(1.5, 6, 0.5), alpha: 0.6 });
+				}
+			}
+		}
+		// the fragments: flung out of the rubble, then waiting to be picked up
+		for (const f of fragments) {
+			if (f.collected) continue;
+			const k = Math.max(0, Math.min(1, (clock - f.born) / 1.1));
+			f.pos.lerpVectors(f.from, f.to, k);
+			f.pos.y += Math.sin(Math.PI * k) * 14;
+			f.model.root.position.copy(f.pos);
+			f.model.animate(clock + f.born);
+			if (k >= 1 && (playing || show.beat === 'controls') && Math.hypot(bot.pos.x - f.pos.x, bot.pos.z - f.pos.z) < MISSION.reach) pickUp(f);
+		}
+		fragments = fragments.filter((f) => !f.collected);
+		if (step === 'next' && clock >= nextAt) nextCompound();
+	}
+
+	// Where the mission wants you next, and what it is: the nearest turret
+	// standing, the core once the shield's down, the nearest fragment.
+	function objective() {
+		const c = current();
+		if (!c) return null;
+		const near = (list) => list.reduce((best, p) => (!best || p.d < best.d ? p : best), null);
+		if (step === 'collect' || step === 'next') {
+			const f = near(fragments.filter((g) => g.compound === c && clock - g.born > 1.1).map((g) => ({ at: g.pos.clone().setY(g.pos.y + 3), d: Math.hypot(g.pos.x - bot.pos.x, g.pos.z - bot.pos.z), label: 'FRAGMENT', colour: '#4dff95' })));
+			return f || { at: new THREE.Vector3(c.site.x, c.site.y + 8, c.site.z), d: Math.hypot(c.site.x - bot.pos.x, c.site.z - bot.pos.z), label: 'RUBBLE', colour: '#4dff95' };
+		}
+		if (c.shieldUp) {
+			return near(c.turrets.filter((b) => !b.dead).map((b) => ({ at: centreOf(b).setY(b.pos.y + 15), d: Math.hypot(b.pos.x - bot.pos.x, b.pos.z - bot.pos.z), label: 'TURRET', colour: '#ffd23f' })));
+		}
+		return { at: centreOf(c.core).setY(c.core.pos.y + 20), d: Math.hypot(c.site.x - bot.pos.x, c.site.z - bot.pos.z), label: 'CORE', colour: '#ff7a3d' };
+	}
+
+	function objectiveText() {
+		const c = current();
+		if (!c) return '';
+		if (step === 'collect' || step === 'next') {
+			const left = fragments.filter((g) => g.compound === c).length + (c.dropped ? 0 : MISSION.fragments);
+			return left ? `FIND THE EMERALD FRAGMENTS IN THE RUBBLE · ${left} LEFT` : 'ALL FRAGMENTS FOUND!';
+		}
+		if (c.shieldUp) {
+			const left = c.turrets.filter((b) => !b.dead).length;
+			return `COMPOUND ${c.n}: KNOCK OUT ${left} TURRET${left === 1 ? '' : 'S'} TO DROP THE SHIELD`;
+		}
+		return `COMPOUND ${c.n}: SHIELD DOWN! BLAST THE CORE`;
 	}
 
 	/* ---------- missiles ---------- */
@@ -448,6 +665,16 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 	}
 
 	function hurt(b, by) {
+		if (b.fixed && show.beat !== 'play') return;   // (the compounds take no harm before the battle)
+		if (b.kind === 'core' && b.compound.shieldUp) {
+			b.compound.shieldFlash = 1;
+			sound.shield(panToward(b.pos));
+			if (clock - (b.compound.toldShield || -9) > 2.5) {
+				b.compound.toldShield = clock;
+				pop('SHIELDED! TAKE OUT THE TURRETS', '#5ad8ff', centreOf(b).setY(b.pos.y + 20), 56);
+			}
+			return;
+		}
 		b.hp--;
 		b.hurt = 0.25;
 		if (b.hp > 0) {
@@ -467,6 +694,8 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 			smashed++;
 			pop('+' + pts, PLAYER_COLORS[by], at, 72);
 		}
+		if (b.kind === 'turret' && b.compound.shieldUp && b.compound.turrets.every((t) => t.dead)) shieldDown(b.compound);
+		if (b.kind === 'core') compoundDown(b.compound);
 	}
 
 	/* ---------- damage ---------- */
@@ -510,8 +739,6 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 	let mode = 'outside';     // outside (the Strider from out there), cockpit (in it)
 	let clock = 0;
 	let runT = 0;
-	let wave = 0;
-	let waveAt = -99;         // when the current wave was announced (clock)
 	let nextSpawn = 0;
 	let boardT = -1;          // seconds into boarding (-1: not boarding)
 	let callT = -1;           // seconds into Doctor Klank's call
@@ -530,14 +757,6 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 	function clearBots(practiceOnly) {
 		for (const b of bots) if (!b.dead && (!practiceOnly || b.practice)) removeBot(b);
 		bots = bots.filter((b) => !b.dead);
-	}
-
-	function startWave(n) {
-		wave = n;
-		waveAt = clock;
-		sound.wave();
-		show.shake = 0.3;
-		for (let i = 0; i < 2 + n; i++) spawn(mixFor(n));
 	}
 
 	/* ---------- the tutorial ---------- */
@@ -625,8 +844,8 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 			draw(ctx, bt) {
 				show.onWalls(ctx, function (c, n) {
 					if (bt > CALL.name) show.slam(c, 'DOCTOR KLANK ATTACKS!', W / 2, 150, 96, bt - CALL.name, { fill: '#ff3b30' });
-					if (n !== 1 && bt > CALL.line) show.text(c, 'BLAST HIS KLANKBOTS BEFORE THEY BLAST YOU!', W / 2, 330, 48, { fill: 'white', alpha: Math.min(1, (bt - CALL.line) * 3) });
-					if (n !== 1 && bt > CALL.list) show.text(c, 'BEETLE BOTS 100 · BUZZ DRONES 150 · CRAB TANKS 250', W / 2, 420, 40, { fill: '#ffd23f', alpha: Math.min(1, (bt - CALL.list) * 3) });
+					if (n !== 1 && bt > CALL.line) show.text(c, 'SMASH HIS COMPOUNDS AND FIND THE EMERALD FRAGMENTS IN THE RUBBLE!', W / 2, 330, 48, { fill: 'white', alpha: Math.min(1, (bt - CALL.line) * 3) });
+					if (n !== 1 && bt > CALL.list) show.text(c, 'KNOCK OUT THE TURRETS · THE SHIELD DROPS · BLAST THE CORE', W / 2, 420, 40, { fill: '#ffd23f', alpha: Math.min(1, (bt - CALL.list) * 3) });
 				});
 				if (bt > CALL.on) {
 					const k = Math.min(1, (bt - CALL.on) / 0.3);
@@ -638,7 +857,7 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 				}
 			},
 		},
-		// the battle: waves of Klankbots until the clock runs out
+		// the battle: on Klank's compounds one by one, until the clock runs out
 		{
 			id: 'play',
 			length: Infinity,
@@ -652,21 +871,23 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 				bot.hull = 100;
 				bot.offline = 0;
 				sound.music(true);
-				startWave(1);
+				while (current() && current().destroyed && step !== 'collect') target++;   // (a restarted round picks up where the mission is)
+				if (!current()) raiseCompound(target);
+				say('DESTROY COMPOUND ' + current().n + '!');
+				sound.wave();
 			},
 			update(dt) {
 				runT += dt;
-				if (runT >= wave * SWARM.wave) startWave(wave + 1);
-				// keep them coming
-				const want = Math.min(SWARM.max, SWARM.start + (wave - 1) * SWARM.perWave);
-				const alive = bots.filter((b) => !b.dead).length;
+				// Klankbots roaming between the compounds: more the further in
+				const want = Math.min(SWARM.max, SWARM.start + target * SWARM.perWave);
+				const alive = bots.filter((b) => !b.dead && !b.fixed).length;
 				nextSpawn -= dt;
-				if (alive < want && nextSpawn <= 0) { spawn(mixFor(wave)); nextSpawn = SWARM.gap; }
+				if (alive < want && nextSpawn <= 0) { spawn(mixFor(target + 1)); nextSpawn = SWARM.gap; }
 				show.record(runT, latest.slice(0, count).map((p, i) => (p && seen[i] ? { px: p.px, pz: p.pz } : null)));
 			},
 			draw(ctx) {
-				const age = clock - waveAt;
-				if (age < 2.2) show.onWalls(ctx, (c) => show.slam(c, 'WAVE ' + wave, W / 2, 300, 130, age, { fill: '#ffd23f', alpha: Math.min(1, (2.2 - age) * 3) }));
+				const age = message ? clock - message.at : 99;
+				if (age < 2.4) show.onWalls(ctx, (c) => show.slam(c, message.text, W / 2, 310, 100, age, { fill: message.colour, alpha: Math.min(1, (2.4 - age) * 3) }));
 			},
 		},
 		show.beats.timeUp({
@@ -758,6 +979,11 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		bot.pos.addScaledVector(fwdOf(bot.heading, tmp), bot.v * dt);
 		const r = Math.hypot(bot.pos.x, bot.pos.z);
 		if (r > ARENA) { bot.pos.x *= ARENA / r; bot.pos.z *= ARENA / r; }
+		for (const c of compounds) {   // (a compound's walls stand till it's destroyed)
+			if (!c || c.destroyed || c.gone) continue;
+			const cx = bot.pos.x - c.site.x, cz = bot.pos.z - c.site.z, d = Math.hypot(cx, cz);
+			if (d > 0.01 && d < COMPOUND.keepOut) { bot.pos.x = c.site.x + cx / d * COMPOUND.keepOut; bot.pos.z = c.site.z + cz / d * COMPOUND.keepOut; }
+		}
 		bot.pos.y = heightAt(bot.pos.x, bot.pos.z);
 		bot.eyeY += (bot.pos.y + EYE - bot.eyeY) * Math.min(1, dt * 6);
 		if (bot.v > 0) bot.odo += bot.v * dt;
@@ -766,9 +992,9 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		// footsteps
 		const gait = Math.abs(bot.v) + Math.abs(bot.turn) * 5;
 		bot.phase += dt * gait / STRIDE * Math.PI;
-		const step = Math.floor(bot.phase / Math.PI);
-		if (step !== bot.steps) {
-			bot.steps = step;
+		const footfall = Math.floor(bot.phase / Math.PI);
+		if (footfall !== bot.steps) {
+			bot.steps = footfall;
 			if (gait > 0.6) {
 				sound.stomp(mode === 'cockpit' ? 1 : 0.5);
 				if (mode === 'cockpit') shake = Math.max(shake, 0.12);
@@ -811,6 +1037,7 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 		if (shake > 0.01) rig.position.add(tmp.set((Math.random() - 0.5) * shake * 0.5, (Math.random() - 0.5) * shake * 0.5, 0).applyQuaternion(eyeQ));
 
 		updateBots(dt);
+		updateMission(dt);
 		updateShots(dt);
 		updateMissiles(dt);
 		updateEffects(dt);
@@ -831,6 +1058,24 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 			if (b.dead) continue;
 			b.t += dt;
 			b.hurt = Math.max(0, b.hurt - dt);
+			if (b.fixed) {
+				// turrets track the Strider and fire when it's in range; cores just hum
+				let firing = false;
+				if (b.kind === 'turret') {
+					const hx = bot.pos.x - b.pos.x, hz = bot.pos.z - b.pos.z;
+					let da = Math.atan2(hx, hz) - b.model.head.rotation.y;
+					da = Math.atan2(Math.sin(da), Math.cos(da));
+					b.model.head.rotation.y += da * Math.min(1, dt * 3);
+					firing = attacking && Math.hypot(hx, hz) < MISSION.turretRange;
+					if (firing) {
+						b.fire -= dt;
+						if (b.fire <= 0) { b.fire = MISSION.turretFire[0] + Math.random() * (MISSION.turretFire[1] - MISSION.turretFire[0]); fireBolt(b, eyeAt); }
+					}
+				}
+				b.model.animate(b.t, dt, firing);
+				b.model.root.scale.setScalar(b.hurt > 0 && Math.floor(b.t * 30) % 2 === 0 ? 1.06 : 1);
+				continue;
+			}
 			const dx = bot.pos.x - b.pos.x, dz = bot.pos.z - b.pos.z;
 			const dist = Math.hypot(dx, dz) || 1;
 			const ux = dx / dist, uz = dz / dist;
@@ -892,7 +1137,7 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 			if (a.dead) continue;
 			for (let j = i + 1; j < bots.length; j++) {
 				const b = bots[j];
-				if (b.dead || a.flying !== b.flying) continue;
+				if (b.dead || a.flying !== b.flying || a.fixed || b.fixed) continue;
 				const dx = b.pos.x - a.pos.x, dz = b.pos.z - a.pos.z;
 				const d = Math.hypot(dx, dz);
 				const min = a.model.radius + b.model.radius;
@@ -917,9 +1162,10 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 	}
 
 	function fireBolt(b, at) {
-		const from = b.pos.clone().add(tmp.set(0, -0.8, 0));
+		const from = b.fixed ? centreOf(b) : b.pos.clone().add(tmp.set(0, -0.8, 0));
 		const lead = tmp2.copy(at).addScaledVector(fwdOf(bot.heading, tmp3), bot.v * 0.6);
 		const vel = lead.sub(from).normalize().multiplyScalar(SHOTS.bolt);
+		if (b.fixed) from.addScaledVector(vel, 3.5 / SHOTS.bolt);   // (out of the barrels)
 		addShot('bolt', from, vel);
 		sound.zap(panToward(from));
 	}
@@ -1066,6 +1312,55 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 			if (p && p.in) return p;
 		}
 		return null;
+	}
+
+	// The mission's next step: a line along the top of the front window, and
+	// a marker over the target (its name and distance), or an arrow at the
+	// back edge of a side window when it's behind you.
+	function drawObjective(ctx) {
+		show.text(ctx, objectiveText(), W * 1.5, 148, 36, { fill: step === 'assault' ? '#ffd23f' : '#4dff95' });
+		const o = objective();
+		if (!o) return;
+		const pulse = 0.5 + 0.5 * Math.sin(clock * 5);
+		const dist = Math.round(o.d) + ' M';
+		const p = onAnyWall(o.at);
+		ctx.save();
+		ctx.strokeStyle = ctx.fillStyle = o.colour;
+		ctx.shadowColor = o.colour;
+		ctx.shadowBlur = 14;
+		ctx.lineWidth = 6;
+		if (p) {
+			const s = 24 + pulse * 6;
+			ctx.beginPath();
+			ctx.moveTo(p.x, p.y - s);
+			ctx.lineTo(p.x + s, p.y);
+			ctx.lineTo(p.x, p.y + s);
+			ctx.lineTo(p.x - s, p.y);
+			ctx.closePath();
+			ctx.stroke();
+			ctx.beginPath();
+			ctx.moveTo(p.x - 13, p.y + s + 10);
+			ctx.lineTo(p.x + 13, p.y + s + 10);
+			ctx.lineTo(p.x, p.y + s + 27);
+			ctx.fill();
+			ctx.restore();
+			art.text(ctx, o.label, p.x, p.y - s - 28, { size: 34, font: 'Lexend', fill: o.colour, outline: '#140a0a', outlineWidth: 6 });
+			art.text(ctx, dist, p.x, p.y + s + 58, { size: 32, font: MONO, fill: '#ffffff', outline: '#140a0a', outlineWidth: 6 });
+			return;
+		}
+		// behind you: which side's nearer
+		const d = tmp.copy(o.at).sub(bot.pos);
+		const left = d.dot(rightOf(bot.heading, tmp2)) < 0;
+		const x = left ? 64 : 3 * W - 64, y = 330, dir = left ? -1 : 1;
+		ctx.globalAlpha = 0.6 + 0.4 * pulse;
+		ctx.beginPath();
+		ctx.moveTo(x + dir * 26, y);
+		ctx.lineTo(x - dir * 22, y - 34);
+		ctx.lineTo(x - dir * 22, y + 34);
+		ctx.fill();
+		ctx.restore();
+		art.text(ctx, o.label, x - dir * 20, y + 64, { size: 30, font: 'Lexend', fill: o.colour, outline: '#140a0a', outlineWidth: 6, align: left ? 'left' : 'right' });
+		art.text(ctx, dist, x - dir * 20, y + 100, { size: 28, font: MONO, fill: '#ffffff', outline: '#140a0a', outlineWidth: 6, align: left ? 'left' : 'right' });
 	}
 
 	let frameArt = null;
@@ -1224,7 +1519,14 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 			let x = d.dot(rt) / RANGE, y = -d.dot(f) / RANGE;
 			const len = Math.hypot(x, y);
 			if (len > 0.95) { x *= 0.95 / len; y *= 0.95 / len; }
-			blips.push({ x, y, colour: COLOUR[b.kind], size: b.kind === 'crab' ? 8 : 6 });
+			blips.push({ x, y, colour: COLOUR[b.kind], size: b.kind === 'core' ? 11 : b.kind === 'crab' ? 8 : 6 });
+		}
+		for (const g of fragments) {
+			const d = tmp.copy(g.pos).sub(bot.pos);
+			let x = d.dot(rt) / RANGE, y = -d.dot(f) / RANGE;
+			const len = Math.hypot(x, y);
+			if (len > 0.95) { x *= 0.95 / len; y *= 0.95 / len; }
+			blips.push({ x, y, colour: '#4dff95', size: 8 });
 		}
 		for (const s of shots) {
 			const d = tmp.copy(s.pos).sub(bot.pos);
@@ -1236,8 +1538,9 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 
 		if (inPlay || show.beat === 'timeup') {
 			readout(ctx, 110, 150, 'SMASHED', String(smashed).padStart(3, '0'), 'left');
-			readout(ctx, 3 * W - 110, 150, 'WAVE', String(wave), 'right', '#ffd23f');
+			emeraldGauge(ctx, 3 * W - 170, 210, 64, Math.min(emeralds, MISSION.emerald), MISSION.emerald, clock);
 		}
+		if (inPlay) drawObjective(ctx);
 
 		if (bot.offline > 0) {
 			show.onWalls(ctx, function (c) {
@@ -1271,7 +1574,8 @@ IGB.register('iron-stride', function IronStrideGame(stage, playersMeta) {
 	// For tests and the console: where the game is up to.
 	self.state = function () {
 		return Object.assign(show.state(), {
-			mode, wave, runT, scores: scores.slice(), smashed, shotsFired,
+			mode, runT, scores: scores.slice(), smashed, shotsFired, target, step, emeralds,
+			compounds: compounds.map((c) => ({ n: c.n, shieldUp: c.shieldUp, destroyed: c.destroyed, turrets: c.turrets.filter((b) => !b.dead).length, coreHp: c.core.hp })), fragments: fragments.length,
 			bot: { x: bot.pos.x, z: bot.pos.z, heading: bot.heading, tL: bot.tL, tR: bot.tR, v: bot.v, hull: bot.hull, offline: bot.offline },
 			bots: bots.map((b) => ({ kind: b.kind, x: b.pos.x, y: b.pos.y, z: b.pos.z, hp: b.hp })),
 			missiles: missiles.length, shots: shots.length,
