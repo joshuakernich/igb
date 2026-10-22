@@ -550,13 +550,14 @@ export function buildSpeedster(colour) {
 		const mz = muzzleCache || (muzzleCache = (() => {
 		const MUZZLE = { body: 0.012 * FACE_K, round: 0.042 * FACE_K, edge: 0.03 * FACE_K, sink: 0.012 * FACE_K };   // its flat middle's thickness, how far its rounded edges bulge (front and back), how far in from its outline they start rounding, how far into the face its back sits
 		const outline = (() => {
-			const segs = [
-				[[20, 400], [130, 424], [270, 446], [368, 448]],
+			// (the drawing's right half, and the same mirrored for the left: the drawn left end sagged)
+			const right = [
 				[[368, 448], [460, 446], [600, 418], [716, 390]],
 				[[716, 390], [745, 470], [705, 590], [600, 645]],
-				[[600, 645], [500, 700], [250, 705], [140, 640]],
-				[[140, 640], [40, 585], [-5, 480], [20, 400]],
+				[[600, 645], [530, 690], [440, 700], [368, 700]],
 			];
+			const mirror = (seg) => seg.map(([x, y]) => [736 - x, y]).reverse();
+			const segs = [...right, ...right.slice().reverse().map(mirror)];
 			const pts = [];
 			for (const [a, b, c, d] of segs) for (let i = 0; i < 24; i++) {
 				const t = i / 24, u = 1 - t;
