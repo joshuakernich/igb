@@ -9,6 +9,7 @@
  * it lives here so the two games can change apart.)
  */
 import * as THREE from '../../lib/three/three.module.min.js';
+import { buildSpeedster } from '../../shared/speedster3d.js';
 
 const TAU = Math.PI * 2;
 
@@ -125,226 +126,20 @@ export function sparkleTexture() {
 
 /* ---------- the hero ---------- */
 
-// A glossy, spiky little speedster: big head, swept-back quills, wide eyes,
-// white gloves, chunky trainers. Running, its legs whirl into a blur; jumping,
-// rolling or revving, it curls into a spinning spiked ball. Faces -z.
+// The hero: the shared speedster (shared/speedster3d.js): sculpted quills,
+// noodly rubber-hose limbs, feet running round in loops; jumping, rolling or
+// revving, it curls into a spinning spiked ball. Faces -z.
 export function buildHero(colour) {
-	const root = new THREE.Group();     // placed on the course
-	const lean = new THREE.Group();     // tilts with the ground, round the loop
-	root.add(lean);
-
-	const skin = glossy(colour);
-	const tan = glossy(0xf6d2a2, { clearcoat: 0.6 });
-	const white = glossy(0xffffff, { clearcoat: 0.8 });
-	const black = glossy(0x101018, { roughness: 0.2 });
-	const strap = glossy(0xffc23a, { metalness: 0.5, roughness: 0.25 });
-
-	const body = new THREE.Group();
-	body.position.y = 0.95;
-	lean.add(body);
-
-	const torso = new THREE.Mesh(new THREE.SphereGeometry(0.34, 24, 16), skin);
-	torso.scale.set(1, 1.1, 0.95);
-	body.add(torso);
-	const belly = new THREE.Mesh(new THREE.SphereGeometry(0.26, 20, 14), tan);
-	belly.position.set(0, -0.02, -0.14);
-	belly.scale.set(0.9, 1.05, 0.6);
-	body.add(belly);
-
-	const head = new THREE.Group();
-	head.position.set(0, 0.62, -0.04);
-	body.add(head);
-	head.add(new THREE.Mesh(new THREE.SphereGeometry(0.42, 28, 20), skin));
-	const quill = new THREE.ConeGeometry(0.17, 0.75, 12);
-	quill.translate(0, 0.375, 0);
-	const quills = [[0, 0.22, 1.9, 0], [0.24, 0.08, 1.95, -0.5], [-0.24, 0.08, 1.95, 0.5], [0.16, -0.16, 2.2, -0.4], [-0.16, -0.16, 2.2, 0.4], [0, -0.05, 2.1, 0]];
-	for (const [x, y, rx, rz] of quills) {
-		const q = new THREE.Mesh(quill, skin);
-		q.position.set(x, y, 0.18);
-		q.rotation.set(rx, 0, rz);
-		head.add(q);
-	}
-	const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.2, 18, 12), tan);
-	muzzle.position.set(0, -0.14, -0.33);
-	muzzle.scale.set(1.2, 0.8, 0.9);
-	head.add(muzzle);
-	const nose = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 8), black);
-	nose.position.set(0, -0.06, -0.52);
-	head.add(nose);
-	for (const side of [-1, 1]) {
-		const ear = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.26, 10), skin);
-		ear.position.set(side * 0.25, 0.36, 0.05);
-		ear.rotation.z = -side * 0.35;
-		head.add(ear);
-		const eye = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 12), white);
-		eye.position.set(side * 0.13, 0.08, -0.33);
-		eye.scale.set(0.8, 1.25, 0.6);
-		head.add(eye);
-		const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 8), black);
-		pupil.position.set(side * 0.11, 0.07, -0.41);
-		head.add(pupil);
-	}
-
-	const arms = [];
-	for (const side of [-1, 1]) {
-		const shoulder = new THREE.Group();
-		shoulder.position.set(side * 0.3, 0.18, 0);
-		body.add(shoulder);
-		const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.42, 8), tan);
-		arm.position.y = -0.21;
-		shoulder.add(arm);
-		const glove = new THREE.Mesh(new THREE.SphereGeometry(0.11, 14, 10), white);
-		glove.position.y = -0.45;
-		shoulder.add(glove);
-		shoulder.rotation.set(-1.1, 0, side * 0.35);
-		arms.push(shoulder);
-	}
-
-	const legs = [];
-	for (const side of [-1, 1]) {
-		const hip = new THREE.Group();
-		hip.position.set(side * 0.14, -0.28, 0);
-		body.add(hip);
-		const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.42, 8), skin);
-		leg.position.y = -0.21;
-		hip.add(leg);
-		const shoe = new THREE.Mesh(new THREE.CapsuleGeometry(0.11, 0.2, 6, 12), white);
-		shoe.rotation.x = Math.PI / 2;
-		shoe.position.set(0, -0.46, -0.08);
-		hip.add(shoe);
-		const band = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.03, 8, 16), strap);
-		band.position.set(0, -0.46, -0.06);
-		hip.add(band);
-		legs.push(hip);
-	}
-
-	// the leg blur: a whirl of colour where the legs would be
-	const whirlTex = canvasTexture(128, 128, function (g, w, h) {
-		g.translate(w / 2, h / 2);
-		for (let i = 0; i < 3; i++) {
-			g.rotate(TAU / 3);
-			const grad = g.createLinearGradient(-60, 0, 60, 0);
-			grad.addColorStop(0, 'rgba(255,255,255,0)');
-			grad.addColorStop(1, 'rgba(255,255,255,0.9)');
-			g.strokeStyle = grad;
-			g.lineWidth = 16;
-			g.beginPath();
-			g.arc(0, 0, 44, 0, Math.PI * 0.9);
-			g.stroke();
-		}
-	});
-	const whirlMat = new THREE.MeshBasicMaterial({ map: whirlTex, color: colour, transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 0 });
-	const whirl = new THREE.Mesh(new THREE.CircleGeometry(0.42, 24), whirlMat);
-	whirl.rotation.y = Math.PI / 2;
-	whirl.position.set(0, 0.42, 0);
-	lean.add(whirl);
-
-	// the ball: curled up and spinning
-	const ball = new THREE.Group();
-	ball.position.y = 0.6;
-	ball.visible = false;
-	lean.add(ball);
-	ball.add(new THREE.Mesh(new THREE.SphereGeometry(0.48, 28, 20), skin));
-	const spike = new THREE.ConeGeometry(0.14, 0.4, 10);
-	spike.translate(0, 0.58, 0);
-	for (let i = 0; i < 14; i++) {
-		const sp = new THREE.Mesh(spike, skin);
-		sp.rotation.set(i / 14 * TAU, 0, (i % 2 ? 0.35 : -0.35));
-		ball.add(sp);
-	}
-	const swirlMat = new THREE.MeshBasicMaterial({ map: whirlTex, color: new THREE.Color(1.8, 1.8, 1.8), transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 0.8, blending: THREE.AdditiveBlending });
-	const swirl = new THREE.Mesh(new THREE.CircleGeometry(0.9, 32), swirlMat);
-	swirl.rotation.y = Math.PI / 2;
-	ball.add(swirl);
-
+	const s = buildSpeedster(colour);
 	// a bubble shield (from a monitor)
 	const bubble = new THREE.Mesh(new THREE.SphereGeometry(1.15, 32, 20), new THREE.MeshPhysicalMaterial({ color: 0x9fe8ff, transparent: true, opacity: 0.28, roughness: 0.05, clearcoat: 1, depthWrite: false, envMapIntensity: 2 }));
 	bubble.position.y = 0.95;
 	bubble.visible = false;
-	root.add(bubble);
-
-	root.traverse((o) => { if (o.isMesh && o !== whirl && o !== swirl && o !== bubble) o.castShadow = true; });
-
-	let cycle = 0;
-	const reset = () => {
-		body.visible = true;
-		ball.visible = false;
-		whirl.visible = false;
-		body.scale.set(1, 1, 1);
-		head.rotation.set(0, 0, 0);
-		body.rotation.set(0, 0, 0);
-	};
-
+	s.root.add(bubble);
 	// Pose for this frame. mode: 'run' | 'ball' | 'crouch' | 'spring' | 'hurt' | 'idle';
 	// pace 0-1 (how fast); spin, how fast the ball turns (radians a second).
-	function pose(dt, mode, pace = 0, spin = 20, time = 0) {
-		reset();
-		cycle += dt * (5 + pace * 26);
-		if (mode === 'ball') {
-			body.visible = false;
-			ball.visible = true;
-			ball.rotation.x -= dt * spin;
-			swirlMat.opacity = Math.min(0.9, 0.3 + Math.abs(spin) / 40);
-			return;
-		}
-		if (mode === 'crouch') {
-			body.position.y = 0.62;
-			body.rotation.x = -0.45;
-			head.rotation.x = 0.35;
-			legs[0].rotation.x = 1.2;
-			legs[1].rotation.x = 1.0;
-			arms[0].rotation.x = -0.6;
-			arms[1].rotation.x = -0.6;
-			return;
-		}
-		if (mode === 'spring') {
-			body.position.y = 0.95;
-			body.rotation.x = 0.1;
-			legs[0].rotation.x = 0.15;
-			legs[1].rotation.x = -0.15;
-			arms[0].rotation.x = -2.9;
-			arms[1].rotation.x = -2.9;
-			head.rotation.x = -0.25;
-			return;
-		}
-		if (mode === 'hurt') {
-			body.position.y = 0.95;
-			body.rotation.x = 0.5;
-			head.rotation.x = -0.4;
-			legs[0].rotation.x = -0.8;
-			legs[1].rotation.x = 0.6;
-			arms[0].rotation.x = -2.2 + Math.sin(time * 30) * 0.4;
-			arms[1].rotation.x = -2.0 - Math.sin(time * 30) * 0.4;
-			return;
-		}
-		if (mode === 'idle' || pace < 0.04) {
-			// standing, tapping a foot, raring to go
-			body.rotation.x = -0.05;
-			body.position.y = 0.95 + Math.abs(Math.sin(time * 4)) * 0.03;
-			legs[0].rotation.x = 0.05;
-			legs[1].rotation.x = -0.2 + Math.max(0, Math.sin(time * 8)) * 0.3;
-			arms[0].rotation.set(-0.2, 0, -0.9);
-			arms[1].rotation.set(-0.2, 0, 0.9);
-			return;
-		}
-		const stride = Math.max(0.15, 1 - pace);   // (flat out, the legs are just a blur)
-		legs[0].rotation.x = Math.sin(cycle) * 1.1 * stride;
-		legs[1].rotation.x = -Math.sin(cycle) * 1.1 * stride;
-		whirl.visible = true;
-		whirlMat.opacity = Math.min(0.85, Math.max(0, pace - 0.25) * 1.4);
-		whirl.rotation.x = -cycle;
-		body.rotation.x = -0.32 * pace - 0.05;
-		body.position.y = 0.95 + Math.abs(Math.sin(cycle)) * 0.06 * stride;
-		for (let i = 0; i < 2; i++) arms[i].rotation.set(pace > 0.55 ? -1.25 + Math.sin(cycle * 2 + i) * 0.05 : Math.sin(cycle + i * Math.PI) * 0.9, 0, (i ? 1 : -1) * 0.35);
-		head.rotation.x = 0.2 * pace;
-	}
-
-	function setColour(c) {
-		skin.color.set(c);
-		whirlMat.color.set(c);
-	}
-
-	return { root, lean, pose, setColour, bubble };
+	const pose = (dt, mode, pace = 0, spin = 20, time = 0) => s.animate(dt, mode, pace, spin, time);
+	return { root: s.root, lean: s.lean, pose, setColour: s.setColour, bubble };
 }
 
 /* ---------- rings ---------- */

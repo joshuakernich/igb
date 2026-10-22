@@ -4,6 +4,7 @@
  * boost pads, the road's textures, and the islands with their palms.
  */
 import * as THREE from '../../lib/three/three.module.min.js';
+import { buildSpeedster } from '../../shared/speedster3d.js';
 
 const TAU = Math.PI * 2;
 
@@ -113,186 +114,20 @@ export function boostTexture() {
 
 /* ---------- a runner ---------- */
 
-// A glossy, spiky little speedster in the player's colour: big head, swept
-// back quills, wide eyes, white gloves, chunky trainers. Running, its legs
-// whirl into a blur; boosting, it curls up into a spinning spiked ball.
+// The runner: the shared speedster (shared/speedster3d.js) in the player's
+// colour: sculpted quills, noodly rubber-hose limbs, feet running round in
+// loops; boosting, it curls into a spinning spiked ball.
 export function buildRunner(colour) {
-	const root = new THREE.Group();     // placed on the track
-	const lean = new THREE.Group();     // leans and tumbles
-	root.add(lean);
-
-	const skin = glossy(colour);
-	const tan = glossy(0xf6d2a2, { clearcoat: 0.6 });
-	const white = glossy(0xffffff, { clearcoat: 0.8 });
-	const black = glossy(0x101018, { roughness: 0.2 });
-	const strap = glossy(0xffc23a, { metalness: 0.5, roughness: 0.25 });
-
-	const body = new THREE.Group();
-	body.position.y = 0.95;
-	lean.add(body);
-
-	const torso = new THREE.Mesh(new THREE.SphereGeometry(0.34, 24, 16), skin);
-	torso.scale.set(1, 1.1, 0.95);
-	body.add(torso);
-	const belly = new THREE.Mesh(new THREE.SphereGeometry(0.26, 20, 14), tan);
-	belly.position.set(0, -0.02, -0.14);
-	belly.scale.set(0.9, 1.05, 0.6);
-	body.add(belly);
-
-	// the head
-	const head = new THREE.Group();
-	head.position.set(0, 0.62, -0.04);
-	body.add(head);
-	const skull = new THREE.Mesh(new THREE.SphereGeometry(0.42, 28, 20), skin);
-	head.add(skull);
-	// the quills: cones raked back and down
-	const quill = new THREE.ConeGeometry(0.17, 0.75, 12);
-	quill.translate(0, 0.375, 0);
-	const quills = [[0, 0.22, 1.9, 0], [0.24, 0.08, 1.95, -0.5], [-0.24, 0.08, 1.95, 0.5], [0.16, -0.16, 2.2, -0.4], [-0.16, -0.16, 2.2, 0.4], [0, -0.05, 2.1, 0]];
-	for (const [x, y, rx, rz] of quills) {
-		const q = new THREE.Mesh(quill, skin);
-		q.position.set(x, y, 0.18);
-		q.rotation.set(rx, 0, rz);
-		head.add(q);
-	}
-	// the muzzle, the nose, the ears
-	const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.2, 18, 12), tan);
-	muzzle.position.set(0, -0.14, -0.33);
-	muzzle.scale.set(1.2, 0.8, 0.9);
-	head.add(muzzle);
-	const nose = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 8), black);
-	nose.position.set(0, -0.06, -0.52);
-	head.add(nose);
-	for (const side of [-1, 1]) {
-		const ear = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.26, 10), skin);
-		ear.position.set(side * 0.25, 0.36, 0.05);
-		ear.rotation.z = -side * 0.35;
-		head.add(ear);
-		// the eyes: big white ovals, dark pupils looking ahead
-		const eye = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 12), white);
-		eye.position.set(side * 0.13, 0.08, -0.33);
-		eye.scale.set(0.8, 1.25, 0.6);
-		head.add(eye);
-		const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 8), black);
-		pupil.position.set(side * 0.11, 0.07, -0.41);
-		head.add(pupil);
-	}
-
-	// arms swept back, white gloves
-	const arms = [];
-	for (const side of [-1, 1]) {
-		const shoulder = new THREE.Group();
-		shoulder.position.set(side * 0.3, 0.18, 0);
-		body.add(shoulder);
-		const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.42, 8), tan);
-		arm.position.y = -0.21;
-		shoulder.add(arm);
-		const glove = new THREE.Mesh(new THREE.SphereGeometry(0.11, 14, 10), white);
-		glove.position.y = -0.45;
-		shoulder.add(glove);
-		shoulder.rotation.set(-1.1, 0, side * 0.35);
-		arms.push(shoulder);
-	}
-
-	// legs and trainers
-	const legs = [];
-	for (const side of [-1, 1]) {
-		const hip = new THREE.Group();
-		hip.position.set(side * 0.14, -0.28, 0);
-		body.add(hip);
-		const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.42, 8), skin);
-		leg.position.y = -0.21;
-		hip.add(leg);
-		const shoe = new THREE.Mesh(new THREE.CapsuleGeometry(0.11, 0.2, 6, 12), white);
-		shoe.rotation.x = Math.PI / 2;
-		shoe.position.set(0, -0.46, -0.08);
-		hip.add(shoe);
-		const band = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.03, 8, 16), strap);
-		band.position.set(0, -0.46, -0.06);
-		hip.add(band);
-		legs.push(hip);
-	}
-
-	// the leg blur: a whirl of colour where the legs would be
-	const whirlTex = canvas(128, 128, function (g, w, h) {
-		g.translate(w / 2, h / 2);
-		for (let i = 0; i < 3; i++) {
-			g.rotate(TAU / 3);
-			const grad = g.createLinearGradient(-60, 0, 60, 0);
-			grad.addColorStop(0, 'rgba(255,255,255,0)');
-			grad.addColorStop(1, 'rgba(255,255,255,0.9)');
-			g.strokeStyle = grad;
-			g.lineWidth = 16;
-			g.beginPath();
-			g.arc(0, 0, 44, 0, Math.PI * 0.9);
-			g.stroke();
-		}
-	});
-	const whirlMat = new THREE.MeshBasicMaterial({ map: whirlTex, color: colour, transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 0 });
-	const whirl = new THREE.Mesh(new THREE.CircleGeometry(0.42, 24), whirlMat);
-	whirl.rotation.y = Math.PI / 2;
-	whirl.position.set(0, 0.42, 0);
-	lean.add(whirl);
-
-	// the ball: curled up and spinning
-	const ball = new THREE.Group();
-	ball.position.y = 0.62;
-	ball.visible = false;
-	lean.add(ball);
-	const core = new THREE.Mesh(new THREE.SphereGeometry(0.5, 28, 20), skin);
-	ball.add(core);
-	const spike = new THREE.ConeGeometry(0.14, 0.42, 10);
-	spike.translate(0, 0.62, 0);
-	for (let i = 0; i < 14; i++) {
-		const sp = new THREE.Mesh(spike, skin);
-		const a = i / 14 * TAU;
-		sp.rotation.set(a, 0, (i % 2 ? 0.35 : -0.35));
-		ball.add(sp);
-	}
-	const swirlMat = new THREE.MeshBasicMaterial({ map: whirlTex, color: new THREE.Color(1.8, 1.8, 1.8), transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 0.8, blending: THREE.AdditiveBlending });
-	const swirl = new THREE.Mesh(new THREE.CircleGeometry(0.95, 32), swirlMat);
-	swirl.rotation.y = Math.PI / 2;
-	ball.add(swirl);
-
-	root.traverse((o) => { if (o.isMesh && o !== whirl && o !== swirl) o.castShadow = true; });
-
-	let cycle = 0;
-	// Pose for this frame: dt, how fast (0-1), curled up or not.
-	function pose(dt, pace, curled) {
-		cycle += dt * (6 + pace * 30);
-		body.visible = !curled;
-		ball.visible = curled;
-		whirl.visible = !curled;
-		if (curled) {
-			ball.rotation.x -= dt * 40;
-			return;
-		}
-		const stride = Math.max(0.15, 1 - pace);   // (at full tilt the legs are just a blur)
-		legs[0].rotation.x = Math.sin(cycle) * 1.1 * stride;
-		legs[1].rotation.x = -Math.sin(cycle) * 1.1 * stride;
-		whirlMat.opacity = Math.min(0.85, pace * 1.1);
-		whirl.rotation.x = -cycle;
-		body.rotation.x = -0.32 * pace - 0.05;   // lean into it
-		body.position.y = 0.95 + Math.abs(Math.sin(cycle)) * 0.06 * stride;
-		for (let i = 0; i < 2; i++) arms[i].rotation.x = pace > 0.35 ? -1.25 + Math.sin(cycle * 2 + i) * 0.05 : Math.sin(cycle + i * Math.PI) * 0.9;
-		head.rotation.x = 0.25 * pace;
-	}
-
-	// Standing at the start, raring to go: bouncing on the spot.
-	function idle(time) {
-		body.visible = true;
-		ball.visible = false;
-		whirl.visible = false;
-		body.rotation.x = -0.12;
-		body.position.y = 0.95 + Math.abs(Math.sin(time * 5)) * 0.05;
-		legs[0].rotation.x = 0.1;
-		legs[1].rotation.x = -0.1;
-		arms[0].rotation.x = -0.4 + Math.sin(time * 5) * 0.1;
-		arms[1].rotation.x = -0.4 - Math.sin(time * 5) * 0.1;
-		head.rotation.x = 0;
-	}
-
-	return { root, lean, pose, idle };
+	const s = buildSpeedster(colour);
+	let t = 0;
+	return {
+		root: s.root,
+		lean: s.lean,
+		// Pose for this frame: dt, how fast (0-1), curled up or not.
+		pose(dt, pace, curled) { t += dt; s.animate(dt, curled ? 'ball' : 'run', Math.max(0.05, pace), 40, t); },
+		// Standing at the start, raring to go.
+		idle(time) { s.animate(0, 'idle', 0, 0, time); },
+	};
 }
 
 /* ---------- things on the track ---------- */
