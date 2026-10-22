@@ -51,7 +51,8 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 	const JUMP = { across: 7.5, max: 6.5, min: 1.6 };      // speed across while rising; the highest and lowest leaps
 	const GLIDE = { speed: 10.5, sink: 2.2 };              // speed across and fall, gliding
 	const MANTLE = 0.35;                                   // seconds to haul himself up over an edge
-	const TRIES = 5;                                       // leaps at one spot before he gives up on it
+	const TRIES = 2;                                       // leaps at one spot before he gives up on it
+	const STALL = { time: 1.0, gain: 0.5, max: 6 };        // he gives up (and stops where he is) if he's got no nearer by this much in this long, or after this long at all
 	const REACH = { ring: 1.2, fragment: 1.7 };            // how near counts as grabbing
 	const POINTS = { ring: 1, fragment: 25 };
 
@@ -523,10 +524,28 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		if (e >= 1) { kn.pos.copy(m.to); kn.state = 'ground'; kn.face = null; kn.mantle = null; }
 	}
 
+	// not getting any nearer (or taking too long)? drop the goal and stop wherever he's
+	// got to: standing, hanging on the wall, or dropping straight down
+	function giveUp(dt) {
+		const g = kn.goal;
+		if (!g || kn.state === 'mantle') return;
+		const d = kn.pos.distanceTo(g.point);
+		g.age = (g.age || 0) + dt;
+		if (g.best === undefined || d < g.best - STALL.gain) { g.best = d; g.since = 0; }
+		else g.since += dt;
+		if (g.since > STALL.time || g.age > STALL.max) {
+			kn.goal = null;
+			kn.vel.x *= 0.2;
+			kn.vel.z *= 0.2;
+			markerAge = Math.max(markerAge, 1.6);
+		}
+	}
+
 	function simulate(dt) {
 		clock += dt;
 		if (show.paused) return;
 		if (live()) {
+			giveUp(dt);
 			if (kn.state === 'ground') stepGround(dt);
 			else if (kn.state === 'air') stepAir(dt);
 			else if (kn.state === 'climb') stepClimb(dt);
