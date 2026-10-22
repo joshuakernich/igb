@@ -110,22 +110,10 @@ IGB.register('sonic-characters', function SonicCharacters(stage) {
 			},
 		};
 	}
-	function knuckles() {
-		const s = buildSpeedster(0xc4141e, { knuckles: true });
-		return {
-			name: 'KNUCKLES', from: 'Sonic Characters', root: s.root, height: 1.6,
-			modes: ['idle', 'jog', 'run', 'flat out', 'ball', 'crouch', 'spring', 'hurt'],
-			step(dt, t, mode) {
-				const pace = { jog: 0.35, run: 0.7, 'flat out': 1 }[mode];
-				if (pace) s.animate(dt, 'run', pace, 0, t);
-				else s.animate(dt, mode, 0, 30, t);
-			},
-		};
-	}
 	function climber() {
 		const c = buildClimber();
 		return {
-			name: 'CLIMBER', from: 'Knuckles Quest', root: c.root, height: 1.7,
+			name: 'KNUCKLES', from: 'Knuckles Quest', root: c.root, height: 1.6,
 			modes: ['idle', 'run', 'climb', 'glide', 'jump', 'fall'],
 			step(dt, t, mode) { c.animate(dt, mode, mode === 'climb' ? 1 : mode === 'run' ? 0.8 : 0, t); },
 		};
@@ -187,10 +175,9 @@ IGB.register('sonic-characters', function SonicCharacters(stage) {
 
 	const PLACES = [
 		// front wall
-		{ make: speedster, a: -33, r: 4.4 },
-		{ make: knuckles, a: -11, r: 4.4 },
-		{ make: fox, a: 11, r: 4.4 },
-		{ make: climber, a: 33, r: 4.6 },
+		{ make: speedster, a: -24, r: 4.4 },
+		{ make: climber, a: 0, r: 4.4 },
+		{ make: fox, a: 24, r: 4.4 },
 		// right wall
 		{ make: () => bot(buildBeetle, 'BEETLE BOT', 'Sonic Robot', 0.55, 2.3, 'rolling'), a: 68, r: 4.6 },
 		{ make: () => bot(buildBuzzer, 'BUZZ DRONE', 'Sonic Robot', 0.55, 1.8, 'buzzing'), a: 92, r: 4.6, base: 1.1 },

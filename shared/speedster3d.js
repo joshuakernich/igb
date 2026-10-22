@@ -842,7 +842,7 @@ export function buildSpeedster(colour, { knuckles = false, tails = false } = {})
 
 	/* ---------- moving ---------- */
 
-	let cycle = 0;
+	let cycle = 0, climbPhase = 0;
 	const foot = V(0, 0, 0), knee = V(0, 0, 0), hand = V(0, 0, 0), elbow = V(0, 0, 0), hipW = V(0, 0, 0), sh = V(0, 0, 0), tmp = V(0, 0, 0);
 	const torsoInv = new THREE.Matrix4();
 
@@ -932,6 +932,36 @@ export function buildSpeedster(colour, { knuckles = false, tails = false } = {})
 			const flail = Math.sin(time * 30);
 			for (const l of legs) placeLeg(l, l.s * 0.18, 0.2 + l.s * 0.08, -0.25 * l.s, 0.4);
 			for (const a of arms) placeArm(a, a.s * (0.6 + 0.08 * flail * a.s), 0.8 + 0.18 * flail * a.s, -0.1, 0.08, 0.05);
+			return;
+		}
+		// (for the climber: the caller lays the whole body flat for a glide, or up to a wall to climb)
+		if (mode === 'glide') {
+			// fists out ahead (over the head, with the body laid flat), legs trailing
+			show(false);
+			head.rotation.x = 1.0;
+			for (const l of legs) placeLeg(l, l.s * 0.14, 0.05 + Math.sin(time * 3 + l.s) * 0.04, 0.32, 0.9);
+			for (const a of arms) placeArm(a, a.s * 0.18, 0.95, -0.42, 0.06, 0.02);
+			return;
+		}
+		if (mode === 'fall') {
+			show(false);
+			torso.rotation.x = 0.15;
+			head.rotation.x = -0.3;
+			const f = Math.sin(time * 24);
+			for (const l of legs) placeLeg(l, l.s * 0.18, 0.12 + l.s * f * 0.05, -0.1 * l.s * f, 0.3);
+			for (const a of arms) placeArm(a, a.s * 0.5, 0.85 + a.s * f * 0.12, -0.05, 0.06, 0.05);
+			return;
+		}
+		if (mode === 'climb') {
+			// hugging the wall in front, fists over fists, feet pushing; pace + climbs, - comes down
+			show(false);
+			climbPhase += dt * pace * 5.5;
+			const s = Math.sin(climbPhase), c = Math.cos(climbPhase);
+			torso.rotation.x = 0.12;
+			head.rotation.x = -0.2;
+			for (const a of arms) placeArm(a, a.s * 0.3, 0.75 + (a.s > 0 ? s : -s) * 0.22, -0.32, 0.12, 0.08);
+			for (const l of legs) placeLeg(l, l.s * 0.2, 0.12 + (l.s > 0 ? -s : s) * 0.18, -0.22, -0.6);
+			torso.position.y = HIP_Y + c * 0.03 * Math.min(1, Math.abs(pace));
 			return;
 		}
 		if (mode === 'idle' || pace < 0.04) {
