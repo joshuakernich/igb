@@ -134,6 +134,31 @@ function muzzlePath(g) {
 	g.closePath();
 }
 
+// Points along the eye mask's outline (not its bottom edge, along the muzzle),
+// as (x, y) on the front of a sphere of radius 0.4 (before flattening).
+function maskRimPoints(perSegment = 40) {
+	const segs = [
+		[[20, 400], [0, 300], [5, 60], [150, 18]],
+		[[150, 18], [250, 12], [310, 130], [332, 236]],
+		[[332, 236], [342, 285], [356, 322], [368, 330]],
+		[[368, 330], [380, 322], [394, 285], [404, 236]],
+		[[404, 236], [428, 130], [488, 18], [600, 24]],
+		[[600, 24], [735, 40], [740, 290], [716, 390]],
+	];
+	const { px, span, s, ox, oy, cy } = FACE;
+	const out = [];
+	segs.forEach(([a, b, c, d], k) => {
+		for (let i = k === 0 ? 0 : 1; i <= perSegment; i++) {
+			const t = i / perSegment, u = 1 - t;
+			const rx = u * u * u * a[0] + 3 * u * u * t * b[0] + 3 * u * t * t * c[0] + t * t * t * d[0];
+			const ry = u * u * u * a[1] + 3 * u * u * t * b[1] + 3 * u * t * t * c[1] + t * t * t * d[1];
+			const U = (px / 2 + (rx - ox) * s) / px, Vv = 1 - (cy + (ry - oy) * s) / px;
+			out.push([(0.5 - U) * span, (Vv - 0.5) * span]);
+		}
+	});
+	return out;
+}
+
 function faceTexture() {
 	const { px, s, ox, oy, cy } = FACE;
 	const toRef = (g) => { g.translate(px / 2 - ox * s, cy - oy * s); g.scale(s, s); };
@@ -380,9 +405,14 @@ export function buildSpeedster(colour) {
 	const B = (x, y, z) => bean(V(x, y, z));
 	const headGeo = new THREE.SphereGeometry(0.4, 96, 72);
 	{
-		const pos = headGeo.attributes.position, v = V(0, 0, 0);
+		const pos = headGeo.attributes.position, uv = headGeo.attributes.uv, v = V(0, 0, 0);
 		for (let i = 0; i < pos.count; i++) {
-			bean(flatten(v.fromBufferAttribute(pos, i)));
+			v.fromBufferAttribute(pos, i);
+			// (UVs measured from the face: round it (u), and away from it (v), so the fur's
+			// strands and streaks all run back from the face over the head)
+			const around = Math.atan2(v.y, v.x), away = Math.acos(Math.max(-1, Math.min(1, -v.z / 0.4)));
+			uv.setXY(i, (around / (Math.PI * 2) + 0.5) * 6, away / Math.PI * 3);
+			bean(flatten(v));
 			pos.setXYZ(i, v.x, v.y, v.z);
 		}
 		headGeo.computeVertexNormals();
@@ -404,6 +434,16 @@ export function buildSpeedster(colour) {
 		const mat = new THREE.MeshPhysicalMaterial({ map: faceTexture(), alphaTest: 0.5, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.06, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
 		const face = add(head, geo, mat, 0, 0, 0.02);
 		face.castShadow = false;
+		// a rim round the eyes: a blue tube along the mask's outline (up from one cheek, over
+		// both eyes and through the notch, down to the other), lying on the head's surface
+		const pts = maskRimPoints(60).map(([x, y]) => {
+			const p = V(x, y, -Math.sqrt(Math.max(0, 0.16 - x * x - y * y)));
+			bean(flatten(p));
+			return p.add(V(0, 0, 0.02 - 0.006));   // (the head's offset, nudged just proud of the face)
+		});
+		const rim = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 160, 0.014, 10, false), skin);
+		rim.castShadow = true;
+		head.add(rim);
 	}
 	// the quills: each starts as a fine point on the head (short of the flat front),
 	// swells as it hugs the head's curve, and tapers to its tip behind
