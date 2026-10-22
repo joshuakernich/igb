@@ -552,7 +552,7 @@ export function buildSpeedster(colour) {
 		const outline = (() => {
 			// (the drawing's right half, and the same mirrored for the left: the drawn left end sagged)
 			const right = [
-				[[368, 424], [410, 424], [440, 440], [500, 436]],   // (rising a little in the middle, under the nose)
+				[[368, 396], [408, 396], [440, 436], [500, 436]],   // (rising a little in the middle, under the nose)
 				[[500, 436], [560, 432], [610, 420], [660, 405]],
 				[[660, 405], [715, 392], [745, 420], [738, 470]],   // (the outer top corner, rounded off)
 				[[738, 470], [730, 540], [690, 610], [600, 645]],
@@ -621,7 +621,7 @@ export function buildSpeedster(colour) {
 			if (pts.length >= 2) lines.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.0055 * FACE_K, 6, false));
 		}
 		// the nose: a glossy black ball on the muzzle's top, where it meets the eyes
-		const nosePt = onMuzzle(366, 448) || onHead(...drawToHead(366, 448));
+		const nosePt = onMuzzle(366, 420) || onHead(...drawToHead(366, 420));
 		return { mgeo, lines, nosePt };
 		})());
 		const muzzle = new THREE.Mesh(mz.mgeo, fur(0xf6d2a2, { normalScale: new THREE.Vector2(0.7, 0.7) }));
@@ -629,7 +629,19 @@ export function buildSpeedster(colour) {
 		head.add(muzzle);
 		const lineMat = new THREE.MeshStandardMaterial({ color: 0x14100c, roughness: 0.6 });
 		for (const g of mz.lines) head.add(new THREE.Mesh(g, lineMat));
-		add(head, new THREE.SphereGeometry(0.05 * FACE_K, 24, 16), black, mz.nosePt.x, mz.nosePt.y, mz.nosePt.z - 0.02);
+		// the nose: a little glossy bean poking forward (and a touch up) off the muzzle's top
+		{
+			const r = 0.042 * FACE_K;
+			const geo = new THREE.SphereGeometry(r, 28, 20);
+			const pos = geo.attributes.position;
+			for (let i = 0; i < pos.count; i++) {
+				const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i) * 1.6;   // (long front to back)
+				pos.setXYZ(i, x * 0.95, y * 0.85 + 0.12 * (z / r) * (z / r) * r, z);   // (both ends curling up a little: a bean)
+			}
+			geo.computeVertexNormals();
+			const nose = add(head, geo, black, mz.nosePt.x, mz.nosePt.y, mz.nosePt.z - 0.02 - r * 0.5);
+			nose.rotation.x = 0.3;   // (its front end raised)
+		}
 	}
 	// the quills: each starts as a fine point on the head (short of the flat front),
 	// swells as it hugs the head's curve, and tapers to its tip behind
