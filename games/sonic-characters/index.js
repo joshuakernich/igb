@@ -221,7 +221,7 @@ IGB.register('sonic-characters', function SonicCharacters(stage) {
 
 	// the spot at the front where a tapped character comes, big, and a glowing ring on the floor there
 	const SHOW = new THREE.Vector3(0, 0, -2.9), BIG = 2.2;
-	const showRing = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.03, 8, 64), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x5ad1ff).multiplyScalar(2.2), transparent: true, opacity: 0 }));
+	const showRing = new THREE.Mesh(new THREE.TorusGeometry(0.75, 0.03, 8, 64), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x5ad1ff).multiplyScalar(2.2), transparent: true, opacity: 0 }));
 	showRing.rotation.x = Math.PI / 2;
 	showRing.position.copy(SHOW).setY(0.02);
 	scene.add(showRing);
@@ -234,11 +234,11 @@ IGB.register('sonic-characters', function SonicCharacters(stage) {
 		c.at = new THREE.Vector3(x, 0, z);
 		c.face = Math.atan2(x, z);   // (toward the middle of the room)
 		// the pedestal
-		const ped = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.25, 0.3, 48), pedestalMat);
+		const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.78, 0.3, 48), pedestalMat);
 		ped.position.set(x, 0.15, z);
 		ped.receiveShadow = ped.castShadow = true;
 		scene.add(ped);
-		const rim = new THREE.Mesh(new THREE.TorusGeometry(1.12, 0.025, 8, 64), rimMat);
+		const rim = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.022, 8, 64), rimMat);
 		rim.rotation.x = Math.PI / 2;
 		rim.position.set(x, 0.3, z);
 		scene.add(rim);
