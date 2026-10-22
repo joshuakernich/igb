@@ -53,8 +53,7 @@
 import * as THREE from '../../lib/three/three.module.min.js';
 import { createWallComposer, createWallRig } from '../../lib/three/walls.js';
 import { createWorld, heightAt, SUN, HORIZON, ARENA, SITES } from './world.js';
-import { buildCompound, buildTurret, buildCore, buildFragment, COMPOUND } from './compounds.js';
-import { buildRobot, buildBeetle, buildBuzzer, buildCrab, buildTarget, buildMissile, buildBolt, buildShell, glowTexture, fireTexture, smokeTexture, glossy } from './models.js';
+import { buildRobot, buildBeetle, buildBuzzer, buildCrab, buildTarget, buildMissile, buildBolt, buildShell, glowTexture, fireTexture, smokeTexture, glossy, buildCompound, buildTurret, buildCore, buildFragment, COMPOUND } from './models.js';
 import { paintFrame, chevronBar, wireStrider, radar, hullDial, readout, emeraldGauge, klank, FRAME, MONO } from './cockpit.js';
 import { createSound } from './sound.js';
 
