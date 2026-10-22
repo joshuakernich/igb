@@ -113,6 +113,11 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const HEAD_SCALE = 0.76, FACE_K = 0.88 / HEAD_SCALE;
 const FACE = { px: 1024, span: 0.84 * FACE_K, s: 0.95, ox: 368, oy: 230, cy: 444 };   // canvas size, metres across it, drawing-to-canvas scale, the drawing's point that lands at (512, cy)
 
+// The eyes (the mask, its rim and the irises) drawn a little smaller than traced,
+// shrunk toward the middle of the muzzle's top so they still sit right down on it
+const EYES = { k: 0.88, ax: 368, ay: 448 };
+const eyesAt = (x, y) => [EYES.ax + (x - EYES.ax) * EYES.k, EYES.ay + (y - EYES.ay) * EYES.k];
+
 function maskPath(g) {
 	g.beginPath();
 	g.moveTo(20, 400);
@@ -154,8 +159,8 @@ function maskRimPoints(perSegment = 40) {
 	segs.forEach(([a, b, c, d], k) => {
 		for (let i = k === 0 ? 0 : 1; i <= perSegment; i++) {
 			const t = i / perSegment, u = 1 - t;
-			const rx = u * u * u * a[0] + 3 * u * u * t * b[0] + 3 * u * t * t * c[0] + t * t * t * d[0];
-			const ry = u * u * u * a[1] + 3 * u * u * t * b[1] + 3 * u * t * t * c[1] + t * t * t * d[1];
+			const [rx, ry] = eyesAt(u * u * u * a[0] + 3 * u * u * t * b[0] + 3 * u * t * t * c[0] + t * t * t * d[0],
+				u * u * u * a[1] + 3 * u * u * t * b[1] + 3 * u * t * t * c[1] + t * t * t * d[1]);
 			const U = (px / 2 + (rx - ox) * s) / px, Vv = 1 - (cy + (ry - oy) * s) / px;
 			out.push([(0.5 - U) * span, (Vv - 0.5) * span]);   // (down the outer edges all the way to the muzzle)
 		}
@@ -181,6 +186,10 @@ function faceTexture(withMuzzle = true) {
 		muzzlePath(g);
 		g.fill();
 	}
+	g.save();
+	g.translate(EYES.ax, EYES.ay);   // (the eyes, a little smaller: see EYES)
+	g.scale(EYES.k, EYES.k);
+	g.translate(-EYES.ax, -EYES.ay);
 	g.fillStyle = '#ffffff';
 	maskPath(g);
 	g.fill();
@@ -244,8 +253,10 @@ function faceTexture(withMuzzle = true) {
 		g.fill();
 		g.restore();
 	}
+	g.restore();
 	// the smirk, with its little tick at the corner (on the muzzle)
 	if (withMuzzle) {
+		g.strokeStyle = '#0c0c14';
 		g.lineWidth = 8;
 		g.beginPath();
 		g.moveTo(428, 612);
