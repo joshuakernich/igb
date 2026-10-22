@@ -2,14 +2,16 @@
  * Quill Relay (shown as SONIC CLASSIC: the manifest's name and title; the id,
  * folder and code stay quill-relay)
  *
- * A classic side-on speedster platformer run as a relay round the room. The
- * course is one continuous level on the three walls: the left wall's stretch
- * runs round the corner into the front wall's, then into the right wall's,
- * then (round the back of the room, out of sight) onto fresh ground on the
- * left wall again, lap after lap. One glossy, spiky hero runs it, painted in
- * the colour of whoever is running.
+ * A classic side-on speedster platformer, everyone at once, round the room.
+ * The course is one continuous level on the three walls: the left wall's
+ * stretch runs round the corner into the front wall's, then into the right
+ * wall's, then (round the back of the room, out of sight) onto the left
+ * wall again, lap after lap. Every player has their own glossy, spiky hero
+ * in their colour. They start spread round the walls (player 1 on the left
+ * wall, 2 on the front, 3 on the right, 4 on the left again...) and each
+ * moves on to the next wall on their own.
  *
- * Body control, for the runner of the moment:
+ * Body control, for each player on their hero's wall:
  *   - walk along the wall you're running (left to right as you face it) and
  *     the hero runs with you, with momentum: he speeds up, overshoots a
  *     touch, slows on the hills and speeds down them;
@@ -21,11 +23,14 @@
  *     item monitors for ten rings or a bubble shield; hit a loop fast enough
  *     and round it you go.
  *
- * The relay: reach the checkpoint post at the right end of your wall and it
- * spins, the hero zips round the corner onto the next wall, and the next
- * player takes over there ("PLAYER 2, GO!"), round and round through
- * everyone until the clock runs out. Each stretch is rebuilt with fresh
- * ground once the hero has left it.
+ * Round the room: reach the checkpoint post at the right end of your wall and
+ * it spins, your hero zips round the corner onto the next wall, and you walk
+ * round to it and carry on ("PLAYER 2, GO!"), lap after lap until the clock
+ * runs out. The right end of one wall is the left end of the next, so you
+ * just keep walking (off the right wall, along the back to the left wall).
+ * Rings, robots and monitors are shared (whoever gets there first) and come
+ * back after a while. A stretch is rebuilt with fresh ground once nobody's
+ * on it.
  *
  * Score: rings, plus SCORE.bot for every robot popped, per player.
  *
@@ -33,10 +38,11 @@
  * sharing one pitch and the same fixed 90 degree field of view, so the walls
  * are the sides of one box and the corners meet seamlessly.
  *
- * Input: walls[i] along-the-wall position (left wall: pz; front: px; right:
- * 1 - pz; pz is 1 at the front wall), py for jumping and ducking (0 high,
- * 1 low), calibrated to each runner's standing height as they take over.
- * At a desk: Space jumps, hold the down arrow to duck.
+ * Input: each player's position along their hero's wall (left wall: pz;
+ * front: px; right: 1 - pz; pz is 1 at the front wall), py for jumping and
+ * ducking (0 high, 1 low), calibrated to their standing height each time
+ * they start a wall. At a desk: Space jumps, hold the down arrow to duck,
+ * for whichever player the mouse moves (keys 1-6).
  *
  * Showtime runs the show: the squad picker, the title drop, the clock, then
  * the relay ('play'), TIME!, scores, rank, and the end.
@@ -61,29 +67,33 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 
 	const ROUND = 180;                  // seconds on the show's clock
 	const COURSE = {
-		depth: 6,                         // metres from the middle of the room to the hero's running line (each wall's stretch is twice this long)
-		ground: -1.8,                     // the ground's base height, metres below the eye
-		near: 5.4, far: 6.6,              // the track's top runs from this close to this far (metres from the middle of the room)
+		depth: 9,                         // metres from the middle of the room to the hero's running line (each wall's stretch is twice this long): further out is more zoomed out
+		ground: -2.7,                     // the ground's base height, metres below the eye (keeps the ground about three quarters of the way down each wall)
+		near: 8.4, far: 9.6,              // the track's top runs from this close to this far (metres from the middle of the room)
 		ringSize: 0.2,                    // a ring's radius (metres)
 		ringLift: 0.55,                   // how high the rings float over the ground
-		slots: [[1.7, 4.5], [4.7, 7.5], [7.7, 10.3]],   // where along a stretch its three features go (a loop takes two)
-		checkpoint: 10.7,                 // where the checkpoint post stands (metres along)
+		slots: [[2.5, 6.6], [7, 11], [11.4, 15.5]],   // three stretches of a wall's track (a loop takes two)
+		checkpoint: 16.2,                 // where the checkpoint post stands (metres along)
 		post: 0.4,                        // and how far behind the running line
-		hill: [0.5, 1.1], dip: [0.45, 0.8],   // metres high / deep
+		hill: [0.35, 0.7], dip: [0.45, 0.8],   // metres high / deep (no dips are laid now)
+		hillChance: 0.35,                 // the chance a wall's track has one low hill
 		loop: { radius: 1.75, width: 1.2 },
-		loopChance: 0.45,                 // the chance a stretch has a loop
+		// a wall's track is flat ground and rings with at most ONE feature: these are its chances
+		loopChance: 0.3,                  // a loop
+		botChance: 0.15,                  // a single robot (a Gearhog)
+		monitorChance: 0.2,               // an item monitor
 		bots: { walk: 0.9, hover: 2.0 },  // the Gearhog's walking speed, the Buzzdrone's height
 	};
 	COURSE.span = COURSE.depth * 2;
 	const CAM = { fov: 64, pitch: 0 };  // vertical degrees (90 across each 16:10 wall), and the rig's one shared tilt: NEVER per camera
 	const MAP = {
 		edge: 0.08,                       // the share of the wall at each end that's beyond the hero's reach
-		from: 0.7, to: 11.3,              // metres along the stretch the player's reach maps to
+		from: 1.0, to: 17.0,              // metres along the stretch the player's reach maps to
 		creep: 2.5,                       // metres a second the hero edges on while the runner stands at the right end
 		start: 0.3,                       // how far along the wall the next runner must be to start (from the left)
 		wait: 6,                          // seconds to wait for them before starting anyway
 	};
-	const RUN = { top: 10, accel: 18, brake: 36, gain: 3.2, slope: 10, air: 10 };   // m/s, m/s², per second (how keenly he chases his runner), slope pull, air control
+	const RUN = { top: 14, accel: 18, brake: 36, gain: 3.2, slope: 10, air: 10 };   // m/s, m/s², per second (how keenly he chases his runner), slope pull, air control
 	const ROLL = { friction: 1.8, slope: 16, stop: 1.2, from: 2.2 };   // rolling: slowing, slope pull, the speed it uncurls at, the speed you need to curl up
 	const JUMP = { speed: 10.5, gravity: 26, bounce: 8 };   // m/s up, m/s², bounce off a popped robot
 	const DASH = { charge: 0.3, min: 11, max: 19, full: 1.2 };   // seconds crouched before it revs, launch speeds, seconds to a full charge
@@ -91,10 +101,11 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 	const LOOP = { min: 5.5, speed: 9 };   // m/s needed to go round a loop, and the least speed round it
 	const SPRING = 13.5;                // m/s up off a spring
 	const HURT = { knock: [5, 7], safe: 2, lose: 0.5, max: 16, linger: 3.5 };   // knocked back (m/s back, up), seconds safe, share of rings spilled, most spilled, seconds they linger
-	const HANDOVER = { zip: 0.7, banner: 1.8, start: 1.0 };   // seconds round the corner, seconds of PLAYER N, GO! (and calibration), metres along the next stretch the hero waits
+	const HANDOVER = { zip: 0.7, banner: 1.8, start: 1.5 };   // seconds round the corner, seconds of PLAYER N, GO! (and calibration), metres along the next stretch the hero starts
 	const REBUILD = { after: 1.6, sink: 0.5, rise: 0.7 };     // a stretch left behind: seconds before it sinks, sinking, rising anew
 	const SCORE = { ring: 1, bot: 5, monitor: 10 };          // points a ring, a robot; rings in a monitor
-	const HERO = { scale: 0.5, turn: 0.4 };                   // his size (1: about 2 m tall), and how far he turns toward the room (radians)
+	const HERO = { scale: 0.5, turn: 0.4, lane: 0.35 };       // his size (1: about 2 m tall), how far he turns toward the room (radians), and how much nearer the room players 4-6 run
+	const RESPAWN = { ring: 6, other: 12 };                   // seconds before a taken ring, or a popped robot or opened monitor, comes back
 
 	const GROUND = COURSE.ground;
 	const HALF = COURSE.span / 2;
@@ -140,7 +151,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 	const sun = new THREE.DirectionalLight(0xfff2dc, 3.0);
 	sun.castShadow = true;
 	sun.shadow.mapSize.set(2048, 2048);
-	Object.assign(sun.shadow.camera, { left: -14, right: 14, top: 14, bottom: -14, near: 1, far: 90 });
+	Object.assign(sun.shadow.camera, { left: -20, right: 20, top: 20, bottom: -20, near: 1, far: 110 });
 	sun.shadow.camera.updateProjectionMatrix();
 	sun.shadow.bias = -0.0004;
 	sun.shadow.normalBias = 0.03;
@@ -210,20 +221,20 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 		const at = (x, d) => new THREE.Vector3(x, GROUND - 1.2, -d);
 		// palms just behind the course, toy hills and a waterfall cliff further off
 		for (let i = 0; i < 4; i++) {
-			const d = 12 + rand() * 6;
+			const d = COURSE.far + 4 + rand() * 6;
 			const p = buildPalm(6 + rand() * 4);
 			p.position.copy(at(-d + 2 + rand() * (2 * d - 4), d));
 			p.rotation.y = rand() * TAU;
 			g.add(p);
 		}
 		for (let i = 0; i < 4; i++) {
-			const d = 26 + rand() * 30;
+			const d = COURSE.far + 18 + rand() * 30;
 			const r = 5 + rand() * 8;
 			const hill = buildHill(r, 4 + rand() * 9, BG.hill);
 			hill.position.copy(at((rand() * 2 - 1) * d * 0.85, d));
 			g.add(hill);
 		}
-		const d = 22 + rand() * 8;
+		const d = COURSE.far + 14 + rand() * 8;
 		const cliff = buildWaterfallCliff(6 + rand() * 3, 7 + rand() * 4, BG.cliff, BG.water, BG.top);
 		cliff.position.copy(at((rand() * 1.2 - 0.6) * d, d));
 		g.add(cliff);
@@ -241,7 +252,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 		walls[w].group.add(sec.group);
 		return sec;
 	}
-	for (let w = 0; w < 3; w++) walls[w].section = newSection(w, w === 0);
+	for (let w = 0; w < 3; w++) walls[w].section = newSection(w, true);   // (everyone starts at once: all three walls start gentle)
 
 	// Where a point on wall w's stretch (u along, y above the base, d deep) is in the world.
 	function worldOf(w, u, y, d = COURSE.depth, out = new THREE.Vector3()) {
@@ -252,23 +263,35 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 		return out.set(x * c + z * s, GROUND + y, -x * s + z * c);
 	}
 
-	/* ---------- the hero ---------- */
+	/* ---------- the heroes: one a player, all running at once ---------- */
 
-	const hero = {
-		model: buildHero(PLAYER_COLORS[0]),
-		holder: new THREE.Group(),
-		wall: 0, u: HANDOVER.start, y: 0, v: 0, vy: 0,
-		grounded: true, ball: false, charging: false, chargeT: 0, crouchT: 0, revAt: 0,
-		hurt: false, sprung: false, safe: 0, shield: false,
-		loop: null,                 // { l (its middle), r, a (radians round) }
-		facing: 1, yaw: 0, turn: HERO.turn, spin: 0,
-		lead: 0,                    // metres he's ahead of where his runner maps to (a dash or a roll carries him on)
-	};
-	hero.model.root.scale.setScalar(HERO.scale);
-	hero.holder.add(hero.model.root);
-	scene.add(hero.holder);
+	// Each player has their own hero. They start spread round the walls
+	// (player 1 on the left wall, 2 on the front, 3 on the right, 4 on the
+	// left again...), and each goes on to the next wall on their own when
+	// they reach their checkpoint. Heroes sharing a wall run on slightly
+	// different lines, nearer the room, so they don't hide each other.
+	function Hero(n) {
+		const model = buildHero(PLAYER_COLORS[n % PLAYER_COLORS.length]);
+		model.root.scale.setScalar(HERO.scale);
+		const holder = new THREE.Group();
+		holder.add(model.root);
+		scene.add(holder);
+		return {
+			n, model, holder,
+			depth: COURSE.depth - Math.floor(n / 3) * HERO.lane,
+			state: 'idle',            // idle (before the run), banner (GO!), wait (for them to get to the left end), run, zip (round the corner), over
+			t: 0, legs: 0, zip: null,
+			wall: n % 3, u: HANDOVER.start, y: 0, v: 0, vy: 0,
+			grounded: true, ball: false, charging: false, chargeT: 0, crouchT: 0, revAt: 0,
+			hurt: false, sprung: false, safe: 0, shield: false,
+			loop: null,                 // { l (its middle), r, a (radians round) }
+			facing: 1, yaw: 0, turn: HERO.turn,
+			lead: 0,                    // metres he's ahead of where his runner maps to (a dash or a roll carries him on)
+		};
+	}
+	let heroes = [];
 
-	/* ---------- players, their bodies, the relay ---------- */
+	/* ---------- players and their bodies ---------- */
 
 	let count = 0;
 	let latest = [];
@@ -278,15 +301,6 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 	const scoreOf = (i) => tally[i].rings * SCORE.ring + tally[i].bots * SCORE.bot;
 	const scores = () => tally.map((t, i) => scoreOf(i));
 
-	const relay = {
-		state: 'idle',             // idle (before the run), banner (PLAYER N, GO!), wait (for them to get to the left end), run, zip (round the corner), over
-		t: 0,
-		leg: 0,                    // which leg: the wall is leg % 3, the runner leg % count, the lap leg / 3
-		runner: 0,
-		zip: null,                 // { from: { w, u }, to: { w, u } }
-	};
-	const wallOfLeg = (leg) => leg % 3;
-
 	// Where a player is along wall w, left (0) to right (1) as they face it.
 	function alongFor(p, w) {
 		if (!p) return 0;
@@ -294,25 +308,29 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 		if (w === 1) return p.px;            // the front wall: left to right
 		return 1 - p.pz;                     // the right wall: from the front to the back
 	}
-	const runnerAlong = () => alongFor(latest[relay.runner], hero.wall);
+	const alongOf = (h) => alongFor(latest[h.n], h.wall);
 	const mapU = (f) => MAP.from + Math.max(0, Math.min(1, (f - MAP.edge) / (1 - 2 * MAP.edge))) * (MAP.to - MAP.from);
 
 	function setUp(n) {
 		count = n;
+		for (const h of heroes) scene.remove(h.holder);
+		heroes = [];
 		for (let i = 0; i < n; i++) {
 			tally[i] = { rings: 0, bots: 0 };
 			body[i] = { py: 0.5, stand: 0.5, samples: [], up: false, duck: false, jumped: false };
+			const h = Hero(i);
+			heroes.push(h);
+			placeHero(h, i % 3, HANDOVER.start);
 		}
-		hero.model.setColour(PLAYER_COLORS[0]);
 	}
 
 	// The body: jumping and ducking against each runner's own standing height.
-	const keys = { jump: false, duck: false };
+	const keys = { jump: false, duck: false, jumpEdge: false };
 	function readBody(i, dt) {
 		const b = body[i];
 		const p = latest[i];
 		if (p && p.py !== undefined) b.py = p.py;
-		if (relay.state === 'banner' && i === relay.runner) b.samples.push(b.py);
+		if (heroes[i] && heroes[i].state === 'banner') b.samples.push(b.py);
 		const rise = b.stand - b.py;         // (py is 0 high, 1 low: standing taller is a smaller py)
 		const wasUp = b.up;
 		if (!b.up && rise > BODY.jump) b.up = true;
@@ -329,13 +347,15 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 		body[i].samples = [];
 		body[i].up = body[i].duck = false;
 	}
+	// (at a desk, the keys drive whichever player the mouse moves)
+	const deskPlayer = () => (IGB.players && IGB.players.selected) || 0;
 
 	/* ---------- effects ---------- */
 
 	const sparkTex = sparkleTexture();
 	const sparks = [];
 	const pops = [];             // words over the course: { text, colour, wall, u, y, age }
-	let flash = 0;
+	const flashes = [0, 1, 2].map(() => ({ v: 0, red: false }));   // a flash over one wall
 
 	function sparkle(at, colour = 0xffffff, size = 1.2) {
 		const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTex, color: new THREE.Color(colour).multiplyScalar(2.2), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));   // (past white: it blooms)
@@ -346,6 +366,10 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 	}
 	function pop(text, colour, wall, u, y) {
 		pops.push({ text, colour, wall, u, y, age: 0 });
+	}
+	function flash(w, v, red) {
+		flashes[w].v = Math.max(flashes[w].v, v);
+		flashes[w].red = red;
 	}
 
 	/* ---------- the show ---------- */
@@ -369,10 +393,10 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 		{
 			id: 'play',
 			length: Infinity,
-			enter() { startRelay(); },
-			draw(ctx) { relayOverlay(ctx); },
+			enter() { startRun(); },
+			draw(ctx) { runOverlay(ctx); },
 		},
-		show.beats.timeUp({ enter() { endRelay(); } }),
+		show.beats.timeUp({ enter() { endRun(); } }),
 		show.beats.scores(),
 		show.beats.rank(),
 		{ id: 'done', length: Infinity, world: false, enter() { IGB.complete(scoresToRewards(scores())); } },
@@ -385,341 +409,344 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 		show.go('title');
 	}
 
-	/* ---------- the relay ---------- */
+	/* ---------- the run ---------- */
 
-	function startRelay() {
+	function startRun() {
 		if (!count) setUp(playersMeta ? playersMeta.length : 3);
 		for (const t of tally) { t.rings = 0; t.bots = 0; }
-		relay.leg = 0;
-		placeHero(0, HANDOVER.start);
-		beginLeg();
+		for (const h of heroes) {
+			h.legs = 0;
+			placeHero(h, h.n % 3, HANDOVER.start);
+			beginLeg(h);
+		}
+		sound.go();
 		sound.music(true);
 	}
 
-	function endRelay() {
-		relay.state = 'over';
+	function endRun() {
+		for (const h of heroes) h.state = 'over';
 		sound.music(false);
 	}
 
-	function placeHero(w, u) {
-		Object.assign(hero, { wall: w, u, y: walls[w].section.height(u), v: 0, vy: 0, grounded: true, ball: false, charging: false, hurt: false, sprung: false, loop: null, facing: 1 });
+	function placeHero(h, w, u) {
+		Object.assign(h, { wall: w, u, y: walls[w].section.height(u), v: 0, vy: 0, grounded: true, ball: false, charging: false, hurt: false, sprung: false, loop: null, facing: 1 });
 	}
 
-	// A new leg: the next runner's colour, PLAYER N, GO!, their standing height.
-	function beginLeg() {
-		relay.runner = relay.leg % count;
-		relay.state = 'banner';
-		relay.t = 0;
-		body[relay.runner].samples = [];
-		hero.model.setColour(PLAYER_COLORS[relay.runner]);
-		hero.lead = 0;
-		sparkle(worldOf(hero.wall, hero.u, 1, COURSE.depth), new THREE.Color(colourOf(relay.runner)).getHex(), 3);
-		sound.go();
+	// A new wall for one hero: GO!, and their standing height.
+	function beginLeg(h) {
+		h.state = 'banner';
+		h.t = 0;
+		h.lead = 0;
+		body[h.n].samples = [];
+		sparkle(worldOf(h.wall, h.u, 1, h.depth), new THREE.Color(colourOf(h.n)).getHex(), 3);
 		show.fx('stepIn');
 	}
 
-	function goRun() {
-		relay.state = 'run';
-		relay.t = 0;
-		body[relay.runner].jumped = false;
-		hero.lead = HANDOVER.start - mapU(runnerAlong());   // (starting from wherever they are: a step right is a step right)
-		if (hero.lead < 0 && runnerAlong() <= MAP.start) hero.lead = 0;
+	function goRun(h) {
+		h.state = 'run';
+		h.t = 0;
+		body[h.n].jumped = false;
+		h.lead = HANDOVER.start - mapU(alongOf(h));   // (starting from wherever they are: a step right is a step right)
+		if (h.lead < 0 && alongOf(h) <= MAP.start) h.lead = 0;
 	}
 
-	// The checkpoint: its orb spins round in the next runner's colour, and
-	// the hero zips round the corner to them.
-	function handover() {
-		const sec = walls[hero.wall].section;
+	// The checkpoint: its orb spins round in the hero's colour, and he zips
+	// round the corner onto the next wall (his player walks round to it).
+	function checkpoint(h) {
+		const sec = walls[h.wall].section;
 		sec.checkpoint.hit = true;
 		sec.checkpoint.spin = 30;
-		const next = (relay.leg + 1) % count;
 		const orb = sec.checkpoint.mesh.userData.orb;
-		orb.material.color.set(colourOf(next));
-		orb.material.emissive.set(colourOf(next));
+		orb.material.color.set(colourOf(h.n));
+		orb.material.emissive.set(colourOf(h.n));
 		sound.checkpoint();
 		stage.timeout(() => sound.zip(), 250);
-		pop('CHECKPOINT!', '#ffd23a', hero.wall, sec.checkpoint.u, 3.2);
-		relay.state = 'zip';
-		relay.t = 0;
-		const w = hero.wall;
-		relay.zip = { w, u0: hero.u, w1: (w + 1) % 3 };
-		hero.ball = true;
-		hero.charging = false;
-		hero.loop = null;
-		// (the stretch left behind sinks away and rises anew, once the post's done spinning)
-		walls[w].swap = { t: -REBUILD.after, built: false };
+		pop('CHECKPOINT!', colourOf(h.n), h.wall, sec.checkpoint.u, 3.2);
+		h.state = 'zip';
+		h.t = 0;
+		h.zip = { w: h.wall, u0: h.u, w1: (h.wall + 1) % 3 };
+		h.ball = true;
+		h.charging = false;
+		h.loop = null;
+		// (the stretch left behind sinks away and rises anew, once nobody's on it)
+		if (!walls[h.zip.w].swap) walls[h.zip.w].swap = { t: -REBUILD.after, built: false };
 	}
 
-	function stepRelay(dt) {
-		relay.t += dt;
-		if (relay.state === 'banner') {
-			if (relay.t >= HANDOVER.banner) {
-				calibrate(relay.runner);
-				if (runnerAlong() <= MAP.start) goRun();
-				else { relay.state = 'wait'; relay.t = 0; }
+	function stepHero(h, dt) {
+		h.t += dt;
+		if (h.state === 'banner') {
+			if (h.t >= HANDOVER.banner) {
+				calibrate(h.n);
+				if (alongOf(h) <= MAP.start) goRun(h);
+				else { h.state = 'wait'; h.t = 0; }
 			}
-		} else if (relay.state === 'wait') {
-			if (runnerAlong() <= MAP.start || relay.t >= MAP.wait) goRun();
-		} else if (relay.state === 'zip') {
-			// round the corner: on along this stretch, then onto the next to where they'll start
-			const z = relay.zip;
+		} else if (h.state === 'wait') {
+			if (alongOf(h) <= MAP.start || h.t >= MAP.wait) goRun(h);
+		} else if (h.state === 'zip') {
+			// round the corner: on along this stretch, then onto the next to where he'll start
+			const z = h.zip;
 			const d1 = COURSE.span - z.u0 + 0.6;
 			const d2 = HANDOVER.start + 0.6;
-			const s = Math.min(1, relay.t / HANDOVER.zip) * (d1 + d2);
-			if (s < d1) { hero.wall = z.w; hero.u = z.u0 + s; }
-			else { hero.wall = z.w1; hero.u = s - d1 - 0.6; }
-			const sec = walls[hero.wall].section;
-			hero.y = sec.height(Math.max(0, Math.min(COURSE.span, hero.u)));
-			hero.v = (d1 + d2) / HANDOVER.zip;
-			hero.grounded = true;
-			if (relay.t >= HANDOVER.zip) {
-				placeHero(z.w1, HANDOVER.start);
-				relay.leg++;
-				beginLeg();
+			const s = Math.min(1, h.t / HANDOVER.zip) * (d1 + d2);
+			if (s < d1) { h.wall = z.w; h.u = z.u0 + s; }
+			else { h.wall = z.w1; h.u = s - d1 - 0.6; }
+			h.y = walls[h.wall].section.height(Math.max(0, Math.min(COURSE.span, h.u)));
+			h.v = (d1 + d2) / HANDOVER.zip;
+			h.grounded = true;
+			if (h.t >= HANDOVER.zip) {
+				placeHero(h, z.w1, HANDOVER.start);
+				h.legs++;
+				beginLeg(h);
+				sound.go();
 			}
 		}
 	}
 
-	/* ---------- the hero's physics ---------- */
+	/* ---------- a hero's physics ---------- */
 
-	function hurt() {
-		if (hero.safe > 0) return;
-		const r = relay.runner;
-		hero.safe = HURT.safe;
-		if (hero.shield) {
-			hero.shield = false;
+	function hurt(h) {
+		if (h.safe > 0) return;
+		const r = h.n;
+		h.safe = HURT.safe;
+		if (h.shield) {
+			h.shield = false;
 			sound.hurt();
-			pop('SHIELD!', '#9fe8ff', hero.wall, hero.u, hero.y + 2.2);
+			pop('SHIELD!', '#9fe8ff', h.wall, h.u, h.y + 2.2);
 		} else if (tally[r].rings > 0) {
 			const lose = Math.min(HURT.max, Math.ceil(tally[r].rings * HURT.lose));
 			tally[r].rings -= lose;
-			spill(lose);
+			spill(h, lose);
 			sound.spill();
-			pop('−' + lose, '#ff3d4a', hero.wall, hero.u, hero.y + 2.2);
+			pop('−' + lose, '#ff3d4a', h.wall, h.u, h.y + 2.2);
 		} else {
 			sound.hurt();
-			pop('OUCH!', '#ff3d4a', hero.wall, hero.u, hero.y + 2.2);
+			pop('OUCH!', '#ff3d4a', h.wall, h.u, h.y + 2.2);
 		}
-		show.shake = Math.max(show.shake, 0.35);
-		flash = 0.5;
-		hero.v = -hero.facing * HURT.knock[0];
-		hero.vy = HURT.knock[1];
-		hero.grounded = false;
-		hero.hurt = true;
-		hero.ball = false;
-		hero.charging = false;
-		hero.sprung = false;
-		hero.loop = null;
+		show.shake = Math.max(show.shake, 0.25);
+		flash(h.wall, 0.5, true);
+		h.v = -h.facing * HURT.knock[0];
+		h.vy = HURT.knock[1];
+		h.grounded = false;
+		h.hurt = true;
+		h.ball = false;
+		h.charging = false;
+		h.sprung = false;
+		h.loop = null;
 	}
 
-	// Rings thrown out of a spill: they bounce, and can be grabbed back.
-	function spill(n) {
-		const wall = walls[hero.wall];
+	// Rings thrown out of a spill: they bounce, and anyone can grab them back.
+	function spill(h, n) {
+		const wall = walls[h.wall];
 		for (let i = 0; i < n; i++) {
 			const a = Math.PI * (0.15 + 0.7 * (i + 0.5) / n);
 			const sp = 4 + (i % 3) * 1.5;
 			const m = buildRing(COURSE.ringSize);
 			wall.group.add(m);
-			wall.spill.push({ mesh: m, u: hero.u, y: hero.y + 1, vu: Math.cos(a) * sp * (i % 2 ? 1 : -1), vy: Math.sin(a) * sp + 2, age: 0 });
+			wall.spill.push({ mesh: m, u: h.u, y: h.y + 1, vu: Math.cos(a) * sp * (i % 2 ? 1 : -1), vy: Math.sin(a) * sp + 2, age: 0 });
 		}
 	}
 
-	function collect(n = 1, at) {
-		const r = relay.runner;
-		tally[r].rings += n;
-		sound.ring((hero.wall - 1) * 0.8);
+	function collect(h, n = 1, at) {
+		tally[h.n].rings += n;
+		sound.ring((h.wall - 1) * 0.8);
 		if (at) sparkle(at, 0xfff2a0, 1.1);
 	}
 
 	const tmp = new THREE.Vector3();
-	function physics(dt) {
-		const sec = walls[hero.wall].section;
-		const b = body[relay.runner];
-		const live = relay.state === 'run';
-		const duck = live && (b.duck || keys.duck);
-		const jump = live && (b.jumped || keys.jumpEdge);
+	function physics(h, dt) {
+		const sec = walls[h.wall].section;
+		const b = body[h.n];
+		const live = h.state === 'run';
+		const desk = h.n === deskPlayer();
+		const duck = live && (b.duck || (desk && keys.duck));
+		const jump = live && (b.jumped || (desk && keys.jumpEdge));
 		if (live) b.jumped = false;
-		keys.jumpEdge = false;
-		hero.safe = Math.max(0, hero.safe - dt);
+		if (live && desk) keys.jumpEdge = false;
+		h.safe = Math.max(0, h.safe - dt);
 
 		// where he's heading: his runner's place along the wall, plus his lead
-		const along = runnerAlong();
-		if (live && along >= 1 - MAP.edge - 0.03) hero.lead = Math.min(COURSE.span, hero.lead + MAP.creep * dt);
-		const target = live ? mapU(along) + hero.lead : hero.u;
-		const want = Math.max(-RUN.top, Math.min(RUN.top, (target - hero.u) * RUN.gain));
+		const along = alongOf(h);
+		if (live && along >= 1 - MAP.edge - 0.03) h.lead = Math.min(COURSE.span, h.lead + MAP.creep * dt);
+		const target = live ? mapU(along) + h.lead : h.u;
+		const want = Math.max(-RUN.top, Math.min(RUN.top, (target - h.u) * RUN.gain));
 
-		if (hero.loop) {
+		if (h.loop) {
 			// round the loop: speed bleeds on the way up, comes back down
-			const L = hero.loop;
-			hero.v = Math.max(LOOP.speed * 0.75, hero.v - 9.8 * Math.sin(L.a) * dt * 0.6);
-			L.a += hero.v / L.r * dt;
+			const L = h.loop;
+			h.v = Math.max(LOOP.speed * 0.75, h.v - 9.8 * Math.sin(L.a) * dt * 0.6);
+			L.a += h.v / L.r * dt;
 			if (L.a >= TAU) {
-				hero.loop = null;
-				hero.u = L.l + 0.02;
-				hero.y = sec.height(hero.u);
-				hero.grounded = true;
-				hero.lead = Math.max(hero.lead, hero.u - mapU(along) + 0.6);
+				h.loop = null;
+				h.u = L.l + 0.02;
+				h.y = sec.height(h.u);
+				h.grounded = true;
+				h.lead = Math.max(h.lead, h.u - mapU(along) + 0.6);
 			} else {
-				hero.u = L.l + Math.sin(L.a) * L.r;
-				hero.y = L.r - Math.cos(L.a) * L.r;
+				h.u = L.l + Math.sin(L.a) * L.r;
+				h.y = L.r - Math.cos(L.a) * L.r;
 			}
-		} else if (hero.grounded) {
-			const slope = sec.slope(hero.u);
-			if (hero.charging) {
-				hero.v *= Math.exp(-dt * 12);
-				hero.chargeT += dt;
-				const level = Math.min(1, hero.chargeT / DASH.full);
-				if (hero.chargeT >= hero.revAt) { sound.rev(level); hero.revAt += 0.22; }
+		} else if (h.grounded) {
+			const slope = sec.slope(h.u);
+			if (h.charging) {
+				h.v *= Math.exp(-dt * 12);
+				h.chargeT += dt;
+				const level = Math.min(1, h.chargeT / DASH.full);
+				if (h.chargeT >= h.revAt) { sound.rev(level); h.revAt += 0.22; }
 				if (!duck) {
 					// let it go
-					hero.charging = false;
-					hero.v = hero.facing * (DASH.min + (DASH.max - DASH.min) * level);
+					h.charging = false;
+					h.v = h.facing * (DASH.min + (DASH.max - DASH.min) * level);
 					sound.dash();
-					flash = Math.max(flash, 0.15);
+					flash(h.wall, 0.15, false);
 				}
-			} else if (hero.ball) {
-				hero.v -= Math.sign(hero.v) * Math.min(Math.abs(hero.v), ROLL.friction * dt);
-				hero.v -= ROLL.slope * slope / (1 + slope * slope) * dt;
-				if (Math.abs(hero.v) < ROLL.stop) hero.ball = false;
-				hero.lead = Math.max(hero.lead, hero.u - mapU(along));
+			} else if (h.ball) {
+				h.v -= Math.sign(h.v) * Math.min(Math.abs(h.v), ROLL.friction * dt);
+				h.v -= ROLL.slope * slope / (1 + slope * slope) * dt;
+				if (Math.abs(h.v) < ROLL.stop) h.ball = false;
+				h.lead = Math.max(h.lead, h.u - mapU(along));
 			} else {
 				if (duck) {
 					// crouched: slow to a stop; curl up if he's going; rev if he's still
-					if (Math.abs(hero.v) >= ROLL.from) { hero.ball = true; sound.roll(); }
+					if (Math.abs(h.v) >= ROLL.from) { h.ball = true; sound.roll(); }
 					else {
-						hero.v *= Math.exp(-dt * 10);
-						hero.crouchT += dt;
-						if (hero.crouchT >= DASH.charge) { hero.charging = true; hero.chargeT = 0; hero.revAt = 0; hero.ball = true; }
+						h.v *= Math.exp(-dt * 10);
+						h.crouchT += dt;
+						if (h.crouchT >= DASH.charge) { h.charging = true; h.chargeT = 0; h.revAt = 0; h.ball = true; }
 					}
 				} else {
-					hero.crouchT = 0;
-					const dv = want - hero.v;
-					const rate = Math.sign(dv) === Math.sign(hero.v) || hero.v === 0 ? RUN.accel : RUN.brake;
-					hero.v += Math.max(-rate * dt, Math.min(rate * dt, dv));
-					hero.v -= RUN.slope * slope / (1 + slope * slope) * dt;
+					h.crouchT = 0;
+					const dv = want - h.v;
+					const rate = Math.sign(dv) === Math.sign(h.v) || h.v === 0 ? RUN.accel : RUN.brake;
+					h.v += Math.max(-rate * dt, Math.min(rate * dt, dv));
+					h.v -= RUN.slope * slope / (1 + slope * slope) * dt;
 				}
 			}
-			if (!duck) hero.crouchT = 0;
-			if (jump && !hero.charging) {
-				hero.vy = JUMP.speed;
-				hero.grounded = false;
-				hero.ball = true;
+			if (!duck) h.crouchT = 0;
+			if (jump && !h.charging) {
+				h.vy = JUMP.speed;
+				h.grounded = false;
+				h.ball = true;
 				sound.jump();
 			}
-			const was = hero.u;
-			hero.u += hero.v * dt;
+			const was = h.u;
+			h.u += h.v * dt;
 			// a loop: in fast enough at its foot, and round he goes
 			for (const L of sec.loops) {
-				if (hero.grounded && hero.v >= LOOP.min && was < L.u && hero.u >= L.u) {
-					hero.loop = { l: L.u, r: L.r, a: 0 };
-					hero.u = L.u;
-					hero.v = Math.max(hero.v, LOOP.speed);
+				if (h.grounded && h.v >= LOOP.min && was < L.u && h.u >= L.u) {
+					h.loop = { l: L.u, r: L.r, a: 0 };
+					h.u = L.u;
+					h.v = Math.max(h.v, LOOP.speed);
 				}
 			}
-			if (hero.grounded && !hero.loop) hero.y = sec.height(hero.u);
+			if (h.grounded && !h.loop) h.y = sec.height(h.u);
 		} else {
 			// in the air
-			hero.vy -= JUMP.gravity * dt;
-			if (!hero.hurt && live) hero.v += Math.max(-RUN.air * dt, Math.min(RUN.air * dt, want - hero.v));
-			hero.u += hero.v * dt;
-			hero.y += hero.vy * dt;
-			const ground = sec.height(hero.u);
-			if (hero.y <= ground && hero.vy <= 0) {
-				hero.y = ground;
-				hero.vy = 0;
-				hero.grounded = true;
-				hero.hurt = false;
-				hero.sprung = false;
-				hero.ball = duck && Math.abs(hero.v) >= ROLL.from;
+			h.vy -= JUMP.gravity * dt;
+			if (!h.hurt && live) h.v += Math.max(-RUN.air * dt, Math.min(RUN.air * dt, want - h.v));
+			h.u += h.v * dt;
+			h.y += h.vy * dt;
+			const ground = sec.height(h.u);
+			if (h.y <= ground && h.vy <= 0) {
+				h.y = ground;
+				h.vy = 0;
+				h.grounded = true;
+				h.hurt = false;
+				h.sprung = false;
+				h.ball = duck && Math.abs(h.v) >= ROLL.from;
 			}
 		}
 
 		// the left end of the stretch is a wall; the right end is the checkpoint
-		if (hero.u < 0.4) { hero.u = 0.4; hero.v = Math.max(0, hero.v); hero.lead = Math.max(hero.lead, 0.4 - mapU(along)); }
-		if (relay.state !== 'run' && hero.u > COURSE.checkpoint - 0.2) { hero.u = COURSE.checkpoint - 0.2; hero.v = Math.min(0, hero.v); }
-		if (Math.abs(hero.v) > 0.3 && !hero.charging && !hero.hurt) hero.facing = Math.sign(hero.v);
-		else if (live && !hero.charging && Math.abs(target - hero.u) > 0.4 && hero.grounded) hero.facing = Math.sign(target - hero.u);
+		if (h.u < 0.4) { h.u = 0.4; h.v = Math.max(0, h.v); h.lead = Math.max(h.lead, 0.4 - mapU(along)); }
+		if (h.state !== 'run' && h.u > COURSE.checkpoint - 0.2) { h.u = COURSE.checkpoint - 0.2; h.v = Math.min(0, h.v); }
+		if (Math.abs(h.v) > 0.3 && !h.charging && !h.hurt) h.facing = Math.sign(h.v);
+		else if (live && !h.charging && Math.abs(target - h.u) > 0.4 && h.grounded) h.facing = Math.sign(target - h.u);
 
-		if (live && hero.u >= COURSE.checkpoint) { handover(); return; }
-		if (live) touch(sec);
+		if (live && h.u >= COURSE.checkpoint) { checkpoint(h); return; }
+		if (live) touch(h, sec);
 	}
 
-	// Did he touch anything?
-	function touch(sec) {
-		const ball = hero.ball || hero.loop;
-		const cy = hero.y + (hero.ball ? 0.55 : 0.95) * HERO.scale;   // (his middle)
+	// Did he touch anything? (Rings, robots and monitors are shared: whoever
+	// gets there first; they come back after a while for the next one.)
+	function touch(h, sec) {
+		const ball = h.ball || h.loop;
+		const cy = h.y + (h.ball ? 0.55 : 0.95) * HERO.scale;   // (his middle)
 		for (const it of sec.items) {
 			if (!it.alive) continue;
-			const du = it.u - hero.u;
+			const du = it.u - h.u;
 			if (it.type === 'ring') {
 				if (du * du + (it.y - cy) * (it.y - cy) < 0.5 * 0.5) {
-					it.alive = false;
-					it.mesh.visible = false;
-					collect(1, it.mesh.getWorldPosition(tmp));
+					take(it, RESPAWN.ring);
+					collect(h, 1, it.mesh.getWorldPosition(tmp));
 				}
 			} else if (it.type === 'spikes') {
-				if (Math.abs(du) < it.half + 0.3 && hero.y - it.y < 0.55 && !hero.loop) hurt();
+				if (Math.abs(du) < it.half + 0.3 && h.y - it.y < 0.55 && !h.loop) hurt(h);
 			} else if (it.type === 'spring') {
-				if (Math.abs(du) < 0.55 && hero.y - it.y < 0.6 && (hero.grounded || hero.vy <= 0) && !hero.loop) {
-					hero.vy = SPRING;
-					hero.grounded = false;
-					hero.ball = false;
-					hero.charging = false;
-					hero.sprung = true;
+				if (Math.abs(du) < 0.55 && h.y - it.y < 0.6 && (h.grounded || h.vy <= 0) && !h.loop) {
+					h.vy = SPRING;
+					h.grounded = false;
+					h.ball = false;
+					h.charging = false;
+					h.sprung = true;
 					it.squash = 1;
 					sound.spring();
 				}
 			} else if (it.type === 'monitor') {
-				const over = Math.abs(du) < it.half + 0.25 && hero.y - it.y < it.tall + 0.1;
+				const over = Math.abs(du) < it.half + 0.25 && h.y - it.y < it.tall + 0.1;
 				if (!over) continue;
-				if (ball || (!hero.grounded && hero.vy < 0 && hero.y - it.y > it.tall * 0.6)) {
-					it.alive = false;
-					it.mesh.visible = false;
+				if (ball || (!h.grounded && h.vy < 0 && h.y - it.y > it.tall * 0.6)) {
+					take(it, RESPAWN.other);
 					const at = it.mesh.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.6, 0));
 					sparkle(at, 0xffffff, 3);
 					sound.monitor();
-					if (!hero.grounded) { hero.vy = Math.max(hero.vy, JUMP.bounce * 0.8); }
+					if (!h.grounded) { h.vy = Math.max(h.vy, JUMP.bounce * 0.8); }
 					if (it.kind === 'shield') {
-						hero.shield = true;
-						pop('SHIELD!', '#9fe8ff', hero.wall, it.u, it.y + 2);
+						h.shield = true;
+						pop('SHIELD!', '#9fe8ff', h.wall, it.u, it.y + 2);
 					} else {
-						for (let i = 0; i < SCORE.monitor; i++) stage.timeout(() => collect(1), i * 60);
-						pop('+' + SCORE.monitor, '#ffd23a', hero.wall, it.u, it.y + 2);
+						for (let i = 0; i < SCORE.monitor; i++) stage.timeout(() => collect(h, 1), i * 60);
+						pop('+' + SCORE.monitor, '#ffd23a', h.wall, it.u, it.y + 2);
 					}
-				} else if (hero.grounded) {
+				} else if (h.grounded) {
 					// solid: he bumps up against it
-					hero.u = it.u - Math.sign(du || 1) * (it.half + 0.25);
-					hero.v = 0;
+					h.u = it.u - Math.sign(du || 1) * (it.half + 0.25);
+					h.v = 0;
 				}
 			} else if (it.type === 'gearhog' || it.type === 'drone') {
 				const by = it.type === 'drone' ? it.y : it.y + 0.7;
 				const dy = by - cy;
 				if (du * du + dy * dy > 0.75 * 0.75) continue;
-				if (ball || (!hero.grounded && hero.vy < 0 && cy > by)) {
+				if (ball || (!h.grounded && h.vy < 0 && cy > by)) {
 					// popped
-					it.alive = false;
-					it.mesh.visible = false;
-					tally[relay.runner].bots++;
+					take(it, RESPAWN.other);
+					tally[h.n].bots++;
 					sparkle(it.mesh.getWorldPosition(new THREE.Vector3()), 0xffffff, 3);
 					sparkle(it.mesh.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.5, 0)), 0xffd23a, 2);
 					sound.pop();
 					show.shake = Math.max(show.shake, 0.15);
-					pop('+' + SCORE.bot, colourOf(relay.runner), hero.wall, it.u, by + 1.2);
-					if (!hero.grounded) hero.vy = JUMP.bounce;
-				} else hurt();
+					pop('+' + SCORE.bot, colourOf(h.n), h.wall, it.u, by + 1.2);
+					if (!h.grounded) h.vy = JUMP.bounce;
+				} else hurt(h);
 			}
 		}
 		// the spilled rings, once they've had a moment
-		const wall = walls[hero.wall];
+		const wall = walls[h.wall];
 		for (const s of wall.spill) {
 			if (s.age < 0.6 || s.gone) continue;
-			const du = s.u - hero.u;
+			const du = s.u - h.u;
 			const dy = s.y - cy;
 			if (du * du + dy * dy < 0.45 * 0.45) {
 				s.gone = true;
-				collect(1, s.mesh.getWorldPosition(tmp));
+				collect(h, 1, s.mesh.getWorldPosition(tmp));
 			}
 		}
+	}
+
+	// Taken: gone for a while, then back (with a sparkle) for whoever's next.
+	function take(it, seconds) {
+		it.alive = false;
+		it.mesh.visible = false;
+		it.back = seconds;
 	}
 
 	/* ---------- every frame ---------- */
@@ -730,29 +757,39 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 
 	function simulate(dt) {
 		clock += dt;
-		flash *= Math.exp(-dt * 5);
+		for (const f of flashes) f.v *= Math.exp(-dt * 5);
 
 		if (count) for (let i = 0; i < count; i++) readBody(i, dt);
-		if (relay.state !== 'idle' && relay.state !== 'over') stepRelay(dt);
+		for (const h of heroes) if (h.state !== 'idle' && h.state !== 'over') stepHero(h, dt);
 
-		// the hero, in small fixed steps
+		// the heroes, in small fixed steps
 		acc += dt;
 		let n = 0;
 		while (acc >= STEP && n < 12) {
 			acc -= STEP;
 			n++;
-			if (relay.state !== 'zip') physics(STEP);
+			for (const h of heroes) if (h.state !== 'zip') physics(h, STEP);
 		}
+		if (n) keys.jumpEdge = false;
 		if (n >= 12) acc = 0;
 
-		poseHero(dt);
+		for (const h of heroes) poseHero(h, dt);
 
 		// the things on each stretch come alive
 		for (let w = 0; w < 3; w++) {
 			const wall = walls[w];
 			const sec = wall.section;
 			for (const it of sec.items) {
-				if (!it.alive) continue;
+				if (!it.alive) {
+					// taken: back after a while
+					if (it.back !== undefined && (it.back -= dt) <= 0) {
+						it.alive = true;
+						it.mesh.visible = true;
+						it.back = undefined;
+						sparkle(it.mesh.getWorldPosition(new THREE.Vector3()), 0xffffff, 1.2);
+					}
+					continue;
+				}
 				if (it.type === 'ring') {
 					it.spin += dt * 3;
 					it.mesh.rotation.y = it.spin;
@@ -800,13 +837,18 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 				wall.group.remove(s.mesh);
 				wall.spill.splice(wall.spill.indexOf(s), 1);
 			}
-			// a stretch left behind: sinks, and rises anew
+			// a stretch left behind: once nobody's on it, it sinks and rises anew
+			// (if someone arrives first, it stays as it is)
 			if (wall.swap) {
 				const sw = wall.swap;
+				const busy = heroes.some((h) => h.wall === w || (h.state === 'zip' && h.zip.w1 === w));
 				sw.t += dt;
-				if (sw.t > 0 && !sw.built) {
+				if (!sw.built && busy) {
+					sec.group.position.y = 0;
+					sw.t = Math.min(sw.t, 0);
+				} else if (sw.t > 0 && !sw.built) {
 					sec.group.position.y = -Math.pow(Math.min(1, sw.t / REBUILD.sink), 2) * 7;
-					if (sw.t >= REBUILD.sink && hero.wall !== w) {
+					if (sw.t >= REBUILD.sink) {
 						wall.group.remove(sec.group);
 						sec.dispose();
 						wall.section = newSection(w, false);
@@ -852,36 +894,37 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 		return Math.atan2(-fx, -fz);
 	}
 
-	function poseHero(dt) {
-		const m = hero.model;
-		hero.holder.rotation.y = YAW[hero.wall];
-		m.root.position.set(hero.u - HALF, GROUND + hero.y, -COURSE.depth);
-		hero.turn += ((hero.loop ? 0 : HERO.turn) - hero.turn) * Math.min(1, dt * 10);
-		const goal = facingYaw(hero.facing, hero.turn);
-		let d = goal - hero.yaw;
+	function poseHero(h, dt) {
+		const m = h.model;
+		h.holder.rotation.y = YAW[h.wall];
+		m.root.position.set(h.u - HALF, GROUND + h.y, -h.depth);
+		h.turn += ((h.loop ? 0 : HERO.turn) - h.turn) * Math.min(1, dt * 10);
+		const goal = facingYaw(h.facing, h.turn);
+		let d = goal - h.yaw;
 		d = Math.atan2(Math.sin(d), Math.cos(d));
-		hero.yaw += d * Math.min(1, dt * 14);
-		m.root.rotation.y = hero.yaw;
-		const sec = walls[hero.wall].section;
-		if (hero.loop) m.lean.rotation.x = hero.loop.a;
-		else if (hero.grounded && relay.state !== 'zip') m.lean.rotation.x += (hero.facing * Math.atan(sec.slope(hero.u)) - m.lean.rotation.x) * Math.min(1, dt * 12);
+		h.yaw += d * Math.min(1, dt * 14);
+		m.root.rotation.y = h.yaw;
+		const sec = walls[h.wall].section;
+		if (h.loop) m.lean.rotation.x = h.loop.a;
+		else if (h.grounded && h.state !== 'zip') m.lean.rotation.x += (h.facing * Math.atan(sec.slope(h.u)) - m.lean.rotation.x) * Math.min(1, dt * 12);
 		else m.lean.rotation.x *= Math.exp(-dt * 8);
-		const pace = Math.min(1, Math.abs(hero.v) / RUN.top);
-		const b = count ? body[relay.runner] : null;
+		const pace = Math.min(1, Math.abs(h.v) / RUN.top);
+		const b = body[h.n];
+		const ducking = b && (b.duck || (h.n === deskPlayer() && keys.duck));
 		let mode = 'run';
 		let spin = 0;
-		if (relay.state === 'zip') { mode = 'ball'; spin = 50; }
-		else if (hero.charging) { mode = 'ball'; spin = 20 + Math.min(1, hero.chargeT / DASH.full) * 40; }
-		else if (hero.hurt) mode = 'hurt';
-		else if (hero.sprung) mode = 'spring';
-		else if (hero.ball) { mode = 'ball'; spin = 14 + Math.abs(hero.v) * 4; }
-		else if (hero.grounded && relay.state === 'run' && b && (b.duck || keys.duck)) mode = 'crouch';
-		else if (relay.state !== 'run' && relay.state !== 'over') mode = 'idle';
-		m.pose(dt, mode, pace, spin * (hero.facing || 1), clock);
-		m.bubble.visible = hero.shield;
-		if (hero.shield) m.bubble.scale.setScalar(1 + Math.sin(clock * 6) * 0.04);
+		if (h.state === 'zip') { mode = 'ball'; spin = 50; }
+		else if (h.charging) { mode = 'ball'; spin = 20 + Math.min(1, h.chargeT / DASH.full) * 40; }
+		else if (h.hurt) mode = 'hurt';
+		else if (h.sprung) mode = 'spring';
+		else if (h.ball) { mode = 'ball'; spin = 14 + Math.abs(h.v) * 4; }
+		else if (h.grounded && h.state === 'run' && ducking) mode = 'crouch';
+		else if (h.state !== 'run' && h.state !== 'over') mode = 'idle';
+		m.pose(dt, mode, pace, spin * (h.facing || 1), clock + h.n);
+		m.bubble.visible = h.shield;
+		if (h.shield) m.bubble.scale.setScalar(1 + Math.sin(clock * 6) * 0.04);
 		// blinking while he's safe after a knock
-		m.root.visible = !(hero.safe > 0 && !hero.hurt && Math.floor(clock * 16) % 2);
+		m.root.visible = !(h.safe > 0 && !h.hurt && Math.floor(clock * 16) % 2);
 	}
 
 	function render() {
@@ -907,67 +950,66 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 			const at = onWall(worldOf(p.wall, p.u, p.y), p.wall);
 			if (!at) continue;
 			const e = p.age / 1.1;
-			label(ctx, p.text, at.x, at.y - e * 80, 64 * (e < 0.15 ? e / 0.15 : 1), p.colour, { alpha: 1 - Math.max(0, e - 0.6) / 0.4 });
+			label(ctx, p.text, at.x, at.y - e * 80, 56 * (e < 0.15 ? e / 0.15 : 1), p.colour, { alpha: 1 - Math.max(0, e - 0.6) / 0.4 });
 		}
-		// a boost's white, a knock's red
-		if (flash > 0.02) art.rect(ctx, hero.wall * W, 0, W, H, { fill: hero.hurt ? `rgba(255,50,70,${flash * 0.35})` : `rgba(255,255,255,${flash * 0.5})` });
-		// speed streaks behind him when he's flying
-		const fast = Math.abs(hero.v) > 8 || relay.state === 'zip';
-		if (fast && count) {
-			const at = onWall(hero.model.root.getWorldPosition(tmp).add(pv.set(0, 0.9, 0)), hero.wall);
-			if (at) {
-				ctx.save();
-				ctx.globalCompositeOperation = 'lighter';
-				ctx.lineCap = 'round';
-				for (let i = 0; i < 6; i++) {
-					const y = at.y - 90 + i * 32 + Math.sin(clock * 40 + i) * 6;
-					const len = 140 + ((i * 53) % 90);
-					const dir = -Math.sign(hero.v || 1);
-					ctx.strokeStyle = `rgba(255,255,255,${0.35 - i * 0.03})`;
-					ctx.lineWidth = 7 - i * 0.6;
-					ctx.beginPath();
-					ctx.moveTo(at.x + dir * 70, y);
-					ctx.lineTo(at.x + dir * (70 + len), y);
-					ctx.stroke();
-				}
-				ctx.restore();
+		// a dash's white, a knock's red, over the wall it happened on
+		flashes.forEach(function (f, w) {
+			if (f.v > 0.02) art.rect(ctx, w * W, 0, W, H, { fill: f.red ? `rgba(255,50,70,${f.v * 0.3})` : `rgba(255,255,255,${f.v * 0.45})` });
+		});
+		// speed streaks behind anyone flying
+		for (const h of heroes) {
+			if (!(Math.abs(h.v) > RUN.top * 0.8 || h.state === 'zip')) continue;
+			const at = onWall(h.model.root.getWorldPosition(tmp).add(pv.set(0, 0.5, 0)), h.wall);
+			if (!at) continue;
+			ctx.save();
+			ctx.globalCompositeOperation = 'lighter';
+			ctx.lineCap = 'round';
+			for (let i = 0; i < 5; i++) {
+				const y = at.y - 50 + i * 22 + Math.sin(clock * 40 + i + h.n) * 4;
+				const len = 90 + ((i * 53) % 60);
+				const dir = -Math.sign(h.v || 1);
+				ctx.strokeStyle = `rgba(255,255,255,${0.35 - i * 0.04})`;
+				ctx.lineWidth = 5 - i * 0.5;
+				ctx.beginPath();
+				ctx.moveTo(at.x + dir * 40, y);
+				ctx.lineTo(at.x + dir * (40 + len), y);
+				ctx.stroke();
 			}
+			ctx.restore();
 		}
 	}
 
-	// The relay's words: who's running, PLAYER N, GO!, where to stand, who's next.
-	function relayOverlay(ctx) {
+	// The run's words: each hero's tag, GO!, where to stand.
+	function runOverlay(ctx) {
 		if (!count) return;
-		const r = relay.runner;
-		const colour = colourOf(r);
-		// the runner's tag over the hero
-		if (relay.state !== 'zip' && relay.state !== 'over') {
-			const at = onWall(hero.model.root.getWorldPosition(tmp).add(pv.set(0, 2.5 * HERO.scale, 0)), hero.wall);
-			if (at) label(ctx, 'P' + (r + 1), at.x, at.y - 20 + Math.sin(clock * 4) * 6, 46, colour);
-		}
-		// lap, top left of the wall being run; who's next, on the next wall
-		label(ctx, 'LAP ' + (Math.floor(relay.leg / 3) + 1), hero.wall * W + 60, 70, 40, '#ffffff', { align: 'left' });
-		if (count > 1 && relay.state !== 'over') {
-			const next = (relay.leg + 1) % count;
-			const nw = (hero.wall + (relay.state === 'zip' ? 0 : 1)) % 3;
-			if (relay.state === 'run') label(ctx, `NEXT UP HERE: PLAYER ${next + 1}`, nw * W + W / 2, 180, 44, colourOf(next));
+		// each hero's tag, in their colour, with the lap they're on
+		for (const h of heroes) {
+			if (h.state === 'zip' || h.state === 'over') continue;
+			const at = onWall(h.model.root.getWorldPosition(tmp).add(pv.set(0, 2.4 * HERO.scale, 0)), h.wall);
+			if (at) label(ctx, 'P' + (h.n + 1), at.x, at.y - 20 + Math.sin(clock * 4 + h.n) * 5, 40, colourOf(h.n));
 		}
 		show.onWalls(ctx, function (c, w) {
-			if (relay.state === 'banner') {
-				show.slam(c, `PLAYER ${r + 1}, GO!`, W / 2, 300, 150, relay.t, { fill: colour, glow: colour });
-				if (w === hero.wall && relay.leg < count && relay.t > 0.5) {
-					show.text(c, 'WALK RIGHT ▶   STAND TALL TO JUMP   SQUAT TO ROLL', W / 2, 430, 46, { fill: 'white', alpha: Math.min(1, (relay.t - 0.5) * 3) });
+			// (a line each for the heroes on this wall who are starting)
+			const here = heroes.filter((h) => h.wall === w && (h.state === 'banner' || h.state === 'wait'));
+			here.forEach(function (h, i) {
+				const y = 260 + i * 130;
+				const colour = colourOf(h.n);
+				if (h.state === 'banner') {
+					show.slam(c, `PLAYER ${h.n + 1}, GO!`, W / 2, y, here.length > 1 ? 100 : 140, h.t, { fill: colour, glow: colour });
+				} else {
+					const pulse = 1 + Math.sin(clock * 6 + h.n) * 0.05;
+					c.save();
+					c.translate(W / 2, y);
+					c.scale(pulse, pulse);
+					show.text(c, `PLAYER ${h.n + 1}: START AT THE LEFT ◀`, 0, 0, 64, { fill: colour });
+					c.restore();
 				}
-			} else if (relay.state === 'wait' && w === hero.wall) {
-				const pulse = 1 + Math.sin(clock * 6) * 0.05;
-				c.save();
-				c.translate(W / 2, 300);
-				c.scale(pulse, pulse);
-				show.text(c, `PLAYER ${r + 1}: START AT THE LEFT`, 0, 0, 80, { fill: colour });
-				c.restore();
-				label(c, '◀', 120 + Math.sin(clock * 8) * 20, 520, 160, colour);
-			} else if (relay.state === 'run' && relay.t < 2.5 && relay.leg < count && w === hero.wall) {
-				show.text(c, 'SQUAT STILL, THEN STAND: SPIN DASH!', W / 2, 260, 46, { fill: '#ffd23a', alpha: Math.min(1, relay.t * 3) * Math.min(1, (2.5 - relay.t) * 3) });
+			});
+			// the moves, once, at the start
+			const first = heroes.find((h) => h.wall === w && h.legs === 0 && (h.state === 'banner' || (h.state === 'run' && h.t < 3)));
+			if (first) {
+				const a = first.state === 'banner' ? Math.min(1, Math.max(0, (first.t - 0.5) * 3)) : Math.min(1, (3 - first.t) * 3);
+				show.text(c, 'WALK RIGHT ▶   STAND TALL TO JUMP   SQUAT TO ROLL', W / 2, 160, 42, { fill: 'white', alpha: a });
 			}
 		});
 	}
@@ -1005,8 +1047,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 	// For tests and the console: where the game is up to.
 	self.state = function () {
 		return Object.assign(show.state(), {
-			relay: { state: relay.state, leg: relay.leg, runner: relay.runner, wall: hero.wall },
-			hero: { u: hero.u, y: hero.y, v: hero.v, grounded: hero.grounded, ball: hero.ball, charging: hero.charging, loop: !!hero.loop, lead: hero.lead },
+			heroes: heroes.map((h) => ({ n: h.n, state: h.state, wall: h.wall, legs: h.legs, u: h.u, y: h.y, v: h.v, grounded: h.grounded, ball: h.ball, charging: h.charging, loop: !!h.loop, lead: h.lead })),
 			body: body.map((b) => ({ py: b.py, stand: b.stand, up: b.up, duck: b.duck })),
 			tally: tally.map((t) => Object.assign({}, t)),
 			scores: scores(),

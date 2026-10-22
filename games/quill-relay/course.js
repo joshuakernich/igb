@@ -83,27 +83,21 @@ export function buildSection({ C, mats, rand, gentle }) {
 	// three slots between the flat ends; a loop takes two side by side
 	const SLOTS = C.slots;
 	const plan = [];
-	if (gentle) {
-		plan.push({ a: SLOTS[0][0], b: SLOTS[0][1], ground: 'hill', thing: 'rings' });
-		plan.push({ a: SLOTS[1][0], b: SLOTS[1][1], ground: 'flat', thing: 'gearhog' });
-		plan.push({ a: SLOTS[2][0], b: SLOTS[2][1], ground: 'flat', thing: 'monitor' });
-	} else {
-		let loop = rand() < C.loopChance ? (rand() < 0.5 ? 0 : 1) : -1;
-		for (let s = 0; s < SLOTS.length; s++) {
-			if (s === loop) {
-				plan.push({ a: SLOTS[s][0], b: SLOTS[s + 1][1], ground: 'flat', thing: 'loop' });
-				s++;
-				continue;
-			}
-			const r = rand();
-			const ground = r < 0.45 ? 'flat' : r < 0.78 ? 'hill' : 'dip';
-			const pick = (list) => list[Math.floor(rand() * list.length)];
-			const thing = ground === 'flat' ? pick(['spring', 'spikes', 'gearhog', 'drone', 'monitor', 'gearhog', 'spikes'])
-				: ground === 'hill' ? pick(['rings', 'drone', 'rings', 'spikes'])
-				: pick(['rings', 'gearhog']);
-			plan.push({ a: SLOTS[s][0], b: SLOTS[s][1], ground, thing });
-		}
-	}
+	// Kept simple: flat ground and lines of rings, at most one low hill, and
+	// at most ONE feature a wall (a loop, a robot or a monitor). The first
+	// wall of the game has just rings and a hill.
+	const r = gentle ? 1 : rand();
+	const feature = r < C.loopChance ? 'loop'
+		: r < C.loopChance + C.botChance ? 'gearhog'
+		: r < C.loopChance + C.botChance + C.monitorChance ? 'monitor' : null;
+	const slots = SLOTS.map((s) => ({ a: s[0], b: s[1], ground: 'flat', thing: 'rings' }));
+	if (feature === 'loop') {
+		const s = rand() < 0.5 ? 0 : 1;
+		slots.splice(s, 2, { a: SLOTS[s][0], b: SLOTS[s + 1][1], ground: 'flat', thing: 'loop' });
+	} else if (feature) slots[Math.floor(rand() * 3)].thing = feature;
+	const open = slots.filter((p) => p.thing === 'rings');
+	if (open.length && (gentle || rand() < C.hillChance)) open[Math.floor(rand() * open.length)].ground = 'hill';
+	plan.push(...slots);
 
 	// the ground first (the things sit on it)
 	for (const p of plan) {
