@@ -98,7 +98,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	const world = createSky(renderer, scene);
 	// Bloom: the sun, its glitter on the sea, the road's neon edges, warning
 	// lamps, sparkles and boost trails all glow (anything past the threshold).
-	postfx = createWallComposer(renderer, scene, { strength: 0.55, radius: 0.55, threshold: 0.9 });
+	postfx = createWallComposer(renderer, scene, { strength: 0.28, radius: 0.4, threshold: 1.0, cap: 1.8 });   // (kept gentle: a glow, not a haze)
 	world.ocean.renderOrder = -5;
 	world.ocean.material.depthWrite = false;
 
