@@ -247,9 +247,9 @@ function furNormalMap() {
 	for (let i = 0; i < 14000; i++) {
 		const x = Math.random() * N, y = Math.random() * N;
 		const a = Math.PI / 2 + (Math.random() - 0.5) * 0.9;   // (mostly lying along v)
-		const len = 5 + Math.random() * 9;
-		const v = Math.floor(90 + Math.random() * 120);
-		g.strokeStyle = `rgba(${v},${v},${v},0.55)`;
+		const len = 7 + Math.random() * 14;
+		const v = Math.floor(60 + Math.random() * 170);
+		g.strokeStyle = `rgba(${v},${v},${v},0.7)`;
 		g.lineWidth = 0.8 + Math.random() * 1.4;
 		for (const [ox, oy] of [[0, 0], [N, 0], [-N, 0], [0, N], [0, -N]]) {   // (wrapped, so it tiles)
 			g.beginPath();
@@ -263,7 +263,7 @@ function furNormalMap() {
 	const out = g.createImageData(N, N);
 	const H = (x, y) => h[(((y + N) % N) * N + ((x + N) % N)) * 4] / 255;
 	for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-		const dx = (H(x + 1, y) - H(x - 1, y)) * 2.2, dy = (H(x, y + 1) - H(x, y - 1)) * 2.2;
+		const dx = (H(x + 1, y) - H(x - 1, y)) * 3.2, dy = (H(x, y + 1) - H(x, y - 1)) * 3.2;
 		const l = Math.hypot(dx, dy, 1);
 		const k = (y * N + x) * 4;
 		out.data[k] = (-dx / l * 0.5 + 0.5) * 255;
@@ -278,9 +278,41 @@ function furNormalMap() {
 	furMap.anisotropy = 4;
 	return furMap;
 }
+let furStreaks = null;
+function furStreakMap() {
+	if (furStreaks) return furStreaks;
+	const N = 512;
+	const c = document.createElement('canvas');
+	c.width = c.height = N;
+	const g = c.getContext('2d');
+	g.fillStyle = '#f2f2f2';
+	g.fillRect(0, 0, N, N);
+	g.lineCap = 'round';
+	// long soft streaks, a little darker or lighter, lying along the fur
+	for (let i = 0; i < 900; i++) {
+		const x = Math.random() * N, y = Math.random() * N;
+		const a = Math.PI / 2 + (Math.random() - 0.5) * 0.5;
+		const len = 20 + Math.random() * 60;
+		const dark = Math.random() < 0.6;
+		g.strokeStyle = dark ? `rgba(0,0,0,${0.05 + Math.random() * 0.08})` : `rgba(255,255,255,${0.1 + Math.random() * 0.15})`;
+		g.lineWidth = 1.5 + Math.random() * 4;
+		for (const [ox, oy] of [[0, 0], [N, 0], [-N, 0], [0, N], [0, -N]]) {
+			g.beginPath();
+			g.moveTo(x + ox, y + oy);
+			g.lineTo(x + ox + Math.cos(a) * len, y + oy + Math.sin(a) * len);
+			g.stroke();
+		}
+	}
+	furStreaks = new THREE.CanvasTexture(c);
+	furStreaks.colorSpace = THREE.SRGBColorSpace;
+	furStreaks.wrapS = furStreaks.wrapT = THREE.RepeatWrapping;
+	furStreaks.repeat.set(3, 3);
+	furStreaks.anisotropy = 4;
+	return furStreaks;
+}
 function fur(color, extra = {}) {
 	const sheenColor = new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.45);
-	return new THREE.MeshPhysicalMaterial(Object.assign({ color, roughness: 0.62, metalness: 0, sheen: 1, sheenColor, sheenRoughness: 0.42, normalMap: furNormalMap(), normalScale: new THREE.Vector2(0.55, 0.55), clearcoat: 0.12, clearcoatRoughness: 0.4, envMapIntensity: 0.9 }, extra));
+	return new THREE.MeshPhysicalMaterial(Object.assign({ color, roughness: 0.62, metalness: 0, sheen: 1, sheenColor, sheenRoughness: 0.42, map: furStreakMap(), normalMap: furNormalMap(), normalScale: new THREE.Vector2(1.0, 1.0), clearcoat: 0.12, clearcoatRoughness: 0.4, envMapIntensity: 0.9 }, extra));
 }
 
 /* ---------- the speedster ---------- */
@@ -291,7 +323,7 @@ export function buildSpeedster(colour) {
 	root.add(lean);
 
 	const skin = fur(colour);   // (soft fur all over)
-	const tan = fur(0xf6d2a2, { normalScale: new THREE.Vector2(0.4, 0.4) });
+	const tan = fur(0xf6d2a2, { normalScale: new THREE.Vector2(0.7, 0.7) });
 	const white = glossy(0xffffff, { clearcoat: 0.9, roughness: 0.25 });
 	const glove = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.55, sheen: 1, sheenColor: 0xffffff, sheenRoughness: 0.4 });
 	const black = glossy(0x0c0c14, { roughness: 0.15 });
@@ -383,17 +415,17 @@ export function buildSpeedster(colour) {
 	};
 	quill(B(0, 0.315, -0.215), B(0, 0.52, 0.17), B(0, 0.25, 0.76), 0.2);              // over the top
 	for (const s of [-1, 1]) quill(B(s * 0.27, 0.12, -0.16), B(s * 0.27, 0.1, 0.22), B(s * 0.13, -0.02, 0.68), 0.16);   // round each side, close in toward the top one (shorter than it)
-	quill(B(0, -0.24, 0.22), B(0, -0.27, 0.46), B(0, -0.2, 0.66), 0.16);              // low at the back (shorter, tucked in under the side ones)
+	quill(B(0, -0.1, 0.3), B(0, -0.12, 0.52), B(0, -0.06, 0.7), 0.16);               // lower at the back (shorter, tucked in under the side ones)
 	// ears: big, forward, just above the eyes, flattened front to back, the tan inside facing forward
 	for (const s of [-1, 1]) {
 		const ear = new THREE.Group();
-		ear.position.copy(B(s * 0.2, 0.27, -0.1));
+		ear.position.copy(B(s * 0.24, 0.26, -0.09));
 		ear.rotation.z = -s * 0.22;
 		ear.scale.z = 0.45;   // (flattened at the front)
 		head.add(ear);
-		// (rounded: full most of the way up, then a dome over the top)
-		const round = (R) => (t) => Math.max(0.004, R * Math.sqrt(Math.max(0, 1 - Math.pow(t, 2.6))));
-		for (const [mat, a, c, b, R] of [[skin, V(0, -0.02, 0), V(s * 0.03, 0.16, 0), V(s * 0.04, 0.33, 0.02), 0.15], [tan, V(0, 0.04, -0.07), V(s * 0.03, 0.16, -0.07), V(s * 0.036, 0.28, -0.06), 0.09]]) {
+		// (full low down, easing to a soft point: between a cone and a dome)
+		const round = (R) => (t) => Math.max(0.004, R * Math.pow(Math.max(0, 1 - Math.pow(t, 1.7)), 0.75));
+		for (const [mat, a, c, b, R] of [[skin, V(0, -0.02, 0), V(s * 0.03, 0.12, 0), V(s * 0.045, 0.25, 0.02), 0.13], [tan, V(0, 0.03, -0.065), V(s * 0.03, 0.12, -0.065), V(s * 0.04, 0.21, -0.055), 0.077]]) {
 			const e = hose(mat, 0, 0, { segs: 24, radial: 16, capA: true, capB: false, profile: round(R) });
 			e.update(a, c, b);
 			e.geometry.computeBoundingSphere();
@@ -403,11 +435,25 @@ export function buildSpeedster(colour) {
 	}
 
 	// gloves: a puffy hand, a thumb and a rolled cuff
+	// hands: a small flat palm, four noodly fingers and a thumb growing out of it
+	// with no joints (each starts inside the palm and tapers out, curling a little
+	// to a rounded tip), and a slim cuff at the wrist. Up the arm is +y.
 	function buildGlove() {
 		const g = new THREE.Group();
-		add(g, new THREE.SphereGeometry(0.14, 24, 18), glove, 0, 0, 0, 1, 1.05, 1.1);
-		add(g, new THREE.SphereGeometry(0.06, 14, 10), glove, 0.085, 0.055, -0.085);
-		const cuff = add(g, new THREE.TorusGeometry(0.085, 0.04, 10, 24), glove, 0, 0.13, 0);
+		add(g, new THREE.SphereGeometry(0.06, 24, 16), glove, 0, -0.01, 0, 1.05, 1.15, 0.45);   // the palm, flat
+		const finger = (a, c, b, r) => {
+			const f = hose(glove, 0, 0, { segs: 18, radial: 10, capA: true, capB: true, profile: (t) => r * (1 + 0.7 * Math.pow(1 - t, 4)) * (1 - 0.25 * t) });
+			f.update(a, c, b);
+			f.geometry.computeBoundingSphere();
+			f.castShadow = true;
+			g.add(f);
+		};
+		for (const x of [-0.033, -0.011, 0.011, 0.033]) {
+			const len = 0.12 - Math.abs(x) * 0.9;
+			finger(V(x * 0.8, -0.02, 0), V(x * 1.15, -0.03 - len * 0.6, 0.004), V(x * 1.3, -0.03 - len, 0.035), 0.0145);
+		}
+		finger(V(0.03, 0.0, 0.005), V(0.07, -0.02, 0.02), V(0.08, -0.06, 0.045), 0.015);   // the thumb
+		const cuff = add(g, new THREE.TorusGeometry(0.045, 0.02, 10, 24), glove, 0, 0.055, 0);
 		cuff.rotation.x = Math.PI / 2;
 		lean.add(g);
 		return g;
@@ -427,7 +473,7 @@ export function buildSpeedster(colour) {
 
 	// the noodle limbs: legs from the hips, arms from the shoulders
 	const legs = [-1, 1].map((s) => ({ s, tube: hose(skin, 0.045, 0.037), shoe: buildShoe(), hip: V(s * 0.075, 0.1, 0.02) }));   // (hips up inside the body: the legs come out of it)
-	const arms = [-1, 1].map((s) => ({ s, tube: hose(skin, 0.032, 0.028), glove: buildGlove(), shoulder: V(s * 0.17, 0.38, 0.0) }));
+	const arms = [-1, 1].map((s) => ({ s, tube: hose(skin, 0.032, 0.028), glove: buildGlove(), shoulder: V(s * 0.05, 0.35, 0.0), corner: V(s * 0.25, 0.39, 0.0) }));   // (it starts inside the torso and curves out through the shoulder corner)
 	for (const l of legs) lean.add(l.tube);
 	for (const a of arms) torso.add(a.tube);
 	// (the arms ride the torso: their hands are placed in its space, then carried into the lean's for the gloves)
@@ -506,7 +552,8 @@ export function buildSpeedster(colour) {
 	function placeArm(a, hx, hy, hz, bowOut = 0.08, bowBack = 0.1) {
 		sh.copy(a.shoulder);
 		hand.set(hx, hy, hz);
-		elbow.lerpVectors(sh, hand, 0.5).add(tmp.set(a.s * bowOut, 0.02, bowBack));
+		// the bend: out through the shoulder corner, then bowing toward the hand
+		elbow.copy(a.corner).lerp(hand, 0.3).add(tmp.set(a.s * bowOut * 0.6, 0.0, bowBack * 0.6));
 		a.tube.update(sh, elbow, hand);
 		// the glove, on the end of the arm: its cuff over the arm's end, turned
 		// up the arm (the way it leaves the elbow), carried into the lean's space
@@ -517,7 +564,7 @@ export function buildSpeedster(colour) {
 		a.glove.quaternion.copy(torso.quaternion).multiply(gloveQ);
 	}
 	const gloveDir = V(0, 0, 0), gloveQ = new THREE.Quaternion(), UP = V(0, 1, 0);
-	const GLOVE_REACH = 0.1;   // (from the arm's end to the middle of the glove: the cuff sits on the end)
+	const GLOVE_REACH = 0.045;   // (from the arm's end to the middle of the palm: the cuff sits on the end)
 
 	function show(running) {
 		torso.visible = true;
