@@ -751,7 +751,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		marks.push({ x: at.x, y: at.y, colour: PLAYER_COLORS[by], age: 0 });
 
 		let goal = null;
-		// a fragment or ring near the line? go for it (to whatever it sits over)
+		// a fragment or ring near the line? go for it (to the ground, or whatever it sits over, under it)
 		const wantThing = (p, slack) => {
 			const v = tmp.copy(p).sub(o);
 			const tt = v.dot(d);
@@ -759,6 +759,8 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		};
 		let bestT = Infinity, thing = null;
 		for (const f of fragments) if (!f.taken) { const tt = wantThing(f.pos, 1.6); if (tt < bestT) { bestT = tt; thing = f.pos; } }
+		// (a ring too: to the ground under it)
+		for (const r of rings) if (!r.taken) { const tt = wantThing(r.pos, 0.9); if (tt < bestT) { bestT = tt; thing = r.pos; } }
 		const hit = raycastBoxes(boxes, o, d, 400);
 		if (thing && (!hit || bestT < hit.t + 1)) {
 			const s = supportAt(thing.x, thing.z, thing.y);

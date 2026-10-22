@@ -64,6 +64,8 @@ IGB.manifest = [
 
 	// (the UX Demo, on a row of its own)
 	{ folder: 'UX Demo', games: [
+		{ id: 'gaze-test', name: 'Gaze Test', icon: 'assets/icons/gaze-test.svg', file: 'games/gaze-test/index.js', module: true,
+			box: { color: '#2dd4ff', bg: '#0d1118', note: 'TOOL' } },
 		{ id: 'show-debug', name: 'UX Demo', icon: 'assets/icons/ux-demo.svg', file: 'games/show-debug.js', module: true,
 			title: { lines: [{ text: 'UX', fill: '#3ad1ff', glow: '#5a4dff' }, { text: 'DEMO', fill: '#ffd23f', glow: '#ff7a3d' }] }, box: { color: '#3ad1ff', bg: '#0b1022', note: 'DEMO' } },
 	] },
@@ -167,7 +169,7 @@ IGB.manifest = [
 
 // The only games the menu shows (in their folders above); the rest stay
 // playable by #id. Remove this (or set it to null) to show everything.
-IGB.menu = ['red-light-green-light', 'loop-island', 'quill-relay', 'iron-stride', 'twin-tail-tower', 'knuckles-quest', 'sonic-characters', 'mingle', 'backrooms', 'gwi-ma-showdown', 'roll-call', 'show-debug'];
+IGB.menu = ['red-light-green-light', 'loop-island', 'quill-relay', 'iron-stride', 'twin-tail-tower', 'knuckles-quest', 'sonic-characters', 'mingle', 'backrooms', 'gwi-ma-showdown', 'roll-call', 'show-debug', 'gaze-test'];
 
 // The music tracks, on or off everywhere: every music-*.mp3 (the show's music
 // included). Tunes the games synthesise (the doll's song, Mingle's waltz),

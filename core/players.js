@@ -118,10 +118,11 @@ IGB.players = (function () {
 
 	// Where a look from (X, Y, Z) first meets a wall: the left (X = -1), the
 	// front (Z = +1) or the right (X = +1), on it between floor and ceiling.
-	function wallHit(X, Y, Z, look) {
+	// (room: the room's proportions, GAZE.room unless given)
+	function wallHit(X, Y, Z, look, room = GAZE.room) {
 		if (!look) return null;
 		// (into the squashed -1..1 space the positions live in)
-		const dx = look.x / GAZE.room.x, dy = look.y / GAZE.room.y, dz = look.z / GAZE.room.z;
+		const dx = look.x / room.x, dy = look.y / room.y, dz = look.z / room.z;
 		let best = null;
 		const consider = (wall, t) => {
 			if (!(t > 0) || (best && t >= best.t)) return;
@@ -337,6 +338,7 @@ IGB.players = (function () {
 		wand,
 		gaze: GAZE,   // (the gaze settings: adjust from the console to check them in the gamebox)
 		wallHit,
+		rotate,
 		start,
 		receive,
 		onUpdate,

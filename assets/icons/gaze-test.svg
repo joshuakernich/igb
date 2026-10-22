@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+	<!-- Gaze Test: an eye on a dark grid, its line of sight ending in a filled circle among dashed rings -->
+	<defs>
+		<pattern id="grid" x="0" y="0" width="32" height="32" patternUnits="userSpaceOnUse">
+			<path d="M32 0 H0 V32" fill="none" stroke="white" stroke-opacity="0.12" stroke-width="1.5"/>
+		</pattern>
+	</defs>
+	<rect width="256" height="256" rx="40" fill="#0d1118"/>
+	<rect width="256" height="256" rx="40" fill="url(#grid)"/>
+	<g fill="none" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+		<path d="M28 168 Q62 132 96 168 Q62 204 28 168 Z"/>
+	</g>
+	<circle cx="62" cy="168" r="11" fill="white"/>
+	<path d="M84 156 L172 98" stroke="white" stroke-opacity="0.5" stroke-width="4" stroke-dasharray="10 8" stroke-linecap="round"/>
+	<g fill="none" stroke="#2dd4ff" stroke-width="4" stroke-dasharray="7 6">
+		<circle cx="132" cy="56" r="14"/>
+		<circle cx="222" cy="104" r="14"/>
+		<circle cx="196" cy="160" r="14"/>
+	</g>
+	<circle cx="186" cy="88" r="26" fill="#ff3b5c"/>
+</svg>
