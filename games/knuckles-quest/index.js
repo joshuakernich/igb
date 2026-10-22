@@ -31,7 +31,7 @@
  */
 import * as THREE from '../../lib/three/three.module.min.js';
 import { createWallComposer, createWallRig, SkyDome } from '../../lib/three/walls.js';
-import { buildMaze, raycastBoxes, GRID, CELL, WALL, DOOR } from './maze.js';
+import { buildMaze, raycastBoxes, GRID, CELL, WALL } from './maze.js';
 import { buildClimber, buildRing, buildFragment, buildMarker, buildBrazier, glowTexture, fireTexture, sparkleTexture } from './models.js';
 
 IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
@@ -59,6 +59,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 	const REACH = { ring: 1.2, fragment: 1.7 };            // how near counts as grabbing
 	const POINTS = { ring: 1, fragment: 25 };
 	const DOOR_STEP = { e: [1, 0], w: [-1, 0], s: [0, 1], n: [0, -1] };   // (which way each doorway of a room leads)
+	const TURN = { x: W * 1.5, y: H * 0.75, r: 70 };            // the turn-around button: middle of the front wall, a quarter up from the bottom
 	const SENSE = 45;                                      // metres off a missing fragment's slot starts to pulse (faster and brighter nearer)
 
 	/* ---------- renderer, scene, cameras ---------- */
@@ -177,7 +178,9 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		glideT: 0,
 	};
 	let camYaw = 0;
-	let camClose = 0;           // 0..1: how far the eye's come in close behind him (in a doorway)
+	let camClose = 0;
+	let spinTo = null;          // turning round (the turn-around button): the way the eye's swinging to
+	let turnFlash = 0;          // the button lit up just after a press           // 0..1: how far the eye's come in close behind him (in a doorway)
 	const markerMesh = buildMarker();
 	markerMesh.visible = false;
 	scene.add(markerMesh);
@@ -384,8 +387,8 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 	// to look through it (along the camera's way): { yaw } or null
 	function doorNear(p) {
 		for (const r of maze.rooms.flat()) for (const w of Object.keys(r.open)) {
-			const [dx, dz] = DOOR_STEP[w];
-			const x = r.cx + dx * CELL / 2, z = r.cz + dz * CELL / 2, y = r.raised[w] ? DOOR.high : 0;
+			const [dx, dz] = DOOR_STEP[w], d = r.doors[w];
+			const x = d.x, z = d.z, y = d.bottom;
 			if (Math.hypot(p.x - x, p.z - z) > 2.2 || Math.abs(p.y - y) > 1) continue;
 			// (through it, whichever way the eye's already facing)
 			const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw);
@@ -666,6 +669,12 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 			let d = kn.yaw - camYaw;
 			d = Math.atan2(Math.sin(d), Math.cos(d));
 			camYaw += d * Math.min(1, dt * CAM.turn);
+		} else if (spinTo !== null) {
+			// turning round
+			let d = spinTo - camYaw;
+			d = Math.atan2(Math.sin(d), Math.cos(d));
+			camYaw += d * Math.min(1, dt * 5);
+			if (Math.abs(d) < 0.02) spinTo = null;
 		} else if (kn.atDoor) {
 			// in a doorway: square up to it
 			let d = kn.atDoor.yaw - camYaw;
@@ -726,6 +735,15 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		if (show.paused || !live()) return;
 		const wall = Math.floor(at.x / W);
 		if (wall < 0 || wall > 2) return;
+		// the turn-around button: about face, the eye swinging round behind him
+		if (Math.hypot(at.x - TURN.x, at.y - TURN.y) < TURN.r) {
+			spinTo = Math.atan2(Math.sin(camYaw + Math.PI), Math.cos(camYaw + Math.PI));
+			if (kn.state === 'ground') { kn.goal = null; kn.yaw = spinTo; }
+			if (kn.atDoor) kn.atDoor = { yaw: spinTo };   // (in a doorway: still close in, looking back the other way)
+			turnFlash = 1;
+			show.fx('whoosh', 0.25, 0.8);
+			return;
+		}
 		const by = nearest(at);
 		ndc.set((at.x - wall * W) / W * 2 - 1, 1 - at.y / H * 2);
 		raycaster.setFromCamera(ndc, cams[wall]);
@@ -781,14 +799,15 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 			const ways = Math.abs(di) >= Math.abs(dj) ? [di > 0 ? 'e' : 'w', dj > 0 ? 's' : 'n'] : [dj > 0 ? 's' : 'n', di > 0 ? 'e' : 'w'];
 			const way = ways.find((w, k) => here.open[w] && (k === 0 || (k === 1 && (w === 'e' || w === 'w' ? di : dj) !== 0)));
 			if (way) {
-				const [dx, dz] = DOOR_STEP[way];
-				const door = new THREE.Vector3(here.cx + dx * CELL / 2, here.raised[way] ? DOOR.high : 0, here.cz + dz * CELL / 2);
+				const d = here.doors[way];
+				const door = new THREE.Vector3(d.x, d.bottom, d.z);
 				if (Math.hypot(door.x - kn.pos.x, door.z - kn.pos.z) > 1.5) goal = { point: door, normal: new THREE.Vector3(0, 1, 0), box: supportAt(door.x, door.z, door.y + 0.1), kind: 'top' };
 			}
 		}
 		goal.by = by;
 		goal.tries = 0;
 		kn.atDoor = null;
+		spinTo = null;
 		kn.goal = goal;
 		kn.lastBy = by;
 		// the marker on the spot
@@ -821,6 +840,38 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		return null;
 	}
 
+	// the turn-around button: a faint U-turn arrow (a return symbol stood on end:
+	// up, over and back down), lighting up when pressed
+	function turnButton(ctx) {
+		turnFlash = Math.max(0, turnFlash - 0.04);
+		const { x, y, r } = TURN, a = 0.28 + 0.6 * turnFlash;
+		ctx.save();
+		ctx.translate(x, y);
+		ctx.globalAlpha = a;
+		ctx.beginPath();
+		ctx.arc(0, 0, r, 0, TAU);
+		ctx.fillStyle = 'rgba(10,20,16,0.35)';
+		ctx.fill();
+		ctx.lineWidth = 4;
+		ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+		ctx.stroke();
+		ctx.lineWidth = 11;
+		ctx.lineCap = ctx.lineJoin = 'round';
+		ctx.strokeStyle = '#fff';
+		ctx.beginPath();
+		ctx.moveTo(-r * 0.3, r * 0.45);
+		ctx.lineTo(-r * 0.3, -r * 0.05);
+		ctx.arc(0, -r * 0.05, r * 0.3, Math.PI, 0);
+		ctx.lineTo(r * 0.3, r * 0.3);
+		ctx.stroke();
+		ctx.beginPath();   // (the arrowhead, pointing back down)
+		ctx.moveTo(r * 0.08, r * 0.18);
+		ctx.lineTo(r * 0.3, r * 0.45);
+		ctx.lineTo(r * 0.52, r * 0.18);
+		ctx.stroke();
+		ctx.restore();
+	}
+
 	// a gem shape, for the fragment slots
 	function gem(ctx, x, y, s, fill, stroke) {
 		ctx.save();
@@ -848,8 +899,8 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 			ctx.fillStyle = 'rgba(232,200,150,0.85)';
 			ctx.fillRect(x + 4, y + 4, cell - 8, cell - 8);
 			ctx.fillStyle = 'rgba(232,200,150,0.85)';
-			if (r.open.e) ctx.fillRect(x + cell - 6, y + cell / 2 - 6, 12, 12);
-			if (r.open.s) ctx.fillRect(x + cell / 2 - 6, y + cell - 6, 12, 12);
+			if (r.open.e) ctx.fillRect(x + cell - 6, y + cell / 2 + (r.doors.e.z - r.cz) / CELL * cell - 6, 12, 12);
+			if (r.open.s) ctx.fillRect(x + cell / 2 + (r.doors.s.x - r.cx) / CELL * cell - 6, y + cell - 6, 12, 12);
 			const f = fragments.find((q) => q.room === r);
 			if (f && f.taken) gem(ctx, x + cell / 2, y + cell / 2, cell * 0.22, '#2dff7a', '#0a3a1a');
 		}
@@ -891,6 +942,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 			art.text(ctx, p.text, at.x, at.y - q * 80, { size: p.size * (q < 0.12 ? q / 0.12 : 1), font: 'Knewave', fill: p.colour, outline: '#1a0b2e', outlineWidth: 7, alpha: 1 - Math.max(0, q - 0.6) / 0.4 });
 		}
 		if (!live() && show.beat !== 'timeup') return;
+		if (live()) turnButton(ctx);
 		// the fragments found, and the map
 		const fx0 = W + 120, fy0 = 120;
 		art.roundRect(ctx, fx0 - 70, fy0 - 60, 300, 120, 30, { fill: 'rgba(20,10,20,0.7)', stroke: 'rgba(255,255,255,0.6)', lineWidth: 3 });

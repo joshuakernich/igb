@@ -22,7 +22,8 @@ import { canvasTexture } from '../../lib/three/walls.js';
 export const GRID = 4;           // rooms a side
 export const CELL = 24;          // metres from one room's middle to the next
 export const WALL = { t: 1.4, h: 8, ceil: 8 };   // thickness, height, and where the ceiling starts (right on the wall tops: no way over them)
-export const DOOR = { w: 5, h: 5.2, high: 3.4 };   // width, height, and how far up a raised doorway starts
+// (doorways vary: narrow or grand, off to one side of the wall or in its middle, at
+// floor level or raised up it; each is { w, h, bottom, x, z }, x and z its middle)
 
 const TAU = Math.PI * 2;
 
@@ -232,12 +233,24 @@ export function buildMaze(scene, { rand = Math.random, aniso = 8 } = {}) {
 	const rooms = [];
 	for (let i = 0; i < GRID; i++) {
 		rooms.push([]);
-		for (let j = 0; j < GRID; j++) rooms[i].push({ i, j, cx: cx(i), cz: cz(j), open: {}, raised: {}, dist: -1, seen: false });
+		for (let j = 0; j < GRID; j++) rooms[i].push({ i, j, cx: cx(i), cz: cz(j), open: {}, raised: {}, doors: {}, dist: -1, seen: false });
 	}
 	const link = (a, b, raised) => {
 		const dir = b.i > a.i ? ['e', 'w'] : b.i < a.i ? ['w', 'e'] : b.j > a.j ? ['s', 'n'] : ['n', 's'];
 		a.open[dir[0]] = b.open[dir[1]] = true;
 		a.raised[dir[0]] = b.raised[dir[1]] = !!raised;
+		// the doorway itself (one, shared by the two rooms)
+		let w, h, bottom = 0;
+		const kind = rand();
+		if (raised) { bottom = 1.5 + rand() * 2.4; w = 3.5 + rand() * 2.5; h = Math.min(3.6 + rand() * 1.2, WALL.h - bottom - 0.4); }
+		else if (kind < 0.3) { w = 3 + rand(); h = 4.4 + rand(); }              // narrow
+		else if (kind < 0.75) { w = 4.5 + rand() * 1.5; h = 5 + rand() * 1.5; }  // ordinary
+		else { w = 7 + rand() * 2; h = 6.4 + rand() * 0.9; }                     // grand
+		const room = CELL / 2 - WALL.t / 2 - 2.6 - w / 2;   // (clear of the corner pillars)
+		const off = (rand() * 2 - 1) * Math.max(0, room) * 0.85;
+		const ew = dir[0] === 'e' || dir[0] === 'w';
+		const d = { w, h, bottom, x: ew ? (a.cx + b.cx) / 2 : a.cx + off, z: ew ? a.cz + off : (a.cz + b.cz) / 2 };
+		a.doors[dir[0]] = b.doors[dir[1]] = d;
 	};
 	const nbrs = (r) => [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([di, dj]) => rooms[r.i + di] && rooms[r.i + di][r.j + dj]).filter(Boolean);
 	const visited = new Set([rooms[0][0]]);
@@ -282,20 +295,19 @@ export function buildMaze(scene, { rand = Math.random, aniso = 8 } = {}) {
 
 	// walls: along every line between rooms (and round the outside), with doorways
 	const T = WALL.t, H = WALL.h;
-	// a wall from a to b along x (alongX) or z, at the given line, with an optional doorway in the middle
-	function wallRun(alongX, line, a, b, door, raised) {
+	// a wall from a to b along x (alongX) or z, at the given line, with an optional doorway
+	function wallRun(alongX, line, a, b, door) {
 		const seg = (s0, s1, y0, y1) => {
 			if (s1 - s0 < 0.05 || y1 - y0 < 0.05) return;
 			if (alongX) box(s0, y0, line - T / 2, s1, y1, line + T / 2, 'wall', stone);
 			else box(line - T / 2, y0, s0, line + T / 2, y1, s1, 'wall', stone);
 		};
 		if (!door) { seg(a, b, 0, H); return; }
-		const mid = (a + b) / 2, d0 = mid - DOOR.w / 2, d1 = mid + DOOR.w / 2;
-		const bottom = raised ? DOOR.high : 0;
+		const mid = alongX ? door.x : door.z, d0 = mid - door.w / 2, d1 = mid + door.w / 2;
 		seg(a, d0, 0, H);
 		seg(d1, b, 0, H);
-		seg(d0, d1, bottom + DOOR.h, H);   // the lintel
-		if (raised) seg(d0, d1, 0, bottom);   // the sill below a raised doorway
+		seg(d0, d1, door.bottom + door.h, H);   // the lintel
+		if (door.bottom > 0) seg(d0, d1, 0, door.bottom);   // the sill below a raised doorway
 	}
 	const lo = cx(0) - CELL / 2, hi = cx(GRID - 1) + CELL / 2;
 	for (let i = 0; i <= GRID; i++) {
@@ -303,15 +315,15 @@ export function buildMaze(scene, { rand = Math.random, aniso = 8 } = {}) {
 		const x = lo + i * CELL;
 		for (let j = 0; j < GRID; j++) {
 			const left = rooms[i - 1] && rooms[i - 1][j], right = rooms[i] && rooms[i][j];
-			const door = left && right && left.open.e;
-			wallRun(false, x, cz(j) - CELL / 2 - (j === 0 ? T / 2 : 0), cz(j) + CELL / 2 + (j === GRID - 1 ? T / 2 : 0), door, door && left.raised.e);
+			const door = left && right && left.open.e ? left.doors.e : null;
+			wallRun(false, x, cz(j) - CELL / 2 - (j === 0 ? T / 2 : 0), cz(j) + CELL / 2 + (j === GRID - 1 ? T / 2 : 0), door);
 		}
 		// the lines between rows of rooms (along x)
 		const z = lo + i * CELL;
 		for (let k = 0; k < GRID; k++) {
 			const up = rooms[k][i - 1], down = rooms[k][i];
-			const door = up && down && up.open.s;
-			wallRun(true, z, cx(k) - CELL / 2 + T / 2, cx(k) + CELL / 2 - T / 2, door, door && up.raised.s);
+			const door = up && down && up.open.s ? up.doors.s : null;
+			wallRun(true, z, cx(k) - CELL / 2 + T / 2, cx(k) + CELL / 2 - T / 2, door);
 		}
 	}
 	// the ceiling: we're indoors. One carved slab over the whole maze, sitting right on
@@ -348,19 +360,26 @@ export function buildMaze(scene, { rand = Math.random, aniso = 8 } = {}) {
 		columnGeo.computeVertexNormals();
 	}
 	disposables.push(columnGeo);
-	const inner = CELL / 2 - T / 2 - 1;
-	const clear = (r, x, z, s) => {
-		// keep doorways and the room's middle free
-		for (const d of Object.keys(r.open)) {
-			const [dx, dz] = dirStep[d];
-			const doorX = r.cx + dx * (CELL / 2), doorZ = r.cz + dz * (CELL / 2);
-			if (Math.abs(x - doorX) < DOOR.w / 2 + s + 2.5 && Math.abs(z - doorZ) < DOOR.w / 2 + s + 2.5) return false;
-		}
-		return Math.hypot(x - r.cx, z - r.cz) > 3.5 + s;
-	};
+	const inner = CELL / 2 - T / 2 - 1;   // (from a room's middle to just inside its walls)
 	for (const col of rooms) for (const r of col) {
-		const n = 2 + Math.floor(rand() * 3);
+		// what's taken in this room, as rectangles { x, z, hx, hz }: nothing else goes there
 		const placed = [];
+		const free = (x, z, hx, hz, pad = 1.5) => Math.abs(x - r.cx) + hx < inner + 0.01 && Math.abs(z - r.cz) + hz < inner + 0.01
+			&& !placed.some((p) => Math.abs(p.x - x) < p.hx + hx + pad && Math.abs(p.z - z) < p.hz + hz + pad);
+		// (keep each doorway's mouth, and the room's middle, clear)
+		for (const d of Object.keys(r.open)) {
+			const door = r.doors[d], [dx, dz] = dirStep[d];
+			placed.push({ x: door.x - dx * 3, z: door.z - dz * 3, hx: dx ? 3 : door.w / 2 + 1, hz: dz ? 3 : door.w / 2 + 1 });
+		}
+		placed.push({ x: r.cx, z: r.cz, hx: 3, hz: 3 });
+		const spot = (hx, hz, tries = 30) => {
+			for (let k = 0; k < tries; k++) {
+				const x = r.cx + (rand() * 2 - 1) * (inner - hx), z = r.cz + (rand() * 2 - 1) * (inner - hz);
+				if (free(x, z, hx, hz)) return { x, z };
+			}
+			return null;
+		};
+
 		// a pillar in each corner, floor to ceiling: a fat column on a square base under a square capital
 		const pc = CELL / 2 - T / 2 - 1.4;
 		for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
@@ -373,23 +392,75 @@ export function buildMaze(scene, { rand = Math.random, aniso = 8 } = {}) {
 			group.add(col);
 			const cap = box(x - 1.0, C - 0.5, z - 1.0, x + 1.0, C, z + 1.0, 'block', darkStone);
 			cap.mesh.castShadow = false;
-			placed.push({ x, z, s: 1.0 });
+			placed.push({ x, z, hx: 1.0, hz: 1.0 });
 		}
-		for (let k = 0; k < n * 4 && placed.length < n; k++) {
-			const s = 1.5 + rand() * 2.2;
-			const x = r.cx + (rand() * 2 - 1) * (inner - s), z = r.cz + (rand() * 2 - 1) * (inner - s);
-			if (!clear(r, x, z, s) || placed.some((p) => Math.abs(p.x - x) < p.s + s + 1.5 && Math.abs(p.z - z) < p.s + s + 1.5)) continue;
-			const h = 1.2 + rand() * 3.8;
-			const b = box(x - s, 0, z - s, x + s, h, z + s, 'block', darkStone);
-			placed.push({ x, z, s, h });
-			// a ring or three on top
-			for (let q = 0; q < 3; q++) rings.push(new THREE.Vector3(x + (q - 1) * 1.1, h + 1.0, z));
-			// stack a smaller one on the taller blocks
-			if (h > 3.5 && rand() < 0.5) {
-				const s2 = s * 0.55;
-				box(x - s2, h, z - s2, x + s2, Math.min(h + 1.6 + rand() * 1.5, C - 2.4), z + s2, 'block', darkStone);   // (always headroom on top)
+
+		// a ruined wall or two standing across the room: climb it, or go round
+		for (let k = 0, n = 1 + Math.floor(rand() * 2); k < n; k++) {
+			const alongX = rand() < 0.5, len = 5 + rand() * 4, th = 0.45;
+			const at = spot(alongX ? len / 2 : th, alongX ? th : len / 2);
+			if (!at) continue;
+			const h = 2.4 + rand() * 3.2;
+			box(at.x - (alongX ? len / 2 : th), 0, at.z - (alongX ? th : len / 2), at.x + (alongX ? len / 2 : th), h, at.z + (alongX ? th : len / 2), 'block', stone);
+			placed.push({ x: at.x, z: at.z, hx: alongX ? len / 2 : th, hz: alongX ? th : len / 2 });
+			for (let q = -1; q <= 1; q++) rings.push(new THREE.Vector3(at.x + (alongX ? q * 1.4 : 0), h + 1.0, at.z + (alongX ? 0 : q * 1.4)));
+		}
+
+		// a flight of big steps up to a high block
+		if (rand() < 0.6) {
+			const n = 3 + Math.floor(rand() * 2), deep = 1.7, wide = 1.6, rise = 1.1 + rand() * 0.3;
+			const [ux, uz] = [[1, 0], [-1, 0], [0, 1], [0, -1]][Math.floor(rand() * 4)];
+			const hx = ux ? n * deep / 2 : wide, hz = uz ? n * deep / 2 : wide;
+			const at = spot(hx, hz);
+			if (at) {
+				for (let q = 0; q < n; q++) {
+					const c = (q + 0.5 - n / 2) * deep;
+					const x = at.x + ux * c, z = at.z + uz * c;
+					box(x - (ux ? deep / 2 : wide), 0, z - (uz ? deep / 2 : wide), x + (ux ? deep / 2 : wide), rise * (q + 1), z + (uz ? deep / 2 : wide), 'block', darkStone);
+				}
+				const top = at.x + ux * (n / 2 - 0.5) * deep, topz = at.z + uz * (n / 2 - 0.5) * deep;
+				rings.push(new THREE.Vector3(top, rise * n + 1.0, topz));
+				placed.push({ x: at.x, z: at.z, hx, hz });
 			}
 		}
+
+		// blocks to climb, some with a smaller one stacked on top
+		for (let k = 0, n = 3 + Math.floor(rand() * 3); k < n; k++) {
+			const sx = 1.2 + rand() * 1.6, sz = sx * (0.7 + rand() * 0.6);
+			const at = spot(sx, sz);
+			if (!at) continue;
+			const { x, z } = at;
+			const h = 1.0 + rand() * 4.0;
+			box(x - sx, 0, z - sz, x + sx, h, z + sz, 'block', darkStone);
+			placed.push({ x, z, hx: sx, hz: sz });
+			for (let q = 0; q < 3; q++) rings.push(new THREE.Vector3(x + (q - 1) * 1.1, h + 1.0, z));
+			if (h > 3 && rand() < 0.55) {
+				const s2 = Math.min(sx, sz) * 0.55;
+				box(x - s2, h, z - s2, x + s2, Math.min(h + 1.4 + rand() * 1.5, C - 2.4), z + s2, 'block', darkStone);   // (always headroom on top)
+			}
+		}
+
+		// rubble: low slabs underfoot, to hop over
+		for (let k = 0, n = 2 + Math.floor(rand() * 3); k < n; k++) {
+			const sx = 0.6 + rand() * 0.8, sz = 0.6 + rand() * 0.8;
+			const at = spot(sx, sz, 12);
+			if (!at) continue;
+			box(at.x - sx, 0, at.z - sz, at.x + sx, 0.6 + rand() * 0.6, at.z + sz, 'block', darkStone);
+			placed.push({ x: at.x, z: at.z, hx: sx, hz: sz });
+		}
+
+		// ledges jutting from the walls (not where there's a doorway), to climb to and stand on
+		for (const d of ['n', 's', 'e', 'w']) {
+			if (r.open[d] || rand() < 0.45) continue;
+			const [dx, dz] = dirStep[d];
+			const off = (rand() < 0.5 ? -1 : 1) * (3 + rand() * 4), wide = 1.8 + rand() * 0.8, out = 1.4, top = 2.8 + rand() * 2.4;
+			const face = CELL / 2 - T / 2;
+			const x = r.cx + (dx ? dx * (face - out / 2) : off), z = r.cz + (dz ? dz * (face - out / 2) : off);
+			const hx = dx ? out / 2 : wide, hz = dz ? out / 2 : wide;
+			box(x - hx, top - 0.6, z - hz, x + hx, top, z + hz, 'block', darkStone);
+			rings.push(new THREE.Vector3(x, top + 1.0, z));
+		}
+
 		// a line of rings across the room's middle
 		const ang = rand() < 0.5 ? 0 : Math.PI / 2;
 		for (let q = -2; q <= 2; q++) rings.push(new THREE.Vector3(r.cx + Math.cos(ang) * q * 1.6, 1.0, r.cz + Math.sin(ang) * q * 1.6));
@@ -399,7 +470,7 @@ export function buildMaze(scene, { rand = Math.random, aniso = 8 } = {}) {
 			const [dx, dz] = dirStep[d];
 			braziers.push(new THREE.Vector3(r.cx + dx * (CELL / 2 - T / 2 - 0.5), 4.2, r.cz + dz * (CELL / 2 - T / 2 - 0.5)));
 		}
-		r.blocks = placed;
+		r.blocks = placed;   // (what's taken in the room)
 	}
 
 	// overgrowth and light: vines hanging from the ceiling (with clumps of leaves),
