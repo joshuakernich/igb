@@ -20,7 +20,7 @@
  *   sec.checkpoint      the spinning post at the right end: { u, mesh }
  *   sec.dispose()
  */
-import * as G from '../../lib/glint/glint.js';
+import * as THREE from '../../lib/three/three.module.min.js';
 import { buildRing, buildGearhog, buildBuzzdrone, buildSpring, buildSpikes, buildMonitor, buildCheckpoint } from './models.js';
 
 const TAU = Math.PI * 2;
@@ -52,10 +52,10 @@ export function buildSection({ C, mats, rand, gentle }) {
 		}
 	}
 
-	const group = new G.Group();
+	const group = new THREE.Group();
 	const items = [];
 	const loops = [];
-	const at = (u, y, d = C.depth) => new G.Vector3(u - half, y, -d);
+	const at = (u, y, d = C.depth) => new THREE.Vector3(u - half, y, -d);
 
 	function add(type, u, y, mesh, extra) {
 		mesh.position.copy(at(u, GROUND + y));   // (y: metres above the base height)
@@ -196,12 +196,12 @@ export function buildSection({ C, mats, rand, gentle }) {
 			const b = a + NU + 1;
 			index.push(a, a + 1, b, a + 1, b + 1, b);
 		}
-		const geo = new G.BufferGeometry();
-		geo.setAttribute('position', new G.Float32BufferAttribute(pos, 3));
-		geo.setAttribute('uv', new G.Float32BufferAttribute(uv, 2));
+		const geo = new THREE.BufferGeometry();
+		geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+		geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
 		geo.setIndex(index);
 		geo.computeVertexNormals();
-		const top = new G.Mesh(geo, mats.grass);
+		const top = new THREE.Mesh(geo, mats.grass);
 		top.receiveShadow = true;
 		group.add(top);
 	}
@@ -225,12 +225,12 @@ export function buildSection({ C, mats, rand, gentle }) {
 			const a = i * 2;
 			index.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
 		}
-		const geo = new G.BufferGeometry();
-		geo.setAttribute('position', new G.Float32BufferAttribute(pos, 3));
-		geo.setAttribute('uv', new G.Float32BufferAttribute(uv, 2));
+		const geo = new THREE.BufferGeometry();
+		geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+		geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
 		geo.setIndex(index);
 		geo.computeVertexNormals();
-		const m = new G.Mesh(geo, mat);
+		const m = new THREE.Mesh(geo, mat);
 		m.receiveShadow = true;
 		group.add(m);
 		return m;
@@ -241,22 +241,22 @@ export function buildSection({ C, mats, rand, gentle }) {
 	/* ---------- loops ---------- */
 
 	function buildLoop(u, r) {
-		const g = new G.Group();
+		const g = new THREE.Group();
 		g.position.copy(at(u, GROUND + r));
 		const width = C.loop.width;
-		const inner = new G.Mesh(new G.CylinderGeometry(r, r, width, 64, 1, true), mats.loopInner);
+		const inner = new THREE.Mesh(new THREE.CylinderGeometry(r, r, width, 64, 1, true), mats.loopInner);
 		inner.rotation.x = Math.PI / 2;
 		inner.receiveShadow = true;
 		g.add(inner);
-		const outer = new G.Mesh(new G.CylinderGeometry(r + 0.45, r + 0.45, width, 64, 1, true), mats.earthLoop);
+		const outer = new THREE.Mesh(new THREE.CylinderGeometry(r + 0.45, r + 0.45, width, 64, 1, true), mats.earthLoop);
 		outer.rotation.x = Math.PI / 2;
 		g.add(outer);
 		for (const side of [-1, 1]) {
-			const rim = new G.Mesh(new G.RingGeometry(r, r + 0.45, 64), mats.earthLoop);
+			const rim = new THREE.Mesh(new THREE.RingGeometry(r, r + 0.45, 64), mats.earthLoop);
 			rim.position.z = side * width / 2;
 			if (side < 0) rim.rotation.y = Math.PI;
 			g.add(rim);
-			const edge = new G.Mesh(new G.TorusGeometry(r + 0.02, 0.05, 6, 64), mats.loopEdge);
+			const edge = new THREE.Mesh(new THREE.TorusGeometry(r + 0.02, 0.05, 6, 64), mats.loopEdge);
 			edge.position.z = side * (width / 2 - 0.03);
 			g.add(edge);
 		}

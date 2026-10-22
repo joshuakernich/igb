@@ -40,10 +40,11 @@
  *
  * Showtime runs the show: the squad picker, the title drop, the clock, then
  * the relay ('play'), TIME!, scores, rank, and the end.
- * An ES module (manifest: module: true), drawn with Glint, the gamebox's own
- * WebGL2 engine (lib/glint).
+ * An ES module (manifest: module: true), drawn with three.js, with bloom and
+ * tone mapping over all three walls (lib/three/walls.js).
  */
-import * as G from '../../lib/glint/glint.js';
+import * as THREE from '../../lib/three/three.module.min.js';
+import { createWallComposer } from '../../lib/three/walls.js';
 import { createSky, SUN, HORIZON } from './sky.js';
 import { buildSection } from './course.js';
 import { buildHero, buildRing, buildPalm, buildHill, buildWaterfallCliff, earthTexture, grassTexture, fringeTexture, waterfallTexture, sparkleTexture, glossy } from './models.js';
@@ -101,19 +102,20 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 
 	/* ---------- renderer, scene, cameras ---------- */
 
-	// Glint (lib/glint): ACES, soft shadows, MSAA and bloom built in
-	const renderer = new G.Renderer({ logarithmicDepthBuffer: false });
+	const renderer = new THREE.WebGLRenderer({ antialias: false });   // (the composer multisamples)
+	renderer.toneMapping = THREE.ACESFilmicToneMapping;
 	renderer.toneMappingExposure = 1.05;
-	renderer.shadowsEnabled = true;
-	Object.assign(renderer.bloom, { strength: 0.4, radius: 0.6, threshold: 1.3 });
-	Object.assign(renderer.grade, { saturation: 1.1, contrast: 1.05, vignette: 0.1 });
+	renderer.shadowMap.enabled = true;
+	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 	$(renderer.domElement).css({ position: 'absolute', left: 0, top: 0, width: WIDTH + 'px', height: H + 'px' }).appendTo(stage.$bg);
 
 	let k = 1;
+	let postfx = null;   // bloom and tone mapping over all three walls (made once the scene is)
 	function resize() {
 		k = Math.min(IGB.scale * IGB.pixelRatio, 1);
 		renderer.setPixelRatio(1);
 		renderer.setSize(Math.round(WIDTH * k), Math.round(H * k), false);
+		if (postfx) postfx.setSize();
 	}
 	// A wall's view: its camera into its third of the canvas (pixels, y up).
 	function viewport(cam, x, y, w, h) {
@@ -126,14 +128,16 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 	const unlisten = IGB.onResize(resize);
 	resize();
 
-	const scene = new G.Scene();
-	scene.fog = new G.Fog(HORIZON, 45, 260);
+	const scene = new THREE.Scene();
+	scene.fog = new THREE.Fog(HORIZON, 45, 260);
 	const world = createSky(renderer, scene, GROUND - 3);
+	// Bloom: rings, the checkpoint orb, monitor screens, sparkles and the sun glow.
+	postfx = createWallComposer(renderer, scene, { strength: 0.55, radius: 0.55, threshold: 0.9 });
 	world.ocean.renderOrder = -5;
 	world.ocean.material.depthWrite = false;
 
-	scene.add(new G.HemisphereLight(0xdff2ff, 0x5a8a3a, 0.9));
-	const sun = new G.DirectionalLight(0xfff2dc, 3.0);
+	scene.add(new THREE.HemisphereLight(0xdff2ff, 0x5a8a3a, 0.9));
+	const sun = new THREE.DirectionalLight(0xfff2dc, 3.0);
 	sun.castShadow = true;
 	sun.shadow.mapSize.set(2048, 2048);
 	Object.assign(sun.shadow.camera, { left: -14, right: 14, top: 14, bottom: -14, near: 1, far: 90 });
@@ -148,16 +152,16 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 	// looking left, the front's ahead, the right's right. They share the rig's
 	// one tilt and one field of view (90 degrees across), so they're the sides
 	// of one box and the walls meet seamlessly.
-	const rig = new G.Group();
+	const rig = new THREE.Group();
 	rig.rotation.x = -CAM.pitch * Math.PI / 180;
 	scene.add(rig);
 	const cams = YAW.map(function (yaw) {
-		const cam = new G.PerspectiveCamera(CAM.fov, W / H, 0.1, 4000);
+		const cam = new THREE.PerspectiveCamera(CAM.fov, W / H, 0.1, 4000);
 		cam.rotation.y = yaw;
 		rig.add(cam);
 		return cam;
 	});
-	const eye = new G.Vector3();
+	const eye = new THREE.Vector3();
 
 	/* ---------- materials ---------- */
 
@@ -169,20 +173,20 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 	loopTex.repeat.set(14, 1);
 	const waterTex = waterfallTexture();
 	const MATS = {
-		grass: new G.MeshPhysicalMaterial({ map: grassTexture(aniso), roughness: 0.45, clearcoat: 0.6, clearcoatRoughness: 0.2 }),
-		earth: new G.MeshPhysicalMaterial({ map: earthTex, roughness: 0.4, clearcoat: 0.7, clearcoatRoughness: 0.1 }),
-		fringe: new G.MeshStandardMaterial({ map: fringeTexture(), transparent: true, alphaTest: 0.5, roughness: 0.5 }),
-		earthLoop: new G.MeshPhysicalMaterial({ map: loopTex, roughness: 0.4, clearcoat: 0.7, side: G.DoubleSide }),
-		loopInner: glossy(0x4fd04a, { side: G.DoubleSide, roughness: 0.45 }),
+		grass: new THREE.MeshPhysicalMaterial({ map: grassTexture(aniso), roughness: 0.45, clearcoat: 0.6, clearcoatRoughness: 0.2 }),
+		earth: new THREE.MeshPhysicalMaterial({ map: earthTex, roughness: 0.4, clearcoat: 0.7, clearcoatRoughness: 0.1 }),
+		fringe: new THREE.MeshStandardMaterial({ map: fringeTexture(), transparent: true, alphaTest: 0.5, roughness: 0.5 }),
+		earthLoop: new THREE.MeshPhysicalMaterial({ map: loopTex, roughness: 0.4, clearcoat: 0.7, side: THREE.DoubleSide }),
+		loopInner: glossy(0x4fd04a, { side: THREE.DoubleSide, roughness: 0.45 }),
 		loopEdge: glossy(0xffffff),
 	};
 	for (const m of Object.values(MATS)) m.userData.shared = true;
 	const BG = {
-		hill: new G.MeshPhysicalMaterial({ map: hillTex, roughness: 0.5, clearcoat: 0.5 }),
-		cliff: new G.MeshPhysicalMaterial({ map: earthTex, roughness: 0.5, clearcoat: 0.5 }),
-		water: new G.MeshBasicMaterial({ map: waterTex, transparent: true, opacity: 0.92 }),
+		hill: new THREE.MeshPhysicalMaterial({ map: hillTex, roughness: 0.5, clearcoat: 0.5 }),
+		cliff: new THREE.MeshPhysicalMaterial({ map: earthTex, roughness: 0.5, clearcoat: 0.5 }),
+		water: new THREE.MeshBasicMaterial({ map: waterTex, transparent: true, opacity: 0.92 }),
 		top: glossy(0x4fd04a, { roughness: 0.5 }),
-		plain: new G.MeshStandardMaterial({ color: 0x5ccf4c, roughness: 0.85 }),
+		plain: new THREE.MeshStandardMaterial({ color: 0x5ccf4c, roughness: 0.85 }),
 	};
 
 	/* ---------- the walls: background and the course ---------- */
@@ -193,17 +197,17 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 
 	// a wide grassy plain below the course, out to the sea (from just behind
 	// the track's front edge, so nothing shows through behind its back edge)
-	const plain = new G.Mesh(new G.RingGeometry(COURSE.depth, 95, 72, 1), BG.plain);
+	const plain = new THREE.Mesh(new THREE.RingGeometry(COURSE.depth, 95, 72, 1), BG.plain);
 	plain.rotation.x = -Math.PI / 2;
 	plain.position.y = GROUND - 1.2;
 	plain.receiveShadow = true;
 	scene.add(plain);
 
 	const walls = YAW.map(function (yaw, w) {
-		const g = new G.Group();
+		const g = new THREE.Group();
 		g.rotation.y = yaw;
 		scene.add(g);
-		const at = (x, d) => new G.Vector3(x, GROUND - 1.2, -d);
+		const at = (x, d) => new THREE.Vector3(x, GROUND - 1.2, -d);
 		// palms just behind the course, toy hills and a waterfall cliff further off
 		for (let i = 0; i < 4; i++) {
 			const d = 12 + rand() * 6;
@@ -225,7 +229,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 		g.add(cliff);
 		for (let i = 0; i < 2; i++) {
 			const p = buildPalm(5 + rand() * 3);
-			p.position.copy(cliff.position).add(new G.Vector3((i ? 1 : -1) * (5 + rand() * 2), 0, 2 + rand() * 2));
+			p.position.copy(cliff.position).add(new THREE.Vector3((i ? 1 : -1) * (5 + rand() * 2), 0, 2 + rand() * 2));
 			g.add(p);
 		}
 		g.traverse((o) => { if (o.isMesh) o.receiveShadow = true; });
@@ -240,7 +244,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 	for (let w = 0; w < 3; w++) walls[w].section = newSection(w, w === 0);
 
 	// Where a point on wall w's stretch (u along, y above the base, d deep) is in the world.
-	function worldOf(w, u, y, d = COURSE.depth, out = new G.Vector3()) {
+	function worldOf(w, u, y, d = COURSE.depth, out = new THREE.Vector3()) {
 		const x = u - HALF;
 		const z = -d;
 		const c = Math.cos(YAW[w]);
@@ -252,7 +256,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 
 	const hero = {
 		model: buildHero(PLAYER_COLORS[0]),
-		holder: new G.Group(),
+		holder: new THREE.Group(),
 		wall: 0, u: HANDOVER.start, y: 0, v: 0, vy: 0,
 		grounded: true, ball: false, charging: false, chargeT: 0, crouchT: 0, revAt: 0,
 		hurt: false, sprung: false, safe: 0, shield: false,
@@ -268,7 +272,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 
 	let count = 0;
 	let latest = [];
-	const colourOf = (n) => new G.Color(PLAYER_COLORS[n % PLAYER_COLORS.length]).getStyle();
+	const colourOf = (n) => new THREE.Color(PLAYER_COLORS[n % PLAYER_COLORS.length]).getStyle();
 	const tally = [];            // per player: { rings, bots }
 	const body = [];             // per player: { py, stand, samples, up, duck }
 	const scoreOf = (i) => tally[i].rings * SCORE.ring + tally[i].bots * SCORE.bot;
@@ -334,7 +338,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 	let flash = 0;
 
 	function sparkle(at, colour = 0xffffff, size = 1.2) {
-		const s = new G.Sprite(new G.SpriteMaterial({ map: sparkTex, color: colour, transparent: true, depthWrite: false, blending: G.AdditiveBlending, toneMapped: false }));
+		const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTex, color: new THREE.Color(colour).multiplyScalar(2.2), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));   // (past white: it blooms)
 		s.position.copy(at);
 		s.scale.setScalar(size);
 		scene.add(s);
@@ -409,7 +413,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 		body[relay.runner].samples = [];
 		hero.model.setColour(PLAYER_COLORS[relay.runner]);
 		hero.lead = 0;
-		sparkle(worldOf(hero.wall, hero.u, 1, COURSE.depth), new G.Color(colourOf(relay.runner)).getHex(), 3);
+		sparkle(worldOf(hero.wall, hero.u, 1, COURSE.depth), new THREE.Color(colourOf(relay.runner)).getHex(), 3);
 		sound.go();
 		show.fx('stepIn');
 	}
@@ -527,7 +531,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 		if (at) sparkle(at, 0xfff2a0, 1.1);
 	}
 
-	const tmp = new G.Vector3();
+	const tmp = new THREE.Vector3();
 	function physics(dt) {
 		const sec = walls[hero.wall].section;
 		const b = body[relay.runner];
@@ -671,7 +675,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 				if (ball || (!hero.grounded && hero.vy < 0 && hero.y - it.y > it.tall * 0.6)) {
 					it.alive = false;
 					it.mesh.visible = false;
-					const at = it.mesh.getWorldPosition(new G.Vector3()).add(new G.Vector3(0, 0.6, 0));
+					const at = it.mesh.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.6, 0));
 					sparkle(at, 0xffffff, 3);
 					sound.monitor();
 					if (!hero.grounded) { hero.vy = Math.max(hero.vy, JUMP.bounce * 0.8); }
@@ -696,8 +700,8 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 					it.alive = false;
 					it.mesh.visible = false;
 					tally[relay.runner].bots++;
-					sparkle(it.mesh.getWorldPosition(new G.Vector3()), 0xffffff, 3);
-					sparkle(it.mesh.getWorldPosition(new G.Vector3()).add(new G.Vector3(0, 0.5, 0)), 0xffd23a, 2);
+					sparkle(it.mesh.getWorldPosition(new THREE.Vector3()), 0xffffff, 3);
+					sparkle(it.mesh.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.5, 0)), 0xffd23a, 2);
 					sound.pop();
 					show.shake = Math.max(show.shake, 0.15);
 					pop('+' + SCORE.bot, colourOf(relay.runner), hero.wall, it.u, by + 1.2);
@@ -882,13 +886,13 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 
 	function render() {
 		// (one shadow pass, then all three walls into one HDR frame, then bloom and tone mapping)
-		renderer.render(scene, cams.map((cam, w) => viewport(cam, w * W, 0, W, H)));
+		postfx.render(cams.map((cam, w) => viewport(cam, w * W, 0, W, H)));
 	}
 
 	/* ---------- the 2D layer ---------- */
 
 	// Where a world point shows on wall w (or null if it's off that wall).
-	const pv = new G.Vector3();
+	const pv = new THREE.Vector3();
 	function onWall(v, w) {
 		pv.copy(v).project(cams[w]);
 		if (pv.z > 1 || Math.abs(pv.x) > 1.2 || Math.abs(pv.y) > 1.2) return null;
@@ -1026,6 +1030,7 @@ IGB.register('quill-relay', function QuillRelayGame(stage, playersMeta) {
 		unlisten();
 		show.fini();
 		world.dispose();
+		postfx.dispose();
 		renderer.dispose();
 		renderer.forceContextLoss();
 	};

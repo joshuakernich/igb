@@ -1,5 +1,6 @@
 /*
- * Twin Tail Tower
+ * Twin Tail Tower (shown as SONIC TAILS: the manifest's name and title; the
+ * id, folder and code stay twin-tail-tower)
  *
  * Doodle Jump, in 3D, round the whole room. Everyone is a glossy little
  * two-tailed fox kit in their own colour, and every fox bounces by itself,
@@ -36,9 +37,9 @@
  * itself until the clock runs out, TIME!, scores, rank, team, leaderboard,
  * replay, rating and the end (IGB.complete there).
  *
- * Drawn with Glint, the gamebox's own engine (lib/glint: physically based,
- * HDR, bloom, filmic tone mapping). Three cameras on one rig at the middle
- * of the room, one per wall (G.createWallRig), all level (one shared pitch:
+ * Drawn with three.js, with bloom and ACES tone mapping over all three walls
+ * (lib/three/walls.js). Three cameras on one rig at the middle
+ * of the room, one per wall (createWallRig), all level (one shared pitch:
  * none) with the same fixed 90-degree field of view across (64 down), so the
  * walls meet seamlessly.
  *
@@ -46,7 +47,8 @@
  * right wall). pz isn't used for steering (only for the replay).
  * An ES module (manifest: module: true).
  */
-import * as G from '../../lib/glint/glint.js';
+import * as THREE from '../../lib/three/three.module.min.js';
+import { createWallComposer, createWallRig, toScreen } from '../../lib/three/walls.js';
 import { createSky } from './sky.js';
 import { buildFox, buildPlatform, buildSpring, buildRotor, buildRobot, buildRing, buildBubble, buildIsland, buildMarker, sparkleTexture } from './models.js';
 import { createSound } from './sound.js';
@@ -101,29 +103,32 @@ IGB.register('twin-tail-tower', function TwinTailTowerGame(stage, playersMeta) {
 
 	/* ---------- renderer, scene, cameras ---------- */
 
-	// Glint: physically based, HDR, bloom, ACES filmic tone mapping, soft shadows.
-	const renderer = new G.Renderer();
+	const renderer = new THREE.WebGLRenderer({ antialias: false });   // (the composer multisamples)
+	renderer.toneMapping = THREE.ACESFilmicToneMapping;
 	renderer.toneMappingExposure = 1.05;
-	Object.assign(renderer.bloom, { strength: 0.45, radius: 0.65, threshold: 1.2 });
-	Object.assign(renderer.grade, { saturation: 1.08, contrast: 1.04, vignette: 0.12 });
-	renderer.shadowsEnabled = true;
+	renderer.shadowMap.enabled = true;
+	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 	$(renderer.domElement).css({ position: 'absolute', left: 0, top: 0, width: WIDTH + 'px', height: H + 'px' }).appendTo(stage.$bg);
 
+	let postfx = null;   // bloom and tone mapping over all three walls (made once the scene is)
 	function resize() {
 		const k = Math.min(IGB.scale * IGB.pixelRatio, 1);
 		renderer.setPixelRatio(1);
 		renderer.setSize(Math.round(WIDTH * k), Math.round(H * k), false);
+		if (postfx) postfx.setSize();
 	}
 	const unlisten = IGB.onResize(resize);
 	resize();
 
-	const scene = new G.Scene();
-	scene.fog = new G.Fog(0xa9d6f6, 120, 1400);
+	const scene = new THREE.Scene();
+	scene.fog = new THREE.Fog(0xa9d6f6, 120, 1400);
 	const world = createSky(renderer, scene, ZONES);
+	// Bloom: rings, the tail rotor, springs, sparkles, the sun and the stars glow.
+	postfx = createWallComposer(renderer, scene, { strength: 0.55, radius: 0.55, threshold: 0.9 });
 
-	const hemi = new G.HemisphereLight(0xcfe9ff, 0x2a7a8a, 0.8);
+	const hemi = new THREE.HemisphereLight(0xcfe9ff, 0x2a7a8a, 0.8);
 	scene.add(hemi);
-	const sun = new G.DirectionalLight(0xfff0d8, 3.2);
+	const sun = new THREE.DirectionalLight(0xfff0d8, 3.2);
 	sun.castShadow = true;
 	sun.shadow.mapSize.set(2048, 2048);
 	Object.assign(sun.shadow.camera, { left: -17, right: 17, top: 17, bottom: -17, near: 1, far: 140 });
@@ -138,7 +143,7 @@ IGB.register('twin-tail-tower', function TwinTailTowerGame(stage, playersMeta) {
 	// level, with the same fixed field of view (90 degrees across), so they're
 	// the sides of one box and the walls meet seamlessly. Never tilt or zoom
 	// one alone.
-	const walls = G.createWallRig({ fov: FOV, aspect: W / H, near: 0.1, far: 6000 });   // left, front, right
+	const walls = createWallRig({ fov: FOV, aspect: W / H, near: 0.1, far: 6000 });   // left, front, right
 	const rig = walls.rig;
 	scene.add(rig);
 	const cams = walls.cameras;
@@ -171,7 +176,7 @@ IGB.register('twin-tail-tower', function TwinTailTowerGame(stage, playersMeta) {
 	const rand = (a, b) => a + Math.random() * (b - a);
 	const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 	const lerp = (a, b, t) => a + (b - a) * t;
-	const v3 = () => new G.Vector3();
+	const v3 = () => new THREE.Vector3();
 	const hard = (y) => clamp(y / HARD_AT, 0, 1);
 
 	let platforms = [];   // { s, s0, y, w, type, look, mesh, alive, move: { amp, speed, ph }, item, fall }
@@ -346,7 +351,7 @@ IGB.register('twin-tail-tower', function TwinTailTowerGame(stage, playersMeta) {
 	let flashRed = 0;
 
 	function sparkle(at, colour = 0xffffff, size = 2) {
-		const s = new G.Sprite(new G.SpriteMaterial({ map: sparkTex, color: colour, transparent: true, depthWrite: false, blending: G.AdditiveBlending, toneMapped: false }));
+		const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTex, color: new THREE.Color(colour).multiplyScalar(2.2), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));   // (past white: it blooms)
 		s.position.copy(at);
 		s.scale.setScalar(size);
 		scene.add(s);
@@ -806,13 +811,13 @@ IGB.register('twin-tail-tower', function TwinTailTowerGame(stage, playersMeta) {
 
 	function render() {
 		// (one shadow pass, then all three walls into one HDR frame, then bloom and tone mapping)
-		renderer.render(scene, walls.views(renderer.width, renderer.height));
+		postfx.render(walls.views(renderer.domElement.width, renderer.domElement.height));
 	}
 
 	/* ---------- the 2D layer: words, the height ---------- */
 
 	function onWall(v, wall) {
-		const p = G.toScreen(v, cams[wall], wall * W, 0, W, H);
+		const p = toScreen(v, cams[wall], wall * W, 0, W, H);
 		if (!p || Math.abs(p.ndc.x) > 1 || Math.abs(p.ndc.y) > 1.3) return null;
 		return p;
 	}
@@ -901,6 +906,7 @@ IGB.register('twin-tail-tower', function TwinTailTowerGame(stage, playersMeta) {
 		show.fini();
 		world.dispose();
 		sparkTex.dispose();
+		postfx.dispose();
 		renderer.dispose();
 		renderer.forceContextLoss();
 	};

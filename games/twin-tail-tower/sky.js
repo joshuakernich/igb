@@ -4,7 +4,7 @@
  * clouds (a deck of them to climb through and look down on); a blazing
  * sunset; then night, the stars coming out; and space, black and starry,
  * the sun sharp and white again and a ringed planet hanging off to one side.
- * The sky is a Glint SkyDome and the sea a ShaderMaterial, sharing one set of
+ * The sky is a SkyDome (lib/three/walls.js) and the sea a ShaderMaterial, sharing one set of
  * uniforms; the dome's environment (rebuilt every few metres as the colours
  * change) keeps everything shiny reflecting the sky of the moment.
  *
@@ -12,7 +12,8 @@
  *   world.update(time, eye, height);    // every frame
  *   world.light                         // the sun, sky light and haze for this height
  */
-import * as G from '../../lib/glint/glint.js';
+import * as THREE from '../../lib/three/three.module.min.js';
+import { SkyDome } from '../../lib/three/walls.js';
 
 const TAU = Math.PI * 2;
 const SUN_AZ = -0.6;   // radians round from straight ahead (the front wall's middle): ahead and to the left
@@ -81,7 +82,7 @@ const EXTRA_GLSL = /* glsl */`
 `;
 
 function oceanMaterial(uniforms) {
-	return new G.ShaderMaterial({
+	return new THREE.ShaderMaterial({
 		uniforms: Object.assign({}, uniforms, { uTime: { value: 0 } }),
 		vertexShader: /* glsl */`
 			varying vec3 vWorld;
@@ -156,8 +157,8 @@ function cloudTexture() {
 	g.globalCompositeOperation = 'source-atop';
 	g.fillStyle = shade;
 	g.fillRect(0, 0, 256, 128);
-	const t = new G.CanvasTexture(c);
-	t.colorSpace = G.SRGBColorSpace;
+	const t = new THREE.CanvasTexture(c);
+	t.colorSpace = THREE.SRGBColorSpace;
 	return t;
 }
 
@@ -178,16 +179,16 @@ function deckTexture() {
 			g.fillRect(x + dx - r, y + dy - r, r * 2, r * 2);
 		}
 	}
-	const t = new G.CanvasTexture(c);
-	t.colorSpace = G.SRGBColorSpace;
-	t.wrapS = t.wrapT = G.RepeatWrapping;
+	const t = new THREE.CanvasTexture(c);
+	t.colorSpace = THREE.SRGBColorSpace;
+	t.wrapS = t.wrapT = THREE.RepeatWrapping;
 	t.repeat.set(30, 30);
 	return t;
 }
 
 // A banded gas giant with a ring.
 function buildPlanet() {
-	const g = new G.Group();
+	const g = new THREE.Group();
 	const c = document.createElement('canvas');
 	c.width = 256;
 	c.height = 128;
@@ -197,13 +198,13 @@ function buildPlanet() {
 		x.fillStyle = bands[Math.floor(Math.random() * bands.length)];
 		x.fillRect(0, y, 256, 8 + Math.random() * 6);
 	}
-	const tex = new G.CanvasTexture(c);
-	tex.colorSpace = G.SRGBColorSpace;
-	const mat = new G.MeshBasicMaterial({ map: tex, transparent: true, fog: false, depthWrite: false });
-	const ball = new G.Mesh(new G.SphereGeometry(130, 48, 32), mat);
+	const tex = new THREE.CanvasTexture(c);
+	tex.colorSpace = THREE.SRGBColorSpace;
+	const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, fog: false, depthWrite: false });
+	const ball = new THREE.Mesh(new THREE.SphereGeometry(130, 48, 32), mat);
 	g.add(ball);
-	const ringMat = new G.MeshBasicMaterial({ color: 0xe8d2b0, transparent: true, opacity: 0.6, side: G.DoubleSide, fog: false, depthWrite: false });
-	const ring = new G.Mesh(new G.RingGeometry(170, 260, 96), ringMat);
+	const ringMat = new THREE.MeshBasicMaterial({ color: 0xe8d2b0, transparent: true, opacity: 0.6, side: THREE.DoubleSide, fog: false, depthWrite: false });
+	const ring = new THREE.Mesh(new THREE.RingGeometry(170, 260, 96), ringMat);
 	ring.rotation.set(-1.25, 0.25, 0);
 	g.add(ring);
 	g.rotation.z = 0.3;
@@ -215,23 +216,23 @@ function buildPlanet() {
 export function createSky(renderer, scene, Z) {
 	const STOPS = stops(Z);
 	const uniforms = {
-		uZenith: { value: new G.Vector3() },
-		uHorizon: { value: new G.Vector3() },
-		uBelow: { value: new G.Vector3() },
-		sunDir: { value: new G.Vector3(0, 1, 0) },
+		uZenith: { value: new THREE.Vector3() },
+		uHorizon: { value: new THREE.Vector3() },
+		uBelow: { value: new THREE.Vector3() },
+		sunDir: { value: new THREE.Vector3(0, 1, 0) },
 		sunBoost: { value: 30 },
-		uSun: { value: new G.Vector3(1, 1, 1) },
+		uSun: { value: new THREE.Vector3(1, 1, 1) },
 		uGlow: { value: 1 },
 		uStars: { value: 0 },
 		uSea: { value: 1 },
 	};
 
 	// the sky, round the eye
-	const sky = new G.SkyDome(SKY_GLSL + EXTRA_GLSL, uniforms, 3000);
+	const sky = new SkyDome(SKY_GLSL + EXTRA_GLSL, uniforms, 3000);
 	scene.add(sky);
 
 	// the sea, a wide disc under the eye
-	const ocean = new G.Mesh(new G.CircleGeometry(3600, 96), oceanMaterial(uniforms));
+	const ocean = new THREE.Mesh(new THREE.CircleGeometry(3600, 96), oceanMaterial(uniforms));
 	ocean.rotation.x = -Math.PI / 2;
 	ocean.position.y = -0.3;
 	ocean.frustumCulled = false;
@@ -244,10 +245,10 @@ export function createSky(renderer, scene, Z) {
 
 	// clouds: far ones low over the sea; a band of them to climb through; a deck of cloud to look down on
 	const tex = cloudTexture();
-	const clouds = new G.Group();
+	const clouds = new THREE.Group();
 	scene.add(clouds);
 	const puff = (x, y, z, w, opacity) => {
-		const s = new G.Sprite(new G.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: false, opacity }));
+		const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: false, opacity }));
 		s.position.set(x, y, z);
 		s.scale.set(w, w * 0.45, 1);
 		clouds.add(s);
@@ -264,7 +265,7 @@ export function createSky(renderer, scene, Z) {
 	}
 	const deckY = Z.clouds + 60;
 	const deckTex = deckTexture();
-	const deck = new G.Mesh(new G.CircleGeometry(3000, 64), new G.MeshBasicMaterial({ map: deckTex, transparent: true, depthWrite: false, fog: false, side: G.DoubleSide, opacity: 0 }));
+	const deck = new THREE.Mesh(new THREE.CircleGeometry(3000, 64), new THREE.MeshBasicMaterial({ map: deckTex, transparent: true, depthWrite: false, fog: false, side: THREE.DoubleSide, opacity: 0 }));
 	deck.rotation.x = -Math.PI / 2;
 	deck.position.y = deckY;
 	deck.renderOrder = -4;
@@ -273,13 +274,13 @@ export function createSky(renderer, scene, Z) {
 	const planet = buildPlanet();
 	scene.add(planet);
 
-	const WHITE = new G.Color(1, 1, 1);
-	const light = { dir: new G.Vector3(), sun: new G.Color(), sunI: 3, hemiSky: new G.Color(), hemiGround: new G.Color(), hemiI: 0.8, fog: new G.Color() };
+	const WHITE = new THREE.Color(1, 1, 1);
+	const light = { dir: new THREE.Vector3(), sun: new THREE.Color(), sunI: 3, hemiSky: new THREE.Color(), hemiGround: new THREE.Color(), hemiI: 0.8, fog: new THREE.Color() };
 	const world = { sky, ocean, light };
 
 	const mix3 = (out, a, b, k) => out.set(a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k);
 	const mix = (a, b, k) => a + (b - a) * k;
-	const lin = (v) => new G.Color(Math.pow(v.x, 2.2), Math.pow(v.y, 2.2), Math.pow(v.z, 2.2));   // (the stops are sRGB-ish; the lights want linear)
+	const lin = (v) => new THREE.Color(Math.pow(v.x, 2.2), Math.pow(v.y, 2.2), Math.pow(v.z, 2.2));   // (the stops are sRGB-ish; the lights want linear)
 	const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 	world.update = function (time, eye, height) {

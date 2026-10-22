@@ -29,7 +29,8 @@
  * everything after TIME! are Showtime's.
  * An ES module (manifest: module: true).
  */
-import * as G from '../../lib/glint/glint.js';
+import * as THREE from '../../lib/three/three.module.min.js';
+import { createWallComposer } from '../../lib/three/walls.js';
 import { createTrack, sweep, STEP, HALF, LANES } from './track.js';
 import { createSky, SUN, HORIZON } from './sky.js';
 import { buildRunner, buildRing, buildBarrier, buildMine, buildPad, buildIsland, roadTexture, checkTexture, boostTexture, sparkleTexture, glossy, chrome } from './models.js';
@@ -65,20 +66,23 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 
 	/* ---------- renderer, scene, cameras ---------- */
 
-	// Glint, the gamebox's own engine: physically based, HDR, bloom, filmic tone mapping.
-	const renderer = new G.Renderer({ logarithmicDepthBuffer: true });
+	const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
+	renderer.toneMapping = THREE.ACESFilmicToneMapping;
 	renderer.toneMappingExposure = 1.05;
-	Object.assign(renderer.bloom, { strength: 0.45, radius: 0.7, threshold: 1.3 });
-	Object.assign(renderer.grade, { saturation: 1.08, contrast: 1.05, vignette: 0.12 });
+	renderer.shadowMap.enabled = true;
+	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+	renderer.shadowMap.autoUpdate = false;
 	$(renderer.domElement).css({ position: 'absolute', left: 0, top: 0, width: WIDTH + 'px', height: H + 'px' }).appendTo(stage.$bg);
 
 	let k = 1;
+	let postfx = null;   // the bloom and tone mapping over all three walls (made once the scene is)
 	function resize() {
 		k = Math.min(IGB.scale * IGB.pixelRatio, 1);
 		renderer.setPixelRatio(1);
 		renderer.setSize(Math.round(WIDTH * k), Math.round(H * k), false);
+		if (postfx) postfx.setSize();
 	}
-	// A wall's view: its camera into its third of the canvas (pixels, y up).
+	// A wall's view: its camera into its part of the frame (pixels, y from the bottom).
 	function viewport(cam, x, y, w, h) {
 		const x0 = Math.round(x * k);
 		const x1 = Math.round((x + w) * k);
@@ -89,14 +93,17 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	const unlisten = IGB.onResize(resize);
 	resize();
 
-	const scene = new G.Scene();
-	scene.fog = new G.Fog(HORIZON, 260, 2000);
+	const scene = new THREE.Scene();
+	scene.fog = new THREE.Fog(HORIZON, 260, 2000);
 	const world = createSky(renderer, scene);
+	// Bloom: the sun, its glitter on the sea, the road's neon edges, warning
+	// lamps, sparkles and boost trails all glow (anything past the threshold).
+	postfx = createWallComposer(renderer, scene, { strength: 0.55, radius: 0.55, threshold: 0.9 });
 	world.ocean.renderOrder = -5;
 	world.ocean.material.depthWrite = false;
 
-	scene.add(new G.HemisphereLight(0xcfe9ff, 0x2a7a8a, 0.7));
-	const sun = new G.DirectionalLight(0xfff0d8, 3.4);
+	scene.add(new THREE.HemisphereLight(0xcfe9ff, 0x2a7a8a, 0.7));
+	const sun = new THREE.DirectionalLight(0xfff0d8, 3.4);
 	sun.castShadow = true;
 	sun.shadow.mapSize.set(2048, 2048);
 	Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 160 });
@@ -109,13 +116,13 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	// side cameras square to it, out to sea. All three share one tilt and one
 	// field of view (90 degrees across), so they're the sides of one box and
 	// the walls meet seamlessly.
-	const rig = new G.Group();
+	const rig = new THREE.Group();
 	scene.add(rig);
-	const PITCH = new G.Quaternion().setFromAxisAngle(new G.Vector3(1, 0, 0), -CAM.pitch * Math.PI / 180);
-	const frontCam = new G.PerspectiveCamera(FOV, W / H, 0.1, 6000);
+	const PITCH = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -CAM.pitch * Math.PI / 180);
+	const frontCam = new THREE.PerspectiveCamera(FOV, W / H, 0.1, 6000);
 	rig.add(frontCam);
 	const sideCams = [Math.PI / 2, -Math.PI / 2].map(function (yaw) {
-		const cam = new G.PerspectiveCamera(FOV, W / H, 0.1, 6000);
+		const cam = new THREE.PerspectiveCamera(FOV, W / H, 0.1, 6000);
 		cam.rotation.y = yaw;
 		rig.add(cam);
 		return cam;
@@ -127,15 +134,15 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	const track = createTrack();
 	const aniso = renderer.capabilities.getMaxAnisotropy();
 	const MAT = {
-		road: new G.MeshPhysicalMaterial({ map: roadTexture(aniso), roughness: 0.22, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.05, side: G.DoubleSide }),
-		check: new G.MeshStandardMaterial({ map: checkTexture(aniso), roughness: 0.35, metalness: 0.05, side: G.DoubleSide }),
-		glow: new G.MeshBasicMaterial({ color: 0x7ff8ff, toneMapped: false, side: G.DoubleSide }),
-		glass: new G.MeshPhysicalMaterial({ color: 0xc8f2ff, transparent: true, opacity: 0.2, roughness: 0.03, metalness: 0, side: G.DoubleSide, depthWrite: false, envMapIntensity: 2 }),
+		road: new THREE.MeshPhysicalMaterial({ map: roadTexture(aniso), roughness: 0.22, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.05, side: THREE.DoubleSide }),
+		check: new THREE.MeshStandardMaterial({ map: checkTexture(aniso), roughness: 0.35, metalness: 0.05, side: THREE.DoubleSide }),
+		glow: new THREE.MeshBasicMaterial({ color: new THREE.Color(0x7ff8ff).multiplyScalar(2.6), side: THREE.DoubleSide }),   // (brighter than white: it blooms)
+		glass: new THREE.MeshPhysicalMaterial({ color: 0xc8f2ff, transparent: true, opacity: 0.2, roughness: 0.03, metalness: 0, side: THREE.DoubleSide, depthWrite: false, envMapIntensity: 2 }),
 		rail: chrome(),
-		pylon: new G.MeshStandardMaterial({ color: 0xf4f6fa, roughness: 0.3, metalness: 0.35 }),
+		pylon: new THREE.MeshStandardMaterial({ color: 0xf4f6fa, roughness: 0.3, metalness: 0.35 }),
 	};
 	const padTex = boostTexture();
-	const PYLON = new G.CylinderGeometry(0.42, 0.62, 1, 14).translate(0, 0.5, 0);
+	const PYLON = new THREE.CylinderGeometry(0.42, 0.62, 1, 14).translate(0, 0.5, 0);
 	PYLON.userData.shared = true;
 
 	const DECK = 0.9;    // the road's depth
@@ -155,9 +162,9 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	let lastHazard = 0;
 
 	const rand = (a, b) => a + Math.random() * (b - a);
-	const v3 = () => new G.Vector3();
+	const v3 = () => new THREE.Vector3();
 	const P = v3();
-	const Q = new G.Quaternion();
+	const Q = new THREE.Quaternion();
 
 	function place(obj, s, x, y) {
 		track.frame(s, P, Q);
@@ -170,9 +177,9 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 		const i1 = Math.round((c + 1) * CHUNK / STEP);
 		track.ensure(i1 * STEP + STEP * 2);
 		const S = track.samples;
-		const group = new G.Group();
+		const group = new THREE.Group();
 		const add = (geo, mat, shadow) => {
-			const m = new G.Mesh(geo, mat);
+			const m = new THREE.Mesh(geo, mat);
 			m.receiveShadow = !!shadow;
 			group.add(m);
 			return m;
@@ -188,7 +195,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 		for (let i = i0 + 12; i < i1; i += 26) {
 			const s = S[i];
 			if (s.up.y < 0.85 || s.pos.y < 4 || s.kind === 'helix') continue;   // (under a helix, it would spear the road below)
-			const p = new G.Mesh(PYLON, MAT.pylon);
+			const p = new THREE.Mesh(PYLON, MAT.pylon);
 			p.position.set(s.pos.x, -1, s.pos.z).addScaledVector(s.up, 0);
 			p.scale.set(1, s.pos.y - DECK + 1, 1);
 			p.castShadow = true;
@@ -198,10 +205,10 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 		// islands off to either side, now and then a big one further out, and clouds
 		for (let i = i0 + Math.floor(rand(0, 60)); i < i1; i += Math.floor(rand(70, 130))) {
 			const s = S[i];
-			const f = new G.Vector3(s.fwd.x, 0, s.fwd.z);
+			const f = new THREE.Vector3(s.fwd.x, 0, s.fwd.z);
 			if (f.lengthSq() < 0.01) continue;
 			f.normalize();
-			const across = new G.Vector3(-f.z, 0, f.x).multiplyScalar(Math.random() < 0.5 ? -1 : 1);
+			const across = new THREE.Vector3(-f.z, 0, f.x).multiplyScalar(Math.random() < 0.5 ? -1 : 1);
 			const r = rand(14, 40);
 			const d = r + rand(16, 90);
 			const isle = buildIsland(r, rand(4, Math.min(11, r * 0.35)));
@@ -211,10 +218,10 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 		}
 		if (Math.random() < 0.45) {
 			const s = S[Math.floor((i0 + i1) / 2)];
-			const f = new G.Vector3(s.fwd.x, 0, s.fwd.z);
+			const f = new THREE.Vector3(s.fwd.x, 0, s.fwd.z);
 			if (f.lengthSq() > 0.01) {
 				f.normalize();
-				const across = new G.Vector3(-f.z, 0, f.x).multiplyScalar(Math.random() < 0.5 ? -1 : 1);
+				const across = new THREE.Vector3(-f.z, 0, f.x).multiplyScalar(Math.random() < 0.5 ? -1 : 1);
 				const r = rand(80, 150);
 				const big = buildIsland(r, rand(45, 95), false);
 				big.position.copy(s.pos).addScaledVector(across, r + rand(120, 260)).setY(0);
@@ -320,7 +327,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 
 	// An arch over the road with a banner: the start, and the goal.
 	function arch(text, s) {
-		const g = new G.Group();
+		const g = new THREE.Group();
 		const tex = (function () {
 			const c = document.createElement('canvas');
 			c.width = 1024;
@@ -344,17 +351,17 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 				x.fillText(text, 512, 84);
 			};
 			words();
-			const t = new G.CanvasTexture(c);
-			t.colorSpace = G.SRGBColorSpace;
+			const t = new THREE.CanvasTexture(c);
+			t.colorSpace = THREE.SRGBColorSpace;
 			// (written again once the font's in, if it wasn't yet)
 			if (document.fonts) document.fonts.load('84px "Nise Sega Sonic"').then(() => { words(); t.needsUpdate = true; }).catch(() => {});
 			return t;
 		})();
-		const banner = new G.Mesh(new G.BoxGeometry(HALF * 2 + 1.6, 1.5, 0.3), [glossy(0x1a0b2e), glossy(0x1a0b2e), glossy(0x1a0b2e), glossy(0x1a0b2e), glossy(0xffffff, { map: tex }), glossy(0xffffff, { map: tex })]);
+		const banner = new THREE.Mesh(new THREE.BoxGeometry(HALF * 2 + 1.6, 1.5, 0.3), [glossy(0x1a0b2e), glossy(0x1a0b2e), glossy(0x1a0b2e), glossy(0x1a0b2e), glossy(0xffffff, { map: tex }), glossy(0xffffff, { map: tex })]);
 		banner.position.y = 6.2;
 		g.add(banner);
 		for (const side of [-1, 1]) {
-			const post = new G.Mesh(new G.CylinderGeometry(0.28, 0.32, 7, 16), chrome());
+			const post = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 7, 16), chrome());
 			post.position.set(side * (HALF + 0.6), 3.0, 0);
 			g.add(post);
 		}
@@ -373,18 +380,18 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 		scene.add(model.root);
 		// a streak of light behind them
 		const TRAIL = 16;
-		const geo = new G.BufferGeometry();
-		geo.setAttribute('position', new G.BufferAttribute(new Float32Array(TRAIL * 2 * 3), 3));
-		geo.setAttribute('color', new G.BufferAttribute(new Float32Array(TRAIL * 2 * 3), 3));
+		const geo = new THREE.BufferGeometry();
+		geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRAIL * 2 * 3), 3));
+		geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(TRAIL * 2 * 3), 3));
 		const idx = [];
 		for (let i = 0; i < TRAIL - 1; i++) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
 		geo.setIndex(idx);
-		const trail = new G.Mesh(geo, new G.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: G.AdditiveBlending, depthWrite: false, side: G.DoubleSide, toneMapped: false }));
+		const trail = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
 		trail.frustumCulled = false;
 		scene.add(trail);
 		return {
 			n, colour, model, trail, TRAIL, history: [],
-			tint: new G.Color(colour),
+			tint: new THREE.Color(colour),
 			px: 0.5, pz: 0.5, x: 0, xWas: 0,
 			off: 0, s: START_S, sWas: START_S,
 			rings: 0, bump: 0,
@@ -410,7 +417,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	const pops = [];         // words: { text, colour, at (world), age, size }
 
 	function sparkle(at, colour = 0xffffff, size = 2.2) {
-		const s = new G.Sprite(new G.SpriteMaterial({ map: sparkTex, color: colour, transparent: true, depthWrite: false, blending: G.AdditiveBlending, toneMapped: false }));
+		const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTex, color: new THREE.Color(colour).multiplyScalar(2.2), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
 		s.position.copy(at);
 		s.scale.setScalar(size);
 		scene.add(s);
@@ -608,13 +615,13 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	/* ---------- every frame ---------- */
 
 	const eye = v3();
-	const eyeQ = new G.Quaternion();
-	const qa = new G.Quaternion();
-	const qb = new G.Quaternion();
+	const eyeQ = new THREE.Quaternion();
+	const qa = new THREE.Quaternion();
+	const qb = new THREE.Quaternion();
 	const up = v3();
 	const right = v3();
 	const tmp = v3();
-	const back = new G.Quaternion().setFromAxisAngle(new G.Vector3(0, 1, 0), Math.PI * 0.97);
+	const back = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI * 0.97);
 	let eyeReady = false;
 
 	function simulate(dt) {
@@ -857,7 +864,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 		const pos = r.trail.geometry.attributes.position;
 		const col = r.trail.geometry.attributes.color;
 		const width = r.boost > 0 ? 0.75 : 0.3;
-		const bright = phase === 'run' || phase === 'finish' ? (r.boost > 0 ? 1.4 : 0.55 * pace) : 0;
+		const bright = phase === 'run' || phase === 'finish' ? (r.boost > 0 ? 2.6 : 0.7 * pace) : 0;
 		for (let i = 0; i < r.TRAIL; i++) {
 			const e = h[Math.min(i, h.length - 1)];
 			const f = 1 - i / (r.TRAIL - 1);
@@ -874,8 +881,8 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	}
 
 	function render() {
-		// (one shadow pass, then all three walls into one HDR frame, then bloom and tone mapping)
-		renderer.render(scene, cams.map((cam, w) => viewport(cam, w * W, 0, W, H)));
+		// all three walls into one HDR frame (the shadows drawn once), then bloom and tone mapping
+		postfx.render(cams.map((cam, w) => viewport(cam, w * W, 0, W, H)));
 	}
 
 	/* ---------- the 2D layer: speed lines, the sun's flare, scores ---------- */
@@ -1093,6 +1100,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 		unlisten();
 		show.fini();
 		world.dispose();
+		postfx.dispose();
 		renderer.dispose();
 		renderer.forceContextLoss();
 	};
