@@ -631,12 +631,12 @@ export function buildSpeedster(colour) {
 		for (const g of mz.lines) head.add(new THREE.Mesh(g, lineMat));
 		// the nose: a little glossy bean poking forward (and a touch up) off the muzzle's top
 		{
-			const r = 0.042 * FACE_K;
+			const r = 0.046 * FACE_K;
 			const geo = new THREE.SphereGeometry(r, 28, 20);
 			const pos = geo.attributes.position;
 			for (let i = 0; i < pos.count; i++) {
-				const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i) * 1.6;   // (long front to back)
-				pos.setXYZ(i, x * 0.95, y * 0.85 + 0.12 * (z / r) * (z / r) * r, z);   // (both ends curling up a little: a bean)
+				const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i) * 1.25;   // (a little long front to back)
+				pos.setXYZ(i, x, y * 0.95 + 0.06 * (z / r) * (z / r) * r, z);   // (both ends curling up a little: a bean)
 			}
 			geo.computeVertexNormals();
 			const nose = add(head, geo, black, mz.nosePt.x, mz.nosePt.y, mz.nosePt.z - 0.02 - r * 0.5);
