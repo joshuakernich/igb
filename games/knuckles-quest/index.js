@@ -17,9 +17,9 @@
  *
  * Two cameras (the debug screen's CAMERA row switches; kept per browser):
  * FIXED (the default) never turns except with the turn-around button; it
- * stands at the back of his room, across its middle, so he runs out onto the
- * side walls, and slides on to the next room after him. FOLLOW chases from
- * behind, swinging round to his heading.
+ * follows him from straight behind, but with slack sideways, so heading off to
+ * one side he runs out onto that side wall. FOLLOW chases from behind,
+ * swinging round to his heading.
  *
  * Whoever's standing nearest the spot a tap lands on owns that tap (taps
  * carry no player): the rings and fragments he grabs on the way are theirs.
@@ -66,7 +66,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 	const POINTS = { ring: 1, fragment: 25 };
 	const DOOR_STEP = { e: [1, 0], w: [-1, 0], s: [0, 1], n: [0, -1] };   // (which way each doorway of a room leads)
 	const TURN = { x: W * 1.5, y: H * 0.75, r: 70 };            // the turn-around button: middle of the front wall, a quarter up from the bottom
-	const FIXED = { wall: 0.8, ahead: 1.5, slide: 3, snap: 5 };   // the fixed camera: how far in front of his room's back wall it stands, how far behind him at least, how fast it slides to a new room, how fast it squares up
+	const FIXED = { side: 7, slide: 6, snap: 5 };          // the fixed camera: how far he gets off to one side before it follows (beyond that he's out on a side wall), how fast it follows, how fast it squares up
 	const CAMERA_KEY = 'knuckles-quest.camera';                 // (which camera, kept per browser: 'fixed' or 'follow')
 	const SENSE = 45;                                      // metres off a missing fragment's slot starts to pulse (faster and brighter nearer)
 
@@ -193,7 +193,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 	// heads off onto the side walls as he crosses it
 	let fixedCam = true;
 	try { fixedCam = localStorage.getItem(CAMERA_KEY) !== 'follow'; } catch (e) { /* (no storage: fixed) */ }
-	let camRoom = null;         // (the room the fixed camera's in: his, or the last one he was in)
+	let camAt = null;           // (where the fixed camera stands, on the ground: a little slack sideways)
 	let turnFlash = 0;          // the button lit up just after a press           // 0..1: how far the eye's come in close behind him (in a doorway)
 	const markerMesh = buildMarker();
 	markerMesh.visible = false;
@@ -686,8 +686,9 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		sky.follow(walls.rig.position);
 	}
 
-	// the fixed eye: square to the maze, turning only with the turn-around button, at the
-	// back of his room and across its middle, so he runs out onto the side walls
+	// the fixed eye: square to the maze, turning only with the turn-around button. It follows
+	// him, always the same way: straight behind him, but with slack sideways, so heading off
+	// to one side he runs out onto that side wall (and it trails him from there)
 	function fixedEye(dt) {
 		const square = Math.round(camYaw / (Math.PI / 2)) * (Math.PI / 2);
 		let d = (spinTo !== null ? spinTo : square) - camYaw;
@@ -695,13 +696,14 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		camYaw += d * Math.min(1, dt * FIXED.snap);
 		if (spinTo !== null && Math.abs(d) < 0.02) { camYaw = spinTo; spinTo = null; }
 		camClose = 0;
-		camRoom = maze.roomAt(kn.pos.x, kn.pos.z) || camRoom || maze.rooms[0][0];
 		const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw);   // ahead
 		const rx = Math.cos(camYaw), rz = -Math.sin(camYaw);    // to the right
-		const along = Math.min(camRoom.cx * fx + camRoom.cz * fz - (CELL / 2 - WALL.t / 2 - FIXED.wall), kn.pos.x * fx + kn.pos.z * fz - FIXED.ahead);
-		const side = camRoom.cx * rx + camRoom.cz * rz;
+		if (!camAt) camAt = new THREE.Vector3(kn.pos.x - fx * CAM.back, 0, kn.pos.z - fz * CAM.back);
+		// (how far it's off to his side now, kept within the slack; always CAM.back behind)
+		const side = Math.max(-FIXED.side, Math.min(FIXED.side, (camAt.x - kn.pos.x) * rx + (camAt.z - kn.pos.z) * rz));
+		camAt.set(kn.pos.x - fx * CAM.back + rx * side, 0, kn.pos.z - fz * CAM.back + rz * side);
 		const head = tmp.copy(kn.pos).add(tmp2.set(0, CAM.look, 0));
-		const want = new THREE.Vector3(fx * along + rx * side, head.y + CAM.up, fz * along + rz * side);
+		const want = new THREE.Vector3(camAt.x, head.y + CAM.up, camAt.z);
 		want.y = Math.min(want.y, Math.max(WALL.h - CAM.below, kn.pos.y + 1.0), WALL.ceil - 1.2);
 		// (pulled in toward him if something's in the way)
 		const dir = want.clone().sub(head);
