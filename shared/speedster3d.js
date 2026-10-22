@@ -390,7 +390,8 @@ export function buildSpeedster(colour) {
 
 	// the head
 	const head = new THREE.Group();
-	head.position.set(0, 0.78, -0.02);
+	head.position.set(0, 0.74, -0.02);
+	head.scale.setScalar(0.88);   // (a little smaller than it was built)
 	torso.add(head);
 	// a bean: a little long front to back, a little wide, arched (seen from the side, its
 	// top rounds over and its underside curves in), its front pressed smoothly flat
