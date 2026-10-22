@@ -134,7 +134,8 @@ function muzzlePath(g) {
 	g.closePath();
 }
 
-// Points along the eye mask's outline (not its bottom edge, along the muzzle),
+// Points along the eye mask's outline (over the tops of the eyes and into the
+// notch; not down round their bottoms, nor along the muzzle),
 // as (x, y) on the front of a sphere of radius 0.4 (before flattening).
 function maskRimPoints(perSegment = 40) {
 	const segs = [
@@ -153,7 +154,7 @@ function maskRimPoints(perSegment = 40) {
 			const rx = u * u * u * a[0] + 3 * u * u * t * b[0] + 3 * u * t * t * c[0] + t * t * t * d[0];
 			const ry = u * u * u * a[1] + 3 * u * u * t * b[1] + 3 * u * t * t * c[1] + t * t * t * d[1];
 			const U = (px / 2 + (rx - ox) * s) / px, Vv = 1 - (cy + (ry - oy) * s) / px;
-			out.push([(0.5 - U) * span, (Vv - 0.5) * span]);
+			if (ry < 300) out.push([(0.5 - U) * span, (Vv - 0.5) * span]);   // (round the tops of the eyes only: no contour down round their bottoms)
 		}
 	});
 	return out;
@@ -180,10 +181,13 @@ function faceTexture(withMuzzle = true) {
 	g.fillStyle = '#ffffff';
 	maskPath(g);
 	g.fill();
-	if (!withMuzzle) {   // (the mask runs a touch under the 3D muzzle's edge, so no seam shows between them)
+	if (!withMuzzle) {   // (the mask runs a little way under the 3D muzzle's top edge, so no seam shows; only along that edge)
 		g.strokeStyle = '#ffffff';
-		g.lineWidth = 14;
-		maskPath(g);
+		g.lineWidth = 26;
+		g.beginPath();
+		g.moveTo(716, 390);
+		g.bezierCurveTo(600, 418, 460, 446, 368, 448);
+		g.bezierCurveTo(270, 446, 130, 424, 20, 400);
 		g.stroke();
 	}
 	g.strokeStyle = '#0c0c14';   // (for the smirk: no outlines round the mask or muzzle)
@@ -448,64 +452,56 @@ export function buildSpeedster(colour) {
 		rim.castShadow = true;
 		head.add(rim);
 
-		// the muzzle in 3D: a soft cushion cut to the drawing's muzzle outline, swelling
-		// out of the face (most in its middle, nothing at its edges, so it grows out of
-		// the face with no step); it wears the same painting (the tan, the smirk), and the
-		// nose is a glossy ball on it
-		const MUZZLE = 0.1;   // how far it swells out
+		// the muzzle: a solid 3D bean of tan fur (a capsule bent up at both ends like the
+		// drawing's crescent, a little flattened front to back), its back half sunk into
+		// the face so it sits flush; the smile and the nose sit right on its front
 		const { px, span, s: sc, ox, oy, cy } = FACE;
 		const drawToHead = (rx, ry) => [(0.5 - (px / 2 + (rx - ox) * sc) / px) * span, ((1 - (cy + (ry - oy) * sc) / px) - 0.5) * span];
-		const toRef = (g) => { g.translate(px / 2 - ox * sc, cy - oy * sc); g.scale(sc, sc); };
-		const canvas = (size, blur, draw) => { const c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d'); g.filter = blur ? 'blur(' + blur + 'px)' : 'none'; g.scale(size / px, size / px); toRef(g); g.fillStyle = '#fff'; draw(g); return c; };
-		const soft = canvas(256, 6, (g) => { muzzlePath(g); g.fill(); }).getContext('2d').getImageData(0, 0, 256, 256).data;
-		const at = (x, y) => soft[(Math.max(0, Math.min(255, y)) * 256 + Math.max(0, Math.min(255, x))) * 4] / 255;
-		const swell = (u, v) => {
-			const fx = u * 255, fy = (1 - v) * 255, x = Math.floor(fx), y = Math.floor(fy), tx = fx - x, ty = fy - y;
-			const m = (at(x, y) * (1 - tx) + at(x + 1, y) * tx) * (1 - ty) + (at(x, y + 1) * (1 - tx) + at(x + 1, y + 1) * tx) * ty;
-			const k = Math.max(0, Math.min(1, (m - 0.56) / 0.4));   // (starts just inside the outline: it meets the face flush)
-			return MUZZLE * Math.pow(k * k * (3 - 2 * k), 0.5);   // (full: a plump cushion, easing to nothing at its edge)
-		};
-		const surface = (x, y, out) => {
-			const u = 0.5 - x / span, v = y / span + 0.5;
-			out.set(x, y, -Math.sqrt(Math.max(0, 0.16 - x * x - y * y)));
-			bean(flatten(out));
-			out.z -= swell(u, v);   // (after the bean: so it swells straight out, not sliding down the face)
-			return out.add(V(0, 0, 0.02 - 0.004));
-		};
-		const [x0, y0] = drawToHead(-10, 380), [x1, y1] = drawToHead(750, 710);
-		const mg = new THREE.PlaneGeometry(Math.abs(x1 - x0), Math.abs(y1 - y0), 140, 70);
-		const mpos = mg.attributes.position, muv = mg.attributes.uv, q = V(0, 0, 0);
-		const cx = (x0 + x1) / 2, cyy = (y0 + y1) / 2;
-		for (let i = 0; i < mpos.count; i++) {
-			const x = mpos.getX(i) + cx, y = mpos.getY(i) + cyy;
-			muv.setXY(i, 0.5 - x / span, y / span + 0.5);
-			surface(x, y, q);
-			mpos.setXYZ(i, q.x, q.y, q.z);
+		const onHead = (x, y) => bean(flatten(V(x, y, -Math.sqrt(Math.max(0, 0.16 - x * x - y * y))))).add(V(0, 0, 0.02));
+		const MUZZLE = { r: 0.105, len: 0.34, bend: 1.4, depth: 0.78, sink: 0.035 };   // its thickness, length between its round ends, how much its ends curve up, front-to-back squash, and how far into the face it sits
+		const mgeo = new THREE.CapsuleGeometry(MUZZLE.r, MUZZLE.len, 12, 32);
+		mgeo.rotateZ(Math.PI / 2);   // (lying across the face)
+		{
+			const pos = mgeo.attributes.position;
+			for (let i = 0; i < pos.count; i++) {
+				const x = pos.getX(i);
+				pos.setY(i, pos.getY(i) + MUZZLE.bend * x * x);   // (the ends curve up: a smile of a bean)
+				pos.setZ(i, pos.getZ(i) * MUZZLE.depth);
+			}
+			mgeo.computeVertexNormals();
 		}
-		mg.computeVertexNormals();
-		const alpha = new THREE.CanvasTexture(canvas(1024, 0, (g) => { muzzlePath(g); g.fill(); }));
-		const mmat = fur(0xf6d2a2, { alphaMap: alpha, alphaTest: 0.5, normalScale: new THREE.Vector2(0.7, 0.7), side: THREE.DoubleSide });   // (the tan as fur, like the tummy)
-		const muzzle = new THREE.Mesh(mg, mmat);
+		const [mcx, mcy] = drawToHead(368, 560);
+		const muzzle = new THREE.Mesh(mgeo, fur(0xf6d2a2, { normalScale: new THREE.Vector2(0.7, 0.7) }));
+		muzzle.position.copy(onHead(mcx, mcy)).add(V(0, 0.015, MUZZLE.sink));
 		muzzle.castShadow = true;
 		head.add(muzzle);
-		// the smile: a fine dark line on the muzzle, its little tick at the corner
-		const curve = (a, c, b, n = 24) => Array.from({ length: n + 1 }, (_, i) => {
-			const t = i / n, u = 1 - t;
-			const [x, y] = drawToHead(u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]);
-			const p = surface(x, y, V(0, 0, 0));
-			p.z -= 0.003;
-			return p;
-		});
+		// (points on its front: cast straight back at its shape from in front of where the
+		// drawing's point lands on the face)
+		const caster = new THREE.Raycaster(), probe = new THREE.Mesh(mgeo);
+		const onMuzzle = (rx, ry) => {
+			const at = onHead(...drawToHead(rx, ry));
+			caster.set(V(at.x - muzzle.position.x, at.y - muzzle.position.y, -1), V(0, 0, 1));
+			const hit = caster.intersectObject(probe, false)[0];
+			return hit ? hit.point.add(muzzle.position) : null;
+		};
+		// the smile: a fine dark line on the bean, with its little tick at the corner
+		const curve = (a, c, b, n = 24) => {
+			const out = [];
+			for (let i = 0; i <= n; i++) {
+				const t = i / n, u = 1 - t;
+				const p = onMuzzle(u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]);
+				if (p) out.push(p.add(V(0, 0, -0.003)));
+			}
+			return out;
+		};
 		const lineMat = new THREE.MeshStandardMaterial({ color: 0x14100c, roughness: 0.6 });
 		for (const pts of [curve([428, 612], [560, 592], [600, 508]), curve([552, 498], [596, 490], [630, 522], 10)]) {
-			const line = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.0055, 6, false), lineMat);
-			head.add(line);
+			if (pts.length < 2) continue;
+			head.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.0055, 6, false), lineMat));
 		}
-		// the nose: a glossy black ball on the muzzle where it meets the mask
-		const [nx, ny] = drawToHead(362, 470);
-		const nose = add(head, new THREE.SphereGeometry(0.05, 24, 16), black, 0, 0, 0);
-		surface(nx, ny, nose.position);
-		nose.position.z -= 0.02;
+		// the nose: a glossy black ball on the bean's top, where it meets the eyes
+		const nosePt = onMuzzle(362, 470) || onHead(...drawToHead(362, 470));
+		const nose = add(head, new THREE.SphereGeometry(0.05, 24, 16), black, nosePt.x, nosePt.y, nosePt.z - 0.02);
 	}
 	// the quills: each starts as a fine point on the head (short of the flat front),
 	// swells as it hugs the head's curve, and tapers to its tip behind
