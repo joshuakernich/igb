@@ -15,6 +15,12 @@
  * tall plinths in the rooms furthest from the start; rings are everywhere.
  * Find all three and the quest is done (or the clock runs out).
  *
+ * Two cameras (the debug screen's CAMERA row switches; kept per browser):
+ * FIXED (the default) never turns except with the turn-around button; it
+ * stands at the back of his room, across its middle, so he runs out onto the
+ * side walls, and slides on to the next room after him. FOLLOW chases from
+ * behind, swinging round to his heading.
+ *
  * Whoever's standing nearest the spot a tap lands on owns that tap (taps
  * carry no player): the rings and fragments he grabs on the way are theirs.
  *
@@ -60,6 +66,8 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 	const POINTS = { ring: 1, fragment: 25 };
 	const DOOR_STEP = { e: [1, 0], w: [-1, 0], s: [0, 1], n: [0, -1] };   // (which way each doorway of a room leads)
 	const TURN = { x: W * 1.5, y: H * 0.75, r: 70 };            // the turn-around button: middle of the front wall, a quarter up from the bottom
+	const FIXED = { wall: 0.8, ahead: 1.5, slide: 3, snap: 5 };   // the fixed camera: how far in front of his room's back wall it stands, how far behind him at least, how fast it slides to a new room, how fast it squares up
+	const CAMERA_KEY = 'knuckles-quest.camera';                 // (which camera, kept per browser: 'fixed' or 'follow')
 	const SENSE = 45;                                      // metres off a missing fragment's slot starts to pulse (faster and brighter nearer)
 
 	/* ---------- renderer, scene, cameras ---------- */
@@ -180,6 +188,12 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 	let camYaw = 0;
 	let camClose = 0;
 	let spinTo = null;          // turning round (the turn-around button): the way the eye's swinging to
+	// The fixed camera (the default; the debug screen's CAMERA row toggles it): it never
+	// turns except with the turn-around button, and stands at the back of his room, so he
+	// heads off onto the side walls as he crosses it
+	let fixedCam = true;
+	try { fixedCam = localStorage.getItem(CAMERA_KEY) !== 'follow'; } catch (e) { /* (no storage: fixed) */ }
+	let camRoom = null;         // (the room the fixed camera's in: his, or the last one he was in)
 	let turnFlash = 0;          // the button lit up just after a press           // 0..1: how far the eye's come in close behind him (in a doorway)
 	const markerMesh = buildMarker();
 	markerMesh.visible = false;
@@ -663,7 +677,51 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		const mode = kn.state === 'climb' ? 'climb' : kn.state === 'mantle' ? 'climb' : kn.state === 'air' ? (kn.glide ? 'glide' : kn.vel.y > 0 ? 'jump' : 'fall') : (kn.goal ? 'run' : 'idle');
 		m.animate(dt, mode, mode === 'climb' ? (kn.state === 'mantle' ? 1.5 : kn.climbPace) : kn.runPace, clock);
 
-		// the eye: behind him, swinging round to face the way he's going
+		if (fixedCam) fixedEye(dt);
+		else followEye(dt);
+
+		// the sun and its shadows round him
+		sun.target.position.copy(kn.pos);
+		sun.position.copy(kn.pos).addScaledVector(SUN, 120);
+		sky.follow(walls.rig.position);
+	}
+
+	// the fixed eye: square to the maze, turning only with the turn-around button, at the
+	// back of his room and across its middle, so he runs out onto the side walls
+	function fixedEye(dt) {
+		const square = Math.round(camYaw / (Math.PI / 2)) * (Math.PI / 2);
+		let d = (spinTo !== null ? spinTo : square) - camYaw;
+		d = Math.atan2(Math.sin(d), Math.cos(d));
+		camYaw += d * Math.min(1, dt * FIXED.snap);
+		if (spinTo !== null && Math.abs(d) < 0.02) { camYaw = spinTo; spinTo = null; }
+		camClose = 0;
+		camRoom = maze.roomAt(kn.pos.x, kn.pos.z) || camRoom || maze.rooms[0][0];
+		const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw);   // ahead
+		const rx = Math.cos(camYaw), rz = -Math.sin(camYaw);    // to the right
+		const along = Math.min(camRoom.cx * fx + camRoom.cz * fz - (CELL / 2 - WALL.t / 2 - FIXED.wall), kn.pos.x * fx + kn.pos.z * fz - FIXED.ahead);
+		const side = camRoom.cx * rx + camRoom.cz * rz;
+		const head = tmp.copy(kn.pos).add(tmp2.set(0, CAM.look, 0));
+		const want = new THREE.Vector3(fx * along + rx * side, head.y + CAM.up, fz * along + rz * side);
+		want.y = Math.min(want.y, Math.max(WALL.h - CAM.below, kn.pos.y + 1.0), WALL.ceil - 1.2);
+		// (pulled in toward him if something's in the way)
+		const dir = want.clone().sub(head);
+		const len = dir.length();
+		dir.normalize();
+		const hit = raycastBoxes(boxes, head, dir, len);
+		const eye = hit ? head.clone().addScaledVector(dir, Math.max(0.6, hit.t - 0.6)) : want;
+		walls.rig.position.lerp(eye, Math.min(1, dt * FIXED.slide));
+		walls.rig.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), camYaw).multiply(PITCH);
+	}
+
+	function setCamera(fixed) {
+		fixedCam = fixed;
+		spinTo = null;
+		try { localStorage.setItem(CAMERA_KEY, fixed ? 'fixed' : 'follow'); } catch (e) { /* (not kept) */ }
+		$camButton.text(fixed ? 'FIXED ⇄ FOLLOW' : 'FOLLOW ⇄ FIXED');
+	}
+
+	// the follow eye: behind him, swinging round to face the way he's going
+	function followEye(dt) {
 		const moving = kn.state === 'ground' && kn.goal || kn.state === 'air';
 		if (moving) {
 			let d = kn.yaw - camYaw;
@@ -695,11 +753,6 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		const eye = hit ? head.clone().addScaledVector(dir, Math.max(0.6, hit.t - 0.6)) : want;
 		walls.rig.position.lerp(eye, Math.min(1, dt * 8));
 		walls.rig.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), camYaw).multiply(PITCH);
-
-		// the sun and its shadows round him
-		sun.target.position.copy(kn.pos);
-		sun.position.copy(kn.pos).addScaledVector(SUN, 120);
-		sky.follow(walls.rig.position);
 	}
 
 	function sparkle(at, colour = 0xffffff, size = 2) {
@@ -737,7 +790,9 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		if (wall < 0 || wall > 2) return;
 		// the turn-around button: about face, the eye swinging round behind him
 		if (Math.hypot(at.x - TURN.x, at.y - TURN.y) < TURN.r) {
-			spinTo = Math.atan2(Math.sin(camYaw + Math.PI), Math.cos(camYaw + Math.PI));
+			// (the fixed eye: from the square it's on, or turning to)
+			const from = !fixedCam ? camYaw : spinTo !== null ? spinTo : Math.round(camYaw / (Math.PI / 2)) * (Math.PI / 2);
+			spinTo = Math.atan2(Math.sin(from + Math.PI), Math.cos(from + Math.PI));
 			if (kn.state === 'ground') { kn.goal = null; kn.yaw = spinTo; }
 			if (kn.atDoor) kn.atDoor = { yaw: spinTo };   // (in a doorway: still close in, looking back the other way)
 			turnFlash = 1;
@@ -809,7 +864,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		goal.by = by;
 		goal.tries = 0;
 		kn.atDoor = null;
-		spinTo = null;
+		if (!fixedCam) spinTo = null;   // (the fixed eye finishes its turn)
 		kn.goal = goal;
 		kn.lastBy = by;
 		// the marker on the spot
@@ -1003,6 +1058,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		// for checking: drop him next to a fragment
 		near(i = 0) { const f = fragments[i]; kn.pos.set(f.pos.x + 4, 0, f.pos.z); kn.state = 'ground'; },
 		// drop him anywhere, facing yaw (0 = -z)
+		camera(fixed) { setCamera(fixed); },
 		place(x, z, yaw = 0) { kn.pos.set(x, 0, z); kn.state = 'ground'; kn.goal = null; kn.face = null; kn.yaw = camYaw = yaw; },
 	};
 
@@ -1015,6 +1071,10 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		renderer.dispose();
 		renderer.forceContextLoss();
 	};
+
+	// the debug screen: which camera
+	const $camButton = show.menu.dbutton('', () => setCamera(!fixedCam), '#2a4a3a').appendTo(show.menu.drow('CAMERA'));
+	setCamera(fixedCam);
 
 	/* ---------- go ---------- */
 
