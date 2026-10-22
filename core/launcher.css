@@ -437,6 +437,26 @@ gamebox-avatar.selected gamebox-human {
 	border-width: 3px;
 }
 
+/* where each simulated player is looking, on the simulator's walls */
+gamebox-gaze {
+	display: block;
+	position: absolute;
+	width: 8px;
+	height: 8px;
+	margin: -4px 0 0 -4px;
+	border-radius: 100%;
+	background: var(--c);
+	box-shadow: 0 0 6px var(--c);
+	pointer-events: none;
+	--c: gray;
+}
+gamebox-gaze[n="0"] { --c: red; }
+gamebox-gaze[n="1"] { --c: blue; }
+gamebox-gaze[n="2"] { --c: limegreen; }
+gamebox-gaze[n="3"] { --c: #dd00ff; }
+gamebox-gaze[n="4"] { --c: #ff6600; }
+gamebox-gaze[n="5"] { --c: #ffbb00; }
+
 gamebox-panel {
 	display: block;
 	position: absolute;
