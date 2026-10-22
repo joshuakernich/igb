@@ -582,7 +582,7 @@ let landMat = null;
 function hill(r, h) {
 	landMat = landMat || new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, flatShading: true });
 	const prof = [[0, h], [0.25, h * 0.92], [0.5, h * 0.62], [0.72, h * 0.3], [0.84, 1.6], [0.93, 0.9], [1.0, 0.2], [1.08, -2]];
-	const geo = new THREE.LatheGeometry(prof.map(([x, y]) => new THREE.Vector2(x * r, y)), 36);
+	const geo = new THREE.LatheGeometry(prof.map(([x, y]) => new THREE.Vector2(x * r, y)).reverse(), 36);   // (climbing profile: faces outward)
 	const pos = geo.attributes.position;
 	const seeds = [Math.random() * TAU, Math.random() * TAU];
 	const colors = [];
@@ -614,7 +614,7 @@ export function buildIsland(ringRadius) {
 	const g = new THREE.Group();
 	const R = ringRadius + 16;
 	const prof = [[0, 0], [ringRadius + 3, 0], [R * 0.85, -0.05], [R, -0.5], [R * 1.12, -2.5]];
-	const geo = new THREE.LatheGeometry(prof.map(([x, y]) => new THREE.Vector2(x, y)), 64);
+	const geo = new THREE.LatheGeometry(prof.map(([x, y]) => new THREE.Vector2(x, y)).reverse(), 64);   // (climbing profile: faces outward)
 	const pos = geo.attributes.position;
 	const colors = [];
 	const c = new THREE.Color();

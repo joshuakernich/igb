@@ -500,7 +500,8 @@ export function buildIsland(r, h, palms = true) {
 
 	// the land: a lathed profile, roughed up all round
 	const prof = [[0, h], [0.25, h * 0.92], [0.5, h * 0.62], [0.72, h * 0.3], [0.84, 1.6], [0.93, 0.9], [1.0, 0.2], [1.08, -2]];
-	const pts = prof.map(([x, y]) => new THREE.Vector2(x * r, y));
+	// (from the shore up to the peak: a lathe's faces point outward when its profile climbs; listed the other way they faced in, and the hills were see-through from outside)
+	const pts = prof.map(([x, y]) => new THREE.Vector2(x * r, y)).reverse();
 	const geo = new THREE.LatheGeometry(pts, 36);
 	const pos = geo.attributes.position;
 	const seeds = [Math.random() * TAU, Math.random() * TAU, Math.random() * TAU];
