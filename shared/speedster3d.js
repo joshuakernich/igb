@@ -159,7 +159,8 @@ function maskRimPoints(perSegment = 40) {
 	return out;
 }
 
-function faceTexture() {
+// withMuzzle: paint the muzzle (its tan and the smirk) too, or just the eye mask and eyes
+function faceTexture(withMuzzle = true) {
 	const { px, s, ox, oy, cy } = FACE;
 	const toRef = (g) => { g.translate(px / 2 - ox * s, cy - oy * s); g.scale(s, s); };
 
@@ -171,12 +172,20 @@ function faceTexture() {
 	toRef(g);
 	g.lineJoin = 'round';
 	g.lineCap = 'round';
-	g.fillStyle = '#f6c48e';
-	muzzlePath(g);
-	g.fill();
+	if (withMuzzle) {
+		g.fillStyle = '#f6c48e';
+		muzzlePath(g);
+		g.fill();
+	}
 	g.fillStyle = '#ffffff';
 	maskPath(g);
 	g.fill();
+	if (!withMuzzle) {   // (the mask runs a touch under the 3D muzzle's edge, so no seam shows between them)
+		g.strokeStyle = '#ffffff';
+		g.lineWidth = 14;
+		maskPath(g);
+		g.stroke();
+	}
 	g.strokeStyle = '#0c0c14';   // (for the smirk: no outlines round the mask or muzzle)
 	// the eyes: tall green irises (darker at the rim, finely streaked), a black
 	// oval pupil in each, and a white glint over the lower-left of the rim
@@ -228,25 +237,18 @@ function faceTexture() {
 		g.fill();
 		g.restore();
 	}
-	// the smirk, with its little tick at the corner
-	g.lineWidth = 8;
-	g.beginPath();
-	g.moveTo(428, 612);
-	g.quadraticCurveTo(560, 592, 600, 508);
-	g.stroke();
-	g.beginPath();
-	g.moveTo(552, 498);
-	g.quadraticCurveTo(596, 490, 630, 522);
-	g.stroke();
-	// the nose: a black ball with a glint, where the mask meets the muzzle
-	g.fillStyle = '#0c0c14';
-	g.beginPath();
-	g.arc(362, 478, 58, 0, Math.PI * 2);
-	g.fill();
-	g.fillStyle = '#ffffff';
-	g.beginPath();
-	g.arc(344, 458, 12, 0, Math.PI * 2);
-	g.fill();
+	// the smirk, with its little tick at the corner (on the muzzle)
+	if (withMuzzle) {
+		g.lineWidth = 8;
+		g.beginPath();
+		g.moveTo(428, 612);
+		g.quadraticCurveTo(560, 592, 600, 508);
+		g.stroke();
+		g.beginPath();
+		g.moveTo(552, 498);
+		g.quadraticCurveTo(596, 490, 630, 522);
+		g.stroke();
+	}
 	g.restore();
 	const tex = new THREE.CanvasTexture(paint);
 	tex.colorSpace = THREE.SRGBColorSpace;
@@ -432,7 +434,7 @@ export function buildSpeedster(colour) {
 			pos.setXYZ(i, v.x, v.y, v.z);
 		}
 		geo.computeVertexNormals();
-		const mat = new THREE.MeshPhysicalMaterial({ map: faceTexture(), alphaTest: 0.5, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.06, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+		const mat = new THREE.MeshPhysicalMaterial({ map: faceTexture(false), alphaTest: 0.5, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.06, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
 		const face = add(head, geo, mat, 0, 0, 0.02);
 		face.castShadow = false;
 		// a rim round the eyes: a blue tube along the mask's outline (up from one cheek, over
@@ -466,9 +468,9 @@ export function buildSpeedster(colour) {
 		const surface = (x, y, out) => {
 			const u = 0.5 - x / span, v = y / span + 0.5;
 			out.set(x, y, -Math.sqrt(Math.max(0, 0.16 - x * x - y * y)));
-			flatten(out);
-			out.z -= swell(u, v);
-			return bean(out).add(V(0, 0, 0.02 - 0.004));
+			bean(flatten(out));
+			out.z -= swell(u, v);   // (after the bean: so it swells straight out, not sliding down the face)
+			return out.add(V(0, 0, 0.02 - 0.004));
 		};
 		const [x0, y0] = drawToHead(-10, 380), [x1, y1] = drawToHead(750, 710);
 		const mg = new THREE.PlaneGeometry(Math.abs(x1 - x0), Math.abs(y1 - y0), 140, 70);
@@ -482,7 +484,7 @@ export function buildSpeedster(colour) {
 		}
 		mg.computeVertexNormals();
 		const alpha = new THREE.CanvasTexture(canvas(1024, 0, (g) => { muzzlePath(g); g.fill(); }));
-		const mmat = new THREE.MeshPhysicalMaterial({ map: mat.map, alphaMap: alpha, alphaTest: 0.5, roughness: 0.45, sheen: 0.6, sheenColor: 0xfff0dc, sheenRoughness: 0.5, clearcoat: 0.2, clearcoatRoughness: 0.4, side: THREE.DoubleSide });
+		const mmat = new THREE.MeshPhysicalMaterial({ map: faceTexture(true), alphaMap: alpha, alphaTest: 0.5, roughness: 0.45, sheen: 0.6, sheenColor: 0xfff0dc, sheenRoughness: 0.5, clearcoat: 0.2, clearcoatRoughness: 0.4, side: THREE.DoubleSide });
 		const muzzle = new THREE.Mesh(mg, mmat);
 		muzzle.castShadow = true;
 		head.add(muzzle);
