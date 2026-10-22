@@ -552,7 +552,8 @@ export function buildSpeedster(colour) {
 		const outline = (() => {
 			// (the drawing's right half, and the same mirrored for the left: the drawn left end sagged)
 			const right = [
-				[[368, 448], [460, 446], [580, 425], [660, 405]],
+				[[368, 424], [410, 424], [440, 440], [500, 436]],   // (rising a little in the middle, under the nose)
+				[[500, 436], [560, 432], [610, 420], [660, 405]],
 				[[660, 405], [715, 392], [745, 420], [738, 470]],   // (the outer top corner, rounded off)
 				[[738, 470], [730, 540], [690, 610], [600, 645]],
 				[[600, 645], [530, 690], [440, 700], [368, 700]],
@@ -620,7 +621,7 @@ export function buildSpeedster(colour) {
 			if (pts.length >= 2) lines.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.0055 * FACE_K, 6, false));
 		}
 		// the nose: a glossy black ball on the muzzle's top, where it meets the eyes
-		const nosePt = onMuzzle(362, 470) || onHead(...drawToHead(362, 470));
+		const nosePt = onMuzzle(366, 448) || onHead(...drawToHead(366, 448));
 		return { mgeo, lines, nosePt };
 		})());
 		const muzzle = new THREE.Mesh(mz.mgeo, fur(0xf6d2a2, { normalScale: new THREE.Vector2(0.7, 0.7) }));
