@@ -58,10 +58,10 @@ function stoneTexture(aniso) {
 		}
 		// the carved glyph band
 		g.fillStyle = 'rgba(25,30,24,0.55)';
-		g.fillRect(0, 26, w, 34);
+		g.fillRect(0, 14, w, 104);
 		g.strokeStyle = 'rgba(15,18,14,0.8)';
-		g.lineWidth = 3;
-		glyphs(g, w, 43);
+		g.lineWidth = 7;
+		glyphs(g, w, 66, GLYPH);
 		// moss and creepers down from the top and up from the bottom
 		for (let i = 0; i < 260; i++) {
 			const top = Math.random() < 0.45;
@@ -76,9 +76,17 @@ function stoneTexture(aniso) {
 	t.anisotropy = aniso;
 	return t;
 }
-// (a row of made-up glyphs along y: circles, eyes, zigzags, ticks)
-function glyphs(g, w, y) {
-	for (let x = 16, k = 0; x < w - 8; x += 32, k++) {
+// (a row of made-up glyphs along y, each about 20 * size across: circles, eyes,
+// zigzags, crosses, diamonds; spaced to tile across the width)
+const GLYPH = 3.6;   // how big the glyphs are
+function glyphs(g, w, at, size) {
+	const n = Math.max(1, Math.round(w / (28 * size))), gap = w / n;
+	for (let k = 0; k < n; k++) {
+		g.save();
+		g.translate(gap * (k + 0.5), at);
+		g.scale(size, size);
+		g.lineWidth /= size;
+		const x = 0, y = 0;   // (drawn about its own middle)
 		g.beginPath();
 		switch (k % 5) {
 			case 0: g.arc(x, y, 9, 0, TAU); g.moveTo(x, y - 4); g.lineTo(x, y + 4); break;
@@ -88,6 +96,7 @@ function glyphs(g, w, y) {
 			default: g.moveTo(x, y - 10); g.lineTo(x + 9, y); g.lineTo(x, y + 10); g.lineTo(x - 9, y); g.closePath();
 		}
 		g.stroke();
+		g.restore();
 	}
 }
 // the glyphs' glow: black, but for the carved band (an emissive map for the stone)
@@ -96,10 +105,10 @@ function runeTexture(aniso) {
 		g.fillStyle = '#000';
 		g.fillRect(0, 0, w, w);
 		g.shadowColor = '#5fffd0';
-		g.shadowBlur = 8;
+		g.shadowBlur = 16;
 		g.strokeStyle = '#b8fff0';
-		g.lineWidth = 2.5;
-		glyphs(g, w, 43);
+		g.lineWidth = 6;
+		glyphs(g, w, 66, GLYPH);
 	});
 	t.wrapS = t.wrapT = THREE.RepeatWrapping;
 	t.anisotropy = aniso;
