@@ -5,10 +5,11 @@
  * a pedestal round the room, lit like a studio shot (with the games' bloom
  * and tone mapping), turning slowly, its name and what it's doing under it.
  *
- *   front wall   the speedster (Sonic Dash, Sonic Classic), the climber
- *                (Knuckles Quest), the fox (Sonic Tails)
- *   left wall    the Strider (Sonic Robot) and a Crab Tank
- *   right wall   a Beetle Bot, a Buzz Drone, Sonic Tails' hovering robot
+ *   front wall   the speedster (Sonic Dash, Sonic Classic), Knuckles (Knuckles
+ *                Quest), Tails (Sonic Tails), Amy Rose, Rouge
+ *   left wall    Shadow, Super Sonic, Metal Sonic, Doctor Robotnik, a Crab Tank
+ *   right wall   a Beetle Bot, a Buzz Drone, Sonic Tails' hovering robot, the
+ *                Strider (Sonic Robot)
  *
  * Tap a character to step it through its animations (run, ball, climb,
  * glide...). Tap anywhere else to stop or start the turntables.
@@ -18,6 +19,7 @@
 import * as THREE from '../../lib/three/three.module.min.js';
 import { createWallComposer, createWallRig, toScreen, environmentFromShader } from '../../lib/three/walls.js';
 import { buildSpeedster } from '../../shared/speedster3d.js';
+import { buildRobotnik } from '../../shared/robotnik3d.js';
 import { buildClimber } from '../knuckles-quest/models.js';
 import { buildFox, buildRobot as buildHoverBot } from '../twin-tail-tower/models.js';
 import { buildRobot as buildStrider, buildBeetle, buildBuzzer, buildCrab } from '../iron-stride/models.js';
@@ -110,6 +112,27 @@ IGB.register('sonic-characters', function SonicCharacters(stage) {
 			},
 		};
 	}
+	// the rest of the family, from the same build (shared/speedster3d.js: kind)
+	function family(name, colour, kind) {
+		const s = buildSpeedster(colour, { kind });
+		return {
+			name, from: 'the speedster build', root: s.root, height: 1.6,
+			modes: ['idle', 'jog', 'run', 'flat out', 'ball', 'crouch', 'spring', 'hurt'],
+			step(dt, t, mode) {
+				const pace = { jog: 0.35, run: 0.7, 'flat out': 1 }[mode];
+				if (pace) s.animate(dt, 'run', pace, 0, t);
+				else s.animate(dt, mode, 0, 30, t);
+			},
+		};
+	}
+	function robotnik() {
+		const r = buildRobotnik();
+		return {
+			name: 'DR ROBOTNIK', from: 'shared/robotnik3d.js', root: r.root, height: 2.0,
+			modes: ['idle', 'run'],
+			step(dt, t, mode) { r.animate(dt, mode, mode === 'run' ? 0.7 : 0, 0, t); },
+		};
+	}
 	function climber() {
 		const c = buildClimber();
 		return {
@@ -175,16 +198,22 @@ IGB.register('sonic-characters', function SonicCharacters(stage) {
 
 	const PLACES = [
 		// front wall
-		{ make: speedster, a: -24, r: 4.4 },
-		{ make: climber, a: 0, r: 4.4 },
-		{ make: fox, a: 24, r: 4.4 },
+		{ make: speedster, a: -32, r: 4.4 },
+		{ make: climber, a: -16, r: 4.4 },
+		{ make: fox, a: 0, r: 4.4 },
+		{ make: () => family('AMY ROSE', 0xff7eb6, 'amy'), a: 16, r: 4.4 },
+		{ make: () => family('ROUGE', 0xf4f2f6, 'rouge'), a: 32, r: 4.4 },
 		// right wall
-		{ make: () => bot(buildBeetle, 'BEETLE BOT', 'Sonic Robot', 0.55, 2.3, 'rolling'), a: 68, r: 4.6 },
-		{ make: () => bot(buildBuzzer, 'BUZZ DRONE', 'Sonic Robot', 0.55, 1.8, 'buzzing'), a: 92, r: 4.6, base: 1.1 },
-		{ make: hoverBot, a: 116, r: 4.6 },
+		{ make: () => bot(buildBeetle, 'BEETLE BOT', 'Sonic Robot', 0.55, 2.3, 'rolling'), a: 56, r: 4.6 },
+		{ make: () => bot(buildBuzzer, 'BUZZ DRONE', 'Sonic Robot', 0.55, 1.8, 'buzzing'), a: 74, r: 4.6, base: 1.1 },
+		{ make: hoverBot, a: 92, r: 4.6 },
+		{ make: strider, a: 116, r: 6.2 },
 		// left wall
-		{ make: strider, a: -84, r: 6.2 },
-		{ make: () => bot(buildCrab, 'CRAB TANK', 'Sonic Robot', 0.42, 1.8, 'scuttling'), a: -114, r: 5 },
+		{ make: () => family('SHADOW', 0x1c1c24, 'shadow'), a: -58, r: 4.6 },
+		{ make: () => family('SUPER SONIC', 0xffc21a, 'super'), a: -74, r: 4.6 },
+		{ make: () => family('METAL SONIC', 0x2a3f9a, 'metal'), a: -90, r: 4.6 },
+		{ make: robotnik, a: -108, r: 4.8 },
+		{ make: () => bot(buildCrab, 'CRAB TANK', 'Sonic Robot', 0.42, 1.8, 'scuttling'), a: -128, r: 5 },
 	];
 
 	const chars = PLACES.map(function (p, i) {
