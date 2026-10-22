@@ -2,7 +2,7 @@
  * The speedster: a glossy, spiky little runner in any colour, built for
  * three.js (shared by Sonic Dash, Quill Relay and the Sonic Characters
  * sandbox). A bean of a head with thick quills flaring out of it and a
- * smooth flattened front where a face will go (none yet); a small bean of a
+ * smooth flattened front with the classic face laid flat on it; a small bean of a
  * body; big puffy gloves; simple red shoes (a dome on a white sole, a white
  * sock); and noodly rubber-hose arms and legs, rebuilt every frame as
  * smooth tapered tubes bowing at the knee and elbow.
@@ -97,6 +97,142 @@ export function spike(mat, a, c, b, r0, r1 = 0.004, segs = 14, flare = 0) {
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
+/* ---------- the face ---------- */
+
+// The face, traced from the classic drawing (a 736-unit square: one white
+// mask holding both eyes, the green eyes, the muzzle crescent, the nose and
+// the smirk), painted on a canvas that maps straight on from the front onto
+// the head's flattened face.
+const FACE = { px: 1024, span: 0.84, s: 0.95, ox: 368, oy: 230, cy: 414 };   // canvas size, metres across it, drawing-to-canvas scale, the drawing's point that lands at (512, cy)
+
+function maskPath(g) {
+	g.beginPath();
+	g.moveTo(20, 400);
+	g.bezierCurveTo(0, 300, 5, 60, 150, 18);              // up the left eye's outside
+	g.bezierCurveTo(250, 12, 310, 130, 332, 236);         // over its top and down its inside
+	g.bezierCurveTo(342, 285, 356, 322, 368, 330);        // into the notch
+	g.bezierCurveTo(380, 322, 394, 285, 404, 236);        // and out of it
+	g.bezierCurveTo(428, 130, 488, 18, 600, 24);          // up the right eye's inside
+	g.bezierCurveTo(735, 40, 740, 290, 716, 390);         // over its top and down its outside
+	g.bezierCurveTo(600, 418, 460, 446, 368, 448);        // along the top of the muzzle...
+	g.bezierCurveTo(270, 446, 130, 424, 20, 400);         // ...back to the start
+	g.closePath();
+}
+function muzzlePath(g) {
+	g.beginPath();
+	g.moveTo(20, 400);
+	g.bezierCurveTo(130, 424, 270, 446, 368, 448);
+	g.bezierCurveTo(460, 446, 600, 418, 716, 390);
+	g.bezierCurveTo(745, 470, 705, 590, 600, 645);        // round the right end and under
+	g.bezierCurveTo(500, 700, 250, 705, 140, 640);
+	g.bezierCurveTo(40, 585, -5, 480, 20, 400);           // round the left end
+	g.closePath();
+}
+
+function faceTexture() {
+	const { px, s, ox, oy, cy } = FACE;
+	const toRef = (g) => { g.translate(px / 2 - ox * s, cy - oy * s); g.scale(s, s); };
+
+	// the painting
+	const paint = document.createElement('canvas');
+	paint.width = paint.height = px;
+	const g = paint.getContext('2d');
+	g.save();
+	toRef(g);
+	g.lineJoin = 'round';
+	g.lineCap = 'round';
+	g.fillStyle = '#f6c48e';
+	muzzlePath(g);
+	g.fill();
+	g.fillStyle = '#ffffff';
+	maskPath(g);
+	g.fill();
+	g.strokeStyle = '#0c0c14';
+	g.lineWidth = 9;
+	muzzlePath(g);
+	g.stroke();
+	maskPath(g);
+	g.stroke();
+	// the eyes: tall green irises (darker at the rim, finely streaked), a black
+	// oval pupil in each, and a white glint over the lower-left of the rim
+	for (const [x, y, rot] of [[234, 306, 0.04], [468, 306, -0.04]]) {
+		const rx = 42, ry = 108;
+		g.save();
+		g.translate(x, y);
+		g.rotate(rot);
+		g.beginPath();
+		g.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+		g.save();
+		g.clip();
+		g.save();
+		g.scale(1, ry / rx);
+		const iris = g.createRadialGradient(0, -rx * 0.1, 0, 0, 0, rx);
+		iris.addColorStop(0, '#5fe25a');
+		iris.addColorStop(0.55, '#2fae32');
+		iris.addColorStop(0.85, '#167a1c');
+		iris.addColorStop(1, '#0a4a10');
+		g.fillStyle = iris;
+		g.fillRect(-rx, -rx, rx * 2, rx * 2);
+		// fine fibres radiating out
+		for (let f = 0; f < 90; f++) {
+			const a = f / 90 * Math.PI * 2 + Math.sin(f * 7.3) * 0.03;
+			g.strokeStyle = f % 3 ? 'rgba(10,60,12,0.22)' : 'rgba(170,255,150,0.18)';
+			g.lineWidth = 1.2;
+			g.beginPath();
+			g.moveTo(Math.cos(a) * rx * 0.55, Math.sin(a) * rx * 0.55);
+			g.lineTo(Math.cos(a) * rx * 0.98, Math.sin(a) * rx * 0.98);
+			g.stroke();
+		}
+		g.restore();
+		// a soft shine at the bottom of the rim
+		const shine = g.createRadialGradient(-2, ry * 0.9, 0, -2, ry * 0.9, rx * 0.5);
+		shine.addColorStop(0, 'rgba(160,255,170,0.5)');
+		shine.addColorStop(1, 'rgba(160,255,170,0)');
+		g.fillStyle = shine;
+		g.fillRect(-rx, ry * 0.5, rx * 2, ry * 0.5);
+		g.restore();
+		// a dark edge
+		g.strokeStyle = 'rgba(5,40,8,0.8)';
+		g.lineWidth = 3;
+		g.stroke();
+		// the pupil
+		g.fillStyle = '#121214';
+		g.beginPath();
+		g.ellipse(rx * 0.04, -ry * 0.02, rx * 0.6, ry * 0.63, 0, 0, Math.PI * 2);
+		g.fill();
+		// the glint
+		g.fillStyle = '#ffffff';
+		g.beginPath();
+		g.ellipse(-rx * 0.6, ry * 0.33, rx * 0.26, ry * 0.19, -0.1, 0, Math.PI * 2);
+		g.fill();
+		g.restore();
+	}
+	// the smirk, with its little tick at the corner
+	g.lineWidth = 8;
+	g.beginPath();
+	g.moveTo(428, 612);
+	g.quadraticCurveTo(560, 592, 600, 508);
+	g.stroke();
+	g.beginPath();
+	g.moveTo(552, 498);
+	g.quadraticCurveTo(596, 490, 630, 522);
+	g.stroke();
+	// the nose: a black ball with a glint, where the mask meets the muzzle
+	g.fillStyle = '#0c0c14';
+	g.beginPath();
+	g.arc(362, 478, 58, 0, Math.PI * 2);
+	g.fill();
+	g.fillStyle = '#ffffff';
+	g.beginPath();
+	g.arc(344, 458, 12, 0, Math.PI * 2);
+	g.fill();
+	g.restore();
+	const tex = new THREE.CanvasTexture(paint);
+	tex.colorSpace = THREE.SRGBColorSpace;
+	tex.anisotropy = 4;
+	return tex;
+}
+
 /* ---------- the speedster ---------- */
 
 export function buildSpeedster(colour) {
@@ -169,6 +305,23 @@ export function buildSpeedster(colour) {
 		headGeo.computeVertexNormals();
 	}
 	add(head, headGeo, skin, 0, 0, 0.02);
+	// the face, laid flat on the flattened front: a skin of the head's own shape
+	// (the front of the same sphere, flattened and bent just the same), its picture
+	// projected straight on from the front, drawn just over the head
+	{
+		const geo = new THREE.SphereGeometry(0.4, 96, 72, Math.PI * 1.5 - 1.1, 2.2, 0.75, 1.85);
+		const pos = geo.attributes.position, uv = geo.attributes.uv, v = V(0, 0, 0);
+		for (let i = 0; i < pos.count; i++) {
+			v.fromBufferAttribute(pos, i);
+			uv.setXY(i, 0.5 - v.x / FACE.span, v.y / FACE.span + 0.5);   // (facing -z: the picture's right is the head's -x, as you look at it)
+			bean(flatten(v));
+			pos.setXYZ(i, v.x, v.y, v.z);
+		}
+		geo.computeVertexNormals();
+		const mat = new THREE.MeshPhysicalMaterial({ map: faceTexture(), alphaTest: 0.5, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.06, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+		const face = add(head, geo, mat, 0, 0, 0.02);
+		face.castShadow = false;
+	}
 	// the quills: each starts as a fine point on the head (short of the flat front),
 	// swells as it hugs the head's curve, and tapers to its tip behind
 	const quill = (a, c, b, r) => {
