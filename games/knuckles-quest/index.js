@@ -76,8 +76,8 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 	resize();
 
 	const scene = new THREE.Scene();
-	const HORIZON = new THREE.Color(0xf2a868);
-	scene.fog = new THREE.Fog(HORIZON, 70, 320);
+	const HORIZON = new THREE.Color(0x3a2418);   // (indoors: a warm, smoky dark in the distance)
+	scene.fog = new THREE.Fog(HORIZON, 40, 160);
 
 	// a sunset sky; the same GLSL lights the scene
 	const SUN = new THREE.Vector3(0.55, 0.22, -0.8).normalize();
@@ -100,8 +100,8 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 	scene.add(sky);
 	scene.environment = sky.environment(renderer);
 
-	scene.add(new THREE.HemisphereLight(0xffd2b0, 0x4a5a3a, 0.9));
-	const sun = new THREE.DirectionalLight(0xffc488, 3.2);
+	scene.add(new THREE.HemisphereLight(0xffc896, 0x3a2a20, 1.0));   // (under the ceiling: warm and dim, the braziers doing the rest)
+	const sun = new THREE.DirectionalLight(0xffc488, 1.6);
 	sun.castShadow = true;
 	sun.shadow.mapSize.set(2048, 2048);
 	Object.assign(sun.shadow.camera, { left: -32, right: 32, top: 32, bottom: -32, near: 1, far: 220 });
@@ -617,7 +617,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		const back = new THREE.Vector3(Math.sin(camYaw), 0, Math.cos(camYaw));
 		const want = head.clone().addScaledVector(back, CAM.back).add(tmp2.set(0, CAM.up, 0));
 		// (kept under the wall tops, unless he's up on top of one himself)
-		want.y = Math.min(want.y, Math.max(WALL.h - CAM.below, kn.pos.y + 1.0));
+		want.y = Math.min(want.y, Math.max(WALL.h - CAM.below, kn.pos.y + 1.0), WALL.ceil - 1.2);   // (and always under the ceiling's beams)
 		// (pulled in if a wall's in the way)
 		const dir = want.clone().sub(head);
 		const len = dir.length();
@@ -685,7 +685,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		if (thing && (!hit || bestT < hit.t + 1)) {
 			const s = supportAt(thing.x, thing.z, thing.y);
 			goal = { point: new THREE.Vector3(thing.x, s ? s.max.y : 0, thing.z), normal: new THREE.Vector3(0, 1, 0), box: s, kind: 'top' };
-		} else if (hit) {
+		} else if (hit && hit.box.kind !== 'ceiling') {
 			if (hit.normal.y < -0.5) return;   // (the underside of a lintel: nowhere to go)
 			if (hit.normal.y > 0.5) goal = { point: hit.point, normal: hit.normal, box: hit.box, kind: 'top' };
 			else if (hit.box.max.y - hit.point.y < 0.9 && hit.box.kind === 'block') {
@@ -703,7 +703,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 				goal = { point: pt, normal: hit.normal, box: b, kind: 'face' };
 			}
 		} else {
-			// open sky (over a wall, through a raised doorway): the ground under the tap, a room or so off
+			// up at the ceiling (over a wall, through a raised doorway): the ground under the tap, a room or so off
 			const flat = Math.hypot(d.x, d.z);
 			if (flat < 0.2) return;
 			const q = o.clone().addScaledVector(d, 18 / flat);

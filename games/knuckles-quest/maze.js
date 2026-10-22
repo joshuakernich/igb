@@ -19,7 +19,7 @@ import { canvasTexture } from '../../lib/three/walls.js';
 
 export const GRID = 4;           // rooms a side
 export const CELL = 24;          // metres from one room's middle to the next
-export const WALL = { t: 1.4, h: 8 };   // thickness, height
+export const WALL = { t: 1.4, h: 8, ceil: 11 };   // thickness, height, and where the ceiling over the whole maze starts (headroom over the wall tops)
 export const DOOR = { w: 5, h: 5.2, high: 3.4 };   // width, height, and how far up a raised doorway starts
 
 const TAU = Math.PI * 2;
@@ -219,6 +219,20 @@ export function buildMaze(scene, { rand = Math.random, aniso = 8 } = {}) {
 			wallRun(true, z, cx(k) - CELL / 2 + T / 2, cx(k) + CELL / 2 - T / 2, door, door && up.raised.s);
 		}
 	}
+	// the ceiling: we're indoors. One stone slab over the whole maze (high enough to
+	// run along the wall tops under it), the outer walls carried up to meet it, and
+	// beams along every wall line beneath it
+	const C = WALL.ceil;
+	const ceiling = box(-ext, C, -ext, ext, C + 1, ext, 'ceiling', darkStone);
+	ceiling.mesh.castShadow = false;   // (the sun still finds its way in)
+	for (const [x0, z0, x1, z1] of [[lo - T / 2, lo - T / 2, hi + T / 2, lo + T / 2], [lo - T / 2, hi - T / 2, hi + T / 2, hi + T / 2], [lo - T / 2, lo, lo + T / 2, hi], [hi - T / 2, lo, hi + T / 2, hi]]) {
+		box(x0, H, z0, x1, C, z1, 'wall', stone);
+	}
+	for (let i = 1; i < GRID; i++) {
+		const at = lo + i * CELL;
+		for (const b of [box(at - 0.4, C - 0.7, lo, at + 0.4, C, hi, 'ceiling', darkStone), box(lo, C - 0.7, at - 0.4, hi, C, at + 0.4, 'ceiling', darkStone)]) b.mesh.castShadow = false;
+	}
+
 	// a little stone step under each raised doorway's sill, both sides, so it can be climbed or hopped
 	// (it's climbable anyway: this just reads as an invitation)
 
