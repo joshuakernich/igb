@@ -3,8 +3,8 @@
  * three.js (shared by Sonic Dash, Quill Relay and the Sonic Characters
  * sandbox). A big round head with tapered, swept-back quills,
  * the classic face (one white mask holding both eyes, a crescent muzzle, a
- * smirk); puffy gloves; chunky
- * sneakers; and noodly rubber-hose arms and legs, rebuilt every frame as
+ * smirk); puffy gloves; simple red shoes (a dome on a white sole, a white
+ * sock); and noodly rubber-hose arms and legs, rebuilt every frame as
  * smooth tapered tubes bowing at the knee and elbow.
  *
  * Running, the feet go round in loops (a wheel at full tilt, a stride when
@@ -235,9 +235,7 @@ export function buildSpeedster(colour) {
 	const white = glossy(0xffffff, { clearcoat: 0.9, roughness: 0.25 });
 	const glove = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.55, sheen: 1, sheenColor: 0xffffff, sheenRoughness: 0.4 });
 	const black = glossy(0x0c0c14, { roughness: 0.15 });
-	const sole = glossy(0x2a2a34, { roughness: 0.5, clearcoat: 0.3 });
-	const strap = glossy(0xffc23a, { metalness: 0.6, roughness: 0.22 });
-	const accent = glossy(0xff3b3b, { roughness: 0.25 });
+	const red = glossy(0xe0202a, { roughness: 0.25 });   // the shoes
 	const glint = new THREE.MeshBasicMaterial({ color: new THREE.Color(2, 2, 2) });   // (past white: the eyes sparkle)
 
 	const add = (parent, geo, mat, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) => {
@@ -306,15 +304,15 @@ export function buildSpeedster(colour) {
 		lean.add(g);
 		return g;
 	}
-	// sneakers: a chunky white upper, a dark sole, a gold strap, a red toe
+	// shoes: a red dome on a white sole, a white sock
 	function buildShoe() {
 		const g = new THREE.Group();
-		add(g, new THREE.CapsuleGeometry(0.1, 0.22, 8, 16), white, 0, 0.08, -0.06, 1, 0.82, 1).rotation.x = Math.PI / 2;
-		add(g, new THREE.CapsuleGeometry(0.105, 0.24, 6, 16), sole, 0, 0.02, -0.06, 1.05, 0.38, 1).rotation.x = Math.PI / 2;
-		add(g, new THREE.SphereGeometry(0.1, 16, 12), accent, 0, 0.08, -0.25, 0.95, 0.75, 0.7);
-		const band = add(g, new THREE.TorusGeometry(0.1, 0.028, 8, 20), strap, 0, 0.1, -0.02);
-		band.scale.set(1, 0.85, 1);
-		add(g, new THREE.SphereGeometry(0.07, 12, 10), white, 0, 0.17, 0.04, 1, 0.8, 1);   // the collar
+		// a red dome, long toward the toe, on a white sole
+		add(g, new THREE.SphereGeometry(0.13, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), red, 0, 0.04, -0.07, 1, 0.95, 1.6);
+		add(g, new THREE.CylinderGeometry(0.13, 0.125, 0.045, 32), white, 0, 0.022, -0.07, 1.04, 1, 1.64);
+		// a white sock round the ankle
+		const sock = add(g, new THREE.TorusGeometry(0.06, 0.03, 12, 24), white, 0, 0.15, 0.0);
+		sock.rotation.x = Math.PI / 2;
 		lean.add(g);
 		return g;
 	}
