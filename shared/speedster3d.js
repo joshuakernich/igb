@@ -468,9 +468,27 @@ export function buildSpeedster(colour, { knuckles = false, tails = false } = {})
 	}
 	add(torso, beanGeo, skin, 0, BODY.y, 0.02);
 	if (knuckles) {
-		// a white crescent across the chest, its horns up
-		const crescent = add(torso, new THREE.TorusGeometry(0.075, 0.024, 12, 32, Math.PI), white, 0, BODY.y + 0.13, -0.135, 1, 1, 0.55);
-		crescent.rotation.set(-0.35, 0, Math.PI);
+		// a flat white crescent painted across the chest, its horns up to sharp points:
+		// the drawn shape (a 630-unit square), laid onto the body's front
+		const k = 0.18 / 510, cy = BODY.y + 0.12;
+		const P = (x, y) => new THREE.Vector2((x - 315) * k, cy - (y - 300) * k);
+		const shape = new THREE.Shape();
+		shape.moveTo(...P(60, 220).toArray());
+		shape.bezierCurveTo(...P(170, 473).toArray(), ...P(460, 473).toArray(), ...P(570, 220).toArray());   // round the bottom
+		shape.bezierCurveTo(...P(450, 360).toArray(), ...P(180, 360).toArray(), ...P(60, 220).toArray());    // and back along the inside
+		const geo = subdivide(new THREE.ShapeGeometry(shape, 24).toNonIndexed(), 0.008);   // (fine enough to bend onto the chest)
+		const body = new THREE.Mesh(beanGeo);
+		body.position.set(0, BODY.y, 0.02);
+		body.updateMatrixWorld();
+		const caster = new THREE.Raycaster(), pos = geo.attributes.position;
+		for (let i = 0; i < pos.count; i++) {
+			caster.set(V(pos.getX(i), pos.getY(i), -1), V(0, 0, 1));
+			const hit = caster.intersectObject(body, false)[0];
+			pos.setZ(i, hit ? hit.point.z - 0.003 : -0.14);
+		}
+		geo.computeVertexNormals();
+		const crescent = add(torso, geo, new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.5, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+		crescent.castShadow = false;
 	} else add(torso, new THREE.SphereGeometry(0.12, 28, 20), tan, 0, BODY.y - 0.01, -0.08, 0.95, 1.3, 0.6);   // the tummy
 	if (tails) for (const [x, y, z] of [[0, 0.4, -0.13], [-0.045, 0.39, -0.12], [0.045, 0.39, -0.12]]) {   // (a fluffy white ruff at the chest)
 		torso.add(spike(tan, V(x, y + 0.02, z + 0.04), V(x * 1.3, y - 0.04, z - 0.03), V(x * 1.5, y - 0.12, z - 0.04), 0.045));
