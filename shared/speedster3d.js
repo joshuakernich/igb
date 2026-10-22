@@ -468,7 +468,7 @@ export function buildSpeedster(colour) {
 	// a bean: a little long front to back, a little wide, arched (seen from the side, its
 	// top rounds over and its underside curves in), its front pressed smoothly flat
 	// (where a face will go). The quills and ears bend with it.
-	const FLAT = { at: 0.29, soft: 0.07 };   // how far forward of the middle the flat face sits, and how softly it rounds into the head
+	const FLAT = { at: 0.305, soft: 0.12 };   // how far forward of the middle the flat face sits, and how softly it rounds into the head
 	const flatten = (v) => {
 		const d = -v.z, knee = FLAT.at - FLAT.soft;
 		if (d > knee) v.z = -(knee + FLAT.soft * Math.tanh((d - knee) / FLAT.soft));   // (eases into the flat: no crease)
