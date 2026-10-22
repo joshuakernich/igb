@@ -5,14 +5,15 @@
  * a pedestal round the room, lit like a studio shot (with the games' bloom
  * and tone mapping), turning slowly, its name and what it's doing under it.
  *
- *   front wall   the speedster (Sonic Dash, Sonic Classic), Knuckles (Knuckles
- *                Quest), Tails (Sonic Tails), Amy Rose, Rouge
- *   left wall    Shadow, Super Sonic, Metal Sonic, Doctor Robotnik, a Crab Tank
- *   right wall   a Beetle Bot, a Buzz Drone, Sonic Tails' hovering robot, the
- *                Strider (Sonic Robot)
+ *   from the left wall round to the right: a Crab Tank, Doctor Robotnik, Metal
+ *   Sonic, Super Sonic, Shadow, the speedster (Sonic Dash, Sonic Classic),
+ *   Knuckles (Knuckles Quest), Tails (Sonic Tails), Amy Rose, Rouge, a Beetle
+ *   Bot, a Buzz Drone, Sonic Tails' hovering robot, the Strider (Sonic Robot)
  *
- * Tap a character to step it through its animations (run, ball, climb,
- * glide...). Tap anywhere else to stop or start the turntables.
+ * They stand spread round the room on pedestals. Tap one and it glides to the
+ * front, big; tap it again to step it through its animations (run, ball,
+ * climb, glide...); tap anywhere else to send it back (or, with no one at the
+ * front, to stop or start the turntables).
  * The models come straight from the games' own files, so what you see here
  * is what they use. An ES module (manifest: module: true).
  */
@@ -196,25 +197,34 @@ IGB.register('sonic-characters', function SonicCharacters(stage) {
 		};
 	}
 
+	// everyone, evenly spread round the three walls from the back of the left
+	// one to the back of the right, at R metres out (the robots' scale and
+	// lift as before; the Strider, being huge, further out)
+	const R = 6.6;
 	const PLACES = [
-		// front wall
-		{ make: speedster, a: -32, r: 4.4 },
-		{ make: climber, a: -16, r: 4.4 },
-		{ make: fox, a: 0, r: 4.4 },
-		{ make: () => family('AMY ROSE', 0xff7eb6, 'amy'), a: 16, r: 4.4 },
-		{ make: () => family('ROUGE', 0xf4f2f6, 'rouge'), a: 32, r: 4.4 },
-		// right wall
-		{ make: () => bot(buildBeetle, 'BEETLE BOT', 'Sonic Robot', 0.55, 2.3, 'rolling'), a: 56, r: 4.6 },
-		{ make: () => bot(buildBuzzer, 'BUZZ DRONE', 'Sonic Robot', 0.55, 1.8, 'buzzing'), a: 74, r: 4.6, base: 1.1 },
-		{ make: hoverBot, a: 92, r: 4.6 },
-		{ make: strider, a: 116, r: 6.2 },
-		// left wall
-		{ make: () => family('SHADOW', 0x1c1c24, 'shadow'), a: -58, r: 4.6 },
-		{ make: () => family('SUPER SONIC', 0xffc21a, 'super'), a: -74, r: 4.6 },
-		{ make: () => family('METAL SONIC', 0x2a3f9a, 'metal'), a: -90, r: 4.6 },
-		{ make: robotnik, a: -108, r: 4.8 },
-		{ make: () => bot(buildCrab, 'CRAB TANK', 'Sonic Robot', 0.42, 1.8, 'scuttling'), a: -128, r: 5 },
+		{ make: () => bot(buildCrab, 'CRAB TANK', 'Sonic Robot', 0.42, 1.8, 'scuttling') },
+		{ make: robotnik },
+		{ make: () => family('METAL SONIC', 0x2a3f9a, 'metal') },
+		{ make: () => family('SUPER SONIC', 0xffc21a, 'super') },
+		{ make: () => family('SHADOW', 0x1c1c24, 'shadow') },
+		{ make: speedster },
+		{ make: climber },
+		{ make: fox },
+		{ make: () => family('AMY ROSE', 0xff7eb6, 'amy') },
+		{ make: () => family('ROUGE', 0xf4f2f6, 'rouge') },
+		{ make: () => bot(buildBeetle, 'BEETLE BOT', 'Sonic Robot', 0.55, 2.3, 'rolling') },
+		{ make: () => bot(buildBuzzer, 'BUZZ DRONE', 'Sonic Robot', 0.55, 1.8, 'buzzing'), base: 1.1 },
+		{ make: hoverBot },
+		{ make: strider, r: R + 2 },
 	];
+	PLACES.forEach((p, i) => { p.a = -128 + i * 256 / (PLACES.length - 1); p.r = p.r || R; });
+
+	// the spot at the front where a tapped character comes, big, and a glowing ring on the floor there
+	const SHOW = new THREE.Vector3(0, 0, -2.9), BIG = 2.2;
+	const showRing = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.03, 8, 64), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x5ad1ff).multiplyScalar(2.2), transparent: true, opacity: 0 }));
+	showRing.rotation.x = Math.PI / 2;
+	showRing.position.copy(SHOW).setY(0.02);
+	scene.add(showRing);
 
 	const chars = PLACES.map(function (p, i) {
 		const c = p.make();
@@ -239,18 +249,24 @@ IGB.register('sonic-characters', function SonicCharacters(stage) {
 		holder.add(c.root);
 		scene.add(holder);
 		c.holder = holder;
+		// (where it lives, and how big; brought forward, it goes to SHOW, about BIG metres tall)
+		c.home = holder.position.clone();
+		c.homeScale = c.scale || 1;
+		c.bigScale = BIG / c.height;
+		c.f = 0;
 		c.root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
 		return c;
 	});
 
 	let spinning = true;
 	let clock = 0;
+	let featured = null;   // the one brought to the front (tapped), or null
 	const tmp = new THREE.Vector3();
 
 	/* ---------- taps ---------- */
 
 	function screenOf(c, wall) {
-		tmp.copy(c.at).setY(0.3 + (c.height * (c.scale || 1)) * 0.5);
+		tmp.copy(c.holder.position).setY(c.holder.position.y + c.height * c.holder.scale.x * 0.5);
 		return toScreen(tmp, cams[wall], wall * W, 0, W, H);
 	}
 
@@ -264,7 +280,11 @@ IGB.register('sonic-characters', function SonicCharacters(stage) {
 			const d = Math.hypot(p.x - at.x, p.y - at.y);
 			if (d < bestD) { bestD = d; best = c; }
 		}
-		if (best) best.mode = (best.mode + 1) % best.modes.length;
+		// a character: bring it to the front (if it's already there, step it through what it can do)
+		if (best && best === featured) best.mode = (best.mode + 1) % best.modes.length;
+		else if (best) featured = best;
+		// nothing: send the one at the front home, or (with no one there) stop or start the turntables
+		else if (featured) featured = null;
 		else spinning = !spinning;
 	}
 	stage.$el.on('click', function (e) {
@@ -282,20 +302,29 @@ IGB.register('sonic-characters', function SonicCharacters(stage) {
 		clock += dt;
 
 		for (const c of chars) {
+			// to the front and back home: an eased glide, hopping up a little on the way
+			c.f += ((c === featured ? 1 : 0) - c.f) * Math.min(1, dt * 3.5);
+			const e = c.f * c.f * (3 - 2 * c.f);
+			c.holder.position.lerpVectors(c.home, SHOW, e);
+			c.holder.position.y += Math.sin(Math.PI * e) * 0.6;
+			c.holder.scale.setScalar(c.homeScale + (c.bigScale - c.homeScale) * e);
 			if (spinning) c.spin += dt * 0.35;
-			c.root.rotation.y = c.face + c.spin;
+			// (facing the middle of the room from wherever it is)
+			const face = Math.atan2(c.holder.position.x, c.holder.position.z);
+			c.root.rotation.y = face + c.spin * (1 - e * 0.7);
 			c.step(dt, clock, c.modes[c.mode]);
 			c.root.position.y = c.root.userData.lift || 0;
 		}
+		showRing.material.opacity = Math.max(...chars.map((c) => c.f));
 		postfx.render(walls.views(renderer.domElement.width, renderer.domElement.height));
 
 		// labels
 		ctx.clearRect(0, 0, WIDTH, H);
 		art.text(ctx, 'SONIC CHARACTERS', W * 1.5, 70, { size: 72, font: 'Knewave', fill: '#ffe14a', outline: '#1a0b2e', outlineWidth: 8 });
-		art.text(ctx, 'TAP A CHARACTER TO CHANGE WHAT IT\'S DOING  ·  TAP ANYWHERE ELSE TO ' + (spinning ? 'STOP' : 'START') + ' THE TURNTABLES', W * 1.5, 940, { size: 30, font: 'Paytone One', weight: 400, fill: 'rgba(255,255,255,0.8)' });
+		art.text(ctx, featured ? 'TAP IT AGAIN TO CHANGE WHAT IT\'S DOING  ·  TAP ANYWHERE ELSE TO SEND IT BACK' : 'TAP A CHARACTER TO BRING IT TO THE FRONT  ·  TAP ANYWHERE ELSE TO ' + (spinning ? 'STOP' : 'START') + ' THE TURNTABLES', W * 1.5, 940, { size: 30, font: 'Paytone One', weight: 400, fill: 'rgba(255,255,255,0.8)' });
 		for (const c of chars) {
 			for (let w = 0; w < 3; w++) {
-				tmp.copy(c.at).setY(0.05);
+				tmp.copy(c.holder.position).setY(0.05);
 				const p = toScreen(tmp, cams[w], w * W, 0, W, H);
 				if (!p || !p.inside) continue;
 				art.text(ctx, c.name, p.x, p.y + 40, { size: 40, font: 'Paytone One', weight: 400, fill: 'white', outline: 'rgba(0,0,0,0.5)', outlineWidth: 5 });
