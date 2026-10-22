@@ -10,6 +10,7 @@
  * the room.
  */
 import * as THREE from '../../lib/three/three.module.min.js';
+import { buildSpeedster } from '../../shared/speedster3d.js';
 
 const TAU = Math.PI * 2;
 
@@ -37,9 +38,8 @@ const shadows = (g) => { g.traverse((o) => { if (o.isMesh) { o.castShadow = true
 
 /* ---------- a fox ---------- */
 
-// A glossy little fox kit in the player's colour: a big head with a cream
-// muzzle and cheek fluff, tall ears, wide dark eyes, aviator goggles pushed
-// up on its forehead, navy boots, and two big white-tipped tails. Bouncing,
+// The fox: the shared speedster build as Tails (the same family as the Sonic
+// models) in the player's colour, two big white-tipped tails behind. Bouncing,
 // it squashes on landing and stretches on the way up; with a tail rotor the
 // tails swing up over its head and spin like a helicopter's blades.
 export function buildFox(colour) {
@@ -49,163 +49,27 @@ export function buildFox(colour) {
 	const lean = new THREE.Group();      // leaning into a turn
 	yaw.add(lean);
 	const tumble = new THREE.Group();    // spinning head over heels when hit
-	tumble.position.y = 0.55;
+	tumble.position.y = 0.6;
 	lean.add(tumble);
 	const squash = new THREE.Group();    // squashed and stretched, about its feet
-	squash.position.y = -0.55;
+	squash.position.y = -0.6;
 	tumble.add(squash);
 
-	const fur = glossy(colour);
-	const cream = glossy(0xfff4e2, { clearcoat: 0.5, roughness: 0.45 });
-	const dark = glossy(0x15131c, { roughness: 0.2 });
-	const boot = glossy(0x2c3550);
-	const sole = glossy(0xffffff, { clearcoat: 0.4 });
-	const lens = glossy(0xffb63a, { transparent: true, opacity: 0.8, roughness: 0.05 });
-	const metal = new THREE.MeshStandardMaterial({ color: 0xd8dde6, metalness: 1, roughness: 0.15 });
-	const strap = glossy(0x6b3d22, { clearcoat: 0.3, roughness: 0.6 });
-	const shine = glow(0xffffff);
-
-	const ball = (r, mat, x, y, z, sx = 1, sy = 1, sz = 1, parent = squash) => {
-		const m = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 14), mat);
-		m.position.set(x, y, z);
-		m.scale.set(sx, sy, sz);
-		parent.add(m);
-		return m;
-	};
-
-	// the body
-	ball(0.24, fur, 0, 0.42, 0, 1, 1.15, 0.95);
-	ball(0.18, cream, 0, 0.4, 0.1, 0.9, 1.1, 0.6);
-
-	// the head
-	const head = new THREE.Group();
-	head.position.y = 0.86;
-	squash.add(head);
-	ball(0.3, fur, 0, 0, 0, 1, 1, 1, head);
-	for (const side of [-1, 1]) {
-		ball(0.13, cream, side * 0.14, -0.09, 0.15, 1.15, 0.8, 0.8, head);              // cheek fluff
-		const ear = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.32, 12), fur);       // ears
-		ear.position.set(side * 0.17, 0.3, -0.02);
-		ear.rotation.z = -side * 0.35;
-		head.add(ear);
-		const inner = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.19, 10), cream);
-		inner.position.set(side * 0.165, 0.28, 0.035);
-		inner.rotation.z = -side * 0.35;
-		head.add(inner);
-	}
-	ball(0.12, cream, 0, -0.07, 0.25, 1, 0.78, 1.3, head);        // the muzzle
-	ball(0.042, dark, 0, -0.035, 0.405, 1, 0.85, 1, head);        // the nose
-	const eyes = new THREE.Group();
-	head.add(eyes);
-	for (const side of [-1, 1]) {
-		ball(0.085, glossy(0xffffff, { clearcoat: 0.8 }), side * 0.11, 0.04, 0.235, 0.85, 1.15, 0.6, eyes);
-		ball(0.052, dark, side * 0.102, 0.035, 0.285, 1, 1.15, 0.6, eyes);
-		ball(0.017, shine, side * 0.088, 0.07, 0.315, 1, 1, 1, eyes);
-	}
-	// a tuft of fringe
-	for (const [x, rz] of [[-0.06, 0.5], [0, 0], [0.06, -0.5]]) {
-		const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.16, 8), fur);
-		tuft.position.set(x, 0.27, 0.13);
-		tuft.rotation.set(0.7, 0, rz);
-		head.add(tuft);
-	}
-	// aviator goggles, pushed up on the forehead
-	const band = new THREE.Mesh(new THREE.TorusGeometry(0.29, 0.022, 8, 32), strap);
-	band.position.y = 0.16;
-	band.rotation.x = Math.PI / 2 - 0.35;
-	head.add(band);
-	for (const side of [-1, 1]) {
-		const rim = new THREE.Mesh(new THREE.TorusGeometry(0.068, 0.02, 8, 20), metal);
-		rim.position.set(side * 0.095, 0.2, 0.235);
-		rim.rotation.x = -0.45;
-		head.add(rim);
-		const glass = new THREE.Mesh(new THREE.CircleGeometry(0.062, 20), lens);
-		glass.position.set(side * 0.095, 0.2, 0.24);
-		glass.rotation.x = -0.45;
-		head.add(glass);
-	}
-
-	// arms, with cream paws
-	const arms = [];
-	for (const side of [-1, 1]) {
-		const shoulder = new THREE.Group();
-		shoulder.position.set(side * 0.2, 0.55, 0);
-		squash.add(shoulder);
-		const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.22, 8), fur);
-		arm.position.y = -0.11;
-		shoulder.add(arm);
-		ball(0.065, cream, 0, -0.24, 0, 1, 1, 1, shoulder);
-		shoulder.userData.side = side;
-		arms.push(shoulder);
-	}
-
-	// legs, and navy boots with white soles
-	const legs = [];
-	for (const side of [-1, 1]) {
-		const hip = new THREE.Group();
-		hip.position.set(side * 0.1, 0.25, 0);
-		squash.add(hip);
-		const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.17, 8), fur);
-		leg.position.y = -0.08;
-		hip.add(leg);
-		const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.1, 6, 12), boot);
-		b.rotation.x = Math.PI / 2;
-		b.position.set(0, -0.19, 0.04);
-		hip.add(b);
-		const s = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.03, 14), sole);
-		s.scale.set(1, 1, 1.7);
-		s.position.set(0, -0.245, 0.04);
-		hip.add(s);
-		legs.push(hip);
-	}
-
-	// the two tails: fat in the middle, white at the tip
-	const REST = new THREE.Vector3(0, 0.3, -0.2);
-	const ROTOR = new THREE.Vector3(0, 1.26, -0.02);
-	const tailRoot = new THREE.Group();
-	tailRoot.position.copy(REST);
-	squash.add(tailRoot);
-	const tails = [];
-	for (const side of [-1, 1]) {
-		const t = new THREE.Group();
-		tailRoot.add(t);
-		ball(1, fur, 0, 0.34, 0, 0.14, 0.38, 0.14, t);
-		ball(0.12, cream, 0, 0.7, 0, 1, 1.35, 1, t);
-		t.userData.side = side;
-		tails.push(t);
-	}
-	// the blur of the spinning tails
-	const whirl = canvasTexture(128, 128, function (g, w, h) {
-		g.translate(w / 2, h / 2);
-		const grad = g.createRadialGradient(0, 0, 8, 0, 0, 62);
-		grad.addColorStop(0, 'rgba(255,255,255,0)');
-		grad.addColorStop(0.55, 'rgba(255,255,255,0.35)');
-		grad.addColorStop(0.92, 'rgba(255,255,255,0.8)');
-		grad.addColorStop(1, 'rgba(255,255,255,0)');
-		g.fillStyle = grad;
-		g.beginPath();
-		g.arc(0, 0, 62, 0, TAU);
-		g.fill();
-	});
-	const blurMat = new THREE.MeshBasicMaterial({ map: whirl, color: new THREE.Color(colour).multiplyScalar(2), transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
-	const blur = new THREE.Mesh(new THREE.CircleGeometry(0.85, 32), blurMat);
-	blur.rotation.x = -Math.PI / 2;
-	blur.position.copy(ROTOR);
-	squash.add(blur);
-
-	shadows(root);
-	blur.castShadow = false;
-
-	let time = Math.random() * 10;
-	let rotorK = 0;
-	let blinkAt = 2 + Math.random() * 3;
-	const lerp = (a, b, k) => a + (b - a) * k;
+	const s = buildSpeedster(colour, { tails: true });
+	s.root.rotation.y = Math.PI;   // (the speedster's built facing -Z; these models face +Z)
+	s.root.scale.setScalar(0.95);
+	squash.add(s.root);
+	// the tails spin on a rotor above the head: a spinning pivot carrying the tails' rig
+	const spin = new THREE.Group();
+	s.torso.add(spin);
+	spin.add(s.tailRig);
+	const REST = s.tailRig.position.clone(), ROTOR = new THREE.Vector3(0, 1.02, 0.02);
+	let time = 0, rotorK = 0;
 
 	// st: { vy, v0 (a bounce's speed), rotor, hurt, squash (0..1), lean (radians), idle }
 	function pose(dt, st) {
 		time += dt;
 		const rise = Math.max(-1, Math.min(1, st.vy / st.v0));
-		const up = (rise + 1) / 2;
 
 		// squashed flat on landing, stretched tall on the way up
 		const stretch = st.rotor ? 0 : Math.max(0, rise) * 0.12;
@@ -213,39 +77,20 @@ export function buildFox(colour) {
 		squash.scale.set(1 + 0.24 * sq - stretch * 0.4, 1 - 0.32 * sq + stretch, 1 + 0.24 * sq - stretch * 0.4);
 		lean.rotation.z = st.lean;
 
-		// arms up on the way up (and holding on under the rotor), out and flapping on the way down
-		for (const a of arms) {
-			const side = a.userData.side;
-			const reach = st.rotor ? 2.75 : lerp(1.15 + Math.sin(time * 16 + side) * 0.18, 2.55, up);
-			a.rotation.set(0, 0, side * reach);
-		}
-		// knees tucked up on the way up, legs dangling and kicking on the way down
-		legs.forEach(function (h, i) {
-			h.rotation.x = st.rotor ? 0.15 + Math.sin(time * 10 + i * Math.PI) * 0.25 : lerp(0.2 + Math.sin(time * 12 + i * Math.PI) * 0.3, -0.6, up);
-		});
-		head.rotation.x = st.rotor ? -0.25 : -rise * 0.16;
+		// arms up on the way up and under the rotor, idle at rest, flailing when hit
+		const mode = st.hurt ? 'hurt' : st.rotor || rise > 0.1 ? 'spring' : 'idle';
+		s.animate(dt, mode, 0, 30, time);
 
-		// the tails: wagging behind, or up over its head and spinning
+		// the tails: up over its head and spinning, flat out like blades
 		rotorK += ((st.rotor ? 1 : 0) - rotorK) * Math.min(1, dt * 9);
-		tailRoot.position.lerpVectors(REST, ROTOR, rotorK);
-		for (const t of tails) {
-			const side = t.userData.side;
-			const wag = Math.sin(time * 7 + side) * 0.14;
-			t.rotation.set(lerp(-0.9, 0, rotorK), 0, side * lerp(0.55 + wag, Math.PI / 2, rotorK));
-		}
-		if (rotorK > 0.04) tailRoot.rotation.y += dt * (6 + rotorK * 38);
-		else tailRoot.rotation.y = 0;
-		blurMat.opacity = rotorK * 0.5;
-		blur.visible = rotorK > 0.04;
+		s.tailRig.position.lerpVectors(REST, ROTOR, rotorK);
+		s.tailRig.rotation.x = 0.74 * rotorK;
+		if (rotorK > 0.04) spin.rotation.y += dt * (6 + rotorK * 38);
+		else spin.rotation.y = Math.sin(time * 7) * 0.12;   // (a wag)
 
 		// head over heels when hit
 		if (st.hurt) tumble.rotation.z += dt * 11;
 		else tumble.rotation.z = 0;
-
-		// a blink now and then
-		blinkAt -= dt;
-		eyes.scale.y = blinkAt < 0.12 && blinkAt > 0 ? 0.15 : 1;
-		if (blinkAt <= 0) blinkAt = 2 + Math.random() * 4;
 	}
 
 	return { root, yaw, pose };

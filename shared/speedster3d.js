@@ -169,7 +169,14 @@ function maskRimPoints(perSegment = 40) {
 }
 
 // withMuzzle: paint the muzzle (its tan and the smirk) too, or just the eye mask and eyes
-function faceTexture(withMuzzle = true) {
+const IRIS = {
+	green: { stops: ['#5fe25a', '#2fae32', '#167a1c', '#0a4a10'], dark: 'rgba(10,60,12,0.22)', light: 'rgba(170,255,150,0.18)', shine: '160,255,170' },
+	blue: { stops: ['#8fd0ff', '#3a8fe6', '#1c58ac', '#0c2c66'], dark: 'rgba(8,30,70,0.22)', light: 'rgba(200,235,255,0.18)', shine: '190,230,255' },
+	purple: { stops: ['#d39cff', '#9a4ee0', '#64209e', '#3a0f60'], dark: 'rgba(40,8,64,0.22)', light: 'rgba(235,200,255,0.18)', shine: '225,185,255' },
+};
+// (iris: which colour the eyes are, from IRIS)
+function faceTexture(withMuzzle = true, iris = 'green') {
+	const eye = IRIS[iris];
 	const { px, s, ox, oy, cy } = FACE;
 	const toRef = (g) => { g.translate(px / 2 - ox * s, cy - oy * s); g.scale(s, s); };
 
@@ -203,7 +210,7 @@ function faceTexture(withMuzzle = true) {
 		g.stroke();
 	}
 	g.strokeStyle = '#0c0c14';   // (for the smirk: no outlines round the mask or muzzle)
-	// the eyes: tall green irises (darker at the rim, finely streaked), a black
+	// the eyes: tall irises (darker at the rim, finely streaked), a black
 	// oval pupil in each, and a white glint over the lower-left of the rim
 	for (const [x, y, rot] of [[234, 306, 0.04], [468, 306, -0.04]]) {
 		const rx = 42, ry = 108;
@@ -216,17 +223,14 @@ function faceTexture(withMuzzle = true) {
 		g.clip();
 		g.save();
 		g.scale(1, ry / rx);
-		const iris = g.createRadialGradient(0, -rx * 0.1, 0, 0, 0, rx);
-		iris.addColorStop(0, '#5fe25a');
-		iris.addColorStop(0.55, '#2fae32');
-		iris.addColorStop(0.85, '#167a1c');
-		iris.addColorStop(1, '#0a4a10');
-		g.fillStyle = iris;
+		const grad = g.createRadialGradient(0, -rx * 0.1, 0, 0, 0, rx);
+		eye.stops.forEach((c, k) => grad.addColorStop([0, 0.55, 0.85, 1][k], c));
+		g.fillStyle = grad;
 		g.fillRect(-rx, -rx, rx * 2, rx * 2);
 		// fine fibres radiating out
 		for (let f = 0; f < 90; f++) {
 			const a = f / 90 * Math.PI * 2 + Math.sin(f * 7.3) * 0.03;
-			g.strokeStyle = f % 3 ? 'rgba(10,60,12,0.22)' : 'rgba(170,255,150,0.18)';
+			g.strokeStyle = f % 3 ? eye.dark : eye.light;
 			g.lineWidth = 1.2;
 			g.beginPath();
 			g.moveTo(Math.cos(a) * rx * 0.55, Math.sin(a) * rx * 0.55);
@@ -236,8 +240,8 @@ function faceTexture(withMuzzle = true) {
 		g.restore();
 		// a soft shine at the bottom of the rim
 		const shine = g.createRadialGradient(-2, ry * 0.9, 0, -2, ry * 0.9, rx * 0.5);
-		shine.addColorStop(0, 'rgba(160,255,170,0.5)');
-		shine.addColorStop(1, 'rgba(160,255,170,0)');
+		shine.addColorStop(0, `rgba(${eye.shine},0.5)`);
+		shine.addColorStop(1, `rgba(${eye.shine},0)`);
 		g.fillStyle = shine;
 		g.fillRect(-rx, ry * 0.5, rx * 2, ry * 0.5);
 		g.restore();
@@ -414,17 +418,25 @@ let muzzleCache = null;   // (the muzzle's shapes, built once for every speedste
 
 /* ---------- the speedster ---------- */
 
-export function buildSpeedster(colour) {
+// knuckles: the same build as a red echidna instead: purple eyes, dreadlocks
+// hanging down the back of the head (no ears, no back quills), a white crescent
+// on the chest, spiked fists, and green shoes with gold cuffs.
+// tails: a fox instead: blue eyes, a white muzzle and chest, three bangs over the
+// brow and tufts at the cheeks (no quills), bigger ears, and two big fluffy tails
+// with white tips (returned as tailRig, to spin as a rotor).
+export function buildSpeedster(colour, { knuckles = false, tails = false } = {}) {
 	const root = new THREE.Group();   // placed in the world
 	const lean = new THREE.Group();   // tilts, leans and tumbles
 	root.add(lean);
 
 	const skin = fur(colour);   // (soft fur all over)
-	const tan = fur(0xf6d2a2, { normalScale: new THREE.Vector2(0.7, 0.7) });
+	const tanColour = tails ? 0xfdfaf4 : 0xf6d2a2;   // (white for the fox)
+	const tan = fur(tanColour, { normalScale: new THREE.Vector2(0.7, 0.7) });
 	const white = glossy(0xffffff, { clearcoat: 0.9, roughness: 0.25 });
 	const glove = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.55, sheen: 1, sheenColor: 0xffffff, sheenRoughness: 0.4 });
 	const black = glossy(0x0c0c14, { roughness: 0.15 });
-	const red = glossy(0xe0202a, { roughness: 0.25 });   // the shoes
+	const red = glossy(knuckles ? 0x2a9a44 : 0xe0202a, { roughness: 0.25 });   // the shoes (green for knuckles)
+	const sockMat = knuckles ? glossy(0xf0c02a, { roughness: 0.2, metalness: 0.3 }) : white;   // (gold cuffs for knuckles)
 	const glint = new THREE.MeshBasicMaterial({ color: new THREE.Color(2, 2, 2) });   // (past white: the eyes sparkle)
 
 	const add = (parent, geo, mat, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) => {
@@ -455,10 +467,34 @@ export function buildSpeedster(colour) {
 		beanGeo.computeVertexNormals();
 	}
 	add(torso, beanGeo, skin, 0, BODY.y, 0.02);
-	add(torso, new THREE.SphereGeometry(0.12, 28, 20), tan, 0, BODY.y - 0.01, -0.08, 0.95, 1.3, 0.6);   // the tummy
-	// a stubby tail and two quills down the back
-	torso.add(spike(skin, V(0, 0.12, 0.16), V(0, 0.08, 0.27), V(0, 0.14, 0.36), 0.06));
-	for (const s of [-1, 1]) torso.add(spike(skin, V(s * 0.07, 0.36, 0.14), V(s * 0.12, 0.37, 0.32), V(s * 0.14, 0.24, 0.45), 0.11));   // (arching out and drooping down)
+	if (knuckles) {
+		// a white crescent across the chest, its horns up
+		const crescent = add(torso, new THREE.TorusGeometry(0.075, 0.024, 12, 32, Math.PI), white, 0, BODY.y + 0.13, -0.135, 1, 1, 0.55);
+		crescent.rotation.set(-0.35, 0, Math.PI);
+	} else add(torso, new THREE.SphereGeometry(0.12, 28, 20), tan, 0, BODY.y - 0.01, -0.08, 0.95, 1.3, 0.6);   // the tummy
+	if (tails) for (const [x, y, z] of [[0, 0.4, -0.13], [-0.045, 0.39, -0.12], [0.045, 0.39, -0.12]]) {   // (a fluffy white ruff at the chest)
+		torso.add(spike(tan, V(x, y + 0.02, z + 0.04), V(x * 1.3, y - 0.04, z - 0.03), V(x * 1.5, y - 0.12, z - 0.04), 0.045));
+	}
+	// two big fluffy tails, sweeping out and up behind, white at the tips; they
+	// hang off one pivot, so they can spin round it like a rotor
+	const tailRig = new THREE.Group();
+	if (tails) {
+		tailRig.position.set(0, 0.12, 0.17);
+		torso.add(tailRig);
+		const q = (p0, p1, p2, t) => V(0, 0, 0).addScaledVector(p0, (1 - t) * (1 - t)).addScaledVector(p1, 2 * (1 - t) * t).addScaledVector(p2, t * t);
+		for (const s of [-1, 1]) {
+			const a = V(0, 0, 0), c = V(s * 0.2, 0.0, 0.32), b = V(s * 0.32, 0.46, 0.5), T = 0.7, R = 0.12;
+			// (split at T: the orange length, then the white tip)
+			const m = q(a, c, b, T), c1 = V(0, 0, 0).lerpVectors(a, c, T), c2 = V(0, 0, 0).lerpVectors(c, b, T);
+			const body = hose(skin, 0, 0, { segs: 24, radial: 16, capA: true, capB: false, profile: (t) => R * (0.3 + 0.7 * Math.sin(Math.PI / 2 * Math.min(1, t * 1.25))) });
+			body.update(a, c1, m);
+			const tip = hose(tan, 0, 0, { segs: 16, radial: 16, capA: false, capB: true, profile: (t) => Math.max(0.004, R * Math.pow(Math.max(0, 1 - t * t), 0.6)) });
+			tip.update(m, c2, b);
+			for (const h of [body, tip]) { h.geometry.computeBoundingSphere(); tailRig.add(h); }
+		}
+	} else torso.add(spike(skin, V(0, 0.12, 0.16), V(0, 0.08, 0.27), V(0, 0.14, 0.36), 0.06));   // a stubby tail
+	// two quills down the back (none for knuckles or the fox)
+	if (!knuckles && !tails) for (const s of [-1, 1]) torso.add(spike(skin, V(s * 0.07, 0.36, 0.14), V(s * 0.12, 0.37, 0.32), V(s * 0.14, 0.24, 0.45), 0.11));   // (arching out and drooping down)
 
 	// the head
 	const head = new THREE.Group();
@@ -504,7 +540,7 @@ export function buildSpeedster(colour) {
 			pos.setXYZ(i, v.x, v.y, v.z);
 		}
 		geo.computeVertexNormals();
-		const mat = new THREE.MeshPhysicalMaterial({ map: faceTexture(false), alphaTest: 0.5, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.06, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+		const mat = new THREE.MeshPhysicalMaterial({ map: faceTexture(false, knuckles ? 'purple' : tails ? 'blue' : 'green'), alphaTest: 0.5, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.06, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
 		const face = add(head, geo, mat, 0, 0, 0.02);
 		face.castShadow = false;
 		// a rim round the eyes: a blue tube along the mask's outline (up from one cheek, over
@@ -626,7 +662,7 @@ export function buildSpeedster(colour) {
 		const nosePt = onMuzzle(366, 420) || onHead(...drawToHead(366, 420));
 		return { mgeo, lines, nosePt };
 		})());
-		const muzzle = new THREE.Mesh(mz.mgeo, fur(0xf6d2a2, { normalScale: new THREE.Vector2(0.7, 0.7) }));
+		const muzzle = new THREE.Mesh(mz.mgeo, fur(tanColour, { normalScale: new THREE.Vector2(0.7, 0.7) }));
 		muzzle.castShadow = true;
 		head.add(muzzle);
 		const lineMat = new THREE.MeshStandardMaterial({ color: 0x14100c, roughness: 0.6 });
@@ -654,15 +690,36 @@ export function buildSpeedster(colour) {
 		q.frustumCulled = true;
 		head.add(q);
 	};
+	if (knuckles) {
+		// dreadlocks: thick and blunt, out over the head and hanging down behind it
+		const dread = (a, c, b, r) => {
+			const q = hose(skin, 0, 0, { segs: 32, radial: 16, capA: false, capB: true, profile: (t) => Math.max(0.004, r * Math.min(1, Math.sin(Math.PI * 0.5 * Math.min(1, t / 0.3))) * (1 - 0.35 * t) * Math.sqrt(Math.max(0, 1 - Math.pow(Math.max(0, t - 0.9) / 0.1, 2)))) });
+			q.update(a, c, b);
+			q.geometry.computeBoundingSphere();
+			q.frustumCulled = true;
+			head.add(q);
+		};
+		dread(B(0, 0.33, -0.12), B(0, 0.56, 0.3), B(0, -0.05, 0.62), 0.15);                 // over the top and down
+		for (const s of [-1, 1]) {
+			dread(B(s * 0.17, 0.3, -0.08), B(s * 0.34, 0.4, 0.28), B(s * 0.34, -0.22, 0.5), 0.14);   // from the top of each side
+			dread(B(s * 0.27, 0.08, -0.04), B(s * 0.4, 0.05, 0.25), B(s * 0.3, -0.45, 0.32), 0.13);  // lower, past the cheeks
+		}
+		dread(B(0, -0.05, 0.28), B(0, -0.1, 0.5), B(0, -0.5, 0.48), 0.13);                 // low at the back
+	} else if (tails) {
+		// three bangs flicking up and forward off the brow, and a tuft at each cheek
+		for (const x of [-0.08, 0, 0.08]) head.add(spike(skin, B(x, 0.3, -0.06), B(x * 1.2, 0.48, -0.16), B(x * 1.5, 0.47, -0.3 + Math.abs(x)), 0.085));
+		for (const s of [-1, 1]) head.add(spike(skin, B(s * 0.3, -0.06, -0.08), B(s * 0.42, -0.1, -0.06), B(s * 0.5, -0.18, -0.02), 0.07));
+	} else {
 	quill(B(0, 0.315, -0.215), B(0, 0.52, 0.17), B(0, 0.25, 0.76), 0.2);              // over the top
 	for (const s of [-1, 1]) quill(B(s * 0.27, 0.12, -0.16), B(s * 0.27, 0.1, 0.22), B(s * 0.13, -0.02, 0.68), 0.16);   // round each side, close in toward the top one (shorter than it)
 	quill(B(0, -0.1, 0.3), B(0, -0.12, 0.52), B(0, -0.06, 0.7), 0.16);               // lower at the back (shorter, tucked in under the side ones)
-	// ears: big, forward, just above the eyes, flattened front to back, the tan inside facing forward
-	for (const s of [-1, 1]) {
+	}
+	// ears: big, forward, just above the eyes, flattened front to back, the tan inside facing forward (none for knuckles: hidden under the dreadlocks)
+	if (!knuckles) for (const s of [-1, 1]) {
 		const ear = new THREE.Group();
 		ear.position.copy(B(s * 0.24, 0.26, -0.09));
 		ear.rotation.z = -s * 0.22;
-		ear.scale.set(FACE_K, FACE_K, 0.45 * FACE_K);   // (flattened at the front; kept their size as the head shrank)
+		ear.scale.set(FACE_K, FACE_K, 0.45 * FACE_K).multiplyScalar(tails ? 1.3 : 1);   // (flattened at the front; kept their size as the head shrank; bigger on the fox)
 		head.add(ear);
 		// (full low down, easing to a soft point: between a cone and a dome)
 		const round = (R) => (t) => Math.max(0.004, R * Math.pow(Math.max(0, 1 - Math.pow(t, 1.7)), 0.75));
@@ -681,6 +738,22 @@ export function buildSpeedster(colour) {
 	// to a rounded tip), and a slim cuff at the wrist. Up the arm is +y.
 	function buildGlove() {
 		const g = new THREE.Group();
+		if (knuckles) {
+			// a big round fist, the curled fingers a soft ridge across its front, the thumb
+			// wrapped over them, and two white spikes on the knuckles
+			add(g, new THREE.SphereGeometry(0.068, 28, 20), glove, 0, -0.05, 0.005, 1.05, 1.05, 0.95);
+			add(g, new THREE.CapsuleGeometry(0.03, 0.07, 8, 16), glove, 0, -0.09, 0.03, 1, 1, 1).rotation.z = Math.PI / 2;   // (the curled fingers)
+			add(g, new THREE.SphereGeometry(0.024, 16, 12), glove, 0.045, -0.06, 0.045, 1, 1.4, 1);   // the thumb
+			for (const x of [-0.024, 0.024]) {
+				const sp = add(g, new THREE.ConeGeometry(0.02, 0.06, 16), glove, x, -0.125, -0.012);
+				sp.rotation.x = Math.PI + 0.35;   // (pointing out past the knuckles)
+			}
+			const cuff = add(g, new THREE.TorusGeometry(0.045, 0.02, 10, 24), glove, 0, 0.03, 0);
+			cuff.rotation.x = Math.PI / 2;
+			g.scale.setScalar(HAND);
+			lean.add(g);
+			return g;
+		}
 		add(g, new THREE.SphereGeometry(0.06, 24, 16), glove, 0, -0.01, 0, 1.05, 1.15, 0.45);   // the palm, flat
 		const finger = (a, c, b, r) => {
 			const f = hose(glove, 0, 0, { segs: 18, radial: 10, capA: true, capB: true, profile: (t) => r * (1 + 0.7 * Math.pow(1 - t, 4)) * (1 - 0.25 * t) });
@@ -707,7 +780,7 @@ export function buildSpeedster(colour) {
 		add(g, new THREE.SphereGeometry(0.17, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), red, 0, 0.05, -0.1, 1, 0.9, 1.6);
 		add(g, new THREE.CylinderGeometry(0.17, 0.163, 0.055, 32), white, 0, 0.027, -0.1, 1.04, 1, 1.64);
 		// a white sock round the ankle
-		const sock = add(g, new THREE.TorusGeometry(0.06, 0.03, 12, 24), white, ANKLE.x, ANKLE.y, ANKLE.z);   // (right where the leg meets the shoe)
+		const sock = add(g, new THREE.TorusGeometry(0.06, 0.03, 12, 24), sockMat, ANKLE.x, ANKLE.y, ANKLE.z);   // (right where the leg meets the shoe)
 		sock.rotation.x = Math.PI / 2;
 		lean.add(g);
 		return g;
@@ -910,5 +983,5 @@ export function buildSpeedster(colour) {
 	}
 
 	animate(0, 'idle');
-	return { root, lean, torso, head, ball, animate, setColour };
+	return { root, lean, torso, head, ball, tailRig, animate, setColour };
 }
