@@ -16,10 +16,11 @@
  * Find all three and the quest is done (or the clock runs out).
  *
  * Two cameras (the debug screen's CAMERA row switches; kept per browser):
- * FIXED (the default) is level (no tilt, so every wall reads square) and never turns except with the turn-around button; it
- * follows him from straight behind, but with slack sideways, so heading off to
- * one side he runs out onto that side wall. FOLLOW chases from behind,
- * swinging round to his heading.
+ * FIXED (the default) stands still in the middle of the room, level (so every
+ * wall reads square), turning only with the turn-around button; tap through
+ * a doorway and, as he lands in it, it flies through to the middle of the next
+ * room, facing the same way. FOLLOW chases from behind, swinging round to his
+ * heading.
  *
  * Whoever's standing nearest the spot a tap lands on owns that tap (taps
  * carry no player): the rings and fragments he grabs on the way are theirs.
@@ -66,7 +67,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 	const POINTS = { ring: 1, fragment: 25 };
 	const DOOR_STEP = { e: [1, 0], w: [-1, 0], s: [0, 1], n: [0, -1] };   // (which way each doorway of a room leads)
 	const TURN = { x: W * 1.5, y: H * 0.75, r: 70 };            // the turn-around button: middle of the front wall, a quarter up from the bottom
-	const FIXED = { side: 7, slide: 6, snap: 5 };          // the fixed camera: how far he gets off to one side before it follows (beyond that he's out on a side wall), how fast it follows, how fast it squares up
+	const FIXED = { eye: 3, fly: 1.5, snap: 5 };          // the fixed camera: how high it stands in the middle of the room, seconds to fly through a doorway to the next room's middle, how fast it squares up
 	const CAMERA_KEY = 'knuckles-quest.camera';                 // (which camera, kept per browser: 'fixed' or 'follow')
 	const SENSE = 45;                                      // metres off a missing fragment's slot starts to pulse (faster and brighter nearer)
 
@@ -193,7 +194,8 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 	// heads off onto the side walls as he crosses it
 	let fixedCam = true;
 	try { fixedCam = localStorage.getItem(CAMERA_KEY) !== 'follow'; } catch (e) { /* (no storage: fixed) */ }
-	let camAt = null;           // (where the fixed camera stands, on the ground: a little slack sideways)
+	let camRoom = null;         // (the room the fixed camera stands in the middle of)
+	let camFly = null;          // (flying on to the next room: { from, via, to, t }, a curve through the doorway)
 	let turnFlash = 0;          // the button lit up just after a press           // 0..1: how far the eye's come in close behind him (in a doorway)
 	const markerMesh = buildMarker();
 	markerMesh.visible = false;
@@ -417,6 +419,10 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		// in a doorway: face through it, and the eye squares up close behind him (till the next tap)
 		const door = kn.goal && kn.goal.kind === 'top' ? doorNear(kn.pos) : null;
 		if (door) { kn.atDoor = door; kn.yaw = door.yaw; }
+		// (the fixed eye: landed in a doorway, so it flies on through to the next room, and he faces into it)
+		const way = fixedCam && door ? doorwayAt(kn.pos) : null;
+		const next = way && (way.a === camRoom ? way.b : way.b === camRoom ? way.a : null);
+		if (next) { flyTo(next, way.door); faceYaw(next.cx - kn.pos.x, next.cz - kn.pos.z); }
 		kn.goal = null;
 		markerAge = Math.max(markerAge, 1.6);
 	}
@@ -686,9 +692,9 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		sky.follow(walls.rig.position);
 	}
 
-	// the fixed eye: square to the maze, turning only with the turn-around button. It follows
-	// him, always the same way: straight behind him, but with slack sideways, so heading off
-	// to one side he runs out onto that side wall (and it trails him from there)
+	// the fixed eye: level and square to the maze, turning only with the turn-around button,
+	// standing still in the middle of the room it's in. When he lands in a doorway he was
+	// sent to, it flies through it to the middle of the next room (see reached), facing the same way
 	function fixedEye(dt) {
 		const square = Math.round(camYaw / (Math.PI / 2)) * (Math.PI / 2);
 		let d = (spinTo !== null ? spinTo : square) - camYaw;
@@ -696,28 +702,52 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		camYaw += d * Math.min(1, dt * FIXED.snap);
 		if (spinTo !== null && Math.abs(d) < 0.02) { camYaw = spinTo; spinTo = null; }
 		camClose = 0;
-		const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw);   // ahead
-		const rx = Math.cos(camYaw), rz = -Math.sin(camYaw);    // to the right
-		if (!camAt) camAt = new THREE.Vector3(kn.pos.x - fx * CAM.back, 0, kn.pos.z - fz * CAM.back);
-		// (how far it's off to his side now, kept within the slack; always CAM.back behind)
-		const side = Math.max(-FIXED.side, Math.min(FIXED.side, (camAt.x - kn.pos.x) * rx + (camAt.z - kn.pos.z) * rz));
-		camAt.set(kn.pos.x - fx * CAM.back + rx * side, 0, kn.pos.z - fz * CAM.back + rz * side);
-		const head = tmp.copy(kn.pos).add(tmp2.set(0, CAM.look, 0));
-		const want = new THREE.Vector3(camAt.x, head.y + CAM.up, camAt.z);
-		want.y = Math.min(want.y, Math.max(WALL.h - CAM.below, kn.pos.y + 1.0), WALL.ceil - 1.2);
-		// (pulled in toward him if something's in the way)
-		const dir = want.clone().sub(head);
-		const len = dir.length();
-		dir.normalize();
-		const hit = raycastBoxes(boxes, head, dir, len);
-		const eye = hit ? head.clone().addScaledVector(dir, Math.max(0.6, hit.t - 0.6)) : want;
-		walls.rig.position.lerp(eye, Math.min(1, dt * FIXED.slide));
+		if (!camRoom) {
+			camRoom = maze.roomAt(kn.pos.x, kn.pos.z) || maze.rooms[0][0];
+			walls.rig.position.set(camRoom.cx, FIXED.eye, camRoom.cz);
+		}
+		// (he's got into another room some other way, and out of its doorway: on after him)
+		const his = maze.roomAt(kn.pos.x, kn.pos.z);
+		if (!camFly && his && his !== camRoom && kn.state === 'ground' && !doorwayAt(kn.pos)) flyTo(his, doorBetween(camRoom, his));
+		if (camFly) {
+			const f = camFly;
+			f.t = Math.min(1, f.t + dt / FIXED.fly);
+			const e = f.t * f.t * (3 - 2 * f.t), u = 1 - e;   // (eased; a curve through the doorway at the halfway point)
+			walls.rig.position.set(0, 0, 0).addScaledVector(f.from, u * u).addScaledVector(f.via, 2 * u * e).addScaledVector(f.to, e * e);
+			if (f.t >= 1) camFly = null;
+		} else walls.rig.position.set(camRoom.cx, FIXED.eye, camRoom.cz);
 		walls.rig.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), camYaw);   // (level, no tilt: upright edges stay upright, every wall square)
 	}
 
-	function setCamera(fixed) {
+	// (the doorway he's standing in: { door, a, b }, the rooms either side of it; or null)
+	function doorwayAt(p) {
+		for (const r of maze.rooms.flat()) for (const w of Object.keys(r.open)) {
+			const d = r.doors[w], [dx, dz] = DOOR_STEP[w];
+			if (Math.hypot(p.x - d.x, p.z - d.z) > 2.2 || Math.abs(p.y - d.bottom) > 1) continue;
+			return { door: d, a: r, b: maze.rooms[r.i + dx][r.j + dz] };
+		}
+		return null;
+	}
+	// (the doorway between two rooms next to each other, or null)
+	function doorBetween(a, b) {
+		for (const w of Object.keys(a.open)) if (a.i + DOOR_STEP[w][0] === b.i && a.j + DOOR_STEP[w][1] === b.j) return a.doors[w];
+		return null;
+	}
+
+	// the fixed eye off to the middle of a room, through a doorway (or straight there)
+	function flyTo(room, door) {
+		const from = walls.rig.position.clone(), to = new THREE.Vector3(room.cx, FIXED.eye, room.cz);
+		const mid = from.clone().add(to).multiplyScalar(0.5);
+		// (the curve's control point, so it passes through the doorway, at head height in it, halfway)
+		const via = door ? new THREE.Vector3(door.x, Math.min(door.bottom + 2.4, WALL.ceil - 1.2), door.z).multiplyScalar(2).sub(mid) : mid;
+		camRoom = room;
+		camFly = { from, via, to, t: 0 };
+	}
+
+	function setCamera(fixed, init) {
 		fixedCam = fixed;
 		spinTo = null;
+		if (fixed && !init) flyTo(maze.roomAt(kn.pos.x, kn.pos.z) || maze.rooms[0][0], null);   // (switched on: over to the middle of his room)
 		try { localStorage.setItem(CAMERA_KEY, fixed ? 'fixed' : 'follow'); } catch (e) { /* (not kept) */ }
 		$camButton.text(fixed ? 'FIXED ⇄ FOLLOW' : 'FOLLOW ⇄ FIXED');
 	}
@@ -1076,7 +1106,17 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 
 	// the debug screen: which camera
 	const $camButton = show.menu.dbutton('', () => setCamera(!fixedCam), '#2a4a3a').appendTo(show.menu.drow('CAMERA'));
-	setCamera(fixedCam);
+	setCamera(fixedCam, true);
+	// (the fixed eye stands in the middle of the first room, right where he'd start: so he
+	// starts a few metres in front of it, wherever's clear)
+	if (fixedCam) {
+		const s = maze.start;
+		for (const [dx, dz] of [[0, -5], [0, -4], [0, -6.5], [-4, -4], [4, -4], [0, -3]]) {
+			if (blockedAt(s.x + dx, 0.05, s.z + dz)) continue;
+			kn.pos.set(s.x + dx, 0, s.z + dz);
+			break;
+		}
+	}
 
 	/* ---------- go ---------- */
 
