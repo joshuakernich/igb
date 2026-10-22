@@ -1,7 +1,9 @@
 /*
- * Knuckles Quest: the maze. A grid of ruined stone rooms on a floating
- * island, joined by doorways (some at floor level, some raised up a wall,
- * to be climbed or glided to), every room with blocks and plinths to climb.
+ * Knuckles Quest: the maze. A lost temple: a grid of overgrown stone halls
+ * under one carved ceiling (glyphs glowing on the walls, pillars, vines,
+ * light slanting in), joined by doorways (some at floor level, some raised
+ * up a wall, to be climbed or glided to), every room with blocks and
+ * plinths to climb.
  * Everything solid is an axis-aligned box, so taps and the climber can
  * meet it exactly: { min, max, kind } ('floor', 'wall', 'block').
  *
@@ -19,45 +21,54 @@ import { canvasTexture } from '../../lib/three/walls.js';
 
 export const GRID = 4;           // rooms a side
 export const CELL = 24;          // metres from one room's middle to the next
-export const WALL = { t: 1.4, h: 8, ceil: 11 };   // thickness, height, and where the ceiling over the whole maze starts (headroom over the wall tops)
+export const WALL = { t: 1.4, h: 8, ceil: 8 };   // thickness, height, and where the ceiling starts (right on the wall tops: no way over them)
 export const DOOR = { w: 5, h: 5.2, high: 3.4 };   // width, height, and how far up a raised doorway starts
 
 const TAU = Math.PI * 2;
 
 /* ---------- textures ---------- */
 
+// Old temple stone: big grey-green blocks, worn and moss-streaked, with a carved
+// band of glyphs near the top of every course (their glow is in runeTexture).
 function stoneTexture(aniso) {
 	const t = canvasTexture(512, 512, function (g, w, h) {
-		g.fillStyle = '#b8a07a';
+		g.fillStyle = '#5f6a5c';
 		g.fillRect(0, 0, w, h);
-		// courses of big blocks, each its own shade
 		const rows = 4;
 		for (let r = 0; r < rows; r++) {
 			const y0 = r * h / rows;
 			const off = (r % 2) * 64;
 			for (let x = -off; x < w; x += 128) {
-				const v = 150 + Math.random() * 50;
-				g.fillStyle = `rgb(${v + 30},${v + 12},${v - 18})`;
-				g.fillRect(x + 4, y0 + 4, 120, h / rows - 8);
-				// weathering
-				for (let i = 0; i < 30; i++) {
-					g.fillStyle = `rgba(${Math.random() < 0.5 ? '60,50,30' : '255,240,210'},${Math.random() * 0.12})`;
-					g.fillRect(x + 4 + Math.random() * 110, y0 + 4 + Math.random() * (h / rows - 18), 4 + Math.random() * 14, 2 + Math.random() * 8);
+				const v = 95 + Math.random() * 40;
+				g.fillStyle = `rgb(${v},${v + 10},${v - 4})`;
+				g.fillRect(x + 3, y0 + 3, 122, h / rows - 6);
+				// weathering, chips and cracks
+				for (let i = 0; i < 40; i++) {
+					g.fillStyle = `rgba(${Math.random() < 0.6 ? '20,26,20' : '200,210,190'},${Math.random() * 0.14})`;
+					g.fillRect(x + 4 + Math.random() * 112, y0 + 4 + Math.random() * (h / rows - 16), 3 + Math.random() * 16, 2 + Math.random() * 7);
 				}
+				g.strokeStyle = 'rgba(20,24,18,0.35)';
+				g.lineWidth = 1.5;
+				g.beginPath();
+				let cx = x + 10 + Math.random() * 100, cy = y0 + 6;
+				g.moveTo(cx, cy);
+				for (let k = 0; k < 5; k++) { cx += (Math.random() - 0.5) * 20; cy += 6 + Math.random() * 10; g.lineTo(cx, cy); }
+				g.stroke();
 			}
 		}
-		// a carved band of zigzags near the top
-		g.strokeStyle = 'rgba(70,50,30,0.45)';
-		g.lineWidth = 6;
-		g.beginPath();
-		for (let x = 0; x <= w; x += 32) g.lineTo(x, 40 + (x / 32 % 2 ? 18 : 0));
-		g.stroke();
-		// moss creeping up from the bottom
-		for (let i = 0; i < 160; i++) {
-			const x = Math.random() * w, y = h - Math.random() * Math.random() * 140;
-			g.fillStyle = `rgba(${60 + Math.random() * 40},${120 + Math.random() * 60},50,${0.25 + Math.random() * 0.35})`;
+		// the carved glyph band
+		g.fillStyle = 'rgba(25,30,24,0.55)';
+		g.fillRect(0, 26, w, 34);
+		g.strokeStyle = 'rgba(15,18,14,0.8)';
+		g.lineWidth = 3;
+		glyphs(g, w, 43);
+		// moss and creepers down from the top and up from the bottom
+		for (let i = 0; i < 260; i++) {
+			const top = Math.random() < 0.45;
+			const x = Math.random() * w, y = top ? Math.random() * Math.random() * 180 : h - Math.random() * Math.random() * 160;
+			g.fillStyle = `rgba(${50 + Math.random() * 40},${110 + Math.random() * 70},${40 + Math.random() * 20},${0.25 + Math.random() * 0.4})`;
 			g.beginPath();
-			g.arc(x, y, 3 + Math.random() * 10, 0, TAU);
+			g.arc(x, y, 2 + Math.random() * 9, 0, TAU);
 			g.fill();
 		}
 	});
@@ -65,26 +76,96 @@ function stoneTexture(aniso) {
 	t.anisotropy = aniso;
 	return t;
 }
+// (a row of made-up glyphs along y: circles, eyes, zigzags, ticks)
+function glyphs(g, w, y) {
+	for (let x = 16, k = 0; x < w - 8; x += 32, k++) {
+		g.beginPath();
+		switch (k % 5) {
+			case 0: g.arc(x, y, 9, 0, TAU); g.moveTo(x, y - 4); g.lineTo(x, y + 4); break;
+			case 1: g.moveTo(x - 10, y); g.quadraticCurveTo(x, y - 12, x + 10, y); g.quadraticCurveTo(x, y + 12, x - 10, y); g.moveTo(x + 2, y); g.arc(x, y, 2, 0, TAU); break;
+			case 2: g.moveTo(x - 10, y + 8); g.lineTo(x - 4, y - 8); g.lineTo(x + 2, y + 8); g.lineTo(x + 8, y - 8); break;
+			case 3: g.moveTo(x - 9, y - 9); g.lineTo(x + 9, y + 9); g.moveTo(x + 9, y - 9); g.lineTo(x - 9, y + 9); g.moveTo(x - 9, y); g.lineTo(x + 9, y); break;
+			default: g.moveTo(x, y - 10); g.lineTo(x + 9, y); g.lineTo(x, y + 10); g.lineTo(x - 9, y); g.closePath();
+		}
+		g.stroke();
+	}
+}
+// the glyphs' glow: black, but for the carved band (an emissive map for the stone)
+function runeTexture(aniso) {
+	const t = canvasTexture(512, 512, function (g, w) {
+		g.fillStyle = '#000';
+		g.fillRect(0, 0, w, w);
+		g.shadowColor = '#5fffd0';
+		g.shadowBlur = 8;
+		g.strokeStyle = '#b8fff0';
+		g.lineWidth = 2.5;
+		glyphs(g, w, 43);
+	});
+	t.wrapS = t.wrapT = THREE.RepeatWrapping;
+	t.anisotropy = aniso;
+	return t;
+}
 
+// Flagstones, cracked and overgrown: grass and moss in the joints.
 function floorTexture(aniso) {
 	const t = canvasTexture(512, 512, function (g, w, h) {
-		g.fillStyle = '#5fa040';
+		g.fillStyle = '#3d5a32';
 		g.fillRect(0, 0, w, h);
-		for (let i = 0; i < 5000; i++) {
-			const v = Math.random();
-			g.fillStyle = `rgba(${v < 0.5 ? '40,110,30' : '140,200,80'},${0.2 + Math.random() * 0.3})`;
-			g.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 2, 3 + Math.random() * 5);
+		const n = 4;
+		for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+			const off = (r % 2) * 64;
+			const x = c * 128 + off, y = r * 128;
+			const v = 100 + Math.random() * 35;
+			for (const dx of [0, -w]) {
+				g.fillStyle = `rgb(${v - 4},${v + 4},${v - 10})`;
+				g.fillRect(x + dx + 6, y + 6, 116, 116);
+				for (let i = 0; i < 30; i++) {
+					g.fillStyle = `rgba(${Math.random() < 0.6 ? '25,30,20' : '190,200,170'},${Math.random() * 0.15})`;
+					g.fillRect(x + dx + 8 + Math.random() * 100, y + 8 + Math.random() * 100, 4 + Math.random() * 14, 3 + Math.random() * 10);
+				}
+			}
 		}
-		// old flagstones showing through
-		for (let i = 0; i < 9; i++) {
-			const x = Math.random() * w, y = Math.random() * h, s = 50 + Math.random() * 70;
-			g.fillStyle = `rgba(190,170,130,${0.35 + Math.random() * 0.3})`;
-			g.fillRect(x, y, s, s * (0.6 + Math.random() * 0.5));
+		// moss and grass tufts creeping over the stones from the joints
+		for (let i = 0; i < 2600; i++) {
+			const onJoint = Math.random() < 0.7;
+			let x = Math.random() * w, y = Math.random() * h;
+			if (onJoint) { if (Math.random() < 0.5) x = Math.round(x / 64) * 64 + (Math.random() - 0.5) * 18; else y = Math.round(y / 128) * 128 + (Math.random() - 0.5) * 18; }
+			g.fillStyle = `rgba(${40 + Math.random() * 50},${100 + Math.random() * 80},${30 + Math.random() * 20},${0.3 + Math.random() * 0.4})`;
+			g.fillRect(x, y, 1 + Math.random() * 2.5, 2 + Math.random() * 5);
 		}
 	});
 	t.wrapS = t.wrapT = THREE.RepeatWrapping;
 	t.anisotropy = aniso;
 	return t;
+}
+
+// A soft glow dot (for the motes of dust drifting in the light).
+function moteTexture() {
+	return canvasTexture(64, 64, function (g) {
+		const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+		r.addColorStop(0, 'rgba(255,255,255,1)');
+		r.addColorStop(0.3, 'rgba(255,255,255,0.5)');
+		r.addColorStop(1, 'rgba(255,255,255,0)');
+		g.fillStyle = r;
+		g.fillRect(0, 0, 64, 64);
+	});
+}
+// A shaft of light: bright at the top, fading toward the floor and at its edges.
+function shaftTexture() {
+	return canvasTexture(64, 256, function (g, w, h) {
+		const v = g.createLinearGradient(0, 0, 0, h);
+		v.addColorStop(0, 'rgba(255,255,255,0.9)');
+		v.addColorStop(1, 'rgba(255,255,255,0)');
+		g.fillStyle = v;
+		g.fillRect(0, 0, w, h);
+		g.globalCompositeOperation = 'destination-in';
+		const e = g.createLinearGradient(0, 0, w, 0);
+		e.addColorStop(0, 'rgba(0,0,0,0)');
+		e.addColorStop(0.5, 'rgba(0,0,0,1)');
+		e.addColorStop(1, 'rgba(0,0,0,0)');
+		g.fillStyle = e;
+		g.fillRect(0, 0, w, h);
+	});
 }
 
 // A box whose UVs run in metres (so textures tile at one size everywhere).
@@ -106,11 +187,16 @@ export function buildMaze(scene, { rand = Math.random, aniso = 8 } = {}) {
 	scene.add(group);
 	const boxes = [];
 	const disposables = [];
-	const stone = new THREE.MeshStandardMaterial({ map: stoneTexture(aniso), roughness: 0.85, metalness: 0 });
-	const darkStone = new THREE.MeshStandardMaterial({ map: stone.map, color: 0xb59a86, roughness: 0.8 });
+	// (the walls' glyphs glow a faint jade)
+	const stone = new THREE.MeshStandardMaterial({ map: stoneTexture(aniso), emissiveMap: runeTexture(aniso), emissive: 0x6effd8, emissiveIntensity: 1.4, roughness: 0.9, metalness: 0 });
+	const darkStone = new THREE.MeshStandardMaterial({ map: stone.map, color: 0x9aa494, roughness: 0.85 });
+	const ceilingStone = new THREE.MeshStandardMaterial({ map: stone.map, color: 0x6a7266, roughness: 0.95 });
 	const grass = new THREE.MeshStandardMaterial({ map: floorTexture(aniso), roughness: 0.95 });
 	const gold = new THREE.MeshStandardMaterial({ color: 0xd8a640, metalness: 0.9, roughness: 0.3 });
-	disposables.push(stone, darkStone, grass, gold, stone.map, grass.map);
+	const vineMat = new THREE.MeshStandardMaterial({ color: 0x3f7a34, roughness: 0.8 });
+	const shaftMat = new THREE.MeshBasicMaterial({ map: shaftTexture(), color: new THREE.Color(1.0, 0.9, 0.65).multiplyScalar(0.55), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false });
+	const moteMat = new THREE.PointsMaterial({ map: moteTexture(), color: new THREE.Color(1.6, 1.5, 1.1), size: 0.16, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+	disposables.push(stone, darkStone, ceilingStone, grass, gold, vineMat, shaftMat, moteMat, stone.map, stone.emissiveMap, grass.map, shaftMat.map, moteMat.map);
 
 	function box(x0, y0, z0, x1, y1, z1, kind, mat) {
 		const min = new THREE.Vector3(Math.min(x0, x1), Math.min(y0, y1), Math.min(z0, z1));
@@ -219,18 +305,19 @@ export function buildMaze(scene, { rand = Math.random, aniso = 8 } = {}) {
 			wallRun(true, z, cx(k) - CELL / 2 + T / 2, cx(k) + CELL / 2 - T / 2, door, door && up.raised.s);
 		}
 	}
-	// the ceiling: we're indoors. One stone slab over the whole maze (high enough to
-	// run along the wall tops under it), the outer walls carried up to meet it, and
-	// beams along every wall line beneath it
+	// the ceiling: we're indoors. One carved slab over the whole maze, sitting right on
+	// the walls, with heavy beams across each room under it (just for looks)
 	const C = WALL.ceil;
-	const ceiling = box(-ext, C, -ext, ext, C + 1, ext, 'ceiling', darkStone);
-	ceiling.mesh.castShadow = false;   // (the sun still finds its way in)
-	for (const [x0, z0, x1, z1] of [[lo - T / 2, lo - T / 2, hi + T / 2, lo + T / 2], [lo - T / 2, hi - T / 2, hi + T / 2, hi + T / 2], [lo - T / 2, lo, lo + T / 2, hi], [hi - T / 2, lo, hi + T / 2, hi]]) {
-		box(x0, H, z0, x1, C, z1, 'wall', stone);
-	}
-	for (let i = 1; i < GRID; i++) {
-		const at = lo + i * CELL;
-		for (const b of [box(at - 0.4, C - 0.7, lo, at + 0.4, C, hi, 'ceiling', darkStone), box(lo, C - 0.7, at - 0.4, hi, C, at + 0.4, 'ceiling', darkStone)]) b.mesh.castShadow = false;
+	const ceiling = box(-ext, C, -ext, ext, C + 1, ext, 'ceiling', ceilingStone);
+	ceiling.mesh.castShadow = false;   // (the light still finds its way in)
+	for (const col of rooms) for (const r of col) {
+		for (const off of [-1, 1]) {   // (two, a quarter of the way in from each side: clear of the plinths in the middle)
+			const geo = boxGeometry(CELL - T, 0.6, 0.9);
+			const beam = new THREE.Mesh(geo, darkStone);
+			beam.position.set(r.cx, C - 0.3, r.cz + off * CELL / 4);
+			group.add(beam);
+			disposables.push(geo);
+		}
 	}
 
 	// a little stone step under each raised doorway's sill, both sides, so it can be climbed or hopped
@@ -239,6 +326,19 @@ export function buildMaze(scene, { rand = Math.random, aniso = 8 } = {}) {
 	// what's in each room: blocks to climb, rings, braziers
 	const rings = [];
 	const braziers = [];
+	// (one column shape for every pillar: fluted, a little fatter at the bottom)
+	const columnGeo = new THREE.CylinderGeometry(0.62, 0.72, C - 1.0, 20, 1);
+	columnGeo.translate(0, (C - 1.0) / 2, 0);
+	{
+		const pos = columnGeo.attributes.position;
+		for (let i = 0; i < pos.count; i++) {
+			const a = Math.atan2(pos.getZ(i), pos.getX(i)), k = 1 + 0.06 * Math.cos(a * 10);
+			pos.setX(i, pos.getX(i) * k);
+			pos.setZ(i, pos.getZ(i) * k);
+		}
+		columnGeo.computeVertexNormals();
+	}
+	disposables.push(columnGeo);
 	const inner = CELL / 2 - T / 2 - 1;
 	const clear = (r, x, z, s) => {
 		// keep doorways and the room's middle free
@@ -252,6 +352,20 @@ export function buildMaze(scene, { rand = Math.random, aniso = 8 } = {}) {
 	for (const col of rooms) for (const r of col) {
 		const n = 2 + Math.floor(rand() * 3);
 		const placed = [];
+		// a pillar in each corner, floor to ceiling: a fat column on a square base under a square capital
+		const pc = CELL / 2 - T / 2 - 1.4;
+		for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+			const x = r.cx + sx * pc, z = r.cz + sz * pc;
+			box(x - 1.0, 0, z - 1.0, x + 1.0, 0.5, z + 1.0, 'block', darkStone);
+			box(x - 0.75, 0.5, z - 0.75, x + 0.75, C - 0.5, z + 0.75, 'block');   // (solid, drawn as the column)
+			const col = new THREE.Mesh(columnGeo, darkStone);
+			col.position.set(x, 0.5, z);
+			col.castShadow = col.receiveShadow = true;
+			group.add(col);
+			const cap = box(x - 1.0, C - 0.5, z - 1.0, x + 1.0, C, z + 1.0, 'block', darkStone);
+			cap.mesh.castShadow = false;
+			placed.push({ x, z, s: 1.0 });
+		}
 		for (let k = 0; k < n * 4 && placed.length < n; k++) {
 			const s = 1.5 + rand() * 2.2;
 			const x = r.cx + (rand() * 2 - 1) * (inner - s), z = r.cz + (rand() * 2 - 1) * (inner - s);
@@ -264,7 +378,7 @@ export function buildMaze(scene, { rand = Math.random, aniso = 8 } = {}) {
 			// stack a smaller one on the taller blocks
 			if (h > 3.5 && rand() < 0.5) {
 				const s2 = s * 0.55;
-				box(x - s2, h, z - s2, x + s2, h + 1.6 + rand() * 1.5, z + s2, 'block', darkStone);
+				box(x - s2, h, z - s2, x + s2, Math.min(h + 1.6 + rand() * 1.5, C - 2.4), z + s2, 'block', darkStone);   // (always headroom on top)
 			}
 		}
 		// a line of rings across the room's middle
@@ -278,6 +392,63 @@ export function buildMaze(scene, { rand = Math.random, aniso = 8 } = {}) {
 		}
 		r.blocks = placed;
 	}
+
+	// overgrowth and light: vines hanging from the ceiling (with clumps of leaves),
+	// a shaft of light slanting down in every room, and motes drifting in the air
+	const vineGeo = new THREE.CylinderGeometry(0.035, 0.07, 1, 6, 1, true);
+	vineGeo.translate(0, -0.5, 0);
+	const leafGeo = new THREE.IcosahedronGeometry(0.2, 0);
+	const flatRooms = rooms.flat();
+	const VINES = 16, LEAVES = 3;
+	const vines = new THREE.InstancedMesh(vineGeo, vineMat, flatRooms.length * VINES);
+	const leaves = new THREE.InstancedMesh(leafGeo, vineMat, flatRooms.length * VINES * LEAVES);
+	const mtx = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), at = new THREE.Vector3(), eu = new THREE.Euler();
+	let nv = 0, nl = 0;
+	for (const r of flatRooms) {
+		for (let k = 0; k < VINES; k++) {
+			// (mostly along the walls)
+			const edge = rand() < 0.7, side = Math.floor(rand() * 4), u = (rand() * 2 - 1) * (CELL / 2 - T);
+			const w = CELL / 2 - T / 2 - 0.2 - rand() * 0.4;
+			const x = r.cx + (edge ? (side === 0 ? -w : side === 1 ? w : u) : (rand() * 2 - 1) * (CELL / 2 - 3));
+			const z = r.cz + (edge ? (side === 2 ? -w : side === 3 ? w : u) : (rand() * 2 - 1) * (CELL / 2 - 3));
+			const len = edge ? 1.5 + rand() * 4.5 : 0.8 + rand() * 2;
+			at.set(x, C, z);
+			q.setFromEuler(eu.set((rand() - 0.5) * 0.12, 0, (rand() - 0.5) * 0.12));
+			mtx.compose(at, q, sc.set(1, len, 1));
+			vines.setMatrixAt(nv++, mtx);
+			for (let l = 0; l < LEAVES; l++) {
+				const s2 = 0.6 + rand() * 0.9;
+				mtx.compose(at.set(x + (rand() - 0.5) * 0.2, C - len * (0.2 + rand() * 0.8), z + (rand() - 0.5) * 0.2), q.setFromEuler(eu.set(rand() * 3, rand() * 3, 0)), sc.set(s2 * 1.3, s2, s2 * 0.7));
+				leaves.setMatrixAt(nl++, mtx);
+			}
+		}
+		// the shaft of light, from a crack in the ceiling
+		const sx = r.cx + (rand() * 2 - 1) * 6, sz = r.cz + (rand() * 2 - 1) * 6;
+		const shaftGeo = new THREE.CylinderGeometry(0.7, 2.2, C, 20, 1, true);
+		const shaft = new THREE.Mesh(shaftGeo, shaftMat);
+		shaft.position.set(sx, C / 2, sz);
+		shaft.rotation.set((rand() - 0.5) * 0.4, 0, (rand() - 0.5) * 0.4);
+		shaft.renderOrder = 2;
+		group.add(shaft);
+		disposables.push(shaftGeo);
+	}
+	vines.castShadow = leaves.castShadow = true;
+	group.add(vines, leaves);
+	disposables.push(vineGeo, leafGeo);
+	const moteGeo = new THREE.BufferGeometry();
+	{
+		const n = 700, arr = new Float32Array(n * 3);
+		for (let i = 0; i < n; i++) {
+			arr[i * 3] = lo + rand() * (hi - lo);
+			arr[i * 3 + 1] = 0.5 + rand() * (C - 1);
+			arr[i * 3 + 2] = lo + rand() * (hi - lo);
+		}
+		moteGeo.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+	}
+	const motes = new THREE.Points(moteGeo, moteMat);
+	motes.renderOrder = 3;
+	group.add(motes);
+	disposables.push(moteGeo);
 
 	// the three fragments: in the three rooms furthest from the start (a
 	// dead end each, if there are enough), each on a tall plinth
@@ -319,6 +490,10 @@ export function buildMaze(scene, { rand = Math.random, aniso = 8 } = {}) {
 	return {
 		group, boxes, rooms, roomAt, start, fragments, rings, braziers,
 		bounds: { lo, hi },
+		// (the motes drifting)
+		update(t) {
+			motes.position.set(Math.sin(t * 0.13) * 0.6, Math.sin(t * 0.31) * 0.4, Math.cos(t * 0.11) * 0.6);
+		},
 		dispose() {
 			scene.remove(group);
 			for (const d of disposables) d.dispose();

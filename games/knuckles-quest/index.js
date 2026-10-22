@@ -1,14 +1,17 @@
 /*
  * Knuckles Quest
  *
- * A big-fisted red climber explores a maze of ruined stone rooms on a
- * floating island at sunset, hunting for the three emerald fragments
- * hidden in it. Seen from just behind him, the three walls are one view.
+ * Knuckles explores a lost temple, a maze of overgrown stone halls under one
+ * carved ceiling, hunting for the three emerald fragments hidden in it (their
+ * slots pulse as he nears one). Seen from just behind him, the three walls
+ * are one view.
  *
  * Tap anywhere on any wall and he heads for that spot: near enough, he runs
- * there (or climbs, or hops); further off he leaps and glides. Hit a wall on
- * the way, or tap a wall itself, and he grabs on and climbs; tap above the
- * top of a wall or block and he climbs up and over. The fragments sit on
+ * there (or climbs, or hops); further off he leaps and glides. Tap through a
+ * doorway and he heads for the middle of it. Hit a wall on the way, or tap a
+ * wall itself, and he grabs on and climbs (the walls reach the ceiling: never
+ * over them); tap above a block and he climbs up onto it. If he's getting no
+ * nearer he gives up and stops where he is. The fragments sit on
  * tall plinths in the rooms furthest from the start; rings are everywhere.
  * Find all three and the quest is done (or the clock runs out).
  *
@@ -28,7 +31,7 @@
  */
 import * as THREE from '../../lib/three/three.module.min.js';
 import { createWallComposer, createWallRig, SkyDome } from '../../lib/three/walls.js';
-import { buildMaze, raycastBoxes, GRID, CELL, WALL } from './maze.js';
+import { buildMaze, raycastBoxes, GRID, CELL, WALL, DOOR } from './maze.js';
 import { buildClimber, buildRing, buildFragment, buildMarker, buildBrazier, glowTexture, fireTexture, sparkleTexture } from './models.js';
 
 IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
@@ -55,6 +58,8 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 	const STALL = { time: 1.0, gain: 0.5, max: 6 };        // he gives up (and stops where he is) if he's got no nearer by this much in this long, or after this long at all
 	const REACH = { ring: 1.2, fragment: 1.7 };            // how near counts as grabbing
 	const POINTS = { ring: 1, fragment: 25 };
+	const DOOR_STEP = { e: [1, 0], w: [-1, 0], s: [0, 1], n: [0, -1] };   // (which way each doorway of a room leads)
+	const SENSE = 45;                                      // metres off a missing fragment's slot starts to pulse (faster and brighter nearer)
 
 	/* ---------- renderer, scene, cameras ---------- */
 
@@ -77,8 +82,8 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 	resize();
 
 	const scene = new THREE.Scene();
-	const HORIZON = new THREE.Color(0x3a2418);   // (indoors: a warm, smoky dark in the distance)
-	scene.fog = new THREE.Fog(HORIZON, 40, 160);
+	const HORIZON = new THREE.Color(0x12241e);   // (a lost temple: a green-black murk in the distance)
+	scene.fog = new THREE.Fog(HORIZON, 28, 120);
 
 	// a sunset sky; the same GLSL lights the scene
 	const SUN = new THREE.Vector3(0.55, 0.22, -0.8).normalize();
@@ -101,8 +106,8 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 	scene.add(sky);
 	scene.environment = sky.environment(renderer);
 
-	scene.add(new THREE.HemisphereLight(0xffc896, 0x3a2a20, 1.0));   // (under the ceiling: warm and dim, the braziers doing the rest)
-	const sun = new THREE.DirectionalLight(0xffc488, 1.6);
+	scene.add(new THREE.HemisphereLight(0x9cd8c0, 0x2a2a1c, 0.9));   // (under the ceiling: a cool jade gloom, the braziers and the shafts of light doing the rest)
+	const sun = new THREE.DirectionalLight(0xffe2a8, 1.3);
 	sun.castShadow = true;
 	sun.shadow.mapSize.set(2048, 2048);
 	Object.assign(sun.shadow.camera, { left: -32, right: 32, top: 32, bottom: -32, near: 1, far: 220 });
@@ -354,6 +359,9 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		show.fx('whoosh', 0.35, 1.3);
 	}
 
+	// (does it reach the ceiling? nothing can stand on top of it)
+	const topless = (b) => b.max.y > WALL.ceil - BODY.h;
+
 	function startClimb(face) {
 		kn.state = 'climb';
 		kn.face = face;
@@ -456,7 +464,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		}
 		if (hit) {
 			// nearly at its top: vault onto it; otherwise grab on
-			if (hit.box.max.y - p.y < 0.8) { kn.state = 'mantle'; kn.mantle = { from: p.clone(), to: tmp.set(p.x - hit.n.x * (BODY.r + 0.3), hit.box.max.y, p.z - hit.n.z * (BODY.r + 0.3)).clone(), t: 0 }; return; }
+			if (hit.box.max.y - p.y < 0.8 && !topless(hit.box)) { kn.state = 'mantle'; kn.mantle = { from: p.clone(), to: tmp.set(p.x - hit.n.x * (BODY.r + 0.3), hit.box.max.y, p.z - hit.n.z * (BODY.r + 0.3)).clone(), t: 0 }; return; }
 			startClimb(hit);
 		}
 	}
@@ -503,6 +511,13 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		p.y += du;
 		p[along] = Math.max(b.min[along] + 0.1, Math.min(b.max[along] - 0.1, p[along] + da));
 		kn.climbPace = (du + Math.abs(da) * 0.6) / Math.max(dt, 1e-4) / CLIMB;
+		// at the top of something that reaches the ceiling (a wall, a pillar): no way over, so he stops there
+		if (topless(b) && p.y + BODY.h * 0.8 >= b.max.y - 0.3 && du > 0) {
+			p.y = b.max.y - 0.3 - BODY.h * 0.8;
+			kn.goal = null;
+			kn.climbPace = 0;
+			return;
+		}
 		// at the top: haul up over it
 		if (p.y + BODY.h * 0.8 >= b.max.y && du > 0) {
 			kn.state = 'mantle';
@@ -543,6 +558,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 
 	function simulate(dt) {
 		clock += dt;
+		maze.update(clock);
 		if (show.paused) return;
 		if (live()) {
 			giveUp(dt);
@@ -733,6 +749,18 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 			goal = { point: new THREE.Vector3(q.x, s ? s.max.y : 0, q.z), normal: new THREE.Vector3(0, 1, 0), box: s, kind: 'top' };
 		}
 		if (!goal) return;
+		// somewhere through a doorway (in another room): to the middle of the doorway out of this one, that way
+		const here = maze.roomAt(kn.pos.x, kn.pos.z), there = maze.roomAt(goal.point.x, goal.point.z);
+		if (here && there && here !== there) {
+			const di = there.i - here.i, dj = there.j - here.j;
+			const ways = Math.abs(di) >= Math.abs(dj) ? [di > 0 ? 'e' : 'w', dj > 0 ? 's' : 'n'] : [dj > 0 ? 's' : 'n', di > 0 ? 'e' : 'w'];
+			const way = ways.find((w, k) => here.open[w] && (k === 0 || (k === 1 && (w === 'e' || w === 'w' ? di : dj) !== 0)));
+			if (way) {
+				const [dx, dz] = DOOR_STEP[way];
+				const door = new THREE.Vector3(here.cx + dx * CELL / 2, here.raised[way] ? DOOR.high : 0, here.cz + dz * CELL / 2);
+				if (Math.hypot(door.x - kn.pos.x, door.z - kn.pos.z) > 1.5) goal = { point: door, normal: new THREE.Vector3(0, 1, 0), box: supportAt(door.x, door.z, door.y + 0.1), kind: 'top' };
+			}
+		}
 		goal.by = by;
 		goal.tries = 0;
 		kn.goal = goal;
@@ -840,7 +868,13 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		// the fragments found, and the map
 		const fx0 = W + 120, fy0 = 120;
 		art.roundRect(ctx, fx0 - 70, fy0 - 60, 300, 120, 30, { fill: 'rgba(20,10,20,0.7)', stroke: 'rgba(255,255,255,0.6)', lineWidth: 3 });
-		fragments.forEach((f, i) => gem(ctx, fx0 + i * 80, fy0, 40, f.taken ? '#2dff7a' : 'rgba(255,255,255,0.12)', f.taken ? '#0a3a1a' : 'rgba(255,255,255,0.5)'));
+		fragments.forEach((f, i) => {
+			if (f.taken) { gem(ctx, fx0 + i * 80, fy0, 40, '#2dff7a', '#0a3a1a'); return; }
+			// a missing one pulses green, faster and brighter the nearer he is to it
+			const near = Math.max(0, Math.min(1, 1 - kn.pos.distanceTo(f.pos) / SENSE));
+			const beat = near > 0 ? Math.pow(0.5 + 0.5 * Math.sin(clock * TAU * (0.8 + near * 4)), 2) * near : 0;
+			gem(ctx, fx0 + i * 80, fy0, 40 * (1 + 0.18 * beat), `rgba(45,255,122,${0.12 + 0.6 * beat})`, `rgba(${Math.round(255 - 210 * beat)},255,${Math.round(255 - 133 * beat)},${0.5 + 0.5 * beat})`);
+		});
 		minimap(ctx, 2 * W - 290, 70, 220);
 	}
 
