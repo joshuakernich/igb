@@ -1,8 +1,9 @@
 /*
- * The speedster: an original glossy, spiky little runner in any colour,
- * built for three.js (shared by Sonic Dash and Quill Relay; deliberately
- * not Sega's character). A big round head with tapered, swept-back quills,
- * wide eyes with a glint, a muzzle and a grin; puffy gloves; chunky
+ * The speedster: a glossy, spiky little runner in any colour, built for
+ * three.js (shared by Sonic Dash, Quill Relay and the Sonic Characters
+ * sandbox). A big round head with tapered, swept-back quills,
+ * the classic face (one white mask holding both eyes, a crescent muzzle, a
+ * smirk); puffy gloves; chunky
  * sneakers; and noodly rubber-hose arms and legs, rebuilt every frame as
  * smooth tapered tubes bowing at the knee and elbow.
  *
@@ -41,11 +42,11 @@ export function hose(mat, r0, r1, { segs = 16, radial = 10, swell = 0.12, capA =
 	const idx = [];
 	for (let i = 0; i < segs; i++) for (let j = 0; j < radial; j++) {
 		const a = i * ringVerts + j, b = a + ringVerts;
-		idx.push(a, b, a + 1, b, b + 1, a + 1);
+		idx.push(a, a + 1, b, b, a + 1, b + 1);   // (wound so the outside faces out)
 	}
 	const capAi = rings * ringVerts, capBi = capAi + (capA ? 1 : 0);
-	if (capA) for (let j = 0; j < radial; j++) idx.push(capAi, j + 1, j);
-	if (capB) for (let j = 0; j < radial; j++) { const base = segs * ringVerts; idx.push(capBi, base + j, base + j + 1); }
+	if (capA) for (let j = 0; j < radial; j++) idx.push(capAi, j, j + 1);
+	if (capB) for (let j = 0; j < radial; j++) { const base = segs * ringVerts; idx.push(capBi, base + j + 1, base + j); }
 	const geo = new THREE.BufferGeometry();
 	geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
 	geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3).setUsage(THREE.DynamicDrawUsage));
@@ -95,6 +96,132 @@ export function spike(mat, a, c, b, r0, r1 = 0.004, segs = 14) {
 }
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
+
+/* ---------- the face ---------- */
+
+// The face, traced from the classic drawing (a 736-unit square: the white
+// mask, the pupils and their glints, the muzzle crescent, the smirk), on a
+// canvas that maps straight onto the front of a sphere of radius R.
+const FACE = { px: 1024, span: 0.84, s: 0.95, ox: 368, oy: 230, cy: 414 };   // canvas size, metres across it, reference-to-canvas scale, the reference point that lands at (512, cy)
+
+function maskPath(g) {
+	g.beginPath();
+	g.moveTo(20, 400);
+	g.bezierCurveTo(0, 300, 5, 60, 150, 18);              // up the left eye's outside
+	g.bezierCurveTo(250, 12, 310, 130, 332, 236);         // over its top and down its inside
+	g.bezierCurveTo(342, 285, 356, 322, 368, 330);        // into the notch
+	g.bezierCurveTo(380, 322, 394, 285, 404, 236);        // and out of it
+	g.bezierCurveTo(428, 130, 488, 18, 600, 24);          // up the right eye's inside
+	g.bezierCurveTo(735, 40, 740, 290, 716, 390);         // over its top and down its outside
+	g.bezierCurveTo(600, 418, 460, 446, 368, 448);        // along the top of the muzzle...
+	g.bezierCurveTo(270, 446, 130, 424, 20, 400);         // ...back to the start
+	g.closePath();
+}
+function muzzlePath(g) {
+	g.beginPath();
+	g.moveTo(20, 400);
+	g.bezierCurveTo(130, 424, 270, 446, 368, 448);
+	g.bezierCurveTo(460, 446, 600, 418, 716, 390);
+	g.bezierCurveTo(745, 470, 705, 590, 600, 645);        // round the right end and under
+	g.bezierCurveTo(500, 700, 250, 705, 140, 640);
+	g.bezierCurveTo(40, 585, -5, 480, 20, 400);           // round the left end
+	g.closePath();
+}
+
+function buildFace(R) {
+	const { px, span, s, ox, oy, cy } = FACE;
+	const toRef = (g) => { g.translate(px / 2 - ox * s, cy - oy * s); g.scale(s, s); };
+
+	// the painting
+	const paint = document.createElement('canvas');
+	paint.width = paint.height = px;
+	const g = paint.getContext('2d');
+	g.save();
+	toRef(g);
+	g.lineJoin = 'round';
+	g.lineCap = 'round';
+	g.fillStyle = '#f6c48e';
+	muzzlePath(g);
+	g.fill();
+	g.fillStyle = '#ffffff';
+	maskPath(g);
+	g.fill();
+	g.strokeStyle = '#0c0c14';
+	g.lineWidth = 9;
+	muzzlePath(g);
+	g.stroke();
+	maskPath(g);
+	g.stroke();
+	// the pupils: tall black ovals, each with a glint
+	for (const [x, y, rot] of [[234, 306, 0.04], [468, 306, -0.04]]) {
+		g.fillStyle = '#0c0c14';
+		g.beginPath();
+		g.ellipse(x, y, 38, 100, rot, 0, Math.PI * 2);
+		g.fill();
+		g.fillStyle = '#ffffff';
+		g.beginPath();
+		g.ellipse(x + 4, y - 40, 12, 33, rot, 0, Math.PI * 2);
+		g.fill();
+	}
+	// the smirk, with its little tick at the corner
+	g.lineWidth = 8;
+	g.beginPath();
+	g.moveTo(428, 612);
+	g.quadraticCurveTo(560, 592, 600, 508);
+	g.stroke();
+	g.beginPath();
+	g.moveTo(552, 498);
+	g.quadraticCurveTo(596, 490, 630, 522);
+	g.stroke();
+	g.restore();
+	const tex = new THREE.CanvasTexture(paint);
+	tex.colorSpace = THREE.SRGBColorSpace;
+	tex.anisotropy = 4;
+
+	// how far each part swells out: a soft-edged copy of the muzzle and mask
+	const H = 256, k = H / px;
+	const hm = document.createElement('canvas');
+	hm.width = hm.height = H;
+	const h = hm.getContext('2d');
+	h.filter = 'blur(5px)';
+	h.save();
+	h.scale(k, k);
+	toRef(h);
+	h.fillStyle = 'rgb(255,0,0)';   // red: the muzzle
+	muzzlePath(h);
+	h.fill();
+	h.fillStyle = 'rgb(0,255,0)';   // green: the eyes
+	maskPath(h);
+	h.fill();
+	h.restore();
+	const height = h.getImageData(0, 0, H, H).data;
+	const swell = (u, v) => {
+		const x = Math.max(0, Math.min(H - 1, Math.round(u * (H - 1)))), y = Math.max(0, Math.min(H - 1, Math.round((1 - v) * (H - 1))));
+		const i = (y * H + x) * 4;
+		return height[i] / 255 * 0.085 + height[i + 1] / 255 * 0.018;
+	};
+
+	// the shell: the front of the sphere, its UVs projected straight on from the front
+	const geo = new THREE.SphereGeometry(R * 1.004, 72, 54, Math.PI * 1.5 - 1.25, 2.5, 0.5, 2.3);
+	const pos = geo.attributes.position, uv = geo.attributes.uv, n = new THREE.Vector3();
+	for (let i = 0; i < pos.count; i++) {
+		n.set(pos.getX(i), pos.getY(i), pos.getZ(i));
+		const u = 0.5 - n.x / span, v = n.y / span + 0.5;   // (facing -z: the picture's right is the head's -x, as you look at it)
+		uv.setXY(i, u, v);
+		n.multiplyScalar(1 + swell(u, v) / R);
+		pos.setXYZ(i, n.x, n.y, n.z);
+	}
+	geo.computeVertexNormals();
+	const mat = glossy(0xffffff, { map: tex, alphaTest: 0.5, transparent: false });
+	const mesh = new THREE.Mesh(geo, mat);
+	mesh.castShadow = true;
+
+	// the nose: where the mask meets the muzzle, on the swollen surface
+	const nu = (px / 2 + (362 - ox) * s) / px, nv = 1 - (cy + (478 - oy) * s) / px;
+	const nx = (0.5 - nu) * span, ny = (nv - 0.5) * span;
+	const nz = -Math.sqrt(Math.max(0, R * R - nx * nx - ny * ny)) * (1 + swell(nu, nv) / R) - 0.02;
+	return { mesh, nose: new THREE.Vector3(nx, ny, nz) };
+}
 
 /* ---------- the speedster ---------- */
 
@@ -157,22 +284,17 @@ export function buildSpeedster(colour) {
 		head.add(spike(skin, V(s * 0.2, 0.26, 0.06), V(s * 0.26, 0.38, 0.06), V(s * 0.28, 0.5, 0.12), 0.1));
 		head.add(spike(tan, V(s * 0.2, 0.28, 0.02), V(s * 0.25, 0.37, 0.02), V(s * 0.27, 0.46, 0.08), 0.055));
 	}
-	// the muzzle, the nose, a grin
-	add(head, new THREE.SphereGeometry(0.2, 28, 20), tan, 0, -0.13, -0.3, 1.25, 0.82, 0.95);
-	add(head, new THREE.SphereGeometry(0.055, 16, 12), black, 0, -0.06, -0.5, 1.2, 0.9, 1);
-	const grin = add(head, new THREE.TorusGeometry(0.075, 0.012, 8, 20, Math.PI * 0.8), black, 0.0, -0.17, -0.47);
-	grin.rotation.set(0.35, 0, Math.PI + Math.PI * 0.1);
-	// the eyes: two big white ovals meeting in the middle, dark pupils, a glint
-	const pupils = [];
-	for (const s of [-1, 1]) {
-		const e = add(head, new THREE.SphereGeometry(0.13, 24, 18), white, s * 0.1, 0.08, -0.3, 0.85, 1.3, 0.62);
-		e.rotation.z = s * 0.12;
-		const p = add(head, new THREE.SphereGeometry(0.06, 16, 12), black, s * 0.085, 0.07, -0.375, 0.9, 1.25, 0.6);
-		add(p, new THREE.SphereGeometry(0.018, 8, 6), glint, s * -0.012, 0.025, -0.05).castShadow = false;
-		pupils.push(p);
-	}
-	// a brow ridge of skin above the eyes
-	add(head, new THREE.SphereGeometry(0.16, 20, 12), skin, 0, 0.2, -0.25, 1.6, 0.5, 0.9);
+	// the face: one shell over the front of the skull, painted from the
+	// classic shape (one white mask holding both eyes, notched between them;
+	// a wide tan crescent of a muzzle with a smirk), the muzzle and eyes
+	// swelling out of the head along their own outlines; the nose a glossy ball
+	const skull = new THREE.Group();
+	skull.position.set(0, 0, 0.02);
+	skull.scale.set(1.02, 0.96, 1.05);
+	head.add(skull);
+	const face = buildFace(0.4);
+	skull.add(face.mesh);
+	add(skull, new THREE.SphereGeometry(0.052, 20, 14), black, face.nose.x, face.nose.y, face.nose.z);
 
 	// gloves: a puffy hand, a thumb and a rolled cuff
 	function buildGlove() {
@@ -199,7 +321,7 @@ export function buildSpeedster(colour) {
 
 	// the noodle limbs: legs from the hips, arms from the shoulders
 	const legs = [-1, 1].map((s) => ({ s, tube: hose(skin, 0.07, 0.055), shoe: buildShoe(), hip: V(s * 0.13, HIP_Y + 0.02, 0) }));
-	const arms = [-1, 1].map((s) => ({ s, tube: hose(tan, 0.05, 0.042), glove: buildGlove(), shoulder: V(s * 0.27, 0.48, -0.02) }));
+	const arms = [-1, 1].map((s) => ({ s, tube: hose(skin, 0.05, 0.042), glove: buildGlove(), shoulder: V(s * 0.27, 0.48, -0.02) }));
 	for (const l of legs) lean.add(l.tube);
 	for (const a of arms) torso.add(a.tube);
 	// (the arms ride the torso: their hands are placed in its space, then carried into the lean's for the gloves)
@@ -305,7 +427,6 @@ export function buildSpeedster(colour) {
 		torso.position.set(0, HIP_Y, 0);
 		torso.rotation.set(0, 0, 0);
 		head.rotation.set(0, 0, 0);
-		for (const p of pupils) p.position.y = 0.07;
 
 		if (mode === 'crouch') {
 			show(false);
