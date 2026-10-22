@@ -307,9 +307,9 @@ export function buildSpeedster(colour) {
 	// gloves: a puffy hand, a thumb and a rolled cuff
 	function buildGlove() {
 		const g = new THREE.Group();
-		add(g, new THREE.SphereGeometry(0.1, 20, 14), glove, 0, 0, 0, 1, 1.05, 1.1);
-		add(g, new THREE.SphereGeometry(0.045, 12, 10), glove, 0.06, 0.04, -0.06);
-		const cuff = add(g, new THREE.TorusGeometry(0.07, 0.035, 10, 20), glove, 0, 0.09, 0);
+		add(g, new THREE.SphereGeometry(0.14, 24, 18), glove, 0, 0, 0, 1, 1.05, 1.1);
+		add(g, new THREE.SphereGeometry(0.06, 14, 10), glove, 0.085, 0.055, -0.085);
+		const cuff = add(g, new THREE.TorusGeometry(0.085, 0.04, 10, 24), glove, 0, 0.13, 0);
 		cuff.rotation.x = Math.PI / 2;
 		lean.add(g);
 		return g;
@@ -318,18 +318,18 @@ export function buildSpeedster(colour) {
 	function buildShoe() {
 		const g = new THREE.Group();
 		// a red dome, long toward the toe, on a white sole
-		add(g, new THREE.SphereGeometry(0.13, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), red, 0, 0.04, -0.07, 1, 0.95, 1.6);
-		add(g, new THREE.CylinderGeometry(0.13, 0.125, 0.045, 32), white, 0, 0.022, -0.07, 1.04, 1, 1.64);
+		add(g, new THREE.SphereGeometry(0.17, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), red, 0, 0.05, -0.1, 1, 0.9, 1.6);
+		add(g, new THREE.CylinderGeometry(0.17, 0.163, 0.055, 32), white, 0, 0.027, -0.1, 1.04, 1, 1.64);
 		// a white sock round the ankle
-		const sock = add(g, new THREE.TorusGeometry(0.06, 0.03, 12, 24), white, 0, 0.15, 0.0);
+		const sock = add(g, new THREE.TorusGeometry(0.06, 0.03, 12, 24), white, 0, 0.19, 0.0);
 		sock.rotation.x = Math.PI / 2;
 		lean.add(g);
 		return g;
 	}
 
 	// the noodle limbs: legs from the hips, arms from the shoulders
-	const legs = [-1, 1].map((s) => ({ s, tube: hose(skin, 0.07, 0.055), shoe: buildShoe(), hip: V(s * 0.1, HIP_Y + 0.04, 0.02) }));
-	const arms = [-1, 1].map((s) => ({ s, tube: hose(skin, 0.05, 0.042), glove: buildGlove(), shoulder: V(s * 0.17, 0.38, 0.0) }));
+	const legs = [-1, 1].map((s) => ({ s, tube: hose(skin, 0.045, 0.037), shoe: buildShoe(), hip: V(s * 0.1, HIP_Y + 0.04, 0.02) }));
+	const arms = [-1, 1].map((s) => ({ s, tube: hose(skin, 0.032, 0.028), glove: buildGlove(), shoulder: V(s * 0.17, 0.38, 0.0) }));
 	for (const l of legs) lean.add(l.tube);
 	for (const a of arms) torso.add(a.tube);
 	// (the arms ride the torso: their hands are placed in its space, then carried into the lean's for the gloves)
@@ -442,7 +442,7 @@ export function buildSpeedster(colour) {
 			torso.rotation.x = -0.5;
 			head.rotation.x = 0.4;
 			for (const l of legs) placeLeg(l, l.s * 0.16, 0, -0.12, 0.1);
-			for (const a of arms) placeArm(a, a.s * 0.2, 0.2, -0.32, 0.05, -0.05);
+			for (const a of arms) placeArm(a, a.s * 0.22, -0.02, -0.42, 0.06, -0.06);
 			return;
 		}
 		if (mode === 'spring') {
@@ -450,7 +450,7 @@ export function buildSpeedster(colour) {
 			torso.rotation.x = 0.1;
 			head.rotation.x = -0.25;
 			for (const l of legs) placeLeg(l, l.s * 0.12, -0.02 + (l.s > 0 ? 0.06 : 0), 0.02 * l.s, -0.25);
-			for (const a of arms) placeArm(a, a.s * 0.32, 1.02, -0.05, 0.08, 0.0);
+			for (const a of arms) placeArm(a, a.s * 0.36, 1.16, -0.05, 0.1, 0.0);
 			return;
 		}
 		if (mode === 'hurt') {
@@ -459,7 +459,7 @@ export function buildSpeedster(colour) {
 			head.rotation.x = -0.4;
 			const flail = Math.sin(time * 30);
 			for (const l of legs) placeLeg(l, l.s * 0.18, 0.2 + l.s * 0.08, -0.25 * l.s, 0.4);
-			for (const a of arms) placeArm(a, a.s * (0.5 + 0.08 * flail * a.s), 0.75 + 0.15 * flail * a.s, -0.1, 0.06, 0.05);
+			for (const a of arms) placeArm(a, a.s * (0.6 + 0.08 * flail * a.s), 0.8 + 0.18 * flail * a.s, -0.1, 0.08, 0.05);
 			return;
 		}
 		if (mode === 'idle' || pace < 0.04) {
@@ -470,7 +470,7 @@ export function buildSpeedster(colour) {
 			torso.rotation.x = -0.04;
 			placeLeg(legs[0], -0.14, 0, 0, 0);
 			placeLeg(legs[1], 0.15, tap * 0.06, -0.06, -tap * 0.5);
-			for (const a of arms) placeArm(a, a.s * 0.19, 0.12, 0.03, 0.14, 0.04);   // (hands on hips, elbows out)
+			for (const a of arms) placeArm(a, a.s * 0.2, 0.1, 0.04, 0.26, 0.05);   // (hands on hips, long arms akimbo)
 			return;
 		}
 
@@ -491,9 +491,9 @@ export function buildSpeedster(colour) {
 			const s = Math.sin(ph), c = Math.cos(ph);
 			// pumping loops, sweeping back into a streamlined trail at full tilt
 			const pump = 1 - Math.max(0, pace - 0.55) / 0.45;
-			const hx = a.s * (0.23 + 0.03 * c);
-			const hy = 0.2 + 0.1 * c * pump + (1 - pump) * 0.18;
-			const hz = (-0.2 * s) * pump + (1 - pump) * (0.42 + 0.03 * s);
+			const hx = a.s * (0.25 + 0.04 * c);
+			const hy = 0.02 + 0.16 * c * pump + (1 - pump) * 0.12;
+			const hz = (-0.32 * s) * pump + (1 - pump) * (0.56 + 0.04 * s);
 			placeArm(a, hx, hy, hz, 0.1, 0.06 + (1 - pump) * 0.1);
 		}
 		torso.position.y = HIP_Y + Math.abs(Math.sin(cycle)) * 0.05 * (1 - pace * 0.6);
