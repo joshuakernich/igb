@@ -42,7 +42,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 
 	const GAME_SECONDS = 600;
 	const FOV = 64;                                        // vertical: 90 across each 16:10 wall, so the walls meet
-	const CAM = { back: 8.5, up: 5.5, pitch: 20, turn: 2.2, look: 1.3 };   // metres behind and above him, degrees down, how fast it swings round behind him, how high on him it aims
+	const CAM = { back: 6.5, up: 1.1, pitch: 9, turn: 2.2, look: 1.3, below: 0.7 };   // metres behind and above him, degrees down, how fast it swings round behind him, how high on him it aims, how far under the wall tops it stays (so you never see over them)
 	const BODY = { r: 0.4, h: 1.7, step: 0.45 };           // his radius, height, and the ledge he just steps up
 	const RUN = 8.5;                                       // metres a second, running
 	const RUN_RANGE = 14;                                  // how far off a spot on the same level can be for him to just run there
@@ -303,8 +303,9 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		for (const b of boxes) {
 			if (b.kind === 'floor') continue;
 			if (!inFoot(b, p.x, p.z, BODY.r) || p.y >= b.max.y - 0.001 || p.y + BODY.h <= b.min.y) continue;
-			// from above: land on it
-			if (prev.y >= b.max.y - 0.05 && vel.y <= 0) { p.y = b.max.y; vel.y = 0; continue; }
+			// from above: land on it (if he's over it enough to stand; on its very edge he slides off)
+			const above = prev.y >= b.max.y - 0.05 && vel.y <= 0;
+			if (above && inFoot(b, p.x, p.z, BODY.r * 0.5)) { p.y = b.max.y; vel.y = 0; continue; }
 			// from below: bump his head
 			if (prev.y + BODY.h <= b.min.y + 0.05 && vel.y > 0) { p.y = b.min.y - BODY.h; vel.y = 0; continue; }
 			// side-on: out along the shallower way
@@ -316,6 +317,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 			else if (m === dxMax) { p.x = b.max.x + BODY.r; n.set(1, 0, 0); }
 			else if (m === dzMin) { p.z = b.min.z - BODY.r; n.set(0, 0, -1); }
 			else { p.z = b.max.z + BODY.r; n.set(0, 0, 1); }
+			if (above) continue;   // (off the edge: pushed clear, no face to grab)
 			if (!hitFace || b.max.y > hitFace.box.max.y) hitFace = { box: b, n };
 		}
 		if (p.y < 0) { p.y = 0; if (vel.y < 0) vel.y = 0; }
@@ -468,6 +470,8 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		if (g) {
 			const sameFace = g.kind === 'face' && g.box === b && g.normal.equals(f.n);
 			const overThis = g.point.y >= b.max.y - 0.3 && (g.box === b || inFoot(b, g.point.x, g.point.z, 0.6));
+			// (a goal on the far side of this wall: over it, not off it)
+			const beyond = (g.point.x - p.x) * -f.n.x + (g.point.z - p.z) * -f.n.z > (b.max.x - b.min.x) * Math.abs(f.n.x) + (b.max.z - b.min.z) * Math.abs(f.n.z);
 			if (sameFace) {
 				// climb across the face to the spot (his middle at it)
 				const ty = g.point.y - BODY.h * 0.55;
@@ -475,7 +479,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 				wantAlong = g.point[along] - p[along];
 				if (Math.abs(wantUp) < 0.3 && Math.abs(wantAlong) < 0.3) { reached(); wantUp = wantAlong = 0; }
 				hold = false;
-			} else if (overThis || (g.point.y > p.y + 0.5 && inFoot(b, g.point.x, g.point.z, 3))) {
+			} else if (overThis || beyond || (g.point.y > p.y + 0.5 && inFoot(b, g.point.x, g.point.z, 3))) {
 				wantUp = 99;   // up and over
 				hold = false;
 			} else if (g.point.y < p.y - 0.5 && Math.hypot(g.point.x - p.x, g.point.z - p.z) < 3) {
@@ -612,6 +616,8 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		const head = tmp.copy(kn.pos).add(tmp2.set(0, CAM.look, 0));
 		const back = new THREE.Vector3(Math.sin(camYaw), 0, Math.cos(camYaw));
 		const want = head.clone().addScaledVector(back, CAM.back).add(tmp2.set(0, CAM.up, 0));
+		// (kept under the wall tops, unless he's up on top of one himself)
+		want.y = Math.min(want.y, Math.max(WALL.h - CAM.below, kn.pos.y + 1.0));
 		// (pulled in if a wall's in the way)
 		const dir = want.clone().sub(head);
 		const len = dir.length();
@@ -682,12 +688,30 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		} else if (hit) {
 			if (hit.normal.y < -0.5) return;   // (the underside of a lintel: nowhere to go)
 			if (hit.normal.y > 0.5) goal = { point: hit.point, normal: hit.normal, box: hit.box, kind: 'top' };
-			else {
+			else if (hit.box.max.y - hit.point.y < 0.9 && hit.box.kind === 'block') {
+				// (just under its top edge, whose top the low eye can't see: up onto it)
+				const b = hit.box;
+				const pt = hit.point.clone().addScaledVector(hit.normal, -0.7);
+				pt.x = Math.max(b.min.x + 0.2, Math.min(b.max.x - 0.2, pt.x));
+				pt.z = Math.max(b.min.z + 0.2, Math.min(b.max.z - 0.2, pt.z));
+				pt.y = b.max.y;
+				goal = { point: pt, normal: new THREE.Vector3(0, 1, 0), box: b, kind: 'top' };
+			} else {
 				const b = hit.box;
 				const pt = hit.point.clone();
 				pt.y = Math.max(b.min.y + BODY.h * 0.6, Math.min(b.max.y - 0.2, pt.y));
 				goal = { point: pt, normal: hit.normal, box: b, kind: 'face' };
 			}
+		} else {
+			// open sky (over a wall, through a raised doorway): the ground under the tap, a room or so off
+			const flat = Math.hypot(d.x, d.z);
+			if (flat < 0.2) return;
+			const q = o.clone().addScaledVector(d, 18 / flat);
+			const { lo, hi } = maze.bounds;
+			q.x = Math.max(lo + 1, Math.min(hi - 1, q.x));
+			q.z = Math.max(lo + 1, Math.min(hi - 1, q.z));
+			const s = supportAt(q.x, q.z, q.y);
+			goal = { point: new THREE.Vector3(q.x, s ? s.max.y : 0, q.z), normal: new THREE.Vector3(0, 1, 0), box: s, kind: 'top' };
 		}
 		if (!goal) return;
 		goal.by = by;
@@ -832,9 +856,21 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 			show.go(id);
 		},
 		tap(x, y) { tap({ x, y }); },
+		// where a world point shows on the walls (or null), for tapping it
+		at(x, y, z) { return onAnyWall(new THREE.Vector3(x, y, z)); },
+		// what a tap there would hit
+		ray(x, y) {
+			const wall = Math.floor(x / W);
+			raycaster.setFromCamera(ndc.set((x - wall * W) / W * 2 - 1, 1 - y / H * 2), cams[wall]);
+			const h = raycastBoxes(boxes, raycaster.ray.origin, raycaster.ray.direction, 400);
+			return h && { point: h.point.toArray(), normal: h.normal.toArray(), kind: h.box.kind, top: h.box.max.y, eye: raycaster.ray.origin.toArray() };
+		},
+		maze,
 		timeLeft(s) { show.setTimeLeft(s); },
 		// for checking: drop him next to a fragment
 		near(i = 0) { const f = fragments[i]; kn.pos.set(f.pos.x + 4, 0, f.pos.z); kn.state = 'ground'; },
+		// drop him anywhere, facing yaw (0 = -z)
+		place(x, z, yaw = 0) { kn.pos.set(x, 0, z); kn.state = 'ground'; kn.goal = null; kn.face = null; kn.yaw = camYaw = yaw; },
 	};
 
 	self.fini = function () {
