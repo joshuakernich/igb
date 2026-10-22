@@ -254,6 +254,7 @@ IGB.register('sonic-characters', function SonicCharacters(stage) {
 		c.homeScale = c.scale || 1;
 		c.bigScale = BIG / c.height;
 		c.f = 0;
+		c.showSpin = 0;
 		c.root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
 		return c;
 	});
@@ -309,9 +310,12 @@ IGB.register('sonic-characters', function SonicCharacters(stage) {
 			c.holder.position.y += Math.sin(Math.PI * e) * 0.6;
 			c.holder.scale.setScalar(c.homeScale + (c.bigScale - c.homeScale) * e);
 			if (spinning) c.spin += dt * 0.35;
+			// (at the front it turns slowly round on its own, turntables on or off, starting face on)
+			if (c === featured) c.showSpin += dt * 0.3;
+			else if (c.f < 0.02) c.showSpin = 0;
 			// (facing the middle of the room from wherever it is)
 			const face = Math.atan2(c.holder.position.x, c.holder.position.z);
-			c.root.rotation.y = face + c.spin * (1 - e * 0.7);
+			c.root.rotation.y = face + c.spin * (1 - e) + c.showSpin;
 			c.step(dt, clock, c.modes[c.mode]);
 			c.root.position.y = c.root.userData.lift || 0;
 		}
