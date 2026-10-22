@@ -252,16 +252,26 @@ export function buildSpeedster(colour) {
 	const torso = new THREE.Group();
 	torso.position.y = HIP_Y;
 	lean.add(torso);
-	add(torso, new THREE.SphereGeometry(0.3, 32, 24), skin, 0, 0.3, 0, 1, 1.18, 0.95);       // the body, egg-shaped
-	add(torso, new THREE.SphereGeometry(0.22, 28, 20), tan, 0, 0.27, -0.13, 0.95, 1.12, 0.62);  // the tummy
-	add(torso, new THREE.SphereGeometry(0.2, 24, 16), skin, 0, 0.02, 0.0, 1.1, 0.7, 1.0);      // the seat
+	// the body: a small bean, its belly bowed forward, its back curving in
+	const BODY = { r: 0.16, len: 0.17, y: 0.25, bend: 0.9 };
+	const beanGeo = new THREE.CapsuleGeometry(BODY.r, BODY.len, 12, 28);
+	{
+		const pos = beanGeo.attributes.position;
+		for (let i = 0; i < pos.count; i++) {
+			const y = pos.getY(i);
+			pos.setZ(i, pos.getZ(i) * 0.9 + BODY.bend * y * y);   // (the ends swept back: a bean on its end)
+		}
+		beanGeo.computeVertexNormals();
+	}
+	add(torso, beanGeo, skin, 0, BODY.y, 0.02);
+	add(torso, new THREE.SphereGeometry(0.12, 28, 20), tan, 0, BODY.y - 0.01, -0.08, 0.95, 1.3, 0.6);   // the tummy
 	// a stubby tail and two quills down the back
-	torso.add(spike(skin, V(0, 0.08, 0.22), V(0, 0.02, 0.36), V(0, 0.1, 0.46), 0.07));
-	for (const s of [-1, 1]) torso.add(spike(skin, V(s * 0.1, 0.42, 0.22), V(s * 0.16, 0.36, 0.42), V(s * 0.18, 0.44, 0.6), 0.09));
+	torso.add(spike(skin, V(0, 0.12, 0.16), V(0, 0.08, 0.27), V(0, 0.14, 0.36), 0.06));
+	for (const s of [-1, 1]) torso.add(spike(skin, V(s * 0.07, 0.36, 0.14), V(s * 0.12, 0.31, 0.32), V(s * 0.14, 0.38, 0.48), 0.08));
 
 	// the head
 	const head = new THREE.Group();
-	head.position.set(0, 0.86, -0.02);
+	head.position.set(0, 0.78, -0.02);
 	torso.add(head);
 	add(head, new THREE.SphereGeometry(0.4, 40, 30), skin, 0, 0, 0.02, 1.02, 0.96, 1.05);
 	// the quills: tapered and curving back, a fan of six
@@ -318,8 +328,8 @@ export function buildSpeedster(colour) {
 	}
 
 	// the noodle limbs: legs from the hips, arms from the shoulders
-	const legs = [-1, 1].map((s) => ({ s, tube: hose(skin, 0.07, 0.055), shoe: buildShoe(), hip: V(s * 0.13, HIP_Y + 0.02, 0) }));
-	const arms = [-1, 1].map((s) => ({ s, tube: hose(skin, 0.05, 0.042), glove: buildGlove(), shoulder: V(s * 0.27, 0.48, -0.02) }));
+	const legs = [-1, 1].map((s) => ({ s, tube: hose(skin, 0.07, 0.055), shoe: buildShoe(), hip: V(s * 0.1, HIP_Y + 0.04, 0.02) }));
+	const arms = [-1, 1].map((s) => ({ s, tube: hose(skin, 0.05, 0.042), glove: buildGlove(), shoulder: V(s * 0.17, 0.38, 0.0) }));
 	for (const l of legs) lean.add(l.tube);
 	for (const a of arms) torso.add(a.tube);
 	// (the arms ride the torso: their hands are placed in its space, then carried into the lean's for the gloves)
@@ -460,7 +470,7 @@ export function buildSpeedster(colour) {
 			torso.rotation.x = -0.04;
 			placeLeg(legs[0], -0.14, 0, 0, 0);
 			placeLeg(legs[1], 0.15, tap * 0.06, -0.06, -tap * 0.5);
-			for (const a of arms) placeArm(a, a.s * 0.25, 0.1, 0.02, 0.16, 0.04);   // (hands on hips, elbows out)
+			for (const a of arms) placeArm(a, a.s * 0.19, 0.12, 0.03, 0.14, 0.04);   // (hands on hips, elbows out)
 			return;
 		}
 
@@ -481,7 +491,7 @@ export function buildSpeedster(colour) {
 			const s = Math.sin(ph), c = Math.cos(ph);
 			// pumping loops, sweeping back into a streamlined trail at full tilt
 			const pump = 1 - Math.max(0, pace - 0.55) / 0.45;
-			const hx = a.s * (0.3 + 0.03 * c);
+			const hx = a.s * (0.23 + 0.03 * c);
 			const hy = 0.2 + 0.1 * c * pump + (1 - pump) * 0.18;
 			const hz = (-0.2 * s) * pump + (1 - pump) * (0.42 + 0.03 * s);
 			placeArm(a, hx, hy, hz, 0.1, 0.06 + (1 - pump) * 0.1);
