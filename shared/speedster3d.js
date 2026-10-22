@@ -552,8 +552,9 @@ export function buildSpeedster(colour) {
 		const outline = (() => {
 			// (the drawing's right half, and the same mirrored for the left: the drawn left end sagged)
 			const right = [
-				[[368, 448], [460, 446], [600, 418], [716, 390]],
-				[[716, 390], [745, 470], [705, 590], [600, 645]],
+				[[368, 448], [460, 446], [580, 425], [660, 405]],
+				[[660, 405], [715, 392], [745, 420], [738, 470]],   // (the outer top corner, rounded off)
+				[[738, 470], [730, 540], [690, 610], [600, 645]],
 				[[600, 645], [530, 690], [440, 700], [368, 700]],
 			];
 			const mirror = (seg) => seg.map(([x, y]) => [736 - x, y]).reverse();
