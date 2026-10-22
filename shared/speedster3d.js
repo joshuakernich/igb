@@ -134,8 +134,8 @@ function muzzlePath(g) {
 	g.closePath();
 }
 
-// Points along the eye mask's outline (over the tops of the eyes and into the
-// notch; not down round their bottoms, nor along the muzzle),
+// Points along the eye mask's outline (from the muzzle up each outer edge, over
+// the tops of the eyes and into the notch; not along the muzzle itself),
 // as (x, y) on the front of a sphere of radius 0.4 (before flattening).
 function maskRimPoints(perSegment = 40) {
 	const segs = [
@@ -154,7 +154,7 @@ function maskRimPoints(perSegment = 40) {
 			const rx = u * u * u * a[0] + 3 * u * u * t * b[0] + 3 * u * t * t * c[0] + t * t * t * d[0];
 			const ry = u * u * u * a[1] + 3 * u * u * t * b[1] + 3 * u * t * t * c[1] + t * t * t * d[1];
 			const U = (px / 2 + (rx - ox) * s) / px, Vv = 1 - (cy + (ry - oy) * s) / px;
-			if (ry < 300) out.push([(0.5 - U) * span, (Vv - 0.5) * span]);   // (round the tops of the eyes only: no contour down round their bottoms)
+			out.push([(0.5 - U) * span, (Vv - 0.5) * span]);   // (down the outer edges all the way to the muzzle)
 		}
 	});
 	return out;
@@ -444,7 +444,7 @@ export function buildSpeedster(colour) {
 	add(torso, new THREE.SphereGeometry(0.12, 28, 20), tan, 0, BODY.y - 0.01, -0.08, 0.95, 1.3, 0.6);   // the tummy
 	// a stubby tail and two quills down the back
 	torso.add(spike(skin, V(0, 0.12, 0.16), V(0, 0.08, 0.27), V(0, 0.14, 0.36), 0.06));
-	for (const s of [-1, 1]) torso.add(spike(skin, V(s * 0.07, 0.36, 0.14), V(s * 0.12, 0.31, 0.32), V(s * 0.14, 0.38, 0.48), 0.11));
+	for (const s of [-1, 1]) torso.add(spike(skin, V(s * 0.07, 0.36, 0.14), V(s * 0.12, 0.37, 0.32), V(s * 0.14, 0.24, 0.45), 0.11));   // (arching out and drooping down)
 
 	// the head
 	const head = new THREE.Group();
@@ -500,7 +500,27 @@ export function buildSpeedster(colour) {
 			bean(flatten(p));
 			return p.add(V(0, 0, 0.02 - 0.006));   // (the head's offset, nudged just proud of the face)
 		});
-		const rim = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 160, 0.014, 10, false), skin);
+		// the rim swells over the tops of the eyes and through the middle of the face, and
+		// thins down the outer edges to the muzzle: each ring of the tube is scaled about its centre
+		const rimCurve = new THREE.CatmullRomCurve3(pts);
+		const rimGeo = new THREE.TubeGeometry(rimCurve, 160, 0.014, 10, false);
+		{
+			let yLo = Infinity, yHi = -Infinity;
+			for (const p of pts) { yLo = Math.min(yLo, p.y); yHi = Math.max(yHi, p.y); }
+			const pos = rimGeo.attributes.position, c = new THREE.Vector3(), v = new THREE.Vector3();
+			for (let i = 0; i <= 160; i++) {
+				rimCurve.getPointAt(i / 160, c);
+				const top = THREE.MathUtils.smoothstep(c.y, yLo + (yHi - yLo) * 0.45, yHi);   // (over the tops of the eyes)
+				const mid = Math.exp(-((c.x / 0.07) ** 2));                                  // (the middle of the face)
+				const k = 0.55 + 0.85 * Math.max(top, mid);
+				for (let j = 0; j <= 10; j++) {
+					const n = i * 11 + j;
+					v.fromBufferAttribute(pos, n).sub(c).multiplyScalar(k).add(c);
+					pos.setXYZ(n, v.x, v.y, v.z);
+				}
+			}
+		}
+		const rim = new THREE.Mesh(rimGeo, skin);
 		rim.castShadow = true;
 		head.add(rim);
 
