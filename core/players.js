@@ -2,9 +2,10 @@
  * IGB.players — where the players are.
  *
  * In the gamebox the tracking system sends positions through Vuplex. At a
- * desk, the little gamebox simulator under the stage stands in for it: move
- * the mouse over a wall or the floor to move the selected player, click a
- * wall to "touch" it, press 1-6 to pick which player the mouse controls.
+ * desk, the little gamebox simulator under the stage stands in for it: the
+ * mouse over a wall points the selected player's gaze there, over the floor
+ * moves them (shift over a wall moves them up and down it too), a click on a
+ * wall "touches" it, and 1-6 pick which player the mouse controls.
  *
  * Each player object carries (all updated in place):
  *
@@ -173,8 +174,8 @@ IGB.players = (function () {
 	/* ---------- the desk simulator ---------- */
 
 	// The simulated hats look at a spot on the walls (each player's own, in the
-	// same -1..1 space as positions); shift + mouse over a wall points the
-	// selected player's gaze there. Their rotation is made to look at it.
+	// same -1..1 space as positions); the mouse over a wall points the selected
+	// player's gaze there. Their rotation is made to look at it.
 	const lookAt = [];
 	function simTarget(i) {
 		if (!lookAt[i]) lookAt[i] = { X: -0.6 + Math.random() * 1.2, Y: -0.2 + Math.random() * 0.5, Z: 1 };
@@ -253,7 +254,7 @@ IGB.players = (function () {
 				<gamebox-panel>
 					<gamebox-player></gamebox-player>
 					<button btn=move>Random move</button>
-					<gamebox-hint>Keys 1–6 pick a player · click a wall to touch it · shift + mouse over a wall points their gaze</gamebox-hint>
+					<gamebox-hint>Keys 1–6 pick a player · mouse over a wall points their gaze, over the floor moves them (shift over a wall: moves them too) · click a wall to touch it</gamebox-hint>
 				</gamebox-panel>
 			</gamebox-simulator>
 		`).appendTo($parent);
@@ -272,8 +273,8 @@ IGB.players = (function () {
 			const x = e.offsetX / (w / 2) - 1;
 			const y = e.offsetY / (h / 2) - 1;
 			const p = slot(selected);
-			// (shift: point their gaze here instead of moving them)
-			if (e.shiftKey && wall < 3) {
+			// (over a wall: point their gaze there; shift held, move them instead)
+			if (!e.shiftKey && wall < 3) {
 				const t = simTarget(selected);
 				if (wall === 0) { t.X = -1; t.Z = -x; }
 				if (wall === 1) { t.Z = 1; t.X = x; }
