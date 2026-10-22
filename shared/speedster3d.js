@@ -248,6 +248,7 @@ export function buildSpeedster(colour) {
 	};
 
 	const HIP_Y = 0.56;
+	const ANKLE = V(0, 0.2, -0.04);   // where a leg meets its shoe (in the shoe's space)
 	// the torso pivots at the hips, so it can lean into the run
 	const torso = new THREE.Group();
 	torso.position.y = HIP_Y;
@@ -320,14 +321,14 @@ export function buildSpeedster(colour) {
 		add(g, new THREE.SphereGeometry(0.17, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), red, 0, 0.05, -0.1, 1, 0.9, 1.6);
 		add(g, new THREE.CylinderGeometry(0.17, 0.163, 0.055, 32), white, 0, 0.027, -0.1, 1.04, 1, 1.64);
 		// a white sock round the ankle
-		const sock = add(g, new THREE.TorusGeometry(0.06, 0.03, 12, 24), white, 0, 0.19, 0.0);
+		const sock = add(g, new THREE.TorusGeometry(0.06, 0.03, 12, 24), white, ANKLE.x, ANKLE.y, ANKLE.z);   // (right where the leg meets the shoe)
 		sock.rotation.x = Math.PI / 2;
 		lean.add(g);
 		return g;
 	}
 
 	// the noodle limbs: legs from the hips, arms from the shoulders
-	const legs = [-1, 1].map((s) => ({ s, tube: hose(skin, 0.045, 0.037), shoe: buildShoe(), hip: V(s * 0.1, HIP_Y + 0.04, 0.02) }));
+	const legs = [-1, 1].map((s) => ({ s, tube: hose(skin, 0.045, 0.037), shoe: buildShoe(), hip: V(s * 0.075, 0.1, 0.02) }));   // (hips up inside the body: the legs come out of it)
 	const arms = [-1, 1].map((s) => ({ s, tube: hose(skin, 0.032, 0.028), glove: buildGlove(), shoulder: V(s * 0.17, 0.38, 0.0) }));
 	for (const l of legs) lean.add(l.tube);
 	for (const a of arms) torso.add(a.tube);
@@ -366,12 +367,12 @@ export function buildSpeedster(colour) {
 	ball.visible = false;
 	lean.add(ball);
 	add(ball, new THREE.SphereGeometry(0.42, 32, 24), skin);
-	for (let i = 0; i < 10; i++) {
-		const a = i / 10 * TAU;
-		const side = (i % 3) - 1;
-		const dir = V(side * 0.45, Math.cos(a), Math.sin(a)).normalize();
-		const tip = dir.clone().multiplyScalar(0.82).add(V(0, 0, 0.18 * Math.sin(a + 1)));
-		ball.add(spike(skin, dir.clone().multiplyScalar(0.3), dir.clone().multiplyScalar(0.56).add(V(0, 0.08, 0.1)), tip, 0.19));
+	// the quills bent right round into the circle, trailing the spin like a buzzsaw's teeth
+	const ring = (r, a, x) => V(x, r * Math.cos(a), r * Math.sin(a));
+	for (let i = 0; i < 9; i++) {
+		const x = ((i % 3) - 1) * 0.17;
+		const a = i / 9 * TAU + (i % 3) * 0.7;
+		ball.add(spike(skin, ring(0.36, a, x * 0.8), ring(0.56, a + 0.4, x), ring(0.5, a + 0.95, x * 1.1), 0.17));
 	}
 	add(ball, new THREE.SphereGeometry(0.2, 20, 14), tan, 0, 0, -0.3, 1, 1, 0.7);
 	const swirlMat = new THREE.MeshBasicMaterial({ map: whirlTex, color: new THREE.Color(1.8, 1.8, 1.8), transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 0.8, blending: THREE.AdditiveBlending });
@@ -389,15 +390,18 @@ export function buildSpeedster(colour) {
 	// A leg from its hip to a foot at (fx, fy, fz) in the lean's space; the
 	// knee bows forward (more the more the leg's squashed), the shoe tilts by toe.
 	function placeLeg(l, fx, fy, fz, toe) {
-		hipW.copy(l.hip).add(V(0, torso.position.y - HIP_Y, 0));
-		foot.set(fx, fy + 0.12, fz);
-		const L = 0.53;   // (the leg's length: shorter than this, it bows)
+		// the hip rides the torso (inside it); the foot end is the shoe's ankle, wherever the shoe's tilted
+		torso.updateMatrix();
+		hipW.copy(l.hip).applyMatrix4(torso.matrix);
+		l.shoe.position.set(fx, fy, fz + 0.04);
+		l.shoe.rotation.set(toe, 0, 0);
+		l.shoe.updateMatrix();
+		foot.copy(ANKLE).applyMatrix4(l.shoe.matrix);
+		const L = 0.5;   // (the leg's length: shorter than this, it bows)
 		const dist = hipW.distanceTo(foot);
 		const bow = Math.sqrt(Math.max(0, L * L - dist * dist)) * 0.75 + 0.03;
 		knee.lerpVectors(hipW, foot, 0.5).add(tmp.set(l.s * 0.03, 0, -bow));
 		l.tube.update(hipW, knee, foot);
-		l.shoe.position.set(fx, fy, fz + 0.04);
-		l.shoe.rotation.set(toe, 0, 0);
 	}
 	// An arm from its shoulder to a hand at (hx, hy, hz) in the torso's space;
 	// the elbow bows out and back.
