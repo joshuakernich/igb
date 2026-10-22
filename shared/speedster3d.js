@@ -45,8 +45,8 @@ export function hose(mat, r0, r1, { segs = 16, radial = 10, swell = 0.12, capA =
 		idx.push(a, a + 1, b, b, a + 1, b + 1);   // (wound so the outside faces out)
 	}
 	const capAi = rings * ringVerts, capBi = capAi + (capA ? 1 : 0);
-	if (capA) for (let j = 0; j < radial; j++) idx.push(capAi, j, j + 1);
-	if (capB) for (let j = 0; j < radial; j++) { const base = segs * ringVerts; idx.push(capBi, base + j + 1, base + j); }
+	if (capA) for (let j = 0; j < radial; j++) idx.push(capAi, j + 1, j);
+	if (capB) for (let j = 0; j < radial; j++) { const base = segs * ringVerts; idx.push(capBi, base + j, base + j + 1); }
 	const geo = new THREE.BufferGeometry();
 	geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
 	geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3).setUsage(THREE.DynamicDrawUsage));
@@ -267,19 +267,18 @@ export function buildSpeedster(colour) {
 	add(torso, new THREE.SphereGeometry(0.12, 28, 20), tan, 0, BODY.y - 0.01, -0.08, 0.95, 1.3, 0.6);   // the tummy
 	// a stubby tail and two quills down the back
 	torso.add(spike(skin, V(0, 0.12, 0.16), V(0, 0.08, 0.27), V(0, 0.14, 0.36), 0.06));
-	for (const s of [-1, 1]) torso.add(spike(skin, V(s * 0.07, 0.36, 0.14), V(s * 0.12, 0.31, 0.32), V(s * 0.14, 0.38, 0.48), 0.08));
+	for (const s of [-1, 1]) torso.add(spike(skin, V(s * 0.07, 0.36, 0.14), V(s * 0.12, 0.31, 0.32), V(s * 0.14, 0.38, 0.48), 0.11));
 
 	// the head
 	const head = new THREE.Group();
 	head.position.set(0, 0.78, -0.02);
 	torso.add(head);
 	add(head, new THREE.SphereGeometry(0.4, 40, 30), skin, 0, 0, 0.02, 1.02, 0.96, 1.05);
-	// the quills: tapered and curving back, a fan of six
+	// the quills: four big ones, thick at the root, tapering and curving back
 	const Q = [
-		[0, 0.18, 0.62, 0.15],
-		[0.2, 0.08, 0.55, 0.13], [-0.2, 0.08, 0.55, 0.13],
-		[0.16, -0.14, 0.5, 0.12], [-0.16, -0.14, 0.5, 0.12],
-		[0, -0.06, 0.66, 0.14],
+		[0, 0.17, 0.64, 0.23],
+		[0.21, -0.02, 0.56, 0.2], [-0.21, -0.02, 0.56, 0.2],
+		[0, -0.19, 0.52, 0.19],
 	];
 	for (const [x, y, len, r] of Q) {
 		const a = V(x * 0.8, y + 0.04, 0.12);
@@ -367,12 +366,12 @@ export function buildSpeedster(colour) {
 	ball.visible = false;
 	lean.add(ball);
 	add(ball, new THREE.SphereGeometry(0.42, 32, 24), skin);
-	for (let i = 0; i < 16; i++) {
-		const a = i / 16 * TAU;
+	for (let i = 0; i < 10; i++) {
+		const a = i / 10 * TAU;
 		const side = (i % 3) - 1;
 		const dir = V(side * 0.45, Math.cos(a), Math.sin(a)).normalize();
 		const tip = dir.clone().multiplyScalar(0.82).add(V(0, 0, 0.18 * Math.sin(a + 1)));
-		ball.add(spike(skin, dir.clone().multiplyScalar(0.3), dir.clone().multiplyScalar(0.56).add(V(0, 0.08, 0.1)), tip, 0.13));
+		ball.add(spike(skin, dir.clone().multiplyScalar(0.3), dir.clone().multiplyScalar(0.56).add(V(0, 0.08, 0.1)), tip, 0.19));
 	}
 	add(ball, new THREE.SphereGeometry(0.2, 20, 14), tan, 0, 0, -0.3, 1, 1, 0.7);
 	const swirlMat = new THREE.MeshBasicMaterial({ map: whirlTex, color: new THREE.Color(1.8, 1.8, 1.8), transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 0.8, blending: THREE.AdditiveBlending });
