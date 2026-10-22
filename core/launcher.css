@@ -448,6 +448,7 @@ gamebox-gaze {
 	background: var(--c);
 	box-shadow: 0 0 6px var(--c);
 	pointer-events: none;
+	transform: translateZ(1px);   /* (just off the wall, into the box: flat on a turned side wall, it flickers against it) */
 	--c: gray;
 }
 gamebox-gaze[n="0"] { --c: red; }

@@ -230,7 +230,9 @@ IGB.players = (function () {
 			const g = p.gaze, $dot = $dots.eq(i);
 			if (!g || i >= CONTROLLABLE) { $dot.hide(); return; }
 			const sx = g.wall === 1 ? g.px : 1 - g.px;
-			$dot.show().appendTo($simulator.find('gamebox-side[wall=' + g.wall + ']')).css({ left: sx * 100 + '%', top: g.py * 100 + '%' });
+			const $side = $simulator.find('gamebox-side[wall=' + g.wall + ']');
+			if ($dot.parent()[0] !== $side[0]) $dot.appendTo($side);   // (only when it changes wall: moving it every update flickers)
+			$dot.show().css({ left: sx * 100 + '%', top: g.py * 100 + '%' });
 		});
 	}
 
