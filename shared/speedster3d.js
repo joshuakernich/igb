@@ -33,7 +33,7 @@ export function glossy(color, extra = {}) {
 // A tapered tube along a quadratic curve a → c → b, radius r0 at a to r1 at
 // b (with a little swell in the middle, like a rubber hose). update() moves
 // it; the mesh's vertices are rewritten in place.
-export function hose(mat, r0, r1, { segs = 16, radial = 10, swell = 0.12, capA = true, capB = true } = {}) {
+export function hose(mat, r0, r1, { segs = 16, radial = 10, swell = 0.12, capA = true, capB = true, flare = 0 } = {}) {
 	const rings = segs + 1;
 	const ringVerts = radial + 1;
 	const count = rings * ringVerts + (capA ? 1 : 0) + (capB ? 1 : 0);
@@ -69,7 +69,7 @@ export function hose(mat, r0, r1, { segs = 16, radial = 10, swell = 0.12, capA =
 			T.normalize();
 			B.crossVectors(T, ref).normalize();
 			N.crossVectors(B, T);
-			const r = (r0 + (r1 - r0) * t) * (1 + swell * Math.sin(Math.PI * t));
+			const r = (r0 + (r1 - r0) * t) * (1 + swell * Math.sin(Math.PI * t)) * (1 + flare * Math.pow(1 - t, 3));   // (flare: wide at the root, like a fillet where it leaves a surface)
 			for (let j = 0; j <= radial; j++) {
 				const th = j / radial * TAU, cs = Math.cos(th), sn = Math.sin(th);
 				const k = (i * ringVerts + j) * 3;
@@ -87,8 +87,8 @@ export function hose(mat, r0, r1, { segs = 16, radial = 10, swell = 0.12, capA =
 }
 
 // A fixed tapered spike along a curve (quills, ears): built once.
-export function spike(mat, a, c, b, r0, r1 = 0.004, segs = 14) {
-	const m = hose(mat, r0, r1, { segs, radial: 12, swell: 0.05, capA: true, capB: false });
+export function spike(mat, a, c, b, r0, r1 = 0.004, segs = 14, flare = 0) {
+	const m = hose(mat, r0, r1, { segs: flare ? Math.max(segs, 20) : segs, radial: 14, swell: 0.05, capA: true, capB: false, flare });
 	m.update(a, c, b);
 	m.geometry.computeBoundingSphere();
 	m.frustumCulled = true;
@@ -102,7 +102,8 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 // The face, traced from the classic drawing (a 736-unit square: the white
 // mask, the pupils and their glints, the muzzle crescent, the smirk), on a
 // canvas that maps straight onto the front of a sphere of radius R.
-const FACE = { px: 1024, span: 0.84, s: 0.95, ox: 368, oy: 230, cy: 414 };   // canvas size, metres across it, reference-to-canvas scale, the reference point that lands at (512, cy)
+const FACE = { px: 1024, span: 0.84, s: 0.95, ox: 368, oy: 230, cy: 414 };
+const WINDOW = { phi0: Math.PI * 1.5 - 1.25, phi: 2.5, theta0: 0.5, theta: 2.3 };   // the front of the head the face covers (sphere angles)   // canvas size, metres across it, reference-to-canvas scale, the reference point that lands at (512, cy)
 
 function maskPath(g) {
 	g.beginPath();
@@ -128,7 +129,7 @@ function muzzlePath(g) {
 	g.closePath();
 }
 
-function buildFace(R) {
+function buildFace(R, deform = (v) => v) {
 	const { px, span, s, ox, oy, cy } = FACE;
 	const toRef = (g) => { g.translate(px / 2 - ox * s, cy - oy * s); g.scale(s, s); };
 
@@ -152,16 +153,59 @@ function buildFace(R) {
 	g.stroke();
 	maskPath(g);
 	g.stroke();
-	// the pupils: tall black ovals, each with a glint
+	// the eyes: tall green irises (darker at the rim, finely streaked), a black
+	// oval pupil in each, and a white glint over the lower-left of the rim
 	for (const [x, y, rot] of [[234, 306, 0.04], [468, 306, -0.04]]) {
-		g.fillStyle = '#0c0c14';
+		const rx = 42, ry = 108;
+		g.save();
+		g.translate(x, y);
+		g.rotate(rot);
 		g.beginPath();
-		g.ellipse(x, y, 38, 100, rot, 0, Math.PI * 2);
+		g.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+		g.save();
+		g.clip();
+		g.save();
+		g.scale(1, ry / rx);
+		const iris = g.createRadialGradient(0, -rx * 0.1, 0, 0, 0, rx);
+		iris.addColorStop(0, '#5fe25a');
+		iris.addColorStop(0.55, '#2fae32');
+		iris.addColorStop(0.85, '#167a1c');
+		iris.addColorStop(1, '#0a4a10');
+		g.fillStyle = iris;
+		g.fillRect(-rx, -rx, rx * 2, rx * 2);
+		// fine fibres radiating out
+		for (let f = 0; f < 90; f++) {
+			const a = f / 90 * Math.PI * 2 + Math.sin(f * 7.3) * 0.03;
+			g.strokeStyle = f % 3 ? 'rgba(10,60,12,0.22)' : 'rgba(170,255,150,0.18)';
+			g.lineWidth = 1.2;
+			g.beginPath();
+			g.moveTo(Math.cos(a) * rx * 0.55, Math.sin(a) * rx * 0.55);
+			g.lineTo(Math.cos(a) * rx * 0.98, Math.sin(a) * rx * 0.98);
+			g.stroke();
+		}
+		g.restore();
+		// a soft shine at the bottom of the rim
+		const shine = g.createRadialGradient(-2, ry * 0.9, 0, -2, ry * 0.9, rx * 0.5);
+		shine.addColorStop(0, 'rgba(160,255,170,0.5)');
+		shine.addColorStop(1, 'rgba(160,255,170,0)');
+		g.fillStyle = shine;
+		g.fillRect(-rx, ry * 0.5, rx * 2, ry * 0.5);
+		g.restore();
+		// a dark edge
+		g.strokeStyle = 'rgba(5,40,8,0.8)';
+		g.lineWidth = 3;
+		g.stroke();
+		// the pupil
+		g.fillStyle = '#121214';
+		g.beginPath();
+		g.ellipse(rx * 0.04, -ry * 0.02, rx * 0.6, ry * 0.63, 0, 0, Math.PI * 2);
 		g.fill();
+		// the glint
 		g.fillStyle = '#ffffff';
 		g.beginPath();
-		g.ellipse(x + 4, y - 40, 12, 33, rot, 0, Math.PI * 2);
+		g.ellipse(-rx * 0.6, ry * 0.33, rx * 0.26, ry * 0.19, -0.1, 0, Math.PI * 2);
 		g.fill();
+		g.restore();
 	}
 	// the smirk, with its little tick at the corner
 	g.lineWidth = 8;
@@ -178,49 +222,73 @@ function buildFace(R) {
 	tex.colorSpace = THREE.SRGBColorSpace;
 	tex.anisotropy = 4;
 
-	// how far each part swells out: a soft-edged copy of the muzzle and mask
+	// the shape of the face, as soft-edged maps: the muzzle (swells out), the
+	// eye mask (sinks back flat into the head), a ridge round the mask (stands up)
 	const H = 256, k = H / px;
-	const hm = document.createElement('canvas');
-	hm.width = hm.height = H;
-	const h = hm.getContext('2d');
-	h.filter = 'blur(5px)';
-	h.save();
-	h.scale(k, k);
-	toRef(h);
-	h.fillStyle = 'rgb(255,0,0)';   // red: the muzzle
-	muzzlePath(h);
-	h.fill();
-	h.fillStyle = 'rgb(0,255,0)';   // green: the eyes
-	maskPath(h);
-	h.fill();
-	h.restore();
-	const height = h.getImageData(0, 0, H, H).data;
-	const swell = (u, v) => {
-		const x = Math.max(0, Math.min(H - 1, Math.round(u * (H - 1)))), y = Math.max(0, Math.min(H - 1, Math.round((1 - v) * (H - 1))));
-		const i = (y * H + x) * 4;
-		return height[i] / 255 * 0.085 + height[i + 1] / 255 * 0.018;
+	const map = (draw, blur) => {
+		const c = document.createElement('canvas');
+		c.width = c.height = H;
+		const h = c.getContext('2d');
+		h.filter = 'blur(' + blur + 'px)';
+		h.save();
+		h.scale(k, k);
+		toRef(h);
+		h.fillStyle = h.strokeStyle = '#fff';
+		draw(h);
+		h.restore();
+		const d = h.getImageData(0, 0, H, H).data;
+		const at = (x, y) => d[(Math.max(0, Math.min(H - 1, y)) * H + Math.max(0, Math.min(H - 1, x))) * 4] / 255;
+		return (u, v) => {   // (read smoothly between pixels: no steps in the surface)
+			const fx = u * (H - 1), fy = (1 - v) * (H - 1);
+			const x = Math.floor(fx), y = Math.floor(fy), tx = fx - x, ty = fy - y;
+			return (at(x, y) * (1 - tx) + at(x + 1, y) * tx) * (1 - ty) + (at(x, y + 1) * (1 - tx) + at(x + 1, y + 1) * tx) * ty;
+		};
 	};
+	const muzzleAt = map((h) => { muzzlePath(h); h.fill(); }, 5);
+	const eyesAt = map((h) => { maskPath(h); h.fill(); }, 2);
+	const ridgeAt = map((h) => { h.lineWidth = 46; maskPath(h); h.stroke(); }, 4);
+	const RISE = { muzzle: 0.085, ridge: 0.028, sink: 0.82 };   // metres out, metres up, and the eyes' flat plane (a fraction of R in front of the middle)
 
-	// the shell: the front of the sphere, its UVs projected straight on from the front
-	const geo = new THREE.SphereGeometry(R * 1.004, 72, 54, Math.PI * 1.5 - 1.25, 2.5, 0.5, 2.3);
-	const pos = geo.attributes.position, uv = geo.attributes.uv, n = new THREE.Vector3();
-	for (let i = 0; i < pos.count; i++) {
-		n.set(pos.getX(i), pos.getY(i), pos.getZ(i));
+	// Shape a point on the front of the head (in the skull's space): the muzzle
+	// swells, the ridge stands up, the eyes sink back to a flat plane. lift
+	// keeps the painted shell just over the head.
+	function shape(n, lift = 0) {
+		if (n.z > 0.02) return n;
 		const u = 0.5 - n.x / span, v = n.y / span + 0.5;   // (facing -z: the picture's right is the head's -x, as you look at it)
-		uv.setXY(i, u, v);
-		n.multiplyScalar(1 + swell(u, v) / R);
-		pos.setXYZ(i, n.x, n.y, n.z);
+		n.multiplyScalar(1 + (muzzleAt(u, v) * RISE.muzzle + ridgeAt(u, v) * RISE.ridge) / R);
+		const e = eyesAt(u, v);
+		const plane = -R * RISE.sink - lift;
+		if (e > 0 && n.z < plane) n.z += (plane - n.z) * e;
+		return n;
 	}
-	geo.computeVertexNormals();
-	const mat = glossy(0xffffff, { map: tex, alphaTest: 0.5, transparent: false });
-	const mesh = new THREE.Mesh(geo, mat);
+
+	// the shells: the front of the sphere (WINDOW), shaped, its UVs projected
+	// straight on from the front. Two from one grid: a skin-coloured one (the
+	// front of the head) and the painted face just over it, so they can't cross.
+	const shell = (lift) => {
+		const geo = new THREE.SphereGeometry(R, 96, 72, WINDOW.phi0, WINDOW.phi, WINDOW.theta0, WINDOW.theta);
+		const pos = geo.attributes.position, uv = geo.attributes.uv, n = new THREE.Vector3();
+		for (let i = 0; i < pos.count; i++) {
+			n.set(pos.getX(i), pos.getY(i), pos.getZ(i));
+			uv.setXY(i, 0.5 - n.x / span, n.y / span + 0.5);
+			n.multiplyScalar(1 + lift);
+			deform(shape(n, R * lift));
+			pos.setXYZ(i, n.x, n.y, n.z);
+		}
+		geo.computeVertexNormals();
+		return geo;
+	};
+	const mesh = new THREE.Mesh(shell(0.014), glossy(0xffffff, { map: tex, alphaTest: 0.5, transparent: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));   // (always drawn over the skin under it)
 	mesh.castShadow = true;
+	const underGeo = shell(0.002);
 
 	// the nose: where the mask meets the muzzle, on the swollen surface
 	const nu = (px / 2 + (362 - ox) * s) / px, nv = 1 - (cy + (478 - oy) * s) / px;
 	const nx = (0.5 - nu) * span, ny = (nv - 0.5) * span;
-	const nz = -Math.sqrt(Math.max(0, R * R - nx * nx - ny * ny)) * (1 + swell(nu, nv) / R) - 0.02;
-	return { mesh, nose: new THREE.Vector3(nx, ny, nz) };
+	const nose = shape(new THREE.Vector3(nx, ny, -Math.sqrt(Math.max(0, R * R - nx * nx - ny * ny))));
+	nose.z -= 0.02;
+	// (the head itself takes the same shape, so the shell fits it)
+	return { mesh, underGeo, nose: deform(nose), shape };
 }
 
 /* ---------- the speedster ---------- */
@@ -274,23 +342,45 @@ export function buildSpeedster(colour) {
 	const head = new THREE.Group();
 	head.position.set(0, 0.78, -0.02);
 	torso.add(head);
-	add(head, new THREE.SphereGeometry(0.4, 40, 30), skin, 0, 0, 0.02, 1.02, 0.96, 1.05);
-	// the quills: four big ones, thick at the root, tapering and curving back
+	// a bean: a little long front to back, a little wide, arched (seen from the side, its
+	// top rounds over and its underside curves in). The face, quills and ears bend with it.
+	const bean = (v) => { v.x *= 1.06; v.z *= 1.1; v.y -= 0.5 * v.z * v.z; return v; };
+	const B = (x, y, z) => bean(V(x, y, z));
+	const face = buildFace(0.4, bean);
+	const headGeo = new THREE.SphereGeometry(0.4, 96, 72);
+	{
+		const pos = headGeo.attributes.position, v = V(0, 0, 0);
+		for (let i = 0; i < pos.count; i++) {
+			v.fromBufferAttribute(pos, i);
+			// inside the face's window, sink a little (the skin shell is the front of the head there)
+			const theta = Math.acos(Math.max(-1, Math.min(1, v.y / 0.4)));
+			let phi = Math.atan2(v.z, -v.x);
+			if (phi < 0) phi += Math.PI * 2;
+			const edge = Math.min(phi - WINDOW.phi0, WINDOW.phi0 + WINDOW.phi - phi, theta - WINDOW.theta0, WINDOW.theta0 + WINDOW.theta - theta);
+			if (edge > 0) v.multiplyScalar(1 - 0.32 * Math.min(1, edge / 0.25));   // (well behind the eyes' flat recess)
+			bean(v);
+			pos.setXYZ(i, v.x, v.y, v.z);
+		}
+		headGeo.computeVertexNormals();
+	}
+	add(head, headGeo, skin, 0, 0, 0.02);
+	// the quills: big ones, thick at the root, tapering and curving back
 	const Q = [
-		[0, 0.17, 0.64, 0.23],
 		[0.21, -0.02, 0.56, 0.2], [-0.21, -0.02, 0.56, 0.2],
 		[0, -0.19, 0.52, 0.19],
 	];
 	for (const [x, y, len, r] of Q) {
-		const a = V(x * 0.8, y + 0.04, 0.12);
-		const b = V(x * 1.7, y - 0.12 + Math.abs(x) * 0.15, 0.3 + len);
-		const c = V(x * 1.25, y + 0.12, 0.3 + len * 0.45);
-		head.add(spike(skin, a, c, b, r));
+		const a = B(x * 0.7, y + 0.04, 0.06);
+		const b = B(x * 1.7, y - 0.12 + Math.abs(x) * 0.15, 0.3 + len);
+		const c = B(x * 1.25, y + 0.12, 0.3 + len * 0.45);
+		head.add(spike(skin, a, c, b, r, 0.004, 14, 0.45));
 	}
+	// the top quill: set forward, rising out of the top of the head and sweeping back over it, hugging its curve
+	head.add(spike(skin, B(0, 0.3, -0.03), B(0, 0.52, 0.2), B(0, 0.26, 0.7), 0.2, 0.004, 14, 0.45));
 	// ears: a skin cone with a tan inside
 	for (const s of [-1, 1]) {
-		head.add(spike(skin, V(s * 0.2, 0.26, 0.06), V(s * 0.26, 0.38, 0.06), V(s * 0.28, 0.5, 0.12), 0.1));
-		head.add(spike(tan, V(s * 0.2, 0.28, 0.02), V(s * 0.25, 0.37, 0.02), V(s * 0.27, 0.46, 0.08), 0.055));
+		head.add(spike(skin, B(s * 0.19, 0.25, 0.06), B(s * 0.26, 0.38, 0.06), B(s * 0.28, 0.5, 0.12), 0.1, 0.004, 14, 0.35));
+		head.add(spike(tan, B(s * 0.2, 0.29, 0.02), B(s * 0.25, 0.37, 0.02), B(s * 0.27, 0.46, 0.08), 0.055));
 	}
 	// the face: one shell over the front of the skull, painted from the
 	// classic shape (one white mask holding both eyes, notched between them;
@@ -298,10 +388,9 @@ export function buildSpeedster(colour) {
 	// swelling out of the head along their own outlines; the nose a glossy ball
 	const skull = new THREE.Group();
 	skull.position.set(0, 0, 0.02);
-	skull.scale.set(1.02, 0.96, 1.05);
 	head.add(skull);
-	const face = buildFace(0.4);
 	skull.add(face.mesh);
+	add(skull, face.underGeo, skin);   // (the front of the head, shaped: the eyes' flat recess, the ridge, the muzzle)
 	add(skull, new THREE.SphereGeometry(0.052, 20, 14), black, face.nose.x, face.nose.y, face.nose.z);
 
 	// gloves: a puffy hand, a thumb and a rolled cuff
