@@ -179,7 +179,7 @@ export function buildSpeedster(colour) {
 		head.add(q);
 	};
 	quill(B(0, 0.315, -0.215), B(0, 0.52, 0.17), B(0, 0.25, 0.76), 0.2);              // over the top
-	for (const s of [-1, 1]) quill(B(s * 0.37, 0.04, -0.13), B(s * 0.43, 0.06, 0.24), B(s * 0.34, -0.08, 0.86), 0.17);   // round each side, half sunk into the head
+	for (const s of [-1, 1]) quill(B(s * 0.3, 0.1, -0.18), B(s * 0.33, 0.1, 0.24), B(s * 0.22, -0.04, 0.86), 0.17);   // round each side, close in toward the top one
 	quill(B(0, -0.27, 0.22), B(0, -0.33, 0.5), B(0, -0.3, 0.82), 0.18);               // low at the back
 	// ears: a skin cone with a tan inside
 	for (const s of [-1, 1]) {
