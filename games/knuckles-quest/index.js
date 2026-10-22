@@ -45,7 +45,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 
 	const GAME_SECONDS = 600;
 	const FOV = 64;                                        // vertical: 90 across each 16:10 wall, so the walls meet
-	const CAM = { back: 6.5, up: 1.1, pitch: 9, turn: 2.2, look: 1.3, below: 0.7 };   // metres behind and above him, degrees down, how fast it swings round behind him, how high on him it aims, how far under the wall tops it stays (so you never see over them)
+	const CAM = { close: 2.2, back: 6.5, up: 1.1, pitch: 9, turn: 2.2, look: 1.3, below: 0.7 };   // metres behind him in a doorway (squared up to it) and otherwise, and above him, degrees down, how fast it swings round behind him, how high on him it aims, how far under the wall tops it stays (so you never see over them)
 	const BODY = { r: 0.4, h: 1.7, step: 0.45 };           // his radius, height, and the ledge he just steps up
 	const RUN = 8.5;                                       // metres a second, running
 	const RUN_RANGE = 14;                                  // how far off a spot on the same level can be for him to just run there
@@ -177,6 +177,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		glideT: 0,
 	};
 	let camYaw = 0;
+	let camClose = 0;           // 0..1: how far the eye's come in close behind him (in a doorway)
 	const markerMesh = buildMarker();
 	markerMesh.visible = false;
 	scene.add(markerMesh);
@@ -379,8 +380,26 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		kn.vel.set(0, 0, 0);
 	}
 
+	// a doorway he's standing in (within a couple of metres of its middle), as the way
+	// to look through it (along the camera's way): { yaw } or null
+	function doorNear(p) {
+		for (const r of maze.rooms.flat()) for (const w of Object.keys(r.open)) {
+			const [dx, dz] = DOOR_STEP[w];
+			const x = r.cx + dx * CELL / 2, z = r.cz + dz * CELL / 2, y = r.raised[w] ? DOOR.high : 0;
+			if (Math.hypot(p.x - x, p.z - z) > 2.2 || Math.abs(p.y - y) > 1) continue;
+			// (through it, whichever way the eye's already facing)
+			const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw);
+			const tx = dx ? (fx >= 0 ? 1 : -1) : 0, tz = dz ? (fz >= 0 ? 1 : -1) : 0;
+			return { yaw: Math.atan2(-tx, -tz) };
+		}
+		return null;
+	}
+
 	function reached() {
 		if (kn.goal && kn.goal.kind === 'top') did.ran = true;
+		// in a doorway: face through it, and the eye squares up close behind him (till the next tap)
+		const door = kn.goal && kn.goal.kind === 'top' ? doorNear(kn.pos) : null;
+		if (door) { kn.atDoor = door; kn.yaw = door.yaw; }
 		kn.goal = null;
 		markerAge = Math.max(markerAge, 1.6);
 	}
@@ -647,10 +666,16 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 			let d = kn.yaw - camYaw;
 			d = Math.atan2(Math.sin(d), Math.cos(d));
 			camYaw += d * Math.min(1, dt * CAM.turn);
+		} else if (kn.atDoor) {
+			// in a doorway: square up to it
+			let d = kn.atDoor.yaw - camYaw;
+			d = Math.atan2(Math.sin(d), Math.cos(d));
+			camYaw += d * Math.min(1, dt * 4);
 		} else if (!live()) camYaw += dt * 0.12;   // (slowly round, before the quest starts)
+		camClose += ((kn.atDoor ? 1 : 0) - camClose) * Math.min(1, dt * 3);
 		const head = tmp.copy(kn.pos).add(tmp2.set(0, CAM.look, 0));
 		const back = new THREE.Vector3(Math.sin(camYaw), 0, Math.cos(camYaw));
-		const want = head.clone().addScaledVector(back, CAM.back).add(tmp2.set(0, CAM.up, 0));
+		const want = head.clone().addScaledVector(back, CAM.back + (CAM.close - CAM.back) * camClose).add(tmp2.set(0, CAM.up * (1 - camClose * 0.6), 0));
 		// (kept under the wall tops, unless he's up on top of one himself)
 		want.y = Math.min(want.y, Math.max(WALL.h - CAM.below, kn.pos.y + 1.0), WALL.ceil - 1.2);   // (and always under the ceiling's beams)
 		// (pulled in if a wall's in the way)
@@ -763,6 +788,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		}
 		goal.by = by;
 		goal.tries = 0;
+		kn.atDoor = null;
 		kn.goal = goal;
 		kn.lastBy = by;
 		// the marker on the spot
