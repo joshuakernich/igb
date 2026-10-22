@@ -691,9 +691,9 @@ export function buildSpeedster(colour, { knuckles = false, tails = false } = {})
 		head.add(q);
 	};
 	if (knuckles) {
-		// dreadlocks: thick and blunt, out over the head and hanging down behind it
+		// dreadlocks: thick, tapering to fine tips, out over the head and hanging down behind it
 		const dread = (a, c, b, r) => {
-			const q = hose(skin, 0, 0, { segs: 32, radial: 16, capA: false, capB: true, profile: (t) => Math.max(0.004, r * Math.min(1, Math.sin(Math.PI * 0.5 * Math.min(1, t / 0.3))) * (1 - 0.35 * t) * Math.sqrt(Math.max(0, 1 - Math.pow(Math.max(0, t - 0.9) / 0.1, 2)))) });
+			const q = hose(skin, 0, 0, { segs: 32, radial: 16, capA: false, capB: true, profile: (t) => Math.max(0.006, r * Math.sin(Math.PI * 0.5 * Math.min(1, t / 0.25)) * (1 - 0.9 * Math.pow(Math.max(0, (t - 0.2) / 0.8), 1.1))) });   // (swelling out of the head, then tapering to a fine tip)
 			q.update(a, c, b);
 			q.geometry.computeBoundingSphere();
 			q.frustumCulled = true;
