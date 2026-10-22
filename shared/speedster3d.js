@@ -340,6 +340,7 @@ export function buildSpeedster(colour) {
 	};
 
 	const HIP_Y = 0.56;
+	const HAND = 1.5;   // how big the hands are
 	const ANKLE = V(0, 0.2, -0.04);   // where a leg meets its shoe (in the shoe's space)
 	// the torso pivots at the hips, so it can lean into the run
 	const torso = new THREE.Group();
@@ -455,6 +456,7 @@ export function buildSpeedster(colour) {
 		finger(V(0.03, 0.0, 0.005), V(0.07, -0.02, 0.02), V(0.08, -0.06, 0.045), 0.015);   // the thumb
 		const cuff = add(g, new THREE.TorusGeometry(0.045, 0.02, 10, 24), glove, 0, 0.055, 0);
 		cuff.rotation.x = Math.PI / 2;
+		g.scale.setScalar(HAND);
 		lean.add(g);
 		return g;
 	}
@@ -473,7 +475,7 @@ export function buildSpeedster(colour) {
 
 	// the noodle limbs: legs from the hips, arms from the shoulders
 	const legs = [-1, 1].map((s) => ({ s, tube: hose(skin, 0.045, 0.037), shoe: buildShoe(), hip: V(s * 0.075, 0.1, 0.02) }));   // (hips up inside the body: the legs come out of it)
-	const arms = [-1, 1].map((s) => ({ s, tube: hose(skin, 0.032, 0.028), glove: buildGlove(), shoulder: V(s * 0.05, 0.35, 0.0), corner: V(s * 0.25, 0.39, 0.0) }));   // (it starts inside the torso and curves out through the shoulder corner)
+	const arms = [-1, 1].map((s) => ({ s, tube: hose(skin, 0.032, 0.028), glove: buildGlove(), shoulder: V(s * 0.05, 0.4, 0.0), corner: V(s * 0.27, 0.5, 0.0) }));   // (it starts inside the torso and curves out through the shoulder corner)
 	for (const l of legs) lean.add(l.tube);
 	for (const a of arms) torso.add(a.tube);
 	// (the arms ride the torso: their hands are placed in its space, then carried into the lean's for the gloves)
@@ -553,18 +555,22 @@ export function buildSpeedster(colour) {
 		sh.copy(a.shoulder);
 		hand.set(hx, hy, hz);
 		// the bend: out through the shoulder corner, then bowing toward the hand
-		elbow.copy(a.corner).lerp(hand, 0.3).add(tmp.set(a.s * bowOut * 0.6, 0.0, bowBack * 0.6));
+		elbow.copy(a.corner).lerp(hand, 0.12).add(tmp.set(a.s * bowOut * 0.4, 0.0, bowBack * 0.4));   // (close to the corner: a sharp, high shoulder)
 		a.tube.update(sh, elbow, hand);
 		// the glove, on the end of the arm: its cuff over the arm's end, turned
 		// up the arm (the way it leaves the elbow), carried into the lean's space
 		const out = gloveDir.subVectors(hand, elbow).normalize();
-		gloveQ.setFromUnitVectors(UP, out.clone().negate());
+		// its frame: up the arm (+y), the palm (+z) turned in toward the body, square to the arm
+		const yA = gy.copy(out).negate();
+		const zA = gz.set(-a.s, 0, 0.15).addScaledVector(yA, -gz.set(-a.s, 0, 0.15).dot(yA)).normalize();
+		const xA = gx.crossVectors(yA, zA);
+		gloveQ.setFromRotationMatrix(gm.makeBasis(xA, yA, zA));
 		torso.updateMatrix();
 		a.glove.position.copy(hand).addScaledVector(out, GLOVE_REACH).applyMatrix4(torso.matrix);
 		a.glove.quaternion.copy(torso.quaternion).multiply(gloveQ);
 	}
-	const gloveDir = V(0, 0, 0), gloveQ = new THREE.Quaternion(), UP = V(0, 1, 0);
-	const GLOVE_REACH = 0.045;   // (from the arm's end to the middle of the palm: the cuff sits on the end)
+	const gloveDir = V(0, 0, 0), gloveQ = new THREE.Quaternion(), gx = V(0, 0, 0), gy = V(0, 0, 0), gz = V(0, 0, 0), gm = new THREE.Matrix4();
+	const GLOVE_REACH = 0.045 * HAND;   // (from the arm's end to the middle of the palm: the cuff sits on the end)
 
 	function show(running) {
 		torso.visible = true;
