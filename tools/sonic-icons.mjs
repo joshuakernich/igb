@@ -2,7 +2,7 @@
 // rendered from the shared models, framed against a solid colour, saved as
 // assets/icons/<name>.png (256 x 256, drawn at 512 and halved).
 //
-//   node sonic-icons.mjs
+//   node sonic-icons.mjs [name ...]     (all of them, or just these)
 import fs from 'node:fs';
 import path from 'node:path';
 import { serve, browser, openPage, PROJECT } from './harness.mjs';
@@ -10,7 +10,7 @@ import { serve, browser, openPage, PROJECT } from './harness.mjs';
 // name: what's in it, its pose, the background, and the view (degrees round from the front, up)
 const ICONS = [
 	{ name: 'sonic-dash', chars: [{ kind: 'sonic', mode: 'run', pace: 1 }], bg: '#ffc93a', yaw: -40, pitch: 8 },
-	{ name: 'sonic-classic', chars: [{ kind: 'sonic', mode: 'spring' }], bg: '#ff5a4a', yaw: -25, pitch: 6 },
+	{ name: 'sonic-classic', chars: [{ kind: 'sonic', mode: 'run', pace: 0.6 }], bg: '#ff5a4a', yaw: 90, pitch: 0 },   // (straight side on, running to the right)
 	{ name: 'sonic-tails', chars: [{ kind: 'tails', mode: 'idle' }], bg: '#4fb3ff', yaw: -35, pitch: 6 },
 	{ name: 'sonic-robot', chars: [{ kind: 'robot' }], bg: '#1fae9b', yaw: -35, pitch: 6 },
 	{ name: 'knuckles-quest', chars: [{ kind: 'knuckles', mode: 'idle' }], bg: '#2fbf5f', yaw: -30, pitch: 6 },
@@ -22,7 +22,8 @@ const b = await browser();
 const { page, problems } = await openPage(b, { width: 600, height: 600 });
 await page.goto(`${server.url}/index.html`);
 
-for (const icon of ICONS) {
+const only = process.argv.slice(2);
+for (const icon of ICONS.filter((i) => !only.length || only.includes(i.name))) {
 	const url = await page.evaluate(async (icon) => {
 		const THREE = await import('/lib/three/three.module.min.js');
 		const { buildSpeedster } = await import('/shared/speedster3d.js');
