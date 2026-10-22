@@ -94,7 +94,7 @@ $(function () {
 		$igb.removeClass('home');
 		document.title = entry.name + ' · IGB';
 		try {
-			const started = await IGB.start(entry.id, $world, undefined);
+			const started = await IGB.start(entry.id, $world, squad());
 			if (token !== starting) { IGB.stop(started); return; }   // switched away while it loaded
 			game = started;
 			gameKey = entry.id;
@@ -110,10 +110,24 @@ $(function () {
 		if (game && game.setPlayers) game.setPlayers(players);
 	});
 
-	// A game played on its own just reports its rewards.
+	// The squad the gamebox's session gives (index.html?players=N, from the
+	// host), so a game skips its own player picker; none at a desk.
+	function squad() {
+		const n = parseInt(new URLSearchParams(window.location.search).get('players'), 10);
+		if (!(n > 0)) return undefined;
+		return Array.from({ length: Math.min(n, 6) }, (_, i) => ({ name: 'P' + (i + 1) }));
+	}
+
+	// A game played on its own just reports its rewards (and, in the gamebox,
+	// tells the host: its scores go to the session).
 	IGB.handleComplete(function (rewards) {
 		console.log('Game complete, rewards:', rewards);
 		log('Complete. Rewards: ' + (rewards || []).join(', '));
+		if (window.vuplex) {
+			let scores = null;
+			try { scores = game && game.state ? game.state().scores || null : null; } catch (e) { /* (no state) */ }
+			window.vuplex.postMessage({ type: 'complete', game: gameKey || null, rewards: rewards || [], scores });
+		}
 	});
 
 	/* ---------- routing ---------- */
@@ -162,6 +176,6 @@ $(function () {
 	buildMenu();
 
 	const first = decodeURIComponent(window.location.hash.slice(1))
-		|| decodeURIComponent(window.location.search.slice(1).split('&')[0]);
+		|| decodeURIComponent(window.location.search.slice(1).split('&').filter((p) => !p.includes('='))[0] || '');   // (not ?players=N)
 	route(first);
 });
