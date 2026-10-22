@@ -33,7 +33,7 @@ export function glossy(color, extra = {}) {
 // A tapered tube along a quadratic curve a → c → b, radius r0 at a to r1 at
 // b (with a little swell in the middle, like a rubber hose). update() moves
 // it; the mesh's vertices are rewritten in place.
-export function hose(mat, r0, r1, { segs = 16, radial = 10, swell = 0.12, capA = true, capB = true, flare = 0 } = {}) {
+export function hose(mat, r0, r1, { segs = 16, radial = 10, swell = 0.12, capA = true, capB = true, flare = 0, profile = null } = {}) {
 	const rings = segs + 1;
 	const ringVerts = radial + 1;
 	const count = rings * ringVerts + (capA ? 1 : 0) + (capB ? 1 : 0);
@@ -69,7 +69,7 @@ export function hose(mat, r0, r1, { segs = 16, radial = 10, swell = 0.12, capA =
 			T.normalize();
 			B.crossVectors(T, ref).normalize();
 			N.crossVectors(B, T);
-			const r = (r0 + (r1 - r0) * t) * (1 + swell * Math.sin(Math.PI * t)) * (1 + flare * Math.pow(1 - t, 3));   // (flare: wide at the root, like a fillet where it leaves a surface)
+			const r = profile ? profile(t) : (r0 + (r1 - r0) * t) * (1 + swell * Math.sin(Math.PI * t)) * (1 + flare * Math.pow(1 - t, 3));   // (flare: wide at the root, like a fillet where it leaves a surface; profile: any thickness along it)
 			for (let j = 0; j <= radial; j++) {
 				const th = j / radial * TAU, cs = Math.cos(th), sn = Math.sin(th);
 				const k = (i * ringVerts + j) * 3;
@@ -169,19 +169,18 @@ export function buildSpeedster(colour) {
 		headGeo.computeVertexNormals();
 	}
 	add(head, headGeo, skin, 0, 0, 0.02);
-	// the quills: big ones, thick at the root, tapering and curving back
-	const Q = [
-		[0.21, -0.02, 0.56, 0.2], [-0.21, -0.02, 0.56, 0.2],
-		[0, -0.19, 0.52, 0.19],
-	];
-	for (const [x, y, len, r] of Q) {
-		const a = B(x * 0.7, y + 0.04, 0.06);
-		const b = B(x * 1.7, y - 0.12 + Math.abs(x) * 0.15, 0.3 + len);
-		const c = B(x * 1.25, y + 0.12, 0.3 + len * 0.45);
-		head.add(spike(skin, a, c, b, r, 0.004, 14, 0.45));
-	}
-	// the top quill: set forward, rising out of the top of the head and sweeping back over it, hugging its curve
-	head.add(spike(skin, B(0, 0.3, -0.03), B(0, 0.52, 0.2), B(0, 0.26, 0.7), 0.2, 0.004, 14, 0.45));
+	// the quills: each starts as a fine point on the head (short of the flat front),
+	// swells as it hugs the head's curve, and tapers to its tip behind
+	const quill = (a, c, b, r) => {
+		const q = hose(skin, 0, 0, { segs: 32, radial: 16, capA: false, capB: false, profile: (t) => Math.max(0.004, r * Math.pow(Math.sin(Math.PI * Math.pow(t, 0.62)), 0.9)) });
+		q.update(a, c, b);
+		q.geometry.computeBoundingSphere();
+		q.frustumCulled = true;
+		head.add(q);
+	};
+	quill(B(0, 0.315, -0.215), B(0, 0.52, 0.17), B(0, 0.25, 0.76), 0.2);              // over the top
+	for (const s of [-1, 1]) quill(B(s * 0.37, 0.04, -0.13), B(s * 0.43, 0.06, 0.24), B(s * 0.34, -0.08, 0.86), 0.17);   // round each side, half sunk into the head
+	quill(B(0, -0.27, 0.22), B(0, -0.33, 0.5), B(0, -0.3, 0.82), 0.18);               // low at the back
 	// ears: a skin cone with a tan inside
 	for (const s of [-1, 1]) {
 		head.add(spike(skin, B(s * 0.19, 0.25, 0.06), B(s * 0.26, 0.38, 0.06), B(s * 0.28, 0.5, 0.12), 0.1, 0.004, 14, 0.35));
@@ -362,7 +361,7 @@ export function buildSpeedster(colour) {
 			torso.rotation.x = -0.04;
 			placeLeg(legs[0], -0.14, 0, 0, 0);
 			placeLeg(legs[1], 0.15, tap * 0.06, -0.06, -tap * 0.5);
-			for (const a of arms) placeArm(a, a.s * 0.2, 0.1, 0.04, 0.26, 0.05);   // (hands on hips, long arms akimbo)
+			for (const a of arms) placeArm(a, a.s * (0.25 + Math.sin(time * 1.6 + a.s) * 0.01), -0.1, 0.02 + Math.sin(time * 1.3 + a.s) * 0.02, 0.05, -0.02);   // (hanging loose by his sides, swaying a little)
 			return;
 		}
 
