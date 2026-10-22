@@ -111,7 +111,7 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 // (FACE_K: the face and its features drawn bigger on the head by as much as the head's
 // been shrunk, so they stay the same size while the head round them gets smaller)
 const HEAD_SCALE = 0.76, FACE_K = 0.88 / HEAD_SCALE;
-const FACE = { px: 1024, span: 0.84 * FACE_K, s: 0.95, ox: 368, oy: 230, cy: 414 };   // canvas size, metres across it, drawing-to-canvas scale, the drawing's point that lands at (512, cy)
+const FACE = { px: 1024, span: 0.84 * FACE_K, s: 0.95, ox: 368, oy: 230, cy: 444 };   // canvas size, metres across it, drawing-to-canvas scale, the drawing's point that lands at (512, cy)
 
 function maskPath(g) {
 	g.beginPath();
