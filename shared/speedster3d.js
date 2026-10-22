@@ -23,7 +23,7 @@ import * as THREE from '../lib/three/three.module.min.js';
 
 const TAU = Math.PI * 2;
 
-function glossy(color, extra = {}) {
+export function glossy(color, extra = {}) {
 	return new THREE.MeshPhysicalMaterial(Object.assign({ color, roughness: 0.3, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.2 }, extra));
 }
 
@@ -32,7 +32,7 @@ function glossy(color, extra = {}) {
 // A tapered tube along a quadratic curve a → c → b, radius r0 at a to r1 at
 // b (with a little swell in the middle, like a rubber hose). update() moves
 // it; the mesh's vertices are rewritten in place.
-function hose(mat, r0, r1, { segs = 16, radial = 10, swell = 0.12, capA = true, capB = true } = {}) {
+export function hose(mat, r0, r1, { segs = 16, radial = 10, swell = 0.12, capA = true, capB = true } = {}) {
 	const rings = segs + 1;
 	const ringVerts = radial + 1;
 	const count = rings * ringVerts + (capA ? 1 : 0) + (capB ? 1 : 0);
@@ -86,7 +86,7 @@ function hose(mat, r0, r1, { segs = 16, radial = 10, swell = 0.12, capA = true, 
 }
 
 // A fixed tapered spike along a curve (quills, ears): built once.
-function spike(mat, a, c, b, r0, r1 = 0.004, segs = 14) {
+export function spike(mat, a, c, b, r0, r1 = 0.004, segs = 14) {
 	const m = hose(mat, r0, r1, { segs, radial: 12, swell: 0.05, capA: true, capB: false });
 	m.update(a, c, b);
 	m.geometry.computeBoundingSphere();

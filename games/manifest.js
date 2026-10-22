@@ -25,6 +25,8 @@ IGB.manifest = [
 			title: { lines: [{ text: 'SONIC', fill: '#2f7cf0', glow: '#3cd6ff', font: 'Nise Sega Sonic' }, { text: 'TAILS', fill: '#ff9a2b', glow: '#ffd23f', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#ff9a2b', bg: '#5fb8ff', note: 'CLIMB' } },
 		{ id: 'iron-stride', name: 'Sonic Robot', icon: 'assets/icons/sonic-robot.png', file: 'games/iron-stride/index.js', module: true,
 			title: { lines: [{ text: 'SONIC', fill: '#2f7cf0', glow: '#3cd6ff', font: 'Nise Sega Sonic' }, { text: 'ROBOT', fill: '#ff3b30', glow: '#e23a2e', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#e23a2e', bg: '#16171b', note: 'MECH' } },
+		{ id: 'knuckles-quest', name: 'Knuckles Quest', icon: 'assets/icons/knuckles-quest.svg', file: 'games/knuckles-quest/index.js', module: true,
+			title: { lines: [{ text: 'KNUCKLES', fill: '#d8262e', glow: '#ff6a3d', font: 'Nise Sega Sonic' }, { text: 'QUEST', fill: '#2dff7a', glow: '#2dff7a', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#2dff7a', bg: '#d8262e', note: 'EXPLORE' } },
 	] },
 
 	{ folder: 'New', games: [
@@ -163,7 +165,7 @@ IGB.manifest = [
 
 // The only games the menu shows (in their folders above); the rest stay
 // playable by #id. Remove this (or set it to null) to show everything.
-IGB.menu = ['red-light-green-light', 'loop-island', 'quill-relay', 'iron-stride', 'twin-tail-tower', 'mingle', 'backrooms', 'gwi-ma-showdown', 'roll-call', 'show-debug'];
+IGB.menu = ['red-light-green-light', 'loop-island', 'quill-relay', 'iron-stride', 'twin-tail-tower', 'knuckles-quest', 'mingle', 'backrooms', 'gwi-ma-showdown', 'roll-call', 'show-debug'];
 
 // The music tracks, on or off everywhere: every music-*.mp3 (the show's music
 // included). Tunes the games synthesise (the doll's song, Mingle's waltz),

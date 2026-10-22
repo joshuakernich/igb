@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+	<!-- Knuckles Quest: a sunset over ruined maze walls, a glowing green emerald fragment, and a big white spiked fist -->
+	<defs>
+		<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+			<stop offset="0" stop-color="#2a2a6a"/>
+			<stop offset="0.55" stop-color="#c8607a"/>
+			<stop offset="1" stop-color="#ffb070"/>
+		</linearGradient>
+		<radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+			<stop offset="0" stop-color="#b0ffc8" stop-opacity="0.9"/>
+			<stop offset="1" stop-color="#2dff7a" stop-opacity="0"/>
+		</radialGradient>
+	</defs>
+	<rect width="256" height="256" rx="40" fill="url(#sky)"/>
+	<circle cx="196" cy="70" r="26" fill="#ffe0a0"/>
+	<path d="M0 170 H70 V120 H110 V170 H150 V100 H200 V170 H256 V256 H0 Z" fill="#8a6a4a"/>
+	<path d="M0 170 H70 V120 H110 V170 H150 V100 H200 V170 H256" fill="none" stroke="#c9a36e" stroke-width="6"/>
+	<circle cx="128" cy="118" r="60" fill="url(#glow)"/>
+	<path d="M128 72 L156 112 L128 164 L100 112 Z" fill="#2dff7a" stroke="#0a5a2a" stroke-width="6" stroke-linejoin="round"/>
+	<path d="M128 72 L140 112 L128 164 M100 112 H156" fill="none" stroke="#c8ffd8" stroke-width="3" opacity="0.8"/>
+	<circle cx="70" cy="206" r="34" fill="#ffffff" stroke="#3a1a1a" stroke-width="6"/>
+	<path d="M52 180 L46 156 L62 176 Z M74 174 L74 150 L84 174 Z" fill="#ffffff" stroke="#3a1a1a" stroke-width="5" stroke-linejoin="round"/>
+	<rect x="40" y="226" width="60" height="20" rx="8" fill="#d8262e" stroke="#3a1a1a" stroke-width="5"/>
+</svg>
