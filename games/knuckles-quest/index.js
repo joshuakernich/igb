@@ -45,7 +45,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 
 	const GAME_SECONDS = 600;
 	const FOV = 64;                                        // vertical: 90 across each 16:10 wall, so the walls meet
-	const CAM = { close: 0.8, over: 1.3, back: 6.5, up: 1.1, pitch: 9, turn: 2.2, look: 1.3, below: 0.7 };   // metres behind him in a doorway (squared up to it, and this much higher, over his head) and otherwise, and above him, degrees down, how fast it swings round behind him, how high on him it aims, how far under the wall tops it stays (so you never see over them)
+	const CAM = { close: 1.9, over: 0.4, back: 6.5, up: 1.1, pitch: 9, turn: 2.2, look: 1.3, below: 0.7 };   // metres behind him in a doorway (squared up to it, and this much higher, over his head) and otherwise, and above him, degrees down, how fast it swings round behind him, how high on him it aims, how far under the wall tops it stays (so you never see over them)
 	const BODY = { r: 0.4, h: 1.7, step: 0.45 };           // his radius, height, and the ledge he just steps up
 	const RUN = 8.5;                                       // metres a second, running
 	const RUN_RANGE = 14;                                  // how far off a spot on the same level can be for him to just run there
