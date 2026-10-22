@@ -16,7 +16,7 @@
  * Find all three and the quest is done (or the clock runs out).
  *
  * Two cameras (the debug screen's CAMERA row switches; kept per browser):
- * FIXED (the default) never turns except with the turn-around button; it
+ * FIXED (the default) is level (no tilt, so every wall reads square) and never turns except with the turn-around button; it
  * follows him from straight behind, but with slack sideways, so heading off to
  * one side he runs out onto that side wall. FOLLOW chases from behind,
  * swinging round to his heading.
@@ -712,7 +712,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		const hit = raycastBoxes(boxes, head, dir, len);
 		const eye = hit ? head.clone().addScaledVector(dir, Math.max(0.6, hit.t - 0.6)) : want;
 		walls.rig.position.lerp(eye, Math.min(1, dt * FIXED.slide));
-		walls.rig.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), camYaw).multiply(PITCH);
+		walls.rig.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), camYaw);   // (level, no tilt: upright edges stay upright, every wall square)
 	}
 
 	function setCamera(fixed) {
