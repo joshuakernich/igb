@@ -499,11 +499,16 @@ export function buildSpeedster(colour) {
 		hand.set(hx, hy, hz);
 		elbow.lerpVectors(sh, hand, 0.5).add(tmp.set(a.s * bowOut, 0.02, bowBack));
 		a.tube.update(sh, elbow, hand);
-		// the glove sits in the lean's space: carry the torso-space hand across
+		// the glove, on the end of the arm: its cuff over the arm's end, turned
+		// up the arm (the way it leaves the elbow), carried into the lean's space
+		const out = gloveDir.subVectors(hand, elbow).normalize();
+		gloveQ.setFromUnitVectors(UP, out.clone().negate());
 		torso.updateMatrix();
-		a.glove.position.copy(hand).applyMatrix4(torso.matrix);
-		a.glove.quaternion.copy(torso.quaternion);
+		a.glove.position.copy(hand).addScaledVector(out, GLOVE_REACH).applyMatrix4(torso.matrix);
+		a.glove.quaternion.copy(torso.quaternion).multiply(gloveQ);
 	}
+	const gloveDir = V(0, 0, 0), gloveQ = new THREE.Quaternion(), UP = V(0, 1, 0);
+	const GLOVE_REACH = 0.1;   // (from the arm's end to the middle of the glove: the cuff sits on the end)
 
 	function show(running) {
 		torso.visible = true;
@@ -569,6 +574,10 @@ export function buildSpeedster(colour) {
 		// running: the feet go round in loops, the arms pump against them
 		show(true);
 		cycle += dt * (7 + pace * 24);
+		// (the body first: the limbs hang off it)
+		torso.position.y = HIP_Y + Math.abs(Math.sin(cycle)) * 0.05 * (1 - pace * 0.6);
+		torso.rotation.x = -0.35 * pace - 0.06;
+		head.rotation.x = 0.25 * pace + 0.04;
 		const stride = 0.22 + pace * 0.16;
 		const lift = 0.12 + pace * 0.18;
 		for (const l of legs) {
@@ -588,9 +597,6 @@ export function buildSpeedster(colour) {
 			const hz = (-0.32 * s) * pump + (1 - pump) * (0.56 + 0.04 * s);
 			placeArm(a, hx, hy, hz, 0.1, 0.06 + (1 - pump) * 0.1);
 		}
-		torso.position.y = HIP_Y + Math.abs(Math.sin(cycle)) * 0.05 * (1 - pace * 0.6);
-		torso.rotation.x = -0.35 * pace - 0.06;
-		head.rotation.x = 0.25 * pace + 0.04;
 		whirlMat.opacity = Math.max(0, pace - 0.7) * 1.6;
 		whirl.rotation.x = -cycle;
 	}
