@@ -220,14 +220,13 @@ IGB.players = (function () {
 	function drawSimulator() {
 		if (!$simulator) return;
 		const $avatars = $simulator.find('gamebox-avatar');
-		const $dots = $simulator.find('gamebox-gaze');
 		players.forEach(function (p, i) {
 			if (p.px === undefined) return;
 			$avatars.eq(i).css({ left: p.px * 100 + '%', top: p.pz * 100 + '%' })
 				.toggleClass('selected', i === selected)
 				.find('gamebox-human').css({ height: (1 - p.py) * 100 + 'px' });
 			// where they're looking, on the simulator's walls (its side walls run the other way across)
-			const g = p.gaze, $dot = $dots.eq(i);
+			const g = p.gaze, $dot = $simulator.find('gamebox-gaze[n=' + i + ']');   // (by its player: moving between walls reorders them)
 			if (!g || i >= CONTROLLABLE) { $dot.hide(); return; }
 			const sx = g.wall === 1 ? g.px : 1 - g.px;
 			const $side = $simulator.find('gamebox-side[wall=' + g.wall + ']');
