@@ -16,10 +16,10 @@
  * Find all three and the quest is done (or the clock runs out).
  *
  * Two cameras (the debug screen's CAMERA row switches; kept per browser):
- * FIXED (the default) stands still in the middle of the room, level (so every
+ * FIXED stands still in the middle of the room, level (so every
  * wall reads square), turning only with the turn-around button; tap through
  * a doorway and, as he lands in it, it flies through to the middle of the next
- * room, facing the same way. FOLLOW chases from behind, swinging round to his
+ * room, facing the same way. FOLLOW (the default) chases from behind, swinging round to his
  * heading.
  *
  * Whoever's standing nearest the spot a tap lands on owns that tap (taps
@@ -68,7 +68,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 	const DOOR_STEP = { e: [1, 0], w: [-1, 0], s: [0, 1], n: [0, -1] };   // (which way each doorway of a room leads)
 	const TURN = { x: W * 1.5, y: H * 0.75, r: 70 };            // the turn-around button: middle of the front wall, a quarter up from the bottom
 	const FIXED = { eye: 3, fly: 1.5, snap: 5 };          // the fixed camera: how high it stands in the middle of the room, seconds to fly through a doorway to the next room's middle, how fast it squares up
-	const CAMERA_KEY = 'knuckles-quest.camera';                 // (which camera, kept per browser: 'fixed' or 'follow')
+	const CAMERA_KEY = 'knuckles-quest.cam';                    // (which camera, kept per browser once toggled: 'fixed' or 'follow')
 	const SENSE = 45;                                      // metres off a missing fragment's slot starts to pulse (faster and brighter nearer)
 
 	/* ---------- renderer, scene, cameras ---------- */
@@ -189,11 +189,11 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 	let camYaw = 0;
 	let camClose = 0;
 	let spinTo = null;          // turning round (the turn-around button): the way the eye's swinging to
-	// The fixed camera (the default; the debug screen's CAMERA row toggles it): it never
-	// turns except with the turn-around button, and stands at the back of his room, so he
-	// heads off onto the side walls as he crosses it
-	let fixedCam = true;
-	try { fixedCam = localStorage.getItem(CAMERA_KEY) !== 'follow'; } catch (e) { /* (no storage: fixed) */ }
+	// The fixed camera (off by default; the debug screen's CAMERA row toggles it): it
+	// never turns except with the turn-around button, and stands in the middle of the
+	// room, flying through a doorway to the next one (fixedEye)
+	let fixedCam = false;
+	try { fixedCam = localStorage.getItem(CAMERA_KEY) === 'fixed'; } catch (e) { /* (no storage: follow) */ }
 	let camRoom = null;         // (the room the fixed camera stands in the middle of)
 	let camFly = null;          // (flying on to the next room: { from, via, to, t }, a curve through the doorway)
 	let turnFlash = 0;          // the button lit up just after a press           // 0..1: how far the eye's come in close behind him (in a doorway)
@@ -748,7 +748,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 		fixedCam = fixed;
 		spinTo = null;
 		if (fixed && !init) flyTo(maze.roomAt(kn.pos.x, kn.pos.z) || maze.rooms[0][0], null);   // (switched on: over to the middle of his room)
-		try { localStorage.setItem(CAMERA_KEY, fixed ? 'fixed' : 'follow'); } catch (e) { /* (not kept) */ }
+		if (!init) try { localStorage.setItem(CAMERA_KEY, fixed ? 'fixed' : 'follow'); } catch (e) { /* (not kept) */ }
 		$camButton.text(fixed ? 'FIXED ⇄ FOLLOW' : 'FOLLOW ⇄ FIXED');
 	}
 
