@@ -12,6 +12,7 @@ const ICONS = [
 	{ name: 'sonic-dash', chars: [{ kind: 'sonic', mode: 'run', pace: 1 }], bg: '#ffc93a', yaw: -40, pitch: 8 },
 	{ name: 'sonic-classic', chars: [{ kind: 'sonic', mode: 'run', pace: 0.6 }], bg: '#ff5a4a', yaw: 90, pitch: 0 },   // (straight side on, running to the right)
 	{ name: 'sonic-tails', chars: [{ kind: 'tails', mode: 'idle' }], bg: '#4fb3ff', yaw: -35, pitch: 6 },
+	{ name: 'tails-escape', chars: [{ kind: 'tails', mode: 'spring', rotor: true }], bg: '#56606e', yaw: -30, pitch: 24 },   // (flying, his tails a rotor over his head)
 	{ name: 'sonic-robot', chars: [{ kind: 'robot' }], bg: '#1fae9b', yaw: -35, pitch: 6 },
 	{ name: 'knuckles-quest', chars: [{ kind: 'knuckles', mode: 'idle' }], bg: '#2fbf5f', yaw: -30, pitch: 6 },
 	{ name: 'sonic-characters', chars: [{ kind: 'knuckles', mode: 'idle', x: -0.75, z: 0.25 }, { kind: 'tails', mode: 'idle', x: 0.75, z: 0.25 }, { kind: 'sonic', mode: 'idle', x: 0, z: -0.15 }], bg: '#8a5cff', yaw: -12, pitch: 6 },
@@ -61,6 +62,15 @@ for (const icon of ICONS.filter((i) => !only.length || only.includes(i.name))) {
 				const m = buildSpeedster(colour, { knuckles: c.kind === 'knuckles', tails: c.kind === 'tails' });
 				// (a few steps in, so a run's mid-stride)
 				for (let i = 0; i < 8; i++) m.animate(0.04, c.mode, c.pace || 0, 30, 1 + i * 0.04);
+				if (c.rotor) {
+					// the tails up over his head on a pivot, mid-spin (as games/tails-escape/models.js flies him)
+					const spin = new THREE.Group();
+					m.torso.add(spin);
+					spin.add(m.tailRig);
+					m.tailRig.position.set(0, 1.02, 0.02);
+					m.tailRig.rotation.x = 0.74;
+					spin.rotation.y = 1.25;   // (the tails out to the sides, where they show)
+				}
 				root = m.root;
 			}
 			root.position.set(c.x || 0, 0, c.z || 0);

@@ -23,6 +23,8 @@ IGB.manifest = [
 			title: { lines: [{ text: 'SONIC', fill: '#2f7cf0', glow: '#3cd6ff', font: 'Nise Sega Sonic' }, { text: 'CLASSIC', fill: '#ffd23a', glow: '#ff7a3d', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#ffd23a', bg: '#2f7cf0', note: 'RELAY' } },
 		{ id: 'twin-tail-tower', name: 'Sonic Tails', icon: 'assets/icons/sonic-tails.png', file: 'games/twin-tail-tower/index.js', module: true,
 			title: { lines: [{ text: 'SONIC', fill: '#2f7cf0', glow: '#3cd6ff', font: 'Nise Sega Sonic' }, { text: 'TAILS', fill: '#ff9a2b', glow: '#ffd23f', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#ff9a2b', bg: '#5fb8ff', note: 'CLIMB' } },
+		{ id: 'tails-escape', name: 'Tails Escape', icon: 'assets/icons/tails-escape.png', file: 'games/tails-escape/index.js', module: true,
+			title: { lines: [{ text: 'TAILS', fill: '#ff9a2b', glow: '#ffd23f', font: 'Nise Sega Sonic' }, { text: 'ESCAPE', fill: '#ff3d3d', glow: '#ff7a3d', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#ffb02b', bg: '#23262d', note: 'DODGE' } },
 		{ id: 'iron-stride', name: 'Sonic Robot', icon: 'assets/icons/sonic-robot.png', file: 'games/iron-stride/index.js', module: true,
 			title: { lines: [{ text: 'SONIC', fill: '#2f7cf0', glow: '#3cd6ff', font: 'Nise Sega Sonic' }, { text: 'ROBOT', fill: '#ff3b30', glow: '#e23a2e', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#e23a2e', bg: '#16171b', note: 'MECH' } },
 		{ id: 'knuckles-quest', name: 'Knuckles Quest', icon: 'assets/icons/knuckles-quest.png', file: 'games/knuckles-quest/index.js', module: true,
@@ -169,7 +171,7 @@ IGB.manifest = [
 
 // The only games the menu shows (in their folders above); the rest stay
 // playable by #id. Remove this (or set it to null) to show everything.
-IGB.menu = ['red-light-green-light', 'loop-island', 'quill-relay', 'iron-stride', 'twin-tail-tower', 'knuckles-quest', 'sonic-characters', 'mingle', 'backrooms', 'gwi-ma-showdown', 'roll-call', 'show-debug', 'gaze-test'];
+IGB.menu = ['red-light-green-light', 'loop-island', 'quill-relay', 'iron-stride', 'twin-tail-tower', 'tails-escape', 'knuckles-quest', 'sonic-characters', 'mingle', 'backrooms', 'gwi-ma-showdown', 'roll-call', 'show-debug', 'gaze-test'];
 
 // The music tracks, on or off everywhere: every music-*.mp3 (the show's music
 // included). Tunes the games synthesise (the doll's song, Mingle's waltz),
