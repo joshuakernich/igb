@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Virtual Gamebox · IGB</title>
+
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Knewave&family=Paytone+One&family=Playwrite+DK+Loopet:wght@100..400&family=Rubik:ital,wght@0,300..900;1,300..900&family=Share+Tech+Mono&family=Lexend:wght@200;300;500&display=swap">
+
+	<link rel="stylesheet" href="core/launcher.css">
+	<link rel="stylesheet" href="core/stage.css">
+	<link rel="stylesheet" href="shared/meep.css">
+	<link rel="stylesheet" href="shared/hud.css">
+	<link rel="stylesheet" href="shared/tally.css">
+	<link rel="stylesheet" href="shared/cube.css">
+	<link rel="stylesheet" href="core/gamebox.css">
+
+	<!-- WebGL canvases keep their last frame, so the virtual box can copy them (core/gamebox.js) -->
+	<script>
+		(function () {
+			const get = HTMLCanvasElement.prototype.getContext;
+			HTMLCanvasElement.prototype.getContext = function (type, opts) {
+				if (type === 'webgl' || type === 'webgl2') opts = Object.assign({}, opts, { preserveDrawingBuffer: true });
+				return get.call(this, type, opts);
+			};
+		})();
+	</script>
+
+	<script src="lib/jquery.min.js"></script>
+	<script src="lib/jquery-ui.min.js"></script>
+
+	<script src="core/igb.js"></script>
+	<script src="core/stage.js"></script>
+	<script src="core/art.js"></script>
+	<script src="core/players.js"></script>
+
+	<script src="shared/util.js"></script>
+	<script src="shared/sfx.js"></script>
+	<script src="shared/audio.js"></script>
+	<script src="shared/meep.js"></script>
+	<script src="shared/hud.js"></script>
+	<script src="shared/showtime.js"></script>
+	<script src="shared/tally.js"></script>
+	<script src="shared/cube.js"></script>
+	<script src="shared/shapes.js"></script>
+
+	<script src="games/manifest.js"></script>
+	<script type="module" src="core/gamebox.js"></script>
+</head>
+<body class="gamebox-page">
+	<!-- the real game runs here, out of sight; its walls are copied into the room -->
+	<gamebox-source><igb-world></igb-world></gamebox-source>
+
+	<canvas id="room"></canvas>
+
+	<gamebox-bar>
+		<gamebox-title><b>Virtual Gamebox</b><span id="status">Loading…</span></gamebox-title>
+		<gamebox-games id="games"></gamebox-games>
+		<gamebox-tools>
+			<label>Players <select id="count"><option>1</option><option>2</option><option selected>3</option><option>4</option></select></label>
+			<button id="view" type="button">View: Outside</button>
+		</gamebox-tools>
+	</gamebox-bar>
+</body>
+</html>
