@@ -13,7 +13,7 @@
  */
 import * as THREE from '../../lib/three/three.module.min.js';
 import { canvasTexture } from '../../lib/three/walls.js';
-import { buildSpeedster } from '../../shared/speedster3d.js';
+import { buildSpeedster, hose } from '../../shared/speedster3d.js';
 import { buildRobotnik } from '../../shared/robotnik3d.js';
 
 const TAU = Math.PI * 2;
@@ -93,7 +93,7 @@ function mats() {
 export function buildFlyer(colour) {
 	const HIPS = 0.1;                    // (how far over his middle his hips are)
 	const TIP = 1.05;                    // (radians the whole body tips forward from the hips: his butt up high, his legs trailing)
-	const ROTOR = 0.9;                   // (how far over his butt the rotor spins)
+	const ROTOR = 0.45;                  // (how far over his butt the rotor spins)
 	const root = new THREE.Group();
 	const yaw = new THREE.Group();       // turned a little into a swerve
 	root.add(yaw);
@@ -116,16 +116,29 @@ export function buildFlyer(colour) {
 	butt.position.copy(s.tailRig.position);
 	s.torso.add(butt);
 	// the tails: a stem rising from there to a spinning pivot over him
-	const fur = s.tailRig.children.find((o) => o.isMesh).material;
+	const [fur, tipFur] = s.tailRig.children.filter((o) => o.isMesh).map((o) => o.material);   // (the tails' orange fur and white tips)
 	const stemGeo = new THREE.CylinderGeometry(0.035, 0.09, 1, 12);
 	stemGeo.translate(0, 0.5, 0);   // (from its base up)
 	const stem = new THREE.Mesh(stemGeo, fur);
 	tumble.add(stem);
 	const spin = new THREE.Group();
 	tumble.add(spin);
-	spin.add(s.tailRig);
-	s.tailRig.position.set(0, 0.04, 0);
-	s.tailRig.rotation.x = 0.74;
+	// the blades: his two tails straight out either side of the hub, flat,
+	// swept back a little the same way round, white tips at their ends (in
+	// place of the speedster's own tails, which curl back behind him)
+	s.tailRig.visible = false;
+	const point = (x, y, z) => new THREE.Vector3(x, y, z);
+	const BLADE = { len: 0.66, R: 0.12, T: 0.7 };
+	for (const side of [-1, 1]) {
+		const a = point(0, 0, 0), c = point(side * BLADE.len * 0.5, 0.04, side * 0.06), b = point(side * BLADE.len, 0.06, side * 0.16);
+		const q = (t) => point(0, 0, 0).addScaledVector(a, (1 - t) * (1 - t)).addScaledVector(c, 2 * (1 - t) * t).addScaledVector(b, t * t);
+		const m = q(BLADE.T), c1 = point(0, 0, 0).lerpVectors(a, c, BLADE.T), c2 = point(0, 0, 0).lerpVectors(c, b, BLADE.T);
+		const body = hose(fur, 0, 0, { segs: 24, radial: 16, capA: true, capB: false, profile: (u) => BLADE.R * (0.45 + 0.55 * Math.sin(Math.PI / 2 * Math.min(1, u * 1.25))) });
+		body.update(a, c1, m);
+		const tip = hose(tipFur, 0, 0, { segs: 16, radial: 16, capA: false, capB: true, profile: (u) => Math.max(0.004, BLADE.R * Math.pow(Math.max(0, 1 - u * u), 0.6)) });
+		tip.update(m, c2, b);
+		for (const h of [body, tip]) { h.geometry.computeBoundingSphere(); h.castShadow = true; spin.add(h); }
+	}
 	const from = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), dir = new THREE.Vector3();
 	let time = 0;
 
