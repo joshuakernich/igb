@@ -29,6 +29,8 @@ IGB.manifest = [
 			title: { lines: [{ text: 'SONIC', fill: '#2f7cf0', glow: '#3cd6ff', font: 'Nise Sega Sonic' }, { text: 'ROBOT', fill: '#ff3b30', glow: '#e23a2e', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#e23a2e', bg: '#16171b', note: 'MECH' } },
 		{ id: 'knuckles-quest', name: 'Knuckles Quest', icon: 'assets/icons/knuckles-quest.png', file: 'games/knuckles-quest/index.js', module: true,
 			title: { lines: [{ text: 'KNUCKLES', fill: '#d8262e', glow: '#ff6a3d', font: 'Nise Sega Sonic' }, { text: 'QUEST', fill: '#2dff7a', glow: '#2dff7a', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#2dff7a', bg: '#d8262e', note: 'EXPLORE' } },
+		{ id: 'super-sonic-battle', name: 'Super Sonic Battle', icon: 'assets/icons/super-sonic-battle.png', file: 'games/super-sonic-battle/index.js', module: true,
+			title: { lines: [{ text: 'SUPER SONIC', fill: '#ffc21a', glow: '#ffe14a', font: 'Nise Sega Sonic' }, { text: 'BATTLE', fill: '#ff3d3d', glow: '#ff7a3d', font: 'Nise Sega Sonic' }], font: 'Nise Sega Sonic' }, box: { color: '#ffc21a', bg: '#1a2a8a', note: 'BOSS' } },
 		{ id: 'sonic-characters', name: 'Sonic Characters', icon: 'assets/icons/sonic-characters.png', file: 'games/sonic-characters/index.js', module: true,
 			box: { color: '#5ad1ff', bg: '#1a1f2e', note: 'SANDBOX' } },
 	] },
@@ -171,7 +173,7 @@ IGB.manifest = [
 
 // The only games the menu shows (in their folders above); the rest stay
 // playable by #id. Remove this (or set it to null) to show everything.
-IGB.menu = ['red-light-green-light', 'loop-island', 'quill-relay', 'iron-stride', 'twin-tail-tower', 'tails-escape', 'knuckles-quest', 'sonic-characters', 'mingle', 'backrooms', 'gwi-ma-showdown', 'roll-call', 'show-debug', 'gaze-test'];
+IGB.menu = ['red-light-green-light', 'loop-island', 'quill-relay', 'iron-stride', 'twin-tail-tower', 'tails-escape', 'knuckles-quest', 'super-sonic-battle', 'sonic-characters', 'mingle', 'backrooms', 'gwi-ma-showdown', 'roll-call', 'show-debug', 'gaze-test'];
 
 // The music tracks, on or off everywhere: every music-*.mp3 (the show's music
 // included). Tunes the games synthesise (the doll's song, Mingle's waltz),

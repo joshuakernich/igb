@@ -15,6 +15,7 @@ const ICONS = [
 	{ name: 'tails-escape', chars: [{ kind: 'flyer' }], bg: '#ff6fae', yaw: -38, pitch: 10 },   // (Tails Escape's own Tails, flying under his tail rotor, three quarters on)
 	{ name: 'sonic-robot', chars: [{ kind: 'robot' }], bg: '#1fae9b', yaw: -35, pitch: 6 },
 	{ name: 'knuckles-quest', chars: [{ kind: 'knuckles', mode: 'idle' }], bg: '#2fbf5f', yaw: -30, pitch: 6 },
+	{ name: 'super-sonic-battle', chars: [{ kind: 'super', mode: 'pose' }], bg: '#1a3aa8', yaw: -28, pitch: 6 },   // (Super Sonic striking his pose)
 	{ name: 'sonic-characters', chars: [{ kind: 'knuckles', mode: 'idle', x: -0.75, z: 0.25 }, { kind: 'tails', mode: 'idle', x: 0.75, z: 0.25 }, { kind: 'sonic', mode: 'idle', x: 0, z: -0.15 }], bg: '#8a5cff', yaw: -12, pitch: 6 },
 ];
 
@@ -66,8 +67,8 @@ for (const icon of ICONS.filter((i) => !only.length || only.includes(i.name))) {
 				m.walk(0.6, 0.6 + Math.PI, 0.5, 0.5, 1);
 				root = m.root;
 			} else {
-				const colour = c.kind === 'knuckles' ? 0xc4141e : c.kind === 'tails' ? 0xf08a12 : 0x2f6cf0;
-				const m = buildSpeedster(colour, { knuckles: c.kind === 'knuckles', tails: c.kind === 'tails' });
+				const colour = c.kind === 'knuckles' ? 0xc4141e : c.kind === 'tails' ? 0xf08a12 : c.kind === 'super' ? 0xffc21a : 0x2f6cf0;
+				const m = buildSpeedster(colour, { knuckles: c.kind === 'knuckles', tails: c.kind === 'tails', kind: c.kind === 'super' ? 'super' : 'sonic' });
 				// (a few steps in, so a run's mid-stride)
 				for (let i = 0; i < 8; i++) m.animate(0.04, c.mode, c.pace || 0, 30, 1 + i * 0.04);
 				root = m.root;

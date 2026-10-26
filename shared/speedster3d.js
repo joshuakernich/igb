@@ -16,7 +16,7 @@
  *   const s = buildSpeedster(0x2f6cf0);
  *   scene.add(s.root);                 // s.lean tilts and tumbles inside it
  *   s.animate(dt, mode, pace, spin, time);
- *     // mode: 'run' | 'ball' | 'crouch' | 'spring' | 'hurt' | 'idle' | 'hang' (limbs dangling) | 'tailhang' (flying under his tails: leaning forward, limbs dangling)
+ *     // mode: 'run' | 'ball' | 'crouch' | 'spring' | 'hurt' | 'idle' | 'hang' (limbs dangling) | 'tailhang' (flying under his tails: leaning forward, limbs dangling) | 'pose' (a hero's pose: one fist thrust high, the other on his hip, a knee up)
  *     // pace: 0..1 (how fast); spin: the ball's turn (radians a second)
  *   s.setColour(c);
  */
@@ -1134,6 +1134,24 @@ export function buildSpeedster(colour, { knuckles = false, tails = false, kind =
 			for (const l of legs) {
 				const swing = Math.sin(time * 2.1 + l.s * 1.1) * 0.07 + back * 0.12, reach = 0.46;
 				placeLeg(l, l.s * 0.09, 0.56 + ly * reach + swing * lz, lz * reach - swing * ly, -0.15 + Math.sin(time * 2.1 + l.s) * 0.1);   // (toes drooping)
+			}
+			return;
+		}
+		if (mode === 'pose') {
+			// a hero's pose (Super Sonic's, at the end): his right fist thrust up
+			// high, his left on his hip, chest out, chin up, one knee raised
+			show(false);
+			torso.rotation.x = 0.12;
+			torso.rotation.z = -0.08;
+			head.rotation.x = -0.18;
+			head.rotation.y = -0.2;
+			for (const a of arms) {
+				if (a.s > 0) placeArm(a, 0.36, 1.04, -0.2, 0.22, 0.08);
+				else placeArm(a, -0.3, 0.12, 0.1, 0.3, -0.12);
+			}
+			for (const l of legs) {
+				if (l.s > 0) placeLeg(l, 0.1, 0, 0.02, 0.15);
+				else placeLeg(l, -0.11, 0.14, -0.05, 0.3);
 			}
 			return;
 		}
