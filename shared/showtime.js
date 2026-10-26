@@ -199,7 +199,7 @@ window.Showtime = function (stage, opts) {
 			{ label: 'DIDN\'T WORK', more: ['TOUCH DIDN\'T WORK', 'TRACKING DIDN\'T WORK', 'SCORING DIDN\'T MAKE SENSE'] },
 			{ label: 'DIDN\'T LIKE IT', more: ['WASN\'T FUN', 'BAD GRAPHICS', 'BAD GAME', 'BAD NARRATIVE', 'BAD SOUND'] },
 		],
-		notAgain: ['show-debug'],   // games never offered to play again
+		notAgain: ['show-debug', 'sonic-characters', 'gaze-test'],   // never offered to play again (the demo, and the sandboxes: not games)
 		wait: { faces: 45, reasons: 40, again: 40 },   // each part moves on after this long untouched
 		picked: 0.25,          // the face picked stays up this long before what comes next (the standard press)
 		thanks: 2.4,           // THANKS FOR THE FEEDBACK holds this long
