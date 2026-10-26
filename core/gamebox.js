@@ -16,10 +16,11 @@ import * as THREE from '../lib/three/three.module.min.js';
 
 const SONIC = [
 	{ id: 'loop-island', name: 'Sonic Dash', bot: 'weave' },
-	{ id: 'quill-relay', name: 'Sonic Classic', bot: 'walls' },
-	{ id: 'twin-tail-tower', name: 'Sonic Tails', bot: 'weave' },
-	{ id: 'iron-stride', name: 'Sonic Robot', bot: 'mech', players: 2 },
 	{ id: 'knuckles-quest', name: 'Knuckles Quest', bot: 'tapper' },
+	{ id: 'quill-relay', name: 'Sonic Classic', bot: 'walls' },
+	{ id: 'iron-stride', name: 'Sonic Robot', bot: 'mech', players: 2 },
+	{ id: 'tails-escape', name: 'Tails Escape', bot: 'escape' },
+	{ id: 'twin-tail-tower', name: 'Tails Jump', bot: 'weave', hidden: true },
 ];
 const COLORS = ['#ff2a2a', '#2f6bff', '#32cd32', '#dd00ff', '#ff6600', '#ffbb00'];
 
@@ -306,6 +307,48 @@ const BOTS = {
 			});
 		} };
 	},
+
+	// Tails Escape: one pilot at a time flies Tails along the wall he's on
+	// (left and right along it steers, nearer and further sets his height);
+	// the rest stand back watching. At a junction a couple of them walk up and
+	// tap the wall of the branch they want (gold ring tunnels first).
+	escape(n) {
+		const ps = Array.from({ length: n }, (_, i) => ({ X: (i - (n - 1) / 2) * 0.5, Y: 0, Z: -0.3, face: 0 }));
+		let st = null, stAt = -1, voted = null;
+		return { ps, step(t, dt, taps) {
+			if (t - stAt > 0.2) { stAt = t; try { st = game && game.state ? game.state() : null; } catch (e) { st = null; } }
+			const w = st && st.wall >= 0 ? st.wall : 1, pilot = st && st.pilot >= 0 ? st.pilot : 0;
+			const j = st && st.junction;
+			if (j && j.prompting && voted !== j.sJ) {
+				voted = j.sJ;
+				const ways = (j.ways || []).map((s) => s.split(':')).map(([dir, kind]) => ({ wall: { W: 0, N: 1, E: 2 }[dir], kind })).filter((o) => o.wall !== undefined);
+				const pick = ways.find((o) => o.kind === 'gold') || ways[Math.floor(Math.random() * ways.length)];
+				// (two of the watchers vote; on your own, the pilot does)
+				const voters = n > 1 ? ps.map((_, i) => i).filter((i) => i !== pilot).slice(0, 2) : [0];
+				if (pick) voters.forEach((i) => {
+					ps[i].goal = { ...nearWall(pick.wall, rnd(0.35, 0.65), 0.1), tap: { wall: pick.wall, x: 0.5, y: 0.5, escape: true } };
+				});
+			}
+			ps.forEach((p, i) => {
+				if (p.goal) {
+					p.face = faceToward(p, p.goal);
+					if (approach(p, p.goal, 1.1, dt)) { taps(i, p.goal.tap); p.goal = null; p.back = t + 0.6; }
+					return;
+				}
+				if (t < (p.back || 0)) return;
+				if (i === pilot) {
+					const along = 0.5 + Math.sin(t * 0.6) * 0.28 + Math.sin(t * 1.7 + 1) * 0.1;
+					const off = 1.0 + Math.sin(t * 0.45) * 0.55;   // (nearer the wall flies higher)
+					approach(p, nearWall(w, along, off), 1.2, dt);
+				} else {
+					const k = (i - (n - 1) / 2) * 0.32;
+					approach(p, nearWall(w, 0.5 + k, 1.6), 0.7, dt);
+				}
+				let d = FACE[w] - p.face; d = Math.atan2(Math.sin(d), Math.cos(d));
+				p.face += d * Math.min(1, dt * 3);
+			});
+		} };
+	},
 };
 
 let bot = null, figures = [], botT = 0;
@@ -321,7 +364,9 @@ function doTap(i, tap) {
 	const f = figures[i];
 	if (f) f.tap((0.5 - tap.y) * 1.6);
 	const x = (tap.wall + tap.x) * IGB.W, y = tap.y * IGB.H;
-	if (game && game.test && game.test.tap) game.test.tap(x, y);
+	if (!game || !game.test || !game.test.tap) return;
+	if (tap.escape) game.test.tap(i, tap.wall);   // (Tails Escape: a vote for that wall's branch)
+	else game.test.tap(x, y);
 }
 
 IGB.players.onUpdate(function (players) {
@@ -357,7 +402,7 @@ async function startGame(id, n) {
 	if (!embedded) history.replaceState(null, '', '?' + q.toString());
 }
 
-$('#games').html(SONIC.map((g) => `<button type="button" data-id="${g.id}">${g.name}</button>`).join(''));
+$('#games').html(SONIC.filter((g) => !g.hidden).map((g) => `<button type="button" data-id="${g.id}">${g.name}</button>`).join(''));
 $('#games').on('click', 'button', function () { startGame(this.dataset.id, +$('#count').val()); });
 $('#count').on('change', function () { if (entry) startGame(entry.id, +this.value); });
 
