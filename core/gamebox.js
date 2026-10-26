@@ -31,9 +31,11 @@ const SONIC = [
 ];
 const COLORS = ['#ff2a2a', '#2f6bff', '#32cd32', '#dd00ff', '#ff6600', '#ffbb00'];
 
-// The room in metres, as built: a 3 m x 3 m floor, walls 16:10 (so 1.875 m of
-// picture up each). Tracking X/Z run -1..1 across it: one unit is 1.5 m.
-const ROOM = { w: 3, d: 3, h: 1.875 };
+// The room in metres, as near as a photo of a real box gives it: a 3.6 m x 3.6 m
+// floor; on each wall a 16:10 picture from the floor to 2.25 m, then a dark band
+// (projectors, speakers) up to a 3 m ceiling. Tracking X/Z run -1..1 across it:
+// one unit is 1.8 m.
+const ROOM = { w: 3.6, d: 3.6, h: 2.25, ceiling: 3.0 };
 const SCALE = 0.5;                 // the hidden stage's scale (world 4800 x 1000 -> 2400 x 500)
 const STRIP = { w: 3072, h: 640 }; // the copied walls: 1024 x 640 each
 
@@ -122,11 +124,21 @@ scene.add(floor);
 
 // The box's frame: thin edges along the top and the open back.
 const edge = new THREE.LineBasicMaterial({ color: '#ae2bff', transparent: true, opacity: 0.7 });
-const hw = ROOM.w / 2, hd = ROOM.d / 2, H = ROOM.h;
+const hw = ROOM.w / 2, hd = ROOM.d / 2, H = ROOM.h, C = ROOM.ceiling;
+// the dark band above the pictures, up to the ceiling
+const bandMat = new THREE.MeshStandardMaterial({ color: '#14001f', roughness: 0.9 });
+for (const n of [0, 1, 2]) {
+	const band = new THREE.Mesh(new THREE.PlaneGeometry(n === 1 ? ROOM.w : ROOM.d, C - H), bandMat);
+	band.position.y = H + (C - H) / 2;
+	if (n === 0) { band.rotation.y = Math.PI / 2; band.position.x = -hw; }
+	if (n === 1) band.position.z = -hd;
+	if (n === 2) { band.rotation.y = -Math.PI / 2; band.position.x = hw; }
+	scene.add(band);
+}
 scene.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints([
-	new THREE.Vector3(-hw, H, hd), new THREE.Vector3(-hw, H, -hd), new THREE.Vector3(-hw, H, -hd), new THREE.Vector3(hw, H, -hd),
-	new THREE.Vector3(hw, H, -hd), new THREE.Vector3(hw, H, hd), new THREE.Vector3(-hw, 0, hd), new THREE.Vector3(-hw, H, hd),
-	new THREE.Vector3(hw, 0, hd), new THREE.Vector3(hw, H, hd),
+	new THREE.Vector3(-hw, C, hd), new THREE.Vector3(-hw, C, -hd), new THREE.Vector3(-hw, C, -hd), new THREE.Vector3(hw, C, -hd),
+	new THREE.Vector3(hw, C, -hd), new THREE.Vector3(hw, C, hd), new THREE.Vector3(-hw, 0, hd), new THREE.Vector3(-hw, C, hd),
+	new THREE.Vector3(hw, 0, hd), new THREE.Vector3(hw, C, hd),
 ]), edge));
 
 // Light: a dim fill, a key from above the open back, and each wall's own glow.
@@ -138,7 +150,7 @@ key.shadow.mapSize.set(1024, 1024);
 Object.assign(key.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 15 });
 scene.add(key);
 const glows = [0, 1, 2].map((n) => {
-	const l = new THREE.PointLight('#ffffff', 3.5, 5, 1.6);
+	const l = new THREE.PointLight('#ffffff', 4.5, 6, 1.6);
 	l.position.set(n === 0 ? -hw + 0.4 : n === 2 ? hw - 0.4 : 0, H * 0.55, n === 1 ? -hd + 0.4 : 0);
 	scene.add(l);
 	return l;
@@ -524,7 +536,7 @@ const makeFigure = (i) => (ghostKit ? GhostFigure(i) : Figure(i));
 const FACE = [Math.PI / 2, 0, -Math.PI / 2];
 const rnd = (a, b) => a + Math.random() * (b - a);
 // a point in front of wall w, `along` it (0..1 as you face it), `off` in from it (tracking units)
-function nearWall(w, along, off = 0.22) {   // (off in tracking units: 0.22 is about 33 cm, an arm's reach)
+function nearWall(w, along, off = 0.18) {   // (off in tracking units: 0.18 is about 32 cm, an arm's reach)
 	const a = along * 2 - 1, e = 1 - off;
 	if (w === 0) return { X: -e, Z: a };
 	if (w === 1) return { X: a, Z: e };
@@ -556,7 +568,7 @@ const BOTS = {
 	// what runs him to the checkpoint), jumping now and then; when he zips
 	// round to the next wall they go to the start of that one.
 	walls(n) {
-		const ps = Array.from({ length: n }, (_, i) => ({ ...nearWall(i % 3, 0.15, 0.3), Y: 0, face: FACE[i % 3], jumpAt: 1.5 + i * 0.7, along: 0.15 }));
+		const ps = Array.from({ length: n }, (_, i) => ({ ...nearWall(i % 3, 0.15, 0.25), Y: 0, face: FACE[i % 3], jumpAt: 1.5 + i * 0.7, along: 0.15 }));
 		let st = null, stAt = -1;
 		return { ps, step(t, dt) {
 			if (t - stAt > 0.25) { stAt = t; st = stateNow(); }
@@ -567,7 +579,7 @@ const BOTS = {
 				if (p.wall !== w) { p.wall = w; p.along = 0.12; }
 				if (running) p.along = Math.min(0.92, p.along + dt * (0.06 + 0.02 * Math.sin(t * 0.7 + i)));
 				else if (h && (h.state === 'banner' || h.state === 'wait')) p.along = Math.max(0.1, p.along - dt * 0.5);
-				approach(p, nearWall(w, p.along, 0.3), 1.2, dt);
+				approach(p, nearWall(w, p.along, 0.25), 1.2, dt);
 				p.face = FACE[w];
 				if (running && t > p.jumpAt) { p.jumpAt = t + rnd(1.4, 2.6); p.jumpEnd = t + 0.45; }
 				p.Y = t < (p.jumpEnd || 0) ? 0.34 * Math.sin((p.jumpEnd - t) / 0.45 * Math.PI) : 0;
@@ -634,7 +646,7 @@ const BOTS = {
 				// (two of the watchers vote; on your own, the pilot does)
 				const voters = n > 1 ? ps.map((_, i) => i).filter((i) => i !== pilot).slice(0, 2) : [0];
 				if (pick) voters.forEach((i) => {
-					ps[i].goal = { ...nearWall(pick.wall, rnd(0.35, 0.65), 0.22), tap: { wall: pick.wall, x: 0.5, y: 0.5, escape: true } };
+					ps[i].goal = { ...nearWall(pick.wall, rnd(0.35, 0.65), 0.18), tap: { wall: pick.wall, x: 0.5, y: 0.5, escape: true } };
 				});
 			}
 			ps.forEach((p, i) => {
@@ -677,7 +689,7 @@ const BOTS = {
 			} else groundSince = null;
 			if ((phase === 'super') && st.targets > 0 && t > nextTap) {
 				const i = ps.findIndex((p, k) => k !== ctrl && !p.goal);
-				if (i >= 0) { ps[i].goal = { ...nearWall(1, rnd(0.35, 0.65), 0.22), tap: { wall: 1, x: 0.5, y: 0.4, hit: true } }; nextTap = t + 3; }
+				if (i >= 0) { ps[i].goal = { ...nearWall(1, rnd(0.35, 0.65), 0.18), tap: { wall: 1, x: 0.5, y: 0.4, hit: true } }; nextTap = t + 3; }
 			}
 			ps.forEach((p, i) => {
 				if (p.goal) {
@@ -779,7 +791,7 @@ const camPos = new THREE.Vector3(), camAt = new THREE.Vector3();
 // 85% of the view's height (and fits its width), then pitches so the box sits
 // exactly in the vertical middle. Projected from the box's eight corners.
 const CORNERS = [];
-for (const x of [-1, 1]) for (const y of [0, 1]) for (const z of [-1, 1]) CORNERS.push(new THREE.Vector3(x * ROOM.w / 2, y * ROOM.h, z * ROOM.d / 2));
+for (const x of [-1, 1]) for (const y of [0, 1]) for (const z of [-1, 1]) CORNERS.push(new THREE.Vector3(x * ROOM.w / 2, y * ROOM.ceiling, z * ROOM.d / 2));
 const FILL = { y: 1.7, x: 1.86 };   // (of the 2 units of NDC each way)
 const cp = new THREE.Vector3(), off = new THREE.Vector3();
 function bounds() {
