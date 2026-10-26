@@ -1,16 +1,18 @@
 /*
  * Tails Escape: the models. Tails flying (the shared speedster build as the
- * fox, his two tails up over his head spinning like a rotor), the conveyor
- * belt round the room, the machines riding it (presses, swinging robot arms,
- * fire jets, buzzsaws, laser gates, crates), gold rings, Robotnik in his egg
- * pod, and the factory hall round it all (its dark sky, walls, pipes and
- * lamps).
+ * fox, his two tails up over his head spinning like a rotor), the tunnels of
+ * the maze (every surface a moving conveyor belt, steel ribs and strip lights
+ * in the tunnel's colour), the junctions where they meet (a closed side shows
+ * a red barrier), the machines in the tunnels (laser grids, crates riding the
+ * floor, buzzsaws, ceiling crushers, swinging robot arms, fire jets across
+ * the tunnel), gold rings, and Robotnik in his egg pod.
  *
- * Every machine is built facing +Z with the belt along x and its top at
- * y = 0: the game turns it to face the middle of the room.
+ * A tunnel's pieces are built in its own frame: x across it (to the right as
+ * you fly), y up from the floor, and -z the way you fly. Every machine is
+ * built at the tunnel's middle line facing +z, toward the incoming foxes.
  */
 import * as THREE from '../../lib/three/three.module.min.js';
-import { SkyDome, canvasTexture } from '../../lib/three/walls.js';
+import { canvasTexture } from '../../lib/three/walls.js';
 import { buildSpeedster } from '../../shared/speedster3d.js';
 import { buildRobotnik } from '../../shared/robotnik3d.js';
 
@@ -23,8 +25,8 @@ export function glossy(color, extra = {}) {
 }
 const steel = (color = 0x6a7280, roughness = 0.35) => new THREE.MeshStandardMaterial({ color, metalness: 0.85, roughness });
 const glowing = (color, k = 3) => new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(k) });   // (past white: it blooms)
+const additive = (color, k, opacity) => new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(k), transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
 
-const shadows = (g) => { g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); return g; };
 function add(parent, geo, mat, x = 0, y = 0, z = 0) {
 	const m = new THREE.Mesh(geo, mat);
 	m.position.set(x, y, z);
@@ -48,6 +50,9 @@ export function stripeTexture() {
 	return t;
 }
 
+// The tunnels' colours: each tunnel's strip lights (and its name over the walls).
+export const KIND_COLOURS = { plain: 0x8fd4ff, rings: 0xffc21a, danger: 0xff2a20 };
+
 let MATS = null;
 function mats() {
 	if (MATS) return MATS;
@@ -58,13 +63,21 @@ function mats() {
 		bright: steel(0xc8cfd8, 0.18),
 		red: glossy(0xd8262e, { roughness: 0.35 }),
 		yellow: glossy(0xf2b705, { roughness: 0.4 }),
-		rubber: new THREE.MeshStandardMaterial({ color: 0x15161a, roughness: 0.8 }),
 		stripes: new THREE.MeshStandardMaterial({ map: stripes, roughness: 0.55, metalness: 0.2 }),
 		chrome: new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 1, roughness: 0.12 }),
 		gold: glossy(0xffc21a, { metalness: 0.9, roughness: 0.18, emissive: 0x7a4a00, emissiveIntensity: 0.5 }),
+		cap: new THREE.MeshBasicMaterial({ color: 0x000000 }),
+		strip: {},
+		lamp: {},
 	};
-	// (shared by every machine: never disposed with one)
-	for (const m of Object.values(MATS)) { m.userData.shared = true; if (m.map) m.map.userData.shared = true; }
+	for (const [k, c] of Object.entries(KIND_COLOURS)) {
+		MATS.strip[k] = glowing(c, 1.5);
+		MATS.lamp[k] = glowing(c, 2);
+	}
+	// (shared by every tunnel and machine: never disposed with one)
+	const mark = (m) => { m.userData.shared = true; if (m.map) m.map.userData.shared = true; };
+	for (const m of Object.values(MATS)) if (m.isMaterial) mark(m);
+	for (const m of [...Object.values(MATS.strip), ...Object.values(MATS.lamp)]) mark(m);
 	return MATS;
 }
 
@@ -73,12 +86,13 @@ function mats() {
 // Tails: the shared speedster build as the fox, in the player's colour, his
 // two tails swung up over his head and spinning like a helicopter's blades
 // the whole time. Flying low he tucks up; high, he reaches up; hit, he
-// tumbles. The root is at the middle of his body (what touches things).
+// tumbles. The root is at the middle of his body (what touches things), and
+// he faces +Z (the game turns him the way he's flying).
 export function buildFlyer(colour, middle = 0.6) {
 	const root = new THREE.Group();
-	const yaw = new THREE.Group();       // turned to the way he's heading
+	const yaw = new THREE.Group();       // turned a little into a swerve
 	root.add(yaw);
-	const lean = new THREE.Group();      // leaning into the way he's going
+	const lean = new THREE.Group();      // banking into it
 	yaw.add(lean);
 	const tumble = new THREE.Group();    // spinning head over heels when hit
 	lean.add(tumble);
@@ -105,17 +119,35 @@ export function buildFlyer(colour, middle = 0.6) {
 		yaw.rotation.y = st.turn;
 		// a little bob under the rotor
 		s.root.position.y = -middle + Math.sin(time * 9) * 0.03;
-		if (st.hurt) tumble.rotation.z += dt * 12;
-		else tumble.rotation.z *= Math.exp(-dt * 12);
+		if (st.hurt) tumble.rotation.x += dt * 12;
+		else tumble.rotation.x *= Math.exp(-dt * 12);
 	}
 
 	return { root, yaw, pose, setColour: s.setColour };
 }
 
-/* ---------- the belt ---------- */
+// A soft dark blob on the floor under a fox (so you can tell how high he is).
+let blobTex = null;
+export function buildBlob() {
+	if (!blobTex) {
+		blobTex = canvasTexture(64, 64, function (g) {
+			const grad = g.createRadialGradient(32, 32, 0, 32, 32, 31);
+			grad.addColorStop(0, 'rgba(0,0,0,0.7)');
+			grad.addColorStop(1, 'rgba(0,0,0,0)');
+			g.fillStyle = grad;
+			g.fillRect(0, 0, 64, 64);
+		});
+	}
+	const geo = new THREE.PlaneGeometry(1.4, 1.4);
+	geo.rotateX(-Math.PI / 2);
+	return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false }));
+}
 
-// The belt's rubber: dark, ribbed across, yellow chevrons along both edges
-// (u runs along the belt, a metre a tile; v across it).
+/* ---------- the tunnels ---------- */
+
+// The belts' rubber: dark, ribbed across, yellow chevrons along both edges
+// (u runs along the belt; v across it). Every surface of every tunnel shares
+// it, so they all run together (toward the foxes).
 export function beltTexture(aniso = 4) {
 	const t = canvasTexture(256, 256, function (g, w, h) {
 		g.fillStyle = '#1b1c21';
@@ -142,182 +174,213 @@ export function beltTexture(aniso = 4) {
 	return t;
 }
 
-// A ribbon along the path: from s0 to s1, at offsets a and b from the
-// middle line (outward), heights ya and yb; u is s / tile.
-export function ribbon(path, s0, s1, a, b, ya, yb, tile = 1, step = 0.25) {
-	const pos = [], uv = [], idx = [];
-	const n = Math.ceil((s1 - s0) / step);
-	for (let i = 0; i <= n; i++) {
-		const s = s0 + (s1 - s0) * i / n;
-		const p = path.at(s);
-		pos.push(p.x + p.nx * a, ya, p.z + p.nz * a, p.x + p.nx * b, yb, p.z + p.nz * b);
-		uv.push(s / tile, 0, s / tile, 1);
-		if (i < n) {
-			const k = i * 2;
-			idx.push(k, k + 2, k + 1, k + 1, k + 2, k + 3);
-		}
-	}
+// A flat four-cornered piece of belt: a and b at the start, c and d at the
+// end (c across from b, d from a); u from u0 at the start to u1 at the end.
+function quad(a, b, c, d, u0, u1) {
 	const g = new THREE.BufferGeometry();
-	g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-	g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-	g.setIndex(idx);
+	g.setAttribute('position', new THREE.Float32BufferAttribute([...a, ...b, ...c, ...d], 3));
+	g.setAttribute('uv', new THREE.Float32BufferAttribute([u0, 0, u0, 1, u1, 1, u1, 0], 2));
+	g.setIndex([0, 1, 2, 0, 2, 3]);
 	g.computeVertexNormals();
 	return g;
 }
 
-// The conveyor: the moving belt on top, a deep striped body under it, rails
-// along both edges, and legs down to the floor. Returns { group, belt
-// (the moving texture) }.
-export function buildConveyor(path, { y, width, s0, s1, floor, aniso }) {
+const BOX = new THREE.BoxGeometry(1, 1, 1);
+BOX.userData.shared = true;
+
+// A stretch of tunnel, from a0 to a1 metres along (its frame: -z ahead):
+// belts all round (floor, ceiling and both walls), steel ribs every few
+// metres with lamps, strip lights along its four corners in its kind's
+// colour. T: { half, height, rib, tile }.
+export function buildTunnel(a0, a1, kind, T, belt) {
 	const M = mats();
-	const group = new THREE.Group();
-	const tex = beltTexture(aniso);
-	const top = new THREE.Mesh(ribbon(path, s0, s1, -width / 2, width / 2, y, y, 1), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.75, metalness: 0.1 }));
-	top.receiveShadow = true;
-	group.add(top);
-	// the body: striped along the front, dark steel behind
-	const stripes = M.stripes.map.clone();
-	stripes.repeat.set(1, 1);
-	const front = new THREE.Mesh(ribbon(path, s0, s1, -width / 2 - 0.02, -width / 2 - 0.02, y - 1.7, y + 0.08, 2), new THREE.MeshStandardMaterial({ map: stripes, roughness: 0.5, metalness: 0.3, side: THREE.DoubleSide }));
-	group.add(front);
-	// (a dark band over the stripes, so the rail reads)
-	group.add(new THREE.Mesh(ribbon(path, s0, s1, -width / 2 - 0.03, -width / 2 - 0.03, y - 0.28, y + 0.1, 2), M.dark));
-	group.add(new THREE.Mesh(ribbon(path, s0, s1, width / 2, width / 2, y - 1.7, y + 0.2, 2), M.dark));
-	// rails: rounded tubes along both edges
-	for (const off of [-width / 2 - 0.05, width / 2 + 0.05]) {
-		const pts = [];
-		for (let s = s0; s <= s1; s += 0.5) { const p = path.at(s); pts.push(new THREE.Vector3(p.x + p.nx * off, y + 0.12, p.z + p.nz * off)); }
-		const rail = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), pts.length * 2, 0.07, 8), M.bright);
-		rail.castShadow = true;
-		group.add(rail);
+	const g = new THREE.Group();
+	const { half: w, height: h } = T;
+	const u0 = a0 / T.tile, u1 = a1 / T.tile;
+	const z0 = -a0, z1 = -a1;
+	for (const [a, b, c, d] of [
+		[[-w, 0, z0], [w, 0, z0], [w, 0, z1], [-w, 0, z1]],       // the floor
+		[[-w, h, z0], [w, h, z0], [w, h, z1], [-w, h, z1]],       // the ceiling
+		[[-w, 0, z0], [-w, h, z0], [-w, h, z1], [-w, 0, z1]],     // the left wall
+		[[w, 0, z0], [w, h, z0], [w, h, z1], [w, 0, z1]],         // the right wall
+	]) add(g, quad(a, b, c, d, u0, u1), belt);
+	// ribs: two posts and a beam over, and a roller across the floor
+	const ribs = [];
+	for (let a = Math.ceil(a0 / T.rib) * T.rib; a < a1; a += T.rib) ribs.push(a);
+	const parts = new THREE.InstancedMesh(BOX, M.dark, ribs.length * 4);
+	const lamps = new THREE.InstancedMesh(BOX, M.lamp[kind], ribs.length * 2);
+	const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3();
+	const put = (mesh, i, x, y, z, sx, sy, sz) => mesh.setMatrixAt(i, m4.compose(p.set(x, y, z), q, s.set(sx, sy, sz)));
+	ribs.forEach(function (a, i) {
+		put(parts, i * 4, -w + 0.15, h / 2, -a, 0.35, h, 0.5);
+		put(parts, i * 4 + 1, w - 0.15, h / 2, -a, 0.35, h, 0.5);
+		put(parts, i * 4 + 2, 0, h - 0.15, -a, w * 2, 0.35, 0.5);
+		put(parts, i * 4 + 3, 0, 0.05, -a, w * 2, 0.14, 0.3);
+		put(lamps, i * 2, -w + 0.36, h * 0.55, -a, 0.08, 0.9, 0.22);
+		put(lamps, i * 2 + 1, w - 0.36, h * 0.55, -a, 0.08, 0.9, 0.22);
+	});
+	g.add(parts, lamps);
+	// strip lights along the corners
+	const len = a1 - a0;
+	for (const [x, y] of [[-w + 0.12, 0.1], [w - 0.12, 0.1], [-w + 0.12, h - 0.1], [w - 0.12, h - 0.1]]) {
+		const strip = add(g, BOX, M.strip[kind], x, y, -(a0 + a1) / 2);
+		strip.scale.set(0.1, 0.1, len);
 	}
-	// legs, every few metres
-	const leg = new THREE.BoxGeometry(0.3, y - 1.7 - floor, 0.3);
-	for (let s = Math.ceil(s0 / 3) * 3; s < s1; s += 3) {
-		const p = path.at(s);
-		for (const off of [-width / 2 + 0.3, width / 2 - 0.3]) {
-			const m = add(group, leg, M.dark, p.x + p.nx * off, (y - 1.7 + floor) / 2, p.z + p.nz * off);
-			m.castShadow = true;
-		}
+	return g;
+}
+
+// The dark end of a tunnel not (yet) taken.
+export function buildCap(a, T) {
+	const m = new THREE.Mesh(new THREE.PlaneGeometry(T.half * 2, T.height), mats().cap);
+	m.position.set(0, T.height / 2, -a);
+	return m;
+}
+
+// A junction: a square room where tunnels meet, a steel grate floor and
+// ceiling, a post at each corner, and a striped barrier with a red X on
+// every side with no tunnel. open: { left, ahead, right } (the way in is
+// always open: +z).
+let barrierTex = null, grateTex = null;
+export function buildJunction(open, T) {
+	const M = mats();
+	const g = new THREE.Group();
+	const { half: w, height: h } = T;
+	if (!grateTex) {
+		grateTex = canvasTexture(128, 128, function (c, cw, ch) {
+			c.fillStyle = '#2a2d34';
+			c.fillRect(0, 0, cw, ch);
+			c.fillStyle = '#121318';
+			for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) c.fillRect(i * 16 + 3, j * 16 + 3, 10, 10);
+		});
+		grateTex.wrapS = grateTex.wrapT = THREE.RepeatWrapping;
+		grateTex.repeat.set(4, 4);
+		grateTex.userData.shared = true;
+		barrierTex = canvasTexture(512, 400, function (c, cw, ch) {
+			c.fillStyle = '#1e2026';
+			c.fillRect(0, 0, cw, ch);
+			c.fillStyle = '#f2b705';
+			for (let x = -60; x < cw + 60; x += 60) {
+				for (const y of [0, ch - 40]) {
+					c.beginPath(); c.moveTo(x, y + 40); c.lineTo(x + 30, y + 40); c.lineTo(x + 70, y); c.lineTo(x + 40, y); c.fill();
+				}
+			}
+			c.strokeStyle = '#ff3020';
+			c.lineWidth = 40;
+			c.lineCap = 'round';
+			c.beginPath(); c.moveTo(cw / 2 - 90, ch / 2 - 90); c.lineTo(cw / 2 + 90, ch / 2 + 90);
+			c.moveTo(cw / 2 + 90, ch / 2 - 90); c.lineTo(cw / 2 - 90, ch / 2 + 90); c.stroke();
+		});
+		barrierTex.userData.shared = true;
 	}
-	return { group, belt: tex };
+	const grate = new THREE.MeshStandardMaterial({ map: grateTex, metalness: 0.7, roughness: 0.4 });
+	const floor = add(g, new THREE.PlaneGeometry(w * 2, w * 2), grate, 0, 0, 0);
+	floor.rotation.x = -Math.PI / 2;
+	const ceil = add(g, new THREE.PlaneGeometry(w * 2, w * 2), grate, 0, h, 0);
+	ceil.rotation.x = Math.PI / 2;
+	for (const [x, z] of [[-w, -w], [w, -w], [-w, w], [w, w]]) {
+		const post = add(g, BOX, M.dark, x, h / 2, z);
+		post.scale.set(0.7, h, 0.7);
+		const lamp = add(g, BOX, M.stripes, x, 0.4, z);
+		lamp.scale.set(0.76, 0.8, 0.76);
+	}
+	const barrier = new THREE.MeshStandardMaterial({ map: barrierTex, emissiveMap: barrierTex, emissive: 0xff6040, emissiveIntensity: 0.5, roughness: 0.5, metalness: 0.3 });
+	const sides = { left: [-w, 0, Math.PI / 2], ahead: [0, -w, 0], right: [w, 0, -Math.PI / 2] };
+	for (const [k, [x, z, ry]] of Object.entries(sides)) {
+		if (open[k]) continue;
+		const b = add(g, new THREE.PlaneGeometry(w * 2, h), barrier, x, h / 2, z);
+		b.rotation.y = ry;
+	}
+	return g;
 }
 
 /* ---------- the machines ---------- */
 
-// (a machine's mast: standing at the back edge of the belt, and up)
-function mast(g, height) {
-	const M = mats();
-	add(g, new THREE.BoxGeometry(0.5, height + 1.7, 0.5), M.dark, 0, (height - 1.7) / 2, -1.65);
-	add(g, new THREE.BoxGeometry(0.9, 0.3, 0.9), M.yellow, 0, 0.15, -1.65);
-}
+// (the cross-section's cells: B.u, the lanes' edges across, B.v, the levels'
+// edges up: three by three)
+const cell = (B, lane, level) => ({ x0: B.u[lane], x1: B.u[lane + 1], y0: B.v[level], y1: B.v[level + 1] });
 
-// A press: a heavy striped steel ram on a piston, hanging from a beam over
-// the belt, a warning lamp on top. userData: ram (its bottom at ram.position.y),
-// piston, lamp (a material, its brightness the warning).
-export function buildPress(top = 5.4) {
+// A laser grid: a frame round the tunnel, and in every blocked cell a curtain
+// of red beams. userData: glow (a material, to flicker).
+export function buildGrid(blocked, B) {
 	const M = mats();
 	const g = new THREE.Group();
-	mast(g, top + 0.4);
-	add(g, new THREE.BoxGeometry(0.7, 0.55, 2.4), M.steel, 0, top + 0.1, -0.55);
-	const ram = new THREE.Group();
-	g.add(ram);
-	add(ram, new THREE.BoxGeometry(2.0, 0.85, 2.0), M.dark, 0, 0.6, 0);
-	const band = add(ram, new THREE.BoxGeometry(2.04, 0.36, 2.04), M.stripes, 0, 0.62, 0);
-	band.material = M.stripes.clone();
-	band.material.map = M.stripes.map.clone();
-	band.material.userData = {};
-	band.material.map.userData = {};
-	band.material.map.repeat.set(2, 0.6);
-	add(ram, new THREE.BoxGeometry(2.1, 0.18, 2.1), M.steel, 0, 0.09, 0);   // (the striking plate)
-	add(ram, new THREE.BoxGeometry(1.3, 0.25, 1.3), M.steel, 0, 1.15, 0);
-	const piston = add(g, new THREE.CylinderGeometry(0.2, 0.2, 1, 16), M.chrome, 0, 0, 0);
-	const lampMat = new THREE.MeshBasicMaterial({ color: 0xff2a10 });
-	add(g, new THREE.SphereGeometry(0.2, 14, 10), lampMat, 0, top + 0.5, 0.45);
-	add(g, new THREE.CylinderGeometry(0.24, 0.24, 0.1, 14), M.dark, 0, top + 0.38, 0.45);
-	g.userData = { ram, piston, lamp: lampMat, top };
-	return shadows(g);
-}
-
-// A robot arm: a mast with an arm out over the belt, and from its end a
-// jointed arm swinging along the belt, a three-fingered claw and a red eye
-// at its end. userData: swing (turn its rotation.z), eye (a material),
-// pivot (the swing's height), reach (pivot to the claw's middle).
-export function buildArm(pivot = 5.6, reach = 3.7) {
-	const M = mats();
-	const g = new THREE.Group();
-	mast(g, pivot + 0.5);
-	add(g, new THREE.BoxGeometry(0.8, 0.8, 0.9), M.yellow, 0, pivot + 0.5, -1.65);
-	add(g, new THREE.BoxGeometry(0.45, 0.45, 1.8), M.steel, 0, pivot + 0.5, -0.75);
-	add(g, new THREE.CylinderGeometry(0.4, 0.4, 0.6, 20), M.dark, 0, pivot, 0).rotation.x = Math.PI / 2;
-	const swing = new THREE.Group();
-	swing.position.y = pivot;
-	g.add(swing);
-	add(swing, new THREE.BoxGeometry(0.42, reach - 0.6, 0.42), M.yellow, 0, -(reach - 0.6) / 2, 0);
-	add(swing, new THREE.BoxGeometry(0.3, 0.5, 0.5), M.dark, 0, -reach * 0.45, 0);   // (a hydraulic sleeve)
-	add(swing, new THREE.SphereGeometry(0.34, 18, 12), M.steel, 0, -reach + 0.55, 0);
-	const claw = new THREE.Group();
-	claw.position.y = -reach;
-	swing.add(claw);
-	add(claw, new THREE.CylinderGeometry(0.42, 0.3, 0.4, 18), M.dark, 0, 0.3, 0);
-	for (let i = 0; i < 3; i++) {
-		const a = i / 3 * TAU;
-		const finger = new THREE.Group();
-		finger.rotation.y = a;
-		claw.add(finger);
-		const f = add(finger, new THREE.BoxGeometry(0.12, 0.6, 0.16), M.bright, 0.32, -0.12, 0);
-		f.rotation.z = -0.45;
-		const tip = add(finger, new THREE.ConeGeometry(0.08, 0.3, 8), M.bright, 0.38, -0.5, 0);
-		tip.rotation.z = Math.PI + 0.5;
+	const w = B.u[3], h = B.v[3];
+	for (const [x, y, sx, sy] of [[-w + 0.2, h / 2, 0.4, h], [w - 0.2, h / 2, 0.4, h], [0, h - 0.2, w * 2, 0.4], [0, 0.1, w * 2, 0.2]]) {
+		const m = add(g, BOX, M.stripes, x, y, 0);
+		m.scale.set(sx, sy, 0.35);
 	}
-	const eyeMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 0.3, 0.2) });
-	add(claw, new THREE.SphereGeometry(0.12, 12, 8), eyeMat, 0, 0.3, 0.38);
-	g.userData = { swing, eye: eyeMat, pivot, reach };
-	return shadows(g);
-}
-
-// A fire jet: a grated burner on the belt, its ring glowing hotter as it's
-// about to fire, then a roaring column of flame. userData: flame (scale y
-// 0..1), flames (materials), ring (a material).
-export function buildJet(height = 4.6) {
-	const M = mats();
-	const g = new THREE.Group();
-	add(g, new THREE.BoxGeometry(1.5, 0.3, 1.8), M.dark, 0, 0.15, 0);
-	add(g, new THREE.BoxGeometry(1.56, 0.12, 1.86), M.stripes, 0, 0.26, 0);
-	add(g, new THREE.CylinderGeometry(0.42, 0.5, 0.35, 20), M.steel, 0, 0.45, 0);
-	const ringMat = new THREE.MeshBasicMaterial({ color: 0x401008 });
-	add(g, new THREE.TorusGeometry(0.36, 0.06, 8, 24), ringMat, 0, 0.63, 0).rotation.x = Math.PI / 2;
-	const flame = new THREE.Group();
-	flame.position.y = 0.6;
-	g.add(flame);
-	const flames = [];
-	for (const [r, c, k, o] of [[0.62, 0xff4a10, 1.6, 0.75], [0.44, 0xff9a2a, 2.2, 0.85], [0.24, 0xfff0a0, 2.8, 1]]) {
-		const m = new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(k), transparent: true, opacity: o, depthWrite: false, blending: THREE.AdditiveBlending });
-		const geo = new THREE.CylinderGeometry(r * 0.5, r, height, 18, 1, true);
-		geo.translate(0, height / 2, 0);
-		add(flame, geo, m);
-		flames.push(m);
+	const beam = glowing(0xff2a20, 4);
+	const glow = additive(0xff2010, 0.9, 0.35);
+	for (const [lane, level] of blocked) {
+		const c = cell(B, lane, level);
+		const cw = c.x1 - c.x0 - 0.15, ch = c.y1 - c.y0 - 0.15;
+		const cx = (c.x0 + c.x1) / 2, cy = (c.y0 + c.y1) / 2;
+		add(g, new THREE.PlaneGeometry(cw, ch), glow, cx, cy, 0);
+		for (let k = 0; k < 4; k++) {
+			const b = add(g, BOX, beam, cx, c.y0 + 0.1 + (ch - 0.05) * k / 3, 0);
+			b.scale.set(cw, 0.05, 0.05);
+		}
 	}
-	flame.scale.y = 0.001;
-	g.userData = { flame, flames, ring: ringMat, height };
-	g.traverse((o) => { if (o.isMesh && o.material.blending !== THREE.AdditiveBlending) { o.castShadow = true; o.receiveShadow = true; } });
+	g.userData = { glow };
 	return g;
 }
 
-// A buzzsaw: a big toothed chrome disc spinning up out of a slot in the belt.
-// userData: disc (turn its rotation.z), radius.
-export function buildSaw(radius = 1.5) {
+// A crate: a steel-banded orange crate with the hazard mark.
+let crateTex = null;
+export function buildCrate(size = 2) {
+	if (!crateTex) {
+		crateTex = canvasTexture(128, 128, function (g, w, h) {
+			g.fillStyle = '#c8641e';
+			g.fillRect(0, 0, w, h);
+			g.fillStyle = '#a24c12';
+			for (let y = 0; y < h; y += 26) g.fillRect(0, y, w, 3);
+			g.strokeStyle = '#3a3f48';
+			g.lineWidth = 12;
+			g.strokeRect(6, 6, w - 12, h - 12);
+			g.lineWidth = 9;
+			g.beginPath(); g.moveTo(10, 10); g.lineTo(w - 10, h - 10); g.stroke();
+			g.fillStyle = '#f2b705';
+			g.beginPath(); g.moveTo(64, 34); g.lineTo(96, 92); g.lineTo(32, 92); g.closePath(); g.fill();
+			g.fillStyle = '#16161a';
+			g.fillRect(60, 52, 8, 22);
+			g.fillRect(60, 79, 8, 7);
+		});
+		crateTex.userData.shared = true;
+	}
+	const g = new THREE.Group();
+	add(g, new THREE.BoxGeometry(size, size, size), new THREE.MeshStandardMaterial({ map: crateTex, roughness: 0.6, metalness: 0.15 }), 0, size / 2, 0);
+	return g;
+}
+
+// Crates riding the floor belt, one in every blocked cell (stacked for the
+// middle level).
+export function buildCrates(blocked, B) {
+	const g = new THREE.Group();
+	for (const [lane, level] of blocked) {
+		const c = cell(B, lane, level);
+		const size = Math.min(c.x1 - c.x0, c.y1 - c.y0) - 0.15;
+		const crate = buildCrate(size);
+		crate.position.set((c.x0 + c.x1) / 2, c.y0, (Math.random() - 0.5) * 0.3);
+		crate.rotation.y = (Math.random() - 0.5) * 0.2;
+		g.add(crate);
+	}
+	return g;
+}
+
+// A buzzsaw: a big toothed chrome disc standing up out of a striped slot in
+// the floor, spinning, facing you. userData: disc (turn its rotation.z; its
+// position.x slides it across), radius.
+export function buildSaw(radius = 2, centre = 0.9) {
 	const M = mats();
 	const g = new THREE.Group();
-	add(g, new THREE.BoxGeometry(radius * 2.3, 0.22, 0.9), M.stripes, 0, 0.11, 0);
-	add(g, new THREE.BoxGeometry(radius * 2.1, 0.06, 0.2), new THREE.MeshBasicMaterial({ color: 0x050505 }), 0, 0.23, 0);
 	const disc = new THREE.Group();
-	disc.position.y = 0.1;
+	disc.position.y = centre;
 	g.add(disc);
+	add(disc, new THREE.BoxGeometry(radius * 1.6, 0.3, 1.2), M.stripes, 0, -centre + 0.15, 0);   // (the slot, sliding with it)
 	const blade = add(disc, new THREE.CylinderGeometry(radius * 0.9, radius * 0.9, 0.07, 48), M.chrome);
 	blade.rotation.x = Math.PI / 2;
-	const teeth = 26;
-	const tooth = new THREE.ConeGeometry(radius * 0.13, radius * 0.22, 4);
+	const teeth = 28;
+	const tooth = new THREE.ConeGeometry(radius * 0.12, radius * 0.2, 4);
 	for (let i = 0; i < teeth; i++) {
 		const a = i / teeth * TAU;
 		const t = add(disc, tooth, M.bright, Math.cos(a) * radius * 0.96, Math.sin(a) * radius * 0.96, 0);
@@ -332,78 +395,112 @@ export function buildSaw(radius = 1.5) {
 		const a = i / 4 * TAU;
 		add(disc, new THREE.BoxGeometry(radius * 0.5, 0.06, 0.09), M.dark, Math.cos(a) * radius * 0.5, Math.sin(a) * radius * 0.5, 0).rotation.z = a;
 	}
-	g.userData = { disc, radius };
-	return shadows(g);
+	g.userData = { disc, radius, centre };
+	return g;
 }
 
-// A laser gate: two posts at the back of the belt, a glowing red beam
-// between them at each height. userData: beams (meshes), beam (a material),
-// emitters (a material), half (half its span).
-export function buildLaser(heights, half = 1.7) {
+// Crushers: in each crushed lane, a heavy striped ram on a piston from the
+// ceiling, slamming down to the floor, its lamp flashing before it drops,
+// and stripes on the floor under it. userData: rams [{ lane, ram, piston,
+// lamp (a material) }], top (the ram's bottom, up).
+export function buildCrusher(lanes, B) {
 	const M = mats();
 	const g = new THREE.Group();
-	const tall = Math.max(...heights) + 0.8;
-	const emitMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 0.2, 0.15) });
-	for (const x of [-half, half]) {
-		add(g, new THREE.BoxGeometry(0.34, tall + 1.7, 0.34), M.dark, x, (tall - 1.7) / 2, -1.35);
-		add(g, new THREE.BoxGeometry(0.4, 0.3, 0.4), M.yellow, x, tall, -1.35);
-		for (const h of heights) add(g, new THREE.BoxGeometry(0.18, 0.22, 0.2), emitMat, x - Math.sign(x) * 0.2, h, -1.35);
+	const h = B.v[3];
+	const rams = [];
+	for (const lane of lanes) {
+		const c = cell(B, lane, 0);
+		const x = (c.x0 + c.x1) / 2, cw = c.x1 - c.x0 - 0.2;
+		add(g, BOX, M.dark, x, h - 0.2, 0).scale.set(cw * 0.6, 0.4, 1.4);
+		const mark = add(g, BOX, M.stripes, x, 0.03, 0);
+		mark.scale.set(cw, 0.06, 1.6);
+		const ram = new THREE.Group();
+		ram.position.x = x;
+		g.add(ram);
+		add(ram, BOX, M.dark, 0, 0.5, 0).scale.set(cw, 0.7, 1.5);
+		const band = add(ram, BOX, M.stripes, 0, 0.55, 0);
+		band.scale.set(cw + 0.04, 0.3, 1.54);
+		add(ram, BOX, M.steel, 0, 0.08, 0).scale.set(cw + 0.08, 0.16, 1.6);
+		const piston = add(g, new THREE.CylinderGeometry(0.22, 0.22, 1, 16), M.chrome, x, 0, 0);
+		const lampMat = new THREE.MeshBasicMaterial({ color: 0xff2a10 });
+		add(ram, new THREE.SphereGeometry(0.16, 12, 8), lampMat, 0, 0.62, 0.8);
+		rams.push({ lane, ram, piston, lamp: lampMat });
 	}
-	const beamMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 0.25, 0.2) });
-	const glowMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.2, 0.08, 0.06), transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending });
-	const beams = [];
-	for (const h of heights) {
-		const beam = new THREE.Group();
-		beam.position.set(0, h, -1.35);
-		g.add(beam);
-		add(beam, new THREE.CylinderGeometry(0.05, 0.05, half * 2 - 0.4, 8), beamMat).rotation.z = Math.PI / 2;
-		add(beam, new THREE.CylinderGeometry(0.16, 0.16, half * 2 - 0.4, 10, 1, true), glowMat).rotation.z = Math.PI / 2;
-		beams.push(beam);
-	}
-	g.userData = { beams, beam: beamMat, glow: glowMat, emitters: emitMat, half };
-	g.traverse((o) => { if (o.isMesh && o.material === M.dark) { o.castShadow = true; o.receiveShadow = true; } });
+	g.userData = { rams, top: h - 1.1 };
 	return g;
 }
 
-// A crate: a steel-banded orange crate with the hazard mark, dropped onto
-// the belt from the dark above.
-let crateTex = null;
-export function buildCrate(size = 1.6) {
-	if (!crateTex) crateTex = canvasTexture(128, 128, function (g, w, h) {
-		g.fillStyle = '#c8641e';
-		g.fillRect(0, 0, w, h);
-		g.fillStyle = '#a24c12';
-		for (let y = 0; y < h; y += 26) g.fillRect(0, y, w, 3);
-		g.strokeStyle = '#3a3f48';
-		g.lineWidth = 12;
-		g.strokeRect(6, 6, w - 12, h - 12);
-		g.lineWidth = 9;
-		g.beginPath(); g.moveTo(10, 10); g.lineTo(w - 10, h - 10); g.stroke();
-		g.fillStyle = '#f2b705';
-		g.beginPath(); g.moveTo(64, 34); g.lineTo(96, 92); g.lineTo(32, 92); g.closePath(); g.fill();
-		g.fillStyle = '#16161a';
-		g.fillRect(60, 52, 8, 22);
-		g.fillRect(60, 79, 8, 7);
-	});
-	crateTex.userData.shared = true;
+// A robot arm hanging from the ceiling, swinging from side to side across
+// the tunnel, a three-fingered claw and a red eye at its end. userData:
+// swing (turn its rotation.z), eye (a material), pivot (its height), reach
+// (pivot to the claw's middle).
+export function buildArm(B, reach = 3.3) {
+	const M = mats();
 	const g = new THREE.Group();
-	const box = add(g, new THREE.BoxGeometry(size, size, size), new THREE.MeshStandardMaterial({ map: crateTex, roughness: 0.6, metalness: 0.15 }), 0, size / 2, 0);
-	box.castShadow = box.receiveShadow = true;
-	g.userData = { size };
+	const h = B.v[3];
+	const pivot = h - 0.35;
+	add(g, BOX, M.yellow, 0, h - 0.15, 0).scale.set(1.4, 0.3, 1.2);
+	add(g, new THREE.CylinderGeometry(0.36, 0.36, 0.7, 20), M.dark, 0, pivot, 0).rotation.x = Math.PI / 2;
+	const swing = new THREE.Group();
+	swing.position.y = pivot;
+	g.add(swing);
+	add(swing, new THREE.BoxGeometry(0.42, reach - 0.6, 0.42), M.yellow, 0, -(reach - 0.6) / 2, 0);
+	add(swing, new THREE.BoxGeometry(0.3, 0.5, 0.5), M.dark, 0, -reach * 0.45, 0);   // (a hydraulic sleeve)
+	add(swing, new THREE.SphereGeometry(0.34, 18, 12), M.steel, 0, -reach + 0.55, 0);
+	const claw = new THREE.Group();
+	claw.position.y = -reach;
+	swing.add(claw);
+	add(claw, new THREE.CylinderGeometry(0.42, 0.3, 0.4, 18), M.dark, 0, 0.3, 0);
+	for (let i = 0; i < 3; i++) {
+		const finger = new THREE.Group();
+		finger.rotation.y = i / 3 * TAU;
+		claw.add(finger);
+		add(finger, new THREE.BoxGeometry(0.12, 0.6, 0.16), M.bright, 0.32, -0.12, 0).rotation.z = -0.45;
+		add(finger, new THREE.ConeGeometry(0.08, 0.3, 8), M.bright, 0.38, -0.5, 0).rotation.z = Math.PI + 0.5;
+	}
+	const eyeMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 0.3, 0.2) });
+	add(claw, new THREE.SphereGeometry(0.12, 12, 8), eyeMat, 0, 0.3, 0.38);
+	g.userData = { swing, eye: eyeMat, pivot, reach };
 	return g;
 }
 
-// A drop's warning: a red glowing ring on the belt under where it'll land.
-export function buildTarget() {
-	const geo = new THREE.RingGeometry(0.55, 0.8, 32);
-	geo.rotateX(-Math.PI / 2);
-	geo.translate(0, 0.03, 0);
-	return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: new THREE.Color(2.5, 0.2, 0.1), transparent: true, opacity: 0.8, depthWrite: false }));
+// Fire jets: a row of burners in both walls at each burning level, their
+// rings glowing hotter as they're about to fire, then a roaring sheet of
+// flame right across the tunnel. userData: rows [{ level, flame (scale x
+// 0..1), rings (a material) }].
+export function buildJets(levels, B) {
+	const M = mats();
+	const g = new THREE.Group();
+	const w = B.u[3];
+	const rows = [];
+	for (const level of levels) {
+		const y = (B.v[level] + B.v[level + 1]) / 2;
+		const ringMat = new THREE.MeshBasicMaterial({ color: 0x401008 });
+		for (const sx of [-1, 1]) {
+			const n = add(g, new THREE.CylinderGeometry(0.4, 0.5, 0.6, 18), M.steel, sx * (w - 0.3), y, 0);
+			n.rotation.z = Math.PI / 2;
+			const r = add(g, new THREE.TorusGeometry(0.34, 0.07, 8, 24), ringMat, sx * (w - 0.62), y, 0);
+			r.rotation.y = Math.PI / 2;
+			add(g, BOX, M.stripes, sx * (w - 0.1), y, 0).scale.set(0.2, 1.3, 1.3);
+		}
+		const flame = new THREE.Group();
+		flame.position.y = y;
+		g.add(flame);
+		for (const [r, c, k, o] of [[0.75, 0xff4a10, 1.6, 0.7], [0.5, 0xff9a2a, 2.2, 0.8], [0.25, 0xfff0a0, 2.8, 1]]) {
+			const geo = new THREE.CylinderGeometry(r, r, w * 2 - 1.2, 16, 1, true);
+			geo.rotateZ(Math.PI / 2);
+			add(flame, geo, additive(c, k, o));
+		}
+		flame.scale.x = 0.001;
+		rows.push({ level, flame, rings: ringMat });
+	}
+	g.userData = { rows };
+	return g;
 }
 
 /* ---------- rings ---------- */
 
-const RING_GEO = new THREE.TorusGeometry(0.3, 0.075, 12, 32);
+const RING_GEO = new THREE.TorusGeometry(0.32, 0.08, 12, 32);
 RING_GEO.userData.shared = true;
 export function buildRing() {
 	const g = new THREE.Group();
@@ -433,8 +530,8 @@ export function sparkleTexture() {
 /* ---------- Robotnik ---------- */
 
 // Robotnik in his egg pod: a silver half egg with a red band, a windscreen,
-// a jet glowing under it, him standing in it. userData: robotnik (from
-// buildRobotnik), jet (a material).
+// a jet glowing under it, him standing in it, facing +Z. userData: robotnik
+// (from buildRobotnik), jetMesh.
 export function buildEggPod() {
 	const M = mats();
 	const g = new THREE.Group();
@@ -449,146 +546,13 @@ export function buildEggPod() {
 	// the windscreen, round the front (+Z)
 	const glass = add(pod, new THREE.SphereGeometry(1.02, 32, 12, Math.PI / 2 - 0.9, 1.8, Math.PI * 0.3, Math.PI * 0.14), new THREE.MeshPhysicalMaterial({ color: 0x8fd0ff, roughness: 0.05, transparent: true, opacity: 0.35, clearcoat: 1, side: THREE.DoubleSide }));
 	glass.position.y = 0.55;
-	const jetMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 2.2, 3.2), transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending });
-	const jet = add(pod, new THREE.ConeGeometry(0.35, 1.1, 18, 1, true), jetMat, 0, -0.75, 0);
+	const jet = add(pod, new THREE.ConeGeometry(0.35, 1.1, 18, 1, true), additive(0xa0c8ff, 2.2, 0.85), 0, -0.75, 0);
 	jet.rotation.x = Math.PI;
 	add(pod, new THREE.CylinderGeometry(0.32, 0.42, 0.3, 18), M.dark, 0, -0.36, 0);
 	const robotnik = buildRobotnik();
 	robotnik.root.position.y = -0.15;
-	robotnik.root.rotation.y = Math.PI;   // (he's built facing -Z: turned to face the room)
+	robotnik.root.rotation.y = Math.PI;   // (he's built facing -Z)
 	g.add(robotnik.root);
-	g.userData = { robotnik, jet: jetMat, jetMesh: jet };
-	return shadows(g);
-}
-
-/* ---------- the factory ---------- */
-
-// The hall's own darkness: soot black overhead with the cold glow of strip
-// lights, and the molten orange of the furnaces low down all round.
-const SKY = `
-	uniform float heat;
-	vec3 skyColor(vec3 d) {
-		float up = d.y;
-		vec3 col = mix(vec3(0.05, 0.035, 0.03), vec3(0.012, 0.016, 0.026), smoothstep(-0.1, 0.6, up));
-		col += vec3(1.1, 0.38, 0.08) * (0.55 + 0.25 * heat) * exp(-abs(up + 0.08) * 9.0);
-		col += vec3(0.35, 0.5, 0.7) * 0.25 * smoothstep(0.55, 0.95, up);
-		return col;
-	}
-`;
-
-// The factory hall: the sky (and the light it gives), the walls a way back
-// on all sides (panelled steel, furnace windows glowing), girders, pipes
-// along the walls, a floor, strip lights high up and amber lamps that spin.
-// Returns { group, sky, update(time) }.
-export function buildFactory(renderer, scene, { far, floor, aniso }) {
-	const M = mats();
-	const group = new THREE.Group();
-	const sky = new SkyDome(SKY, { heat: { value: 0 } }, 900);
-	scene.add(sky);
-	scene.environment = sky.environment(renderer);
-
-	// the walls: one panelled texture, its windows glowing (an emissive map)
-	const paint = (glow) => function (g, w, h) {
-		g.fillStyle = glow ? '#000' : '#23262d';
-		g.fillRect(0, 0, w, h);
-		if (!glow) {
-			for (let x = 0; x < w; x += 128) for (let y = 0; y < h; y += 96) {
-				g.fillStyle = (x / 128 + y / 96) % 2 ? '#2a2e36' : '#262930';
-				g.fillRect(x + 3, y + 3, 122, 90);
-				g.fillStyle = '#3a3f49';
-				for (const [cx, cy] of [[10, 10], [118, 10], [10, 86], [118, 86]]) g.fillRect(x + cx - 2, y + cy - 2, 4, 4);
-			}
-			g.fillStyle = '#f2b705';
-			for (let x = 0; x < w; x += 24) { g.beginPath(); g.moveTo(x, h - 40); g.lineTo(x + 12, h - 40); g.lineTo(x + 24, h - 24); g.lineTo(x + 12, h - 24); g.fill(); }
-		}
-		// tall furnace windows, molten behind
-		for (let x = 64; x < w; x += 256) {
-			const grad = g.createLinearGradient(0, 300, 0, 620);
-			grad.addColorStop(0, glow ? '#ff8a1c' : '#5a2a10');
-			grad.addColorStop(1, glow ? '#ffd04a' : '#7a3a12');
-			g.fillStyle = grad;
-			g.fillRect(x, 300, 128, 320);
-			g.fillStyle = glow ? '#000' : '#16181d';
-			for (let k = 1; k < 4; k++) g.fillRect(x + k * 32 - 3, 300, 6, 320);
-			for (let k = 1; k < 4; k++) g.fillRect(x, 300 + k * 80 - 3, 128, 6);
-		}
-	};
-	const wallTex = canvasTexture(1024, 768, paint(false));
-	const glowTex = canvasTexture(1024, 768, paint(true));
-	for (const t of [wallTex, glowTex]) { t.wrapS = THREE.RepeatWrapping; t.repeat.set(2, 1); t.anisotropy = aniso; }
-	const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, emissiveMap: glowTex, emissive: 0xffffff, emissiveIntensity: 1.2, roughness: 0.6, metalness: 0.5 });
-	const tall = far * 1.15;
-	for (let w = 0; w < 3; w++) {
-		const m = new THREE.Mesh(new THREE.PlaneGeometry(far * 2, tall), wallMat);
-		m.rotation.y = [Math.PI / 2, 0, -Math.PI / 2][w];
-		m.position.set([-far, 0, far][w], floor + tall / 2, [0, -far, 0][w]);
-		m.receiveShadow = true;
-		group.add(m);
-	}
-	// the floor: dark concrete, yellow lines
-	const floorTex = canvasTexture(256, 256, function (g, w, h) {
-		g.fillStyle = '#1d1f23';
-		g.fillRect(0, 0, w, h);
-		for (let i = 0; i < 400; i++) { g.fillStyle = `rgba(${Math.random() < 0.5 ? '255,255,255' : '0,0,0'},0.04)`; g.fillRect(Math.random() * w, Math.random() * h, 3, 3); }
-		g.fillStyle = '#a07a10';
-		g.fillRect(0, 120, w, 10);
-		g.fillRect(120, 0, 10, h);
-	});
-	floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
-	floorTex.repeat.set(far / 3, far / 3);
-	floorTex.anisotropy = aniso;
-	const ground = new THREE.Mesh(new THREE.PlaneGeometry(far * 2, far * 2), new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.85, metalness: 0.2 }));
-	ground.rotation.x = -Math.PI / 2;
-	ground.position.y = floor;
-	ground.receiveShadow = true;
-	group.add(ground);
-
-	// girders up the walls, a beam across the top, pipes along them
-	const lamps = [];
-	const girder = new THREE.BoxGeometry(0.8, tall, 0.8);
-	const pipeMat = steel(0x8a5a3a, 0.4);
-	const greenPipe = steel(0x3a6a5a, 0.4);
-	for (let w = 0; w < 3; w++) {
-		const side = new THREE.Group();
-		side.rotation.y = [Math.PI / 2, 0, -Math.PI / 2][w];
-		group.add(side);
-		const d = far - 1.2;
-		for (let x = -far + 4; x <= far - 4; x += 8) add(side, girder, M.dark, x, floor + tall / 2, -d);
-		add(side, new THREE.BoxGeometry(far * 2, 0.9, 0.9), M.dark, 0, floor + 11, -d + 0.2);
-		for (const [y, r, mat] of [[floor + 4.2, 0.45, pipeMat], [floor + 5.3, 0.3, greenPipe], [floor + 13, 0.6, pipeMat]]) {
-			const p = add(side, new THREE.CylinderGeometry(r, r, far * 2, 14), mat, 0, y, -d + 0.9);
-			p.rotation.z = Math.PI / 2;
-			for (let x = -far + 6; x < far; x += 8) add(side, new THREE.CylinderGeometry(r * 1.25, r * 1.25, 0.25, 14), M.dark, x, y, -d + 0.9).rotation.z = Math.PI / 2;
-		}
-		// strip lights high up, amber lamps on the girders
-		for (let x = -far + 8; x < far - 4; x += 8) {
-			add(side, new THREE.BoxGeometry(3, 0.15, 0.3), glowing(0xcfe4ff, 2.2), x, floor + 15, -d + 1.5);
-			const lamp = new THREE.Group();
-			lamp.position.set(x - 4, floor + 9, -d + 0.6);
-			side.add(lamp);
-			add(lamp, new THREE.CylinderGeometry(0.22, 0.26, 0.3, 14), M.dark);
-			const beam = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.6, 16, 1, true), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 1.0, 0.1), transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
-			beam.rotation.z = Math.PI / 2;
-			beam.position.x = 0.8;
-			const spin = new THREE.Group();
-			spin.position.y = 0.25;
-			lamp.add(spin);
-			spin.add(beam);
-			add(spin, new THREE.SphereGeometry(0.2, 12, 8), glowing(0xffa020, 2.4));
-			lamps.push({ spin, ph: Math.random() * TAU });
-		}
-	}
-	scene.add(group);
-
-	return {
-		group, sky,
-		update(time, heat = 0) {
-			sky.uniforms.heat.value = heat;
-			for (const l of lamps) l.spin.rotation.y = time * 4 + l.ph;
-		},
-		dispose() {
-			if (sky.env) sky.env.dispose();
-			for (const t of [wallTex, glowTex, floorTex]) t.dispose();
-		},
-	};
+	g.userData = { robotnik, jetMesh: jet };
+	return g;
 }

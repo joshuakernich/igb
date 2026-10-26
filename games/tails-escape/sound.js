@@ -1,14 +1,15 @@
 /*
  * Tails Escape: the sound, all synthesised. The hum of Tails' tail rotor,
- * the clank and rumble of the factory, a hammer of a thud for a press, the
- * whoosh of a fire jet, the zap of a laser gate, a crate landing, the ping
- * of a ring, a clang and a jangle of rings for a hit, a chime for every
- * machine slipped past, and a driving, clanky tune scheduled a beat ahead
- * from tick().
+ * the hum of the factory, a hammer of a thud for a crusher, the whoosh of a
+ * fire jet, the ping of a ring, a clang and a jangle of rings for a hit, a
+ * chime for every machine slipped past, an alert as a junction comes up, a
+ * blip for every tap, a swoop round a corner, and a driving, clanky tune
+ * scheduled a beat ahead from tick().
  *
  *   const sound = createSound();
  *   sound.ring(pan);  sound.slam(pan);  sound.whoosh(pan);  sound.zap(pan);  sound.thud(pan);
  *   sound.hit(pan);  sound.clear(pan);  sound.hop(pan);  sound.dive(pan);  sound.faster();
+ *   sound.prompt();  sound.vote(pan);  sound.turn(pan);
  *   sound.go();  sound.finish();  sound.laugh();  sound.rotor(0..1);
  *   sound.music(true);  sound.tick();   // every frame
  */
@@ -200,6 +201,32 @@ export function createSound() {
 		sound.resume();
 		const t = now();
 		tone(t, 0.2, 'sine', 700, 220, 0.08, 0.004, master, pan);
+	};
+
+	// A junction coming up: a two-tone alert.
+	sound.prompt = function () {
+		sound.resume();
+		const t = now();
+		for (let i = 0; i < 3; i++) {
+			tone(t + i * 0.22, 0.1, 'square', 880, 880, 0.05, 0.003).g.connect(echo);
+			tone(t + i * 0.22 + 0.1, 0.1, 'square', 1175, 1175, 0.05, 0.003);
+		}
+	};
+
+	// A tap counted: a bright blip.
+	sound.vote = function (pan = 0) {
+		sound.resume();
+		const t = now();
+		tone(t, 0.12, 'square', 1319, 1760, 0.06, 0.002, master, pan);
+		tone(t, 0.2, 'sine', 2637, 2637, 0.04, 0.002, master, pan).g.connect(echo);
+	};
+
+	// Round a corner into a new tunnel: a swooping whoosh.
+	sound.turn = function (pan = 0) {
+		sound.resume();
+		const t = now();
+		noise(t, 0.6, 'bandpass', 500, 2600, 0.3, 1.2, master, pan);
+		tone(t, 0.4, 'sine', 400, 900, 0.08, 0.02, master, pan);
 	};
 
 	// The belt speeding up: a rising siren.
