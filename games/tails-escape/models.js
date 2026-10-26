@@ -115,14 +115,17 @@ export function buildFlyer(colour) {
 	const butt = new THREE.Object3D();
 	butt.position.copy(s.tailRig.position);
 	s.torso.add(butt);
-	// the tails: a stem rising from there to a spinning pivot over him
+	// the tails: rising from there to a spinning pivot over him
 	const [fur, tipFur] = s.tailRig.children.filter((o) => o.isMesh).map((o) => o.material);   // (the tails' orange fur and white tips)
-	const stemGeo = new THREE.CylinderGeometry(0.035, 0.09, 1, 12);
-	stemGeo.translate(0, 0.5, 0);   // (from its base up)
-	const stem = new THREE.Mesh(stemGeo, fur);
+	// (a furry tube, thick at his butt and tapering up to the hub, bowed back a little)
+	const stem = hose(fur, 0, 0, { segs: 18, radial: 16, capA: true, capB: false, profile: (u) => 0.1 * (1 - 0.55 * Math.pow(u, 0.8)) });
+	stem.castShadow = true;
 	tumble.add(stem);
 	const spin = new THREE.Group();
 	tumble.add(spin);
+	const hub = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 12), fur);   // (where the stem meets the blades)
+	hub.scale.y = 0.7;
+	spin.add(hub);
 	// the blades: his two tails straight out either side of the hub, flat,
 	// swept back a little the same way round, white tips at their ends (in
 	// place of the speedster's own tails, which curl back behind him)
@@ -139,7 +142,7 @@ export function buildFlyer(colour) {
 		tip.update(m, c2, b);
 		for (const h of [body, tip]) { h.geometry.computeBoundingSphere(); h.castShadow = true; spin.add(h); }
 	}
-	const from = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), dir = new THREE.Vector3();
+	const from = new THREE.Vector3(), bend = new THREE.Vector3();
 	let time = 0;
 
 	// st: { rising (0..1), hurt, lean (radians), turn (radians) }
@@ -157,10 +160,10 @@ export function buildFlyer(colour) {
 		tumble.updateMatrixWorld(true);
 		tumble.worldToLocal(butt.getWorldPosition(from));
 		spin.position.set(from.x, from.y + ROTOR, from.z);
-		stem.position.copy(from);
-		dir.subVectors(spin.position, from);
-		stem.scale.set(1, dir.length(), 1);
-		stem.quaternion.setFromUnitVectors(up, dir.normalize());
+		bend.lerpVectors(from, spin.position, 0.5);
+		bend.z -= 0.09;   // (bowed back)
+		stem.update(from, bend, spin.position);
+		stem.geometry.computeBoundingSphere();
 	}
 
 	return { root, yaw, pose, setColour: s.setColour };
