@@ -16,7 +16,7 @@
  *   const s = buildSpeedster(0x2f6cf0);
  *   scene.add(s.root);                 // s.lean tilts and tumbles inside it
  *   s.animate(dt, mode, pace, spin, time);
- *     // mode: 'run' | 'ball' | 'crouch' | 'spring' | 'hurt' | 'idle' | 'hang' (limbs dangling) | 'tailhang' (hung by the hips, head and limbs down)
+ *     // mode: 'run' | 'ball' | 'crouch' | 'spring' | 'hurt' | 'idle' | 'hang' (limbs dangling) | 'tailhang' (flying under his tails: leaning forward, limbs dangling)
  *     // pace: 0..1 (how fast); spin: the ball's turn (radians a second)
  *   s.setColour(c);
  */
@@ -1107,22 +1107,16 @@ export function buildSpeedster(colour, { knuckles = false, tails = false, kind =
 			return;
 		}
 		if (mode === 'tailhang') {
-			// lifted by the tail: the hips the highest point, the body folded
-			// forward and down from them, the head drooping, the arms hanging
-			// straight down from the shoulders and the legs from the hips, all
-			// swaying; pace swings the legs back
+			// flying under spinning tails (the classic Tails): leaning well
+			// forward from the hips, the head up looking ahead, the arms
+			// reaching forward and down, the legs dangling under him and a
+			// little behind, all swaying; pace swings the legs back
 			show(false);
 			const sway = Math.sin(time * 2.6), back = Math.max(0, Math.min(1, pace));
-			const fold = 2.35 + sway * 0.05;
-			torso.rotation.x = -fold;
-			head.rotation.x = 0.2;
-			// (straight down, in the folded torso's space)
-			const dy = -Math.cos(fold), dz = -Math.sin(fold);
-			for (const a of arms) {
-				const r = 0.44 + Math.sin(time * 2.6 + a.s) * 0.02;
-				placeArm(a, a.s * 0.2, 0.4 + dy * r, dz * r + sway * 0.02, 0.04, -0.02);
-			}
-			for (const l of legs) placeLeg(l, l.s * 0.09, 0.03 + (l.s > 0 ? 0.02 : 0), sway * 0.025 * l.s + back * 0.08, -0.55 - back * 0.2);
+			torso.rotation.x = -0.95 + sway * 0.03;
+			head.rotation.x = 0.8;
+			for (const a of arms) placeArm(a, a.s * 0.22, 0.12 + Math.sin(time * 2.6 + a.s) * 0.02, -0.3, 0.06, 0.02);
+			for (const l of legs) placeLeg(l, l.s * 0.08, 0.13 + (l.s > 0 ? 0.03 : 0), 0.24 + sway * 0.025 * l.s + back * 0.1, -0.3 - back * 0.2);
 			return;
 		}
 		if (mode === 'idle' || pace < 0.04) {

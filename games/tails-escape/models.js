@@ -84,14 +84,15 @@ function mats() {
 /* ---------- Tails, flying ---------- */
 
 // Tails: the shared speedster build as the fox, in the player's colour,
-// hanging by his butt: his two tails spin like a helicopter's blades right
-// over his rear, and the rest of him hangs below it, head down (a little
-// ahead of him), arms and legs dangling (his legs trailing back a little
-// more as he climbs); hit, he tumbles. The root is at the middle of his body
-// (what touches things), and he faces +Z (the game turns him the way he's
-// flying).
+// flying the classic way: his two tails rise from his rear and spin like a
+// helicopter's blades over him, and he hangs under them leaning forward,
+// head up looking ahead, arms reaching forward and down, legs dangling (and
+// trailing back a little more as he climbs); hit, he tumbles. The root is
+// at the middle of his body (what touches things), and he faces +Z (the
+// game turns him the way he's flying).
 export function buildFlyer(colour) {
-	const HIPS = 0.3;                    // (how far over his middle his hips hang from the rotor)
+	const HIPS = 0.1;                    // (how far over his middle his hips are)
+	const ROTOR = { up: 1.05, back: 0.3 };    // (the rotor: how far over his hips, and behind)
 	const root = new THREE.Group();
 	const yaw = new THREE.Group();       // turned a little into a swerve
 	root.add(yaw);
@@ -105,12 +106,17 @@ export function buildFlyer(colour) {
 	const base = HIPS - 0.56;            // (the speedster's hips are 0.56 over its feet)
 	s.root.position.y = base;
 	tumble.add(s.root);
-	// the tails on a spinning pivot just over his rear (behind him: -Z)
+	// the tails: rising from his rear (behind him: -Z) to a spinning pivot over him
+	const fur = s.tailRig.children.find((o) => o.isMesh).material;
+	const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.09, ROTOR.up, 12), fur);
+	stem.position.set(0, HIPS + ROTOR.up / 2, -ROTOR.back + 0.04);
+	stem.rotation.x = -0.08;
+	tumble.add(stem);
 	const spin = new THREE.Group();
-	spin.position.set(0, HIPS + 0.1, -0.16);
+	spin.position.set(0, HIPS + ROTOR.up, -ROTOR.back);
 	tumble.add(spin);
 	spin.add(s.tailRig);
-	s.tailRig.position.set(0, 0.16, 0);
+	s.tailRig.position.set(0, 0.04, 0);
 	s.tailRig.rotation.x = 0.74;
 	let time = 0;
 
