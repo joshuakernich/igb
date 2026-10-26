@@ -8,9 +8,10 @@
  * turns flying him: a tunnel each (PLAYER 2, FLY!), in the pilot's colour.
  *
  *   - The pilot steps left and right along the wall Tails is on and he moves
- *     across the tunnel to match. Stand as normal and he flies at the middle
- *     height; jump (or stretch up tall) and he flies up high for a moment;
- *     squat and he dives down low for as long as you stay down.
+ *     across the tunnel to match. Step forward (toward that wall) and he
+ *     flies up and further ahead of the eye; step back and he drops down
+ *     and closer: standing in the middle of the room, he's at the middle
+ *     height.
  *   - The machines in the tunnels: laser grids (fly through a gap), crates
  *     riding the floor (over or round them), buzzsaws standing up out of the
  *     floor (over or round, and later on they slide across), crushers
@@ -58,11 +59,10 @@
  * junction, so whichever way they fly is straight into one of the walls.
  *
  * Input: each player's position along Tails' wall (the left wall: pz; the
- * front: px; the right: 1 - pz), py (height: jump to fly high, squat to
- * dive low, against each player's own standing height), and wall taps
- * (wallChange, or coming within TOUCH of a wall). At a desk: Space jumps,
- * hold the down arrow to duck, click a wall to tap it, for whichever player
- * the mouse moves (keys 1-6).
+ * front: px; the right: 1 - pz), how far they are from it (forward and back:
+ * up and away, down and near), and wall taps (wallChange, or coming within
+ * TOUCH of a wall). At a desk: the simulator's mouse over the floor moves
+ * whichever player it moves (keys 1-6), and a click on a wall taps it.
  * An ES module (manifest: module: true).
  */
 import * as THREE from '../../lib/three/three.module.min.js';
@@ -82,26 +82,25 @@ IGB.register('tails-escape', function TailsEscapeGame(stage, playersMeta) {
 	const GAME_SECONDS = 600;                       // the show's clock (the intros and tutorial come out of it too)
 	const T = { half: 4.1, height: 6.6, stub: 24, rib: 6, tile: 2 };   // the tunnels: half their width, their height, how far a branch not yet taken is built (metres), metres between ribs, metres of belt a tile
 	const LANES = [-2.6, 0, 2.6];                   // the middles of the three lanes across a tunnel
-	const LEVELS = [1.3, 3.0, 4.7];                 // and of its three levels: low (diving), the middle (as normal) and high (a jump)
+	const LEVELS = [1.3, 3.0, 4.7];                 // and of its three levels: low (the pilot well back), the middle (in the middle of the room) and high (well forward)
 	const B = { u: [-T.half, -1.3, 1.3, T.half], v: [0, 2.15, 3.85, T.height] };   // the cells' edges across and up (three by three)
 	const CHASE = 6;                                // metres the eye follows behind Tails (flying)
 	const EYE = 3.9;                                // the eye's height in the tunnel
 	const FOV = 64;                                 // vertical, degrees: 90 across each 16:10 wall, so the walls meet
 	const EDGE = 0.1;                               // the share of each wall at either end that's past the edge of the tunnel
 	const FOX = { scale: 0.88, middle: 0.6, r: 0.5 };   // his size (about 1.2 m tall), the height of his middle in the model, his reach (what touches things)
-	const FLY = { rise: 7, dive: 11, hop: 1.0 };    // how quickly he climbs and dives (per second), and how long a jump keeps him up high (seconds)
+	const FLY = { follow: 5, near: 0.85, far: 0.15, back: -2, ahead: 3.5 };   // forward and back: how quickly he follows the pilot (per second); how far from Tails' wall (0..1 of the room) is all the way back (low, near) and all the way forward (high, far); and metres from his usual place along the tunnel, back there and forward
 	const STEER = { glide: 8, max: 16 };            // how quickly a fox follows its player across (per second), and its top speed (metres a second)
-	const BODY = { jump: 0.06, duck: 0.11, release: 0.07, adapt: 0.4 };   // py above standing to jump, below to duck (and to stand up again), how fast standing height adapts
-	const SPEED = { idle: 8, tutorial: 8.5, start: 10, end: 19 };   // metres a second: behind the show, in the tutorial, at the start of the escape and at its hardest
+	const SPEED = { idle: 5, tutorial: 5.5, start: 6, end: 11 };   // metres a second: behind the show, in the tutorial, at the start of the escape and at its hardest
 	const HARD_AT = 360;                            // seconds into the escape at which it's as hard as it gets
-	const LEG = { start: 8.5, end: 6.6, wobble: 0.8, min: 60 };   // seconds of flying from one junction to the next (then and at the hardest, give or take), and the fewest metres
-	const BUSY = 0.5;                               // the share of each tunnel (from its start) that has machines in it: the rest is for choosing
-	const FIRST = 16;                               // metres into a tunnel before its first machine
-	const DECIDE = 3.6;                             // seconds before a junction that TAP HERE shows
-	const HOVER = { brake: 7, min: 0.6, grace: 0.7, max: 15, attract: 1.2, chase: 2.6, accel: 1.2 };   // a junction: Tails slows (metres a second, a second) to hover in its middle until it's chosen: at least this long, and this long after the last tap; with no taps at all, this long (behind the show's opening, this long); the eye this close behind him there; how quickly he's back up to speed (per second)
+	const LEG = { start: 12, end: 9, wobble: 1, min: 50 };   // seconds of flying from one junction to the next (then and at the hardest, give or take), and the fewest metres
+	const BUSY = 0.8;                               // the share of each tunnel (from its start) that has machines in it: the rest is for choosing
+	const FIRST = 12;                               // metres into a tunnel before its first machine
+	const DECIDE = 2.5;                             // seconds before a junction that TAP HERE shows
+	const HOVER = { brake: 4, min: 0.6, grace: 0.7, max: 15, attract: 1.2, chase: 2.6, accel: 1.2 };   // a junction: Tails slows (metres a second, a second) to hover in its middle until it's chosen: at least this long, and this long after the last tap; with no taps at all, this long (behind the show's opening, this long); the eye this close behind him there; how quickly he's back up to speed (per second)
 	const CENTRE = 6;                               // metres either side of a junction's middle over which Tails is drawn in to the middle of the tunnel (to turn on the spot)
 	const MAP = { size: 300, margin: 26, scale: 1.3 };   // the map, top left of Tails' wall: its size (pixels), how far in, pixels a metre
-	const GAP = { start: 24, end: 13, wobble: 2.5 };   // metres between machines (then and at the hardest)
+	const GAP = { start: 10, end: 6, wobble: 1.5, least: 5 };   // metres between machines (then and at the hardest, give or take), and never fewer
 	const UNLOCK = { crates: 0, grid: 0, saw: 0.05, crusher: 0.12, arm: 0.2, jets: 0.3 };   // how hard it has to be (0..1) before each machine turns up
 	const KIND = {                                  // the tunnels' kinds: metres between machines (scaled), the chance of a trail of rings before each, the bonus for slipping past one (scaled)
 		plain: { gap: 1, rings: 0.5, clear: 1, label: '' },
@@ -238,7 +237,7 @@ IGB.register('tails-escape', function TailsEscapeGame(stage, playersMeta) {
 		group.position.set(x, 0, z);
 		group.rotation.y = YAW[dir];
 		scene.add(group);
-		const b = { x, z, dir, kind, len, group, cap: null, built: T.half, nextA: FIRST, sB: null, junction: null, chosen: false, gone: false };
+		const b = { x, z, dir, kind, len, group, cap: null, built: T.half, nextA: FIRST, lastA: -Infinity, sB: null, junction: null, chosen: false, gone: false };
 		branches.push(b);
 		return b;
 	}
@@ -263,14 +262,14 @@ IGB.register('tails-escape', function TailsEscapeGame(stage, playersMeta) {
 			if (machinesOn !== 'off') open = addMachine(b, pickType(), a);
 			const way = open ? pick(open) : [Math.floor(Math.random() * 3), Math.floor(Math.random() * 3)];
 			if (!open || Math.random() < k.rings) {
-				const n = b.kind === 'rings' ? 6 : 4;
-				for (let i = 0; i < n; i++) {
-					const at = a - 2 - (n - 1 - i) * RINGS.gap;
-					if (at > T.half + 3) addRing(b, at, way[0], way[1]);   // (never back in the junction)
-				}
+				// (only in the clear stretch since the last machine, and never back in the junction)
+				const from = Math.max(b.lastA + 2, T.half + 3);
+				const n = clamp(Math.floor((a - 2 - from) / RINGS.gap) + 1, 0, b.kind === 'rings' ? 6 : 4);
+				for (let i = 0; i < n; i++) addRing(b, a - 2 - (n - 1 - i) * RINGS.gap, way[0], way[1]);
 				if (open) addRing(b, a, way[0], way[1]);   // (and one right through the gap)
 			}
-			b.nextA += (open ? lerp(GAP.start, GAP.end, heat()) * k.gap : 12) + rand(-GAP.wobble, GAP.wobble);
+			if (open) b.lastA = a;
+			b.nextA += Math.max(GAP.least, (open ? lerp(GAP.start, GAP.end, heat()) * k.gap : 12) + rand(-GAP.wobble, GAP.wobble));
 		}
 	}
 
@@ -553,11 +552,10 @@ IGB.register('tails-escape', function TailsEscapeGame(stage, playersMeta) {
 		return {
 			n, colour: PLAYER_COLORS[n],
 			along: [0.5, 0.5, 0.5], px: 0.5, pz: 0.5, seen: false, near: -1,
-			hop: 0,
+			dist: [0.5, 0.5, 0.5],   // (how far from each wall: forward and back)
 			rings: 0, hits: 0, cleared: 0, flown: 0,
-			body: { stand: null, up: false, duck: false },
 			reach: { min: 0.5, max: 0.5 },
-			hopped: false, ducked: false, voted: false,
+			wentFar: false, wentNear: false, voted: false,
 		};
 	}
 
@@ -569,7 +567,7 @@ IGB.register('tails-escape', function TailsEscapeGame(stage, playersMeta) {
 		scene.add(blob);
 		return {
 			model, blob,
-			s: 0, sWas: 0, u: 0, vu: 0, v: LEVELS[1], level: 'mid', yaw: 0,
+			s: 0, sWas: 0, u: 0, vu: 0, k: 0.5, v: LEVELS[1], yaw: 0,   // (k: forward, 0 all the way back to 1 all the way forward)
 			state: 'fly',            // fly, or hurt (tumbling)
 			t: 0, safe: 0,
 		};
@@ -687,8 +685,8 @@ IGB.register('tails-escape', function TailsEscapeGame(stage, playersMeta) {
 	const piloted = (fn) => foxes.length > 0 && fn(flyer());
 	const TUTORIAL = [
 		{ caption: 'PILOT: STEP LEFT AND RIGHT TO FLY ACROSS', min: 2, max: 10, did: () => piloted((f) => f.reach.max - f.reach.min >= 0.3) },
-		{ caption: 'PILOT: JUMP TO FLY UP HIGH', min: 2, max: 10, did: () => piloted((f) => f.hopped) },
-		{ caption: 'PILOT: SQUAT TO DIVE DOWN LOW', min: 2, max: 10, did: () => piloted((f) => f.ducked) },
+		{ caption: 'PILOT: STEP FORWARD TO FLY UP AND AWAY', min: 2, max: 10, did: () => piloted((f) => f.wentFar) },
+		{ caption: 'PILOT: STEP BACK TO DROP DOWN AND NEAR', min: 2, max: 10, did: () => piloted((f) => f.wentNear) },
 		{ caption: 'EVERYONE: TAP A WALL TO PICK A TUNNEL', min: 2, max: 30, did: () => foxes.some((f) => f.voted) },
 	];
 
@@ -707,8 +705,8 @@ IGB.register('tails-escape', function TailsEscapeGame(stage, playersMeta) {
 			enterStep(i) {
 				for (const f of foxes) {
 					f.reach = { min: f.along[wallNow], max: f.along[wallNow] };
-					if (i === 1) f.hopped = false;
-					if (i === 2) f.ducked = false;
+					if (i === 1) f.wentFar = false;
+					if (i === 2) f.wentNear = false;
 					if (i === 3) f.voted = false;
 				}
 			},
@@ -906,33 +904,28 @@ IGB.register('tails-escape', function TailsEscapeGame(stage, playersMeta) {
 
 	function stepTails(dt, counts, touchy) {
 		const f = tails, p = flyer();
-		for (const q of foxes) q.hop = Math.max(0, q.hop - dt);
 		f.t += dt;
 		f.safe = Math.max(0, f.safe - dt);
 		f.sWas = f.s;
-		f.s = sT;
+		// (drawn in to the middle of the tunnel through the junctions, where he turns on the spot)
+		const free = clamp(Math.min(junction.sJ - sT, sT - lastJ) / CENTRE, 0, 1);
 
-		// the pilot's body: high or low
-		const b = p.body;
-		const wasLevel = f.level;
-		if (f.state === 'hurt') f.level = 'mid';
-		else if (b.duck) f.level = 'low';
-		else if (b.up || p.hop > 0) f.level = 'high';
-		else f.level = 'mid';
-		if (touchy && f.level !== wasLevel && f.state === 'fly') {
-			if (f.level === 'high') { p.hopped = true; sound.hop(wallPan(wallNow)); }
-			if (f.level === 'low') { p.ducked = true; sound.dive(wallPan(wallNow)); }
+		// forward and back: the pilot stepping toward Tails' wall flies him up
+		// and away, stepping back drops him down and near (a tumble: the middle)
+		const aim = f.state === 'hurt' || !p.seen ? 0.5 : clamp((FLY.near - p.dist[wallNow]) / (FLY.near - FLY.far), 0, 1);
+		f.k += (aim - f.k) * Math.min(1, dt * FLY.follow);
+		f.v = lerp(LEVELS[0], LEVELS[2], f.k);
+		f.s = Math.min(junction.sJ, sT + lerp(FLY.back, FLY.ahead, f.k) * free);
+		if (touchy && f.state === 'fly') {
+			if (f.k > 0.85) p.wentFar = true;
+			if (f.k < 0.15) p.wentNear = true;
 		}
-		const aim = LEVELS[f.level === 'low' ? 0 : f.level === 'high' ? 2 : 1];
-		f.v += (aim - f.v) * Math.min(1, dt * (aim < f.v ? FLY.dive : FLY.rise));
 
-		// across the tunnel, after the pilot along Tails' wall (drawn in to the
-		// middle through the junctions, where he turns on the spot)
+		// across the tunnel, after the pilot along Tails' wall
 		const target = LANES[0] + clamp((p.along[wallNow] - EDGE) / (1 - 2 * EDGE), 0, 1) * (LANES[2] - LANES[0]);
 		const uWas = f.u;
 		if (p.seen) f.u += clamp((target - f.u) * Math.min(1, dt * STEER.glide), -STEER.max * dt, STEER.max * dt);
 		f.vu = dt > 0 ? (f.u - uWas) / dt : 0;
-		const free = clamp(Math.min(junction.sJ - f.s, f.s - lastJ) / CENTRE, 0, 1);
 		f.across = f.u * free;
 		if (f.state === 'hurt' && f.t >= HURT.time) { f.state = 'fly'; f.t = 0; f.safe = HURT.safe; }
 
@@ -948,7 +941,7 @@ IGB.register('tails-escape', function TailsEscapeGame(stage, playersMeta) {
 		f.yaw += dy * Math.min(1, dt * 6);
 		m.root.rotation.y = f.yaw;
 		m.pose(dt, {
-			rising: clamp((aim - f.v) / 1.7, 0, 1),
+			rising: clamp((aim - f.k) * 2, 0, 1),
 			hurt: f.state === 'hurt',
 			lean: clamp(f.vu * 0.04, -0.45, 0.45) * free,
 			turn: -clamp(f.vu * 0.03, -0.35, 0.35) * free,
@@ -1000,7 +993,6 @@ IGB.register('tails-escape', function TailsEscapeGame(stage, playersMeta) {
 		const f = tails;
 		f.state = 'hurt';
 		f.t = 0;
-		p.hop = 0;
 		sound.hit(wallPan(wallNow));
 		shake = Math.max(shake, 0.3);
 		flashRed = Math.max(flashRed, 0.4);
@@ -1178,7 +1170,6 @@ IGB.register('tails-escape', function TailsEscapeGame(stage, playersMeta) {
 		const now = (time || performance.now()) / 1000;
 		const dt = last === undefined ? 0 : Math.min(0.05, Math.max(0, now - last));
 		last = now;
-		readKeys();
 		simulate(show.paused ? 0 : dt * show.timeScale);   // (still while paused; slowing to a stop with TIME!)
 		if (SCENE.includes(show.beat)) render();   // (the results are on the show's own backdrop)
 		show.frame(ctx, dt, overlay);
@@ -1186,26 +1177,7 @@ IGB.register('tails-escape', function TailsEscapeGame(stage, playersMeta) {
 
 	/* ---------- input ---------- */
 
-	// The body: jumping and ducking against each player's own standing height.
-	function readBody(f, py, dt) {
-		const b = f.body;
-		if (b.stand === null) b.stand = py;
-		const rise = b.stand - py;         // (py is 0 high, 1 low: standing taller is a smaller py)
-		const wasUp = b.up;
-		if (!b.up && rise > BODY.jump) b.up = true;
-		else if (b.up && rise < BODY.jump * 0.5) b.up = false;
-		if (!b.duck && -rise > BODY.duck) b.duck = true;
-		else if (b.duck && -rise < BODY.release) b.duck = false;
-		if (b.up && !wasUp) f.hop = FLY.hop;
-		// standing height drifts with them while they're neither jumping nor ducking
-		if (!b.up && !b.duck && Math.abs(rise) < BODY.jump * 0.8) b.stand += (py - b.stand) * Math.min(1, dt * BODY.adapt);
-	}
-
-	let lastInput = performance.now();
 	self.setPlayers = function (p) {
-		const t = performance.now();
-		const dt = Math.min(0.2, (t - lastInput) / 1000);
-		lastInput = t;
 		foxes.forEach(function (f, i) {
 			const q = p[i];
 			if (!q || q.px === undefined) return;
@@ -1216,44 +1188,17 @@ IGB.register('tails-escape', function TailsEscapeGame(stage, playersMeta) {
 			f.along = [f.pz, f.px, 1 - f.pz];
 			f.reach.min = Math.min(f.reach.min, f.along[wallNow]);
 			f.reach.max = Math.max(f.reach.max, f.along[wallNow]);
-			if (q.py !== undefined && !keys.any) readBody(f, q.py, dt);
 			// a tap: a touch (wallChange), or coming right up to a wall
 			if (q.wallChange !== undefined && q.wallChange !== null) {
 				if (q.wallChange >= 0 && q.wallChange <= 2) taps.push({ f, wall: q.wallChange });
 				q.wallChange = undefined;
 			}
-			const dist = [f.px, 1 - f.pz, 1 - f.px];
+			const dist = f.dist = [f.px, 1 - f.pz, 1 - f.px];   // (how far from each wall)
 			let near = -1;
 			for (let w = 0; w < 3; w++) if (dist[w] < TOUCH && (near < 0 || dist[w] < dist[near])) near = w;
 			f.near = near;
 		});
 	};
-
-	// At a desk: Space jumps, hold the down arrow to duck (whoever the mouse moves).
-	const keys = { jump: false, duck: false, jumpEdge: false, any: false };
-	const deskPlayer = () => (IGB.players && IGB.players.selected) || 0;
-	function onKey(e) {
-		if (e.target && e.target.tagName === 'INPUT') return;
-		const down = e.type === 'keydown';
-		if (e.code === 'Space') {
-			if (down && !keys.jump) keys.jumpEdge = true;
-			keys.jump = down;
-			keys.any = true;
-			e.preventDefault();
-		}
-		if (e.code === 'ArrowDown') { keys.duck = down; keys.any = true; e.preventDefault(); }
-	}
-	function readKeys() {
-		if (!keys.any) return;
-		const f = foxes[deskPlayer()];
-		if (!f) return;
-		if (keys.jumpEdge) f.hop = FLY.hop;
-		keys.jumpEdge = false;
-		f.body.duck = keys.duck;
-		f.body.up = false;
-	}
-	document.addEventListener('keydown', onKey);
-	document.addEventListener('keyup', onKey);
 
 	// For tests and the console: where the game is up to.
 	self.state = function () {
@@ -1261,7 +1206,7 @@ IGB.register('tails-escape', function TailsEscapeGame(stage, playersMeta) {
 			phase, machinesOn, speed, escaped, heat: heat(), sT, wall: wallNow,
 			junction: junction && { sJ: junction.sJ, ways: junction.branches.map((b) => b.dir + ':' + b.kind), prompting: junction.prompting, votes: [...junction.votes.values()].map((v) => v.dir) },
 			hovering, pilot,
-			tails: { u: tails.u, v: tails.v, level: tails.level, state: tails.state },
+			tails: { u: tails.u, v: tails.v, k: tails.k, ahead: tails.s - sT, state: tails.state },
 			foxes: foxes.map((f) => ({ n: f.n, rings: f.rings, hits: f.hits, cleared: f.cleared, flown: f.flown })),
 			machines: items.filter((m) => m.s !== null && m.s > sT).map((m) => ({ type: m.type, ahead: m.s - sT })),
 			rings: rings.length,
@@ -1281,8 +1226,6 @@ IGB.register('tails-escape', function TailsEscapeGame(stage, playersMeta) {
 	};
 
 	self.fini = function () {
-		document.removeEventListener('keydown', onKey);
-		document.removeEventListener('keyup', onKey);
 		sound.close();
 		unlisten();
 		show.fini();

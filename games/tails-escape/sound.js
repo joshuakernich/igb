@@ -121,9 +121,9 @@ export function createSound() {
 	hum.start();
 	sound.rotor = function (level) {
 		const t = ctx.currentTime;
-		rotorBus.gain.setTargetAtTime(level * 0.16, t, 0.2);
+		rotorBus.gain.setTargetAtTime(level * 0.025, t, 0.2);   // (just a whisper under the rest)
 		chopLfo.frequency.setTargetAtTime(14 + level * 10, t, 0.3);
-		humG.gain.setTargetAtTime(level > 0 ? 0.05 : 0, t, 0.5);
+		humG.gain.setTargetAtTime(level > 0 ? 0.02 : 0, t, 0.5);
 	};
 
 	// A ring: two quick bright notes, stepping up.
