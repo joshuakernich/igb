@@ -18,7 +18,7 @@
  * On foot, gather the seven Chaos Emeralds scattered round the field
  * (columns of light show where), dodging the machine's missiles (a red ring
  * where each will land), its shockwaves (rolling out across the ground: run
- * for the gap), the badniks rolling round the field and the Buzz Bombers
+ * for a gap), the badniks rolling round the field and the Buzz Bombers
  * that fly in, hover in view and dive at him. Any robot can be tapped (on
  * whichever wall it's on, by anyone) to smash it: points to the tapper, and
  * a few rings out of it. Rings lie in arcs round the field (and the sky):
@@ -99,7 +99,7 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 	const BAND = { lo: 31.5, hi: 34.5 };                    // how far from the middle the emeralds lie (where he can reach)
 	const REACH = { emerald: 1.8, badnik: 1.2, blast: 2.6, wave: 0.8, target: 2.4, ring: 1.4 };   // metres that count as touching
 	const HURT = { tumble: 0.8, safe: 2.2, knock: 6, bare: 1.6 };   // seconds tumbling, and safe after; how hard he's knocked across; how much longer he tumbles as Super Sonic with no rings to lose
-	const ATTACK = { gap: 4.8, gapDown: 0.6, gapMin: 2.0, flight: 1.7, apex: 12, waveSpeed: 10, waveUp: 1.5, waveGap: 0.95, charge: 1.1 };   // seconds between attacks (and how much less each round, and the least); a missile's flight and how high it arcs; a shockwave's speed (and how much faster each round), its gap (radians), and the charge before it
+	const ATTACK = { gap: 4.8, gapDown: 0.6, gapMin: 2.0, flight: 1.7, apex: 12, waveSpeed: 10, waveUp: 1.5, waveGap: 0.95, waveGaps: [4, 3], charge: 1.1 };   // seconds between attacks (and how much less each round, and the least); a missile's flight and how high it arcs; a shockwave's speed (and how much faster each round), its gaps (each one's width, radians; how many: in the first two rounds, and after), and the charge before it
 	const SUPER = {                                         // the machine's attacks on Super Sonic: seconds between them (less each round, and the least);
 		gap: 3.0, gapDown: 0.35, gapMin: 1.3,
 		orb: { n: [3, 7], spread: 0.085, speed: 26, speedUp: 3, charge: 0.7, again: 0.5, reach: 1.25 },   // a fan of energy orbs (how many, from more each round to the most), radians apart, metres a second (faster each round), the eyes' charge before, the gap before a second fan, how near hits
@@ -487,7 +487,7 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 	const missiles = [];    // falling on him, on foot: { mesh, warn, from, to, t, flight }
 	const homers = [];      // homing in on Super Sonic: { mesh, pos, dir, age }
 	const orbs = [];        // energy orbs at Super Sonic: { sprite, pos, vel, age }
-	const shockwaves = [];  // { mesh, r, speed, gap, charge, y }
+	const shockwaves = [];  // { mesh, r, speed, gaps, charge, y }
 	const badniks = [];     // rolling round the field: { mesh, theta, r, dir, run, dead }
 	const buzzers = [];     // Buzz Bombers: { m, glow, state, t, pos, station, vel, dead }
 	let attackIn = 3;
@@ -521,16 +521,19 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 		sound.warn();
 	}
 
-	// A shockwave rolling out from the machine at height y (the ground, or Super Sonic's sky), a gap to run for.
+	// A shockwave rolling out from the machine at height y (the ground, or
+	// Super Sonic's sky), gaps spread round it to run for (none right where he is).
 	function startShockwave(y) {
-		const gap = sonicAngle() + (Math.random() < 0.5 ? -1 : 1) * rand(0.6, 1.3);
-		const mesh = buildShockwave(ATTACK.waveGap, y > 0 ? 2 : 1.4);
-		mesh.rotation.y = gap;
+		const n = level < 2 ? ATTACK.waveGaps[0] : ATTACK.waveGaps[1];
+		const base = sonicAngle() + (Math.random() < 0.5 ? -1 : 1) * rand(0.45, TAU / n - 0.45);
+		const gaps = [];
+		for (let i = 0; i < n; i++) gaps.push(base + i * TAU / n + rand(-0.15, 0.15));
+		const mesh = buildShockwave(gaps, ATTACK.waveGap, y > 0 ? 2 : 1.4);
 		mesh.position.y = y > 0 ? y - 0.4 : 0;
 		mesh.scale.set(5, 1, 5);
 		mesh.visible = false;
 		scene.add(mesh);
-		shockwaves.push({ mesh, r: 5, speed: ATTACK.waveSpeed + level * ATTACK.waveUp, gap, charge: ATTACK.charge, y });
+		shockwaves.push({ mesh, r: 5, speed: ATTACK.waveSpeed + level * ATTACK.waveUp, gaps, charge: ATTACK.charge, y });
 		sound.charge();
 		waves++;
 	}
@@ -744,10 +747,10 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 			const was = w.r;
 			w.r += w.speed * dt;
 			w.mesh.scale.set(w.r, 1 + Math.sin(clock * 30) * 0.08, w.r);
-			w.mesh.children[0].material.opacity = Math.min(1, (FIELD - w.r) / 10);
+			w.mesh.userData.mat.opacity = Math.min(1, (FIELD - w.r) / 10);
 			const rs = Math.hypot(so.pos.x, so.pos.z);
 			const passed = (was - rs) * (w.r - rs) <= 0 || Math.abs(w.r - rs) < REACH.wave;
-			if (passed && Math.abs(so.y - w.y) < 1.6 && Math.abs(angleTo(w.gap, sonicAngle())) > ATTACK.waveGap / 2 - 0.4 / rs) hurt(so.v >= 0 ? -1 : 1);
+			if (passed && Math.abs(so.y - w.y) < 1.6 && !w.gaps.some((g) => Math.abs(angleTo(g, sonicAngle())) < ATTACK.waveGap / 2 - 0.4 / rs)) hurt(so.v >= 0 ? -1 : 1);
 			if (w.r > FIELD) w.done = true;
 		}
 		for (const w of shockwaves.filter((w) => w.done)) {
@@ -1909,7 +1912,7 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 		const say = (text, fill, y = 255, size = 66, age = phaseT) => show.onWalls(ctx, (c) => show.slam(c, text, W / 2, y, size, age, { fill }));
 		if (show.beat === 'play') {
 			if (phase === 'super' && superCount === 1 && hits === roundHits && roundHits === 0) say('TAP THE TARGETS ON ROBOTNIK\'S MACHINE!', '#ffd23a');
-			if (phase === 'ground' && shockwaves.length && waves <= 2) show.onWalls(ctx, (c) => show.text(c, 'SHOCKWAVE! RUN FOR THE GAP!', W / 2, 255, 60, { fill: '#c78aff' }));
+			if (phase === 'ground' && shockwaves.length && waves <= 2) show.onWalls(ctx, (c) => show.text(c, 'SHOCKWAVE! RUN FOR A GAP!', W / 2, 255, 60, { fill: '#c78aff' }));
 			if (phase === 'ground' && held.length === EMERALDS - 1 && Math.floor(clock * 2) % 2) show.onWalls(ctx, (c) => show.text(c, 'ONE MORE EMERALD!', W / 2, 255, 56, { fill: '#2fe86a' }));
 		}
 		if (phase === 'transform' && phaseT > TF.land) say('SUPER SONIC!', '#ffd23a', 230, 130, phaseT - TF.land);

@@ -603,9 +603,9 @@ export function buildWarning() {
 }
 
 // A shockwave: a wall of energy rolling out across the ground from the
-// middle, with a gap in it (gap: its width, radians, centred on angle 0,
-// that is +z). Radius 1 (scale x and z), height h.
-export function buildShockwave(gap, h = 1.4) {
+// middle, with gaps in it (gaps: their middles, radians round from +z
+// toward +x; width: each one's width). Radius 1 (scale x and z), height h.
+export function buildShockwave(gaps, width, h = 1.4) {
 	const g = new THREE.Group();
 	const tex = canvas(64, 128, function (c, w, hh) {
 		const gr = c.createLinearGradient(0, hh, 0, 0);
@@ -615,10 +615,19 @@ export function buildShockwave(gap, h = 1.4) {
 		c.fillStyle = gr;
 		c.fillRect(0, 0, w, hh);
 	});
+	const mat = new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(0xb04aff).multiplyScalar(2.4), transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
+	// a piece of wall from each gap round to the next
 	// (CylinderGeometry's theta starts at +z, going round toward +x)
-	const wall = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, h, 160, 1, true, gap / 2, TAU - gap), new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(0xb04aff).multiplyScalar(2.4), transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
-	wall.position.y = h / 2;
-	g.add(wall);
+	const sorted = gaps.map((a) => ((a % TAU) + TAU) % TAU).sort((a, b) => a - b);
+	sorted.forEach(function (a, i) {
+		const next = i + 1 < sorted.length ? sorted[i + 1] : sorted[0] + TAU;
+		const len = next - a - width;
+		if (len <= 0.01) return;
+		const wall = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, h, Math.max(4, Math.ceil(len / TAU * 160)), 1, true, a + width / 2, len), mat);
+		wall.position.y = h / 2;
+		g.add(wall);
+	});
+	g.userData = { mat };
 	return g;
 }
 
