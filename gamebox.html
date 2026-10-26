@@ -28,6 +28,40 @@
 		})();
 	</script>
 
+	<!-- A pause for the whole page (window.__pause(true/false)): the clock stops, animation
+	     frames and timers hold, and on resume everything carries on from the same instant.
+	     The storyboard uses it to run one gamebox at a time. -->
+	<script>
+		(function () {
+			const realPerf = performance.now.bind(performance), realRaf = window.requestAnimationFrame.bind(window);
+			const realTimeout = window.setTimeout.bind(window), realInterval = window.setInterval.bind(window);
+			const RealDate = Date, epoch = RealDate.now() - realPerf();
+			let paused = false, pausedAt = 0, lost = 0;
+			const now = () => (paused ? pausedAt : realPerf()) - lost;
+			performance.now = now;
+			class PausableDate extends RealDate {
+				constructor(...a) { if (a.length) super(...a); else super(epoch + now()); }
+				static now() { return epoch + now(); }
+			}
+			window.Date = PausableDate;
+			const heldFrames = [], heldCalls = [];
+			window.requestAnimationFrame = (cb) => realRaf(() => { if (paused) heldFrames.push(cb); else cb(now()); });
+			window.setTimeout = (fn, ms, ...a) => realTimeout(() => { if (paused) heldCalls.push(() => fn(...a)); else fn(...a); }, ms);
+			window.setInterval = (fn, ms, ...a) => realInterval(() => { if (!paused) fn(...a); }, ms);
+			window.__pause = function (on) {
+				if (on && !paused) { pausedAt = realPerf(); paused = true; if (window.IGB && IGB.pauseAudio) IGB.pauseAudio(true); }
+				else if (!on && paused) {
+					lost += realPerf() - pausedAt; paused = false;
+					if (window.IGB && IGB.pauseAudio) IGB.pauseAudio(false);
+					for (const cb of heldFrames.splice(0)) realRaf(() => cb(now()));
+					for (const fn of heldCalls.splice(0)) fn();
+				}
+				return paused;
+			};
+			window.__paused = () => paused;
+		})();
+	</script>
+
 	<script src="lib/jquery.min.js"></script>
 	<script src="lib/jquery-ui.min.js"></script>
 
