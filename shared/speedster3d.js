@@ -1116,13 +1116,15 @@ export function buildSpeedster(colour, { knuckles = false, tails = false, kind =
 			const TIP = 1.05, LEAN = 0.55;
 			const sway = Math.sin(time * 2.6), back = Math.max(0, Math.min(1, pace));
 			torso.rotation.x = -LEAN + sway * 0.03;
-			head.rotation.x = 1.25;
+			head.rotation.x = 1.6;   // (looking up, ahead)
 			// (straight down: in the legs' space, tipped TIP; in the torso's, TIP + LEAN)
 			const down = (k) => [-Math.cos(k), -Math.sin(k)];
 			const [ay, az] = down(TIP + LEAN), [ly, lz] = down(TIP);
+			// (and forward, in the torso's space: the hands a little ahead, the elbows bent)
+			const fy = Math.sin(TIP + LEAN), fz = -Math.cos(TIP + LEAN);
 			for (const a of arms) {
-				const swing = Math.sin(time * 2.3 + a.s * 1.3) * 0.08, reach = 0.47;
-				placeArm(a, a.s * (0.19 + Math.sin(time * 1.7 + a.s) * 0.015), 0.4 + ay * reach + swing * az, az * reach - swing * ay, 0.03, 0.01);
+				const swing = Math.sin(time * 2.3 + a.s * 1.3) * 0.08, reach = 0.4, ahead = 0.16;
+				placeArm(a, a.s * (0.19 + Math.sin(time * 1.7 + a.s) * 0.015), 0.4 + ay * reach + (swing + ahead) * fy, az * reach + (swing + ahead) * fz, 0.05, -0.08);
 			}
 			for (const l of legs) {
 				const swing = Math.sin(time * 2.1 + l.s * 1.1) * 0.07 + back * 0.12, reach = 0.46;
