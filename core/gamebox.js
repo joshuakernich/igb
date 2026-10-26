@@ -766,6 +766,35 @@ $('#view').on('click', function () {
 	showView();
 });
 const camPos = new THREE.Vector3(), camAt = new THREE.Vector3();
+// Keep the box framed: the camera eases back or in until the box fills about
+// 85% of the view's height (and fits its width), then pitches so the box sits
+// exactly in the vertical middle. Projected from the box's eight corners.
+const CORNERS = [];
+for (const x of [-1, 1]) for (const y of [0, 1]) for (const z of [-1, 1]) CORNERS.push(new THREE.Vector3(x * ROOM.w / 2, y * ROOM.h, z * ROOM.d / 2));
+const FILL = { y: 1.7, x: 1.86 };   // (of the 2 units of NDC each way)
+const cp = new THREE.Vector3(), off = new THREE.Vector3();
+function bounds() {
+	camera.updateMatrixWorld();
+	const b = { lx: Infinity, hx: -Infinity, ly: Infinity, hy: -Infinity };
+	for (const c of CORNERS) { cp.copy(c).project(camera); b.lx = Math.min(b.lx, cp.x); b.hx = Math.max(b.hx, cp.x); b.ly = Math.min(b.ly, cp.y); b.hy = Math.max(b.hy, cp.y); }
+	return b;
+}
+function centreBox() {
+	for (let pass = 0; pass < 3; pass++) {
+		camera.lookAt(camAt);
+		const b = bounds();
+		const k = Math.max((b.hy - b.ly) / FILL.y, (b.hx - b.lx) / FILL.x);
+		if (!isFinite(k) || Math.abs(k - 1) < 0.01) break;
+		off.copy(camera.position).sub(camAt).multiplyScalar(Math.max(0.6, Math.min(1.6, k)));
+		camera.position.copy(camAt).add(off);
+	}
+	camera.lookAt(camAt);
+	for (let pass = 0; pass < 2; pass++) {
+		const b = bounds(), mid = (b.ly + b.hy) / 2;
+		if (!isFinite(mid) || Math.abs(mid) < 1e-4) return;
+		camera.rotateX(Math.atan(mid * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))));
+	}
+}
 let camReady = false;
 
 // Embedded in another page (?embed=1, the storyboard): no bar, and quiet unless ?sound=1.
@@ -819,6 +848,7 @@ IGB.onFrame(function (now) {
 	camReady = true;
 	camera.position.copy(camPos);
 	camera.lookAt(camAt);
+	if (view !== 'Inside') centreBox();   // (inside the room there's no box to frame)
 	composer.render();
 });
 
