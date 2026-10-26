@@ -78,8 +78,8 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#0e0726');
-scene.fog = new THREE.Fog('#0e0726', 14, 30);
+scene.background = new THREE.Color('#200033');
+scene.fog = new THREE.Fog('#200033', 14, 30);
 const camera = new THREE.PerspectiveCamera(42, 16 / 10, 0.05, 80);
 
 const wallTex = new THREE.CanvasTexture(strip);
@@ -107,10 +107,10 @@ const walls = [wall(0), wall(1), wall(2)];
 const floorTex = (() => {
 	const c = document.createElement('canvas'); c.width = c.height = 1024;
 	const x = c.getContext('2d');
-	x.fillStyle = '#140a33'; x.fillRect(0, 0, 1024, 1024);
-	x.strokeStyle = 'rgba(150,120,255,0.16)'; x.lineWidth = 2;
+	x.fillStyle = '#2e143b'; x.fillRect(0, 0, 1024, 1024);
+	x.strokeStyle = 'rgba(158,0,255,0.22)'; x.lineWidth = 2;
 	for (let i = 0; i <= 10; i++) { const p = i * 102.4; x.beginPath(); x.moveTo(p, 0); x.lineTo(p, 1024); x.moveTo(0, p); x.lineTo(1024, p); x.stroke(); }
-	x.strokeStyle = 'rgba(205,178,255,0.5)'; x.lineWidth = 6; x.strokeRect(3, 3, 1018, 1018);
+	x.strokeStyle = 'rgba(252,25,146,0.55)'; x.lineWidth = 6; x.strokeRect(3, 3, 1018, 1018);
 	const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
 	return t;
 })();
@@ -120,7 +120,7 @@ floor.receiveShadow = true;
 scene.add(floor);
 
 // The box's frame: thin edges along the top and the open back.
-const edge = new THREE.LineBasicMaterial({ color: '#cdb2ff', transparent: true, opacity: 0.55 });
+const edge = new THREE.LineBasicMaterial({ color: '#ae2bff', transparent: true, opacity: 0.7 });
 const hw = ROOM.w / 2, hd = ROOM.d / 2, H = ROOM.h;
 scene.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints([
 	new THREE.Vector3(-hw, H, hd), new THREE.Vector3(-hw, H, -hd), new THREE.Vector3(-hw, H, -hd), new THREE.Vector3(hw, H, -hd),
@@ -129,7 +129,7 @@ scene.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints([
 ]), edge));
 
 // Light: a dim fill, a key from above the open back, and each wall's own glow.
-scene.add(new THREE.HemisphereLight('#8a7ad8', '#120828', 0.9));
+scene.add(new THREE.HemisphereLight('#a06bd8', '#14001f', 0.9));
 const key = new THREE.DirectionalLight('#ffffff', 1.1);
 key.position.set(1.5, 6, 5);
 key.castShadow = true;
