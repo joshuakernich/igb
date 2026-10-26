@@ -596,7 +596,8 @@ export function buildSpeedster(colour, { knuckles = false, tails = false, kind =
 
 	// the head
 	const head = new THREE.Group();
-	head.position.set(0, 0.71, -0.02);
+	const HEAD_AT = V(0, 0.71, -0.02);
+	head.position.copy(HEAD_AT);
 	head.scale.setScalar(HEAD_SCALE);   // (smaller than it was built; the face and its features are drawn up to match: FACE_K)
 	torso.add(head);
 	// a bean: a little long front to back, a little wide, arched (seen from the side, its
@@ -1038,6 +1039,7 @@ export function buildSpeedster(colour, { knuckles = false, tails = false, kind =
 		torso.position.set(0, HIP_Y, 0);
 		torso.rotation.set(0, 0, 0);
 		head.rotation.set(0, 0, 0);
+		head.position.copy(HEAD_AT);
 
 		if (mode === 'crouch') {
 			show(false);
@@ -1116,7 +1118,10 @@ export function buildSpeedster(colour, { knuckles = false, tails = false, kind =
 			const TIP = 1.05, LEAN = 0.55;
 			const sway = Math.sin(time * 2.6), back = Math.max(0, Math.min(1, pace));
 			torso.rotation.x = -LEAN + sway * 0.03;
-			head.rotation.x = 1.25;
+			// the head tilted up to look ahead, pushed forward (the way he's
+			// flying, in the tipped torso's space)
+			head.rotation.x = 1.5;
+			head.position.set(0, HEAD_AT.y + Math.sin(TIP + LEAN) * 0.05, HEAD_AT.z - Math.cos(TIP + LEAN) * 0.05);
 			// (straight down: in the legs' space, tipped TIP; in the torso's, TIP + LEAN)
 			const down = (k) => [-Math.cos(k), -Math.sin(k)];
 			const [ay, az] = down(TIP + LEAN), [ly, lz] = down(TIP);

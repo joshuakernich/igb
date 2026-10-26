@@ -111,9 +111,10 @@ export function buildFlyer(colour) {
 	const base = -0.56;                  // (the speedster's hips are 0.56 over its feet)
 	s.root.position.y = base;
 	tip.add(s.root);
-	// where his tails grow from (on his torso, so it moves with him)
+	// where his tails grow from (on his torso, so it moves with him): a little
+	// way inside him, so the stalk disappears into his body
 	const butt = new THREE.Object3D();
-	butt.position.copy(s.tailRig.position);
+	butt.position.copy(s.tailRig.position).lerp(new THREE.Vector3(0, 0.25, 0), 0.45);
 	s.torso.add(butt);
 	// the tails: rising from there to a spinning pivot over him
 	const [fur, tipFur] = s.tailRig.children.filter((o) => o.isMesh).map((o) => o.material);   // (the tails' orange fur and white tips)
