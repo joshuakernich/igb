@@ -551,16 +551,24 @@ const BOTS = {
 			});
 		} };
 	},
-	// one runner per wall: run along it, jump now and then
+	// Sonic Classic: each player walks right along their hero's wall (that's
+	// what runs him to the checkpoint), jumping now and then; when he zips
+	// round to the next wall they go to the start of that one.
 	walls(n) {
-		const ps = Array.from({ length: n }, (_, i) => ({ ...nearWall(i % 3, 0.5, 0.25), Y: 0, face: FACE[i % 3], jumpAt: 1.5 + i * 0.7 }));
+		const ps = Array.from({ length: n }, (_, i) => ({ ...nearWall(i % 3, 0.15, 0.25), Y: 0, face: FACE[i % 3], jumpAt: 1.5 + i * 0.7, along: 0.15 }));
+		let st = null, stAt = -1;
 		return { ps, step(t, dt) {
+			if (t - stAt > 0.25) { stAt = t; st = stateNow(); }
 			ps.forEach((p, i) => {
-				const w = i % 3;
-				const along = 0.5 + Math.sin(t * 0.45 + i * 1.7) * 0.36;
-				approach(p, nearWall(w, along, 0.25), 1.0, dt);
+				const h = st && st.heroes && st.heroes[i];
+				const w = h && h.wall >= 0 ? h.wall : i % 3;
+				const running = !h || h.state === 'run';
+				if (p.wall !== w) { p.wall = w; p.along = 0.12; }
+				if (running) p.along = Math.min(0.92, p.along + dt * (0.06 + 0.02 * Math.sin(t * 0.7 + i)));
+				else if (h && (h.state === 'banner' || h.state === 'wait')) p.along = Math.max(0.1, p.along - dt * 0.5);
+				approach(p, nearWall(w, p.along, 0.25), 1.2, dt);
 				p.face = FACE[w];
-				if (t > p.jumpAt) { p.jumpAt = t + rnd(1.6, 2.8); p.jumpEnd = t + 0.45; }
+				if (running && t > p.jumpAt) { p.jumpAt = t + rnd(1.4, 2.6); p.jumpEnd = t + 0.45; }
 				p.Y = t < (p.jumpEnd || 0) ? 0.34 * Math.sin((p.jumpEnd - t) / 0.45 * Math.PI) : 0;
 			});
 		} };
@@ -852,5 +860,33 @@ IGB.onFrame(function (now) {
 	composer.render();
 });
 
-window.gamebox = { canvas, start: startGame, setView(v) { if (VIEWS[v]) { view = v; showView(); } }, games: SONIC, get game() { return game; }, get beat() { return game && game.state ? (game.state() || {}).beat : null; } };
+/* ---------- one loop of the game ----------
+   The storyboard's animatic holds on a live frame for one full loop of its
+   game: startLoop() when the frame comes up, then loopState().done. Counted
+   from the moment the game is actually in play. */
+const destroyedOf = (st) => (st.compounds || []).filter((c) => c.destroyed).length;
+const wallsOf = (st) => (st.heroes || []).map((h) => h.wall).join('');
+const LOOPS = {
+	'loop-island': { max: 24 },                                                                              // (a stretch of the run)
+	'knuckles-quest': { min: 8, max: 40, done: (a, b) => (b.found || 0) > (a.found || 0) },                 // an emerald fragment found
+	'quill-relay': { min: 6, max: 40, done: (a, b) => wallsOf(a) !== '' && wallsOf(b) !== wallsOf(a) },     // a hero reaches his checkpoint and zips on to the next wall
+	'iron-stride': { min: 10, max: 40, done: (a, b) => destroyedOf(b) > destroyedOf(a) },                   // a compound brought down
+	'tails-escape': { min: 6, max: 45, done: (a, b) => b.pilot !== a.pilot },                               // a junction taken, the next pilot up
+	'super-sonic-battle': { min: 10, max: 60, done: (a, b) => b.phase === 'handover' || b.phase === 'finale' },   // a whole turn as Sonic
+};
+let loopStart = null, loopFrom = null;
+const stateNow = () => { try { return (game && game.state && game.state()) || {}; } catch (e) { return {}; } };
+function startLoop() { loopStart = performance.now(); loopFrom = stateNow(); }
+function loopState() {
+	if (loopStart === null) return { t: 0, done: false };
+	const L = LOOPS[entry && entry.id] || { max: 20 }, now = stateNow();
+	// (start counting once it's really playing)
+	if (loopFrom.beat !== 'play' && now.beat === 'play') { loopFrom = now; loopStart = performance.now(); }
+	const t = (performance.now() - loopStart) / 1000;
+	let done = t >= L.max;
+	if (!done && L.done && now.beat === 'play' && t >= (L.min || 0)) { try { done = !!L.done(loopFrom, now); } catch (e) { /* (keep waiting) */ } }
+	return { t, done, max: L.max };
+}
+
+window.gamebox = { canvas, startLoop, loopState, start: startGame, setView(v) { if (VIEWS[v]) { view = v; showView(); } }, games: SONIC, get game() { return game; }, get beat() { return game && game.state ? (game.state() || {}).beat : null; } };
 startGame(params.get('game') || SONIC[0].id, +(params.get('players') || 3));
