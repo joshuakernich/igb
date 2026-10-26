@@ -12,7 +12,7 @@ const ICONS = [
 	{ name: 'sonic-dash', chars: [{ kind: 'sonic', mode: 'run', pace: 1 }], bg: '#ffc93a', yaw: -40, pitch: 8 },
 	{ name: 'sonic-classic', chars: [{ kind: 'sonic', mode: 'run', pace: 0.6 }], bg: '#ff5a4a', yaw: 90, pitch: 0 },   // (straight side on, running to the right)
 	{ name: 'sonic-tails', chars: [{ kind: 'tails', mode: 'idle' }], bg: '#4fb3ff', yaw: -35, pitch: 6 },
-	{ name: 'tails-escape', chars: [{ kind: 'flyer' }], bg: '#56606e', yaw: -38, pitch: 10 },   // (Tails Escape's own Tails, flying under his tail rotor, three quarters on)
+	{ name: 'tails-escape', chars: [{ kind: 'flyer' }], bg: '#ff6fae', yaw: -38, pitch: 10 },   // (Tails Escape's own Tails, flying under his tail rotor, three quarters on)
 	{ name: 'sonic-robot', chars: [{ kind: 'robot' }], bg: '#1fae9b', yaw: -35, pitch: 6 },
 	{ name: 'knuckles-quest', chars: [{ kind: 'knuckles', mode: 'idle' }], bg: '#2fbf5f', yaw: -30, pitch: 6 },
 	{ name: 'sonic-characters', chars: [{ kind: 'knuckles', mode: 'idle', x: -0.75, z: 0.25 }, { kind: 'tails', mode: 'idle', x: 0.75, z: 0.25 }, { kind: 'sonic', mode: 'idle', x: 0, z: -0.15 }], bg: '#8a5cff', yaw: -12, pitch: 6 },
@@ -77,7 +77,7 @@ for (const icon of ICONS.filter((i) => !only.length || only.includes(i.name))) {
 		}
 		// the view: round from the front (the models face -z), framed on the whole group
 		group.updateMatrixWorld(true);
-		const box = new THREE.Box3().setFromObject(group);
+		const box = new THREE.Box3().setFromObject(group, true);   // (precise: the tubes are rebuilt as they pose, so their own bounds go stale)
 		const centre = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3());
 		const yaw = icon.yaw * Math.PI / 180, pitch = icon.pitch * Math.PI / 180;
 		const dir = new THREE.Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch));
