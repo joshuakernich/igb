@@ -20,6 +20,7 @@ const SONIC = [
 	{ id: 'quill-relay', name: 'Sonic Classic', bot: 'walls' },
 	{ id: 'iron-stride', name: 'Sonic Robot', bot: 'mech', players: 2 },
 	{ id: 'tails-escape', name: 'Tails Escape', bot: 'escape' },
+	{ id: 'super-sonic-battle', name: 'Super Sonic Battle', bot: 'battle' },
 	{ id: 'twin-tail-tower', name: 'Tails Jump', bot: 'weave', hidden: true },
 ];
 const COLORS = ['#ff2a2a', '#2f6bff', '#32cd32', '#dd00ff', '#ff6600', '#ffbb00'];
@@ -349,6 +350,46 @@ const BOTS = {
 			});
 		} };
 	},
+
+	// Super Sonic Battle: one player at a time is Sonic. On foot they sweep
+	// wide, so he runs laps of the machine for the emeralds; if they haven't
+	// all been gathered after a while the bot hands them over (test.emeralds),
+	// so the battle gets to Super Sonic. In the sky, when targets light up, a
+	// watcher walks to the front wall and taps to send him through the machine.
+	// At a hand-over the next Sonic steps into the middle.
+	battle(n) {
+		const ps = Array.from({ length: n }, (_, i) => ({ X: (i - (n - 1) / 2) * 0.5, Y: 0, Z: -0.5, face: 0 }));
+		let st = null, stAt = -1, groundSince = null, gifted = -1, nextTap = 0;
+		return { ps, step(t, dt, taps) {
+			if (t - stAt > 0.2) { stAt = t; try { st = game && game.state ? game.state() : null; } catch (e) { st = null; } }
+			const phase = st && st.phase, ctrl = st && st.ctrl >= 0 ? st.ctrl : 0;
+			if (phase === 'ground') {
+				if (groundSince === null) groundSince = t;
+				const round = st.turns ? st.turns.length : 0;
+				if (t - groundSince > 12 && gifted !== round && game.test && game.test.emeralds) { gifted = round; game.test.emeralds(); }
+			} else groundSince = null;
+			if ((phase === 'super') && st.targets > 0 && t > nextTap) {
+				const i = ps.findIndex((p, k) => k !== ctrl && !p.goal);
+				if (i >= 0) { ps[i].goal = { ...nearWall(1, rnd(0.35, 0.65), 0.1), tap: { wall: 1, x: 0.5, y: 0.4, hit: true } }; nextTap = t + 3; }
+			}
+			ps.forEach((p, i) => {
+				if (p.goal) {
+					p.face = faceToward(p, p.goal);
+					if (approach(p, p.goal, 1.2, dt)) { taps(i, p.goal.tap); p.goal = null; p.back = t + 0.5; }
+					return;
+				}
+				if (t < (p.back || 0)) return;
+				if (i === ctrl) {
+					if (phase === 'handover' || phase === 'wait' || phase === 'transform') approach(p, { X: 0, Z: 0 }, 1.0, dt);
+					else approach(p, { X: Math.sin(t * 0.45) * 0.82, Z: Math.sin(t * 0.3) * 0.25 }, 1.4, dt);
+				} else {
+					const k = ps.length > 1 ? (i - (n - 1) / 2) * 0.55 : 0;
+					approach(p, { X: k, Z: -0.72 }, 0.7, dt);
+				}
+				p.face *= 1 - Math.min(1, dt * 2);
+			});
+		} };
+	},
 };
 
 let bot = null, figures = [], botT = 0;
@@ -364,7 +405,9 @@ function doTap(i, tap) {
 	const f = figures[i];
 	if (f) f.tap((0.5 - tap.y) * 1.6);
 	const x = (tap.wall + tap.x) * IGB.W, y = tap.y * IGB.H;
-	if (!game || !game.test || !game.test.tap) return;
+	if (!game || !game.test) return;
+	if (tap.hit) { if (game.test.hit) game.test.hit(); return; }   // (Super Sonic Battle: dive at a lit target)
+	if (!game.test.tap) return;
 	if (tap.escape) game.test.tap(i, tap.wall);   // (Tails Escape: a vote for that wall's branch)
 	else game.test.tap(x, y);
 }
