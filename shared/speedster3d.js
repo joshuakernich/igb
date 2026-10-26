@@ -1108,16 +1108,26 @@ export function buildSpeedster(colour, { knuckles = false, tails = false, kind =
 		}
 		if (mode === 'tailhang') {
 			// flying under spinning tails (the classic Tails): leaning forward
-			// from the hips (tip the whole body forward too, for the butt up
-			// high), the head up looking ahead, the arms reaching forward and
-			// down, the legs dangling a little behind, all swaying; pace swings
-			// the legs back
+			// from the hips, the head up looking ahead, the arms and legs
+			// dangling loose, straight down, swinging; pace swings the legs back.
+			// (made for a body tipped TIP forward as a whole, as Tails Escape
+			// flies him: straight down is worked out in that tipped body)
 			show(false);
+			const TIP = 1.05, LEAN = 0.55;
 			const sway = Math.sin(time * 2.6), back = Math.max(0, Math.min(1, pace));
-			torso.rotation.x = -0.55 + sway * 0.03;
+			torso.rotation.x = -LEAN + sway * 0.03;
 			head.rotation.x = 1.25;
-			for (const a of arms) placeArm(a, a.s * 0.22, 0.6 + Math.sin(time * 2.6 + a.s) * 0.02, -0.34, 0.06, 0.02);   // (tipped well forward, as Tails Escape flies him: forward and down)
-			for (const l of legs) placeLeg(l, l.s * 0.08, 0.1 + (l.s > 0 ? 0.03 : 0), 0.14 + sway * 0.025 * l.s + back * 0.1, -0.3 - back * 0.2);
+			// (straight down: in the legs' space, tipped TIP; in the torso's, TIP + LEAN)
+			const down = (k) => [-Math.cos(k), -Math.sin(k)];
+			const [ay, az] = down(TIP + LEAN), [ly, lz] = down(TIP);
+			for (const a of arms) {
+				const swing = Math.sin(time * 2.3 + a.s * 1.3) * 0.08, reach = 0.47;
+				placeArm(a, a.s * (0.19 + Math.sin(time * 1.7 + a.s) * 0.015), 0.4 + ay * reach + swing * az, az * reach - swing * ay, 0.03, 0.01);
+			}
+			for (const l of legs) {
+				const swing = Math.sin(time * 2.1 + l.s * 1.1) * 0.07 + back * 0.12, reach = 0.46;
+				placeLeg(l, l.s * 0.09, 0.56 + ly * reach + swing * lz, lz * reach - swing * ly, -0.15 + Math.sin(time * 2.1 + l.s) * 0.1);   // (toes drooping)
+			}
 			return;
 		}
 		if (mode === 'idle' || pace < 0.04) {
