@@ -6,7 +6,7 @@ body.gamebox-page {
 	margin: 0;
 	background: #14001f;
 	color: #ffffff;
-	font-family: Lexend, system-ui, sans-serif;
+	font-family: Rubik, Arial, system-ui, sans-serif;
 	font-weight: 300;
 	overflow: hidden;
 	height: 100vh;
@@ -55,7 +55,7 @@ gamebox-bar {
 }
 gamebox-bar.recording { opacity: 0; pointer-events: none; }
 gamebox-title { display: flex; align-items: baseline; gap: 12px; margin-right: auto; }
-gamebox-title b { font-weight: 200; font-size: 22px; letter-spacing: 0.02em; }
+gamebox-title b { font-weight: 300; font-size: 22px; letter-spacing: 0.02em; }
 gamebox-title span { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #a99bb0; }
 gamebox-games, gamebox-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 gamebox-bar button, gamebox-bar select {
