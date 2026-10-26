@@ -31,8 +31,9 @@ const SONIC = [
 ];
 const COLORS = ['#ff2a2a', '#2f6bff', '#32cd32', '#dd00ff', '#ff6600', '#ffbb00'];
 
-// The room in metres: walls 16:10, square floor. Tracking X/Z run -1..1 across it.
-const ROOM = { w: 5, d: 5, h: 3.125 };
+// The room in metres, as built: a 3 m x 3 m floor, walls 16:10 (so 1.875 m of
+// picture up each). Tracking X/Z run -1..1 across it: one unit is 1.5 m.
+const ROOM = { w: 3, d: 3, h: 1.875 };
 const SCALE = 0.5;                 // the hidden stage's scale (world 4800 x 1000 -> 2400 x 500)
 const STRIP = { w: 3072, h: 640 }; // the copied walls: 1024 x 640 each
 
@@ -137,7 +138,7 @@ key.shadow.mapSize.set(1024, 1024);
 Object.assign(key.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 15 });
 scene.add(key);
 const glows = [0, 1, 2].map((n) => {
-	const l = new THREE.PointLight('#ffffff', 6, 7, 1.6);
+	const l = new THREE.PointLight('#ffffff', 3.5, 5, 1.6);
 	l.position.set(n === 0 ? -hw + 0.4 : n === 2 ? hw - 0.4 : 0, H * 0.55, n === 1 ? -hd + 0.4 : 0);
 	scene.add(l);
 	return l;
@@ -374,7 +375,7 @@ function GhostFigure(n) {
 	const lift = new THREE.Group();
 	lift.add(body);
 	root.add(lift);
-	const pool = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), new THREE.MeshBasicMaterial({ map: poolTex, color: col, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+	const pool = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 1.0), new THREE.MeshBasicMaterial({ map: poolTex, color: col, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
 	pool.rotation.x = -Math.PI / 2; pool.position.y = 0.012;
 	root.add(pool);
 	scene.add(root);
@@ -523,7 +524,7 @@ const makeFigure = (i) => (ghostKit ? GhostFigure(i) : Figure(i));
 const FACE = [Math.PI / 2, 0, -Math.PI / 2];
 const rnd = (a, b) => a + Math.random() * (b - a);
 // a point in front of wall w, `along` it (0..1 as you face it), `off` in from it (tracking units)
-function nearWall(w, along, off = 0.12) {
+function nearWall(w, along, off = 0.22) {   // (off in tracking units: 0.22 is about 33 cm, an arm's reach)
 	const a = along * 2 - 1, e = 1 - off;
 	if (w === 0) return { X: -e, Z: a };
 	if (w === 1) return { X: a, Z: e };
@@ -555,7 +556,7 @@ const BOTS = {
 	// what runs him to the checkpoint), jumping now and then; when he zips
 	// round to the next wall they go to the start of that one.
 	walls(n) {
-		const ps = Array.from({ length: n }, (_, i) => ({ ...nearWall(i % 3, 0.15, 0.25), Y: 0, face: FACE[i % 3], jumpAt: 1.5 + i * 0.7, along: 0.15 }));
+		const ps = Array.from({ length: n }, (_, i) => ({ ...nearWall(i % 3, 0.15, 0.3), Y: 0, face: FACE[i % 3], jumpAt: 1.5 + i * 0.7, along: 0.15 }));
 		let st = null, stAt = -1;
 		return { ps, step(t, dt) {
 			if (t - stAt > 0.25) { stAt = t; st = stateNow(); }
@@ -566,7 +567,7 @@ const BOTS = {
 				if (p.wall !== w) { p.wall = w; p.along = 0.12; }
 				if (running) p.along = Math.min(0.92, p.along + dt * (0.06 + 0.02 * Math.sin(t * 0.7 + i)));
 				else if (h && (h.state === 'banner' || h.state === 'wait')) p.along = Math.max(0.1, p.along - dt * 0.5);
-				approach(p, nearWall(w, p.along, 0.25), 1.2, dt);
+				approach(p, nearWall(w, p.along, 0.3), 1.2, dt);
 				p.face = FACE[w];
 				if (running && t > p.jumpAt) { p.jumpAt = t + rnd(1.4, 2.6); p.jumpEnd = t + 0.45; }
 				p.Y = t < (p.jumpEnd || 0) ? 0.34 * Math.sin((p.jumpEnd - t) / 0.45 * Math.PI) : 0;
@@ -633,7 +634,7 @@ const BOTS = {
 				// (two of the watchers vote; on your own, the pilot does)
 				const voters = n > 1 ? ps.map((_, i) => i).filter((i) => i !== pilot).slice(0, 2) : [0];
 				if (pick) voters.forEach((i) => {
-					ps[i].goal = { ...nearWall(pick.wall, rnd(0.35, 0.65), 0.1), tap: { wall: pick.wall, x: 0.5, y: 0.5, escape: true } };
+					ps[i].goal = { ...nearWall(pick.wall, rnd(0.35, 0.65), 0.22), tap: { wall: pick.wall, x: 0.5, y: 0.5, escape: true } };
 				});
 			}
 			ps.forEach((p, i) => {
@@ -676,7 +677,7 @@ const BOTS = {
 			} else groundSince = null;
 			if ((phase === 'super') && st.targets > 0 && t > nextTap) {
 				const i = ps.findIndex((p, k) => k !== ctrl && !p.goal);
-				if (i >= 0) { ps[i].goal = { ...nearWall(1, rnd(0.35, 0.65), 0.1), tap: { wall: 1, x: 0.5, y: 0.4, hit: true } }; nextTap = t + 3; }
+				if (i >= 0) { ps[i].goal = { ...nearWall(1, rnd(0.35, 0.65), 0.22), tap: { wall: 1, x: 0.5, y: 0.4, hit: true } }; nextTap = t + 3; }
 			}
 			ps.forEach((p, i) => {
 				if (p.goal) {
