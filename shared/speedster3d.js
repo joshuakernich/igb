@@ -1118,10 +1118,12 @@ export function buildSpeedster(colour, { knuckles = false, tails = false, kind =
 			const TIP = 1.05, LEAN = 0.55;
 			const sway = Math.sin(time * 2.6), back = Math.max(0, Math.min(1, pace));
 			torso.rotation.x = -LEAN + sway * 0.03;
-			// the head tilted up to look ahead, pushed forward (the way he's
-			// flying, in the tipped torso's space)
-			head.rotation.x = 1.5;
-			head.position.set(0, HEAD_AT.y + Math.sin(TIP + LEAN) * 0.05, HEAD_AT.z - Math.cos(TIP + LEAN) * 0.05);
+			// the head tilted back to look ahead, pushed forward and up (in the
+			// tipped torso's space)
+			head.rotation.x = 1.85;
+			// (forward 0.05 and up 0.07, in the world)
+			const k = TIP + LEAN;
+			head.position.set(0, HEAD_AT.y + Math.sin(k) * 0.05 + Math.cos(k) * 0.07, HEAD_AT.z - Math.cos(k) * 0.05 + Math.sin(k) * 0.07);
 			// (straight down: in the legs' space, tipped TIP; in the torso's, TIP + LEAN)
 			const down = (k) => [-Math.cos(k), -Math.sin(k)];
 			const [ay, az] = down(TIP + LEAN), [ly, lz] = down(TIP);
