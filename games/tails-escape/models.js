@@ -167,7 +167,7 @@ export function buildFlyer(colour) {
 		stem.geometry.computeBoundingSphere();
 	}
 
-	return { root, yaw, pose, setColour: s.setColour };
+	return { root, yaw, spin, pose, setColour: s.setColour };   // (spin: the rotor, turning)
 }
 
 // A soft dark blob on the floor under a fox (so you can tell how high he is).
