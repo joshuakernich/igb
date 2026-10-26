@@ -1,5 +1,5 @@
 /*
- * Twin Tail Tower (shown as SONIC TAILS: the manifest's name and title; the
+ * Twin Tail Tower (shown as TAILS JUMP: the manifest's name and title; the
  * id, folder and code stay twin-tail-tower)
  *
  * Doodle Jump, in 3D, round the whole room. Everyone is a glossy little
