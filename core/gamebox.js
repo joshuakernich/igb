@@ -245,11 +245,52 @@ async function loadMannequin() {
 		return await loader.parseAsync(bin.buffer, '');
 	}
 }
+// How fast the ground goes by in a locomotion clip (metres a second, at our
+// scale): while a foot is planted it slides back under the hips at exactly
+// the speed the body moves, so sample the clip and time the planted feet.
+function groundSpeed(scene, clip, scale) {
+	const c = cloneSkinned(scene), mixer = new THREE.AnimationMixer(c);
+	mixer.clipAction(clip).play();
+	const feet = ['DEF-foot.L', 'DEF-foot.R'].map((k) => boneNamed(c, k)).filter(Boolean);
+	const N = 120, dt = clip.duration / N, pts = feet.map(() => []), v = new THREE.Vector3();
+	for (let i = 0; i <= N; i++) {
+		mixer.setTime(i * dt);
+		c.updateMatrixWorld(true);
+		feet.forEach((f, k) => { f.getWorldPosition(v); pts[k].push({ y: v.y, z: v.z }); });
+	}
+	// the stance: the longest run (round the loop) of samples with the foot in
+	// the low third of its height range; how far it slid back over that run
+	const speeds = [];
+	for (const ps of pts) {
+		const n = ps.length - 1;   // (the last sample repeats the first)
+		const ys = ps.slice(0, n).map((p) => p.y), lo = Math.min(...ys), hi = Math.max(...ys), th = lo + (hi - lo) * 0.35;
+		const down = ys.map((y) => y < th);
+		if (down.every(Boolean) || !down.some(Boolean)) continue;
+		let start = down.findIndex((d, i) => d && !down[(i - 1 + n) % n]), best = null;
+		for (let i = 0; i < n; i++) {
+			const s0 = (start + i) % n;
+			if (!down[s0] || down[(s0 - 1 + n) % n]) continue;
+			let len = 0; while (len < n && down[(s0 + len) % n]) len++;
+			if (!best || len > best.len) best = { s0, len };
+		}
+		if (!best || best.len < 3) continue;
+		const z0 = ps[best.s0].z, z1 = ps[(best.s0 + best.len - 1) % n].z;
+		speeds.push((z0 - z1) / ((best.len - 1) * dt) * scale);
+	}
+	return speeds.length ? speeds.reduce((a, b) => a + b) / speeds.length : 0;
+}
+// (glTF node names lose their dots on loading: 'DEF-foot.L' becomes 'DEF-footL')
+const boneNamed = (obj, name) => obj.getObjectByName(name) || obj.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(name));
+const GAITS = { Walk_Loop: 1.3, Jog_Fwd_Loop: 3.0, Sprint_Loop: 5.5, Crouch_Fwd_Loop: 0.9 };   // (fallbacks, m/s)
 const ghostReady = loadMannequin().then((gltf) => {
 	const box = new THREE.Box3().setFromObject(gltf.scene);
 	const clips = {};
 	for (const c of gltf.animations) clips[c.name] = c;
-	ghostKit = { scene: gltf.scene, clips, scale: HEIGHT / Math.max(0.01, box.max.y - box.min.y), floor: box.min.y };
+	const scale = HEIGHT / Math.max(0.01, box.max.y - box.min.y);
+	const speed = {};
+	for (const k in GAITS) { const v = clips[k] ? groundSpeed(gltf.scene, clips[k], scale) : 0; speed[k] = v > 0.2 && v < 12 ? v : GAITS[k]; }
+	ghostKit = { scene: gltf.scene, clips, scale, floor: box.min.y, speed };
+	window.gamebox && (window.gamebox.gaits = speed);
 }).catch((e) => console.warn('No mannequin, using the simple figures', e));
 
 const GHOST_VERT = `
@@ -348,66 +389,127 @@ function GhostFigure(n) {
 		a.time = Math.random() * clip.duration;   // (out of step with each other)
 		act[name] = a;
 	}
-	const bone = (k) => body.getObjectByName(k);
+	const bone = (k) => boneNamed(body, k);
 	const arm = { upper: bone('DEF-upper_arm.R'), fore: bone('DEF-forearm.R'), hand: bone('DEF-hand.R') };
+	if (!arm.upper || !arm.fore || !arm.hand) console.warn('Ghost: arm bones not found');
+	const GAIT = ['Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop'];
+	for (const k of [...GAIT, 'Crouch_Fwd_Loop']) if (act[k]) act[k].timeScale = 0;   // (these are stepped by hand, in phase: see below)
+	const vOf = ghostKit.speed;
 
-	const f = { x: 0, z: 0, face: 0, speed: 0, reach: 0, reachTo: new THREE.Vector3(), blend: {} };
+	// The body stands where the tracker puts them, but its feet stay planted
+	// through small drifts: it only sets off once they're a few centimetres
+	// away, steps over at a walking pace at least, and stops dead once there.
+	const f = { x: 0, z: 0, placed: false, moving: false, face: 0, speed: 0, tSpeed: 0, tx: 0, tz: 0, phase: Math.random(), reachT: -1, reachTo: new THREE.Vector3(), blend: {} };
+	const START = 0.06, STOP = 0.012, MIN_STEP = 0.55;   // metres, metres, m/s
+	const REACH = { up: 0.28, hold: 0.32, down: 0.3 };   // seconds
+	const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
 	f.update = function (s, dt) {
-		const x = s.X * hw * 0.92, z = -s.Z * hd * 0.92;
-		const dx = x - f.x, dz = z - f.z;
-		const v = Math.hypot(dx, dz) / Math.max(dt, 1e-3);
-		f.speed += (v - f.speed) * Math.min(1, dt * 6);
-		f.x = x; f.z = z;
-		root.position.set(x, 0, z);
-		// face where they're going when they're really moving, otherwise where the game has them looking
-		const heading = Math.atan2(-dx, -dz);
-		const want = f.speed > 0.7 && f.reach <= 0 ? heading : s.face;
+		const tx = s.X * hw * 0.92, tz = -s.Z * hd * 0.92;
+		if (!f.placed) { f.x = f.tx = tx; f.z = f.tz = tz; f.placed = true; }
+		// how fast the tracked person is going (smoothed)
+		const tv = Math.hypot(tx - f.tx, tz - f.tz) / Math.max(dt, 1e-3);
+		f.tSpeed += (tv - f.tSpeed) * Math.min(1, dt * 5);
+		f.tx = tx; f.tz = tz;
+		// the body follows
+		const ex = tx - f.x, ez = tz - f.z, dist = Math.hypot(ex, ez);
+		if (!f.moving && dist > START) f.moving = true;
+		if (f.moving && dist < STOP && f.tSpeed < 0.15) f.moving = false;
+		let step = 0;
+		if (f.moving && dist > 1e-5) {
+			const want = Math.min(7, Math.max(f.tSpeed, dist * 3, MIN_STEP));
+			step = Math.min(dist, want * dt);
+			f.x += ex / dist * step; f.z += ez / dist * step;
+		}
+		const v = step / Math.max(dt, 1e-3);
+		f.speed += (v - f.speed) * Math.min(1, dt * 10);
+		root.position.set(f.x, 0, f.z);
+
+		// facing: the way they're walking while they walk (feet don't skate
+		// sideways), otherwise where the game has them looking
+		const reaching = f.reachT >= 0;
+		const want = f.speed > 0.25 && !reaching ? Math.atan2(-ex, -ez) : s.face;
 		let d = want - f.face; d = Math.atan2(Math.sin(d), Math.cos(d));
-		f.face += d * Math.min(1, dt * 6);
+		f.face += d * Math.min(1, dt * (f.speed > 0.25 ? 7 : 3.5));
 		root.rotation.y = f.face + Math.PI;
 
-		// the blend: locomotion by speed (m/s), or crouch / jump from the height
+		// the blend
 		const sp = f.speed, crouch = s.Y < -0.06, jump = s.Y > 0.06;
 		const w = { Idle_Loop: 0, Walk_Loop: 0, Jog_Fwd_Loop: 0, Sprint_Loop: 0, Crouch_Idle_Loop: 0, Crouch_Fwd_Loop: 0, Jump_Loop: 0 };
+		const vW = vOf.Walk_Loop, vJ = vOf.Jog_Fwd_Loop, vS = vOf.Sprint_Loop;
 		if (jump) w.Jump_Loop = 1;
-		else if (crouch) { const k = Math.min(1, sp / 1.0); w.Crouch_Idle_Loop = 1 - k; w.Crouch_Fwd_Loop = k; }
-		else if (sp < 1.3) { const k = sp / 1.3; w.Idle_Loop = 1 - k; w.Walk_Loop = k; }
-		else if (sp < 3.2) { const k = (sp - 1.3) / 1.9; w.Walk_Loop = 1 - k; w.Jog_Fwd_Loop = k; }
-		else { const k = Math.min(1, (sp - 3.2) / 2.3); w.Jog_Fwd_Loop = 1 - k; w.Sprint_Loop = k; }
+		else if (crouch) { const k = smooth(0.03, 0.3, sp); w.Crouch_Idle_Loop = 1 - k; w.Crouch_Fwd_Loop = k; }
+		else if (sp <= vW) { const k = smooth(0.03, 0.3, sp); w.Idle_Loop = 1 - k; w.Walk_Loop = k; }
+		else if (sp <= vJ) { const k = (sp - vW) / (vJ - vW); w.Walk_Loop = 1 - k; w.Jog_Fwd_Loop = k; }
+		else { const k = Math.min(1, (sp - vJ) / (vS - vJ)); w.Jog_Fwd_Loop = 1 - k; w.Sprint_Loop = k; }
 		for (const k in act) {
-			f.blend[k] = (f.blend[k] || 0) + (w[k] - (f.blend[k] || 0)) * Math.min(1, dt * 8);
+			f.blend[k] = (f.blend[k] || 0) + (w[k] - (f.blend[k] || 0)) * Math.min(1, dt * 10);
 			act[k].setEffectiveWeight(f.blend[k]);
 		}
-		// keep the stride in step with the ground
-		const stride = sp < 1.3 ? sp / 1.3 : sp < 3.2 ? sp / 3.2 : sp / 5.5;
-		for (const k of ['Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Crouch_Fwd_Loop']) if (act[k]) act[k].timeScale = Math.max(0.5, Math.min(1.6, stride || 1));
+		// One stride phase for walk, jog and sprint, advanced at the rate that
+		// makes the planted foot keep pace with the ground (each clip at
+		// speed / its own ground speed), so blending between gaits never slips.
+		let rate = 0, tot = 0;
+		for (const k of GAIT) if (act[k] && f.blend[k] > 0.001) { rate += f.blend[k] * (Math.max(sp, 0.12) / vOf[k]) / act[k].getClip().duration; tot += f.blend[k]; }
+		if (tot > 0) f.phase = (f.phase + dt * rate / tot) % 1;
+		for (const k of GAIT) if (act[k]) act[k].time = f.phase * act[k].getClip().duration;
+		if (act.Crouch_Fwd_Loop) { const c = act.Crouch_Fwd_Loop; c.time = (c.time + dt * Math.max(sp, 0.1) / vOf.Crouch_Fwd_Loop) % c.getClip().duration; }
 		lift.position.y = jump ? s.Y * 0.9 : 0;
 		mixer.update(dt);
 
-		// the touch: aim the right arm, straightened, at the spot on the wall
-		f.reach = Math.max(0, f.reach - dt * 1.6);
-		if (f.reach > 0 && arm.upper && arm.fore) {
-			const k = Math.sin(Math.min(1, f.reach) * Math.PI) * 1.15;
-			body.updateMatrixWorld(true);
-			const shoulder = arm.upper.getWorldPosition(tmpV);
-			const dir = tmpV2.copy(f.reachTo).sub(shoulder).normalize();
-			// the bone runs along its own +y: turn that onto the direction
-			const cur = Y_AXIS.clone().applyQuaternion(arm.upper.getWorldQuaternion(tmpQ)).normalize();
-			const turn = tmpQ2.setFromUnitVectors(cur, dir);
-			const worldQ = tmpQ.premultiply(turn);
-			const parentQ = arm.upper.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
-			const localQ = parentQ.multiply(worldQ);
-			arm.upper.quaternion.slerp(localQ, Math.min(1, k));
-			arm.fore.quaternion.slerp(new THREE.Quaternion(), Math.min(1, k) * 0.85);
+		// the touch: a two-bone reach, shoulder and elbow solved together so
+		// the hand lands on the spot, the elbow bending down and out
+		if (reaching) {
+			f.reachT += dt;
+			const t = f.reachT;
+			const k = t < REACH.up ? smooth(0, REACH.up, t) : t < REACH.up + REACH.hold ? 1 : 1 - smooth(REACH.up + REACH.hold, REACH.up + REACH.hold + REACH.down, t);
+			if (t > REACH.up + REACH.hold + REACH.down) f.reachT = -1;
+			if (k > 0 && arm.upper && arm.fore && arm.hand) reachTo(k);
 		}
 	};
+
+	const S = new THREE.Vector3(), E = new THREE.Vector3(), H = new THREE.Vector3(), T = new THREE.Vector3(), dir = new THREE.Vector3(), pole = new THREE.Vector3(), side = new THREE.Vector3(), elbow = new THREE.Vector3();
+	const qa = new THREE.Quaternion(), qb = new THREE.Quaternion(), qp = new THREE.Quaternion();
+	// turn a bone (it runs along its own +y) so it points from its head at `to`, by k
+	function aim(b, to, k) {
+		b.updateWorldMatrix(true, false);
+		const head = b.getWorldPosition(new THREE.Vector3());
+		const cur = Y_AXIS.clone().applyQuaternion(b.getWorldQuaternion(qa)).normalize();
+		const want = to.clone().sub(head).normalize();
+		const worldQ = qa.premultiply(qb.setFromUnitVectors(cur, want));
+		const local = b.parent.getWorldQuaternion(qp).invert().multiply(worldQ);
+		b.quaternion.slerp(local, k);
+		b.updateWorldMatrix(false, true);
+	}
+	function reachTo(k) {
+		body.updateMatrixWorld(true);
+		arm.upper.getWorldPosition(S);
+		arm.fore.getWorldPosition(E);
+		arm.hand.getWorldPosition(H);
+		const a = S.distanceTo(E), b = E.distanceTo(H);
+		// the hand stops on the wall's surface, a touch short of fully straight
+		T.copy(f.reachTo);
+		dir.copy(T).sub(S);
+		const d = Math.min(dir.length(), (a + b) * 0.985);
+		dir.normalize();
+		T.copy(S).addScaledVector(dir, d);
+		// the elbow: down and out to their right, and a little back
+		side.set(-1, 0, 0).applyQuaternion(root.quaternion);   // (their right: the figure faces +z before root's turn)
+		pole.set(0, -1, 0).addScaledVector(side, 0.7).add(new THREE.Vector3(0, 0, -0.3).applyQuaternion(root.quaternion));
+		pole.addScaledVector(dir, -pole.dot(dir)).normalize();
+		const cosA = Math.max(-1, Math.min(1, (a * a + d * d - b * b) / (2 * a * d)));
+		const sinA = Math.sqrt(1 - cosA * cosA);
+		elbow.copy(S).addScaledVector(dir, a * cosA).addScaledVector(pole, a * sinA);
+		aim(arm.upper, elbow, k);
+		aim(arm.fore, T, k);
+	}
 	// tap: { wall, x, y } (fractions along that wall as you face it, y 0 at the top)
 	f.tap = function (tap) {
 		const along = tap.x, h = (1 - tap.y) * ROOM.h;
 		if (tap.wall === 1) f.reachTo.set((along - 0.5) * ROOM.w, h, -hd);
 		else if (tap.wall === 0) f.reachTo.set(-hw, h, (0.5 - along) * ROOM.d);
 		else f.reachTo.set(hw, h, (along - 0.5) * ROOM.d);
-		f.reach = 1;
+		f.reachT = 0;
 	};
 	f.dispose = function () { scene.remove(root); mixer.stopAllAction(); };
 	return f;
