@@ -31,11 +31,10 @@ const SONIC = [
 ];
 const COLORS = ['#ff2a2a', '#2f6bff', '#32cd32', '#dd00ff', '#ff6600', '#ffbb00'];
 
-// The room in metres, as near as a photo of a real box gives it: a 3.6 m x 3.6 m
-// floor; on each wall a 16:10 picture from the floor to 2.25 m, then a dark band
-// (projectors, speakers) up to a 3 m ceiling. Tracking X/Z run -1..1 across it:
-// one unit is 1.8 m.
-const ROOM = { w: 3.6, d: 3.6, h: 2.25, ceiling: 3.0 };
+// The room in metres: a 3.6 m x 3.6 m floor, each wall 16:10 (3.6 m x 2.25 m),
+// all of it picture. Tracking X/Z run -1..1 across it: one unit is 1.8 m.
+const ROOM = { w: 3.6, d: 3.6, h: 2.25 };
+ROOM.ceiling = ROOM.h;
 const SCALE = 0.5;                 // the hidden stage's scale (world 4800 x 1000 -> 2400 x 500)
 const STRIP = { w: 3072, h: 640 }; // the copied walls: 1024 x 640 each
 
@@ -125,16 +124,6 @@ scene.add(floor);
 // The box's frame: thin edges along the top and the open back.
 const edge = new THREE.LineBasicMaterial({ color: '#ae2bff', transparent: true, opacity: 0.7 });
 const hw = ROOM.w / 2, hd = ROOM.d / 2, H = ROOM.h, C = ROOM.ceiling;
-// the dark band above the pictures, up to the ceiling
-const bandMat = new THREE.MeshStandardMaterial({ color: '#14001f', roughness: 0.9 });
-for (const n of [0, 1, 2]) {
-	const band = new THREE.Mesh(new THREE.PlaneGeometry(n === 1 ? ROOM.w : ROOM.d, C - H), bandMat);
-	band.position.y = H + (C - H) / 2;
-	if (n === 0) { band.rotation.y = Math.PI / 2; band.position.x = -hw; }
-	if (n === 1) band.position.z = -hd;
-	if (n === 2) { band.rotation.y = -Math.PI / 2; band.position.x = hw; }
-	scene.add(band);
-}
 scene.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints([
 	new THREE.Vector3(-hw, C, hd), new THREE.Vector3(-hw, C, -hd), new THREE.Vector3(-hw, C, -hd), new THREE.Vector3(hw, C, -hd),
 	new THREE.Vector3(hw, C, -hd), new THREE.Vector3(hw, C, hd), new THREE.Vector3(-hw, 0, hd), new THREE.Vector3(-hw, C, hd),
