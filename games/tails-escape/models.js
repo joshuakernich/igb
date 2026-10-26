@@ -85,9 +85,10 @@ function mats() {
 
 // Tails: the shared speedster build as the fox, in the player's colour, his
 // two tails swung up over his head and spinning like a helicopter's blades
-// the whole time. Flying low he tucks up; high, he reaches up; hit, he
-// tumbles. The root is at the middle of his body (what touches things), and
-// he faces +Z (the game turns him the way he's flying).
+// the whole time, and him hanging under them, arms and legs dangling (his
+// legs trailing back a little more as he climbs); hit, he tumbles. The root
+// is at the middle of his body (what touches things), and he faces +Z (the
+// game turns him the way he's flying).
 export function buildFlyer(colour, middle = 0.6) {
 	const root = new THREE.Group();
 	const yaw = new THREE.Group();       // turned a little into a swerve
@@ -105,15 +106,14 @@ export function buildFlyer(colour, middle = 0.6) {
 	const spin = new THREE.Group();
 	s.torso.add(spin);
 	spin.add(s.tailRig);
-	s.tailRig.position.set(0, 1.02, 0.02);
+	s.tailRig.position.set(0, 1.12, 0.02);   // (a little higher than standing: he hangs from them)
 	s.tailRig.rotation.x = 0.74;
 	let time = 0;
 
-	// st: { mode ('low' | 'mid' | 'high'), rising (0..1), hurt, lean (radians), turn (radians) }
+	// st: { rising (0..1), hurt, lean (radians), turn (radians) }
 	function pose(dt, st) {
 		time += dt;
-		const mode = st.hurt ? 'hurt' : st.mode === 'low' ? 'crouch' : 'spring';
-		s.animate(dt, mode, 0, 30, time);
+		s.animate(dt, st.hurt ? 'hurt' : 'hang', 0.25 + st.rising * 0.5, 30, time);
 		spin.rotation.y += dt * (st.hurt ? 14 : 30 + st.rising * 14);
 		lean.rotation.z = st.lean;
 		yaw.rotation.y = st.turn;

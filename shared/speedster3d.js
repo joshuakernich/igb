@@ -16,7 +16,7 @@
  *   const s = buildSpeedster(0x2f6cf0);
  *   scene.add(s.root);                 // s.lean tilts and tumbles inside it
  *   s.animate(dt, mode, pace, spin, time);
- *     // mode: 'run' | 'ball' | 'crouch' | 'spring' | 'hurt' | 'idle'
+ *     // mode: 'run' | 'ball' | 'crouch' | 'spring' | 'hurt' | 'idle' | 'hang' (limbs dangling)
  *     // pace: 0..1 (how fast); spin: the ball's turn (radians a second)
  *   s.setColour(c);
  */
@@ -1093,6 +1093,17 @@ export function buildSpeedster(colour, { knuckles = false, tails = false, kind =
 			for (const a of arms) placeArm(a, a.s * 0.3, 0.75 + (a.s > 0 ? s : -s) * 0.22, -0.32, 0.12, 0.08);
 			for (const l of legs) placeLeg(l, l.s * 0.2, 0.12 + (l.s > 0 ? -s : s) * 0.18, -0.22, -0.6);
 			torso.position.y = HIP_Y + c * 0.03 * Math.min(1, Math.abs(pace));
+			return;
+		}
+		if (mode === 'hang') {
+			// hanging (by Tails' tails, say): arms straight down by the sides, legs
+			// dangling, toes pointed, all swaying a little; pace swings the legs back
+			show(false);
+			const sway = Math.sin(time * 2.6), back = Math.max(0, Math.min(1, pace));
+			torso.rotation.x = 0.05;
+			head.rotation.x = -0.12;
+			for (const a of arms) placeArm(a, a.s * 0.19, -0.2 + Math.sin(time * 2.6 + a.s) * 0.015, -0.03 + sway * 0.02, 0.04, -0.02);
+			for (const l of legs) placeLeg(l, l.s * 0.09, 0.07 + (l.s > 0 ? 0.02 : 0), 0.03 + sway * 0.025 * l.s + back * 0.14, -0.7 - back * 0.3);
 			return;
 		}
 		if (mode === 'idle' || pace < 0.04) {
