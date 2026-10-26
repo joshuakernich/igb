@@ -10,21 +10,28 @@
  * One player at a time is Sonic (their colour on the tag over him). Stand in
  * the middle of the room. Step left or right and Sonic lines up with you:
  * in the middle quarter of the room he just steps across; further out he
- * jogs, then runs, flat out at the edge (curled into a ball, smashing
- * badniks), and the eye swings round the other way with him, so he runs a
+ * jogs, then runs, flat out well short of the wall (his legs a whirling
+ * blur, smashing straight through badniks), and the eye swings round the other way with him, so he runs a
  * great circle round the machine, the eye still on it. Step forward and he's
  * a little further from the eye (nearer the machine); back, a little nearer.
  *
  * On foot, gather the seven Chaos Emeralds scattered round the field
  * (columns of light show where), dodging the machine's missiles (a red ring
  * where each will land), its shockwaves (rolling out across the ground: run
- * for the gap) and the badniks rolling round the field. Get hit and an
- * emerald's knocked loose, flying off somewhere else.
+ * for the gap), the badniks rolling round the field and the Buzz Bombers
+ * that fly in, hover in view and dive at him. Any robot can be tapped (on
+ * whichever wall it's on, by anyone) to smash it: points to the tapper, and
+ * a few rings out of it. Rings lie in arcs round the field (and the sky):
+ * they're his shield. Get hit and they scatter (grab them back quick); hit
+ * with none, an emerald's knocked loose, flying off somewhere else.
  *
  * With all seven: the transformation. The emeralds whirl round him as he
  * floats up, a vortex of light, they flow into him, he lands, a flash of
- * light and fire: Super Sonic. Up into the sky he goes, strafing as before
- * (invincible now), and targets light up on the machine; tap one (on
+ * light and fire: Super Sonic. Up into the sky he goes, strafing as before,
+ * the machine throwing everything at him: fans of energy orbs aimed where
+ * he's heading, homing missiles, shockwaves at his height, Buzz Bombers (a
+ * hit scatters his rings, or with none leaves him reeling). Targets light
+ * up on the machine; tap one (on
  * whichever wall it's on, anyone can) and he hurtles at it, straight through
  * the machine and out the other side, the eye following him through and
  * round to look back. Two or three hits (so the twelve come out right for
@@ -40,11 +47,12 @@
  * for the Sonic at Immersive Gamebox lockup) with a braam and an electric
  * guitar.
  *
- * Scores: emeralds and badniks to whoever's Sonic, hits to whoever tapped
- * the target (whoever's standing nearest the spot the tap lands on).
+ * Scores: emeralds, rings and badniks run down to whoever's Sonic; smashed
+ * robots and hits to whoever tapped them (whoever's standing nearest the
+ * spot the tap lands on).
  *
  * The show is Showtime's: the squad picker, the title drop, the clock, the
- * visor check, a tutorial (step, run, grab an emerald), the battle's intro,
+ * visor check, a tutorial (step, run, grab an emerald, tap a robot), the battle's intro,
  * the play (the transformations, dives and finale are part of it), then
  * scores, rank, team, leaderboard, replay, rating and the end (TIME UP!
  * first, if the clock runs out before the machine's beaten).
@@ -58,8 +66,8 @@
 import * as THREE from '../../lib/three/three.module.min.js';
 import { createWallComposer, createWallRig, SkyDome } from '../../lib/three/walls.js';
 import { buildSpeedster } from '../../shared/speedster3d.js';
-import { buildArena, buildBoss, buildTarget, buildEmerald, buildBadnik, buildMissile, buildWarning, buildShockwave, buildVortex,
-	EMERALD_COLOURS, glowTexture, fireTexture, smokeTexture, swirlTexture, sparkleTexture } from './models.js';
+import { buildArena, buildBoss, buildTarget, buildEmerald, buildBadnik, buildBuzzer, buildRing, buildMissile, buildWarning, buildShockwave, buildVortex,
+	EMERALD_COLOURS, glowTexture, fireTexture, smokeTexture, swirlTexture, sparkleTexture, legBlurTexture } from './models.js';
 import { createSound } from './sound.js';
 
 IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersMeta) {
@@ -78,20 +86,30 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 	const AHEAD = { near: 6, far: 10 };                     // metres from the eye to Sonic: the controller at the back of the room, at the front
 	const SPAN = 6.5;                                       // metres either side of the middle of the view he goes, the controller at the room's edge
 	const STEP_ZONE = 0.125;                                // half the room's middle quarter: in it, he just steps across; out of it, he runs
-	const RUN = { top: 22, accel: 4, glide: 10, depth: 4 }; // metres a second round the circle, the controller at the edge; how quickly he gets up to speed, lines up across, and moves forward and back (per second)
-	const BALL = 0.85;                                      // how far out (0 the edge of the middle quarter, 1 the room's edge) he curls into a ball (smashing badniks)
+	const FULL = 0.34;                                      // how far out from the middle of the room he's flat out (0.5 is the wall: flat out well short of it)
+	const RUN = { top: 22, accel: 4, glide: 10, depth: 4 }; // metres a second round the circle, flat out; how quickly he gets up to speed, lines up across, and moves forward and back (per second)
+	const LEGS = 1.8;                                       // how much faster than the model's own stride his legs go
+	const BLUR = [0.4, 0.85];                               // the pace his legs start to blur into a whirling wheel, and are all blur
+	const SMASH = 0.9;                                      // how far to flat out (0 the edge of the middle quarter, 1 flat out) he smashes straight through badniks
 	const SKY = 7;                                          // Super Sonic's height
 	const BOSS = { y: 10.5, turn: 1.4, spin: 0.14, spinUp: 0.05 };   // the machine's height; how fast it turns to face Sonic on foot (radians a second); its slow turning as Super Sonic, and how much faster each round
 	const TOTAL_HITS = 12;                                  // hits to beat the machine (and everyone must have been Sonic)
 	const HITS = { min: 2, max: 3 };                        // hits a round, worked out so the twelve come out right for the squad
 	const EMERALDS = 7;
 	const BAND = { lo: 31.5, hi: 34.5 };                    // how far from the middle the emeralds lie (where he can reach)
-	const REACH = { emerald: 1.8, badnik: 1.2, blast: 2.6, wave: 0.8, target: 2.4 };   // metres that count as touching
-	const HURT = { tumble: 0.8, safe: 2.2, knock: 6 };      // seconds tumbling, and safe after; how hard he's knocked across
+	const REACH = { emerald: 1.8, badnik: 1.2, blast: 2.6, wave: 0.8, target: 2.4, ring: 1.4 };   // metres that count as touching
+	const HURT = { tumble: 0.8, safe: 2.2, knock: 6, bare: 1.6 };   // seconds tumbling, and safe after; how hard he's knocked across; how much longer he tumbles as Super Sonic with no rings to lose
 	const ATTACK = { gap: 4.8, gapDown: 0.6, gapMin: 2.0, flight: 1.7, apex: 12, waveSpeed: 10, waveUp: 1.5, waveGap: 0.95, charge: 1.1 };   // seconds between attacks (and how much less each round, and the least); a missile's flight and how high it arcs; a shockwave's speed (and how much faster each round), its gap (radians), and the charge before it
-	const BADNIKS = { speed: 6, most: 4 };                  // metres a second; the most at once (one more each round, from one)
+	const SUPER = {                                         // the machine's attacks on Super Sonic: seconds between them (less each round, and the least);
+		gap: 3.0, gapDown: 0.35, gapMin: 1.3,
+		orb: { n: [3, 7], spread: 0.085, speed: 26, speedUp: 3, charge: 0.7, again: 0.5, reach: 1.25 },   // a fan of energy orbs (how many, from more each round to the most), radians apart, metres a second (faster each round), the eyes' charge before, the gap before a second fan, how near hits
+		homing: { speed: 16, speedUp: 1.5, turn: 1.6, home: 3.2, life: 6, reach: 1.4 },   // homing missiles: metres a second, how fast they turn (radians a second), how long they home, live, and how near hits
+	};
+	const BADNIKS = { speed: 6, most: 6, tap: 1.6 };        // metres a second; the most at once (two, and one more each round); how near a tap must pass to hit one
+	const BUZZ = { most: [1, 6], scale: 0.6, speed: 10, dive: 19, diveFor: 1.6, hover: [1.6, 3.2], aim: 0.8, reach: 1.4, tap: 2.0, across: 9, ahead: [11, 19], up: [1.2, 3.5] };   // Buzz Bombers: how many at once (from one on foot, one more each round and as Super Sonic, to the most); their size; metres a second flying in and diving; seconds diving, hovering, and flashing their stinger first; how near hits him, and how near a tap must pass; where they hover (metres across the view, ahead of the eye, above him)
+	const RINGS = { keep: 36, arc: [5, 8], gap: 2.4, up: 0.7, spill: 16, life: 3.2, grab: 0.4, drop: 4 };   // rings out at once; how many to an arc, metres apart, how high; how many scatter when he's hit, how long they last, how soon he can grab them back; how many a smashed minion drops
 	const TARGET = { life: 6, lifeDown: 0.8, lifeMin: 2.6, gap: 0.9, first: 1.0 };   // seconds a target stays lit (less each round), the pause between, and before the first
-	const POINTS = { emerald: 10, badnik: 5, hit: 50 };
+	const POINTS = { emerald: 10, badnik: 5, hit: 50, minion: 10, ring: 1 };
 	const TF = { face: 0.6, rise: [0.3, 1.6], spin: [0.5, 3.0], merge: [3.0, 4.0], drop: [4.0, 4.35], land: 4.35, sky: [4.9, 6.4], length: 6.6 };   // the transformation's beats (seconds)
 	const DIVE = { wind: 0.3, hit: 0.85, through: 1.35, turn: 2.7, slow: 0.35, slowBy: 0.25, past: 16 };   // the dive's beats; the slow motion at the hit (how long, how slow); metres past the target he comes out
 	const SPILL = { burst: 0.25, fall: [0.6, 1.6], length: 2.3, flight: 1.6 };   // the emeralds bursting out of him
@@ -174,6 +192,19 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 	const superM = buildSpeedster(0xffc21a, { kind: 'super' });
 	hero.add(sonicM.root, superM.root);
 	superM.root.visible = false;
+	// the blur of his legs flat out: a whirling wheel either side of him at
+	// his hips, side on (one over each leg, so it hides them from either side)
+	const legBlurMat = new THREE.MeshBasicMaterial({ map: legBlurTexture(), transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
+	const legBlur = new THREE.Group();
+	legBlur.position.set(0, 0.32, -0.02);
+	for (const side of [-1, 1]) {
+		const disc = new THREE.Mesh(new THREE.CircleGeometry(0.47, 40), legBlurMat);
+		disc.rotation.y = Math.PI / 2;
+		disc.position.x = side * 0.25;
+		disc.renderOrder = 2;
+		legBlur.add(disc);
+	}
+	sonicM.lean.add(legBlur);
 	const aura = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.glow, color: new THREE.Color(0xffd040).multiplyScalar(1.6), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
 	aura.position.y = 0.6;
 	aura.visible = false;
@@ -281,7 +312,7 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 	function steer(dt, canMove) {
 		const c = ctrlAt();
 		const dx = canMove ? c.px - 0.5 : 0;
-		so.out = Math.max(0, Math.abs(dx) - STEP_ZONE) / (0.5 - STEP_ZONE);
+		so.out = Math.min(1, Math.max(0, Math.abs(dx) - STEP_ZONE) / (FULL - STEP_ZONE));
 		const want = Math.sign(dx) * RUN.top * (0.35 * so.out + 0.65 * so.out * so.out);
 		so.v += (want - so.v) * Math.min(1, dt * RUN.accel);
 		if (so.hurt > 0) so.v *= Math.exp(-dt * 5);
@@ -313,8 +344,9 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 		}
 		m.lean.rotation.set(0, 0, 0);
 		m.lean.position.y = 0;
+		legBlurMat.opacity = 0;
 		if (so.hurt > 0) {
-			const kk = 1 - so.hurt / HURT.tumble;
+			const kk = 1 - Math.min(1, so.hurt / HURT.tumble);
 			m.animate(dt, 'hurt', 0, 0, clock);
 			m.lean.rotation.x = kk * TAU;
 			m.lean.position.y = Math.sin(Math.PI * kk) * 1.3;
@@ -328,15 +360,14 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 			m.animate(dt, fly > 0.3 ? 'glide' : 'idle', 0, 0, clock);
 			return;
 		}
-		if (so.out >= BALL && Math.abs(so.v) > RUN.top * 0.6) {
-			m.animate(dt, 'ball', 1, 34, clock);
-			return;
-		}
 		const pace = Math.min(1, speed / RUN.top);
 		m.lean.rotation.z = so.v / RUN.top * 0.3;   // (into the curve)
-		m.animate(dt, 'run', speed < 0.6 ? 0 : 0.12 + pace * 0.88, 30, clock);
+		m.animate(dt * LEGS, 'run', speed < 0.6 ? 0 : 0.12 + pace * 0.88, 30, clock);
+		// flat out, his legs a whirling blur
+		legBlurMat.opacity = 0.95 * ease(between(pace, BLUR[0], BLUR[1]));
+		for (const disc of legBlur.children) disc.rotation.z -= dt * (20 + pace * 40);
 	}
-	const isBall = () => phase === 'ground' && so.hurt <= 0 && so.out >= BALL && Math.abs(so.v) > RUN.top * 0.6;
+	const flatOut = () => phase === 'ground' && so.hurt <= 0 && so.out >= SMASH && Math.abs(so.v) > RUN.top * 0.6;
 
 	function setSuper(on) {
 		superM.root.visible = on;
@@ -451,14 +482,24 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 		scores[n] += pts;
 	}
 
-	/* ---------- the machine's attacks ---------- */
+	/* ---------- the machine's attacks, and its minions ---------- */
 
-	const missiles = [];    // { mesh, warn, from, to, t, flight }
-	const shockwaves = [];  // { mesh, r, speed, gap, charge }
-	const badniks = [];     // { mesh, theta, r, dir, run, dead }
+	const missiles = [];    // falling on him, on foot: { mesh, warn, from, to, t, flight }
+	const homers = [];      // homing in on Super Sonic: { mesh, pos, dir, age }
+	const orbs = [];        // energy orbs at Super Sonic: { sprite, pos, vel, age }
+	const shockwaves = [];  // { mesh, r, speed, gap, charge, y }
+	const badniks = [];     // rolling round the field: { mesh, theta, r, dir, run, dead }
+	const buzzers = [];     // Buzz Bombers: { m, glow, state, t, pos, station, vel, dead }
 	let attackIn = 3;
+	let volley = null;      // energy orbs coming: { n, at, left } (the machine's eyes charging till then)
+	let killed = 0;         // minions tapped to bits (for the tutorial)
 
-	const gapFor = () => Math.max(ATTACK.gapMin, ATTACK.gap - level * ATTACK.gapDown);
+	const gapFor = () => (phase === 'super' ? Math.max(SUPER.gapMin, SUPER.gap - level * SUPER.gapDown) : Math.max(ATTACK.gapMin, ATTACK.gap - level * ATTACK.gapDown));
+	const planeY = () => (phase === 'super' || phase === 'dive' ? SKY : 0);   // the height he's at: the ground, or the sky
+	const centre = (out) => out.set(so.pos.x, so.pos.y + 0.6, so.pos.z);     // his middle
+	const canHurt = () => (phase === 'ground' || phase === 'super') && so.hurt <= 0 && so.safe <= 0;
+	const sideOf = (p) => (v3().subVectors(p, so.pos).dot(rightAt(so.theta, P1)) > 0 ? -1 : 1);   // which way something knocks him (away from it)
+	const panOf = () => Math.max(-1, Math.min(1, so.lat / SPAN));
 
 	function launchMissiles(n) {
 		const lead = so.vel.clone().setY(0).multiplyScalar(ATTACK.flight * 0.8);
@@ -480,16 +521,52 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 		sound.warn();
 	}
 
-	function startShockwave() {
+	// A shockwave rolling out from the machine at height y (the ground, or Super Sonic's sky), a gap to run for.
+	function startShockwave(y) {
 		const gap = sonicAngle() + (Math.random() < 0.5 ? -1 : 1) * rand(0.6, 1.3);
-		const mesh = buildShockwave(ATTACK.waveGap);
+		const mesh = buildShockwave(ATTACK.waveGap, y > 0 ? 2 : 1.4);
 		mesh.rotation.y = gap;
+		mesh.position.y = y > 0 ? y - 0.4 : 0;
 		mesh.scale.set(5, 1, 5);
 		mesh.visible = false;
 		scene.add(mesh);
-		shockwaves.push({ mesh, r: 5, speed: ATTACK.waveSpeed + level * ATTACK.waveUp, gap, charge: ATTACK.charge });
+		shockwaves.push({ mesh, r: 5, speed: ATTACK.waveSpeed + level * ATTACK.waveUp, gap, charge: ATTACK.charge, y });
 		sound.charge();
 		waves++;
+	}
+
+	// A fan of energy orbs from the machine's eyes, aimed where he's heading.
+	function fireOrbs(n) {
+		sound.zap();
+		const from = boss.eyes[Math.floor(Math.random() * 2)].getWorldPosition(v3());
+		const aim = centre(v3());
+		aim.addScaledVector(so.vel, aim.distanceTo(from) / SUPER.orb.speed * 0.9);
+		const dir = aim.sub(from).normalize();
+		const speed = SUPER.orb.speed + level * SUPER.orb.speedUp;
+		for (let i = 0; i < n; i++) {
+			const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.glow, color: new THREE.Color(0xff3aa0).multiplyScalar(2.4), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+			s.scale.setScalar(2.4);
+			s.position.copy(from);
+			scene.add(s);
+			orbs.push({ sprite: s, pos: from.clone(), vel: dir.clone().applyAxisAngle(UP, (i - (n - 1) / 2) * SUPER.orb.spread).multiplyScalar(speed), age: 0 });
+		}
+	}
+
+	// Missiles homing in on Super Sonic for a while (outrun them, or turn hard).
+	function launchHomers(n) {
+		for (let i = 0; i < n; i++) {
+			const sh = boss.shoulders[i % 2];
+			const pos = boss.body.localToWorld(sh.muzzle.clone());
+			const mesh = buildMissile(TEX.fire);
+			mesh.scale.setScalar(1.5);
+			mesh.position.copy(pos);
+			mesh.visible = false;
+			scene.add(mesh);
+			const dir = v3().set(sh.s * 0.6, 1, 0).applyAxisAngle(UP, bossYaw).normalize();
+			homers.push({ mesh, pos, dir, age: -i * 0.35 });
+		}
+		sound.launch();
+		sound.warn();
 	}
 
 	function spawnBadnik() {
@@ -500,19 +577,98 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 		badniks.push({ mesh, theta, r: rand(BAND.lo - 0.5, BAND.hi + 0.5), dir, run: 0, dead: false });
 	}
 
+	// A Buzz Bomber, flying in from high over the field to hover in view.
+	function newStation(b) {
+		b.station = { lat: rand(-BUZZ.across, BUZZ.across), ahead: rand(BUZZ.ahead[0], BUZZ.ahead[1]), up: rand(BUZZ.up[0], BUZZ.up[1]) };
+	}
+	const stationAt = (b, out) => placeFor(so.theta, b.station.lat, b.station.ahead, planeY() + b.station.up, out);
+	function spawnBuzzer() {
+		const m = buildBuzzer();
+		m.root.scale.setScalar(BUZZ.scale);
+		const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.glow, color: new THREE.Color(0xff2a3a).multiplyScalar(2.4), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+		glow.scale.setScalar(4);
+		glow.visible = false;
+		m.root.add(glow);
+		const b = { m, glow, state: 'come', t: 0, pos: v3(), vel: v3(), dead: false, seed: Math.random() * 10 };
+		newStation(b);
+		placeFor(so.theta, b.station.lat * 3, b.station.ahead + 25, planeY() + b.station.up + 16, b.pos);
+		m.root.position.copy(b.pos);
+		scene.add(m.root);
+		buzzers.push(b);
+		return b;
+	}
+	const faceTo = (obj, d) => { obj.rotation.y = Math.atan2(d.x, d.z); };   // (the Buzz Bombers face +z)
+
+	// The Buzz Bombers: in to their spot in view, hovering, then (in the play)
+	// a flash of the stinger and a dive straight at him.
+	function stepBuzzers(dt, attacking) {
+		const me = centre(v3());
+		for (const b of buzzers) {
+			if (b.dead) continue;
+			b.t += dt;
+			const r = b.m.root;
+			if (b.state === 'dive') {
+				b.pos.addScaledVector(b.vel, dt);
+				b.pos.y = Math.max(0.6, b.pos.y);
+				faceTo(r, b.vel);
+				if (canHurt() && b.pos.distanceTo(me) < BUZZ.reach) hurt(sideOf(b.pos));
+				if (b.t > BUZZ.diveFor) { b.state = 'come'; b.t = 0; newStation(b); }
+			} else {
+				const d = stationAt(b, v3()).sub(b.pos);
+				const len = d.length();
+				const speed = b.state === 'come' ? BUZZ.speed : BUZZ.speed * 0.5;
+				if (len > 0.01) b.pos.addScaledVector(d, Math.min(1, speed * dt / len));
+				if (b.state === 'come' && len < 0.8) { b.state = 'hover'; b.t = 0; b.hover = rand(BUZZ.hover[0], BUZZ.hover[1]) * Math.max(0.5, 1 - level * 0.12); }
+				else if (b.state === 'hover' && b.t > b.hover && attacking) { b.state = 'aim'; b.t = 0; sound.warn(); }
+				else if (b.state === 'aim' && b.t > BUZZ.aim) {
+					b.state = 'dive';
+					b.t = 0;
+					b.vel.copy(me).addScaledVector(so.vel, 0.25).sub(b.pos).normalize().multiplyScalar(BUZZ.dive);
+				}
+				faceTo(r, b.state === 'come' && len > 3 ? d : v3().subVectors(me, b.pos));
+			}
+			b.glow.visible = b.state === 'aim' && Math.floor(b.t * 14) % 2 === 0;
+			r.position.copy(b.pos);
+			b.m.animate(clock + b.seed);
+		}
+		for (const b of buzzers.filter((b) => b.dead)) {
+			scene.remove(b.m.root);
+			buzzers.splice(buzzers.indexOf(b), 1);
+		}
+	}
+
 	function attack(dt) {
 		attackIn -= dt;
+		if (volley) {
+			volley.at -= dt;
+			if (volley.at <= 0) {
+				fireOrbs(volley.n);
+				volley.left--;
+				volley.at = SUPER.orb.again;
+				if (volley.left <= 0) volley = null;
+			}
+		}
 		if (attackIn <= 0) {
 			attackIn = gapFor() * rand(0.85, 1.15);
-			if (level >= 1 && Math.random() < 0.35 && !shockwaves.length) startShockwave();
+			const r = Math.random();
+			if (phase === 'super') {
+				if (r < 0.45) { volley = { n: Math.min(SUPER.orb.n[0] + level, SUPER.orb.n[1]), at: SUPER.orb.charge, left: level >= 2 ? 2 : 1 }; sound.charge(); }
+				else if (r < 0.8 || level < 1 || shockwaves.length) launchHomers(Math.min(1 + Math.floor(level / 2), 3));
+				else startShockwave(SKY);
+			} else if (level >= 1 && r < 0.35 && !shockwaves.length) startShockwave(0);
 			else launchMissiles(Math.min(1 + level, 4));
 			if (Math.random() < 0.25) sound.laugh();
 		}
-		const most = Math.min(BADNIKS.most, level + 1);
-		if (badniks.filter((b) => !b.dead).length < most && Math.random() < dt * 0.5) spawnBadnik();
+		// the minions: badniks on foot, Buzz Bombers both ways (more each round)
+		const ground = phase === 'ground';
+		const mostBadniks = ground ? Math.min(BADNIKS.most, 2 + level) : 0;
+		if (badniks.filter((b) => !b.dead).length < mostBadniks && Math.random() < dt * 0.6) spawnBadnik();
+		const mostBuzzers = Math.min(BUZZ.most[1], BUZZ.most[0] + level + (ground ? 0 : 1));
+		if (buzzers.filter((b) => !b.dead).length < mostBuzzers && Math.random() < dt * 0.5) spawnBuzzer();
 	}
 
 	function stepAttacks(dt) {
+		const me = centre(v3());
 		for (const m of missiles) {
 			m.t += dt;
 			const kk = Math.max(0, Math.min(1, m.t / m.flight));
@@ -521,21 +677,62 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 			const ahead = v3().lerpVectors(m.from, m.to, Math.min(1, kk + 0.02));
 			ahead.y += Math.sin(Math.PI * Math.min(1, kk + 0.02)) * ATTACK.apex;
 			m.mesh.position.copy(p);
-			if (ahead.distanceToSquared(p) > 1e-6) m.mesh.lookAt(ahead.add(ahead.clone().sub(p)));
+			if (ahead.distanceToSquared(p) > 1e-6) m.mesh.lookAt(ahead);
 			m.mesh.visible = m.t > 0;
 			m.warn.material.opacity = 0.5 + 0.5 * Math.sin(clock * 18);
 			m.warn.scale.setScalar(REACH.blast * (1.4 - 0.4 * kk));
 			if (kk >= 1) {
 				m.done = true;
 				blast(m.to.clone().setY(0.8), 3.4);
-				sound.blast(false, Math.max(-1, Math.min(1, so.lat / SPAN)));
+				sound.blast(false, panOf());
 				shake = Math.max(shake, 0.25);
-				if (Math.hypot(m.to.x - so.pos.x, m.to.z - so.pos.z) < REACH.blast) hurt(Math.sign(so.pos.clone().sub(m.to).dot(rightAt(so.theta, P1))) || 1);
+				if (so.y < 1.5 && Math.hypot(m.to.x - so.pos.x, m.to.z - so.pos.z) < REACH.blast) hurt(sideOf(m.to));
 			}
 		}
 		for (const m of missiles.filter((m) => m.done)) {
 			scene.remove(m.mesh, m.warn);
 			missiles.splice(missiles.indexOf(m), 1);
+		}
+
+		for (const h of homers) {
+			h.age += dt;
+			if (h.age < 0) continue;
+			h.mesh.visible = true;
+			if (h.age < SUPER.homing.home) {
+				const want = v3().subVectors(me, h.pos).normalize();
+				const off = h.dir.angleTo(want);
+				if (off > 1e-4) h.dir.lerp(want, Math.min(1, SUPER.homing.turn * dt / off)).normalize();
+			}
+			h.pos.addScaledVector(h.dir, (SUPER.homing.speed + level * SUPER.homing.speedUp) * dt);
+			h.mesh.position.copy(h.pos);
+			h.mesh.lookAt(v3().copy(h.pos).add(h.dir));
+			if (Math.random() < dt * 20) puff(h.pos, 1.2, 0.8);
+			const hit = canHurt() && h.pos.distanceTo(me) < SUPER.homing.reach;
+			if (hit || h.pos.y < 0.3 || h.age > SUPER.homing.life) {
+				h.done = true;
+				blast(h.pos, 3);
+				sound.blast(false, panOf());
+				if (hit) hurt(sideOf(h.pos));
+			}
+		}
+		for (const h of homers.filter((h) => h.done)) {
+			scene.remove(h.mesh);
+			homers.splice(homers.indexOf(h), 1);
+		}
+
+		for (const o of orbs) {
+			o.age += dt;
+			o.pos.addScaledVector(o.vel, dt);
+			o.sprite.position.copy(o.pos);
+			o.sprite.material.rotation += dt * 6;
+			o.sprite.scale.setScalar(2.4 + Math.sin(clock * 30 + o.age * 9) * 0.3);
+			if (canHurt() && o.pos.distanceTo(me) < SUPER.orb.reach) { o.done = true; sparkle(o.pos, 0xff60c0, 3); hurt(sideOf(o.pos)); }
+			if (o.age > 4 || o.pos.y < 0) o.done = true;
+		}
+		for (const o of orbs.filter((o) => o.done)) {
+			scene.remove(o.sprite);
+			o.sprite.material.dispose();
+			orbs.splice(orbs.indexOf(o), 1);
 		}
 
 		for (const w of shockwaves) {
@@ -550,7 +747,7 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 			w.mesh.children[0].material.opacity = Math.min(1, (FIELD - w.r) / 10);
 			const rs = Math.hypot(so.pos.x, so.pos.z);
 			const passed = (was - rs) * (w.r - rs) <= 0 || Math.abs(w.r - rs) < REACH.wave;
-			if (passed && so.y < 1.5 && Math.abs(angleTo(w.gap, sonicAngle())) > ATTACK.waveGap / 2 - 0.4 / rs) hurt(so.v >= 0 ? -1 : 1);
+			if (passed && Math.abs(so.y - w.y) < 1.6 && Math.abs(angleTo(w.gap, sonicAngle())) > ATTACK.waveGap / 2 - 0.4 / rs) hurt(so.v >= 0 ? -1 : 1);
 			if (w.r > FIELD) w.done = true;
 		}
 		for (const w of shockwaves.filter((w) => w.done)) {
@@ -569,13 +766,13 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 			b.mesh.position.y = Math.abs(Math.sin(b.run * 3)) * 0.06;
 			if (b.run > b.r * TAU * 0.7) b.dead = true;
 			if (phase === 'ground' && so.y < 1.5 && Math.hypot(b.mesh.position.x - so.pos.x, b.mesh.position.z - so.pos.z) < REACH.badnik) {
-				if (isBall()) {
+				if (flatOut()) {
 					b.dead = true;
 					blast(b.mesh.position.clone().setY(0.6), 1.6);
 					sound.pop();
 					score(ctrl, POINTS.badnik);
 					pop('+' + POINTS.badnik, '#ffe14a', b.mesh.position, 60);
-				} else if (so.safe <= 0) hurt(Math.sign(b.mesh.position.clone().sub(so.pos).dot(rightAt(so.theta, P1))) > 0 ? -1 : 1);
+				} else hurt(sideOf(b.mesh.position));
 			}
 		}
 		for (const b of badniks.filter((b) => b.dead)) {
@@ -584,30 +781,159 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 		}
 	}
 
-	// Everything the machine has thrown, gone in a puff (for the cinematics).
+	// Everything the machine has thrown and sent, gone in a puff (for the cinematics).
 	function clearAttacks() {
 		for (const m of missiles) { if (m.t > 0) puff(m.mesh.position, 2, 1); scene.remove(m.mesh, m.warn); }
 		missiles.length = 0;
+		for (const h of homers) { if (h.age > 0) puff(h.pos, 2, 1); scene.remove(h.mesh); }
+		homers.length = 0;
+		for (const o of orbs) { scene.remove(o.sprite); o.sprite.material.dispose(); }
+		orbs.length = 0;
+		volley = null;
 		for (const w of shockwaves) scene.remove(w.mesh);
 		shockwaves.length = 0;
 		for (const b of badniks) { puff(b.mesh.position.clone().setY(0.6), 1.6, 1); scene.remove(b.mesh); }
 		badniks.length = 0;
+		for (const b of buzzers) { puff(b.pos, 2, 1); scene.remove(b.m.root); }
+		buzzers.length = 0;
 	}
 
-	// Hit, on foot: tumble, an emerald knocked loose (side: which way he's knocked).
+	// A minion tapped to bits: a blast, points to the tapper, rings out of it.
+	function killMinion(b, by) {
+		b.dead = true;
+		const at = b.m ? b.pos.clone() : b.mesh.position.clone().setY(0.6);
+		blast(at, 2.6);
+		sound.kill(panOf());
+		killed++;
+		if (show.beat === 'play') score(by, POINTS.minion);
+		pop('+' + POINTS.minion, PLAYER_COLORS[by] || '#ffe14a', at, 64);
+		dropRings(at, RINGS.drop);
+	}
+
+	// Hit: tumble; his rings scatter (or, with none, an emerald's knocked loose
+	// on foot; as Super Sonic, he's knocked about all the longer).
 	function hurt(side) {
-		if (phase !== 'ground' || so.hurt > 0 || so.safe > 0) return;
+		if (!canHurt()) return;
 		so.hurt = HURT.tumble;
 		so.safe = HURT.safe;
 		so.knock = side * HURT.knock;
 		sound.hurt();
 		shake = Math.max(shake, 0.5);
 		redFlash = 0.6;
-		if (held.length) {
+		if (ringCount > 0) {
+			pop('-' + ringCount, '#ffe14a', so.pos, 80);
+			scatterRings();
+		} else if (phase === 'ground' && held.length) {
 			const e = emeralds[held.pop()];
 			flyEmerald(e, so.pos.clone().setY(1.2), sonicAngle() + (Math.random() < 0.5 ? -1 : 1) * rand(1.0, 2.4), 1.3);
 			pop('OUCH!', '#ff3d4a', so.pos, 80);
-		} else pop('OUCH!', '#ff3d4a', so.pos, 80);
+		} else {
+			pop('OUCH!', '#ff3d4a', so.pos, 80);
+			if (phase === 'super') so.hurt = HURT.tumble * HURT.bare;
+		}
+	}
+
+	/* ---------- the rings ---------- */
+
+	const rings = [];      // { mesh, pos, spin, loose: { vel, age, sky } | null, fly: { from, t, dur } | null }
+	let ringCount = 0;     // the rings he has (his shield: a hit scatters them, not an emerald)
+
+	function addRing(pos) {
+		const mesh = buildRing();
+		mesh.position.copy(pos);
+		scene.add(mesh);
+		const r = { mesh, pos: pos.clone(), spin: Math.random() * TAU, loose: null, fly: null };
+		rings.push(r);
+		return r;
+	}
+
+	// An arc of rings round the circle from angle a, weaving in or out a little, at height y.
+	function layArc(a, y) {
+		const n = Math.floor(rand(RINGS.arc[0], RINGS.arc[1] + 1));
+		const r0 = rand(BAND.lo, BAND.hi), r1 = rand(BAND.lo, BAND.hi);
+		const dir = Math.random() < 0.5 ? -1 : 1;
+		for (let i = 0; i < n; i++) {
+			const r = r0 + (r1 - r0) * (n > 1 ? i / (n - 1) : 0);
+			const b = a + dir * i * RINGS.gap / r;
+			addRing(v3().set(Math.sin(b) * r, y + RINGS.up, Math.cos(b) * r));
+		}
+	}
+
+	// Keep the field (or the sky) stocked with rings.
+	function topUpRings() {
+		if (rings.filter((r) => !r.loose && !r.fly).length >= RINGS.keep) return;
+		layArc(sonicAngle() + (Math.random() < 0.5 ? -1 : 1) * rand(0.7, 2.6), planeY());
+	}
+	function clearRings() {
+		for (const r of rings) scene.remove(r.mesh);
+		rings.length = 0;
+	}
+
+	// His rings flying off when he's hit (to grab back, if he's quick).
+	function scatterRings() {
+		const n = Math.min(ringCount, RINGS.spill);
+		const sky = planeY() > 0;
+		const at = centre(v3());
+		for (let i = 0; i < n; i++) {
+			const a = i / n * TAU + rand(-0.2, 0.2);
+			const r = addRing(at);
+			r.loose = { vel: v3().set(Math.cos(a) * rand(5, 9), sky ? rand(-1.5, 1.5) : rand(6, 10), Math.sin(a) * rand(5, 9)), age: 0, sky };
+		}
+		ringCount = 0;
+		sound.ringLoss();
+	}
+
+	// Rings out of a smashed minion, flying to spots on his way round (at his height).
+	function dropRings(from, n) {
+		const a0 = Math.atan2(from.x, from.z);
+		const rad = rand(BAND.lo, BAND.hi);
+		for (let i = 0; i < n; i++) {
+			const r = addRing(from);
+			const a = a0 + (i - (n - 1) / 2) * RINGS.gap / rad;
+			r.pos.set(Math.sin(a) * rad, planeY() + RINGS.up, Math.cos(a) * rad);
+			r.fly = { from: from.clone(), t: 0, dur: rand(0.7, 1.0) };
+		}
+	}
+
+	function stepRings(dt) {
+		const me = centre(v3());
+		const grabbing = (phase === 'ground' || phase === 'super') && so.hurt <= 0;
+		for (const r of rings) {
+			r.spin += dt * 3.5;
+			r.mesh.rotation.y = r.spin;
+			if (r.fly) {
+				r.fly.t += dt;
+				const kk = Math.min(1, r.fly.t / r.fly.dur);
+				r.mesh.position.lerpVectors(r.fly.from, r.pos, kk);
+				r.mesh.position.y += Math.sin(Math.PI * kk) * 3;
+				if (kk >= 1) r.fly = null;
+				continue;
+			}
+			if (r.loose) {
+				const L = r.loose;
+				L.age += dt;
+				if (!L.sky) {
+					L.vel.y -= 20 * dt;
+					if (r.mesh.position.y < RINGS.up && L.vel.y < 0) { L.vel.y *= -0.55; L.vel.x *= 0.8; L.vel.z *= 0.8; }
+				} else L.vel.multiplyScalar(Math.exp(-dt * 1.5));
+				r.mesh.position.addScaledVector(L.vel, dt);
+				r.mesh.visible = L.age < RINGS.life - 1 || Math.floor(L.age * 12) % 2 === 0;
+				if (L.age > RINGS.life) r.gone = true;
+				if (L.age < RINGS.grab) continue;
+			} else r.mesh.position.copy(r.pos);
+			if (!r.gone && grabbing && r.mesh.position.distanceTo(me) < REACH.ring) {
+				r.gone = true;
+				ringCount++;
+				if (show.beat === 'play') score(ctrl, POINTS.ring);
+				sound.ring(panOf());
+				sparkle(r.mesh.position, 0xfff2a0, 1.4);
+			}
+		}
+		for (const r of rings.filter((r) => r.gone)) {
+			scene.remove(r.mesh);
+			rings.splice(rings.indexOf(r), 1);
+		}
+		if ((phase === 'ground' || phase === 'super') && RING_BEATS.includes(show.beat)) topUpRings();
 	}
 
 	/* ---------- the targets (as Super Sonic) ---------- */
@@ -698,6 +1024,7 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 	function startTransform() {
 		setPhase('transform');
 		clearAttacks();
+		clearRings();
 		so.v = 0;
 		sound.music(false);
 		sound.rise(3.6);
@@ -857,6 +1184,8 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 	function startSpill() {
 		setPhase('spill');
 		clearTargets();
+		clearAttacks();
+		clearRings();
 		sound.music(false);
 		sound.spill();
 		flash = 0.9;
@@ -892,6 +1221,7 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 	function startHandover(n) {
 		ctrl = n;
 		turns[ctrl]++;
+		ringCount = 0;
 		setPhase('handover');
 		sound.handover();
 		show.fx('wordSlam', 0.7);
@@ -1007,6 +1337,7 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 
 	/* ---------- the beats ---------- */
 
+	const RING_BEATS = ['controls', 'intro', 'play'];   // (the beats the rings are laid out through)
 	const SCENE_BEATS = ['squad', 'title', 'clock', 'visors', 'controls', 'intro', 'play', 'finale', 'timeup'];
 
 	// the tutorial: whoever's Sonic first, a step at a time (the machine holds its fire)
@@ -1015,6 +1346,7 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 		{ caption: 'SONIC: STEP LEFT AND RIGHT', min: 2, max: 10, did: () => reach.max - reach.min >= 0.25 },
 		{ caption: 'STEP OUT WIDE TO RUN ROUND ROBOTNIK', min: 2, max: 12, did: () => reach.ran >= 2.2 },
 		{ caption: 'GRAB A CHAOS EMERALD', min: 1, max: 14, did: () => held.length >= 1 },
+		{ caption: 'EVERYONE: TAP A ROBOT TO DESTROY IT', min: 1, max: 14, did: () => killed >= 1 },
 	];
 
 	show.sequence([
@@ -1024,7 +1356,11 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 		show.beats.visors(),
 		show.beats.tutorial({
 			steps: TUTORIAL,
-			enterStep() { const c = ctrlAt(); Object.assign(reach, { min: c.px, max: c.px, ran: 0 }); },
+			enterStep(i) {
+				const c = ctrlAt();
+				Object.assign(reach, { min: c.px, max: c.px, ran: 0 });
+				if (i === 3) { killed = 0; for (let n = buzzers.length; n < 3; n++) spawnBuzzer(); }   // (some to tap: they only hover, till the play)
+			},
 			enter() {
 				turns[ctrl] = Math.max(1, turns[ctrl]);
 				setPhase('ground');
@@ -1048,7 +1384,7 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 		// Robotnik's challenge: the machine glares, he laughs
 		{
 			id: 'intro',
-			length: 5,
+			length: 6,
 			enter() {
 				if (phase !== 'ground') setPhase('ground');
 				armed = false;
@@ -1057,15 +1393,16 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 				bossAnger = 1;
 			},
 			update(dt, bt) {
-				show.blackout = 0.4 * Math.min(1, bt * 2) * (1 - between(bt, 4.2, 5));
+				show.blackout = 0.4 * Math.min(1, bt * 2) * (1 - between(bt, 5.2, 6));
 				if (show.cue(1.6)) show.fx('stomp');
 				if (show.cue(2.8)) show.fx('beat');
 			},
 			draw(ctx, bt) {
 				show.onWalls(ctx, function (c) {
 					show.slam(c, 'COLLECT THE 7 CHAOS EMERALDS!', W / 2, 250, 88, bt - 0.3, { fill: '#2fe86a', glow: '#2fe86a' });
-					if (bt > 1.6) show.text(c, 'DODGE ROBOTNIK\'S MISSILES AND BADNIKS', W / 2, 370, 50, { fill: 'white', alpha: Math.min(1, (bt - 1.6) * 3) });
-					if (bt > 2.8) show.text(c, 'THEN GO SUPER AND SMASH HIS MACHINE!', W / 2, 450, 50, { fill: '#ffd23a', alpha: Math.min(1, (bt - 2.8) * 3) });
+					if (bt > 1.6) show.text(c, 'DODGE HIS ATTACKS · GRAB RINGS TO STAY SAFE', W / 2, 370, 50, { fill: 'white', alpha: Math.min(1, (bt - 1.6) * 3) });
+					if (bt > 2.6) show.text(c, 'EVERYONE: TAP HIS ROBOTS TO SMASH THEM', W / 2, 450, 50, { fill: '#ff8a5a', alpha: Math.min(1, (bt - 2.6) * 3) });
+					if (bt > 3.6) show.text(c, 'THEN GO SUPER AND SMASH HIS MACHINE!', W / 2, 530, 50, { fill: '#ffd23a', alpha: Math.min(1, (bt - 3.6) * 3) });
 				});
 			},
 		},
@@ -1078,8 +1415,9 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 				if (phase !== 'ground') startGround();
 				so.hurt = 0;
 				so.safe = 0;
-				scores = scores.map(() => 0);   // (the tutorial's emeralds don't count)
+				scores = scores.map(() => 0);   // (the tutorial's emeralds and rings don't count)
 				scatterEmeralds();
+				ringCount = 0;
 				attackIn = 2.5;
 				sound.music('foot');
 			},
@@ -1167,6 +1505,7 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 			steer(dt, playing);
 			so.y = SKY + Math.sin(clock * 2.2) * 0.25;
 			poseHero(dt);
+			if (armed && show.beat === 'play') attack(dt);
 		} else if (phase === 'dive') {
 			stepDive(dt);
 		} else if (phase === 'spill') {
@@ -1189,6 +1528,8 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 
 		stepEmeralds(dt);
 		stepAttacks(dt);
+		stepBuzzers(dt, armed && show.beat === 'play' && (phase === 'ground' || phase === 'super'));
+		stepRings(dt);
 		stepTargets(dt);
 
 		// the machine: facing Sonic on foot, turning slowly by itself as Super Sonic
@@ -1200,7 +1541,7 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 		boss.root.rotation.y = bossYaw;
 		boss.root.rotation.x = -bossKick * 0.25;
 		boss.hurtT = Math.max(0, (boss.hurtT || 0) - dt);
-		if (!blownUp) boss.animate(dt, clock, { anger: Math.max(bossAnger, phase === 'super' || phase === 'dive' ? 0.6 : 0), charge: shockwaves.some((w) => w.charge > 0) ? 1 : 0, hurt: boss.hurtT / 0.6 });
+		if (!blownUp) boss.animate(dt, clock, { anger: Math.max(bossAnger, phase === 'super' || phase === 'dive' ? 0.6 : 0), charge: volley || shockwaves.some((w) => w.charge > 0) ? 1 : 0, hurt: boss.hurtT / 0.6 });
 
 		// sprites, debris, words, marks
 		for (const f of fx) {
@@ -1338,30 +1679,39 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 		return best;
 	}
 
+	// A tap: on a minion, it's smashed; on a lit target (as Super Sonic, not
+	// reeling from a hit), he dives at it. Whatever the tap passes nearest first.
 	function tap(at) {
-		if (show.paused || show.beat !== 'play') return;
+		if (show.paused || (show.beat !== 'play' && show.beat !== 'controls')) return;
 		const wall = Math.floor(at.x / W);
 		if (wall < 0 || wall > 2) return;
 		const by = nearest(at);
 		marks.push({ x: at.x, y: at.y, colour: PLAYER_COLORS[by], age: 0 });
-		if (phase !== 'super') return;
+		if (phase !== 'ground' && phase !== 'super') return;
 		ndc.set((at.x - wall * W) / W * 2 - 1, 1 - at.y / H * 2);
 		raycaster.setFromCamera(ndc, cams[wall]);
 		const o = raycaster.ray.origin, d = raycaster.ray.direction;
-		let best = null, bestD = Infinity;
-		for (const tg of targets) {
-			if (tg.age < 0.15) continue;
-			const p = tg.mesh.getWorldPosition(v3());
-			const n = tg.spot.normal.clone().transformDirection(boss.body.matrixWorld);
-			if (n.dot(v3().subVectors(o, p)) < 0) continue;   // (round the far side: out of sight)
+		let best = null, bestAlong = Infinity;
+		const consider = function (p, reach, what) {
 			const v = v3().subVectors(p, o);
 			const along = v.dot(d);
-			if (along < 1) continue;
-			const off = v.addScaledVector(d, -along).length();
-			if (off < REACH.target && off < bestD) { best = tg; bestD = off; }
+			if (along < 1 || along > bestAlong) return;
+			if (v.addScaledVector(d, -along).length() < reach) { best = what; bestAlong = along; }
+		};
+		for (const b of buzzers) if (!b.dead) consider(b.pos, BUZZ.tap, b);
+		for (const b of badniks) if (!b.dead) consider(v3().copy(b.mesh.position).setY(0.5), BADNIKS.tap, b);
+		if (phase === 'super' && show.beat === 'play' && so.hurt <= 0) {
+			for (const tg of targets) {
+				if (tg.age < 0.15) continue;
+				const p = tg.mesh.getWorldPosition(v3());
+				const n = tg.spot.normal.clone().transformDirection(boss.body.matrixWorld);
+				if (n.dot(v3().subVectors(o, p)) < 0) continue;   // (round the far side: out of sight)
+				consider(p, REACH.target, tg);
+			}
 		}
-		if (best) startDive(best, by);
-		else show.fx('tap', 0.3);
+		if (!best) show.fx('tap', 0.3);
+		else if (targets.includes(best)) startDive(best, by);
+		else killMinion(best, by);
 	}
 
 	stage.$el.on('click', function (e) {
@@ -1534,6 +1884,18 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 				const lit = superM.root.visible || held.includes(i) || e.state === 'merged';
 				gem(ctx, W + 70 + i * 56, 72, 22, '#' + new THREE.Color(e.colour).getHexString(), lit);
 			}
+			// his rings
+			ctx.save();
+			ctx.lineWidth = 9;
+			ctx.strokeStyle = '#ffd23a';
+			ctx.shadowColor = 'rgba(255,200,40,0.8)';
+			ctx.shadowBlur = 12;
+			ctx.beginPath();
+			ctx.ellipse(W + 70, 136, 20, 22, 0, 0, TAU);
+			ctx.stroke();
+			ctx.restore();
+			const ringFlash = phase === 'ground' || phase === 'super' ? (ringCount === 0 && Math.floor(clock * 3) % 2 ? '#ff3d3d' : '#ffe14a') : '#ffe14a';
+			art.text(ctx, String(ringCount), W + 106, 138, { size: 50, font: SONIC_FONT, fill: ringFlash, outline: '#0a1a3a', outlineWidth: 7, align: 'left' });
 			// the machine's strength (top right of the front wall)
 			const left = Math.max(0, TOTAL_HITS - hits);
 			const x0 = 2 * W - 70 - TOTAL_HITS * 30;
@@ -1601,7 +1963,7 @@ IGB.register('super-sonic-battle', function SuperSonicBattleGame(stage, playersM
 	self.state = function () {
 		return Object.assign(show.state(), {
 			phase, phaseT, level, hits, roundHits, roundNeed, ctrl, turns: turns.slice(),
-			held: held.slice(), scores: scores.slice(),
+			held: held.slice(), scores: scores.slice(), rings: ringCount, ringsOut: rings.length, buzzers: buzzers.length, orbs: orbs.length, homers: homers.length,
 			sonic: { theta: so.theta, lat: so.lat, ahead: so.ahead, y: so.y, v: so.v },
 			targets: targets.length, missiles: missiles.length, badniks: badniks.length, shockwaves: shockwaves.length,
 			timeLeft: show.timeLeft(),

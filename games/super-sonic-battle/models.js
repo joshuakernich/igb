@@ -3,16 +3,19 @@
  * egg of a robot with glaring eyes, spiked shoulders, claw arms, missile
  * pods and roaring thrusters, Robotnik himself in his Egg Mobile under a
  * glass dome on top), its weak spots, the seven Chaos Emeralds, the
- * badniks, the missiles, the warning rings and shockwaves, the arena (a
+ * badniks and Buzz Bombers, the rings, the missiles, the warning rings and
+ * shockwaves, Super Sonic's energy orbs, the blur of his legs flat out, the arena (a
  * round, chequered field on a clifftop over the sea, palms round its rim),
  * and the textures for the fire, smoke, sparkles and the transformation's
  * vortex.
  */
 import * as THREE from '../../lib/three/three.module.min.js';
 import { buildRobotnik } from '../../shared/robotnik3d.js';
-import { buildPalm, sparkleTexture } from '../loop-island/models.js';
+import { buildPalm, buildRing, sparkleTexture } from '../loop-island/models.js';
+import { buildBuzzer } from '../iron-stride/models.js';
 
-export { sparkleTexture };
+// (gold rings, from Sonic Dash; Buzz Bomber minions, from Sonic Robot)
+export { sparkleTexture, buildRing, buildBuzzer };
 
 const TAU = Math.PI * 2;
 
@@ -112,6 +115,48 @@ export function swirlTexture() {
 	});
 	t.wrapS = t.wrapT = THREE.RepeatWrapping;
 	return t;
+}
+
+// The blur of his legs flat out: a whirling wheel of red shoes and blue
+// legs smeared round, a white rim of speed (for a disc side on to him).
+export function legBlurTexture() {
+	return canvas(256, 256, function (g, w) {
+		g.translate(w / 2, w / 2);
+		// a haze of blue through it all
+		const haze = g.createRadialGradient(0, 0, 0, 0, 0, 110);
+		haze.addColorStop(0, 'rgba(40,90,230,0.55)');
+		haze.addColorStop(0.75, 'rgba(40,90,230,0.4)');
+		haze.addColorStop(1, 'rgba(40,90,230,0)');
+		g.fillStyle = haze;
+		g.beginPath();
+		g.arc(0, 0, 110, 0, TAU);
+		g.fill();
+		// the legs: blue streaks from the hub out
+		for (let i = 0; i < 10; i++) {
+			g.rotate(TAU / 10);
+			const gr = g.createLinearGradient(0, 0, 0, -100);
+			gr.addColorStop(0, 'rgba(40,90,230,0)');
+			gr.addColorStop(0.5, 'rgba(40,100,240,0.6)');
+			gr.addColorStop(1, 'rgba(40,100,240,0)');
+			g.fillStyle = gr;
+			g.fillRect(-7, -100, 14, 100);
+		}
+		// the shoes: red smears round the rim, fading behind as they go
+		for (let k = 0; k < 2; k++) {
+			for (let i = 0; i < 24; i++) {
+				const a = k * Math.PI + i / 24 * Math.PI * 0.95;
+				g.strokeStyle = `rgba(${230 + i},${40 + i * 2},${40 + i * 2},${(1 - i / 24) * 0.9})`;
+				g.lineWidth = 26;
+				g.beginPath();
+				g.arc(0, 0, 92, a, a + 0.14);
+				g.stroke();
+			}
+		}
+		// a white rim of speed
+		g.strokeStyle = 'rgba(255,255,255,0.55)';
+		g.lineWidth = 6;
+		for (const a of [0.3, 2.1, 3.9]) { g.beginPath(); g.arc(0, 0, 112, a, a + 1.2); g.stroke(); }
+	});
 }
 
 // The field: a big chequer of two greens, a few flowers, 8 m a square.

@@ -14,6 +14,7 @@
  *   sound.emerald(i, pan);  sound.hurt();  sound.launch();  sound.blast(big);
  *   sound.warn();  sound.charge();  sound.wave();  sound.pop();  sound.laugh();
  *   sound.rise();  sound.merge(i);  sound.ignite();  sound.dive();  sound.clang();
+ *   sound.ring(pan);  sound.ringLoss();  sound.zap();  sound.kill(pan);
  *   sound.spill();  sound.handover();  sound.boom();  sound.braam();  sound.guitar();
  *   sound.music('foot' | 'super' | false);  sound.wind(0..1);
  *   sound.tick();   // every frame
@@ -233,6 +234,43 @@ export function createSound() {
 			o.stop(at + 0.3);
 			noise(at - 0.03, 0.06, 'bandpass', 1500, 1200, 0.12, 1);   // (the H)
 		}
+	};
+
+	// A ring: two quick bright notes, stepping up (as in Sonic Dash).
+	sound.ring = function (pan = 0) {
+		sound.resume();
+		const t = now();
+		for (const [at, f] of [[0, 1568], [0.065, 2093]]) {
+			tone(t + at, 0.3, 'square', f, f, 0.04, 0.003, master, pan).connect(echo);
+			tone(t + at, 0.28, 'sine', f * 2, f * 2, 0.03, 0.003, master, pan);
+		}
+	};
+
+	// Rings scattering: the jangle of a dozen of them flying off.
+	sound.ringLoss = function () {
+		sound.resume();
+		const t = now();
+		for (let i = 0; i < 14; i++) {
+			const f = 1400 + Math.random() * 1500;
+			tone(t + i * 0.035, 0.3, 'square', f, f * 0.85, 0.03, 0.002, master, (Math.random() - 0.5) * 1.6);
+		}
+	};
+
+	// Energy orbs fired: a volley of falling laser zaps.
+	sound.zap = function () {
+		sound.resume();
+		const t = now();
+		for (let i = 0; i < 3; i++) tone(t + i * 0.06, 0.25, 'sawtooth', 1800, 220, 0.05, 0.002);
+		noise(t, 0.3, 'highpass', 5000, 2000, 0.12);
+	};
+
+	// A minion tapped to bits: a pop, a crunch and a bright ding.
+	sound.kill = function (pan = 0) {
+		sound.resume();
+		const t = now();
+		tone(t, 0.2, 'square', 700, 120, 0.12, 0.002, master, pan);
+		noise(t, 0.3, 'lowpass', 4000, 400, 0.4);
+		tone(t + 0.05, 0.4, 'sine', 1760, 1760, 0.07, 0.003, master, pan).connect(echo);
 	};
 
 	/* ---------- the transformation ---------- */
