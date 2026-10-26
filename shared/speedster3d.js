@@ -1107,16 +1107,17 @@ export function buildSpeedster(colour, { knuckles = false, tails = false, kind =
 			return;
 		}
 		if (mode === 'tailhang') {
-			// flying under spinning tails (the classic Tails): leaning well
-			// forward from the hips, the head up looking ahead, the arms
-			// reaching forward and down, the legs dangling under him and a
-			// little behind, all swaying; pace swings the legs back
+			// flying under spinning tails (the classic Tails): leaning forward
+			// from the hips (tip the whole body forward too, for the butt up
+			// high), the head up looking ahead, the arms reaching forward and
+			// down, the legs dangling a little behind, all swaying; pace swings
+			// the legs back
 			show(false);
 			const sway = Math.sin(time * 2.6), back = Math.max(0, Math.min(1, pace));
-			torso.rotation.x = -0.95 + sway * 0.03;
-			head.rotation.x = 0.8;
-			for (const a of arms) placeArm(a, a.s * 0.22, 0.12 + Math.sin(time * 2.6 + a.s) * 0.02, -0.3, 0.06, 0.02);
-			for (const l of legs) placeLeg(l, l.s * 0.08, 0.13 + (l.s > 0 ? 0.03 : 0), 0.24 + sway * 0.025 * l.s + back * 0.1, -0.3 - back * 0.2);
+			torso.rotation.x = -0.55 + sway * 0.03;
+			head.rotation.x = 1.25;
+			for (const a of arms) placeArm(a, a.s * 0.22, 0.6 + Math.sin(time * 2.6 + a.s) * 0.02, -0.34, 0.06, 0.02);   // (tipped well forward, as Tails Escape flies him: forward and down)
+			for (const l of legs) placeLeg(l, l.s * 0.08, 0.1 + (l.s > 0 ? 0.03 : 0), 0.14 + sway * 0.025 * l.s + back * 0.1, -0.3 - back * 0.2);
 			return;
 		}
 		if (mode === 'idle' || pace < 0.04) {

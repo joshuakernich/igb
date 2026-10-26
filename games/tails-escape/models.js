@@ -85,14 +85,15 @@ function mats() {
 
 // Tails: the shared speedster build as the fox, in the player's colour,
 // flying the classic way: his two tails rise from his rear and spin like a
-// helicopter's blades over him, and he hangs under them leaning forward,
-// head up looking ahead, arms reaching forward and down, legs dangling (and
-// trailing back a little more as he climbs); hit, he tumbles. The root is
+// helicopter's blades over him, and he hangs under them tipped forward, his
+// butt up high, head up looking ahead, arms reaching forward and down, legs
+// trailing (back a little more as he climbs); hit, he tumbles. The root is
 // at the middle of his body (what touches things), and he faces +Z (the
 // game turns him the way he's flying).
 export function buildFlyer(colour) {
 	const HIPS = 0.1;                    // (how far over his middle his hips are)
-	const ROTOR = { up: 1.05, back: 0.3 };    // (the rotor: how far over his hips, and behind)
+	const TIP = 1.05;                    // (radians the whole body tips forward from the hips: his butt up high, his legs trailing)
+	const ROTOR = 0.9;                   // (how far over his butt the rotor spins)
 	const root = new THREE.Group();
 	const yaw = new THREE.Group();       // turned a little into a swerve
 	root.add(yaw);
@@ -100,24 +101,32 @@ export function buildFlyer(colour) {
 	yaw.add(lean);
 	const tumble = new THREE.Group();    // spinning head over heels when hit
 	lean.add(tumble);
+	const tip = new THREE.Group();       // tipped forward about his hips
+	tip.position.y = HIPS;
+	tip.rotation.x = TIP;
+	tumble.add(tip);
 
 	const s = buildSpeedster(colour, { tails: true });
 	s.root.rotation.y = Math.PI;         // (the speedster's built facing -Z; these models face +Z)
-	const base = HIPS - 0.56;            // (the speedster's hips are 0.56 over its feet)
+	const base = -0.56;                  // (the speedster's hips are 0.56 over its feet)
 	s.root.position.y = base;
-	tumble.add(s.root);
-	// the tails: rising from his rear (behind him: -Z) to a spinning pivot over him
+	tip.add(s.root);
+	// where his tails grow from (on his torso, so it moves with him)
+	const butt = new THREE.Object3D();
+	butt.position.copy(s.tailRig.position);
+	s.torso.add(butt);
+	// the tails: a stem rising from there to a spinning pivot over him
 	const fur = s.tailRig.children.find((o) => o.isMesh).material;
-	const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.09, ROTOR.up, 12), fur);
-	stem.position.set(0, HIPS + ROTOR.up / 2, -ROTOR.back + 0.04);
-	stem.rotation.x = -0.08;
+	const stemGeo = new THREE.CylinderGeometry(0.035, 0.09, 1, 12);
+	stemGeo.translate(0, 0.5, 0);   // (from its base up)
+	const stem = new THREE.Mesh(stemGeo, fur);
 	tumble.add(stem);
 	const spin = new THREE.Group();
-	spin.position.set(0, HIPS + ROTOR.up, -ROTOR.back);
 	tumble.add(spin);
 	spin.add(s.tailRig);
 	s.tailRig.position.set(0, 0.04, 0);
 	s.tailRig.rotation.x = 0.74;
+	const from = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), dir = new THREE.Vector3();
 	let time = 0;
 
 	// st: { rising (0..1), hurt, lean (radians), turn (radians) }
@@ -131,6 +140,14 @@ export function buildFlyer(colour) {
 		s.root.position.y = base + Math.sin(time * 9) * 0.03;
 		if (st.hurt) tumble.rotation.x += dt * 12;
 		else tumble.rotation.x *= Math.exp(-dt * 12);
+		// the rotor over his butt, the stem from his butt up to it
+		tumble.updateMatrixWorld(true);
+		tumble.worldToLocal(butt.getWorldPosition(from));
+		spin.position.set(from.x, from.y + ROTOR, from.z);
+		stem.position.copy(from);
+		dir.subVectors(spin.position, from);
+		stem.scale.set(1, dir.length(), 1);
+		stem.quaternion.setFromUnitVectors(up, dir.normalize());
 	}
 
 	return { root, yaw, pose, setColour: s.setColour };
