@@ -13,6 +13,12 @@
  *   gamebox.html?game=loop-island&players=3&view=outside
  */
 import * as THREE from '../lib/three/three.module.min.js';
+import { GLTFLoader } from '../lib/three/addons/loaders/GLTFLoader.js';
+import { clone as cloneSkinned } from '../lib/three/addons/utils/SkeletonUtils.js';
+import { EffectComposer } from '../lib/three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from '../lib/three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from '../lib/three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from '../lib/three/addons/postprocessing/OutputPass.js';
 
 const SONIC = [
 	{ id: 'loop-island', name: 'Sonic Dash', bot: 'weave' },
@@ -213,10 +219,200 @@ function Figure(n) {
 			arms[1].rotation.x = -1.2 - 0.5 * k + (f.reachUp || 0) * k;
 		}
 	};
-	f.tap = function (up) { f.reach = 1; f.reachUp = up; };
+	f.tap = function (tap) { f.reach = 1; f.reachUp = (0.5 - tap.y) * 1.6; };
 	f.dispose = function () { scene.remove(root); };
 	return f;
 }
+
+
+/* ---------- the players as glowing ghosts ----------
+   Quaternius's Mannequin (assets/shared/mannequin.glb, CC0), one clone per
+   player: idle / walk / jog / sprint blended by how fast they're really
+   moving, crouch and jump from the height the game reads, and the right arm
+   reaching to the very spot on the wall a tap lands. Drawn as a ghost: a
+   rim glow in the player's colour, bright at the silhouette and nearly clear
+   through the body, with a thin glowing outline; bloom spills it into the room. */
+
+const MANNEQUIN = 'assets/shared/mannequin.glb';
+const HEIGHT = 1.75;   // metres
+let ghostKit = null;   // { scene, clips, scale }
+// (the .glb, or where a host won't serve .glb, the same bytes from a module)
+async function loadMannequin() {
+	const loader = new GLTFLoader();
+	try { return await loader.loadAsync(MANNEQUIN); } catch (e) {
+		const m = await import('../' + MANNEQUIN + '.js');
+		const bin = Uint8Array.from(atob(m.default), (c) => c.charCodeAt(0));
+		return await loader.parseAsync(bin.buffer, '');
+	}
+}
+const ghostReady = loadMannequin().then((gltf) => {
+	const box = new THREE.Box3().setFromObject(gltf.scene);
+	const clips = {};
+	for (const c of gltf.animations) clips[c.name] = c;
+	ghostKit = { scene: gltf.scene, clips, scale: HEIGHT / Math.max(0.01, box.max.y - box.min.y), floor: box.min.y };
+}).catch((e) => console.warn('No mannequin, using the simple figures', e));
+
+const GHOST_VERT = `
+	#include <common>
+	#include <skinning_pars_vertex>
+	uniform float grow;
+	varying vec3 vN;
+	varying vec3 vV;
+	void main() {
+		#include <beginnormal_vertex>
+		#include <skinbase_vertex>
+		#include <skinnormal_vertex>
+		#include <begin_vertex>
+		#include <skinning_vertex>
+		float nl = length(objectNormal);
+		vec3 nrm = nl > 1e-4 ? objectNormal / nl : vec3(0.0, 1.0, 0.0);   // (a few vertices carry no normal)
+		if (grow > 0.0) transformed += nrm * grow;
+		vec4 mv = modelViewMatrix * vec4(transformed, 1.0);
+		vN = normalize(normalMatrix * nrm);
+		vV = normalize(-mv.xyz);
+		gl_Position = projectionMatrix * mv;
+	}`;
+const GHOST_FRAG = `
+	uniform vec3 color;
+	uniform float core, rim, power, alpha;
+	varying vec3 vN;
+	varying vec3 vV;
+	void main() {
+		float f = 1.0 - abs(dot(normalize(vN), normalize(vV)));
+		float r = pow(f, power);
+		gl_FragColor = vec4(color * (core + r * rim), (core + r) * alpha);
+	}`;
+function ghostMaterial(col, outline) {
+	return new THREE.ShaderMaterial({
+		uniforms: {
+			color: { value: col.clone() },
+			grow: { value: outline ? 0.012 : 0 },
+			core: { value: outline ? 0.0 : 0.05 },
+			rim: { value: outline ? 2.6 : 2.2 },
+			power: { value: outline ? 1.2 : 2.4 },
+			alpha: { value: outline ? 0.9 : 0.85 },
+		},
+		vertexShader: GHOST_VERT,
+		fragmentShader: GHOST_FRAG,
+		transparent: true,
+		depthWrite: false,
+		blending: THREE.AdditiveBlending,
+		side: outline ? THREE.BackSide : THREE.FrontSide,
+		toneMapped: false,
+	});
+}
+
+// a soft pool of the player's colour on the floor
+const poolTex = (() => {
+	const c = document.createElement('canvas'); c.width = c.height = 128;
+	const x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+	g.addColorStop(0, 'rgba(255,255,255,0.9)'); g.addColorStop(0.35, 'rgba(255,255,255,0.35)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+	x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+	return new THREE.CanvasTexture(c);
+})();
+
+const tmpV = new THREE.Vector3(), tmpV2 = new THREE.Vector3(), tmpQ = new THREE.Quaternion(), tmpQ2 = new THREE.Quaternion(), Y_AXIS = new THREE.Vector3(0, 1, 0);
+
+function GhostFigure(n) {
+	const col = new THREE.Color(COLORS[n % COLORS.length]).multiplyScalar(1.4);
+	const root = new THREE.Group();
+	const body = cloneSkinned(ghostKit.scene);
+	body.scale.setScalar(ghostKit.scale);
+	body.position.y = -ghostKit.floor * ghostKit.scale;
+	const skinned = [];
+	body.traverse((o) => { if (o.isSkinnedMesh) skinned.push(o); });
+	for (const m of skinned) {
+		m.material = ghostMaterial(col, false);
+		m.frustumCulled = false;
+		const shell = m.clone();
+		shell.material = ghostMaterial(col, true);
+		shell.frustumCulled = false;
+		shell.bind(m.skeleton, m.bindMatrix);
+		m.parent.add(shell);
+	}
+	const lift = new THREE.Group();
+	lift.add(body);
+	root.add(lift);
+	const pool = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), new THREE.MeshBasicMaterial({ map: poolTex, color: col, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+	pool.rotation.x = -Math.PI / 2; pool.position.y = 0.012;
+	root.add(pool);
+	scene.add(root);
+
+	const mixer = new THREE.AnimationMixer(body);
+	const act = {};
+	for (const name of ['Idle_Loop', 'Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Crouch_Idle_Loop', 'Crouch_Fwd_Loop', 'Jump_Loop']) {
+		const clip = ghostKit.clips[name];
+		if (!clip) continue;
+		const a = mixer.clipAction(clip);
+		a.play(); a.setEffectiveWeight(0);
+		a.time = Math.random() * clip.duration;   // (out of step with each other)
+		act[name] = a;
+	}
+	const bone = (k) => body.getObjectByName(k);
+	const arm = { upper: bone('DEF-upper_arm.R'), fore: bone('DEF-forearm.R'), hand: bone('DEF-hand.R') };
+
+	const f = { x: 0, z: 0, face: 0, speed: 0, reach: 0, reachTo: new THREE.Vector3(), blend: {} };
+	f.update = function (s, dt) {
+		const x = s.X * hw * 0.92, z = -s.Z * hd * 0.92;
+		const dx = x - f.x, dz = z - f.z;
+		const v = Math.hypot(dx, dz) / Math.max(dt, 1e-3);
+		f.speed += (v - f.speed) * Math.min(1, dt * 6);
+		f.x = x; f.z = z;
+		root.position.set(x, 0, z);
+		// face where they're going when they're really moving, otherwise where the game has them looking
+		const heading = Math.atan2(-dx, -dz);
+		const want = f.speed > 0.7 && f.reach <= 0 ? heading : s.face;
+		let d = want - f.face; d = Math.atan2(Math.sin(d), Math.cos(d));
+		f.face += d * Math.min(1, dt * 6);
+		root.rotation.y = f.face + Math.PI;
+
+		// the blend: locomotion by speed (m/s), or crouch / jump from the height
+		const sp = f.speed, crouch = s.Y < -0.06, jump = s.Y > 0.06;
+		const w = { Idle_Loop: 0, Walk_Loop: 0, Jog_Fwd_Loop: 0, Sprint_Loop: 0, Crouch_Idle_Loop: 0, Crouch_Fwd_Loop: 0, Jump_Loop: 0 };
+		if (jump) w.Jump_Loop = 1;
+		else if (crouch) { const k = Math.min(1, sp / 1.0); w.Crouch_Idle_Loop = 1 - k; w.Crouch_Fwd_Loop = k; }
+		else if (sp < 1.3) { const k = sp / 1.3; w.Idle_Loop = 1 - k; w.Walk_Loop = k; }
+		else if (sp < 3.2) { const k = (sp - 1.3) / 1.9; w.Walk_Loop = 1 - k; w.Jog_Fwd_Loop = k; }
+		else { const k = Math.min(1, (sp - 3.2) / 2.3); w.Jog_Fwd_Loop = 1 - k; w.Sprint_Loop = k; }
+		for (const k in act) {
+			f.blend[k] = (f.blend[k] || 0) + (w[k] - (f.blend[k] || 0)) * Math.min(1, dt * 8);
+			act[k].setEffectiveWeight(f.blend[k]);
+		}
+		// keep the stride in step with the ground
+		const stride = sp < 1.3 ? sp / 1.3 : sp < 3.2 ? sp / 3.2 : sp / 5.5;
+		for (const k of ['Walk_Loop', 'Jog_Fwd_Loop', 'Sprint_Loop', 'Crouch_Fwd_Loop']) if (act[k]) act[k].timeScale = Math.max(0.5, Math.min(1.6, stride || 1));
+		lift.position.y = jump ? s.Y * 0.9 : 0;
+		mixer.update(dt);
+
+		// the touch: aim the right arm, straightened, at the spot on the wall
+		f.reach = Math.max(0, f.reach - dt * 1.6);
+		if (f.reach > 0 && arm.upper && arm.fore) {
+			const k = Math.sin(Math.min(1, f.reach) * Math.PI) * 1.15;
+			body.updateMatrixWorld(true);
+			const shoulder = arm.upper.getWorldPosition(tmpV);
+			const dir = tmpV2.copy(f.reachTo).sub(shoulder).normalize();
+			// the bone runs along its own +y: turn that onto the direction
+			const cur = Y_AXIS.clone().applyQuaternion(arm.upper.getWorldQuaternion(tmpQ)).normalize();
+			const turn = tmpQ2.setFromUnitVectors(cur, dir);
+			const worldQ = tmpQ.premultiply(turn);
+			const parentQ = arm.upper.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
+			const localQ = parentQ.multiply(worldQ);
+			arm.upper.quaternion.slerp(localQ, Math.min(1, k));
+			arm.fore.quaternion.slerp(new THREE.Quaternion(), Math.min(1, k) * 0.85);
+		}
+	};
+	// tap: { wall, x, y } (fractions along that wall as you face it, y 0 at the top)
+	f.tap = function (tap) {
+		const along = tap.x, h = (1 - tap.y) * ROOM.h;
+		if (tap.wall === 1) f.reachTo.set((along - 0.5) * ROOM.w, h, -hd);
+		else if (tap.wall === 0) f.reachTo.set(-hw, h, (0.5 - along) * ROOM.d);
+		else f.reachTo.set(hw, h, (along - 0.5) * ROOM.d);
+		f.reach = 1;
+	};
+	f.dispose = function () { scene.remove(root); mixer.stopAllAction(); };
+	return f;
+}
+const makeFigure = (i) => (ghostKit ? GhostFigure(i) : Figure(i));
 
 /* ---------- the bots ---------- */
 
@@ -403,7 +599,7 @@ function sendTracking() {
 
 function doTap(i, tap) {
 	const f = figures[i];
-	if (f) f.tap((0.5 - tap.y) * 1.6);
+	if (f) f.tap(tap);
 	const x = (tap.wall + tap.x) * IGB.W, y = tap.y * IGB.H;
 	if (!game || !game.test) return;
 	if (tap.hit) { if (game.test.hit) game.test.hit(); return; }   // (Super Sonic Battle: dive at a lit target)
@@ -434,7 +630,9 @@ async function startGame(id, n) {
 	game = g;
 	IGB.current = g;
 	bot = BOTS[entry.bot](n);
-	figures = bot.ps.map((_, i) => Figure(i));
+	await ghostReady;
+	if (token !== starting) return;
+	figures = bot.ps.map((_, i) => makeFigure(i));
 	botT = 0;
 	// straight into the run, once it has had a moment to build its world
 	const jump = () => { try { if (game === g && g.test && g.test.jump) g.test.jump('play'); } catch (e) { console.warn(e); } };
@@ -479,7 +677,7 @@ if (embedded && !params.get('sound')) IGB.setVolume(0);
 // The view is always 16:10 (a wall's shape), letterboxed in the window, or a
 // fixed pixel size (?size=1600x1000).
 const fixed = (params.get('size') || '').split('x').map(Number);
-function resize() {
+let resize = function () {
 	let w, h;
 	if (fixed[0] > 0 && fixed[1] > 0) { [w, h] = fixed; renderer.setPixelRatio(1); }
 	else { w = window.innerWidth; h = Math.round(w / 1.6); if (h > window.innerHeight) { h = window.innerHeight; w = Math.round(h * 1.6); } }
@@ -487,8 +685,16 @@ function resize() {
 	Object.assign(canvas.style, { width: w + 'px', height: h + 'px', left: (window.innerWidth - w) / 2 + 'px', top: (window.innerHeight - h) / 2 + 'px' });
 	camera.aspect = w / h;
 	camera.updateProjectionMatrix();
-}
-window.addEventListener('resize', resize);
+};
+window.addEventListener('resize', () => resize());
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(1024, 640), 0.9, 0.55, 1.0);   // (threshold 1: the walls top out there, the ghosts go past it)
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const resizeRender = resize;
+resize = function () { resizeRender(); const s = renderer.getDrawingBufferSize(new THREE.Vector2()); composer.setSize(s.x / renderer.getPixelRatio(), s.y / renderer.getPixelRatio()); };
 resize();
 
 let last = performance.now(), sendAt = 0;
@@ -511,7 +717,7 @@ IGB.onFrame(function (now) {
 	camReady = true;
 	camera.position.copy(camPos);
 	camera.lookAt(camAt);
-	renderer.render(scene, camera);
+	composer.render();
 });
 
 window.gamebox = { canvas, start: startGame, setView(v) { if (VIEWS[v]) { view = v; showView(); } }, games: SONIC, get game() { return game; }, get beat() { return game && game.state ? (game.state() || {}).beat : null; } };

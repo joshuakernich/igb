@@ -1,0 +1,8 @@
+mannequin.glb: the Mannequin and 11 of its animations (Idle, Walk, Jog, Sprint,
+Crouch idle/forward, Jump start/loop/land, Interact, Push) from the Universal
+Animation Library [Standard] by Quaternius, slimmed with glTF Transform
+(other clips and textures removed, keyframes resampled).
+
+CC0 1.0 Universal (Public Domain Dedication)
+https://creativecommons.org/publicdomain/zero/1.0/
+Source: https://opengameart.org/node/174563 · https://quaternius.com
