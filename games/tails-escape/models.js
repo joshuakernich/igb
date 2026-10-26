@@ -83,13 +83,15 @@ function mats() {
 
 /* ---------- Tails, flying ---------- */
 
-// Tails: the shared speedster build as the fox, in the player's colour, his
-// two tails swung up over his head and spinning like a helicopter's blades
-// the whole time, and him hanging under them, arms and legs dangling (his
-// legs trailing back a little more as he climbs); hit, he tumbles. The root
-// is at the middle of his body (what touches things), and he faces +Z (the
-// game turns him the way he's flying).
-export function buildFlyer(colour, middle = 0.6) {
+// Tails: the shared speedster build as the fox, in the player's colour,
+// hanging by his butt: his two tails spin like a helicopter's blades right
+// over his rear, and the rest of him hangs below it, head down (a little
+// ahead of him), arms and legs dangling (his legs trailing back a little
+// more as he climbs); hit, he tumbles. The root is at the middle of his body
+// (what touches things), and he faces +Z (the game turns him the way he's
+// flying).
+export function buildFlyer(colour) {
+	const HIPS = 0.3;                    // (how far over his middle his hips hang from the rotor)
 	const root = new THREE.Group();
 	const yaw = new THREE.Group();       // turned a little into a swerve
 	root.add(yaw);
@@ -100,25 +102,27 @@ export function buildFlyer(colour, middle = 0.6) {
 
 	const s = buildSpeedster(colour, { tails: true });
 	s.root.rotation.y = Math.PI;         // (the speedster's built facing -Z; these models face +Z)
-	s.root.position.y = -middle;
+	const base = HIPS - 0.56;            // (the speedster's hips are 0.56 over its feet)
+	s.root.position.y = base;
 	tumble.add(s.root);
-	// the tails on a spinning pivot over his head
+	// the tails on a spinning pivot just over his rear (behind him: -Z)
 	const spin = new THREE.Group();
-	s.torso.add(spin);
+	spin.position.set(0, HIPS + 0.1, -0.16);
+	tumble.add(spin);
 	spin.add(s.tailRig);
-	s.tailRig.position.set(0, 1.12, 0.02);   // (a little higher than standing: he hangs from them)
+	s.tailRig.position.set(0, 0.16, 0);
 	s.tailRig.rotation.x = 0.74;
 	let time = 0;
 
 	// st: { rising (0..1), hurt, lean (radians), turn (radians) }
 	function pose(dt, st) {
 		time += dt;
-		s.animate(dt, st.hurt ? 'hurt' : 'hang', 0.25 + st.rising * 0.5, 30, time);
+		s.animate(dt, st.hurt ? 'hurt' : 'tailhang', 0.25 + st.rising * 0.5, 30, time);
 		spin.rotation.y += dt * (st.hurt ? 14 : 30 + st.rising * 14);
 		lean.rotation.z = st.lean;
 		yaw.rotation.y = st.turn;
 		// a little bob under the rotor
-		s.root.position.y = -middle + Math.sin(time * 9) * 0.03;
+		s.root.position.y = base + Math.sin(time * 9) * 0.03;
 		if (st.hurt) tumble.rotation.x += dt * 12;
 		else tumble.rotation.x *= Math.exp(-dt * 12);
 	}

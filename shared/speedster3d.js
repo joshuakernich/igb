@@ -16,7 +16,7 @@
  *   const s = buildSpeedster(0x2f6cf0);
  *   scene.add(s.root);                 // s.lean tilts and tumbles inside it
  *   s.animate(dt, mode, pace, spin, time);
- *     // mode: 'run' | 'ball' | 'crouch' | 'spring' | 'hurt' | 'idle' | 'hang' (limbs dangling)
+ *     // mode: 'run' | 'ball' | 'crouch' | 'spring' | 'hurt' | 'idle' | 'hang' (limbs dangling) | 'tailhang' (hung by the hips, head and limbs down)
  *     // pace: 0..1 (how fast); spin: the ball's turn (radians a second)
  *   s.setColour(c);
  */
@@ -1104,6 +1104,25 @@ export function buildSpeedster(colour, { knuckles = false, tails = false, kind =
 			head.rotation.x = -0.12;
 			for (const a of arms) placeArm(a, a.s * 0.19, -0.2 + Math.sin(time * 2.6 + a.s) * 0.015, -0.03 + sway * 0.02, 0.04, -0.02);
 			for (const l of legs) placeLeg(l, l.s * 0.09, 0.07 + (l.s > 0 ? 0.02 : 0), 0.03 + sway * 0.025 * l.s + back * 0.14, -0.7 - back * 0.3);
+			return;
+		}
+		if (mode === 'tailhang') {
+			// lifted by the tail: the hips the highest point, the body folded
+			// forward and down from them, the head drooping, the arms hanging
+			// straight down from the shoulders and the legs from the hips, all
+			// swaying; pace swings the legs back
+			show(false);
+			const sway = Math.sin(time * 2.6), back = Math.max(0, Math.min(1, pace));
+			const fold = 2.35 + sway * 0.05;
+			torso.rotation.x = -fold;
+			head.rotation.x = 0.2;
+			// (straight down, in the folded torso's space)
+			const dy = -Math.cos(fold), dz = -Math.sin(fold);
+			for (const a of arms) {
+				const r = 0.44 + Math.sin(time * 2.6 + a.s) * 0.02;
+				placeArm(a, a.s * 0.2, 0.4 + dy * r, dz * r + sway * 0.02, 0.04, -0.02);
+			}
+			for (const l of legs) placeLeg(l, l.s * 0.09, 0.03 + (l.s > 0 ? 0.02 : 0), sway * 0.025 * l.s + back * 0.08, -0.55 - back * 0.2);
 			return;
 		}
 		if (mode === 'idle' || pace < 0.04) {

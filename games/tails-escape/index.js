@@ -88,7 +88,7 @@ IGB.register('tails-escape', function TailsEscapeGame(stage, playersMeta) {
 	const EYE = 3.9;                                // the eye's height in the tunnel
 	const FOV = 64;                                 // vertical, degrees: 90 across each 16:10 wall, so the walls meet
 	const EDGE = 0.1;                               // the share of each wall at either end that's past the edge of the tunnel
-	const FOX = { scale: 0.88, middle: 0.6, r: 0.5 };   // his size (about 1.2 m tall), the height of his middle in the model, his reach (what touches things)
+	const FOX = { scale: 0.88, r: 0.5 };            // his size (about 1.2 m tall), and his reach (what touches things)
 	const FLY = { follow: 5, near: 0.85, far: 0.15, back: -2, ahead: 3.5 };   // forward and back: how quickly he follows the pilot (per second); how far from Tails' wall (0..1 of the room) is all the way back (low, near) and all the way forward (high, far); and metres from his usual place along the tunnel, back there and forward
 	const STEER = { glide: 8, max: 16 };            // how quickly a fox follows its player across (per second), and its top speed (metres a second)
 	const SPEED = { idle: 5, tutorial: 5.5, start: 6, end: 11 };   // metres a second: behind the show, in the tutorial, at the start of the escape and at its hardest
@@ -560,7 +560,7 @@ IGB.register('tails-escape', function TailsEscapeGame(stage, playersMeta) {
 	}
 
 	const tails = (function () {
-		const model = buildFlyer(PLAYER_COLORS[0], FOX.middle);
+		const model = buildFlyer(PLAYER_COLORS[0]);
 		model.root.scale.setScalar(FOX.scale);
 		scene.add(model.root);
 		const blob = buildBlob();
