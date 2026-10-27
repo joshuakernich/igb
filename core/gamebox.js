@@ -28,6 +28,7 @@ const SONIC = [
 	{ id: 'tails-escape', name: 'Tails Escape', bot: 'escape' },
 	{ id: 'super-sonic-battle', name: 'Super Sonic Battle', bot: 'battle' },
 	{ id: 'twin-tail-tower', name: 'Tails Jump', bot: 'weave', hidden: true },
+	{ id: 'red-light-green-light', name: 'Red Light Green Light', bot: 'rlgl', hidden: true },
 ];
 const COLORS = ['#ff2a2a', '#2f6bff', '#32cd32', '#dd00ff', '#ff6600', '#ffbb00'];
 
@@ -621,6 +622,22 @@ const BOTS = {
 	// (left and right along it steers, nearer and further sets his height);
 	// the rest stand back watching. At a junction a couple of them walk up and
 	// tap the wall of the branch they want (gold ring tunnels first).
+	// Red Light Green Light: everyone wanders the room on green light (the track
+	// scrolls on by itself) and freezes dead still from the warning until green
+	rlgl(n) {
+		const ps = Array.from({ length: n }, (_, i) => ({ X: (i - (n - 1) / 2) * 0.5, Y: 0, Z: 0, face: 0 }));
+		let st = null, stAt = -1;
+		return { ps, step(t, dt) {
+			if (t - stAt > 0.1) { stAt = t; try { st = game && game.state ? game.state() : null; } catch (e) { st = null; } }
+			const ph = st && st.phase;
+			if (ph === 'warning' || ph === 'turning' || ph === 'red' || ph === 'drill-red') return;   // (frozen: not a hair)
+			ps.forEach((p, i) => {
+				const to = { X: Math.max(-0.8, Math.min(0.8, Math.sin(t * 0.6 + i * 2.1) * 0.55 + (i - (n - 1) / 2) * 0.22)), Z: Math.max(-0.7, Math.min(0.7, Math.sin(t * 0.45 + i * 1.7) * 0.5)) };
+				approach(p, to, 1.1, dt);
+				p.face = Math.max(-0.5, Math.min(0.5, -(to.X - p.X) * 2));
+			});
+		} };
+	},
 	escape(n) {
 		const ps = Array.from({ length: n }, (_, i) => ({ X: (i - (n - 1) / 2) * 0.5, Y: 0, Z: -0.3, face: 0 }));
 		let st = null, stAt = -1, voted = null;
@@ -747,7 +764,7 @@ async function startGame(id, n) {
 	figures = bot.ps.map((_, i) => makeFigure(i));
 	botT = 0;
 	// straight into the run, once it has had a moment to build its world
-	const jump = () => { try { if (game === g && g.test && g.test.jump) g.test.jump('play'); } catch (e) { console.warn(e); } };
+	const jump = () => { try { const j = g.test && (g.test.jump || g.test.skipTo); if (game === g && j) j('play'); } catch (e) { console.warn(e); } };   // (RLGL calls it skipTo)
 	setTimeout(jump, 1200);
 	setTimeout(() => { if (game === g) $status.text(entry.name + ' · ' + n + (n > 1 ? ' players' : ' player')); }, 1300);
 	const q = new URLSearchParams(location.search);
@@ -874,6 +891,7 @@ const LOOPS = {
 	'quill-relay': { min: 6, max: 40, done: (a, b) => wallsOf(a) !== '' && wallsOf(b) !== wallsOf(a) },     // a hero reaches his checkpoint and zips on to the next wall
 	'iron-stride': { min: 10, max: 40, done: (a, b) => destroyedOf(b) > destroyedOf(a) },                   // a compound brought down
 	'tails-escape': { min: 6, max: 45, done: (a, b) => b.pilot !== a.pilot },                               // a junction taken, the next pilot up
+	'red-light-green-light': { min: 10, max: 45, done: (a, b) => b.phase === 'cleared' && a.phase !== 'cleared' },   // a round cleared
 	'super-sonic-battle': { min: 10, max: 60, done: (a, b) => b.phase === 'handover' || b.phase === 'finale' },   // a whole turn as Sonic
 };
 let loopStart = null, loopFrom = null;
