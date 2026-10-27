@@ -81,6 +81,10 @@ IGB.manifest = [
 		{ id: 'dance-mat', name: 'Dance Mat' },
 	] },
 
+	{ folder: 'Batman', games: [
+		{ id: 'riddler', name: 'Riddler', icon: 'assets/icons/riddler.png', file: 'games/riddler.js' },
+	] },
+
 	{ folder: 'Box Party Metagame', games: [
 		{ id: 'box-party', name: 'Box Party', icon: 'assets/icons/box-party.png', css: true },
 		{ id: 'name-entry', name: 'Name Entry', icon: 'assets/icons/name-entry.png', css: true },
