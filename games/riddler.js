@@ -677,7 +677,7 @@ IGB.register('riddler', function RiddlerGame(stage, playersMeta) {
 			} else if (symbol.indexOf('poker') > -1) {
 				setContent(sc, { type: 'poker', src: `${A}poker/${symbol.substr(6)}.svg` });
 			} else {
-				setContent(sc, { type: 'emoji', src: `${A}emoji/${emojiToUnicode(symbol)}.png` });
+				setContent(sc, { type: 'emoji', code: emojiToUnicode(symbol) });
 			}
 		}
 	}
@@ -906,6 +906,20 @@ IGB.register('riddler', function RiddlerGame(stage, playersMeta) {
 		return out;
 	}
 
+	// The emoji live on one sheet (assets/riddler/emoji.png): 72 x 72 cells, 13 to a
+	// row, in the order of EMOJI (their codes). Drawn colour-inverted, like the rest.
+	const EMOJI = ['1F308', '1F31B', '1F31D', '1F324', '1F32A', '1F333', '1F344', '1F349', '1F34E', '1F354', '1F355', '1F357', '1F36D', '1F377', '1F379', '1F37A', '1F383', '1F384', '1F388', '1F3A3', '1F3A8', '1F3A9', '1F3AA', '1F3AC', '1F3B1', '1F3B2', '1F3B3', '1F3B7', '1F3B8', '1F3BA', '1F3BB', '1F3C0', '1F3C8', '1F3CB', '1F3D0', '1F3DB', '1F3E0', '1F3E6', '1F3ED', '1F3F0', '1F40C', '1F414', '1F41D', '1F41F', '1F422', '1F42A', '1F433', '1F446', '1F447', '1F448', '1F449', '1F44F', '1F459', '1F45C', '1F45E', '1F466', '1F468', '1F475', '1F476', '1F4A6', '1F4A7', '1F4B0', '1F4BC', '1F4E6', '1F4FA', '1F4FD', '1F511', '1F514', '1F525', '1F528', '1F534', '1F536', '1F53A', '1F53B', '1F551', '1F56F', '1F573', '1F576', '1F577', '1F5C4', '1F64C', '1F680', '1F681', '1F697', '1F6AA', '1F6B2', '1F6CC', '1F6D6', '1F6DD', '1F6DE', '1F6F5', '1F6F7', '1F6F9', '1F6FC', '1F91A', '1F938', '1F944', '1F94A', '1F95C', '1F968', '1F97E', '1F986', '1F98B', '1F98D', '1F993', '1F9B4', '1F9B7', '1F9C0', '1F9C3', '1F9C8', '1F9D4', '1F9E0', '1F9F6', '1FA87', '1FA91', '1FA99', '1FAB0', '1FAB5', '1FABC', '1FABD', '1FAE7', '2194', '2198', '23FA', '25B6', '25C0', '2602', '2615', '2660', '2663', '2665', '2666', '267E', '26A1', '26BD', '26C4', '26F5', '2708', '2709', '270F', '2744', '274C', '2797', '2B05', '2B06', '2B07', '2B1C', '2B50'];
+	const EMOJI_CELL = 72, EMOJI_COLS = 13;
+	IGB.image(A + 'emoji.png');   // (start loading the sheet)
+	function drawEmoji(ctx, code, x, y, w, h) {
+		const i = EMOJI.indexOf(code), img = art.ready(A + 'emoji.png');
+		if (i < 0 || !img) return;
+		ctx.save();
+		ctx.filter = 'invert(100%)';
+		ctx.drawImage(img, (i % EMOJI_COLS) * EMOJI_CELL, Math.floor(i / EMOJI_COLS) * EMOJI_CELL, EMOJI_CELL, EMOJI_CELL, x, y, w, h);
+		ctx.restore();
+	}
+
 	function drawInverted(ctx, src, x, y, w, h) {
 		ctx.save();
 		ctx.filter = 'invert(100%)';
@@ -942,7 +956,7 @@ IGB.register('riddler', function RiddlerGame(stage, playersMeta) {
 		const c = sc.content;
 		const IMG = 3 * VW;
 		if (c && c.type == 'emoji') {
-			drawInverted(ctx, c.src, ix + (INNER_W - IMG) / 2, iy + (INNER_H - IMG) / 2, IMG, IMG);
+			drawEmoji(ctx, c.code, ix + (INNER_W - IMG) / 2, iy + (INNER_H - IMG) / 2, IMG, IMG);
 		} else if (c && c.type == 'riddler') {
 			const h = 3.5 * VW;
 			drawInverted(ctx, c.src, ix + (INNER_W - IMG) / 2, iy + INNER_H - h, IMG, h);
