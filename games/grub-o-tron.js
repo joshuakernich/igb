@@ -6,55 +6,48 @@
  * fryer for a belly), and the customers are the mutants who crawl in from
  * the wasteland demanding food nobody should eat.
  *
- * The room is the kitchen:
+ * Every wall is a side-on view of its stretch of the kitchen: a counter
+ * right across it, its devices standing on it.
  *   LEFT WALL    THE OLD WAYS: the CHOPPER, FRYER, GRILLER and SOAKER
  *   FRONT WALL   the GRABBER (a teleport hatch: ingredients beam in, left),
- *                the mutants at the counter with a SERVER square in front
- *                of each (middle) and the BINNER (a void chute, right)
+ *                the mutants behind the counter, each with a SERVER in
+ *                front (middle), and the BINNER (a void chute, right)
  *   RIGHT WALL   THE NEW WAYS: the CRUSHER, MUTATOR, WARPER and FREEZER
- * Every device is named for what it does, and the hint over each cook is
- * the same thing in two words: GRAB IT, FRY IT, SOAK IT, SERVE IT, BIN IT.
+ * Each player's cook stands along the bottom of every wall, rising into
+ * view as they walk over to it (so near a corner, they're on two walls).
  *
- * Each wall's floor is a grid of squares, the whole room from that wall to
- * the far one. Where you stand in the room is where your cook stands.
- * Everything is done by where you stand: every station takes a square, with
- * a marked square next to it, and standing on that square uses it.
- *   the hatch    stand on its square with empty hands: you grab what's there
- *   a station    stand on its square holding food: it goes in. Stay on the
- *                square to work it, and when it's done (and your hands are
- *                empty) it comes back to you
- *   the counter  stand at the front counter in front of a mutant holding
- *                what it ordered: you hand it over
- *   the chute    stand on its square a moment: what you hold goes in the bin
- * The only touch: your cook works on one wall at a time (everyone starts at
- * the front). Touch another wall, where you can reach it, to move there.
- * A ticket lists each part of the dish: an ingredient and the stations it
- * goes through, in order, and a hint over your cook says where to go next.
- *   chop    stay on its square
- *   fry     cooks by itself; take it out while it's golden, or it burns
- *   grill   cooks by itself, but someone has to be there to flip it
- *   stir    sway from side to side on its square
- *   press   squat on its square (or wait it out, slowly)
- *   inject  stay on its square until the needle hits the green
- *   warp    cooks by itself into another dimension, and comes back out of
- *           a portal on some other square: go and stand in it
- *   cryo    hold still on its square
- * Burnt food left sitting starts a fire (stand on its square to put it out,
- * or it spreads); bin burnt food in the void chute.
+ * To use a device, walk to it and tap it: a tap only counts for a player
+ * close enough to reach that spot, and their cook acts it out.
+ *   the GRABBER   tap with empty hands: grab what's beamed in
+ *   a device      tap holding food: it goes in; tap when it's done to take it
+ *   the SERVER    tap a mutant holding what it ordered: you hand it over
+ *   the BINNER    tap holding anything: gone
+ * Working the devices:
+ *   CHOPPER   tap, again and again
+ *   FRYER     cooks by itself; take it out while it's golden, or it burns
+ *   GRILLER   cooks by itself, but tap it to flip when it says FLIP!
+ *   SOAKER    stay in front of it and sway from side to side
+ *   CRUSHER   squat in front of it (or tap)
+ *   MUTATOR   tap when the needle's in the green
+ *   WARPER    cooks by itself into another dimension, and comes back in a
+ *             portal on some other wall: go and tap it
+ *   FREEZER   stay in front of it and hold still
+ * Burnt food left sitting starts a fire (tap it out, or it spreads). Every
+ * device is named for what it does, and the hint over each cook is the same
+ * thing in two words: GRAB IT, FRY IT, SOAK IT, SERVE IT, BIN IT.
  *
  * Score: a finished dish pays everyone who had a hand in it (grabbed it,
  * worked it, carried it, served it) its price plus a tip for speed. The
  * shifts ramp over the ten minutes: more windows, longer recipes, less
  * patience, and from the second shift, trouble (grease fires, a jammed
- * hatch, dimensional leaks, the Overlord's feast).
+ * grabber, dimensional leaks, the Overlord's feast).
  *
- * Drawn in 3D (three.js): each wall looks down on its own part of the
- * kitchen at a tilt, through an orthographic camera, so the room reads as
- * one grimy, neon-lit 2.5D diorama; words, tickets and prompts are 2D over it.
+ * Drawn in 3D (three.js), each wall through its own orthographic camera,
+ * a little above the counter; the words, tickets and prompts are 2D over it.
  *
- * Input: px / pz (which square you're on; pz is 1 at the front wall), py
- * (squats), movement (stir, hold still), and touches on a wall, only from a
- * player near enough that spot to reach it (to change walls).
+ * Input: px / pz (where you are along each wall and how near it; pz is 1 at
+ * the front wall), py (squats), movement (sway, hold still) and touches on
+ * the walls, from players near enough to reach that spot.
  */
 import * as THREE from '../lib/three/three.module.min.js';
 import { createWallComposer, canvasTexture, environmentFromShader, toScreen } from '../lib/three/walls.js';
@@ -71,24 +64,22 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	/* ---------- tuning ---------- */
 
-	const SLOT = 400;             // a station's width (four to a wall)
-	const REACH_WALL = 0.2;       // a touch on a wall counts for a player this near it, and this near the spot along it
-	const DWELL = 0.35;           // seconds on a square before it acts (drop in, take out, grab, serve)
-	const BIN_DWELL = 0.9;        // (the chute waits a little longer: no binning by accident)
-	const CHOP_TIME = 2.4;        // seconds on the block's square to chop
-	const PRESS_WAIT = 7;         // the press does it by itself this slowly (squats are quicker)
-	const DOUSE = 2;              // seconds on a burning station's square to put it out
-	const UNJAM = 2.5;            // and on the jammed hatch's to fix it
-	const HATCH = 330;            // the front wall: the hatch up to here...
-	const CHUTE = 1270;           // ...the chute from here, and the windows between
+	const SLOT = 400;             // a device's width on a side wall (four to a wall)
+	const REACH = { out: 0.25, along: 0.2 };   // a touch counts for a player this near the wall (room widths) and this near the spot along it
+	const SHOW = { full: 0.12, gone: 0.45 };   // a cook rises into view at the foot of a wall as their player comes within this of it
+	const HATCH = 330;            // the front wall: the GRABBER up to here...
+	const CHUTE = 1270;           // ...the BINNER from here, and the mutants' windows between
+	const CHOP_TAPS = 6;
+	const JAM_TAPS = 6;
+	const ACT_TIME = 0.6;         // how long a cook takes to act out a tap
 	const FRY = { cook: 5, burn: 6 };              // seconds to golden, then golden this long
 	const GRILL = { flipAt: 2.2, flipBy: 5.2, cook: 7.5, burn: 6.5 };
 	const STIR_NEED = 1.0;        // room widths of swaying, in all
-	const PRESS = { squats: 3, tap: 0.1, down: 0.62, up: 0.5 };
+	const PRESS = { squats: 3, tap: 0.15, down: 0.62, up: 0.5 };
 	const INJECT = { period: 1.6, zone: 0.11, lockout: 0.7 };
 	const WARP_TIME = 4;
 	const CRYO = { need: 3, still: 0.12, thaw: 0.15 };   // seconds held still; slower than this (room widths a second) is still
-	const FIRE = { hp: 6, after: 6, spread: 12 };       // taps to put out; seconds burnt food sits before it lights; and before a fire spreads
+	const FIRE = { hp: 5, after: 6, spread: 12 };       // taps to put out; seconds burnt food sits before it lights; and before a fire spreads
 	const PATIENCE = { 0: 999, 1: 58, 2: 78, 3: 105, 4: 140 };
 	const PRICE = { 0: 20, 1: 20, 2: 40, 3: 75, 4: 150 };
 	const STREAK = { every: 5, bonus: 50 };
@@ -247,12 +238,10 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		menu: { restart: () => { clearKitchen(); show.go('play'); } },
 	});
 
-	const everyone = (fn) => count > 0 && chefs.every((c, i) => fn(i));
 	const TUTORIAL = [
-		{ caption: 'GRAB IT: STAND ON THE GRABBER', min: 2, max: 30, did: () => chefs.filter((c, i) => tut.held[i]).length >= Math.min(count, 3) },
-		{ caption: 'TOUCH A SIDE WALL TO GO TO ITS KITCHEN', min: 2, max: 25, did: () => everyone((i) => tut.moved[i]) },
-		{ caption: 'COOK IT: STAND ON A STATION', min: 2, max: 30, did: () => chefs.filter((c, i) => tut.put[i]).length >= Math.min(count, 3) },
-		{ caption: 'SERVE IT: STAND ON A SERVER', min: 3, max: 45, did: () => tut.served >= Math.min(count, 3) },
+		{ caption: 'WALK TO THE GRABBER AND TAP IT', min: 2, max: 30, did: () => chefs.filter((c, i) => tut.held[i]).length >= Math.min(count, 3) },
+		{ caption: 'TAKE IT TO A STATION AND TAP IT', min: 2, max: 30, did: () => chefs.filter((c, i) => tut.put[i]).length >= Math.min(count, 3) },
+		{ caption: 'COOK IT, THEN TAP A MUTANT', min: 3, max: 45, did: () => tut.served >= Math.min(count, 3) },
 	];
 
 	show.sequence([
@@ -345,7 +334,6 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	function tick(dt) {
 		t += dt;
 		for (let i = 0; i < count; i++) readChef(i, dt);
-		act(dt);
 		stepStations(dt);
 		stepCustomers(dt);
 		stepHatch(dt);
@@ -354,7 +342,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		if (phase === 'play') stepShift(dt);
 	}
 
-	// where a player is: the wall they're nearest (sticky), how far along it, how near
+	// where a player is, seen from each wall: how far along it, how near
 	function wallsOf(p) {
 		return { along: [p.pz, p.px, 1 - p.pz], dist: [p.px, 1 - p.pz, 1 - p.px] };
 	}
@@ -364,25 +352,36 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		const c = chefs[i];
 		if (!p) return;
 		const { along, dist } = wallsOf(p);
-		const best = c.wall;   // (their wall: they change it by tapping another)
-		c.along = clamp(along[best], 0, 1);
-		c.dist = dist[best];
+		c.alongs = along.map((a) => clamp(a, 0, 1));
+		c.dists = dist.map((d) => clamp(d, 0, 1));
+		let best = 0;
+		for (let w = 1; w < 3; w++) if (c.dists[w] < c.dists[best]) best = w;
+		c.wall = best;   // (the wall they're nearest: where their floating words go)
+		c.along = c.alongs[best];
+		c.dist = c.dists[best];
 		const moved = c.prev ? Math.hypot(p.px - c.prev.px, p.pz - c.prev.pz) : 0;
 		c.prev = { px: p.px, pz: p.pz };
 		c.moved = moved;
 		if (dt > 0) c.speed = lerp(c.speed, moved / dt, Math.min(1, dt * 5));
-		c.x = best * W + c.along * W;   // (one to one with the player: no smoothing)
-		// the square they're on, and what it's next to
-		c.cell = cellOf(best, c.along, c.dist);
-		c.station = best !== 1 ? stations.find((s) => s.wall === best && onSpot(c, [s.cell, s.spot])) || null : null;
-		c.atHatch = best === 1 && onSpot(c, CELLS.hatch);
-		c.atChute = best === 1 && onSpot(c, CELLS.chute);
+		c.x = best * W + c.along * W;
+		// the side-wall device they're standing at, if any (the soaker and the freezer work by being there)
+		c.station = null;
+		for (const s of stations) {
+			const d = c.dists[s.wall];
+			if (d < REACH.out && Math.abs(c.alongs[s.wall] - (s.slot + 0.5) / 4) < 0.15 && (!c.station || d < c.dists[c.station.wall])) c.station = s;
+		}
 		c.work = Math.max(0, c.work - dt * 2);
+		if (c.act) { c.act.t += dt; if (c.act.t > ACT_TIME) c.act = null; }
 		// a squat: down past PRESS.down, back up past PRESS.up
 		if (typeof p.py === 'number') {
 			if (!c.down && p.py > PRESS.down) c.down = true;
 			else if (c.down && p.py < PRESS.up) { c.down = false; pump(i); }
 		}
+	}
+
+	// a cook acts out what their tap did (the avatar matches the action)
+	function doing(i, kind) {
+		if (i !== undefined && chefs[i]) chefs[i].act = { kind, t: 0 };
 	}
 
 	const chefsAt = (s) => chefs.map((c, i) => i).filter((i) => chefs[i].station === s);
@@ -482,94 +481,93 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		if (s.prog >= 0.999) finish(s);
 	}
 
-	// Each frame, whatever each cook is standing on acts, once they've been on
-	// it a moment (c.dwell; c.said: whether it's told them why not already)
-	function act(dt) {
-		for (let i = 0; i < count; i++) {
-			const c = chefs[i];
-			if (!latest[i] || !c.cell) continue;
-			const portal = portals.find((p) => p.wall === c.wall && p.cell[0] === c.cell.col && p.cell[1] === c.cell.row);
-			const k = serveSlot(c);
-			const here = c.station ? 's:' + c.station.kind : c.atHatch ? 'hatch' : c.atChute ? 'chute' : portal ? 'p' + portal.item.id : k >= 0 ? 'serve' + k : '';
-			if (here !== c.here) { c.here = here; c.dwell = 0; c.said = false; }
-			c.dwell += dt;
-			if (!here) continue;
-			if (c.station) useStation(c.station, i, dt);
-			else if (c.atHatch) useHatch(i, dt);
-			else if (c.atChute) useChute(i);
-			else if (portal) usePortal(portal, i);
-			else serve(k, i);
-		}
-	}
-
-	// (a word over a station, once per visit)
-	function tell(c, s, text, fill) {
-		if (c.said) return;
-		c.said = true;
-		float(s.ui.x, s.ui.prompt - 36, text, fill || '#ffffff', 32);
-	}
-
-	function useStation(s, i, dt) {
-		const c = chefs[i];
+	// A tap on a device, from the players in reach of it (nearest first)
+	function tapStation(s, hit) {
+		const say = (text, fill, size) => float(s.ui.x, s.ui.prompt - 40, text, fill || '#ffffff', size || 34);
 		if (s.fire > 0) {
-			s.douse += dt;
-			c.work = 1;
-			s.shake = 0.4;
-			if (s.douse >= DOUSE) { s.fire = 0; s.douse = 0; float(s.ui.x, s.ui.prompt - 36, 'PUT OUT!', '#8fdcff', 50); show.fx('skip', 0.5); }
+			s.fire--;
+			s.shake = 1;
+			doing(hit[0], 'douse');
+			show.fx('whoosh', 0.6, 1.4);
+			if (s.fire <= 0) { say('PUT OUT!', '#8fdcff', 50); show.fx('skip', 0.5); }
 			return;
 		}
 		if (!s.item) {
-			if (!c.held || c.dwell < DWELL) return;
-			if (c.held.burnt) return tell(c, s, 'BIN IT', '#ff4a32');
-			if (c.held.steps.includes(s.kind)) return tell(c, s, 'ALREADY ' + s.adj);
-			if (c.held.steps.length >= 3) return tell(c, s, 'SERVE IT');
-			const item = c.held;
-			c.held = null;
-			c.dwell = 0;
-			Object.assign(s, { item, state: 'work', t: 0, prog: 0, doneT: 0, burntT: 0, flipped: false, lock: 0, chopT: 0 });
+			const i = hit.find((k) => chefs[k].held && !chefs[k].held.burnt && !chefs[k].held.steps.includes(s.kind) && chefs[k].held.steps.length < 3);
+			if (i === undefined) {
+				const j = hit.find((k) => chefs[k].held);
+				if (j === undefined) say('GRAB IT FIRST');
+				else if (chefs[j].held.burnt) say('BIN IT', '#ff4a32');
+				else if (chefs[j].held.steps.includes(s.kind)) say('ALREADY ' + s.adj);
+				else say('SERVE IT');
+				return;
+			}
+			const item = chefs[i].held;
+			chefs[i].held = null;
+			Object.assign(s, { item, state: 'work', t: 0, prog: 0, doneT: 0, burntT: 0, flipped: false, lock: 0 });
 			credit(s, i);
 			tut.put[i] = true;
+			doing(i, 'put');
 			show.fx('tap', 0.8);
 			if (s.kind === 'warp') show.fx('charge', 0.5);
 			return;
 		}
 		if (s.state === 'done' || s.state === 'burnt') {
-			if (c.held) return tell(c, s, 'HANDS FULL!');
-			if (c.dwell < DWELL) return;
-			c.held = s.item;
-			c.dwell = 0;
+			const i = hit.find((k) => !chefs[k].held);
+			if (i === undefined) { say('HANDS FULL!'); return; }
+			chefs[i].held = s.item;
 			if (!s.item.burnt && !s.item.by.includes(i)) s.item.by.push(i);
 			s.item = null;
 			s.state = 'idle';
+			doing(i, 'take');
 			show.fx('lockIn', 0.6);
 			return;
 		}
-		// working it, by being there
-		c.work = 1;
-		credit(s, i);
+		// working it
+		const i = hit[0];
+		chefs[i].work = 1;
 		if (s.kind === 'chop') {
-			s.prog += dt / CHOP_TIME;
-			s.chopT += dt;
-			if (s.chopT > 0.3) { s.chopT = 0; s.hit = 1; show.fx('thud', 0.35, 1.5 + Math.random() * 0.3); }
-			if (s.prog >= 1) finish(s);
+			s.prog += 1 / CHOP_TAPS;
+			s.hit = 1;
+			credit(s, i);
+			doing(i, 'chop');
+			show.fx('swordSwish', 0.5, 0.9 + Math.random() * 0.3);
+			show.fx('thud', 0.35, 1.5);
+			if (s.prog >= 0.999) finish(s);
 		} else if (s.kind === 'inject') {
-			if (s.t > 0.6 && Math.abs(needle(s) - 0.5) < INJECT.zone) {
-				float(s.ui.x, s.ui.prompt - 36, 'PERFECT DOSE!', '#d04dff', 44);
+			if (s.lock > 0) return;
+			doing(i, 'jab');
+			if (Math.abs(needle(s) - 0.5) < INJECT.zone) {
+				credit(s, i);
+				say('PERFECT DOSE!', '#d04dff', 44);
 				show.fx('correct', 0.6);
 				finish(s);
+			} else {
+				s.lock = INJECT.lockout;
+				s.shake = 1;
+				say('SPLORT!', '#ff2d8f', 50);
+				show.fx('wrong', 0.6);
 			}
 		} else if (s.kind === 'grill') {
 			if (!s.flipped && s.t >= GRILL.flipAt) {
 				s.flipped = true;
 				s.hit = 1;
-				float(s.ui.x, s.ui.prompt - 36, 'FLIPPED!', '#ffc21a', 46);
+				credit(s, i);
+				doing(i, 'flip');
+				say('FLIPPED!', '#ffc21a', 46);
 				show.fx('whoosh', 0.5);
-			}
+			} else say(s.flipped ? 'SIZZLING...' : 'NOT YET!');
 		} else if (s.kind === 'press') {
-			s.prog += dt / PRESS_WAIT;
+			s.prog += PRESS.tap;
+			s.hit = 0.6;
+			credit(s, i);
+			doing(i, 'pump');
+			show.fx('thud', 0.4);
 			if (s.prog >= 0.999) finish(s);
-		}
-		// (stir and cryo are worked in stepStations; fry and warp look after themselves)
+		} else if (s.kind === 'stir') say('STAY AND SWAY!', '#9dff3a');
+		else if (s.kind === 'cryo') say('STAY STILL!', '#8fdcff');
+		else if (s.kind === 'warp') say('IT\'S ELSEWHERE...', '#3af2ff');
+		else say('WAIT FOR GOLDEN...', '#ffc21a');
 	}
 
 	// the injector's needle, 0..1 and back
@@ -614,73 +612,71 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		return Math.random() < 0.6 ? pick(pool) : pick(Object.keys(INGS));
 	}
 
-	function useHatch(i, dt) {
-		const c = chefs[i];
+	function tapGrabber(hit) {
+		const say = (text, fill, size) => float(HATCH_UI.x, HATCH_UI.prompt - 40, text, fill || '#ffffff', size || 34);
 		if (hatch.jam > 0) {
-			hatch.jam = Math.max(0, hatch.jam - dt);
-			hatch.shake = 0.5;
-			c.work = 1;
-			if (hatch.jam <= 0) { float(HATCH_UI.x, HATCH_UI.prompt - 36, 'UNJAMMED!', '#9dff3a', 44); show.fx('allSet', 0.4); }
+			hatch.jam--;
+			hatch.shake = 1;
+			doing(hit[0], 'douse');
+			show.fx('thud', 0.6);
+			if (hatch.jam <= 0) { say('UNJAMMED!', '#9dff3a', 44); show.fx('allSet', 0.4); }
 			return;
 		}
-		if (c.held || c.dwell < DWELL) return;
+		const i = hit.find((n) => !chefs[n].held);
+		if (i === undefined) { say('HANDS FULL!'); return; }
 		const k = pods.findIndex((p) => p.ing);
-		if (k < 0) return;
-		c.held = { id: nextId++, ing: pods[k].ing, steps: [], burnt: false, by: [i] };
-		c.dwell = 0;
+		if (k < 0) { say('BEAMING IN...'); return; }
+		chefs[i].held = { id: nextId++, ing: pods[k].ing, steps: [], burnt: false, by: [i] };
 		tut.held[i] = true;
 		pods[k].ing = null;
 		pods[k].wait = 1.0;
+		doing(i, 'grab');
 		show.fx('pop', 0.7);
-		float(POD_UI[k].x, HATCH_UI.prompt - 36, INGS[c.held.ing].name, '#9dff3a', 30);
+		say(INGS[chefs[i].held.ing].name, '#9dff3a', 30);
 	}
 
-	function useChute(i) {
-		const c = chefs[i];
-		if (!c.held || c.dwell < BIN_DWELL) return;
-		c.held = null;
-		c.dwell = 0;
+	function tapBinner(hit) {
+		const i = hit.find((n) => chefs[n].held);
+		if (i === undefined) { float(CHUTE_UI.x, CHUTE_UI.prompt - 40, 'NOTHING TO BIN', '#ffffff', 30); return; }
+		chefs[i].held = null;
+		doing(i, 'bin');
 		show.fx('whooshLong', 0.5, 0.7);
-		float(CHUTE_UI.x, CHUTE_UI.prompt - 36, pick(['INTO THE VOID', 'GONE FOREVER', 'THE VOID SAYS THANKS']), '#d04dff', 34);
+		float(CHUTE_UI.x, CHUTE_UI.prompt - 40, pick(['INTO THE VOID', 'GONE FOREVER', 'THE VOID SAYS THANKS']), '#d04dff', 34);
 	}
 
+	// The warper sends food somewhere else: it comes back in a portal hanging in front of the counter, on some wall, between two devices
 	function spawnPortal(item, from) {
-		// (a free square: no station, no station's square, no other portal)
-		const taken = (w, col, row) => Object.values(CELLS).some((cs, n) => (w === 1 ? n >= 8 : STATIONS[n] && STATIONS[n].wall === w) && cs.some(([cc, rr]) => cc === col && rr === row)) || portals.some((p) => p.wall === w && p.cell[0] === col && p.cell[1] === row) || (w === 1 && row === 0);
-		let wall, col, row, tries = 0;
+		let wall, x3, tries = 0;
 		do {
 			wall = Math.floor(Math.random() * 3);
-			col = Math.floor(Math.random() * 8);
-			row = Math.floor(Math.random() * GRID[wall].rows);
+			x3 = pick([-3, 0, 3]) + (Math.random() - 0.5) * 0.6;
 			tries++;
-		} while (tries < 60 && (taken(wall, col, row) || (wall === from.wall && Math.abs(cellX(col) - from.sx) < 3)));
-		const x3 = cellX(col), z = cellZ(wall, row);
-		const sp = proj(wall, x3, 1.35, z);
-		portals.push({ item, wall, cell: [col, row], x3, z, t: 0, x: sp.x, y: sp.y });
+		} while (tries < 30 && ((wall === from.wall && Math.abs(x3 - from.sx) < 2) || portals.some((p) => p.wall === wall && Math.abs(p.x3 - x3) < 1.5)));
+		const sp = proj(wall, x3, PORTAL_Y, PORTAL_Z);
+		portals.push({ item, wall, x3, t: 0, x: sp.x, y: sp.y });
 		if (portals.length > MAX_PORTALS) portals.shift();
 		show.fx('reveal', 0.5, 0.8);
-		float(from.ui.x, from.ui.prompt - 36, 'IT\'S... SOMEWHERE ELSE!', '#3af2ff', 36);
+		float(from.ui.x, from.ui.prompt - 40, 'IT\'S... SOMEWHERE ELSE!', '#3af2ff', 36);
 	}
 
 	function stepPortals(dt) {
 		for (const p of portals) {
 			p.t += dt;
-			const sp = proj(p.wall, p.x3, 1.35, p.z);
+			const sp = proj(p.wall, p.x3, PORTAL_Y, PORTAL_Z);
 			p.x = sp.x;
 			p.y = sp.y;
 		}
 	}
 
-	function usePortal(p, i) {
-		const c = chefs[i];
-		if (c.held) { if (!c.said) { c.said = true; float(p.x, p.y - 140, 'HANDS FULL!', '#ffffff', 34); } return true; }
-		c.held = p.item;
-		c.dwell = 0;
+	function tapPortal(p, hit) {
+		const i = hit.find((n) => !chefs[n].held);
+		if (i === undefined) { float(p.x, p.y - 140, 'HANDS FULL!', '#ffffff', 34); return; }
+		chefs[i].held = p.item;
 		if (!p.item.by.includes(i)) p.item.by.push(i);
 		portals.splice(portals.indexOf(p), 1);
+		doing(i, 'grab');
 		show.fx('pop', 0.8, 0.8);
 		float(p.x, p.y - 100, 'GOT IT!', '#3af2ff', 40);
-		return true;
 	}
 
 	/* ---------- the customers ---------- */
@@ -745,37 +741,32 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		return part.steps[0] === '*' ? item.steps.length > 0 : sameSteps(item.steps, part.steps);
 	}
 
-	// which mutant a cook at the front counter (the front wall's first row) is standing in front of, or -1
-	function serveSlot(c) {
-		if (c.wall !== 1 || !c.cell || c.cell.row !== 0) return -1;
-		const lx = c.along * W;
-		if (lx < HATCH || lx >= CHUTE) return -1;
-		return clamp(Math.floor((lx - HATCH) / colW(windowsNow())), 0, windowsNow() - 1);
-	}
-
-	function serve(k, i) {
-		const c = chefs[i];
+	function tapCustomer(k, hit) {
 		const cu = customers[k];
 		if (!cu || cu.state !== 'wait') return;
-		const item = c.held;
-		if (!item) {
-			if (!c.said && c.dwell > 0.8) { c.said = true; cu.say = 'WELL? I\'M WAITING.'; cu.sayT = 1.4; }
+		for (const i of hit) {
+			const item = chefs[i].held;
+			const part = item && cu.parts.find((pt) => fits(item, pt));
+			if (!part) continue;
+			part.filled = true;
+			part.item = item;
+			chefs[i].held = null;
+			for (const n of item.by.concat([i])) if (!cu.by.includes(n)) cu.by.push(n);
+			doing(i, 'serve');
+			show.fx('lockIn', 0.7);
+			if (cu.parts.every((pt) => pt.filled)) complete(cu);
+			else { cu.say = 'AND THE REST?'; cu.sayT = 1.6; }
 			return;
 		}
-		const part = cu.parts.find((pt) => fits(item, pt));
-		if (!part) {
-			if (!c.said && c.dwell > 0.5) { c.said = true; cu.say = item.burnt ? 'IS THAT... CHARCOAL?' : pick(NOPE); cu.sayT = 1.8; show.fx('buzz', 0.5); }
-			return;
+		const holder = hit.find((i) => chefs[i].held);
+		if (holder !== undefined) {
+			cu.say = chefs[holder].held.burnt ? 'IS THAT... CHARCOAL?' : pick(NOPE);
+			cu.sayT = 1.8;
+			show.fx('buzz', 0.5);
+		} else if (cu.sayT <= 0) {
+			cu.say = 'WELL? I\'M WAITING.';
+			cu.sayT = 1.4;
 		}
-		if (c.dwell < DWELL) return;
-		part.filled = true;
-		part.item = item;
-		c.held = null;
-		c.dwell = 0;
-		for (const n of item.by.concat([i])) if (!cu.by.includes(n)) cu.by.push(n);
-		show.fx('lockIn', 0.7);
-		if (cu.parts.every((pt) => pt.filled)) complete(cu);
-		else { cu.say = 'AND THE REST?'; cu.sayT = 1.6; }
 	}
 
 	// what a cook should do next, for the hint over their head
@@ -813,7 +804,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			const o = overChef(i);
 			float(o.x, o.y, '+' + (price + tip), colourOf(i), 52);
 		}
-		float(c.x, TICKET_Y - 20, tip > 0 ? 'TIP +' + tip : 'SERVED', '#e9ff4a', 40);
+		float(c.x, SAY_Y - 70, tip > 0 ? 'TIP +' + tip : 'SERVED', '#e9ff4a', 40);
 		served++;
 		streak++;
 		if (streak % STREAK.every === 0) {
@@ -832,7 +823,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		streak = 0;
 		walkouts++;
 		show.fx('roundFail', 0.35);
-		float(c.x, TICKET_Y - 20, 'WALKOUT!', '#ff4a32', 46);
+		float(c.x, SAY_Y - 70, 'WALKOUT!', '#ff4a32', 46);
 	}
 
 	/* ---------- the shifts and their trouble ---------- */
@@ -865,17 +856,17 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		if (kind === 'fire') {
 			const free = stations.filter((s) => s.fire <= 0);
 			if (free.length) ignite(pick(free));
-			setBanner('GREASE FIRE!', 'STAND ON IT TO PUT IT OUT', '#ff4a32');
+			setBanner('GREASE FIRE!', 'TAP IT TO PUT IT OUT', '#ff4a32');
 			show.fx('alarm', 0.5);
 		} else if (kind === 'jam') {
-			hatch.jam = UNJAM;
+			hatch.jam = JAM_TAPS;
 			hatch.shake = 1;
-			setBanner('GRABBER JAMMED!', 'STAND ON IT TO FIX IT', '#ffc21a');
+			setBanner('GRABBER JAMMED!', 'TAP IT TO FIX IT', '#ffc21a');
 			show.fx('alarm', 0.5);
 		} else if (kind === 'leak') {
 			const warp = stations.find((s) => s.kind === 'warp');
 			for (let n = 0; n < 3; n++) spawnPortal({ id: nextId++, ing: chooseIng(), steps: [], burnt: false, by: [] }, warp);
-			setBanner('DIMENSIONAL LEAK!', 'FREE INGREDIENTS ON THE FLOOR', '#3af2ff');
+			setBanner('DIMENSIONAL LEAK!', 'FREE FOOD IN THE PORTALS', '#3af2ff');
 		} else if (kind === 'vip') {
 			vipPending = true;
 			setBanner('THE OVERLORD APPROACHES', 'SERVE ITS FEAST FOR A FORTUNE', '#d04dff');
@@ -900,33 +891,32 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			const p = latest[i];
 			if (!p) continue;
 			const { along, dist } = wallsOf(p);
-			if (dist[wall] > REACH_WALL || Math.abs(along[wall] - a) > REACH_WALL) continue;
+			if (dist[wall] > REACH.out || Math.abs(along[wall] - a) > REACH.along) continue;
 			near.push({ i, d: (i === flagged ? -1 : 0) + Math.abs(along[wall] - a) + dist[wall] });
 		}
 		near.sort((x, y) => x.d - y.d);
 		return near.map((n) => n.i);
 	}
 
+	// A tap does whatever's drawn under it, for a player who's walked over and can reach it
 	function tap(at) {
 		if (!at || !count || (phase !== 'tutorial' && phase !== 'play')) return;
 		if (show.paused) return;
 		ripples.push({ x: at.x, y: at.y, t: 0 });
-		// the one thing a touch does: move a cook who can reach it to that wall
-		const tw = clamp(Math.floor(at.x / W), 0, 2);
-		const i = hitters(at).find((n) => chefs[n].wall !== tw);
-		if (i !== undefined) moveWall(i, tw);
-	}
-
-	const WALL_NAMES = ['THE OLD WAYS', 'THE COUNTER', 'THE NEW WAYS'];
-	function moveWall(i, w) {
-		const c = chefs[i];
-		c.wall = w;
-		c.station = null;
-		tut.moved[i] = true;
-		show.fx('whoosh', 0.6, 1.2);
-		const p = latest[i];
-		const along = p ? wallsOf(p).along[w] : 0.5;
-		float(w * W + clamp(along, 0.05, 0.95) * W, 560, '→ ' + WALL_NAMES[w], colourOf(i), 40);
+		const wall = clamp(Math.floor(at.x / W), 0, 2);
+		const lx = at.x - wall * W;
+		const hit = hitters(at);
+		if (!hit.length) { float(at.x, at.y - 40, 'WALK OVER HERE', '#ffffff', 28); return; }
+		const portal = portals.find((p) => p.wall === wall && Math.abs(p.x - at.x) < 130 && Math.abs(p.y - at.y) < 160);
+		if (portal) { tapPortal(portal, hit); return; }
+		if (wall === 1) {
+			if (lx < HATCH) tapGrabber(hit);
+			else if (lx >= CHUTE) tapBinner(hit);
+			else tapCustomer(clamp(Math.floor((lx - HATCH) / colW(windowsNow())), 0, windowsNow() - 1), hit);
+			return;
+		}
+		const s = stations.find((o) => o.wall === wall && o.slot === clamp(Math.floor(lx / SLOT), 0, 3));
+		if (s) tapStation(s, hit);
 	}
 
 	stage.$el.on('click.grub-o-tron', (e) => tap(IGB.toWorld(e)));
@@ -960,52 +950,37 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		ctx.restore();
 	}
 
-	/* ---------- 3D: the kitchen, three sets seen from above ---------- */
+	/* ---------- 3D: the kitchen, seen side on ---------- */
 
-	// Every wall looks down on its own room through an orthographic camera,
-	// steeply tilted (2.5D: no perspective), so a wall's x maps straight onto
-	// its room's x. A wall is 12 units across and its floor about 7.5 deep.
-	// The side walls' stations stand on islands of their own, staggered about
-	// the floor; the cooks stand on it too, further out (lower on the wall)
-	// the further they are from the wall, so walking to a station's spot in
-	// the room puts you at it. On the front wall the mutants wait behind a
-	// serving counter, with the hatch and the chute on islands out in front.
-	// A tap goes to whatever's drawn under it.
-	const VW = 15;                 // a wall's view, units across (and 15 / 1.6 down)
+	// Each wall is a side-on view of its own stretch of kitchen: a long
+	// counter across the wall with its devices standing on it, the tiled wall
+	// behind, and the cooks along the bottom, in front of the counter. An
+	// orthographic camera, tilted down a little, so a wall's x maps straight
+	// onto its kitchen's x (12 units across a wall). A cook rises into view at
+	// the foot of a wall as their player walks over to it and sinks away as
+	// they leave, so a player near a corner shows on both walls. On the front
+	// wall the mutants wait behind the counter, with the GRABBER and the
+	// BINNER at its ends.
+	const VW = 12;                 // a wall's view, units across (and 12 / 1.6 down)
 	const VH = VW / 1.6;
 	const U = VW / W;
-	const SET_X = [-40, 0, 40];
-	const PITCH = 60 * Math.PI / 180;
-	const AIM = [1.2, 0.0, 1.2];                             // the z each wall's camera aims at
-	const BACK_Z = [-2.8, -3.9, -2.8];                        // each room's back wall
-	const CT = { y: 1, front: -1.5, back: -2.5, z: -2.0 };    // the front wall's serving counter: its top, its front and back faces, its middle
-	const ISLAND = { y: 1 };                                  // a station's island: its top
-	const CELL = VW / 8;                                      // the floor is a grid: 8 squares across every wall
-	const GRID = [{ z0: -2.8, rows: 5 }, { z0: -1.4, rows: 4 }, { z0: -2.8, rows: 5 }];   // each wall's grid: where it starts (at the back) and its rows
-	const MS = 0.68;                                          // the machines, scaled to fit a square
-	// each station's square and, beside it, the square you stand on to use it (column, row; row 0 at the back)
-	const CELLS = {
-		chop: [[1, 0], [1, 1]], fry: [[5, 0], [5, 1]], grill: [[3, 2], [3, 3]], stir: [[7, 2], [7, 3]],
-		press: [[0, 2], [0, 3]], inject: [[2, 0], [2, 1]], warp: [[4, 2], [4, 3]], cryo: [[6, 0], [6, 1]],
-		hatch: [[0, 1], [1, 1]], chute: [[7, 1], [6, 1]],
-	};
-	const QUEUE_Z = -3.2;                                     // where the mutants stand, behind the serving counter
+	const SET_X = [-40, 0, 40];    // each wall's kitchen, side by side in one scene
+	const PITCH = 12 * Math.PI / 180;
+	const AIM = { y: 3.5, z: 0 };  // where every camera looks
+	const CT = { y: 1.6, front: -0.2, back: -1.8, z: -1.0 };   // the counter: its top, its front and back faces, its middle
+	const BACK_Z = [-2.3, -3.5, -2.3];                         // each kitchen's back wall
+	const STAND_Z = 0.9;           // where the cooks stand, in front of the counter
+	const QUEUE_Z = -2.6;          // where the mutants stand, behind the front counter
+	const ISLAND = { y: CT.y };    // (the devices stand on the counter)
+	const MS = 1;                  // (their machines at full size)
+	const PORTAL_Y = CT.y + 1.0, PORTAL_Z = CT.front + 0.7;   // a portal hangs in front of the counter
 	const lx3 = (lx) => lx * U - VW / 2;
-	const cellX = (col) => -VW / 2 + (col + 0.5) * CELL;
-	const cellZ = (wall, row) => GRID[wall].z0 + (row + 0.5) * CELL;
-	// where on the grid a cook is: across by where they are along the wall, back to front by how far from it
-	// (the whole room, wall to far wall, is the whole grid: one to one)
-	const floorZ = (wall, dist) => GRID[wall].z0 + 0.01 + clamp(dist, 0, 1) * (GRID[wall].rows * CELL - 0.02);
-	const cellOf = (wall, along, dist) => ({ col: clamp(Math.floor(clamp(along, 0, 0.9999) * 8), 0, 7), row: clamp(Math.floor((floorZ(wall, dist) - GRID[wall].z0) / CELL), 0, GRID[wall].rows - 1) });
-	// (standing on the thing's own square counts too, as well as the marked one beside it)
-	const onSpot = (c, cells) => !!c.cell && cells.some(([col, row]) => c.cell.col === col && c.cell.row === row);
-	const HATCH_AT = [cellX(CELLS.hatch[0][0]), cellZ(1, CELLS.hatch[0][1])];
-	const CHUTE_AT = [cellX(CELLS.chute[0][0]), cellZ(1, CELLS.chute[0][1])];
-	const POD_OFF = [[-0.42, 0.3], [0.42, 0.3], [0, -0.36]];   // the hatch's three pods, in a triangle on its square
-	const POD_X = POD_OFF.map((o) => HATCH_AT[0] + o[0]);
-	const POD_Z = POD_OFF.map((o) => HATCH_AT[1] + o[1]);
-	const CHUTE_X = CHUTE_AT[0];
-	const ITEM_AT = { chop: 0.78, fry: 0.92, grill: 0.72, stir: 1.02, press: 0.5, inject: 0.62, warp: 0.7, cryo: 0.5 };   // an item's height on each station (over the counter top)
+	const SLOT_X = [0, 1, 2, 3].map((k) => lx3((k + 0.5) * SLOT));
+	const HATCH_X = lx3(HATCH / 2);
+	const CHUTE_X = lx3((CHUTE + W) / 2);
+	const POD_X = [-0.62, 0, 0.62].map((d) => HATCH_X + d);
+	const POD_Z = POD_X.map(() => CT.z + 0.15);
+	const ITEM_AT = { chop: 0.78, fry: 0.92, grill: 0.72, stir: 1.02, press: 0.5, inject: 0.62, warp: 0.7, cryo: 0.5 };   // an item's height on each device (over the counter)
 
 	const renderer = new THREE.WebGLRenderer({ antialias: false });   // (the composer multisamples)
 	renderer.toneMapping = THREE.NeutralToneMapping;   // (keeps the colours bright)
@@ -1040,10 +1015,10 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	scene.environment = envTex;
 	scene.environmentIntensity = 0.35;
 
-	const cams = SET_X.map(function (ox, w) {
+	const cams = SET_X.map(function (ox) {
 		const c = new THREE.OrthographicCamera(-VW / 2, VW / 2, VH / 2, -VH / 2, 0.1, 80);
-		c.position.set(ox, Math.sin(PITCH) * 30, AIM[w] + Math.cos(PITCH) * 30);
-		c.lookAt(ox, 0, AIM[w]);
+		c.position.set(ox, AIM.y + Math.sin(PITCH) * 30, AIM.z + Math.cos(PITCH) * 30);
+		c.lookAt(ox, AIM.y, AIM.z);
 		c.updateMatrixWorld();
 		return c;
 	});
@@ -1054,32 +1029,24 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			return { camera, x: x0, y: 0, width: x1 - x0, height: h };
 		});
 	}
-	// where a point in a wall's set lands on that wall (world pixels)
+	// where a point in a wall's kitchen lands on that wall (world pixels)
 	const _v = new THREE.Vector3();
 	function proj(wall, x, y, z) {
 		_v.set(SET_X[wall] + x, y, z);
 		return toScreen(_v, cams[wall], wall * W, 0, W, H) || { x: wall * W + W / 2, y: H / 2 };
 	}
-	// where the words go for something standing at (x, z) on a wall's floor:
-	// its prompt over its machine, its name plate on its island's front, its middle
-	const uiAt = (wall, x, z) => ({ x: proj(wall, x, 0, z).x, prompt: proj(wall, x, ISLAND.y + 2.0, z).y, plate: proj(wall, x, ISLAND.y / 2, z + CELL * 0.46).y, top: proj(wall, x, ISLAND.y + 0.7, z).y });
+	// a device's words: its name plate over it (all in a row), its prompt and bar under that, its middle
+	const uiAt = (wall, x) => ({ x: proj(wall, x, 0, CT.z).x, plate: proj(wall, x, CT.y + 3.0, CT.z).y, prompt: proj(wall, x, CT.y + 3.0, CT.z).y + 46, top: proj(wall, x, CT.y + 1, CT.z).y });
 	for (const d of STATIONS) {
-		const [[c0, r0], [c1, r1]] = CELLS[d.kind];
-		d.sx = cellX(c0);
-		d.sz = cellZ(d.wall, r0);
-		d.spot = [c1, r1];
-		d.cell = [c0, r0];
-		d.spx = cellX(c1);
-		d.spz = cellZ(d.wall, r1);
-		d.ui = uiAt(d.wall, d.sx, d.sz);
+		d.sx = SLOT_X[d.slot];
+		d.sz = CT.z;
+		d.ui = uiAt(d.wall, d.sx);
 	}
-	const HATCH_UI = uiAt(1, HATCH_AT[0], HATCH_AT[1]);
-	const POD_UI = POD_X.map((x, k) => proj(1, x, ISLAND.y + 0.3, POD_Z[k]));
-	const CHUTE_UI = uiAt(1, CHUTE_AT[0], CHUTE_AT[1]);
-	const TICKET_Y = proj(1, 0, CT.y, CT.back).y + 12;    // the tickets, laid on the serving counter
-	const SAY_Y = proj(1, 0, 2.1, QUEUE_Z).y;             // the mutants' speech, over their faces
-	const SERVE_Y = proj(1, 0, 0, cellZ(1, 0) + 0.45).y;  // the SERVER plates, on the squares in front of them
-
+	const HATCH_UI = uiAt(1, HATCH_X);
+	const CHUTE_UI = uiAt(1, CHUTE_X);
+	const TICKET_BOTTOM = proj(1, 0, 3.9, QUEUE_Z).y;     // the tickets, over the mutants' heads
+	const SAY_Y = proj(1, 0, 2.6, QUEUE_Z).y;             // their speech, over their faces
+	const SERVE_Y = proj(1, 0, CT.y + 0.15, CT.front).y - 20;   // a SERVER plate on the counter in front of each
 
 	/* ---------- 3D: helpers ---------- */
 
@@ -1286,25 +1253,6 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		{ floor: ['#3e2468', '#371f5e'], wall: ['#4a2490', '#a82a78'], edge: 0x1e0c3a },
 		{ floor: ['#14504a', '#114641'], wall: ['#0e6e6a', '#2a8a4a'], edge: 0x06302a },
 	];
-	// two by two floor squares, checked, with a soft bevel and a hint of grime
-	function checkerTex(a, b) {
-		return tex(256, 256, function (c) {
-			const rnd = seeded(a.length * 7 + b.charCodeAt(2));
-			c.fillStyle = mix(b, '#000000', 0.18);
-			c.fillRect(0, 0, 256, 256);
-			for (let y = 0; y < 2; y++) for (let x = 0; x < 2; x++) {
-				const col = (x + y) % 2 ? a : b;
-				const g = c.createLinearGradient(x * 128, y * 128, x * 128 + 128, y * 128 + 128);
-				g.addColorStop(0, mix(col, '#ffffff', 0.06));
-				g.addColorStop(1, col);
-				c.fillStyle = g;
-				c.beginPath();
-				c.roundRect(x * 128 + 2, y * 128 + 2, 124, 124, 10);
-				c.fill();
-			}
-			for (let n = 0; n < 40; n++) { c.fillStyle = `rgba(60,30,70,${rnd() * 0.08})`; c.beginPath(); c.arc(rnd() * 256, rnd() * 256, 2 + rnd() * 10, 0, Math.PI * 2); c.fill(); }
-		});
-	}
 	// glossy wall tiles in two colours, banded, the odd crack and drip
 	function wallTex(a, b) {
 		return tex(512, 512, function (c) {
@@ -1324,54 +1272,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			for (let n = 0; n < 6; n++) { c.fillStyle = 'rgba(120,255,80,0.35)'; c.fillRect(rnd() * 512, rnd() * 200, 4, 40 + rnd() * 120); }
 		}, 9, 3);
 	}
-	// a marked square to stand on: a rounded outline, footprints pointing at what it serves
-	TEX.spot = canvasTexture(256, 256, function (c) {
-		c.fillStyle = 'rgba(255,255,255,0.28)';
-		c.beginPath();
-		c.roundRect(14, 14, 228, 228, 34);
-		c.fill();
-		c.strokeStyle = '#ffffff';
-		c.lineWidth = 14;
-		c.setLineDash([34, 18]);
-		c.stroke();
-		c.setLineDash([]);
-		c.fillStyle = '#ffffff';
-		for (const [x, y, r] of [[100, 150, -0.15], [156, 112, 0.15]]) {
-			c.save();
-			c.translate(x, y);
-			c.rotate(r);
-			c.beginPath(); c.ellipse(0, 0, 20, 34, 0, 0, Math.PI * 2); c.fill();
-			for (let t = 0; t < 4; t++) { c.beginPath(); c.arc(-14 + t * 9, -44 - (t === 0 || t === 3 ? 0 : 4), 6, 0, Math.PI * 2); c.fill(); }
-			c.restore();
-		}
-	});
-	// the square a cook is on: a soft glowing square
-	TEX.cell = canvasTexture(256, 256, function (c) {
-		c.fillStyle = 'rgba(255,255,255,0.4)';
-		c.beginPath();
-		c.roundRect(12, 12, 232, 232, 36);
-		c.fill();
-		c.strokeStyle = '#ffffff';
-		c.lineWidth = 16;
-		c.stroke();
-	});
-	function spotTile(parent, x, z, colour, toward) {
-		const g = new THREE.Group();
-		g.position.set(x, 0.02, z);
-		g.rotation.y = Math.atan2(-(toward[0] - x), -(toward[1] - z));
-		parent.add(g);
-		const m = mesh(new THREE.PlaneGeometry(CELL * 0.88, CELL * 0.88), new THREE.MeshBasicMaterial({ map: TEX.spot, color: colour, transparent: true, depthWrite: false }), g);
-		m.rotation.x = -Math.PI / 2;
-		m.userData.colour = colour;
-		return m;
-	}
-	// how a marked square looks: its colour (the station's, or whoever's on it), how lit (0..1)
-	function spotLook(m, colour, k) {
-		m.material.color.set(colour).multiplyScalar(0.55 + k * 0.6);
-		m.material.opacity = 0.5 + k * 0.5;
-	}
-
-	/* ---------- 3D: the room ---------- */
+	/* ---------- 3D: the kitchens ---------- */
 
 	const sets = SET_X.map(function (ox) {
 		const g = new THREE.Group();
@@ -1382,138 +1283,72 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	const fans = [];
 	const signs = [];
 
-	// a counter island, x by z, its top at ISLAND.y: shiny plastic in its station's colour, a white top, a strip of light at its foot
-	function island(g, x, z, w, d, colour) {
-		const top = ISLAND.y;
-		const body = mesh(BOX(w, top, d), std(new THREE.Color(colour).lerp(new THREE.Color(0xffffff), 0.2), 0.3, 0.05, { clearcoat: 0.7 }), g, x, top / 2, z);
-		body.castShadow = body.receiveShadow = true;
-		mesh(BOX(w + 0.08, 0.12, d + 0.08), MAT.white, g, x, top, z).receiveShadow = true;
-		mesh(BOX(w, 0.07, 0.02), MAT.hazard, g, x, top - 0.07, z + d / 2 + 0.012);
-		if (colour) mesh(BOX(w - 0.1, 0.05, 0.03), glowMat(colour, 1.1), g, x, 0.08, z + d / 2 + 0.02);
-		return body;
-	}
-
-	// Spills: dark, glossy, barely tinted wet patches that catch the light rather
-	// than glow. Each is an irregular pool, a thinner film spreading round its
-	// edge, and a few splash droplets flicked off to one side.
-	const SPILLS = [
-		{ colour: 0x120a04, opacity: 0.72 },   // old fryer oil
-		{ colour: 0x1c3a10, opacity: 0.5 },    // something that was green once
-		{ colour: 0x3a0816, opacity: 0.55 },   // sauce, probably
-	];
-	const spillMats = SPILLS.map((k) => [1, 0.38].map((o) => std(k.colour, 0.03, 0.15, { clearcoat: 1, clearcoatRoughness: 0.04, transparent: true, opacity: k.opacity * o, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 })));
-	function blob(rnd, r, wobble) {
-		const ph = [rnd() * 6, rnd() * 6, rnd() * 6], amp = [0.18, 0.1, 0.05].map((a) => a * wobble * (0.6 + rnd() * 0.8));
-		const pts = [];
-		for (let i = 0; i < 40; i++) {
-			const a = i / 40 * Math.PI * 2;
-			const k = 1 + amp[0] * Math.sin(2 * a + ph[0]) + amp[1] * Math.sin(3 * a + ph[1]) + amp[2] * Math.sin(5 * a + ph[2]);
-			pts.push(new THREE.Vector2(Math.cos(a) * r * k, Math.sin(a) * r * k * 0.8));
-		}
-		const shape = new THREE.Shape();
-		shape.moveTo(pts[0].x, pts[0].y);
-		shape.splineThru(pts.slice(1).concat([pts[0]]));
-		return new THREE.ShapeGeometry(shape, 3);
-	}
-	function spill(g, rnd, x, z, kind) {
-		const m = spillMats[SPILLS.indexOf(kind)];
-		const r = 0.28 + rnd() * 0.42;
-		const turn = rnd() * Math.PI * 2;
-		const put = (geo, mat, dx, dz, y) => {
-			const p = mesh(geo, mat, g, x + dx, y, z + dz);
-			p.rotation.set(-Math.PI / 2, 0, turn);
-			p.receiveShadow = true;
-			return p;
-		};
-		put(blob(rnd, r * 1.25, 1.3), m[1], 0, 0, 0.006);   // (the thin film round it)
-		put(blob(rnd, r, 1), m[0], 0, 0, 0.009);            // (the pool)
-		const n = 2 + Math.floor(rnd() * 3);
-		for (let k = 0; k < n; k++) {                        // (the splashes)
-			const a = turn + (rnd() - 0.5) * 1.2, d = r * (1.4 + rnd() * 0.9);
-			put(blob(rnd, r * (0.06 + rnd() * 0.1), 0.6), m[0], Math.cos(a) * d, -Math.sin(a) * d * 0.8, 0.009);
-		}
-	}
-
 	function buildRoom(w) {
 		const g = sets[w];
 		const backZ = BACK_Z[w];
 		const look = ROOM_LOOK[w];
-		const gr = GRID[w];
-		const base = mesh(new THREE.PlaneGeometry(20, 14), std(look.edge, 0.5, 0), g, 0, -0.01, 1);
-		base.rotation.x = -Math.PI / 2;
-		base.receiveShadow = true;
-		// the grid: one checked square a cell
-		const ft = checkerTex(look.floor[0], look.floor[1]);
-		ft.repeat.set(4, gr.rows / 2);
-		const floor = mesh(new THREE.PlaneGeometry(VW, gr.rows * CELL), std(0xffffff, 0.3, 0, { map: ft, clearcoat: 0.5 }), g, 0, 0, gr.z0 + gr.rows * CELL / 2);
+		// the floor the cooks stand on, the tiled wall behind
+		const floor = mesh(new THREE.PlaneGeometry(14, 8), std(look.edge, 0.4, 0.05), g, 0, 0, 2);
 		floor.rotation.x = -Math.PI / 2;
 		floor.receiveShadow = true;
-		const wall = mesh(new THREE.PlaneGeometry(18, 6), std(0xffffff, 0.35, 0, { map: wallTex(look.wall[0], look.wall[1]) }), g, 0, 3, backZ);
+		const wt = wallTex(look.wall[0], look.wall[1]);
+		wt.repeat.set(7, 4.5);
+		const wall = mesh(new THREE.PlaneGeometry(14, 9), std(0xffffff, 0.35, 0, { map: wt }), g, 0, 4.5, backZ);
 		wall.receiveShadow = true;
-		// a skirting of steel, and pipes along the back wall, dripping rust
-		mesh(BOX(18, 0.25, 0.08), MAT.darkSteel, g, 0, 0.12, backZ + 0.04);
-		for (const [y, r] of [[w === 1 ? 2.35 : 1.75, 0.12], [w === 1 ? 2.6 : 2.0, 0.07]]) {
-			const p = mesh(CYL(r, r, 18, 14), MAT.pipe, g, 0, y, backZ + 0.2);
+		// the counter right across: steel on top, the room's colour down the front
+		const front = new THREE.Color(look.wall[0]).lerp(new THREE.Color(0x000000), 0.35);
+		const counter = mesh(BOX(12.4, CT.y, CT.front - CT.back), std(front, 0.35, 0.1), g, 0, CT.y / 2, CT.z);
+		counter.receiveShadow = counter.castShadow = true;
+		mesh(BOX(12.6, 0.12, CT.front - CT.back + 0.15), MAT.steel, g, 0, CT.y, CT.z).receiveShadow = true;
+		mesh(BOX(12.4, 0.08, 0.02), MAT.hazard, g, 0, CT.y - 0.12, CT.front + 0.012);
+		mesh(BOX(12.4, 0.16, 0.05), MAT.black, g, 0, 0.08, CT.front + 0.03);
+		// pipes high on the wall, dripping rust
+		for (const [y, r] of [[6.3, 0.13], [6.65, 0.08]]) {
+			const p = mesh(CYL(r, r, 14, 14), MAT.pipe, g, 0, y, backZ + 0.2);
 			p.rotation.z = Math.PI / 2;
-			for (let x = -8; x <= 8; x += 2.3 + (y % 1)) {
-				const j = mesh(CYL(r * 1.35, r * 1.35, 0.14, 14), MAT.rust, g, x, y, backZ + 0.2);
-				j.rotation.z = Math.PI / 2;
-			}
+			for (let x = -6; x <= 6; x += 2.3 + (y % 1)) mesh(CYL(r * 1.35, r * 1.35, 0.14, 14), MAT.rust, g, x, y, backZ + 0.2).rotation.z = Math.PI / 2;
 		}
-		// spills, and a drain
-		const rnd = seeded(40 + w);
-		for (let n = 0; n < 4; n++) spill(g, rnd, -6.5 + rnd() * 13, -1.2 + rnd() * 6, SPILLS[(n + w) % SPILLS.length]);
-		const drain = mesh(new THREE.CircleGeometry(0.3, 20), MAT.black, g, -0.2 + rnd() * 0.4, 0.012, 0.2);
-		drain.rotation.x = -Math.PI / 2;
-		// light: a warm overhead wash, and the room's own colour of neon
-		const wash = new THREE.PointLight(0xffffff, 14, 20, 1.2);
-		wash.position.set(0, 7, 2);
-		wash.distance = 28;
+		// light: a warm wash from overhead, and the room's own colour of neon
+		const wash = new THREE.PointLight(0xffffff, 18, 26, 1.2);
+		wash.position.set(0, 8, 3);
 		g.add(wash);
 		const light = new THREE.PointLight([0xff8a5a, 0xc08aff, 0x4ae0d0][w], 26, 14, 1.4);
-		light.position.set(0, 3.5, -1.5);
+		light.position.set(0, 5, -0.5);
 		g.add(light);
 		if (w !== 1) {
-			// the sign and a shelf of glowing jars on the back wall, a fan
-			const sx = w === 0 ? -1.7 : 1.7;
-			const sign = mesh(new THREE.PlaneGeometry(2.7, 0.5), new THREE.MeshBasicMaterial({ map: null, transparent: true, depthWrite: false }), g, sx, 1.05, backZ + 0.06);
+			// the sign, a shelf of glowing jars and a fan, high on the wall
+			const sign = mesh(new THREE.PlaneGeometry(3.6, 0.66), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), g, w === 0 ? -3 : 3, 5.75, backZ + 0.06);
 			signs.push({ m: sign, text: w === 0 ? 'THE OLD WAYS' : 'THE NEW WAYS', colour: w === 0 ? '#ff8a2a' : '#3af2ff', k: 1.25, seed: w });
-			const jx = w === 0 ? 5.2 : -5.2;
-			mesh(BOX(2.6, 0.08, 0.36), MAT.rust, g, jx, 1.0, backZ + 0.18);
+			const jx = w === 0 ? 3.2 : -3.2;
+			mesh(BOX(2.6, 0.08, 0.36), MAT.rust, g, jx, 5.4, backZ + 0.18);
 			for (let k = 0; k < 4; k++) {
 				const hue = [0x9dff3a, 0xff2d8f, 0xe9ff4a, 0x3af2ff][(k + w) % 4];
-				mesh(CYL(0.15, 0.15, 0.36 + (k % 2) * 0.12, 14), MAT.glass, g, jx - 0.9 + k * 0.6, 1.23 + (k % 2) * 0.06, backZ + 0.18);
-				mesh(CYL(0.12, 0.12, 0.22 + (k % 2) * 0.1, 14), glowMat(hue, 1.1), g, jx - 0.9 + k * 0.6, 1.17 + (k % 2) * 0.06, backZ + 0.18);
+				mesh(CYL(0.15, 0.15, 0.36 + (k % 2) * 0.12, 14), MAT.glass, g, jx - 0.9 + k * 0.6, 5.63 + (k % 2) * 0.06, backZ + 0.18);
+				mesh(CYL(0.12, 0.12, 0.22 + (k % 2) * 0.1, 14), glowMat(hue, 1.1), g, jx - 0.9 + k * 0.6, 5.57 + (k % 2) * 0.06, backZ + 0.18);
 			}
 			const fan = new THREE.Group();
-			fan.position.set(w === 0 ? -6.9 : 6.9, 1.45, backZ + 0.1);
+			fan.position.set(w === 0 ? 0.3 : -0.3, 5.7, backZ + 0.1);
 			g.add(fan);
-			mesh(new THREE.TorusGeometry(0.34, 0.05, 8, 24), MAT.darkSteel, fan);
-			mesh(new THREE.CircleGeometry(0.34, 24), MAT.black, fan, 0, 0, -0.02);
+			mesh(new THREE.TorusGeometry(0.4, 0.05, 8, 24), MAT.darkSteel, fan);
+			mesh(new THREE.CircleGeometry(0.4, 24), MAT.black, fan, 0, 0, -0.02);
 			const blades = new THREE.Group();
 			fan.add(blades);
 			for (let b = 0; b < 4; b++) {
-				const bl = mesh(BOX(0.1, 0.3, 0.02), MAT.steel, blades, 0, 0.16, 0.02);
 				const pivot = new THREE.Group();
 				pivot.rotation.z = b * Math.PI / 2;
-				pivot.add(bl);
+				mesh(BOX(0.12, 0.34, 0.02), MAT.steel, pivot, 0, 0.18, 0.02);
 				blades.add(pivot);
 			}
 			fans.push(blades);
 		} else {
-			// the serving counter along the back, the window onto the wasteland behind it, signs either side
-			const counter = mesh(BOX(16.6, CT.y, CT.front - CT.back), MAT.counterFront, g, 0, CT.y / 2, CT.z);
-			counter.receiveShadow = counter.castShadow = true;
-			mesh(BOX(16.6, 0.07, 0.02), MAT.hazard, g, 0, CT.y - 0.06, CT.front + 0.012);
-			mesh(BOX(16.7, 0.12, 1.1), MAT.white, g, 0, CT.y, CT.z);
-			mesh(new THREE.PlaneGeometry(10.6, 2.0), new THREE.MeshBasicMaterial({ map: TEX.sky, color: new THREE.Color(0.7, 0.7, 0.7) }), g, 0, 1.65, backZ + 0.03);
-			for (const x of [-5.4, 5.4]) mesh(BOX(0.22, 2.4, 0.3), MAT.darkSteel, g, x, 1.5, backZ + 0.1);
-			mesh(BOX(11, 0.16, 0.4), MAT.rust, g, 0, 0.6, backZ + 0.2);
-			for (const [x, text, colour] of [[-6.5, 'FISSION CHIPS', '#9dff3a'], [6.5, 'OPEN 25/8', '#FC1992']]) {
-				const sign = mesh(new THREE.PlaneGeometry(2.0, 0.38), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), g, x, 1.75, backZ + 0.06);
+			// the window onto the wasteland behind the mutants, its posts, the neon over it
+			mesh(new THREE.PlaneGeometry(8.4, 4.2), new THREE.MeshBasicMaterial({ map: TEX.sky, color: new THREE.Color(0.7, 0.7, 0.7) }), g, 0, 3.6, backZ + 0.03);
+			for (const x of [-4.25, 4.25]) mesh(BOX(0.24, 4.6, 0.3), MAT.darkSteel, g, x, 3.5, backZ + 0.12);
+			mesh(BOX(8.8, 0.24, 0.3), MAT.darkSteel, g, 0, 5.75, backZ + 0.12);
+			for (const [x, text, colour] of [[-2.6, 'FISSION CHIPS', '#9dff3a'], [2.6, 'OPEN 25/8', '#FC1992']]) {
+				const sign = mesh(new THREE.PlaneGeometry(3.4, 0.62), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), g, x, 6.0, backZ + 0.06);
 				signs.push({ m: sign, text, colour, k: 1.3, seed: x, font: x < 0 ? 'Monoton' : null });   // (the name in the title's neon-tube lettering)
 			}
-			// the islands the hatch and the chute stand on
 		}
 	}
 	for (let w = 0; w < 3; w++) buildRoom(w);
@@ -1528,15 +1363,15 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	paintSigns();
 	if (document.fonts) Promise.all([`800 100px ${FONT}`, '100px "Monoton"'].map((f) => document.fonts.load(f))).then(paintSigns).catch(() => {});
 
-	// the key light, one shadow map over all three sets
-	scene.add(new THREE.HemisphereLight(0x8a94c0, 0x3a2418, 0.4));
-	const sun = new THREE.DirectionalLight(0xfff2e0, 3.6);
-	sun.position.set(0, 20, 8);
-	sun.target.position.set(0, 0, 1.5);
+	// the key light, from up and in front, one shadow map over all three kitchens
+	scene.add(new THREE.HemisphereLight(0x8a94c0, 0x3a2418, 0.5));
+	const sun = new THREE.DirectionalLight(0xfff2e0, 3.4);
+	sun.position.set(0, 18, 14);
+	sun.target.position.set(0, 2, -1);
 	scene.add(sun, sun.target);
 	sun.castShadow = true;
 	sun.shadow.mapSize.set(4096, 1024);
-	Object.assign(sun.shadow.camera, { left: -47, right: 47, top: 10, bottom: -10, near: 1, far: 50 });
+	Object.assign(sun.shadow.camera, { left: -47, right: 47, top: 9, bottom: -9, near: 1, far: 50 });
 	sun.shadow.camera.updateProjectionMatrix();
 	sun.shadow.bias = -0.0004;
 	sun.shadow.normalBias = 0.02;
@@ -1659,19 +1494,18 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		},
 	};
 
-	// the 3D for each station's state (rebuilt with the kitchen, so made fresh each time)
+	// the 3D for each device's state
 	const station3d = {};
 	function buildStations() {
 		for (const s of STATIONS) {
 			const g = new THREE.Group();
-			g.position.set(s.sx, ISLAND.y, s.sz);
-			g.scale.setScalar(MS);
+			g.position.set(s.sx, CT.y, CT.z);
 			sets[s.wall].add(g);
-			island(sets[s.wall], s.sx, s.sz, CELL * 0.9, CELL * 0.9, s.colour);
 			const p = { g };
 			STATION_3D[s.kind](g, p);
-			// the ring on the floor when someone's at it, and its fire
-			p.spot = spotTile(sets[s.wall], s.spx, s.spz, s.colour, [s.sx, s.sz]);
+			// a panel of its colour on the counter's front, under it
+			mesh(BOX(2.7, 0.9, 0.04), std(s.colour, 0.35, 0.1, { emissive: s.colour, emissiveIntensity: 0.25 }), sets[s.wall], s.sx, 0.8, CT.front + 0.03);
+			// its fire
 			p.fire = new THREE.Group();
 			g.add(p.fire);
 			p.flames = [];
@@ -1685,46 +1519,43 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	}
 	buildStations();
 
-	/* ---------- 3D: the hatch, the chute ---------- */
+	/* ---------- 3D: the grabber, the binner ---------- */
 
 	const hatch3d = (function () {
 		const g = new THREE.Group();
-		g.position.set(HATCH_AT[0], ISLAND.y, HATCH_AT[1]);
+		g.position.set(HATCH_X, CT.y, CT.z);
 		sets[1].add(g);
-		island(sets[1], HATCH_AT[0], HATCH_AT[1], CELL * 0.9, CELL * 0.9, 0x9dff3a);
-		// an arch over it, that beams the ingredients in
-		for (const x of [-0.74, 0.74]) mesh(BOX(0.14, 1.5, 0.14), MAT.darkSteel, g, x, 0.75, -0.66);
-		mesh(BOX(1.62, 0.2, 0.42), MAT.steel, g, 0, 1.55, -0.6);
-		mesh(BOX(1.3, 0.06, 0.06), glowMat(0x9dff3a, 1.4), g, 0, 1.44, -0.4);
-		const pods = POD_OFF.map(function ([ox, oz]) {
-			mesh(CYL(0.25, 0.27, 0.1, 32), std(0x8af06a, 0.3, 0.1), g, ox, 0.1, oz).receiveShadow = true;
-			const rim = mesh(new THREE.TorusGeometry(0.25, 0.03, 10, 36), glowMat(0x9dff3a, 1.4), g, ox, 0.15, oz);
+		mesh(BOX(2.3, 0.3, 1.2), MAT.darkSteel, g, 0, 0.15, 0);
+		for (const x of [-1.05, 1.05]) mesh(BOX(0.16, 2.1, 0.2), MAT.darkSteel, g, x, 1.05, -0.4);
+		mesh(BOX(2.5, 0.26, 0.6), MAT.steel, g, 0, 2.15, -0.3);
+		mesh(BOX(2.0, 0.07, 0.07), glowMat(0x9dff3a, 1.4), g, 0, 2.0, -0.02);
+		mesh(BOX(2.7, 0.9, 0.04), std(0x9dff3a, 0.35, 0.1, { emissive: 0x9dff3a, emissiveIntensity: 0.25 }), sets[1], HATCH_X, 0.8, CT.front + 0.03);
+		const pods = [-0.62, 0, 0.62].map(function (ox) {
+			mesh(CYL(0.26, 0.28, 0.1, 32), std(0x8af06a, 0.3, 0.1), g, ox, 0.35, 0.15).receiveShadow = true;
+			const rim = mesh(new THREE.TorusGeometry(0.26, 0.03, 10, 36), glowMat(0x9dff3a, 1.4), g, ox, 0.4, 0.15);
 			rim.rotation.x = Math.PI / 2;
-			const beam = mesh(CYL(0.22, 0.25, 1.3, 32, true), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x9dff3a).multiplyScalar(1.2), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }), g, ox, 0.8, oz);
+			const beam = mesh(CYL(0.24, 0.27, 1.6, 32, true), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x9dff3a).multiplyScalar(1.2), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }), g, ox, 1.2, 0.15);
 			return { rim, beam };
 		});
+		const hl = new THREE.PointLight(0xe8ffd0, 9, 4, 1.6);   // (the pods lit, so what's on them shows)
+		hl.position.set(HATCH_X, CT.y + 1.6, CT.z + 1.2);
+		sets[1].add(hl);
 		shadows(g);
-		// the chute: a hole in its island, onto somewhere else
+		// the binner: a hopper with a door onto the void
 		const chute = new THREE.Group();
-		chute.position.set(CHUTE_X, ISLAND.y + 0.07, CHUTE_AT[1]);
+		chute.position.set(CHUTE_X, CT.y, CT.z);
 		sets[1].add(chute);
-		island(sets[1], CHUTE_AT[0], CHUTE_AT[1], CELL * 0.9, CELL * 0.9, 0xd04dff);
-		mesh(new THREE.CircleGeometry(0.6, 48), new THREE.MeshBasicMaterial({ color: 0x0a0418 }), chute, 0, 0.005, 0).rotation.x = -Math.PI / 2;
-		const swirl = mesh(new THREE.CircleGeometry(0.58, 48), glowMat(0xffffff, 1.1, { map: TEX.swirl, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), chute, 0, 0.02, 0);
-		swirl.rotation.x = -Math.PI / 2;
-		mesh(new THREE.TorusGeometry(0.62, 0.07, 12, 48), glowMat(0xd04dff, 1.4), chute, 0, 0.04, 0).rotation.x = Math.PI / 2;
-		mesh(new THREE.TorusGeometry(0.72, 0.05, 10, 48), MAT.steel, chute, 0, 0.03, 0).rotation.x = Math.PI / 2;
-		const light = new THREE.PointLight(0xd04dff, 3, 3, 2);
-		light.position.set(0, 0.6, 0.3);
-		chute.add(light);
-		const [, [hc, hr]] = CELLS.hatch, [, [cc, cr]] = CELLS.chute;
-		const hatchSpot = spotTile(sets[1], cellX(hc), cellZ(1, hr), 0x9dff3a, HATCH_AT);
-		const hatchLight = new THREE.PointLight(0xe8ffd0, 9, 4, 1.6);   // (the pods lit, so what's on them shows)
-		hatchLight.position.set(HATCH_AT[0], ISLAND.y + 1.6, HATCH_AT[1] + 0.8);
-		sets[1].add(hatchLight);
-		const serveSpots = [0, 1, 2, 3, 4, 5, 6, 7].map((col) => spotTile(sets[1], cellX(col), cellZ(1, 0), 0xe9ff4a, [cellX(col), CT.z]));
-		const chuteSpot = spotTile(sets[1], cellX(cc), cellZ(1, cr), 0xd04dff, CHUTE_AT);
-		return { pods, swirl, chute, hatchSpot, chuteSpot, serveSpots };
+		mesh(BOX(2.2, 1.9, 1.2), std(0x4a2a7a, 0.35, 0.2), chute, 0, 0.95, 0);
+		mesh(BOX(2.35, 0.14, 1.3), MAT.steel, chute, 0, 1.95, 0);
+		mesh(new THREE.CircleGeometry(0.66, 48), new THREE.MeshBasicMaterial({ color: 0x0a0418 }), chute, 0, 0.95, 0.61);
+		const swirl = mesh(new THREE.CircleGeometry(0.62, 48), glowMat(0xffffff, 1.1, { map: TEX.swirl, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), chute, 0, 0.95, 0.62);
+		mesh(new THREE.TorusGeometry(0.68, 0.07, 12, 48), glowMat(0xd04dff, 1.4), chute, 0, 0.95, 0.63);
+		mesh(BOX(2.7, 0.9, 0.04), std(0xd04dff, 0.35, 0.1, { emissive: 0xd04dff, emissiveIntensity: 0.25 }), sets[1], CHUTE_X, 0.8, CT.front + 0.03);
+		const cl = new THREE.PointLight(0xd04dff, 3, 3, 2);
+		cl.position.set(0, 1, 1);
+		chute.add(cl);
+		shadows(chute);
+		return { pods, swirl, chute };
 	})();
 
 	/* ---------- 3D: food ---------- */
@@ -2196,10 +2027,6 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			eye(-0.08, 0.03);
 			eye(0.08, 0.03);
 		}
-		// a ring of their colour on the floor, so they know which they are
-		// the square they're on, lit in their colour (it lives on the floor, not on them)
-		parts.tile = mesh(new THREE.PlaneGeometry(CELL * 0.92, CELL * 0.92), new THREE.MeshBasicMaterial({ map: TEX.cell, color: col, transparent: true, depthWrite: false }), null);
-		parts.tile.rotation.x = -Math.PI / 2;
 		parts.hold = new THREE.Group();
 		parts.hold.position.y = 2.2;
 		g.add(parts.hold);
@@ -2340,9 +2167,9 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			}
 			// the food in it
 			const item = s.kind === 'warp' ? null : s.item;
-			const v = syncItem(s, item, p.g, 0, ITEM_AT[k] + (s.state === 'done' ? 0.06 + Math.sin(rt * 5) * 0.05 : 0), 0, 1.4);
+			const v = syncItem(s, item, p.g, 0, ITEM_AT[k] + (s.state === 'done' ? 0.06 + Math.sin(rt * 5) * 0.05 : 0), 0, 1.0);
 			if (v && k === 'fry' && s.state === 'work') v.position.y -= 0.12;
-			if (v && k === 'press') v.scale.y = 1.4 * (1 - (s.state === 'work' ? s.prog : 1) * 0.35);
+			if (v && k === 'press') v.scale.y = 1.0 * (1 - (s.state === 'work' ? s.prog : 1) * 0.35);
 			if (s.state === 'burnt') every('burnt-' + k, 3, dt, () => smoke(w, cx, ISLAND.y + MS * 1.0, cz, 1.1));
 			// fire
 			p.fire.visible = s.fire > 0;
@@ -2355,36 +2182,18 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 				every('fire-' + k, 7, dt, () => smoke(w, cx, ISLAND.y + MS * 1.6, cz, 1.6));
 				every('ember-' + k, 10, dt, () => puff(w, cx + rnd1() * 2 * MS, ISLAND.y + MS * 0.8, cz + rnd1(), { color: 0xffa040, size: 0.06, grow: 0.03, life: 1.0, vy: 1.8, vx: rnd1() * 0.6 * MS, glow: 2.2, add: true, alpha: 1 }));
 			}
-			// its square: lit in the colour of whoever's on it, pulsing when the food's ready
-			const at = chefsAt(s);
-			spotLook(p.spot, at.length ? colourOf(at[0]) : s.colour, at.length ? 1 : s.state === 'done' ? 0.5 + Math.sin(rt * 6) * 0.4 : 0.25);
 		}
 
-		// the hatch and the chute
+		// the grabber's pods and the binner
 		hatch3d.pods.forEach((pp, k) => {
 			const pod = pods[k];
 			pp.beam.material.opacity = pod ? pod.beam * 0.7 : 0;
 			pp.rim.material.color.set(hatch.jam > 0 ? 0xffc21a : 0x9dff3a).multiplyScalar(hatch.jam > 0 && Math.sin(rt * 12) > 0 ? 0.4 : 1.8);
 			if (!pod) return;
-			const holder = pod;
-			const v = syncItem(holder, pod.ing ? { ing: pod.ing, steps: [], burnt: false } : null, sets[1], POD_X[k] + (hatch.shake ? rnd1() * 0.1 : 0), ISLAND.y + 0.2 + Math.sin(rt * 2 + k) * 0.05, POD_Z[k], 0.95);
+			const v = syncItem(pod, pod.ing ? { ing: pod.ing, steps: [], burnt: false } : null, sets[1], POD_X[k] + (hatch.shake ? rnd1() * 0.1 : 0), CT.y + 0.42 + Math.sin(rt * 2 + k) * 0.05, POD_Z[k], 0.95);
 			if (v) v.rotation.y = rt * 0.8 + k;
 		});
 		hatch3d.swirl.rotation.z = -rt * 2.5;
-		const onHatch = chefs.findIndex((c, i) => latest[i] && c.atHatch), onChute = chefs.findIndex((c, i) => latest[i] && c.atChute);
-		spotLook(hatch3d.hatchSpot, onHatch >= 0 ? colourOf(onHatch) : 0x9dff3a, onHatch >= 0 ? 1 : 0.25);
-		spotLook(hatch3d.chuteSpot, onChute >= 0 ? colourOf(onChute) : 0xd04dff, onChute >= 0 ? 1 : 0.25);
-		// (the counter's squares: shown in front of a waiting mutant, lit by whoever's on one)
-		hatch3d.serveSpots.forEach((m, col) => {
-			const lx = (col + 0.5) / 8 * W;
-			const n = windowsNow();
-			const k = lx >= HATCH && lx < CHUTE ? clamp(Math.floor((lx - HATCH) / colW(n)), 0, n - 1) : -1;
-			const cu = k >= 0 ? customers[k] : null;
-			m.visible = !!(cu && cu.state === 'wait');
-			if (!m.visible) return;
-			const on = chefs.findIndex((c, i) => latest[i] && c.wall === 1 && c.cell && c.cell.row === 0 && c.cell.col === col);
-			spotLook(m, on >= 0 ? colourOf(on) : 0xe9ff4a, on >= 0 ? 1 : 0.2);
-		});
 
 		// the mutants
 		const n = windowsNow();
@@ -2394,11 +2203,11 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			if (!c.model) { c.model = buildMutant(c.type); sets[1].add(c.model.g); }
 			const m = c.model;
 			const x3 = lx3(c.x - W);
-			const enter = c.state === 'leave' ? -Math.min(1, c.stateT / 0.7) * 2.6 : -(1 - Math.min(1, c.age / 0.5)) * 2.6;
+			const enter = c.state === 'leave' ? -Math.min(1, c.stateT / 0.7) * 4.2 : -(1 - Math.min(1, c.age / 0.5)) * 4.2;
 			const panic = c.state === 'wait' && c.left / c.patience < 0.25;
 			m.g.position.set(x3 + (panic ? Math.sin(rt * 45) * 0.04 : 0), enter + Math.sin(rt * 2 + c.seed) * 0.04, QUEUE_Z);
 			const sq = c.state === 'eat' ? Math.sin(c.stateT * 12) * 0.06 : 0;
-			const sc = Math.min(1, colW(n) * U / 2.4) * (c.recipe === FEAST ? 1.05 : 1);
+			const sc = Math.min(1.6, colW(n) * U / 1.6) * (c.recipe === FEAST ? 1.05 : 1);   // (big, to show over the counter)
 			m.g.scale.set(sc * (1 + sq), sc * (1 - sq), sc);
 			const angry = c.state === 'angry' || panic;
 			m.skin.emissive.set(angry ? 0xff1a00 : c.state === 'eat' ? 0x40ff40 : 0x000000);
@@ -2417,65 +2226,66 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		for (const o of sets[1].children.slice()) if (o.userData.mutant && !customers.some((c) => c && c.model && c.model.g === o)) o.removeFromParent();
 		for (const c of customers) if (c && c.model) c.model.g.userData.mutant = true;
 
-		// the cooks
+		// the cooks: one on every wall for every player, risen into view on the walls they're near
 		for (let i = 0; i < count; i++) {
 			const c = chefs[i];
-			if (!chefs3[i]) chefs3[i] = buildChef(i);
-			const m = chefs3[i];
-			if (!latest[i]) { m.g.visible = false; m.tile.visible = false; continue; }
-			m.g.visible = true;
-			if (m.g.parent !== sets[c.wall]) sets[c.wall].add(m.g);
-			if (m.tile.parent !== sets[c.wall]) sets[c.wall].add(m.tile);
-			// they stand in the middle of their square, and hop from one to the next
-			// exactly where the player is, every frame; their square lit under them
-			const wp = wallsOf(latest[i]);
-			const along = clamp(wp.along[c.wall], 0, 1), dist = clamp(wp.dist[c.wall], 0, 1);
-			const cell = cellOf(c.wall, along, dist);
-			const x3 = lx3(along * W);
-			const z3 = floorZ(c.wall, dist);
-			m.tile.visible = true;
-			m.tile.position.set(cellX(cell.col), 0.025, cellZ(c.wall, cell.row));
-			m.tile.material.opacity = 0.75 + Math.sin(rt * 4 + i) * 0.2;
-			if (m.wall !== c.wall) {
-				if (m.wall !== undefined) for (let n = 0; n < 16; n++) puff(c.wall, x3 + rnd1() * 0.8, 0.3 + Math.random() * 2, z3, { color: colourOf(i), size: 0.1, grow: 0.02, life: 0.7, vy: 1.5 + Math.random(), vx: rnd1() * 2, glow: 1.6, add: true, alpha: 1 });
-				m.z = z3;
-				m.x = x3;
-				m.wall = c.wall;
-			}
-			// (tracking arrives about 20 times a second; glide between its updates rather than jump)
-			const k = 1 - Math.exp(-dt * 24);
-			const px = m.x, pz = m.z;
-			m.x = lerp(m.x, x3, k);
-			m.z = lerp(m.z, z3, k);
-			m.vx = lerp(m.vx || 0, (m.x - px) / Math.max(dt, 0.001), 1 - Math.exp(-dt * 6));
-			m.vz = lerp(m.vz || 0, (m.z - pz) / Math.max(dt, 0.001), 1 - Math.exp(-dt * 6));
-			m.g.position.set(m.x, 0, m.z);
-			// facing the counter when working at it, the room otherwise, turning toward where they move
-			// facing what they're using (from its square), or the room, turning as they go
-			const working = !!c.station || c.atHatch || c.atChute;
-			const thing = c.station ? [c.station.sx, c.station.sz] : c.atHatch ? HATCH_AT : c.atChute ? CHUTE_AT : null;
-			// (turning by their smoothed speed across, so it doesn't twitch)
-			const face = thing ? Math.atan2(thing[0] - m.x, thing[1] - m.z) : clamp(m.vx * 0.3, -0.9, 0.9);
-			m.yaw = lerp(m.yaw || 0, face, Math.min(1, dt * 6));
-			m.g.rotation.y = m.yaw;
+			if (!chefs3[i]) chefs3[i] = [0, 1, 2].map((w) => { const m = buildChef(i); sets[w].add(m.g); m.holder = {}; return m; });
+			const p = latest[i];
+			const wp = p ? wallsOf(p) : null;
 			const time = t + (c.bob || 0);
-			m.body.position.y = 0.55 + Math.abs(Math.sin(time * (c.speed > 0.05 ? 12 : 2))) * (c.speed > 0.05 ? 0.06 : 0.015) + (m.flame ? 0.1 + Math.sin(time * 3) * 0.04 : 0);
-			if (m.flame) m.flame.scale.y = 0.8 + Math.sin(rt * 40) * 0.25;
-			const swing = c.work * Math.sin(time * 22) * 0.9;
-			if (c.held) { m.armL.rotation.x = lerp(m.armL.rotation.x, -2.75, Math.min(1, dt * 10)); m.armR.rotation.x = m.armL.rotation.x; }
-			else {
-				m.armL.rotation.x = lerp(m.armL.rotation.x, working ? -1.1 + swing : Math.sin(time * 2) * 0.1, Math.min(1, dt * 12));
-				m.armR.rotation.x = lerp(m.armR.rotation.x, working ? -1.1 - swing : -Math.sin(time * 2) * 0.1, Math.min(1, dt * 12));
+			for (let w = 0; w < 3; w++) {
+				const m = chefs3[i][w];
+				const dist = wp ? clamp(wp.dist[w], 0, 1) : 1;
+				const along = wp ? clamp(wp.along[w], 0, 1) : 0.5;
+				// (risen, 1, at the wall; gone, 0, once they've walked away from it)
+				const rise = 1 - clamp((dist - SHOW.full) / (SHOW.gone - SHOW.full), 0, 1);
+				m.rise = lerp(m.rise || 0, rise, 1 - Math.exp(-dt * 10));
+				const tx = lx3(along * W);
+				// (tracking arrives about 20 times a second; glide between its updates rather than jump)
+				const k = 1 - Math.exp(-dt * 24);
+				const px = m.x === undefined ? tx : m.x;
+				m.x = m.x === undefined ? tx : lerp(m.x, tx, k);
+				m.vx = lerp(m.vx || 0, (m.x - px) / Math.max(dt, 0.001), 1 - Math.exp(-dt * 6));
+				m.g.visible = m.rise > 0.02;
+				if (!m.g.visible) continue;
+				m.g.position.set(m.x, -(1 - m.rise) * 2.8, STAND_Z);
+				// facing the counter, back to us, turned a little the way they're walking
+				m.yaw = lerp(m.yaw === undefined ? Math.PI : m.yaw, Math.PI - clamp(m.vx * 0.12, -0.6, 0.6), Math.min(1, dt * 6));
+				m.g.rotation.y = m.yaw;
+				const walking = c.speed > 0.05;
+				m.body.position.y = 0.55 + Math.abs(Math.sin(time * (walking ? 12 : 2))) * (walking ? 0.06 : 0.015) + (m.flame ? 0.1 + Math.sin(time * 3) * 0.04 : 0);
+				if (m.flame) m.flame.scale.y = 0.8 + Math.sin(rt * 40) * 0.25;
+				// the arms, acting out the last tap (or the device they're working by being there)
+				let L = Math.sin(time * 2) * 0.1, R = -L;
+				if (c.held) L = R = -2.75;
+				const s = c.station && c.station.wall === w && c.station.state === 'work' ? c.station : null;
+				if (s && s.kind === 'stir') { L = -1.3 + Math.sin(time * 8) * 0.45; R = -1.3 + Math.cos(time * 8) * 0.45; }
+				else if (s && s.kind === 'cryo') { L = R = -1.45; }
+				const a = c.act;
+				if (a) {
+					const u = clamp(a.t / ACT_TIME, 0, 1), pulse = Math.sin(u * Math.PI);
+					if (a.kind === 'chop') { R = u < 0.35 ? lerp(R, -2.9, u / 0.35) : lerp(-2.9, -0.7, clamp((u - 0.35) / 0.2, 0, 1)); L = -0.8; }
+					else if (a.kind === 'grab' || a.kind === 'take') { L = lerp(L, -2.4, pulse); R = lerp(R, -2.4, pulse); }
+					else if (a.kind === 'put' || a.kind === 'serve') { L = R = lerp(-2.75, -1.5, Math.min(1, u * 3)); if (u > 0.5) L = R = lerp(-1.5, Math.sin(time * 2) * 0.1, (u - 0.5) * 2); }
+					else if (a.kind === 'bin') R = -3.1 * pulse;
+					else if (a.kind === 'flip') { R = -1.0 - 1.8 * pulse; L = -0.9; }
+					else if (a.kind === 'jab') R = -1.6 * pulse;
+					else if (a.kind === 'pump') { L = R = -1.4; m.body.position.y -= 0.28 * pulse; }
+					else if (a.kind === 'douse') { L = R = -1.4 + Math.sin(a.t * 40) * 0.3; }
+				}
+				const ease = Math.min(1, dt * 16);
+				m.armL.rotation.x = lerp(m.armL.rotation.x, L, ease);
+				m.armR.rotation.x = lerp(m.armR.rotation.x, R, ease);
+				m.armL.rotation.z = -0.15;
+				m.armR.rotation.z = 0.15;
+				m.head.rotation.y = Math.sin(time * 0.7) * 0.25;
+				for (const tl of m.tools) tl.rotation.y += dt * 30;
+				if (m.blend) m.blend.rotation.y += dt * 20;
+				if (m.toast) m.toast.position.y = 0.44 + Math.max(0, Math.sin(time * 1.5)) * 0.08;
+				const hv = syncItem(m.holder, c.held, m.hold, 0, Math.sin(rt * 3 + i) * 0.04, 0, 0.95);
+				if (hv) hv.rotation.y = -m.yaw + Math.PI + Math.sin(rt * 1.5) * 0.3;
+				if (c.held && c.held.burnt && m.rise > 0.5) every('held-smoke-' + i + '-' + w, 2, dt, () => smoke(w, m.x, 2.9, STAND_Z, 0.6));
 			}
-			m.armL.rotation.z = -0.15;
-			m.armR.rotation.z = 0.15;
-			m.head.rotation.y = Math.sin(time * 0.7) * 0.25;
-			for (const tl of m.tools) tl.rotation.y += dt * 30;
-			if (m.blend) m.blend.rotation.y += dt * 20;
-			if (m.toast) m.toast.position.y = 0.44 + Math.max(0, Math.sin(time * 1.5)) * 0.08;
-			const hv = syncItem(c, c.held, m.hold, 0, Math.sin(rt * 3 + i) * 0.04, 0, 0.95);
-			if (hv) hv.rotation.y = -m.yaw + Math.sin(rt * 1.5) * 0.3;
-			if (c.held && c.held.burnt) every('held-smoke-' + i, 2, dt, () => smoke(c.wall, x3, 2.7, m.z, 0.6));
 		}
 
 		// the portals
@@ -2483,14 +2293,14 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			if (!p.ring) { p.ring = buildPortal(); sets[p.wall].add(p.ring.g); }
 			const v = p.ring;
 			const grow = Math.min(1, p.t * 3) * (1 + Math.sin(p.t * 5) * 0.05);
-			v.g.position.set(p.x3, 1.35 + Math.sin(p.t * 2) * 0.1, p.z);
+			v.g.position.set(p.x3, PORTAL_Y + Math.sin(p.t * 2) * 0.1, PORTAL_Z);
 			v.g.scale.setScalar(grow);
 			v.disc.rotation.z = -p.t * 3;
 			v.r1.rotation.z = p.t * 1.5;
 			v.r2.rotation.z = -p.t * 2.2;
 			const iv = syncItem(p, p.item, v.hold, 0, -0.3, 0, 0.9);
 			if (iv) iv.rotation.y = p.t * 1.5;
-			every('portal-' + p.item.id, 6, dt, () => puff(p.wall, p.x3 + rnd1() * 1.2, 1.35 + rnd1() * 1.2, p.z, { color: Math.random() < 0.5 ? 0x3af2ff : 0xff2d8f, size: 0.06, grow: 0.02, life: 0.8, vy: 0, vx: rnd1() * 0.5, glow: 2, add: true, alpha: 1 }));
+			every('portal-' + p.item.id, 6, dt, () => puff(p.wall, p.x3 + rnd1() * 1.2, PORTAL_Y + rnd1() * 1.2, PORTAL_Z, { color: Math.random() < 0.5 ? 0x3af2ff : 0xff2d8f, size: 0.06, grow: 0.02, life: 0.8, vy: 0, vx: rnd1() * 0.5, glow: 2, add: true, alpha: 1 }));
 		}
 		for (const g of sets) for (const o of g.children.slice()) if (o.userData.portal && !portals.some((p) => p.ring && p.ring.g === o)) o.removeFromParent();
 		for (const p of portals) p.ring.g.userData.portal = true;
@@ -2499,7 +2309,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		manager.visible = phase === 'intro';
 		if (manager.visible) {
 			const k = clamp(introT / 0.9, 0, 1);
-			manager.position.set(0, lerp(7, 1.7, 1 - Math.pow(1 - k, 3)) + Math.sin(rt * 2.4) * 0.06, 0.9);
+			manager.position.set(0, lerp(9, 3.6, 1 - Math.pow(1 - k, 3)) + Math.sin(rt * 2.4) * 0.06, 0.6);
 			manager.rotation.z = Math.sin(rt * 1.7) * 0.05;
 		}
 
@@ -2527,20 +2337,24 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	function drawWorld(ctx) {
 		for (const s of stations) drawStationUI(ctx, s);
 		drawFrontUI(ctx);
-		for (const p of portals) art.text(ctx, 'GRAB IT', p.x, p.y + 95, { size: 28, weight: 800, font: FONT, fill: '#3af2ff', outline: INK, outlineWidth: 5 });
-		// over each cook: what they hold, and where to go with it
+		for (const p of portals) art.text(ctx, 'GRAB IT', p.x, p.y + 92, { size: 28, weight: 800, font: FONT, fill: '#3af2ff', outline: INK, outlineWidth: 5 });
+		// over each cook, on each wall they've risen into: what they hold, and what to do with it
 		const playing = phase === 'tutorial' || phase === 'play';
 		for (let i = 0; i < count; i++) {
 			const c = chefs[i];
-			if (!latest[i] || !chefs3[i] || chefs3[i].x === undefined) continue;
-			const at = proj(c.wall, chefs3[i].x, 3.0, chefs3[i].z);
-			let y = at.y;
-			if (c.held) {
-				const label = (c.held.burnt ? 'BURNT ' : '') + c.held.steps.map((s) => KIND[s].adj).reverse().join(' ') + (c.held.steps.length ? ' ' : '') + INGS[c.held.ing].short;
-				art.text(ctx, label, at.x, y, { size: 24, weight: 800, font: FONT, fill: 'white', outline: INK, outlineWidth: 5 });
-				y += 28;
+			if (!latest[i] || !chefs3[i]) continue;
+			for (let w = 0; w < 3; w++) {
+				const m = chefs3[i][w];
+				if (!m.g.visible || m.rise < 0.6) continue;
+				const at = proj(w, m.x, 3.05 - (1 - m.rise) * 2.8, STAND_Z);
+				let y = at.y;
+				if (c.held) {
+					const label = (c.held.burnt ? 'BURNT ' : '') + c.held.steps.map((s) => KIND[s].adj).reverse().join(' ') + (c.held.steps.length ? ' ' : '') + INGS[c.held.ing].short;
+					art.text(ctx, label, at.x, y, { size: 22, weight: 800, font: FONT, fill: 'white', outline: INK, outlineWidth: 5 });
+					y += 26;
+				}
+				if (playing) art.text(ctx, hintFor(c), at.x, y, { size: 22, weight: 800, font: FONT, fill: '#e9ff4a', outline: INK, outlineWidth: 5 });
 			}
-			if (playing) art.text(ctx, hintFor(c), at.x, y, { size: 20, weight: 800, font: FONT, fill: '#e9ff4a', outline: INK, outlineWidth: 5 });
 		}
 		for (const r of ripples) art.circle(ctx, r.x, r.y, 20 + r.t * 160, { stroke: 'white', lineWidth: 6, alpha: 1 - r.t / 0.5 });
 		for (const f of floaters) {
@@ -2549,11 +2363,11 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		}
 	}
 
-	// where a cook's floating words go: over their head
+	// where a cook's floating words go: over their head, on the wall they're nearest
 	function overChef(i) {
 		const c = chefs[i];
-		const m = chefs3[i];
-		return m && m.x !== undefined ? proj(c.wall, m.x, 2.9, m.z) : proj(c.wall, lx3(c.x - c.wall * W), 2.9, 1);
+		const m = chefs3[i] && chefs3[i][c.wall];
+		return m && m.x !== undefined ? proj(c.wall, m.x, 3.0, STAND_Z) : { x: c.x, y: 600 };
 	}
 
 	function bar(ctx, x, y, w, k, colour, back) {
@@ -2568,33 +2382,31 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	}
 
 	function plate(ctx, x, y, text, colour) {
-		ctx.font = `800 22px ${FONT}`;
-		const w = Math.min(340, ctx.measureText(text).width + 36);
-		art.roundRect(ctx, x - w / 2, y - 19, w, 38, 8, { fill: 'rgba(8,10,9,0.88)', stroke: colour, lineWidth: 3 });
-		art.text(ctx, text, x, y, { size: text.length > 18 ? 18 : 22, weight: 800, font: FONT, fill: colour });
+		ctx.font = `800 26px ${FONT}`;
+		const w = Math.min(340, ctx.measureText(text).width + 40);
+		art.roundRect(ctx, x - w / 2, y - 22, w, 44, 10, { fill: 'rgba(8,10,9,0.88)', stroke: colour, lineWidth: 3 });
+		art.text(ctx, text, x, y, { size: 26, weight: 800, font: FONT, fill: colour });
 	}
 
 	function drawStationUI(ctx, s) {
 		const { x: cx, prompt: py, plate: ply } = s.ui;
 		const by = py + 36;
 		plate(ctx, cx, ply, s.name, s.colour);
-		if (s.fire > 0) {
-			prompt(ctx, cx, py, 'FIRE! STAND HERE', '#ff4a32', true);
-			if (s.douse > 0) bar(ctx, cx, by, 220, s.douse / DOUSE, '#8fdcff');
-		} else if (s.state === 'done') {
-			prompt(ctx, cx, py, 'READY! STAND HERE', '#9dff3a', true);
+		if (s.fire > 0) prompt(ctx, cx, py, 'FIRE! TAP ×' + s.fire, '#ff4a32', true);
+		else if (s.state === 'done') {
+			prompt(ctx, cx, py, 'READY! TAP', '#9dff3a', true);
 			if (s.kind === 'fry' || s.kind === 'grill') bar(ctx, cx, by, 220, 1 - s.doneT / (s.kind === 'fry' ? FRY.burn : GRILL.burn), '#ff4a32');
-		} else if (s.state === 'burnt') prompt(ctx, cx, py, 'BURNT! BIN IT', '#ff4a32', true);
+		} else if (s.state === 'burnt') prompt(ctx, cx, py, 'BURNT! TAP', '#ff4a32', true);
 		else if (s.state === 'work') {
 			const hint = {
-				chop: ['STAND HERE', s.prog],
+				chop: ['TAP TAP TAP!', s.prog],
 				fry: ['FRYING...', s.t / FRY.cook],
-				grill: [!s.flipped && s.t >= GRILL.flipAt ? 'FLIP! STAND HERE' : s.flipped ? 'SIZZLING...' : 'SEARING...', s.flipped ? s.t / GRILL.cook : Math.min(s.t, GRILL.flipAt) / GRILL.cook],
-				stir: ['SWAY HERE', s.prog],
-				press: ['SQUAT HERE', s.prog],
-				inject: ['STAND HERE', -1],
+				grill: [!s.flipped && s.t >= GRILL.flipAt ? 'FLIP! TAP' : s.flipped ? 'SIZZLING...' : 'SEARING...', s.flipped ? s.t / GRILL.cook : Math.min(s.t, GRILL.flipAt) / GRILL.cook],
+				stir: ['STAY AND SWAY', s.prog],
+				press: ['SQUAT OR TAP', s.prog],
+				inject: ['TAP IN THE GREEN', -1],
 				warp: ['WARPING...', s.t / WARP_TIME],
-				cryo: ['HOLD STILL', s.prog],
+				cryo: ['STAY STILL', s.prog],
 			}[s.kind];
 			const urgent = s.kind === 'grill' && !s.flipped && s.t >= GRILL.flipAt;
 			prompt(ctx, cx, py, hint[0], urgent ? '#ff4a32' : '#e9ff4a', urgent || ['chop', 'stir', 'press', 'cryo', 'inject'].includes(s.kind));
@@ -2610,26 +2422,23 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		}
 	}
 
+	const ticketH = (c) => 62 + c.parts.length * 58 + 24;
 	function drawFrontUI(ctx) {
 		plate(ctx, HATCH_UI.x, HATCH_UI.plate, 'GRABBER', '#9dff3a');
 		plate(ctx, CHUTE_UI.x, CHUTE_UI.plate, 'BINNER', '#d04dff');
-		if (hatch.jam > 0) {
-			prompt(ctx, HATCH_UI.x, HATCH_UI.prompt, 'JAMMED! STAND HERE', '#ffc21a', true);
-			bar(ctx, HATCH_UI.x, HATCH_UI.prompt + 36, 200, 1 - hatch.jam / UNJAM, '#ffc21a');
-		} else prompt(ctx, HATCH_UI.x, HATCH_UI.prompt, 'STAND HERE', '#9dff3a', false);
-		// (what's in it, under its name)
+		if (hatch.jam > 0) prompt(ctx, HATCH_UI.x, HATCH_UI.prompt, 'JAMMED! TAP ×' + hatch.jam, '#ffc21a', true);
+		else prompt(ctx, HATCH_UI.x, HATCH_UI.prompt, 'TAP TO GRAB', '#9dff3a', false);
+		// (what's in it, under that)
 		const inHatch = pods.filter((p) => p.ing).map((p) => INGS[p.ing].short);
-		art.text(ctx, inHatch.length ? inHatch.join(' · ') : 'BEAMING IN...', HATCH_UI.x, HATCH_UI.plate + 36, { size: 18, weight: 800, font: FONT, fill: inHatch.length ? '#ffffff' : 'rgba(255,255,255,0.45)', outline: INK, outlineWidth: 4 });
-		prompt(ctx, CHUTE_UI.x, CHUTE_UI.prompt, 'STAND HERE', '#d04dff', false);
-		const binning = chefs.find((c, i) => latest[i] && c.atChute && c.held);
-		if (binning) bar(ctx, CHUTE_UI.x, CHUTE_UI.prompt + 36, 200, binning.dwell / BIN_DWELL, '#d04dff');
+		art.text(ctx, inHatch.length ? inHatch.join(' · ') : 'BEAMING IN...', HATCH_UI.x, HATCH_UI.prompt + 36, { size: 18, weight: 800, font: FONT, fill: inHatch.length ? '#ffffff' : 'rgba(255,255,255,0.45)', outline: INK, outlineWidth: 4 });
+		prompt(ctx, CHUTE_UI.x, CHUTE_UI.prompt, 'TAP TO BIN', '#d04dff', false);
 		const n = windowsNow();
 		const cw = colW(n);
 		for (let k = 0; k < n; k++) {
 			const c = customers[k];
 			if (!c) continue;
 			const x = W + HATCH + cw * k + cw / 2;
-			if (c.state !== 'leave') drawTicket(ctx, c, x, TICKET_Y, cw - 26);
+			if (c.state !== 'leave') drawTicket(ctx, c, x, TICKET_BOTTOM - ticketH(c), cw - 26);
 			if (c.state === 'wait') plate(ctx, x, SERVE_Y, 'SERVER', '#e9ff4a');
 			if (c.sayT > 0 && c.say) drawSpeech(ctx, c.say, x, SAY_Y, cw - 10, c.state === 'angry' ? '#ff4a32' : c.state === 'eat' ? '#9dff3a' : 'white');
 		}
