@@ -963,7 +963,51 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				totalEmissiveRadiance += uRim * ${k.toFixed(2)} * pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0);`);
 		};
 		m.customProgramCacheKey = () => 'rim' + k;
+		m.userData.rimK = k;
 		return m;
+	}
+	// The wobble: every creature bends like jelly from its feet up, on its own
+	// uniforms (where its feet are, how tall it is, which way and how far it
+	// leans, how hard it jiggles). It's done to each vertex in world space, so
+	// the face, the noodles and the hat all bend together.
+	const wobT = { value: 0 };
+	function wobblify(m, W) {
+		const k = m.userData.rimK;
+		m.onBeforeCompile = (sh) => {
+			Object.assign(sh.uniforms, { uBase: W.base, uBend: W.bend, uH: W.h, uJig: W.jig, uT: wobT });
+			sh.vertexShader = 'uniform vec3 uBase; uniform vec3 uBend; uniform float uH; uniform float uJig; uniform float uT;\n' + sh.vertexShader.replace('#include <project_vertex>', `
+				vec4 wpos = vec4(transformed, 1.0);
+				#ifdef USE_INSTANCING
+				wpos = instanceMatrix * wpos;
+				#endif
+				wpos = modelMatrix * wpos;
+				float hh = clamp((wpos.y - uBase.y) / uH, 0.0, 1.6);
+				vec2 rel = wpos.xz - uBase.xz;
+				wpos.xz += uBend.xz * hh * hh;
+				wpos.xz += rel * uJig * sin(hh * 5.5 - uT * 9.0) * hh;
+				wpos.y -= uBend.y * hh * hh;
+				vec4 mvPosition = viewMatrix * wpos;
+				gl_Position = projectionMatrix * mvPosition;`);
+			if (k !== undefined) {
+				sh.uniforms.uRim = rimU.uRim;
+				sh.fragmentShader = 'uniform vec3 uRim;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+					totalEmissiveRadiance += uRim * ${k.toFixed(2)} * pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0);`);
+			}
+		};
+		m.customProgramCacheKey = () => 'wob' + (k === undefined ? '' : k);
+		m.needsUpdate = true;
+		return m;
+	}
+	// give a creature its own copy of every material under its bouncer, all wobbling together
+	function wobbleCreature(c) {
+		c.wob = { base: { value: new THREE.Vector3() }, bend: { value: new THREE.Vector3() }, h: { value: c.top * c.size }, jig: { value: 0 } };
+		const own = new Map();
+		c.bouncer.traverse((o) => {
+			if (!o.material || o.material.isShaderMaterial || o.material.isPointsMaterial) return;
+			if (!own.has(o.material)) { const m = o.material.clone(); m.userData.rimK = o.material.userData.rimK; own.set(o.material, wobblify(m, c.wob)); }
+			o.material = own.get(o.material);
+		});
+		if (c.limbMat && own.has(c.limbMat)) c.limbMat = own.get(c.limbMat);
 	}
 	const furMat = (col, sheen) => rimify(new THREE.MeshPhysicalMaterial({ color: col, roughness: 0.85, bumpMap: TEX.fur, bumpScale: 3, sheen: 1, sheenColor: new THREE.Color(sheen || col).lerp(new THREE.Color('#ffffff'), 0.2), sheenRoughness: 0.5 }));
 	const slickMat = (col) => rimify(new THREE.MeshPhysicalMaterial({ color: col, roughness: 0.32, bumpMap: TEX.skin, bumpScale: 1.6, clearcoat: 1, clearcoatRoughness: 0.08, sheen: 0.4, sheenColor: new THREE.Color('#ffffff') }));
@@ -1617,6 +1661,25 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	});
 	const cardMat = rimify(new THREE.MeshStandardMaterial({ map: TEX.cards, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.55 }), 0.5);
 	const fernMat = rimify(new THREE.MeshStandardMaterial({ map: TEX.fern, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.5 }), 0.4);
+	TEX.bigleaf = canvasTexture(256, 512, function (c, w, h) {
+		c.clearRect(0, 0, w, h);
+		const g = c.createLinearGradient(0, h, 0, 0);
+		g.addColorStop(0, '#1f5a24'); g.addColorStop(0.6, '#3f9a3a'); g.addColorStop(1, '#7ac84a');
+		c.fillStyle = g;
+		c.beginPath(); c.moveTo(w / 2, h); c.bezierCurveTo(-w * 0.15, h * 0.55, w * 0.1, h * 0.05, w / 2, 0); c.bezierCurveTo(w * 0.9, h * 0.05, w * 1.15, h * 0.55, w / 2, h); c.fill();
+		c.strokeStyle = 'rgba(200,255,160,0.55)'; c.lineWidth = 4;
+		c.beginPath(); c.moveTo(w / 2, h); c.lineTo(w / 2, h * 0.06); c.stroke();
+		c.lineWidth = 2;
+		for (let y = h * 0.85; y > h * 0.12; y -= h * 0.08) for (const sx of [-1, 1]) { c.beginPath(); c.moveTo(w / 2, y); c.quadraticCurveTo(w / 2 + sx * w * 0.2, y - h * 0.03, w / 2 + sx * w * 0.38, y - h * 0.1); c.stroke(); }
+	});
+	const bigLeafMat = rimify(new THREE.MeshStandardMaterial({ map: TEX.bigleaf, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.4 }), 0.5);
+	const bigLeafGeo = (function () {
+		const g = new THREE.PlaneGeometry(0.7, 1.1, 3, 6);
+		const p = g.attributes.position;
+		for (let i = 0; i < p.count; i++) { const y = p.getY(i) + 0.55, x = p.getX(i); p.setY(i, y * 0.9); p.setZ(i, y * y * 0.4 - x * x * 0.5); }
+		g.computeVertexNormals();
+		return g;
+	})();
 	const fernGeo = (function () {
 		const g = new THREE.PlaneGeometry(0.34, 1.1, 1, 8);
 		const p = g.attributes.position;
@@ -1625,6 +1688,9 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		return g;
 	})();
 	let canopySpots = [];
+	let plantOK = () => true;
+	// a spot in the ring round a clearing: dense just behind the creatures, thinning out into the trees
+	const ringR = (r0 = 3.7, span = 6) => r0 + Math.pow(rnd(), 1.5) * span;
 	function vegetation(group, cx, cz, C) {
 		const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3();
 		// leaf cards round every canopy blob
@@ -1641,21 +1707,41 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		cards.userData.tag = 'cards';
 		group.add(cards);
 		// ferns, in clumps round the shrubs and trunks
-		const NF = 70 * 7;
+		const NF = 170 * 7;
 		const ferns = new THREE.InstancedMesh(fernGeo, fernMat, NF);
 		k = 0;
-		for (let c = 0; c < 70; c++) {
-			const a = rnd() * Math.PI * 2, r = rr(3.2, 12);
-			const x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r;
+		for (let c = 0; c < 170; c++) {
+			let x, z, r, tries = 0;
+			do { const a = rnd() * Math.PI * 2; r = ringR(3.5, 7); x = cx + Math.cos(a) * r; z = cz + Math.sin(a) * r; } while (!plantOK(x, z, 0.1) && ++tries < 12);
+			if (tries >= 12) { x = cx; z = cz + 40; }   // (nowhere fit: tuck it away out of sight)
 			for (let j = 0; j < 7; j++) {
 				e.set(0, j / 7 * Math.PI * 2 + rnd(), 0); q.setFromEuler(e);
-				const s = rr(0.6, 1.2);
+				const s = rr(0.8, 1.6) * (0.8 + (r - 3.5) * 0.06);
 				m4.compose(new THREE.Vector3(x, 0, z), q, new THREE.Vector3(s, s, s));
 				ferns.setMatrixAt(k++, m4);
 			}
 		}
 		ferns.receiveShadow = true;
 		ferns.userData.tag = 'ferns';
+		// big-leafed plants, clumped through the ring
+		const NB = 120 * 5;
+		const big = new THREE.InstancedMesh(bigLeafGeo, bigLeafMat, NB);
+		k = 0;
+		for (let c = 0; c < 120; c++) {
+			let x, z, r, tries = 0;
+			do { const a = rnd() * Math.PI * 2; r = ringR(3.8, 6); x = cx + Math.cos(a) * r; z = cz + Math.sin(a) * r; } while (!plantOK(x, z, 0.2) && ++tries < 12);
+			if (tries >= 12) { x = cx; z = cz + 40; }
+			const s0 = rr(0.8, 1.7);
+			for (let j = 0; j < 5; j++) {
+				e.set(rr(-0.25, 0.1), j / 5 * Math.PI * 2 + rnd(), 0, 'YXZ'); q.setFromEuler(e);
+				const s = s0 * rr(0.75, 1.15);
+				m4.compose(new THREE.Vector3(x, 0, z), q, new THREE.Vector3(s, s, s));
+				big.setMatrixAt(k++, m4);
+			}
+		}
+		big.receiveShadow = true;
+		big.userData.tag = 'ferns';
+		group.add(big);
 		group.add(ferns);
 		// little glowing flowers scattered through the grass
 		const NFl = 520;
@@ -1780,6 +1866,16 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const path = mesh(new THREE.PlaneGeometry(2.4, SPACING), new THREE.MeshStandardMaterial({ color: '#8a6a4a', roughness: 1, bumpMap: TEX.moss, bumpScale: 2 }), g, cx, 0.005, cz - SPACING / 2);
 		path.rotation.x = -Math.PI / 2; path.receiveShadow = true; path.castShadow = false;
 		canopySpots = [];
+		// where the creatures will stand (they're built last): plants keep clear of them, the room and the path
+		const spots = C.creatures.map((d) => {
+			const D = R + d.out, lat = (d.along - 0.5) * 2 * D;
+			return d.wall === 1 ? [cx + lat, cz - D] : d.wall === 0 ? [cx - D, cz - lat] : [cx + D, cz + lat];
+		});
+		plantOK = (x, z, pad = 0) => {
+			if (Math.abs(x - cx) < R + 0.35 && Math.abs(z - cz) < R + 0.35) return false;
+			if (z < cz - R && Math.abs(x - cx) < 1.5) return false;
+			return !spots.some(([sx, sz]) => Math.hypot(x - sx, z - sz) < 0.95 + pad);
+		};
 		// trees in rings, the nearest framing the corners between the walls
 		for (const a of [-Math.PI * 0.75, -Math.PI * 0.25, Math.PI * 0.25]) tree(g, cx + Math.cos(a) * 6.2, cz + Math.sin(a) * 6.2, rr(0.9, 1.1));
 		for (let k = 0; k < 22; k++) {
@@ -1787,13 +1883,26 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			if (Math.abs(Math.cos(a)) < 0.18 && Math.sin(a) < 0) continue;   // (keep the path ahead clear)
 			tree(g, cx + Math.cos(a) * r, cz + Math.sin(a) * r, rr(0.8, 1.4));
 		}
-		for (let k = 0; k < 18; k++) {
-			const a = rnd() * Math.PI * 2, r = rr(4.6, 8);
-			if (Math.abs(Math.cos(a)) < 0.2 && Math.sin(a) < 0) continue;
-			shrub(g, cx + Math.cos(a) * r, cz + Math.sin(a) * r, rr(0.4, 0.9), C.lights[k % 4]);
+		for (let k = 0; k < 14; k++) {
+			const a = rnd() * Math.PI * 2, r = rr(7.2, 10.5);
+			const x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r;
+			if (plantOK(x, z, 1.5)) tree(g, x, z, rr(0.75, 1.15));
+		}
+		for (let k = 0; k < 75; k++) {
+			const a = rnd() * Math.PI * 2, r = ringR(4.1, 5.5);
+			const x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r;
+			if (!plantOK(x, z, 0.4)) continue;
+			shrub(g, x, z, rr(0.5, 0.9) * (0.8 + (r - 4) * 0.12), C.lights[k % 4]);
+		}
+		// the canopy closing in overhead, round the tops of the walls
+		for (let k = 0; k < 14; k++) {
+			const a = -Math.PI / 2 + rr(-2.4, 2.4), r = rr(5.5, 10);
+			const b = mesh(CANOPY[k % 3], leafMats[k % 4], g, cx + Math.cos(a) * r, rr(6.5, 9), cz + Math.sin(a) * r, rr(2, 3.2), rr(1, 1.5), rr(2, 3.2));
+			b.receiveShadow = true;
+			canopySpots.push({ x: b.position.x, y: b.position.y, z: b.position.z, s: b.scale.x });
 		}
 		// grass
-		const NG = 2600;
+		const NG = 4200;
 		const grass = new THREE.InstancedMesh(grassGeo, grassMat(new THREE.Color(C.ground).offsetHSL(0, 0.1, 0.08)), NG);
 		const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
 		for (let k = 0; k < NG; k++) {
@@ -1819,6 +1928,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		for (const def of C.creatures) {
 			const c = frame(def, ci);
 			BUILD[c.kind](c);
+			wobbleCreature(c);
 			c.root.position.x += cx; c.root.position.z += cz;
 			c.root.lookAt(cx, 0, cz);
 			c.root.userData.tag = 'creatures';
@@ -1879,6 +1989,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		rt += dt;
 		frameNo++;
 		sparkleU.uTime.value = rt;
+		wobT.value = rt;
 		swayU.uTime.value = rt;
 		const now = clock();
 		// what was scheduled for now
@@ -1952,7 +2063,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			const base = c.size;
 			c.bouncer.scale.set(base * (1 + sq * 0.6 + duck * 0.25), base * (1 - sq + c.singT * 0.12 - duck * 0.4), base * (1 + sq * 0.6 + duck * 0.25));
 			c.bouncer.position.y = Math.sin((1 - c.hopT) * Math.PI) * (c.hopT > 0 ? 0.45 : 0) + myPulse * 0.04;
-			c.bouncer.rotation.z = Math.sin(beat * Math.PI + c.phase) * 0.06;
+			c.bouncer.rotation.z = Math.sin(beat * Math.PI + c.phase) * 0.02;
 			c.bouncer.rotation.y = Math.sin(beat * Math.PI * 0.5 + c.phase) * 0.12;
 			// the ring at its feet lights when someone stands in front
 			c.ring.material.opacity = c.singer >= 0 ? 0.85 : 0.18 + myPulse * 0.1;
@@ -1974,6 +2085,17 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				f.mouth.tongue.visible = open > 0.2;
 				f.mouth.teeth.forEach((m) => { m.visible = open > 0.2; m.position.y = (0.03 + open * 0.1) * f.s; });
 				f.mouth.smile.visible = open < 0.2;
+			}
+			if (c.wob) {
+				const W2 = c.wob;
+				c.root.getWorldPosition(W2.base.value);
+				_m.set(1, 0, 0).applyQuaternion(c.root.quaternion);   // (its own sideways, in the world)
+				_m2.set(0, 0, 1).applyQuaternion(c.root.quaternion);   // (its forward: toward the walls)
+				const sway = Math.sin(beat * Math.PI + c.phase) * 0.14 + (c.trickT > 0 ? Math.sin(rt * 14 + c.phase) * 0.35 * c.trickT : 0);
+				const lean = c.singT * 0.16 - c.duckT * 0.05 + Math.sin(beat * Math.PI * 0.5 + c.phase * 2) * 0.05;
+				W2.bend.value.set(0, 0, 0).addScaledVector(_m, sway * c.size).addScaledVector(_m2, lean * c.size);
+				W2.bend.value.y = (myPulse * 0.06 + c.duckT * 0.15) * c.size;
+				W2.jig.value = 0.03 + myPulse * 0.07 + c.singT * 0.14 + c.trickT * 0.22;
 			}
 			stepKind(c, dt, beat, myPulse);
 			if (!perfFlags.nonoodles && ((c.index + frameNo) % 2 === 0 || c.trickT > 0)) noodles(c, beat, myPulse);   // (half the noodles each frame: twice the speed, no one can tell)
