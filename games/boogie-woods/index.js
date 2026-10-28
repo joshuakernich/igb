@@ -1277,15 +1277,18 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				// (a real bend, not a skew: every point turned about the feet in the bend's
 				// plane, by an angle that grows with height, so the top tips over at an angle)
 				float bl = length(uBend.xz);
-				if (bl > 1e-4) {
+				if (bl > 1e-3) {
+					// (a spine curving at a steady rate from the feet: each point rides the spine at its
+					// own height and leans with it there, so a cap tilts exactly as its stalk's top does)
 					vec2 bd = uBend.xz / bl;
-					float th = bl / uH * 2.4 * hh;
+					float kk = bl / uH * 1.3 / uH;
 					vec2 r0 = wpos.xz - uBase.xz;
 					float u = dot(r0, bd), yy = wpos.y - uBase.y;
 					vec2 perp = r0 - bd * u;
-					float c0 = cos(th), s0 = sin(th);
-					wpos.xz = uBase.xz + perp + bd * (u * c0 + yy * s0);
-					wpos.y = uBase.y - u * s0 + yy * c0;
+					float sArc = clamp(yy, 0.0, uH * 1.6), ex = yy - sArc, ph = kk * sArc;
+					float cph = cos(ph), sph = sin(ph);
+					wpos.xz = uBase.xz + perp + bd * ((1.0 - cph) / kk + u * cph + ex * sph);
+					wpos.y = uBase.y + sph / kk - u * sph + ex * cph;
 				}
 				wpos.xz += rel * uJig * sin(hh * 5.5 - uT * 9.0) * hh;
 				wpos.y -= uBend.y * hh * hh;
@@ -1467,7 +1470,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			limb(c, [-0.09, 0.08, 0.04], [-0.14, -0.08, 0.12], 0.035, 'shoe', -1, true);
 			limb(c, [0.09, 0.08, 0.04], [0.14, -0.08, 0.12], 0.035, 'shoe', 1, true);
 			c.top = 2.05;
-			c.bend = 2.4;   // (the bendiest thing in the woods)
+			c.bend = 1.6;   // (the bendiest thing in the woods)
 		},
 		frog(c) {
 			const skin = slickMat(c.tint);
@@ -3499,6 +3502,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		jump(id) { show.go(id); },
 		clearing(k) { goTo(k, true); },
 		walk(k) { walkTo(k); },
+		bendAll(k) { for (const c of creatures) c.bend = k; },
 		tap(x, y) { tap({ x, y }); },
 		grid() { const gw = grids[here]; return gw && { on: gw.on.slice(), at: gw.pos.map((v) => { const q = proj(1, v); return [Math.round(q.x), Math.round(q.y)]; }) }; },
 		webHits() { const wb = webs[here]; return wb && [rt - wb.lastT < 0.5 ? 100 : 0]; },
