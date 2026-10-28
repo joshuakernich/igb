@@ -1973,6 +1973,7 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 
 	self.test = {
 		skipTo(id) { show.go(id); },
+		jump(id) { show.go(id); },   // (the virtual gamebox's name for it)
 		level(k) { loadLevel(k === 'lair' ? LAIR : LEVELS[k], k === 'lair' ? levelIdx : k); },
 	};
 

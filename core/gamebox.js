@@ -29,6 +29,7 @@ const SONIC = [
 	{ id: 'super-sonic-battle', name: 'Super Sonic Battle', bot: 'battle' },
 	{ id: 'twin-tail-tower', name: 'Tails Jump', bot: 'weave', hidden: true },
 	{ id: 'red-light-green-light', name: 'Red Light Green Light', bot: 'rlgl', hidden: true },
+	{ id: 'temple-of-coins', name: 'Temple of Coins', bot: 'roam', hidden: true },
 ];
 const COLORS = ['#ff2a2a', '#2f6bff', '#32cd32', '#dd00ff', '#ff6600', '#ffbb00'];
 
@@ -551,6 +552,17 @@ const BOTS = {
 				const to = { X: Math.max(-0.88, Math.min(0.88, lane)), Z: 0.15 + Math.sin(t * 0.37 + i) * 0.35 };
 				approach(p, to, 1.4, dt);
 				p.face = Math.max(-0.5, Math.min(0.5, -(to.X - p.X) * 2));
+			});
+		} };
+	},
+	// Temple of Coins: wandering all over the floor, each on a loop of their own
+	roam(n) {
+		const ps = Array.from({ length: n }, (_, i) => ({ X: (i + 0.5) / n * 1.4 - 0.7, Y: 0, Z: 0, face: 0 }));
+		return { ps, step(t, dt) {
+			ps.forEach((p, i) => {
+				const to = { X: Math.sin(t * 0.31 + i * 2.1) * 0.7, Z: Math.cos(t * 0.23 + i * 1.7) * 0.7 };
+				approach(p, to, 1.2, dt);
+				p.face = Math.atan2(to.X - p.X, -(to.Z - p.Z));
 			});
 		} };
 	},
