@@ -2,10 +2,16 @@
  * IGB.players — where the players are.
  *
  * In the gamebox the tracking system sends positions through Vuplex. At a
- * desk, the little gamebox simulator under the stage stands in for it: the
- * mouse over a wall points the selected player's gaze there, over the floor
- * moves them (shift over a wall moves them up and down it too), a click on a
- * wall "touches" it, and 1-6 pick which player the mouse controls.
+ * desk, the little gamebox simulator under the stage stands in for it, with the
+ * virtual gamebox's controls (core/gamebox.js) for the player you drive:
+ *   WASD / arrows   walk                     click the floor   walk there
+ *   Shift (or C)    squat                    Space             jump
+ *   Q / E           shorter / taller (110-190 cm)
+ *   mouse over a wall   look there           click a wall      touch it (you walk
+ *                                            into reach first; the game hears a click)
+ *   Tab / 1-6       pick a player            0                 just watch
+ *   H               hide or show the help
+ * It's gone (and its keys with it) in the real gamebox, where Vuplex sends the tracking.
  *
  * Each player object carries (all updated in place):
  *
@@ -193,6 +199,7 @@ IGB.players = (function () {
 
 	function randomMove() {
 		for (let i = 0; i < CONTROLLABLE; i++) {
+			if (i === selected) continue;   // (not the one you're driving)
 			const p = slot(i);
 			$(p).stop(true).animate({
 				X: -0.9 + Math.random() * 1.8,
@@ -203,19 +210,115 @@ IGB.players = (function () {
 		}
 	}
 
+	// You: the player you drive (selected; -1 just watches), as in the virtual gamebox.
+	// Positions are tracking units (1 unit = 1.8 m of a 3.6 m room; Y 1 unit = 1.125 m of height).
+	const HEIGHTS = [110, 130, 150, 170, 190];   // cm
+	const keys = new Set();
+	const you = { cm: 170, sq: 0, jumpT: -1, goal: null, pendingTouch: null, help: true };
+	const youBase = () => (you.cm - 170) / 112.5;   // (0 is a standing 170 cm adult)
+	const youJump = () => (you.jumpT >= 0 ? 0.34 * Math.sin(Math.PI * Math.min(1, you.jumpT / 0.55)) : 0);
+	const simOn = () => !!$simulator && !window.vuplex && $simulator.is(':visible');
+
+	// a touch on a wall, t = { wall, u, v } (u across as you face it, v down from the top):
+	// the game hears a click there on the stage, as it would from a real touch
+	function touchWall(t) {
+		const p = slot(selected);
+		p.wall = t.wall;
+		p.wallChange = t.wall;
+		const $w = $('igb-world');
+		const r = $w[0].getBoundingClientRect(), sc = IGB.scale;
+		const cx = r.left + (t.wall + t.u) * IGB.W * sc, cy = r.top + t.v * IGB.H * sc;
+		const hit = document.elementsFromPoint(cx, cy).find((e) => $w[0].contains(e)) || $w[0];
+		const o = { bubbles: true, cancelable: true, clientX: cx, clientY: cy, pageX: cx, pageY: cy, button: 0, pointerId: 1, isPrimary: true };
+		hit.dispatchEvent(new PointerEvent('pointerdown', o));
+		hit.dispatchEvent(new MouseEvent('mousedown', o));
+		hit.dispatchEvent(new PointerEvent('pointerup', o));
+		hit.dispatchEvent(new MouseEvent('mouseup', o));
+		hit.dispatchEvent(new MouseEvent('click', o));
+		flash('TOUCH!');
+	}
+	// where you'd stand to touch that spot, and whether you're there already
+	const standFor = (t) => (t.wall === 1 ? { X: t.u * 2 - 1, Z: 0.8 } : t.wall === 0 ? { X: -0.8, Z: t.u * 2 - 1 } : { X: 0.8, Z: 1 - t.u * 2 });
+	function reachable(t) {
+		const p = slot(selected), s2 = standFor(t);
+		const out = t.wall === 1 ? 1 - p.Z : t.wall === 0 ? p.X + 1 : 1 - p.X;
+		const along = t.wall === 1 ? Math.abs(p.X - s2.X) : Math.abs(p.Z - s2.Z);
+		return out < 0.39 && along < 0.3 && (1 - t.v) * 2.25 < you.cm / 100 * 1.25;   // (0.7 m out, 0.55 m along, up to 1.25 x your height)
+	}
+	function touch(t) {
+		if (selected < 0) return;
+		if (reachable(t)) { touchWall(t); return; }
+		you.goal = standFor(t);
+		you.pendingTouch = t;
+	}
+
+	// one step of you: walking (keys, or toward a click), squatting, jumping
+	function stepYou(dt) {
+		if (selected < 0) return;
+		const p = slot(selected);
+		let ix = 0, iz = 0;
+		if (keys.has('w') || keys.has('arrowup')) iz += 1;
+		if (keys.has('s') || keys.has('arrowdown')) iz -= 1;
+		if (keys.has('a') || keys.has('arrowleft')) ix -= 1;
+		if (keys.has('d') || keys.has('arrowright')) ix += 1;
+		const speed = (you.sq > 0.5 ? 0.5 : 1) * 1.4 / 1.8;   // (1.4 m/s, slower squatting)
+		if (ix || iz) {
+			$(p).stop(true);
+			you.goal = null; you.pendingTouch = null;
+			const l = Math.hypot(ix, iz);
+			p.X += ix / l * speed * dt; p.Z += iz / l * speed * dt;
+		} else if (you.goal) {
+			$(p).stop(true);
+			const dx = you.goal.X - p.X, dz = you.goal.Z - p.Z, d = Math.hypot(dx, dz);
+			if (d < 0.02) {
+				you.goal = null;
+				if (you.pendingTouch) { touchWall(you.pendingTouch); you.pendingTouch = null; }
+			} else { const st = Math.min(d, speed * 1.3 * dt); p.X += dx / d * st; p.Z += dz / d * st; }
+		}
+		const wantSq = keys.has('shift') || keys.has('c') ? 1 : 0;
+		you.sq += (wantSq - you.sq) * Math.min(1, dt * 8);
+		if (you.jumpT >= 0) { you.jumpT += dt; if (you.jumpT > 0.55) you.jumpT = -1; }
+		p.Y = youBase() - you.sq * 0.32 + youJump();
+	}
+
+	// a word on the stage for a moment (TOUCH!, 150 CM)
+	let $flash;
+	function flash(text) {
+		if (!$simulator) return;
+		if (!$flash) $flash = $('<gamebox-flash>').appendTo($simulator);
+		$flash.stop(true).text(text).css({ opacity: 1 }).delay(500).animate({ opacity: 0 }, 400);
+	}
+
 	function stepDebug() {
+		stepYou(1 / DEBUG_RATE);
 		const out = [];
 		for (let i = 0; i < CONTROLLABLE; i++) {
 			const p = slot(i);
-			p.X = Math.max(-0.8, Math.min(0.8, p.X));
-			p.Y = Math.max(-0.4, Math.min(0.6, p.Y));
-			p.Z = Math.max(-0.8, Math.min(0.8, p.Z));
+			p.X = Math.max(-0.95, Math.min(0.95, p.X));
+			p.Y = i === selected ? Math.max(-1, Math.min(1, p.Y)) : Math.max(-0.4, Math.min(0.6, p.Y));
+			p.Z = Math.max(-0.95, Math.min(0.95, p.Z));
 			const t = simTarget(i);
 			const q = lookRotation({ x: (t.X - p.X) * GAZE.room.x, y: (t.Y - p.Y) * GAZE.room.y, z: (t.Z - p.Z) * GAZE.room.z });
 			out.push({ Id: i, X: p.X, Y: p.Y, Z: p.Z, rW: q.w, rX: q.x, rY: q.y, rZ: q.z });
 		}
 		out.push({ Id: 0, X: 0, Y: -0.2, Z: -0.5, rW: 1, rX: 0, rY: 0, rZ: 0 });   // (the wand, held still)
 		receive(JSON.stringify(out) + '|Front,0,0,None');
+		drawYou();
+	}
+
+	// the little box's view of you: a walking target, and the panel
+	function drawYou() {
+		if (!$simulator) return;
+		const $goal = $simulator.find('gamebox-goal');
+		if (you.goal && selected >= 0) $goal.show().css({ left: (you.goal.X + 1) / 2 * 100 + '%', top: (you.goal.Z + 1) / 2 * 100 + '%' }).attr('n', selected);
+		else $goal.hide();
+	}
+	function hud() {
+		if (!$simulator) return;
+		const state = you.sq > 0.5 ? ' · squatting' : you.jumpT >= 0 ? ' · jumping' : '';
+		$simulator.find('gamebox-player').html(selected < 0 ? 'Watching <span>(Tab or 1–6 to drive a player)</span>'
+			: `<b n="${selected}">You: player ${selected + 1}</b> · ${you.cm} cm${state}`);
+		$simulator.find('gamebox-hint').toggle(you.help);
 	}
 
 	function drawSimulator() {
@@ -237,8 +340,12 @@ IGB.players = (function () {
 	}
 
 	function select(n) {
-		if (n >= 0 && n < CONTROLLABLE) selected = n;
-		if ($simulator) $simulator.find('gamebox-player').text('Mouse moves player ' + (selected + 1));
+		if (n >= -1 && n < CONTROLLABLE && n !== selected) {
+			selected = n;
+			you.goal = null; you.pendingTouch = null; you.sq = 0; you.jumpT = -1;
+			if (n >= 0) { $(slot(n)).stop(true); }
+		}
+		hud();
 		drawSimulator();
 	}
 
@@ -256,7 +363,7 @@ IGB.players = (function () {
 				<gamebox-panel>
 					<gamebox-player></gamebox-player>
 					<button btn=move>Random move</button>
-					<gamebox-hint>Keys 1–6 pick a player · mouse over a wall points their gaze, over the floor moves them (shift over a wall: moves them too) · click a wall to touch it</gamebox-hint>
+					<gamebox-hint>WASD walk · click the floor to walk there · Shift squat · Space jump · Q / E height<br>mouse over a wall to look · click a wall to touch it (walks over first)<br>Tab / 1–6 pick a player · 0 watch · H hide this</gamebox-hint>
 				</gamebox-panel>
 			</gamebox-simulator>
 		`).appendTo($parent);
@@ -266,17 +373,14 @@ IGB.players = (function () {
 			$('<gamebox-avatar><gamebox-human></gamebox-human></gamebox-avatar>').attr('n', i).appendTo($floor);
 			$('<gamebox-gaze>').attr('n', i).hide().appendTo($floor);
 		}
+		$('<gamebox-goal>').hide().appendTo($floor);
 
 		const $sides = $simulator.find('gamebox-side');
+		const at = (el, e) => ({ wall: parseInt($(el).attr('wall'), 10), fx: e.offsetX / el.offsetWidth, fy: e.offsetY / el.offsetHeight });
 		$sides.on('mousemove', function (e) {
-			const wall = parseInt($(this).attr('wall'), 10);
-			const w = this.offsetWidth;
-			const h = this.offsetHeight;
-			const x = e.offsetX / (w / 2) - 1;
-			const y = e.offsetY / (h / 2) - 1;
-			const p = slot(selected);
-			// (over a wall: point their gaze there; shift held, move them instead)
-			if (!e.shiftKey && wall < 3) {
+			if (selected < 0) return;
+			const { wall, fx, fy } = at(this, e), x = fx * 2 - 1, y = fy * 2 - 1;
+			if (wall < 3) {   // (over a wall: look there)
 				const t = simTarget(selected);
 				if (wall === 0) { t.X = -1; t.Z = -x; }
 				if (wall === 1) { t.Z = 1; t.X = x; }
@@ -284,26 +388,44 @@ IGB.players = (function () {
 				t.Y = -y;
 				return;
 			}
-			$(p).stop(true);
-			if (wall === 0) { p.Z = -x; p.Y = -y; }
-			if (wall === 1) { p.X = x; p.Y = -y; }
-			if (wall === 2) { p.Z = x; p.Y = -y; }
-			if (wall === 3) { p.X = x; p.Z = y; }
+			if (e.buttons & 1) {   // (dragging over the floor: straight there)
+				const p = slot(selected);
+				$(p).stop(true); you.goal = null; you.pendingTouch = null;
+				p.X = x; p.Z = y;
+			}
 		});
-		$sides.on('click', function () {
-			const wall = parseInt($(this).attr('wall'), 10);
-			const p = slot(selected);
-			p.wall = wall;
-			p.wallChange = wall;
+		$sides.on('click', function (e) {
+			if (selected < 0) return;
+			e.stopPropagation();
+			const { wall, fx, fy } = at(this, e);
+			if (wall === 3) { you.goal = { X: fx * 2 - 1, Z: fy * 2 - 1 }; you.pendingTouch = null; return; }
+			touch({ wall, u: wall === 1 ? fx : 1 - fx, v: fy });   // (the side walls run the other way across, seen from inside)
 		});
 
 		$simulator.find('[btn=move]').on('click', randomMove);
 
 		$(document).on('keydown', function (e) {
-			if (e.target.tagName === 'INPUT') return;
-			const n = parseInt(e.key, 10) - 1;
-			if (n >= 0 && n < CONTROLLABLE) select(n);
+			if (!simOn() || (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName))) return;
+			const k = e.key.toLowerCase();
+			if (k === ' ') { if (selected >= 0 && you.jumpT < 0) you.jumpT = 0; e.preventDefault(); return; }
+			if (k === 'tab') { select(selected + 1 >= CONTROLLABLE ? -1 : selected + 1); e.preventDefault(); return; }
+			if (k === '0') { select(-1); return; }
+			if (/^[1-6]$/.test(k)) { select(+k - 1); return; }
+			if (k === 'q' || k === 'e') {
+				const n = Math.max(0, Math.min(HEIGHTS.length - 1, HEIGHTS.indexOf(you.cm) + (k === 'q' ? -1 : 1)));
+				you.cm = HEIGHTS[n]; flash(you.cm + ' CM'); hud(); return;
+			}
+			if (k === 'h') { you.help = !you.help; hud(); return; }
+			keys.add(k);
+			if (k === 'shift' || k === 'c') hud();
+			if (k.startsWith('arrow')) e.preventDefault();
 		});
+		$(document).on('keyup', function (e) {
+			const k = e.key.toLowerCase();
+			keys.delete(k);
+			if (k === 'shift' || k === 'c') hud();
+		});
+		$(window).on('blur', () => keys.clear());
 
 		select(selected);
 	}
@@ -318,6 +440,7 @@ IGB.players = (function () {
 	function connectVuplex() {
 		clearInterval(debugInterval);
 		if ($simulator) $simulator.hide();
+		keys.clear();
 		window.vuplex.postMessage({ type: 'greeting', message: 'Hello from JavaScript!' });
 		window.vuplex.addEventListener('message', function (e) { receive(e.data); });
 	}

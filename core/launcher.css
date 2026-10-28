@@ -492,3 +492,40 @@ gamebox-hint {
 	display: block;
 	opacity: 0.5;
 }
+
+gamebox-player b { color: var(--c); }
+gamebox-player span { opacity: 0.5; }
+gamebox-player b[n="0"] { --c: red; }
+gamebox-player b[n="1"] { --c: #6a8cff; }
+gamebox-player b[n="2"] { --c: limegreen; }
+gamebox-player b[n="3"] { --c: #dd00ff; }
+gamebox-player b[n="4"] { --c: #ff6600; }
+gamebox-player b[n="5"] { --c: #ffbb00; }
+
+/* where the player you drive is walking to */
+gamebox-goal {
+	display: block;
+	position: absolute;
+	width: 10px;
+	height: 10px;
+	margin: -5px 0 0 -5px;
+	box-sizing: border-box;
+	border: 2px dashed white;
+	border-radius: 100%;
+	pointer-events: none;
+}
+
+/* TOUCH!, 150 CM: a word over the little box for a moment */
+gamebox-flash {
+	display: block;
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: -26px;
+	text-align: center;
+	color: white;
+	font: 700 14px monospace;
+	text-shadow: 0 0 6px black;
+	pointer-events: none;
+	opacity: 0;
+}
