@@ -1000,7 +1000,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	const scene = new THREE.Scene();
 	scene.background = new THREE.Color(0x07040e);
-	post = createWallComposer(renderer, scene, { strength: 0.32, radius: 0.4, threshold: 1.0, cap: 1.6 });   // (a little glow on the neon, no more)
+	post = createWallComposer(renderer, scene, { strength: 0.32, radius: 0.4, threshold: 1.0, cap: 1.6, fxaa: true });   // (a little glow on the neon, no more; FXAA, not multisampling: far quicker)
 	// what the shiny plastic reflects: a bright candy-coloured room, a strip light overhead
 	const envTex = environmentFromShader(renderer, `
 		vec3 envColor(vec3 d) {

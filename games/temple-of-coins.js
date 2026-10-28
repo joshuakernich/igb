@@ -959,7 +959,7 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 
 	const scene = new THREE.Scene();
 	scene.background = new THREE.Color(0x07050a);
-	post = createWallComposer(renderer, scene, { strength: 0.55, radius: 0.45, threshold: 0.9, cap: 2.2 });
+	post = createWallComposer(renderer, scene, { strength: 0.55, radius: 0.45, threshold: 0.9, cap: 2.2, fxaa: true });   // (FXAA, not multisampling: far quicker)
 	const envTex = environmentFromShader(renderer, `
 		vec3 envColor(vec3 d) {
 			float up = d.y * 0.5 + 0.5;
