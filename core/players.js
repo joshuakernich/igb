@@ -303,45 +303,153 @@ IGB.players = (function () {
 		}
 		out.push({ Id: 0, X: 0, Y: -0.2, Z: -0.5, rW: 1, rX: 0, rY: 0, rZ: 0 });   // (the wand, held still)
 		receive(JSON.stringify(out) + '|Front,0,0,None');
-		drawYou();
 	}
 
-	// the little box's view of you: a walking target, and the panel
-	function drawYou() {
-		if (!$simulator) return;
-		const $goal = $simulator.find('gamebox-goal');
-		if (you.goal && selected >= 0) $goal.show().css({ left: (you.goal.X + 1) / 2 * 100 + '%', top: (you.goal.Z + 1) / 2 * 100 + '%' }).attr('n', selected);
-		else $goal.hide();
-	}
 	function hud() {
 		if (!$simulator) return;
 		const state = you.sq > 0.5 ? ' · squatting' : you.jumpT >= 0 ? ' · jumping' : '';
-		$simulator.find('gamebox-player').attr('n', selected < 0 ? null : selected).html(selected < 0 ? 'Watching <span>Tab or 1–6 to drive a player</span>'
+		$simulator.find('gamebox-player').attr('n', selected < 0 ? null : selected).html(selected < 0 ? 'Watching <span>pick a player below</span>'
 			: `<b>You are P${selected + 1}</b> <span>${you.cm} cm${state}</span>`);
 		$simulator.find('gamebox-hint').toggle(you.help);
+		$simulator.find('[pip]').each(function (k) { $(this).toggleClass('on', k === selected); });
+	}
+
+	/* the little box, drawn on a canvas from a camera behind and above the back of the room */
+
+	const COLS = ['#ff3b3b', '#3b7bff', '#2fd25a', '#d23bff', '#ff7a1a', '#ffc21a'];
+	const HR = 1.25;   // (the walls' height, in room half-widths: they're 16:10)
+	const SIM = { w: 300, h: 210, eye: [0, 5.4, -4.6], at: [0, 0.15, 0.25], hover: -1 };
+	const v3 = { sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], norm: (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; }, cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]] };
+	const cam = (function () {
+		const fwd = v3.norm(v3.sub(SIM.at, SIM.eye)), right = v3.norm(v3.cross([0, 1, 0], fwd)), up = v3.cross(fwd, right);
+		const raw = (pt) => { const d = v3.sub(pt, SIM.eye), z = v3.dot(d, fwd); return [v3.dot(d, right) / z, -v3.dot(d, up) / z]; };
+		// fit the box (and a token's head at the back) into the canvas
+		let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+		for (const X of [-1, 1]) for (const Z of [-1, 1]) for (const y of [0, HR]) { const [a, b] = raw([X, y, Z]); x0 = Math.min(x0, a); x1 = Math.max(x1, a); y0 = Math.min(y0, b); y1 = Math.max(y1, b); }
+		const m = 12, k = Math.min((SIM.w - 2 * m) / (x1 - x0), (SIM.h - 2 * m) / (y1 - y0));
+		const ox = SIM.w / 2 - (x0 + x1) / 2 * k, oy = SIM.h / 2 - (y0 + y1) / 2 * k;
+		return {
+			p(X, y, Z) { const [a, b] = raw([X, y, Z]); return [ox + a * k, oy + b * k]; },
+			// what's under a point on the canvas: { wall (0 left, 1 front, 2 right, 3 floor), X, y, Z }
+			pick(px, py) {
+				const a = (px - ox) / k, b = (py - oy) / k;
+				const dir = v3.norm([fwd[0] + right[0] * a - up[0] * b, fwd[1] + right[1] * a - up[1] * b, fwd[2] + right[2] * a - up[2] * b]);
+				const E = SIM.eye, at = (t) => [E[0] + dir[0] * t, E[1] + dir[1] * t, E[2] + dir[2] * t];
+				let best = null;
+				const take = (wall, t, ok) => { if (t > 0 && (!best || t < best.t)) { const q = at(t); if (ok(q)) best = { wall, t, X: q[0], y: q[1], Z: q[2] }; } };
+				const inY = (q) => q[1] >= 0 && q[1] <= HR, inZ = (q) => Math.abs(q[2]) <= 1, inX = (q) => Math.abs(q[0]) <= 1;
+				if (dir[1] < 0) take(3, -E[1] / dir[1], (q) => inX(q) && inZ(q));
+				if (dir[0] < 0) take(0, (-1 - E[0]) / dir[0], (q) => inY(q) && inZ(q));
+				if (dir[0] > 0) take(2, (1 - E[0]) / dir[0], (q) => inY(q) && inZ(q));
+				if (dir[2] > 0) take(1, (1 - E[2]) / dir[2], (q) => inY(q) && inX(q));
+				return best;
+			},
+		};
+	})();
+
+	let ctx;
+	function quad(pts, fill, stroke) {
+		ctx.beginPath();
+		pts.forEach(([X, y, Z], k) => { const [a, b] = cam.p(X, y, Z); k ? ctx.lineTo(a, b) : ctx.moveTo(a, b); });
+		ctx.closePath();
+		if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+		if (stroke) { ctx.strokeStyle = stroke; ctx.stroke(); }
+	}
+	function line(A, B) { const [a, b] = cam.p(...A), [c, d] = cam.p(...B); ctx.moveTo(a, b); ctx.lineTo(c, d); }
+	// where a gaze lands, in the room: { wall, x, y } (the tracker's -1..1, squashed) into X, y, Z
+	function gazePoint(g) {
+		const h = (g.y + 1) / 2 * HR;
+		return g.wall === 1 ? [g.x, h, 1] : g.wall === 0 ? [-1, h, g.x] : [1, h, -g.x];
+	}
+	// a token's radius at a share f of its height: a round foot, a tapering body, a collar, a neck
+	function lathe(f) {
+		if (f < 0.07) return 0.088;
+		if (f < 0.1) return 0.072;
+		if (f < 0.66) return 0.064 - (f - 0.1) / 0.56 * 0.03;
+		if (f < 0.72) return 0.047;
+		return 0.03;
+	}
+	function shade(hex, k) {   // (lighter for k > 0, darker for k < 0)
+		const n = parseInt(hex.slice(1), 16), c = [n >> 16, (n >> 8) & 255, n & 255].map((v) => Math.round(k > 0 ? v + (255 - v) * k : v * (1 + k)));
+		return `rgb(${c[0]},${c[1]},${c[2]})`;
 	}
 
 	function drawSimulator() {
-		if (!$simulator) return;
-		const $avatars = $simulator.find('gamebox-avatar');
-		players.forEach(function (p, i) {
-			if (p.px === undefined || i >= CONTROLLABLE) { $avatars.eq(i).hide(); return; }
-			// (a little person: their height, squatting or jumping; the one you drive from your own settings)
-			const me = i === selected, $a = $avatars.eq(i);
-			const tall = me ? you.cm / 170 : Math.max(0.7, Math.min(1.25, 1 + p.Y * 0.5));
-			const squat = me ? you.sq > 0.5 : p.Y < -0.25;
-			const lift = me ? youJump() * 60 : 0;
-			$a.css({ left: p.px * 100 + '%', top: p.pz * 100 + '%' }).toggleClass('selected', me);
-			$a.find('gamebox-human').toggleClass('squat', squat).css({ height: 60 * tall + 'px', width: 24 * tall + 'px', left: -12 * tall + 'px', transform: `rotateX(90deg) translateY(${-lift}px)` });
-			$a.find('gamebox-tag').text(me ? 'YOU' : 'P' + (i + 1));
-			// where they're looking, on the simulator's walls (its side walls run the other way across)
-			const g = p.gaze, $dot = $simulator.find('gamebox-gaze[n=' + i + ']');   // (by its player: moving between walls reorders them)
-			if (!g || i >= CONTROLLABLE) { $dot.hide(); return; }
-			const sx = g.wall === 1 ? g.px : 1 - g.px;
-			const $side = $simulator.find('gamebox-side[wall=' + g.wall + ']');
-			if ($dot.parent()[0] !== $side[0]) $dot.appendTo($side);   // (only when it changes wall: moving it every update flickers)
-			$dot.show().css({ left: sx * 100 + '%', top: g.py * 100 + '%' });
-		});
+		if (!ctx) return;
+		ctx.clearRect(0, 0, SIM.w, SIM.h);
+		ctx.lineWidth = 1;
+		const hv = SIM.hover;
+		// the floor, with its grid; then the walls
+		quad([[-1, 0, -1], [1, 0, -1], [1, 0, 1], [-1, 0, 1]], hv === 3 ? 'rgba(70, 90, 150, 0.75)' : 'rgba(40, 48, 90, 0.7)');
+		ctx.beginPath();
+		for (let k = -3; k <= 3; k++) { line([k / 4, 0, -1], [k / 4, 0, 1]); line([-1, 0, k / 4], [1, 0, k / 4]); }
+		ctx.strokeStyle = 'rgba(170, 210, 255, 0.13)'; ctx.stroke();
+		const wallFill = (n) => (hv === n ? 'rgba(110, 150, 255, 0.42)' : 'rgba(70, 95, 180, 0.26)');
+		quad([[-1, 0, -1], [-1, 0, 1], [-1, HR, 1], [-1, HR, -1]], wallFill(0), 'rgba(160, 200, 255, 0.45)');
+		quad([[1, 0, -1], [1, 0, 1], [1, HR, 1], [1, HR, -1]], wallFill(2), 'rgba(160, 200, 255, 0.45)');
+		quad([[-1, 0, 1], [1, 0, 1], [1, HR, 1], [-1, HR, 1]], wallFill(1), 'rgba(160, 200, 255, 0.45)');
+		// where you're walking to
+		if (you.goal && selected >= 0) {
+			ctx.beginPath();
+			for (let k = 0; k <= 24; k++) { const a = k / 24 * Math.PI * 2, [x, y] = cam.p(you.goal.X + Math.cos(a) * 0.09, 0, you.goal.Z + Math.sin(a) * 0.09); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+			ctx.setLineDash([3, 3]); ctx.strokeStyle = COLS[selected]; ctx.lineWidth = 1.5; ctx.stroke(); ctx.setLineDash([]); ctx.lineWidth = 1;
+		}
+		// the players, far ones first: tokens, then where they look
+		const list = players.slice(0, CONTROLLABLE).map((p, i) => ({ p, i })).filter((o) => o.p.px !== undefined).sort((a, b) => b.p.Z - a.p.Z);
+		const heads = [];
+		for (const { p, i } of list) {
+			const me = i === selected, col = COLS[i];
+			const tall = me ? you.cm / 170 : Math.max(0.75, Math.min(1.2, 1 + p.Y * 0.4));
+			const sq = me ? you.sq : p.Y < -0.25 ? 1 : 0;
+			const H = 0.42 * tall * (1 - sq * 0.38), lift = me ? youJump() * 0.5 : 0, X = p.X, Z = p.Z;
+			// its shadow, and your ring
+			const sh = (r) => { ctx.beginPath(); for (let k = 0; k <= 20; k++) { const a = k / 20 * Math.PI * 2, [x, y] = cam.p(X + Math.cos(a) * r, 0, Z + Math.sin(a) * r); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } };
+			sh(0.11 + lift * 0.1); ctx.fillStyle = `rgba(0, 0, 10, ${0.45 - lift * 0.4})`; ctx.fill();
+			if (me) { sh(0.13); ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.lineWidth = 1; }
+			// the lathed body: stacked rings, shaded across
+			const [bx] = cam.p(X, 0, Z), [ex] = cam.p(X + 0.09, 0, Z), rx0 = ex - bx;
+			const grad = ctx.createLinearGradient(bx - rx0, 0, bx + rx0, 0);
+			grad.addColorStop(0, shade(col, -0.45)); grad.addColorStop(0.62, shade(col, 0.25)); grad.addColorStop(1, shade(col, -0.2));
+			ctx.fillStyle = grad;
+			for (let f = 0; f <= 0.78; f += 0.025) {
+				const y = lift + f * H, r = lathe(f), [cx, cy] = cam.p(X, y, Z), [rx] = cam.p(X + r, y, Z), [, ny] = cam.p(X, y, Z - r), [, fy] = cam.p(X, y, Z + r);
+				ctx.beginPath(); ctx.ellipse(cx, cy, Math.max(0.5, rx - cx), Math.max(0.3, Math.abs(ny - fy) / 2), 0, 0, Math.PI * 2); ctx.fill();
+			}
+			// the head: a ball, with its centre marked
+			const hy = lift + H * 0.88, hr = 0.06 * Math.min(1.1, tall), [hx, hyS] = cam.p(X, hy, Z), [hrx] = cam.p(X + hr, hy, Z), R = hrx - hx;
+			const hg = ctx.createRadialGradient(hx - R * 0.3, hyS - R * 0.35, R * 0.1, hx, hyS, R);
+			hg.addColorStop(0, shade(col, 0.55)); hg.addColorStop(0.6, col); hg.addColorStop(1, shade(col, -0.4));
+			ctx.beginPath(); ctx.arc(hx, hyS, R, 0, Math.PI * 2); ctx.fillStyle = hg; ctx.fill();
+			heads.push({ i, me, col, X, Z, hy, hx, hyS, R, g: p.gaze, tag: me ? 'YOU' : 'P' + (i + 1), top: hyS - R });
+		}
+		// gazes: the line on the head the way it faces, then dots to a target on the wall
+		for (const h of heads) {
+			const a = h.me ? 0.95 : 0.45;
+			if (h.g) {
+				const T = gazePoint(h.g), [tx, ty] = cam.p(...T);
+				const d = Math.hypot(tx - h.hx, ty - h.hyS) || 1, ux = (tx - h.hx) / d, uy = (ty - h.hyS) / d;
+				ctx.globalAlpha = a;
+				ctx.beginPath(); ctx.moveTo(h.hx + ux * h.R, h.hyS + uy * h.R); ctx.lineTo(tx, ty);
+				ctx.setLineDash([1.5, 3]); ctx.strokeStyle = h.col; ctx.lineWidth = h.me ? 1.5 : 1; ctx.stroke(); ctx.setLineDash([]);
+				ctx.beginPath(); ctx.arc(tx, ty, h.me ? 4.5 : 3.5, 0, Math.PI * 2); ctx.stroke();
+				ctx.beginPath(); ctx.moveTo(tx - 2, ty); ctx.lineTo(tx + 2, ty); ctx.moveTo(tx, ty - 2); ctx.lineTo(tx, ty + 2); ctx.stroke();
+				ctx.globalAlpha = 1;
+				ctx.beginPath(); ctx.moveTo(h.hx, h.hyS); ctx.lineTo(h.hx + ux * h.R * 0.95, h.hyS + uy * h.R * 0.95);
+				ctx.strokeStyle = 'rgba(10, 10, 25, 0.85)'; ctx.lineWidth = 1.2; ctx.stroke();
+			}
+			ctx.beginPath(); ctx.arc(h.hx, h.hyS, 1.3, 0, Math.PI * 2); ctx.fillStyle = 'rgba(10, 10, 25, 0.9)'; ctx.fill();
+			ctx.lineWidth = 1;
+		}
+		// their names, over their heads
+		ctx.font = '700 8px Rubik, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+		for (const h of heads) {
+			const w = ctx.measureText(h.tag).width + 7, y = h.top - 7;
+			ctx.globalAlpha = h.me ? 1 : 0.75;
+			ctx.beginPath(); ctx.roundRect(h.hx - w / 2, y - 5.5, w, 11, 5.5); ctx.fillStyle = h.col; ctx.fill();
+			if (h.me) { ctx.strokeStyle = 'white'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.lineWidth = 1; }
+			ctx.fillStyle = 'white'; ctx.fillText(h.tag, h.hx, y + 0.5);
+			ctx.globalAlpha = 1;
+		}
 	}
 
 	function select(n) {
@@ -359,15 +467,11 @@ IGB.players = (function () {
 	function mountSimulator($parent) {
 		$simulator = $(`
 			<gamebox-simulator>
-				<gamebox-box>
-					<gamebox-side wall=0></gamebox-side>
-					<gamebox-side wall=1></gamebox-side>
-					<gamebox-side wall=2></gamebox-side>
-					<gamebox-side wall=3 class=floor></gamebox-side>
-				</gamebox-box>
+				<canvas></canvas>
 				<gamebox-panel>
 					<gamebox-player></gamebox-player>
 					<button btn=move>Shuffle the others</button>
+					<gamebox-pips>${COLS.map((c, i) => `<button pip=${i} style="--c:${c}" title="Drive player ${i + 1}"></button>`).join('')}</gamebox-pips>
 					<gamebox-hint>
 						<span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>walk</span>
 						<span><kbd class=mouse>mouse on floor</kbd></span><span>move there</span>
@@ -377,48 +481,45 @@ IGB.players = (function () {
 						<span><kbd class=mouse>point at wall</kbd></span><span>look</span>
 						<span><kbd class=mouse>click wall</kbd></span><span>touch it</span>
 						<span><kbd>Tab</kbd><kbd>1–6</kbd></span><span>pick a player</span>
-						<span><kbd>0</kbd></span><span>just watch</span>
-						<span><kbd>H</kbd></span><span>hide this</span>
 					</gamebox-hint>
 				</gamebox-panel>
 			</gamebox-simulator>
 		`).appendTo($parent);
 
-		const $floor = $simulator.find('gamebox-side.floor');
-		for (let i = 0; i < SLOTS; i++) {
-			$('<gamebox-avatar><gamebox-human><gamebox-body></gamebox-body><gamebox-tag></gamebox-tag></gamebox-human></gamebox-avatar>').attr('n', i).appendTo($floor);
-			$('<gamebox-gaze>').attr('n', i).hide().appendTo($floor);
-		}
-		$('<gamebox-goal>').hide().appendTo($floor);
-
-		const $sides = $simulator.find('gamebox-side');
-		const at = (el, e) => ({ wall: parseInt($(el).attr('wall'), 10), fx: e.offsetX / el.offsetWidth, fy: e.offsetY / el.offsetHeight });
-		$sides.on('mousemove', function (e) {
-			if (selected < 0) return;
-			const { wall, fx, fy } = at(this, e), x = fx * 2 - 1, y = fy * 2 - 1;
-			if (wall < 3) {   // (over a wall: look there)
+		const canvas = $simulator.find('canvas')[0], dpr = Math.min(2, window.devicePixelRatio || 1);
+		canvas.width = SIM.w * dpr; canvas.height = SIM.h * dpr;
+		canvas.style.width = SIM.w + 'px'; canvas.style.height = SIM.h + 'px';
+		ctx = canvas.getContext('2d');
+		ctx.scale(dpr, dpr);
+		const under = (e) => { const r = canvas.getBoundingClientRect(); return cam.pick((e.clientX - r.left) / r.width * SIM.w, (e.clientY - r.top) / r.height * SIM.h); };
+		$(canvas).on('mousemove', function (e) {
+			const h = under(e);
+			SIM.hover = h ? h.wall : -1;
+			canvas.style.cursor = !h ? 'default' : h.wall === 3 ? 'pointer' : 'crosshair';
+			if (!h || selected < 0) return;
+			if (h.wall < 3) {   // (over a wall: look there)
 				const t = simTarget(selected);
-				if (wall === 0) { t.X = -1; t.Z = -x; }
-				if (wall === 1) { t.Z = 1; t.X = x; }
-				if (wall === 2) { t.X = 1; t.Z = x; }
-				t.Y = -y;
+				t.X = h.wall === 0 ? -1 : h.wall === 2 ? 1 : h.X;
+				t.Z = h.wall === 1 ? 1 : h.Z;
+				t.Y = h.y / HR * 2 - 1;
 				return;
 			}
-			{   // (over the floor: straight there)
-				const p = slot(selected);
-				$(p).stop(true); you.goal = null; you.pendingTouch = null;
-				p.X = x; p.Z = y;
-			}
+			const p = slot(selected);   // (over the floor: straight there)
+			$(p).stop(true); you.goal = null; you.pendingTouch = null;
+			p.X = h.X; p.Z = h.Z;
 		});
-		$sides.on('click', function (e) {
-			if (selected < 0) return;
+		$(canvas).on('mouseleave', () => { SIM.hover = -1; });
+		$(canvas).on('click', function (e) {
+			const h = under(e);
+			if (!h || selected < 0) return;
 			e.stopPropagation();
-			const { wall, fx, fy } = at(this, e);
-			if (wall === 3) { you.goal = { X: fx * 2 - 1, Z: fy * 2 - 1 }; you.pendingTouch = null; return; }
-			touch({ wall, u: wall === 1 ? fx : 1 - fx, v: fy });   // (the side walls run the other way across, seen from inside)
+			if (h.wall === 3) { you.goal = { X: h.X, Z: h.Z }; you.pendingTouch = null; return; }
+			// (u across the wall as you face it from inside, v down from its top)
+			touch({ wall: h.wall, u: h.wall === 1 ? (h.X + 1) / 2 : h.wall === 0 ? (h.Z + 1) / 2 : (1 - h.Z) / 2, v: 1 - h.y / HR });
 		});
 
 		$simulator.find('[btn=move]').on('click', randomMove);
+		$simulator.on('click', '[pip]', function (e) { e.stopPropagation(); const n = +this.getAttribute('pip'); select(n === selected ? -1 : n); });
 
 		$(document).on('keydown', function (e) {
 			if (!simOn() || (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName))) return;
