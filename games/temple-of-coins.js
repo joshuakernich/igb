@@ -1117,6 +1117,63 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 		c.fillRect(0, 0, w, w);
 	});
 
+	// THE SPARK, after Tile Runner's drawSpark: a long thin streak across, a shorter one up and
+	// down, two quiet ones on the diagonals, a glow in the middle and a white-hot heart. Each streak
+	// is a radial gradient squashed flat, brightest at its heart and thinning along and across it.
+	// Painted once (the cross, and the diagonals apart so they can turn), stamped as sprites, and
+	// it shimmers by itself: every part breathes on a clock of its own (sparkle, below).
+	const SPARK = { h: 2.4, hW: 0.08, hA: 1.0, v: 1.35, vW: 0.07, vA: 0.9, d: 1.5, dW: 0.05, dA: 0.45, fall: 1.8, glow: 1.05, glowA: 0.55, core: 0.12, coreA: 1.0, breathe: 0.16, twinkle: 0.2, ms: 2600, size: 0.6, col: [255, 228, 92] };
+	function paintStreak(c, cx, cy, rx, ry, a, rgb) {
+		const STOPS = [0, 0.06, 0.16, 0.3, 0.48, 0.7, 1];
+		c.save();
+		c.translate(cx, cy);
+		c.scale(rx, ry);
+		const g = c.createRadialGradient(0, 0, 0, 0, 0, 1);
+		for (const u of STOPS) g.addColorStop(u, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a * Math.pow(1 - u, SPARK.fall)})`);
+		c.fillStyle = g;
+		c.beginPath(); c.arc(0, 0, 1, 0, Math.PI * 2); c.fill();
+		c.restore();
+	}
+	const SPARK_REACH = SPARK.h;   // (the pictures are 2 x reach sizes across)
+	TEX.sparkCross = canvasTexture(512, 512, function (c, w) {
+		const u = w / 2 / SPARK_REACH, m = w / 2;   // one size, in pixels
+		c.globalCompositeOperation = 'lighter';
+		paintStreak(c, m, m, SPARK.glow * u, SPARK.glow * u, SPARK.glowA * 0.6, SPARK.col);
+		paintStreak(c, m, m, SPARK.vW * u, SPARK.v * u, SPARK.vA, SPARK.col);
+		paintStreak(c, m, m, SPARK.h * u, SPARK.hW * u, SPARK.hA, SPARK.col);
+		paintStreak(c, m, m, SPARK.core * u, SPARK.core * u, SPARK.coreA, [255, 255, 255]);
+	});
+	TEX.sparkDiag = canvasTexture(512, 512, function (c, w) {
+		const u = w / 2 / SPARK_REACH, m = w / 2;
+		c.globalCompositeOperation = 'lighter';
+		c.translate(m, m);
+		c.rotate(Math.PI / 4);
+		paintStreak(c, 0, 0, SPARK.d * u, SPARK.dW * u, SPARK.dA, SPARK.col);
+		paintStreak(c, 0, 0, SPARK.dW * u, SPARK.d * u, SPARK.dA, SPARK.col);
+	});
+	const SPARK_MAT = {};
+	SPARK_MAT.cross = new THREE.SpriteMaterial({ map: TEX.sparkCross, color: new THREE.Color(2.1, 2.1, 2.1), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+	SPARK_MAT.diag = new THREE.SpriteMaterial({ map: TEX.sparkDiag, color: new THREE.Color(2.1, 2.1, 2.1), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+	// each coin's spark, every frame: it flickers on three sines that never line up, the streaks
+	// breathe on their own clocks, and the diagonals turn slowly
+	function sparkle(c, x, y, z, s) {
+		const TAU = Math.PI * 2, P = SPARK, tt = rt * 1000 / P.ms + c.seed;
+		const wave = (f, ph) => Math.sin(TAU * (tt * f + ph));
+		const tw = Math.max(0, 1 + P.twinkle * (0.55 * wave(1, 0) + 0.3 * wave(2.37, 0.18) + 0.15 * wave(5.13, 0.41)));
+		const bh = 1 + P.breathe * wave(0.83, 0.07), bv = 1 + P.breathe * wave(1.19, 0.33), bd = 1 + P.breathe * wave(1.61, 0.64);
+		const td = Math.max(0, 1 + P.twinkle * wave(1.43, 0.52));
+		const size = 0.4 * P.size * s;   // (a share of the coin's width)
+		const across = size * SPARK_REACH * 2;
+		c.cross.visible = c.diag.visible = c.mesh.visible;
+		c.cross.position.set(x, y, z);
+		c.diag.position.set(x, y, z);
+		c.cross.scale.set(across * bh, across * bv, 1);
+		c.diag.scale.set(across * bd, across * bd, 1);
+		c.cross.material.opacity = Math.min(1, tw);
+		c.diag.material.opacity = Math.min(1, td);
+		c.diag.material.rotation = (6 * rt) * Math.PI / 180;
+	}
+
 	/* the temple itself */
 
 	const MAT = {
@@ -1132,7 +1189,6 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 		gold: new THREE.MeshStandardMaterial({ color: 0xffc23a, metalness: 0.55, roughness: 0.3, emissive: 0xffa21a, emissiveIntensity: 0.55 }),
 		coin: new THREE.MeshStandardMaterial({ color: 0xffcf45, metalness: 0.7, roughness: 0.32, emissive: 0xff9a10, emissiveIntensity: 0.14 }),
 		coinRim: new THREE.MeshStandardMaterial({ color: 0x9a5e0c, metalness: 0.75, roughness: 0.4, emissive: 0x3a1a00, emissiveIntensity: 0.3 }),
-		coinGlow: new THREE.MeshBasicMaterial({ map: TEX.soft, color: new THREE.Color(1.3, 0.85, 0.2), transparent: true, opacity: 0.25, depthWrite: false, blending: THREE.AdditiveBlending }),
 		wood: new THREE.MeshStandardMaterial({ color: 0x6a3d1c, roughness: 0.7 }),
 		dark: new THREE.MeshStandardMaterial({ color: 0x1a0f08, roughness: 0.6 }),
 		flame: new THREE.MeshBasicMaterial({ color: new THREE.Color(3.2, 1.4, 0.3), transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }),
@@ -1298,15 +1354,14 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 		sh.scale.setScalar(0.62);   // (a good dark shadow under each, so it stands off the floor)
 		sh.position.set(x, 0.01, z);
 		group.add(sh);
-		const glow = new THREE.Mesh(GEO.shadow, MAT.coinGlow);
-		glow.rotation.x = -Math.PI / 2;
-		glow.scale.setScalar(value >= BIG ? 1.2 : 0.8);
-		glow.position.set(x, 0.02, z);
-		group.add(glow);
+		// the spark (after Tile Runner's): a cross of light behind the coin, and two quiet diagonals turning through it
+		const cross = new THREE.Sprite(SPARK_MAT.cross.clone());
+		const diag = new THREE.Sprite(SPARK_MAT.diag.clone());
+		for (const sp of [cross, diag]) { sp.renderOrder = 2; group.add(sp); }
 		g.rotation.order = 'YXZ';
 		g.position.set(x, 0.3, z);
 		group.add(g);
-		return { x, z, value, present: true, fly: 1, fx: x, fz: z, mesh: g, shadow: sh, glow, spin: Math.random() * 6, pop: -delay, big: value >= BIG, c: colOf(x), r: rowOf(z) };
+		return { x, z, value, present: true, fly: 1, fx: x, fz: z, mesh: g, shadow: sh, cross, diag, seed: Math.random(), spin: Math.random() * 6, pop: -delay, big: value >= BIG, c: colOf(x), r: rowOf(z) };
 	}
 	function makeExit(group, x, z) {
 		const pad = new THREE.Mesh(GEO.pad, MAT.bronze);
@@ -1639,12 +1694,11 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 			const arc = Math.sin(k * Math.PI) * 1.6;
 			c.mesh.visible = c.present && c.pop > 0;
 			c.shadow.visible = c.mesh.visible;
-			c.glow.visible = c.mesh.visible;
-			c.glow.position.set(x, 0.02, z);
 			const s = (c.big ? 1.55 : 1) * 1.3 * easeOut(Math.max(0, c.pop));
 			c.mesh.scale.setScalar(Math.max(0.001, s));
 			c.mesh.position.set(x, 0.36 + Math.sin(c.spin * 0.8) * 0.05 + arc + (c.drop || 0) * 4, z);   // (drop: only the coins the treasury rains)
 			c.mesh.rotation.set(0.55, c.spin, 0);   // (tipped back a little, turning: it glints as it goes round)
+			sparkle(c, x, c.mesh.position.y, z, s);
 			c.shadow.position.set(x, 0.012, z);
 		}
 
