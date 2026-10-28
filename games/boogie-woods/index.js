@@ -2801,6 +2801,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 
 	const PAL = CLEARINGS.map((c) => ({ top: new THREE.Color(c.sky[0]), bot: new THREE.Color(c.sky[1]), fog: new THREE.Color(c.fog), sun: new THREE.Color(c.sun), lights: c.lights.map((l) => new THREE.Color(l)) }));
 	const tmpC = new THREE.Color();
+	const _yAx = new THREE.Vector3(0, 1, 0);
 	const _q0 = new THREE.Quaternion(), _e0 = new THREE.Euler(), _p0 = new THREE.Vector3();
 	let rt = 0;
 	let frameNo = 0;
@@ -3097,7 +3098,11 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			const q = pl[i], m = q.mesh;
 			m.visible = q.seen && phase !== 'off';
 			if (!m.visible) continue;
-			m.position.set(walls.rig.position.x + avCap(q.x), 0.3 + pulse * 0.08 + (q.jumpT > 0.3 ? 0.25 : 0), walls.rig.position.z + avCap(q.z));
+			// (on the path between clearings, everyone's range squeezes into a tight patch on the path just ahead)
+			const sq = glide ? Math.sin(Math.min(1, glide.t / 0.12, (1 - glide.t) / 0.12) * Math.PI / 2) : 0;
+			const ax = lerp(avCap(q.x), q.x * 0.25, sq), az = lerp(avCap(q.z), -2.6 + q.z * 0.2, sq);
+			_p0.set(ax, 0, az).applyAxisAngle(_yAx, walls.rig.rotation.y);
+			m.position.set(walls.rig.position.x + _p0.x, 0.3 + pulse * 0.08 + (q.jumpT > 0.3 ? 0.25 : 0), walls.rig.position.z + _p0.z);
 			m.lookAt(walls.rig.position.x, 0.3, walls.rig.position.z - 4);
 			m.scale.setScalar(1 + pulse * 0.1);
 			if (q.speed > RUN && Math.random() < 0.4) spray(m.position, colour(i), 2, 0.6, 1);
