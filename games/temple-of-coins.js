@@ -55,7 +55,8 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 	const HALF = SIZE / 2;
 	const WALL_H = 0.62;          // how tall the stone stands
 	const E_R = 0.2;             // an explorer's radius (for the walls)
-	const WALL_GIVE = 0.07;       // the stone's edge is forgiving by this much
+	const SPIKE = 0.3;           // how far the spikes stick out of the stone
+	const WALL_GIVE = 0.1;       // the spikes' reach is forgiving by this much (short of their tips)
 	const WALL_GRACE = 0.12;      // seconds touching stone before it counts (tracking jitters)
 	const PICK_R = 0.36;          // how near a coin to pick it up
 	const BANK_R = 0.6;           // how near the chest to bank
@@ -529,7 +530,7 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 	function touchingStone(e) {
 		const rad = E_R * (e.grow > 0 ? 1.5 : 1);
 		const c0 = colOf(e.x), r0 = rowOf(e.z);
-		const half = CS * 0.48 - WALL_GIVE;
+		const half = CS * 0.48 + SPIKE - WALL_GIVE;   // (out to the spikes)
 		for (let r = r0 - 2; r <= r0 + 2; r++) {
 			for (let c = c0 - 2; c <= c0 + 2; c++) {
 				if (!inGrid(c, r) || !grid[r][c]) continue;
@@ -1124,7 +1125,7 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 		cap: new THREE.MeshStandardMaterial({ map: TEX.cap, roughness: 0.8 }),
 		marble: new THREE.MeshStandardMaterial({ color: 0xe9dcc4, roughness: 0.5 }),
 		bronze: new THREE.MeshStandardMaterial({ color: 0x9a6a2a, metalness: 0.8, roughness: 0.35 }),
-		iron: new THREE.MeshStandardMaterial({ color: 0x8a8f9a, metalness: 0.85, roughness: 0.3, emissive: 0x2a0800, emissiveIntensity: 0.4 }),
+		iron: new THREE.MeshStandardMaterial({ color: 0xd8dce6, metalness: 0.6, roughness: 0.25, emissive: 0x5a5f6a, emissiveIntensity: 0.6 }),
 		gold: new THREE.MeshStandardMaterial({ color: 0xffc23a, metalness: 0.55, roughness: 0.3, emissive: 0xffa21a, emissiveIntensity: 0.55 }),
 		coinGlow: new THREE.MeshBasicMaterial({ map: TEX.soft, color: new THREE.Color(1.3, 0.85, 0.2), transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending }),
 		wood: new THREE.MeshStandardMaterial({ color: 0x6a3d1c, roughness: 0.7 }),
@@ -1222,23 +1223,26 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 		shadow: new THREE.PlaneGeometry(1, 1),
 		spikes: spikeGeometry(),
 	};
-	// a block's spikes, as one mesh: a staggered cluster on top, a pair out of each side
+	// a block's spikes, as one mesh: rows of them sticking out of every side,
+	// where you'd walk into them (and a few short ones along the top edge)
 	function spikeGeometry() {
 		const parts = [];
 		const add = (g) => parts.push(g.toNonIndexed());
-		const top = WALL_H + 0.08;
-		const P = [[-0.22, -0.22], [0.02, -0.24], [0.24, -0.18], [-0.2, 0.02], [0.04, 0.0], [0.24, 0.06], [-0.22, 0.24], [0.0, 0.22], [0.22, 0.25]];
-		P.forEach(function ([x, z], k) {
-			const h = 0.2 + ((k * 7) % 5) * 0.03;
-			add(new THREE.ConeGeometry(0.065, h, 7).translate(x * CS / 0.75, top + h / 2, z * CS / 0.75));
-		});
+		const face = CS * 0.48;
 		for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-			for (const off of [-0.17, 0.17]) {
-				const c = new THREE.ConeGeometry(0.05, 0.17, 6).rotateX(Math.PI / 2);   // (pointing along +z)
-				c.rotateY(Math.atan2(dx, dz));
-				c.translate(dx * (CS * 0.48 + 0.08) + (dz ? off : 0), WALL_H * 0.55, dz * (CS * 0.48 + 0.08) + (dx ? off : 0));
-				add(c);
-			}
+			[[0.16, [-0.24, 0, 0.24]], [0.42, [-0.12, 0.12]]].forEach(function ([y, offs], row) {
+				for (const off of offs) {
+					const len = SPIKE - (row ? 0.04 : 0);
+					const c = new THREE.ConeGeometry(0.075, len, 8).rotateX(Math.PI / 2);   // (pointing along +z)
+					c.rotateY(Math.atan2(dx, dz));
+					const out = face + len / 2;
+					c.translate(dx * out + (dz ? off * CS / 0.75 : 0), y * WALL_H / 0.62, dz * out + (dx ? off * CS / 0.75 : 0));
+					add(c);
+				}
+			});
+		}
+		for (const [x, z] of [[-0.26, -0.26], [0.26, -0.26], [-0.26, 0.26], [0.26, 0.26]]) {
+			add(new THREE.ConeGeometry(0.05, 0.14, 6).translate(x * CS / 0.75, WALL_H + 0.15, z * CS / 0.75));
 		}
 		const out = new THREE.BufferGeometry();
 		for (const name of ['position', 'normal', 'uv']) {
