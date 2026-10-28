@@ -1297,7 +1297,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			if (k !== undefined) {
 				sh.uniforms.uRim = rimU.uRim;
 				sh.fragmentShader = 'uniform vec3 uRim;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-					totalEmissiveRadiance += uRim * ${k.toFixed(2)} * pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0);`);
+					totalEmissiveRadiance += uRim * ${k.toFixed(2)} * pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0);
+					totalEmissiveRadiance += diffuseColor.rgb * 0.13;   // (a soft glow from within: colour in the shadows)`);
 			}
 		};
 		m.customProgramCacheKey = () => 'wob' + (k === undefined ? '' : k);
@@ -1323,6 +1324,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		eyeWhite: new THREE.MeshPhysicalMaterial({ color: '#f8f2e2', roughness: 0.15, clearcoat: 1 }),
 		pupil: new THREE.MeshBasicMaterial({ color: '#0a0a0c' }),
 		pupilGloss: new THREE.MeshPhysicalMaterial({ color: '#0a0a0c', roughness: 0.1, clearcoat: 1 }),
+		cheek: new THREE.MeshBasicMaterial({ map: null, color: '#ff7a9a', transparent: true, opacity: 0.55, depthWrite: false }),
 		shine: new THREE.MeshBasicMaterial({ color: new THREE.Color(2, 2, 2) }),
 		mouth: new THREE.MeshStandardMaterial({ color: '#3a0a10', roughness: 0.6 }),
 		tongue: new THREE.MeshPhysicalMaterial({ color: '#ff5a7a', roughness: 0.3, clearcoat: 1 }),
@@ -1339,7 +1341,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	/* the vintage cartoon face: tall eyes, pie-cut pupils, a toothy grin */
 
 	const GEO = {
-		sph: new THREE.SphereGeometry(1, 24, 16),
+		sph: new THREE.SphereGeometry(1, 40, 28),
 		sphLo: new THREE.SphereGeometry(1, 14, 10),
 		pie: new THREE.CircleGeometry(1, 28, Math.PI * 0.35, Math.PI * 2 - 0.75),
 		disc: new THREE.CircleGeometry(1, 16),
@@ -1384,6 +1386,10 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const teeth = [-1, 1].map((sx) => mesh(GEO.box, MAT.tooth, mouth, sx * 0.05 * s, 0.03 * s, 0.06 * s, 0.07 * s, 0.05 * s, 0.02 * s));
 		const smile = mesh(GEO.smile, MAT.pupil, mouth, 0, 0.06 * s, 0.05 * s, 0.17 * s);
 		smile.rotation.z = Math.PI + Math.PI * 0.05;
+		for (const sx of [-1, 1]) {   // (rosy cheeks)
+			const ch = mesh(GEO.disc, MAT.cheek, g, sx * (gap + 0.08) * s, -0.12 * s, 0.02 * s, 0.11 * s, 0.075 * s);
+			ch.castShadow = false;
+		}
 		return { g, eyes, mouth: { open, tongue, teeth, smile }, s, blink: Math.random() * 4 };
 	}
 
@@ -1447,6 +1453,30 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		c.limbs.push({ m, from: new THREE.Vector3(...from), rest: new THREE.Vector3(...rest), r, tip, side, leg, end });
 	}
 
+	const STRAND = new THREE.ConeGeometry(1, 1, 5, 1).translate(0, 0.5, 0);
+	function fuzz(parent, [x, y, z], [rx, ry, rz], col, n, len, opts = {}) {
+		const mat = furMat(col);
+		const im = new THREE.InstancedMesh(STRAND, mat, n);
+		const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), d = new THREE.Vector3(), nrm = new THREE.Vector3();
+		let k = 0;
+		for (let tries = 0; k < n && tries < n * 6; tries++) {
+			d.set(rr(-1, 1), rr(-1, 1), rr(-1, 1));
+			if (d.lengthSq() > 1 || d.lengthSq() < 0.05) continue;
+			d.normalize();
+			if (opts.face !== false && d.z > 0.35 && d.y > -0.55 && Math.abs(d.x) < 0.75) continue;   // (keep the face clear)
+			if (opts.below !== undefined && d.y < opts.below) continue;
+			nrm.set(d.x / rx, d.y / ry, d.z / rz).normalize();
+			nrm.y -= opts.droop === undefined ? 0.25 : opts.droop; nrm.normalize();   // (combed down a little)
+			q.setFromUnitVectors(up, nrm);
+			const l = len * rr(0.6, 1.25), w = len * rr(0.12, 0.2);
+			m4.compose(new THREE.Vector3(x + d.x * rx * 0.93, y + d.y * ry * 0.93, z + d.z * rz * 0.93), q, new THREE.Vector3(w, l, w));
+			im.setMatrixAt(k++, m4);
+		}
+		im.count = k;
+		im.castShadow = true;
+		parent.add(im);
+		return im;
+	}
 	const BUILD = {
 		mushroom(c) {
 			c.limbMat = MAT.stem;
@@ -1469,6 +1499,9 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			c.face = makeFace(c.bouncer, 0.42, 0, 0.9, 0.165, { gap: 0.3 });
 			limb(c, [-0.09, 0.08, 0.04], [-0.14, -0.08, 0.12], 0.035, 'shoe', -1, true);
 			limb(c, [0.09, 0.08, 0.04], [0.14, -0.08, 0.12], 0.035, 'shoe', 1, true);
+			// a frilly skirt round the stalk, under the cap
+			const skirt = mesh(new THREE.CylinderGeometry(0.17, 0.27, 0.12, 24, 1, true), new THREE.MeshPhysicalMaterial({ color: '#fff6e6', roughness: 0.6, sheen: 1, sheenColor: new THREE.Color('#ffffff'), side: THREE.DoubleSide }), c.bouncer, 0, 1.32, 0);
+			skirt.castShadow = false;
 			c.top = 2.05;
 			c.bend = 1.6;   // (the bendiest thing in the woods)
 		},
@@ -1486,6 +1519,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			limb(c, [0.3, 0.25, 0.1], [0.42, 0.04, 0.3], 0.045, 'glove', 1);
 			limb(c, [-0.3, 0.12, -0.1], [-0.5, 0.0, 0.1], 0.06, 'shoe', -1, true);
 			limb(c, [0.3, 0.12, -0.1], [0.5, 0.0, 0.1], 0.06, 'shoe', 1, true);
+			// spots on its back
+			for (let k = 0; k < 7; k++) { const a = rr(-1.2, 1.2), e = rr(0.3, 1.1); mesh(GEO.sphLo, slickMat(new THREE.Color(c.tint).multiplyScalar(0.55)), c.bouncer, Math.sin(a) * Math.sin(e) * 0.42, 0.32 + Math.cos(e) * 0.32, -Math.cos(a) * Math.sin(e) * 0.36, rr(0.04, 0.07), 0.02, rr(0.04, 0.07)).castShadow = false; }
 			c.top = 0.9;
 		},
 		hedgehog(c) {
@@ -1520,6 +1555,10 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			limb(c, [0.32, 0.4, 0.15], [0.42, 0.38, 0.38], 0.04, 'glove', 1);
 			limb(c, [-0.15, 0.1, 0.05], [-0.2, -0.06, 0.15], 0.045, 'shoe', -1, true);
 			limb(c, [0.15, 0.1, 0.05], [0.2, -0.06, 0.15], 0.045, 'shoe', 1, true);
+			// little round ears, a pink nose, a fuzz of soft fur on its face
+			for (const sx of [-1, 1]) mesh(GEO.sph, skinMat('#d8a888'), c.bouncer, sx * 0.24, 0.72, 0.12, 0.07, 0.08, 0.04);
+			mesh(GEO.sph, skinMat('#ff7a8a'), c.bouncer, 0, 0.36, 0.56, 0.055);
+			fuzz(c.bouncer, [0, 0.36, 0.1], [0.3, 0.3, 0.26], '#f2d6b8', 140, 0.06, { droop: 0.1 });
 			c.top = 1.0;
 		},
 		snail(c) {
@@ -1558,6 +1597,13 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			c.parts.head = head;
 			limb(c, [-0.32, 1.0, 0.0], [-0.5, 0.7, 0.1], 0.05, 'glove', -1);
 			limb(c, [0.32, 1.0, 0.0], [0.5, 0.7, 0.1], 0.05, 'glove', 1);
+			// wings, folded at its sides, in layered feathers; a crest of fluff; a fluffy chest
+			for (const sx of [-1, 1]) {
+				const wing = new THREE.Group(); wing.position.set(sx * 0.33, 0.95, -0.02); wing.rotation.z = sx * 0.12; c.bouncer.add(wing);
+				for (let k = 0; k < 4; k++) mesh(GEO.sph, furMat(new THREE.Color(c.tint).offsetHSL(0, 0, -0.06 * k).getStyle()), wing, 0, -k * 0.09, -k * 0.015, 0.09, 0.2 - k * 0.025, 0.2 - k * 0.02);
+			}
+			fuzz(c.parts.head, [0, 0, 0], [0.32, 0.27, 0.28], c.tint, 220, 0.07);
+			fuzz(c.bouncer, [0, 0.95, 0], [0.36, 0.44, 0.32], c.tint, 260, 0.07);
 			c.top = 1.85;
 		},
 		gnome(c) {
@@ -1580,6 +1626,11 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			limb(c, [0.2, 0.7, 0.05], [0.45, 0.52, 0.2], 0.04, 'glove', 1);
 			limb(c, [-0.12, 0.1, 0.05], [-0.16, -0.08, 0.15], 0.045, 'shoe', -1, true);
 			limb(c, [0.12, 0.1, 0.05], [0.16, -0.08, 0.15], 0.045, 'shoe', 1, true);
+			// a big round nose and a curly moustache
+			const nose = c.parts.hat.parent;
+			mesh(GEO.sph, skinMat('#ff9a8a'), nose, 0, -0.04, 0.22, 0.075);
+			for (const sx of [-1, 1]) { const mo = mesh(new THREE.TorusGeometry(0.06, 0.03, 8, 16, Math.PI * 1.2), furMat('#f8f4ee', '#ffffff'), nose, sx * 0.065, -0.1, 0.19); mo.rotation.z = sx > 0 ? -0.2 : Math.PI + 0.2; }
+			fuzz(nose, [0, -0.24, 0.1], [0.2, 0.25, 0.12], '#f8f4ee', 160, 0.06, { face: false, droop: 0.6 });
 			c.top = 1.85;
 		},
 		fairy(c) {
@@ -1605,6 +1656,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			limb(c, [0.14, 1.05, 0.02], [0.36, 1.25, 0.12], 0.025, 'glove', 1);
 			limb(c, [-0.06, 0.72, 0], [-0.1, 0.5, 0.05], 0.025, 'shoe', -1, true);
 			limb(c, [0.06, 0.72, 0], [0.1, 0.5, 0.05], 0.025, 'shoe', 1, true);
+			// a bun of hair
+			mesh(GEO.sph, furMat(new THREE.Color(c.tint).offsetHSL(0.15, 0.2, -0.15).getStyle()), c.parts.float, 0, 0.55, -0.08, 0.1);
 			c.top = 1.65;
 		},
 		flower(c) {
@@ -1649,6 +1702,10 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			limb(c, [0.24, 0.5, 0.05], [0.42, 0.32, 0.2], 0.035, 'glove', 1);
 			limb(c, [-0.13, 0.1, 0.05], [-0.18, -0.06, 0.18], 0.045, 'shoe', -1, true);
 			limb(c, [0.13, 0.1, 0.05], [0.18, -0.06, 0.18], 0.045, 'shoe', 1, true);
+			// a cotton tail, and soft fur all over
+			mesh(GEO.sph, furMat('#ffffff'), c.bouncer, 0, 0.28, -0.3, 0.11);
+			fuzz(c.bouncer, [0, 0.36, 0], [0.3, 0.34, 0.28], c.tint, 300, 0.06);
+			fuzz(c.parts.head, [0, 0, 0], [0.25, 0.23, 0.23], c.tint, 200, 0.05);
 			c.top = 1.75;
 		},
 		troll(c) {
@@ -1672,6 +1729,10 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			limb(c, [0.68, 1.2, 0.05], [1.0, 0.65, 0.35], 0.09, 'glove', 1);
 			limb(c, [-0.3, 0.3, 0.0], [-0.4, -0.05, 0.25], 0.1, 'shoe', -1, true);
 			limb(c, [0.3, 0.3, 0.0], [0.4, -0.05, 0.25], 0.1, 'shoe', 1, true);
+			// a tuft of hair, warts, and shaggy fur
+			fuzz(c.parts.head, [0, 0.3, -0.05], [0.3, 0.14, 0.28], '#3a2a1a', 120, 0.16, { face: false, droop: -0.3, below: -0.2 });
+			for (let k = 0; k < 4; k++) mesh(GEO.sphLo, skinMat('#8a9a6a'), c.parts.head, rr(-0.28, 0.28), rr(-0.15, 0.2), 0.33, 0.03);
+			fuzz(c.bouncer, [0, 0.95, 0], [0.75, 0.8, 0.6], c.tint, 520, 0.12);
 			c.top = 2.4;
 		},
 	};
@@ -2285,7 +2346,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			c.ring.position.x = cx + c.hot.x; c.ring.position.z = cz + c.hot.y;
 			// (a teardrop: its round end where you stand, its tail reaching to the creature's feet)
 			const tdx = c.root.position.x - c.ring.position.x, tdz = c.root.position.z - c.ring.position.z, tL = Math.max(0.5, Math.hypot(tdx, tdz));   // (the tail reaches right to the middle of its footprint)
-			c.ringFill.geometry = new THREE.ShapeGeometry(new THREE.Shape(teardrop(0.24, tL)));
+			c.ringFill.geometry = new THREE.ShapeGeometry(hotShape(0.24, (c.kind === 'troll' ? 0.62 : c.kind === 'owl' ? 0.42 : 0.34) * c.size, tL), 24);
 			const edge = new THREE.Shape(teardrop(0.24, tL)); edge.holes.push(new THREE.Path(teardrop(0.19, tL - 0.1)));
 			c.ringEdge.geometry = new THREE.ShapeGeometry(edge);
 			c.ringEdge.visible = false;   // (no outline: just the glowing shape)
@@ -2901,6 +2962,17 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		_shellGeo = g;
 		return g;
 	}
+	// A hotspot: a round pad where you stand (r1, at the origin), a neck narrowing away from
+	// it, and a round footprint (r2) under the creature, L along +y.
+	function hotShape(r1, r2, L) {
+		const ph = 0.85, w = Math.min(r1, r2) * 0.35, sh = new THREE.Shape();
+		sh.moveTo(r1 * Math.sin(ph), r1 * Math.cos(ph));
+		sh.quadraticCurveTo(w, L / 2, r2 * Math.sin(ph), L - r2 * Math.cos(ph));
+		sh.absarc(0, L, r2, -Math.PI / 2 + ph, Math.PI * 1.5 - ph, false);
+		sh.quadraticCurveTo(-w, L / 2, -r1 * Math.sin(ph), r1 * Math.cos(ph));
+		sh.absarc(0, 0, r1, Math.PI / 2 + ph, Math.PI * 2.5 - ph, false);
+		return sh;
+	}
 	// a teardrop outline: a circle of radius r round the origin, a tail to a point L along +y
 	function teardrop(r, L) {
 		const b = Math.acos(Math.min(0.99, r / L)), pts = [new THREE.Vector2(0, L)];
@@ -3429,8 +3501,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 						label(ctx, '♪', s.x + 34, s.y - 20 - c.singT * 18 + bob, 46, colour(c.singer));
 					}
 					// a hint at the base of anything a player could touch right now
-					const reach = hitters(w, (proj(w, c.touchAt()).x - w * W) / W);
-					if (reach.length && c.trickT <= 0) {
+					if (c.singer >= 0 && c.trickT <= 0) {   // (only while someone's on its hotspot)
 						const b = proj(w, c.touchAt());
 						if (b.y > H * TOUCH_TOP) label(ctx, 'TOUCH!', b.x, b.y + 50 + Math.sin(rt * 5) * 5, 24, '#fff6a0', 0.9);
 					}
