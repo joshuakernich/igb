@@ -1417,7 +1417,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		// its hotspot: a glowing pad on the ground in front of it, exactly where your avatar
 		// stands when you stand on it (from the clearing's middle; placed in the clearing later)
 		// (pulled in toward the middle of its wall, so the perspective doesn't drag it out to the screen's edge)
-		const pullA = 0.5 + (def.along - 0.5) * 0.6, sp2 = 0.12;
+		const pullA = 0.5 + (def.along - 0.5) * 0.8, sp2 = 0.12;   // (pulled in a little, not all the way)
 		const hs = def.wall === 1 ? { px: pullA, pz: 1 - sp2 } : def.wall === 0 ? { px: sp2, pz: pullA } : { px: 1 - sp2, pz: 1 - pullA };
 		const av = avatarAt(hs.px, hs.pz);
 		c.hot = new THREE.Vector2(av.x, av.z);
@@ -2290,8 +2290,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			c.ring.position.x = cx + c.hot.x; c.ring.position.z = cz + c.hot.y;
 			// (a teardrop: its round end where you stand, its tail reaching to the creature's feet)
 			const tdx = c.root.position.x - c.ring.position.x, tdz = c.root.position.z - c.ring.position.z, tL = Math.max(0.5, Math.hypot(tdx, tdz) - 0.4 * c.size);
-			c.ringFill.geometry = new THREE.ShapeGeometry(new THREE.Shape(teardrop(0.34, tL)));
-			const edge = new THREE.Shape(teardrop(0.34, tL)); edge.holes.push(new THREE.Path(teardrop(0.28, tL - 0.12)));
+			c.ringFill.geometry = new THREE.ShapeGeometry(new THREE.Shape(teardrop(0.24, tL)));
+			const edge = new THREE.Shape(teardrop(0.24, tL)); edge.holes.push(new THREE.Path(teardrop(0.19, tL - 0.1)));
 			c.ringEdge.geometry = new THREE.ShapeGeometry(edge);
 			c.ring.rotation.y = Math.atan2(-tdx, -tdz);
 			g.add(c.ring);
