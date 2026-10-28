@@ -7,27 +7,38 @@
  * key and scale so every note fits. The grid names its notes.
  *
  * The three walls are one long sheet of paper. A playhead sweeps it, left
- * wall to right wall, eight beats on each, and every player is a pen riding
- * it in their own colour: the closer you stand to the wall being drawn on,
- * the higher your note. Your pen leaves a line behind it and plays your own
- * instrument as it moves. Tap any wall to drop a drum dot on the paper
- * (high on the wall a hi-hat, the middle a clap, low a kick); the playhead
- * plays it every time it passes.
+ * wall to right wall, eight beats on each, and plays whatever is on the
+ * paper as it passes, over a soft bed of chords and bass. Every player has
+ * their own colour and their own instrument.
  *
- * The rounds come round in threes, each in a new key and scale, a little
- * faster each time:
- *   TRACE THE LINE   a pencil melody is sketched on the paper and plays
- *                    softly; keep your pen on it (a point a step)
- *   HIT THE CHORDS   each bar is a chord (its name over it, its notes
- *                    shaded) over a bass line; stay on a chord note (a point
- *                    a step), and when three players cover the whole chord
- *                    together, FULL CHORD: a bonus each
- *   FREE JAM         paint anything; every pass leaves an echo that plays
- *                    on under the next, so the room layers up a song (a
- *                    point for every note you hold)
+ * The rounds come round in turn, each in a new key and scale, a little
+ * faster as they go:
+ *   TRACE THE LINE   every player is a pen riding the playhead: the closer
+ *                    you stand to the wall it's on, the higher your note. A
+ *                    pencil melody is sketched on the paper; keep your pen
+ *                    on it (a point a step)
+ *   DRAW BY MOVING   your pen is free: the floor unrolls onto the walls, so
+ *                    walking along a wall draws along it and stepping in
+ *                    towards it draws upwards. Draw any shape; wherever the
+ *                    playhead crosses your lines they sing (a point a note)
+ *   HIT THE CHORDS   pens on the playhead again; each bar is a chord (its
+ *                    name over it, its notes shaded); stay on a chord note
+ *                    (a point a step), and when three players cover the
+ *                    whole chord together, FULL CHORD: a bonus each
+ *   PAINT BY TOUCH   touch the walls to paint soft shades; touch again to
+ *                    deepen one. The playhead plays each shade as a chord of
+ *                    the notes it covers (a point a note)
+ *   BEND THE LINE    one long string runs across the paper; touch the walls
+ *                    to pull it up or down to where you touch. Pull it onto
+ *                    the pencil melody: each step you put right scores for
+ *                    you, and the whole line right is PERFECT
+ *   FREE JAM         pens on the playhead; paint anything; every pass leaves
+ *                    an echo that plays on under the next (a point a note)
+ * In the pen rounds, a tap on a wall drops a drum dot (high a shaker, the
+ * middle a snap, low a kick) that plays every time the playhead passes.
  *
- * Input: walls[n].dist (how near the wall under the playhead you stand:
- * pitch), clicks on the walls (drum dots).
+ * Input: walls[n].dist and walls[n].px (pitch, and the free pen), clicks on
+ * the walls (drums, shades, bending), credited to the nearest player.
  */
 IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 
@@ -52,13 +63,31 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 	const STEPS = 48;            // eighth notes in a pass: eight beats on each wall
 	const STEP_W = WIDTH / STEPS;
 	const BAR_STEPS = 8;
-	const INTRO = 3.2;           // seconds of a round's title card before the playhead sets off
+	const INTRO = 4;             // seconds of a round's title card before the playhead sets off
 	const NEAR = 0.1;            // nearer the wall than this is the top note...
 	const FAR = 0.9;             // ...further than this the bottom one
 	const STICKY = 0.7;          // rows the pen has to be pulled before it changes note
 	const MAX_DOTS = 40;
 	const LINE = 13;
 	const PEN_R = 22;
+
+	// the free pen (DRAW BY MOVING): the nearest wall, at your place along it;
+	// right at it is the top of the paper, the middle of the room the bottom
+	const FREE_NEAR = 0.06;
+	const FREE_FAR = 0.48;
+	const FREE_GAP = 14;         // how far the pen moves before it adds a point
+	const FREE_POINTS = 700;     // a player's ink, at most (the oldest goes first)
+
+	// shades (PAINT BY TOUCH)
+	const SHADE_R = 105;
+	const SHADE_GROW = 18;
+	const SHADE_MAX_R = 230;
+	const SHADE_MERGE = 70;      // a touch this near your own shade deepens it
+	const MAX_SHADES = 60;
+
+	// the string (BEND THE LINE)
+	const BEND_SIGMA = 1.7;      // steps: how wide a pull spreads
+	const BEND_OWN = 0.5;        // a pull this strong at a step makes it yours
 
 	const SCALES = {
 		'MAJOR PENTATONIC': [0, 2, 4, 7, 9],
@@ -72,45 +101,106 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 	};
 	const NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 	const NUMERALS = { i: 0, ii: 1, iii: 2, iv: 3, v: 4, vi: 5, vii: 6 };
+	// the bed under a round with no chords of its own
+	const BEDS = {
+		'MAJOR': ['I', 'vi', 'IV', 'V', 'I', 'IV'],
+		'MINOR': ['i', 'VI', 'III', 'VII', 'i', 'VI'],
+		'DORIAN': ['i', 'IV', 'i', 'VII', 'i', 'IV'],
+		'LYDIAN': ['I', 'II', 'I', 'vii', 'I', 'II'],
+		'MIXOLYDIAN': ['I', 'VII', 'IV', 'I', 'VII', 'I'],
+	};
 
 	const KINDS = {
-		trace: { title: 'TRACE THE LINE', fill: '#3f9e7f', loops: 2 },
-		chords: { title: 'HIT THE CHORDS', fill: '#7a72d8', loops: 2 },
-		jam: { title: 'FREE JAM', fill: '#e8a83c', loops: 3 },
+		trace: { title: 'TRACE THE LINE', how: 'STAND CLOSE TO THE WALL TO PLAY HIGH', fill: '#3f9e7f', loops: 2, pens: true },
+		shapes: { title: 'DRAW BY MOVING', how: 'WALK THE ROOM TO DRAW · NEAR THE WALL IS HIGH', fill: '#d0653f', loops: 3 },
+		chords: { title: 'HIT THE CHORDS', how: 'STAY ON THE SHADED NOTES', fill: '#7a72d8', loops: 2, pens: true },
+		shades: { title: 'PAINT BY TOUCH', how: 'TOUCH THE WALLS TO PAINT · TOUCH AGAIN TO DEEPEN', fill: '#d886b8', loops: 3 },
+		bend: { title: 'BEND THE LINE', how: 'TOUCH THE WALLS TO PULL THE LINE ONTO THE PENCIL', fill: '#4d5fc4', loops: 3 },
+		jam: { title: 'FREE JAM', how: 'PAINT ANYTHING · IT ALL FITS', fill: '#e8a83c', loops: 3, pens: true },
 	};
 	const ROUNDS = [
-		{ kind: 'trace', key: 0, scale: 'MAJOR PENTATONIC', bpm: 96 },
-		{ kind: 'chords', key: 0, scale: 'MAJOR', bpm: 96, prog: ['I', 'V', 'vi', 'IV', 'I', 'V'] },
-		{ kind: 'jam', key: 2, scale: 'DORIAN', bpm: 100 },
-		{ kind: 'trace', key: 9, scale: 'MINOR PENTATONIC', bpm: 100 },
-		{ kind: 'chords', key: 9, scale: 'MINOR', bpm: 104, prog: ['i', 'VI', 'III', 'VII', 'i', 'v'] },
-		{ kind: 'jam', key: 4, scale: 'BLUES', bpm: 104 },
-		{ kind: 'trace', key: 7, scale: 'MAJOR', bpm: 108 },
-		{ kind: 'chords', key: 7, scale: 'MAJOR', bpm: 108, prog: ['I', 'vi', 'IV', 'V', 'I', 'IV'] },
-		{ kind: 'jam', key: 5, scale: 'LYDIAN', bpm: 112 },
-		{ kind: 'trace', key: 2, scale: 'MIXOLYDIAN', bpm: 112 },
-		{ kind: 'chords', key: 5, scale: 'MAJOR', bpm: 116, prog: ['I', 'IV', 'ii', 'V', 'iii', 'vi'] },
-		{ kind: 'jam', key: 0, scale: 'MINOR PENTATONIC', bpm: 116 },
+		{ kind: 'trace', key: 0, scale: 'MAJOR PENTATONIC', bpm: 92 },
+		{ kind: 'shapes', key: 7, scale: 'MAJOR PENTATONIC', bpm: 88 },
+		{ kind: 'chords', key: 0, scale: 'MAJOR', bpm: 92, prog: ['I', 'V', 'vi', 'IV', 'I', 'V'] },
+		{ kind: 'shades', key: 9, scale: 'MINOR PENTATONIC', bpm: 84 },
+		{ kind: 'bend', key: 2, scale: 'DORIAN', bpm: 92 },
+		{ kind: 'jam', key: 2, scale: 'DORIAN', bpm: 96 },
+		{ kind: 'trace', key: 9, scale: 'MINOR PENTATONIC', bpm: 96 },
+		{ kind: 'shapes', key: 4, scale: 'BLUES', bpm: 92 },
+		{ kind: 'chords', key: 9, scale: 'MINOR', bpm: 100, prog: ['i', 'VI', 'III', 'VII', 'i', 'v'] },
+		{ kind: 'shades', key: 5, scale: 'LYDIAN', bpm: 88 },
+		{ kind: 'bend', key: 7, scale: 'MAJOR', bpm: 100 },
+		{ kind: 'jam', key: 0, scale: 'MINOR PENTATONIC', bpm: 104 },
 	];
-	const TUTORIAL_ROUND = { kind: 'trace', key: 0, scale: 'MAJOR PENTATONIC', bpm: 90, loops: Infinity };
+	const TUTORIAL_ROUND = { kind: 'trace', key: 0, scale: 'MAJOR PENTATONIC', bpm: 88, loops: Infinity };
 
 	const rowY = (r) => BOTTOM - r * (BOTTOM - TOP) / (ROWS - 1);
+	const yRow = (y) => Math.max(0, Math.min(ROWS - 1, Math.round((BOTTOM - y) / (BOTTOM - TOP) * (ROWS - 1))));
 	const stepX = (s) => (s + 0.5) * STEP_W;
 	const clamp01 = (v) => Math.max(0, Math.min(1, v));
 	const pick = (a) => a[Math.floor(Math.random() * a.length)];
+	const human = () => 0.88 + Math.random() * 0.2;   // (a touch of give in every note)
 
 	/* ---------- sound: everything synthesised ---------- */
 
+	// Every voice goes into one bus: straight out, into a long soft hall, and
+	// into an echo a dotted eighth behind that darkens as it repeats.
 	const AC = window.AudioContext || window.webkitAudioContext;
 	const ac = AC ? new AC() : null;
 	let master = null;
+	let bus = null;
+	let echo = null;
 	let noise = null;
 	if (ac) {
 		const comp = ac.createDynamicsCompressor();
+		comp.threshold.value = -18;
+		comp.ratio.value = 3;
 		comp.connect(ac.destination);
 		master = ac.createGain();
 		master.gain.value = 0.8;
 		master.connect(comp);
+
+		bus = ac.createGain();
+		bus.connect(master);
+
+		const hall = ac.createConvolver();
+		const len = Math.floor(ac.sampleRate * 3.2);
+		const ir = ac.createBuffer(2, len, ac.sampleRate);
+		for (let ch = 0; ch < 2; ch++) {
+			const d = ir.getChannelData(ch);
+			for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2);
+		}
+		hall.buffer = ir;
+		const hallSend = ac.createGain();
+		hallSend.gain.value = 0.42;
+		const hallTone = ac.createBiquadFilter();
+		hallTone.type = 'lowpass';
+		hallTone.frequency.value = 5200;
+		bus.connect(hallSend);
+		hallSend.connect(hall);
+		hall.connect(hallTone);
+		hallTone.connect(master);
+
+		echo = ac.createDelay(2);
+		echo.delayTime.value = 0.45;
+		const echoSend = ac.createGain();
+		echoSend.gain.value = 0.2;
+		const echoTone = ac.createBiquadFilter();
+		echoTone.type = 'lowpass';
+		echoTone.frequency.value = 2400;
+		const feedback = ac.createGain();
+		feedback.gain.value = 0.34;
+		bus.connect(echoSend);
+		echoSend.connect(echo);
+		echo.connect(echoTone);
+		echoTone.connect(feedback);
+		feedback.connect(echo);
+		echoTone.connect(hallSend);
+		const echoOut = ac.createGain();
+		echoOut.gain.value = 0.7;
+		echoTone.connect(echoOut);
+		echoOut.connect(master);
+
 		noise = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
 		const d = noise.getChannelData(0);
 		for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -118,118 +208,134 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 	const wake = () => { if (ac && ac.state === 'suspended') ac.resume(); };
 	const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
-	function gainEnv(t, attack, peak, decay) {
+	function gainEnv(t, attack, peak, decay, out = bus) {
 		const g = ac.createGain();
 		g.gain.setValueAtTime(0.0001, t);
 		g.gain.exponentialRampToValueAtTime(peak, t + attack);
 		g.gain.exponentialRampToValueAtTime(0.0001, t + attack + decay);
-		g.connect(master);
+		g.connect(out);
 		return g;
 	}
-	function tone(type, f, t, len, out) {
+	function tone(type, f, t, len, out, cents = 0) {
 		const o = ac.createOscillator();
 		o.type = type;
 		o.frequency.value = f;
+		o.detune.value = cents;
 		o.connect(out);
 		o.start(t);
 		o.stop(t + len + 0.05);
 		return o;
 	}
+	function lowpass(f, out, q = 0.6) {
+		const lp = ac.createBiquadFilter();
+		lp.type = 'lowpass';
+		lp.frequency.value = f;
+		lp.Q.value = q;
+		lp.connect(out);
+		return lp;
+	}
 
 	// one instrument a player, in player order
 	const VOICES = [
-		function piano(f, t, v) {
-			const g = gainEnv(t, 0.005, 0.32 * v, 0.9);
-			tone('triangle', f, t, 0.95, g);
-			const g2 = gainEnv(t, 0.005, 0.08 * v, 0.4);
-			tone('sine', f * 2, t, 0.45, g2);
+		function tines(f, t, v) {          // an electric piano: a round tone, a bright tine on top
+			tone('sine', f, t, 1.9, gainEnv(t, 0.004, 0.3 * v, 1.8));
+			tone('sine', f * 2, t, 1, gainEnv(t, 0.003, 0.06 * v, 0.9), 3);
+			tone('sine', f * 7, t, 0.16, gainEnv(t, 0.001, 0.022 * v, 0.13));
 		},
 		function marimba(f, t, v) {
-			tone('sine', f, t, 0.5, gainEnv(t, 0.004, 0.42 * v, 0.45));
-			tone('sine', f * 4, t, 0.1, gainEnv(t, 0.002, 0.12 * v, 0.07));
+			tone('sine', f, t, 0.8, gainEnv(t, 0.003, 0.36 * v, 0.75));
+			tone('sine', f * 4, t, 0.1, gainEnv(t, 0.002, 0.08 * v, 0.08));
+			tone('sine', f * 9.9, t, 0.05, gainEnv(t, 0.001, 0.02 * v, 0.03));
 		},
-		function pluck(f, t, v) {
-			const g = gainEnv(t, 0.004, 0.22 * v, 0.55);
-			const lp = ac.createBiquadFilter();
-			lp.type = 'lowpass';
-			lp.frequency.setValueAtTime(3200, t);
-			lp.frequency.exponentialRampToValueAtTime(380, t + 0.35);
-			lp.connect(g);
-			tone('sawtooth', f, t, 0.6, lp);
+		function harp(f, t, v) {
+			const g = gainEnv(t, 0.003, 0.28 * v, 1.6);
+			const lp = lowpass(4200, g, 0.4);
+			lp.frequency.setValueAtTime(4200, t);
+			lp.frequency.exponentialRampToValueAtTime(700, t + 0.9);
+			tone('triangle', f, t, 1.7, lp);
+			tone('sine', f * 2, t, 0.6, gainEnv(t, 0.002, 0.05 * v, 0.5));
 		},
 		function bell(f, t, v) {
-			const g = gainEnv(t, 0.003, 0.26 * v, 1.3);
-			const car = tone('sine', f, t, 1.35, g);
+			const g = gainEnv(t, 0.003, 0.18 * v, 2.4);
+			const car = tone('sine', f, t, 2.5, g);
 			const mg = ac.createGain();
-			mg.gain.setValueAtTime(f * 2.2, t);
-			mg.gain.exponentialRampToValueAtTime(1, t + 1);
+			mg.gain.setValueAtTime(f * 1.6, t);
+			mg.gain.exponentialRampToValueAtTime(1, t + 1.6);
 			mg.connect(car.frequency);
-			tone('sine', f * 3.5, t, 1.35, mg);
+			tone('sine', f * 3.5, t, 2.5, mg);
 		},
-		function lead(f, t, v) {
-			const g = gainEnv(t, 0.01, 0.12 * v, 0.5);
-			const lp = ac.createBiquadFilter();
-			lp.type = 'lowpass';
-			lp.frequency.value = 1700;
-			lp.connect(g);
-			tone('square', f, t, 0.55, lp);
+		function strings(f, t, v) {        // two detuned saws, soft and slow
+			const g = gainEnv(t, 0.07, 0.07 * v, 1.2);
+			const lp = lowpass(1300, g);
+			tone('sawtooth', f, t, 1.35, lp, -7);
+			tone('sawtooth', f, t, 1.35, lp, 7);
 		},
 		function flute(f, t, v) {
-			const g = gainEnv(t, 0.06, 0.3 * v, 0.7);
-			const o = tone('sine', f, t, 0.8, g);
+			const g = gainEnv(t, 0.08, 0.26 * v, 1);
+			const o = tone('sine', f, t, 1.1, g);
+			tone('triangle', f * 2, t, 1.1, gainEnv(t, 0.1, 0.02 * v, 0.8));
 			const lfo = ac.createOscillator();
 			const lg = ac.createGain();
-			lfo.frequency.value = 5.5;
-			lg.gain.value = f * 0.007;
+			lfo.frequency.value = 5.2;
+			lg.gain.setValueAtTime(0, t);
+			lg.gain.linearRampToValueAtTime(f * 0.006, t + 0.35);
 			lfo.connect(lg);
 			lg.connect(o.frequency);
 			lfo.start(t);
-			lfo.stop(t + 0.85);
+			lfo.stop(t + 1.15);
 		},
 	];
 
 	function note(voice, midi, vol = 1) {
 		if (!ac) return;
-		VOICES[voice % VOICES.length](hz(midi), ac.currentTime + 0.01, vol);
+		VOICES[voice % VOICES.length](hz(midi), ac.currentTime + 0.01, vol * human());
 	}
 	function guide(midi) {
 		if (!ac) return;
 		const t = ac.currentTime + 0.01;
-		tone('sine', hz(midi), t, 0.6, gainEnv(t, 0.02, 0.13, 0.55));
+		tone('sine', hz(midi), t, 0.9, gainEnv(t, 0.03, 0.09, 0.8));
 	}
 	function bass(midi, len) {
 		if (!ac) return;
 		const t = ac.currentTime + 0.01;
-		const g = gainEnv(t, 0.01, 0.34, len);
-		const lp = ac.createBiquadFilter();
-		lp.type = 'lowpass';
-		lp.frequency.value = 600;
-		lp.connect(g);
+		const g = gainEnv(t, 0.02, 0.3, len);
+		const lp = lowpass(420, g);
 		tone('triangle', hz(midi), t, len + 0.05, lp);
+		tone('sine', hz(midi), t, len + 0.05, lp);
 	}
-	function pad(midis, len) {
+	// the bed: each note two detuned soft triangles, swelling in and out
+	function pad(midis, len, vol = 1) {
 		if (!ac) return;
 		const t = ac.currentTime + 0.01;
-		for (const m of midis) tone('triangle', hz(m), t, len + 0.3, gainEnv(t, 0.25, 0.045, len));
+		for (const m of midis) {
+			const g = ac.createGain();
+			g.gain.setValueAtTime(0, t);
+			g.gain.linearRampToValueAtTime(0.03 * vol, t + Math.min(0.7, len * 0.4));
+			g.gain.setValueAtTime(0.03 * vol, t + len * 0.75);
+			g.gain.linearRampToValueAtTime(0, t + len + 0.9);
+			const lp = lowpass(1100, g);
+			g.connect(bus);
+			tone('triangle', hz(m), t, len + 1, lp, -6);
+			tone('triangle', hz(m), t, len + 1, lp, 6);
+		}
 	}
 	function drum(kind, vol = 1) {
 		if (!ac) return;
 		const t = ac.currentTime + 0.01;
 		if (kind === 'kick') {
-			const g = gainEnv(t, 0.002, 0.6 * vol, 0.22);
-			const o = tone('sine', 150, t, 0.25, g);
-			o.frequency.setValueAtTime(150, t);
-			o.frequency.exponentialRampToValueAtTime(42, t + 0.14);
+			const g = gainEnv(t, 0.003, 0.42 * vol, 0.3, master);   // (dry: the hall would muddy it)
+			const o = tone('sine', 110, t, 0.35, g);
+			o.frequency.exponentialRampToValueAtTime(46, t + 0.16);
 			return;
 		}
 		const src = ac.createBufferSource();
 		src.buffer = noise;
 		const f = ac.createBiquadFilter();
-		f.type = kind === 'hat' ? 'highpass' : 'bandpass';
-		f.frequency.value = kind === 'hat' ? 7000 : 1500;
-		f.Q.value = kind === 'hat' ? 0.7 : 1.2;
+		f.type = 'bandpass';
+		f.frequency.value = kind === 'hat' ? 6500 : 1800;
+		f.Q.value = kind === 'hat' ? 1.1 : 0.9;
 		src.connect(f);
-		f.connect(gainEnv(t, 0.002, (kind === 'hat' ? 0.18 : 0.45) * vol, kind === 'hat' ? 0.05 : 0.16));
+		f.connect(gainEnv(t, kind === 'hat' ? 0.008 : 0.002, (kind === 'hat' ? 0.07 : 0.26) * vol, kind === 'hat' ? 0.06 : 0.14));
 		src.start(t);
 		src.stop(t + 0.3);
 	}
@@ -238,7 +344,7 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 
 	let count = 0;
 	let scores = [];
-	let pens = [];             // { row, y, heldFor, flash, colour }
+	let pens = [];             // { row, y, heldFor, flash, colour, fx, fy, free: bool }
 	let latest = [];           // the tracker's last word
 	let isLive = false;        // the playhead is running (the tutorial and the play)
 	let t = 0;
@@ -252,6 +358,14 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 	let pass = 0;
 	let passes = [];           // per pass, per player: the row drawn at each step (-1: none)
 	let dots = [];             // drum dots: { s, kind, y, flash }
+	let strokes = [];          // free ink: { i, pts: [{ x, y }] }
+	let heard = [];            // per player, the rows their free ink played last step
+	let shades = [];           // { i, x, y, r, a, flash }
+	let line = null;           // the string: where it's pulled to (rows, per step)
+	let lineShown = null;      // where it's drawn (easing after the pull)
+	let lineBy = null;         // who last pulled each step (-1: no one)
+	let lineLast = -1;         // the row the string sounded last step
+	let rings = [];            // where ink sounded: { x, y, colour, age }
 	let pops = [];             // words floating up: { x, y, text, fill, age }
 	let taps = 0;
 	let fullBars = new Set();
@@ -261,34 +375,60 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 	function setUp(def) {
 		const scale = SCALES[def.scale];
 		const len = scale.length;
-		const base = 48 + (def.key > 6 ? def.key - 12 : def.key);
+		const base = 60 + (def.key > 5 ? def.key - 12 : def.key);
 		const midiAt = (r) => base + 12 * Math.floor(r / len) + scale[r % len];
 		const r = Object.assign({}, def, KINDS[def.kind], def.loops ? { loops: def.loops } : {}, {
 			scaleSteps: scale, len, base, midiAt,
 			label: `${NAMES[def.key]} ${def.scale}`,
 			names: Array.from({ length: ROWS }, (_, i) => NAMES[(def.key + scale[i % len]) % 12]),
 		});
-		if (def.kind === 'trace') r.melody = makeMelody(len);
 		if (def.kind === 'chords') r.chords = def.prog.map((num) => chordOf(num, r));
+		r.bed = bedOf(r);
+		if (def.kind === 'trace' || def.kind === 'bend') r.melody = makeMelody(r);
 		return r;
 	}
 
+	// The bed under each bar: { midis (the pad), bass, pcs (its pitch classes) }.
+	// Seven-note scales walk a progression; the pentatonics and the blues
+	// rock between home and its relative.
+	function bedOf(r) {
+		const low = r.base - 12;
+		if (r.chords) return r.chords.map((c) => ({ midis: c.midis.map((m) => m - 12), bass: low - 12 + r.scaleSteps[c.root] }));
+		if (r.len === 7) return (BEDS[r.scale] || BEDS.MAJOR).map((num) => chordOf(num, r)).map((c) => ({ midis: c.midis.map((m) => m - 12), bass: low - 12 + r.scaleSteps[c.root] }));
+		const major = r.scaleSteps[1] === 2;
+		const home = major ? [0, 4, 7, 12] : [0, 3, 7, 12];
+		const away = major ? [9, 12, 16, 21] : [3, 7, 10, 15];
+		return [home, away, home, away, away, home].map((set) => ({ midis: set.map((k) => low + k), bass: low - 12 + set[0] }));
+	}
+	const pcsOf = (b) => new Set(b.midis.map((m) => ((m % 12) + 12) % 12));
+
 	// A pencil melody: held notes of a quarter to a dotted half, mostly
-	// stepwise, coming home to a root over the last bar.
-	function makeMelody(len) {
+	// stepwise, landing on a note of the bed at each bar, and coming home to
+	// a root over the last bar.
+	function makeMelody(r) {
+		const len = r.len;
 		const out = new Array(STEPS);
 		const lo = len === 5 ? 1 : 2;
 		const hi = 9;
-		let r = len;
+		const onChord = (row, bar) => {
+			const pcs = pcsOf(r.bed[bar]);
+			for (let k = 0; k < ROWS; k++) for (const sgn of [1, -1]) {
+				const c = row + sgn * k;
+				if (c >= lo && c <= hi && pcs.has(r.midiAt(c) % 12)) return c;
+			}
+			return row;
+		};
+		let row = len;
 		let s = 0;
 		while (s < STEPS) {
 			const left = STEPS - s;
 			let d = left <= BAR_STEPS ? left : pick([2, 2, 4, 4, 6]);
 			if ((s % BAR_STEPS) + d > BAR_STEPS && left > BAR_STEPS) d = BAR_STEPS - (s % BAR_STEPS);
-			for (let k = 0; k < d; k++) out[s + k] = r;
+			if (s % BAR_STEPS === 0) row = onChord(row, s / BAR_STEPS);
+			for (let k = 0; k < d; k++) out[s + k] = row;
 			s += d;
-			r = Math.max(lo, Math.min(hi, r + pick([-2, -1, -1, -1, 1, 1, 1, 2, 3, -3])));
-			if (STEPS - s <= BAR_STEPS) r = Math.abs(r - len) <= Math.abs(r - 2 * len) || 2 * len > hi ? len : 2 * len;
+			row = Math.max(lo, Math.min(hi, row + pick([-2, -1, -1, -1, 1, 1, 1, 2, 3, -3])));
+			if (STEPS - s <= BAR_STEPS) row = Math.abs(row - len) <= Math.abs(row - 2 * len) || 2 * len > hi ? len : 2 * len;
 		}
 		return out;
 	}
@@ -319,8 +459,18 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 		pass = 0;
 		passes = [];
 		dots = [];
+		strokes = [];
+		heard = pens.map(() => new Set());
+		shades = [];
+		rings = [];
 		fullBars = new Set();
+		line = new Float32Array(STEPS).fill(5);
+		lineShown = new Float32Array(STEPS).fill(5);
+		lineBy = new Int8Array(STEPS).fill(-1);
+		lineLast = -1;
+		for (const p of pens) { p.free = false; p.stroke = null; }
 		newPass();
+		if (echo) echo.delayTime.value = 60 / round.bpm * 0.75;
 		show.label(`${round.title} · ${round.label}`);
 		if (show.fx) show.fx('stepIn', 0.6);
 	}
@@ -370,8 +520,6 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 			enter() {
 				isLive = false;
 				scores = scores.map(() => 0);
-				passes = [];
-				dots = [];
 				round = null;
 			},
 			draw(ctx, bt) {
@@ -396,7 +544,8 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 				if (phase !== 'intro' || !round) return;
 				show.onWalls(ctx, function (c) {
 					show.slam(c, round.title, W / 2, 190, 110, phaseT, { fill: round.fill });
-					show.text(c, round.label, W / 2, 300, 56, { fill: 'white', glow: round.fill, alpha: clamp01((phaseT - 0.4) * 3) });
+					show.text(c, round.label, W / 2, 300, 50, { fill: 'white', glow: round.fill, alpha: clamp01((phaseT - 0.4) * 3) });
+					show.text(c, round.how, W / 2, 400, 46, { fill: '#ffd23f', glow: INK, alpha: clamp01((phaseT - 0.8) * 3) });
 				});
 			},
 		},
@@ -417,7 +566,8 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 	function initGame(n) {
 		count = n;
 		scores = new Array(n).fill(0);
-		pens = Array.from({ length: n }, (_, i) => ({ row: 5, y: rowY(5), heldFor: 0, flash: 0, colour: PLAYER_COLORS[i % PLAYER_COLORS.length] }));
+		pens = Array.from({ length: n }, (_, i) => ({ row: 5, y: rowY(5), heldFor: 0, flash: 0, colour: PLAYER_COLORS[i % PLAYER_COLORS.length], fx: W * 1.5, fy: BOTTOM, free: false, stroke: null }));
+		heard = pens.map(() => new Set());
 		show.go('title');
 	}
 
@@ -427,9 +577,14 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 		if (show.paused || !round) return;
 		t += dt;
 		if (master) master.gain.value = 0.8 * (IGB.volume === undefined ? 1 : IGB.volume);
-		steerPens(dt);
+		if (round.pens) steerPens(dt);
+		if (round.kind === 'shapes') steerFree(dt);
+		if (round.kind === 'bend') for (let s = 0; s < STEPS; s++) lineShown[s] += (line[s] - lineShown[s]) * Math.min(1, dt * 10);
 		for (const p of pens) p.flash = Math.max(0, p.flash - dt * 3);
 		for (const d of dots) d.flash = Math.max(0, d.flash - dt * 4);
+		for (const sh of shades) sh.flash = Math.max(0, sh.flash - dt * 3);
+		for (const r of rings) r.age += dt;
+		rings = rings.filter((r) => r.age < 0.6);
 		for (const p of pops) p.age += dt;
 		pops = pops.filter((p) => p.age < 1.2);
 
@@ -453,7 +608,7 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 		}
 	}
 
-	// each pen follows its player: nearer the wall under the playhead, higher
+	// each pen on the playhead follows its player: nearer the wall under the playhead, higher
 	function steerPens(dt) {
 		const wall = Math.max(0, Math.min(2, Math.floor(playheadX() / W)));
 		pens.forEach(function (pen, i) {
@@ -471,23 +626,73 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 		});
 	}
 
+	// The free pens: the floor unrolled onto the walls. Your nearest wall,
+	// at your place along it; the nearer you are, the higher up it. (Along
+	// the diagonals two walls meet at their shared corner at the same
+	// height, so the pen never jumps.)
+	function freeSpot(p) {
+		if (!p || !p.walls) return null;
+		let best = 0;
+		for (let n = 1; n < 3; n++) if (p.walls[n].dist < p.walls[best].dist) best = n;
+		const w = p.walls[best];
+		if (isNaN(w.px) || isNaN(w.dist)) return null;
+		return {
+			x: (best + clamp01(w.px)) * W,
+			y: TOP - 30 + clamp01((w.dist - FREE_NEAR) / (FREE_FAR - FREE_NEAR)) * (BOTTOM - TOP + 60),
+		};
+	}
+
+	function steerFree(dt) {
+		pens.forEach(function (pen, i) {
+			const at = freeSpot(latest[i]);
+			if (!at) return;
+			if (!pen.free) { pen.fx = at.x; pen.fy = at.y; pen.free = true; }
+			const k = Math.min(1, dt * 9);
+			pen.fx += (at.x - pen.fx) * k;
+			pen.fy += (at.y - pen.fy) * k;
+			if (phase !== 'run') return;
+			let st = pen.stroke;
+			const lastPt = st && st.pts[st.pts.length - 1];
+			if (!st || Math.hypot(pen.fx - lastPt.x, pen.fy - lastPt.y) > 260) {
+				st = pen.stroke = { i, pts: [{ x: pen.fx, y: pen.fy }] };
+				strokes.push(st);
+			} else if (Math.hypot(pen.fx - lastPt.x, pen.fy - lastPt.y) >= FREE_GAP) {
+				st.pts.push({ x: pen.fx, y: pen.fy });
+			}
+			// (a player's ink is limited: the oldest goes first)
+			let total = 0;
+			for (const s of strokes) if (s.i === i) total += s.pts.length;
+			while (total > FREE_POINTS) {
+				const oldest = strokes.find((s) => s.i === i);
+				oldest.pts.shift();
+				total--;
+				if (oldest.pts.length < 2 && oldest !== st) strokes.splice(strokes.indexOf(oldest), 1);
+			}
+		});
+	}
+
 	function playStep(s) {
 		const bar = Math.floor(s / BAR_STEPS);
 		const inBar = s % BAR_STEPS;
 		const stepLen = 60 / round.bpm / 2;
+		const bed = round.bed[bar];
 
-		// the backing: a soft kick on one and three, hats on the offbeats
-		if (inBar === 0 || inBar === 4) drum('kick', 0.45);
-		if (s % 2 === 1) drum('hat', 0.35);
+		// the bed: a pad for the bar, a bass on one (and three, in the chords),
+		// a soft kick and shaker underneath
+		if (inBar === 0) pad(bed.midis, stepLen * BAR_STEPS, round.kind === 'chords' ? 1.3 : 1);
+		if (inBar === 0) bass(bed.bass, stepLen * (round.kind === 'chords' ? 4 : 7));
+		if (round.kind === 'chords' && inBar === 4) bass(bed.bass + 12, stepLen * 3);
+		if (inBar === 0 || inBar === 5) drum('kick', inBar === 0 ? 0.55 : 0.32);
+		if (s % 2 === 1) drum('hat', s % 4 === 3 ? 0.9 : 0.55);
 
 		if (round.kind === 'trace') {
 			const m = round.melody[s];
-			if (s === 0 || m !== round.melody[s - 1]) guide(round.midiAt(m) + 12);
+			if (s === 0 || m !== round.melody[s - 1]) guide(round.midiAt(m));
 		}
-		if (round.kind === 'chords') {
-			const ch = round.chords[bar];
-			if (inBar === 0) pad(ch.midis.map((m) => m + 12), stepLen * BAR_STEPS);
-			if (inBar === 0 || inBar === 4 || inBar === 6) bass(round.base - 12 + round.scaleSteps[ch.root], stepLen * (inBar === 6 ? 2 : 4));
+		if (round.kind === 'bend') {
+			const m = round.melody[s];
+			if (s === 0 || m !== round.melody[s - 1]) guide(round.midiAt(m) - 12);
+			playLine(s);
 		}
 
 		// echoes: in the jam, every earlier pass plays on, quieter
@@ -495,14 +700,21 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 			passes.slice(0, -1).forEach(function (layer, age) {
 				layer.forEach(function (ink, i) {
 					const r = ink[s];
-					if (r >= 0 && (s === 0 || r !== ink[s - 1] || s % 4 === 0)) note(i, round.midiAt(r), 0.35 + 0.15 * age);
+					if (r >= 0 && (s === 0 || r !== ink[s - 1] || s % BAR_STEPS === 0)) note(i, round.midiAt(r), 0.3 + 0.12 * age);
 				});
 			});
 		}
 
+		if (round.kind === 'shapes') playStrokes(s);
+		if (round.kind === 'shades') playShades(s);
+
 		for (const d of dots) if (d.s === s) { drum(d.kind); d.flash = 1; }
 
-		// the pens: draw, play, score
+		if (round.pens) playPens(s, bar);
+	}
+
+	// the pens on the playhead: draw, play, score
+	function playPens(s, bar) {
 		const ink = passes[passes.length - 1];
 		const covered = new Map();   // chord degree -> players on it
 		pens.forEach(function (pen, i) {
@@ -510,7 +722,7 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 			const was = s > 0 ? ink[i][s - 1] : -1;
 			ink[i][s] = r;
 			if (r !== was) pen.heldFor = 0; else pen.heldFor++;
-			if (r !== was || s % 4 === 0) note(i, round.midiAt(r), 1);
+			if (r !== was || s % BAR_STEPS === 0) note(i, round.midiAt(r), s % BAR_STEPS === 0 ? 1.05 : 0.9);
 
 			if (round.kind === 'trace' && r === round.melody[s]) score(i, 1);
 			if (round.kind === 'chords') {
@@ -535,7 +747,84 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 		}
 	}
 
+	// Free ink sings where the playhead crosses it: every line through this
+	// step's middle is a note (a shape crossing it twice, two).
+	function playStrokes(s) {
+		const cx = stepX(s);
+		const now = pens.map(() => new Map());   // per player: row -> y
+		for (const st of strokes) {
+			const pts = st.pts;
+			for (let k = 1; k < pts.length; k++) {
+				const a = pts[k - 1];
+				const b = pts[k];
+				if ((a.x - cx) * (b.x - cx) > 0 || a.x === b.x) continue;
+				const y = a.y + (b.y - a.y) * (cx - a.x) / (b.x - a.x);
+				now[st.i].set(yRow(y), y);
+			}
+		}
+		now.forEach(function (rows, i) {
+			let n = 0;
+			for (const [r, y] of rows) {
+				const fresh = !heard[i].has(r) || s % BAR_STEPS === 0;
+				if (fresh && n < 3) {
+					note(i, round.midiAt(r), 0.85);
+					score(i, 1);
+					rings.push({ x: cx, y, colour: pens[i].colour, age: 0 });
+					n++;
+				}
+			}
+			heard[i] = new Set(rows.keys());
+		});
+	}
+
+	// Each shade is a chord of the rows it covers under the playhead: struck
+	// as the playhead comes into it, and again at each bar.
+	function playShades(s) {
+		const cx = stepX(s);
+		const prev = stepX(s - 1);
+		for (const sh of shades) {
+			const dx = Math.abs(cx - sh.x);
+			if (dx > sh.r) continue;
+			const entering = Math.abs(prev - sh.x) > sh.r || s === 0;
+			if (!entering && s % BAR_STEPS !== 0) continue;
+			const half = Math.sqrt(sh.r * sh.r - dx * dx);
+			const top = yRow(sh.y - half);
+			const bot = yRow(sh.y + half);
+			const rows = [];
+			for (let r = bot; r <= top; r++) rows.push(r);
+			// (no more than three of them: the top, the bottom and the middle)
+			const chosen = rows.length <= 3 ? rows : [rows[0], rows[Math.floor(rows.length / 2)], rows[rows.length - 1]];
+			chosen.forEach((r, k) => stage.timeout(() => note(sh.i, round.midiAt(r), 0.45 + sh.a * 0.6), k * 45));   // (a gentle strum)
+			score(sh.i, chosen.length);
+			sh.flash = 1;
+		}
+	}
+
+	// The string plays its own row at each step (in the voice of whoever
+	// last pulled it there); steps on the pencil score for whoever put them right.
+	function playLine(s) {
+		const r = Math.round(line[s]);
+		const by = lineBy[s];
+		if (r !== lineLast || s % BAR_STEPS === 0) note(by >= 0 ? by : 0, round.midiAt(r), by >= 0 ? 0.95 : 0.7);
+		lineLast = r;
+		if (r === round.melody[s] && by >= 0) {
+			score(by, 1);
+			rings.push({ x: stepX(s), y: rowY(r), colour: pens[by].colour, age: 0 });
+		}
+		if (s === STEPS - 1) {
+			let right = 0;
+			for (let k = 0; k < STEPS; k++) if (Math.round(line[k]) === round.melody[k]) right++;
+			if (right === STEPS) {
+				pops.push({ x: W * 1.5, y: TOP - 40, text: 'PERFECT!', fill: round.fill, age: 0, size: 90 });
+				for (let i = 0; i < count; i++) score(i, 10);
+				if (show.fx) show.fx('fanfare', 0.5);
+				round.melody = makeMelody(round);
+			}
+		}
+	}
+
 	function score(i, n) {
+		if (i < 0 || i >= count) return;
 		scores[i] += n;
 		pens[i].flash = 1;
 	}
@@ -552,20 +841,27 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 
 	function drawWorld(ctx) {
 		art.rect(ctx, 0, 0, WIDTH, H, { fill: PAPER });
+		if (round && round.kind === 'shades') drawShades(ctx);
 		drawGrid(ctx);
 		if (!round) return;
 		if (round.kind === 'chords') drawChords(ctx);
-		if (round.kind === 'trace') drawMelody(ctx);
+		if (round.kind === 'trace' || round.kind === 'bend') drawMelody(ctx);
 
-		// the earlier passes, faint (the echoes, in the jam)
-		passes.slice(0, -1).forEach((layer, age) => layer.forEach((ink, i) => drawInk(ctx, ink, i, STEPS, round.kind === 'jam' ? 0.3 + 0.1 * age : 0.18)));
-		// this pass, up to the playhead
-		const now = passes[passes.length - 1];
-		if (now && phase === 'run') now.forEach((ink, i) => drawInk(ctx, ink, i, cur + 1, 1, true));
+		if (round.pens) {
+			// the earlier passes, faint (the echoes, in the jam)
+			passes.slice(0, -1).forEach((layer, age) => layer.forEach((ink, i) => drawInk(ctx, ink, i, STEPS, round.kind === 'jam' ? 0.3 + 0.1 * age : 0.18)));
+			// this pass, up to the playhead
+			const now = passes[passes.length - 1];
+			if (now && phase === 'run') now.forEach((ink, i) => drawInk(ctx, ink, i, cur + 1, 1, true));
+		}
+		if (round.kind === 'shapes') drawStrokes(ctx);
+		if (round.kind === 'bend') drawLine(ctx);
 
 		drawDots(ctx);
 		if (phase === 'run') drawPlayhead(ctx);
+		if (round.kind === 'shapes') drawFreePens(ctx);
 
+		for (const r of rings) art.circle(ctx, r.x, r.y, 14 + r.age * 70, { fill: r.colour, alpha: 0.4 * (1 - r.age / 0.6) });
 		for (const p of pops) {
 			art.text(ctx, p.text, p.x, p.y - p.age * 60, { size: p.size || 44, font: 'Lexend', fill: p.fill, alpha: clamp01(1.2 - p.age), outline: 'white', outlineWidth: 6 });
 		}
@@ -651,6 +947,76 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 		ctx.restore();
 	}
 
+	// free ink: smooth strokes through the points (midpoint curves)
+	function drawStrokes(ctx) {
+		ctx.save();
+		ctx.lineWidth = LINE;
+		ctx.lineCap = 'round';
+		ctx.lineJoin = 'round';
+		for (const st of strokes) {
+			const p = st.pts;
+			if (p.length < 2) continue;
+			ctx.strokeStyle = pens[st.i].colour;
+			ctx.beginPath();
+			ctx.moveTo(p[0].x, p[0].y);
+			for (let k = 1; k < p.length - 1; k++) ctx.quadraticCurveTo(p[k].x, p[k].y, (p[k].x + p[k + 1].x) / 2, (p[k].y + p[k + 1].y) / 2);
+			ctx.lineTo(p[p.length - 1].x, p[p.length - 1].y);
+			ctx.stroke();
+		}
+		ctx.restore();
+	}
+
+	function drawFreePens(ctx) {
+		pens.forEach(function (pen) {
+			if (!pen.free) return;
+			if (pen.flash > 0) art.circle(ctx, pen.fx, pen.fy, PEN_R + 18 * (1 - pen.flash) + 6, { fill: pen.colour, alpha: pen.flash * 0.35 });
+			art.circle(ctx, pen.fx, pen.fy, PEN_R + 4, { fill: INK });
+			art.circle(ctx, pen.fx, pen.fy, PEN_R, { fill: pen.colour });
+		});
+	}
+
+	// shades: soft discs, the deeper the more they've been touched
+	function drawShades(ctx) {
+		for (const sh of shades) {
+			const c = pens[sh.i] ? pens[sh.i].colour : INK;
+			const a = sh.a * (1 + sh.flash * 0.4);
+			art.circle(ctx, sh.x, sh.y, sh.r * (1 + sh.flash * 0.05), { fill: c, alpha: a * 0.35 });
+			art.circle(ctx, sh.x, sh.y, sh.r * 0.72, { fill: c, alpha: a * 0.35 });
+			art.circle(ctx, sh.x, sh.y, sh.r * 0.42, { fill: c, alpha: a * 0.4 });
+		}
+	}
+
+	// the string: a smooth line through its steps, each stretch in the colour of who pulled it
+	function drawLine(ctx) {
+		const pt = (s) => ({ x: stepX(s), y: rowY(lineShown[s]) });
+		ctx.save();
+		ctx.lineCap = 'round';
+		ctx.lineJoin = 'round';
+		ctx.lineWidth = LINE + 8;
+		ctx.strokeStyle = INK;
+		ctx.beginPath();
+		ctx.moveTo(0, pt(0).y);
+		for (let s = 0; s < STEPS; s++) ctx.lineTo(pt(s).x, pt(s).y);
+		ctx.lineTo(WIDTH, pt(STEPS - 1).y);
+		ctx.stroke();
+		ctx.lineWidth = LINE - 2;
+		for (let s = 0; s < STEPS; s++) {
+			const a = s === 0 ? { x: 0, y: pt(0).y } : { x: (pt(s - 1).x + pt(s).x) / 2, y: (pt(s - 1).y + pt(s).y) / 2 };
+			const b = s === STEPS - 1 ? { x: WIDTH, y: pt(s).y } : { x: (pt(s).x + pt(s + 1).x) / 2, y: (pt(s).y + pt(s + 1).y) / 2 };
+			ctx.strokeStyle = lineBy[s] >= 0 && pens[lineBy[s]] ? pens[lineBy[s]].colour : '#fffaf0';
+			ctx.beginPath();
+			ctx.moveTo(a.x, a.y);
+			ctx.lineTo(pt(s).x, pt(s).y);
+			ctx.lineTo(b.x, b.y);
+			ctx.stroke();
+		}
+		ctx.restore();
+		// the steps already on the pencil: a dot
+		for (let s = 0; s < STEPS; s++) {
+			if (Math.round(line[s]) === round.melody[s]) art.circle(ctx, pt(s).x, pt(s).y, 7, { fill: INK });
+		}
+	}
+
 	function drawDots(ctx) {
 		for (const d of dots) {
 			const r = { hat: 10, clap: 15, kick: 21 }[d.kind];
@@ -665,6 +1031,7 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 	function drawPlayhead(ctx) {
 		const x = playheadX();
 		art.rect(ctx, x - 2, TOP - 40, 4, BOTTOM - TOP + 80, { fill: INK });
+		if (!round.pens) return;
 		pens.forEach(function (pen, i) {
 			const off = (i - (count - 1) / 2) * 5;
 			const y = pen.y + off;
@@ -680,10 +1047,33 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 		latest = players;
 	};
 
-	// a tap on a wall drops a drum dot where it lands (snapped to the eighth)
+	// Who touched: the player the simulator just touched with, or else the
+	// one nearest that spot on the wall.
+	function toucher(at) {
+		for (let i = 0; i < count; i++) {
+			const p = latest[i];
+			if (p && p.wallChange !== undefined && p.wallChange !== null && p.wallChange !== false) { p.wallChange = null; return i; }
+		}
+		const wall = Math.max(0, Math.min(2, Math.floor(at.x / W)));
+		const along = at.x / W - wall;
+		let best = 0;
+		let bestD = Infinity;
+		for (let i = 0; i < count; i++) {
+			const w = latest[i] && latest[i].walls && latest[i].walls[wall];
+			if (!w) continue;
+			const d = Math.abs(w.px - along) + w.dist;
+			if (d < bestD) { bestD = d; best = i; }
+		}
+		return best;
+	}
+
 	function tap(at) {
 		wake();
-		if (!isLive || !round || !at) return;
+		if (!isLive || !round || !at || !count) return;
+		taps++;
+		if (round.kind === 'shades') return paint(at);
+		if (round.kind === 'bend') return bend(at);
+		// a drum dot where it lands (snapped to the eighth)
 		const s = Math.max(0, Math.min(STEPS - 1, Math.floor(at.x / STEP_W)));
 		const kind = at.y < H * 0.45 ? 'hat' : at.y < H * 0.7 ? 'clap' : 'kick';
 		const y = Math.max(TOP, Math.min(BOTTOM, at.y));
@@ -694,16 +1084,61 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 			if (dots.length > MAX_DOTS) dots.shift();
 			drum(kind);
 		}
-		taps++;
 	}
+
+	// a shade where you touch, or a deeper, bigger one where you touched before
+	function paint(at) {
+		const i = toucher(at);
+		const y = Math.max(TOP, Math.min(BOTTOM, at.y));
+		const mine = shades.find((sh) => sh.i === i && Math.hypot(sh.x - at.x, sh.y - y) < SHADE_MERGE);
+		if (mine) {
+			mine.a = Math.min(1, mine.a + 0.2);
+			mine.r = Math.min(SHADE_MAX_R, mine.r + SHADE_GROW);
+			mine.flash = 1;
+		} else {
+			shades.push({ i, x: at.x, y, r: SHADE_R, a: 0.45, flash: 1 });
+			if (shades.length > MAX_SHADES) shades.shift();
+		}
+		note(i, round.midiAt(yRow(y)), 0.6);
+	}
+
+	// pull the string to where you touch, the pull spreading a little either side
+	function bend(at) {
+		const i = toucher(at);
+		const goal = Math.max(0, Math.min(ROWS - 1, (BOTTOM - at.y) / (BOTTOM - TOP) * (ROWS - 1)));
+		const c = at.x / STEP_W - 0.5;
+		for (let s = Math.max(0, Math.floor(c - 5)); s <= Math.min(STEPS - 1, Math.ceil(c + 5)); s++) {
+			const w = Math.exp(-((s - c) * (s - c)) / (2 * BEND_SIGMA * BEND_SIGMA));
+			line[s] += (goal - line[s]) * w;
+			if (w >= BEND_OWN) lineBy[s] = i;
+		}
+		note(i, round.midiAt(Math.round(goal)), 0.6);
+	}
+
 	stage.$el.on('pointerdown.melody-canvas', wake);
 	stage.$el.on('click.melody-canvas', (e) => tap(IGB.toWorld(e)));
+
+	/* ---------- debug: straight to a mode ---------- */
+
+	if (show.menu && show.menu.drow) {
+		const $modes = show.menu.drow('MODES');
+		for (const kind of Object.keys(KINDS)) {
+			show.menu.dbutton(KINDS[kind].title, function () {
+				if (!count) return;
+				if (show.beat !== 'play') show.go('play');
+				roundNo = ROUNDS.findIndex((r) => r.kind === kind);
+				startRound(ROUNDS[roundNo]);
+			}, KINDS[kind].fill).appendTo($modes);
+		}
+	}
 
 	self.state = () => Object.assign(show.state(), {
 		scores: scores.slice(),
 		round: round && { kind: round.kind, label: round.label, phase, step: cur, pass },
-		pens: pens.map((p) => p.row),
+		pens: pens.map((p) => (round && round.kind === 'shapes' ? { x: Math.round(p.fx), y: Math.round(p.fy) } : p.row)),
 		dots: dots.length,
+		strokes: strokes.length,
+		shades: shades.length,
 	});
 
 	self.fini = function () {
