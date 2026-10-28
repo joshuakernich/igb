@@ -116,7 +116,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	// and its pattern
 
 	const CLEARINGS = [
-		{ name: 'MUSHROOM HOLLOW', sub: 'SQUAT ON A PUFFBALL · STRUM THE SPIDERWEB', bpm: 100, root: 261.6, puffballs: [[0, 0.2], [0, 0.5], [0, 0.8]], web: [2, 0.5],
+		{ name: 'MUSHROOM HOLLOW', sub: 'SQUAT BY A PUMPKIN · STRUM THE SPIDERWEB', bpm: 100, root: 261.6, puffballs: [[0, 0.2], [0, 0.5], [0, 0.8]], web: [2, 0.5],
 			sky: ['#2a1450', '#ff8fb8'], fog: '#5a2a5e', ground: '#5d7a3a', sun: '#ffb27a', lights: ['#ff5fd0', '#7affd8', '#ffd04a', '#8a7aff'],
 			groove: { kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], hat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], snare: [] },
 			motif: 'mushrooms',
@@ -334,7 +334,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
 	}
 	const resume = () => { if (ac && ac.state !== 'running') ac.resume().catch(() => {}); };
-	// a voice that holds while you hold it: a puffball's drone, the moonbeam's whistle
+	// a voice that holds while you hold it: a pumpkin's drone, the moonbeam's whistle
 	// a held shimmer: glassy sine partials through a lowpass, trembling; set(e, pan) swells
 	// it (louder, brighter, the upper partials blooming, the tremble quicker) and leans it
 	// left or right; stop() lets it ring away
@@ -811,20 +811,22 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const C = CLEARINGS[here];
 		wade(dt, live && !glide);
 		const on = live && !glide;
-		// puffballs: squat on one to squash it; hold the squat for its drone
+		// pumpkins: squat by one to squash it; hold the squat for its drone
 		for (const pb of puffs[here] || []) {
 			let who = -1;
 			if (on) for (let i = 0; i < count; i++) { const p = latest[i], q = pl[i]; if (p && q.seen && near(p, pb.spot) && q.base !== null && p.py > q.base + SQUAT * 0.7) who = i; }
 			if (who >= 0 && !pb.pressed) {
 				pb.pressed = true;
 				if (audioOn()) { SND.bwomp(clock() + 0.005, 0.5); pb.voice = holdVoice(freqOf(C.root, pb.deg) / 2, 'drone', pb.w); }
-				spray(pb.pos.clone().setY(0.6), '#f8f0c8', 30, 2.2, 2.5);
+				spray(pb.pos.clone().setY(0.6), '#ffd27a', 30, 2.2, 2.5);   // (a burst of seeds)
+				pb.v -= 6;   // (a thump down)
 				scores[who] += 3;
 			} else if (who < 0 && pb.pressed) {
 				pb.pressed = false;
+				pb.v += 5;   // (and it springs back up)
 				if (pb.voice) { pb.voice.stop(); pb.voice = null; }
 			}
-			if (pb.pressed && Math.random() < 0.3) spray(pb.pos.clone().setY(0.5), '#f8f0c8', 2, 1, 2);
+			if (pb.pressed && Math.random() < 0.3) spray(pb.pos.clone().setY(0.5), '#ffb84a', 2, 1, 2);
 		}
 		for (const [ci, list] of puffs.entries()) if (list && ci !== here) for (const pb of list) if (pb.voice) { pb.voice.stop(); pb.voice = null; pb.pressed = false; }
 		// the moonbeam: whoever stands in it plays it; their height bends the note
@@ -2730,20 +2732,50 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	const near = (p, spot, r = STAND) => Math.hypot(p.px - spot.px, p.pz - spot.pz) < r;
 	const labels = [];   // little hints, drawn on the walls: { ci, wall, at, text }
 
-	// PUFFBALL BELLOWS: squat by one and it squashes with a BWOMP and a puff of
-	// spores; hold the squat and it drones
+	// PUMPKIN BELLOWS: plump ribbed pumpkins with little faces; squat by one and it
+	// squashes (eyes screwed shut, mouth an O) with a BWOMP and a burst of seeds, drones
+	// while you hold it, and springs back up, wobbling, when you stand
 	const puffs = [];
+	let _pumpkinGeo = null;
+	function pumpkinGeo() {   // (a squat sphere, eight deep ribs, dimpled top and bottom; its base on the ground)
+		if (_pumpkinGeo) return _pumpkinGeo;
+		const g = new THREE.SphereGeometry(1, 64, 32), a = g.attributes.position;
+		for (let i = 0; i < a.count; i++) {
+			let x = a.getX(i), y = a.getY(i), z = a.getZ(i);
+			const r = Math.hypot(x, z), th = Math.atan2(z, x);
+			const rib = 0.9 + 0.1 * Math.pow(Math.abs(Math.cos(th * 4)), 0.5);   // (the lobes, and the grooves between)
+			x *= rib; z *= rib;
+			y = y * 0.78 - Math.sign(y) * 0.22 * Math.exp(-r * r / 0.06);   // (squat, pinched in at the stem and the base)
+			a.setXYZ(i, x, y, z);
+		}
+		g.computeVertexNormals();
+		g.translate(0, 0.78, 0);
+		return (_pumpkinGeo = g);
+	}
 	function buildPuffballs(g, ci, cx, cz, defs) {
-		const skin = skinMat('#efe4cc');
+		const skin = rimify(new THREE.MeshPhysicalMaterial({ color: '#ff8414', roughness: 0.42, bumpMap: TEX.skin, bumpScale: 1.2, clearcoat: 0.6, clearcoatRoughness: 0.3, emissive: '#ff5a00', emissiveIntensity: 0.12 }));
+		const stemM = new THREE.MeshStandardMaterial({ color: '#5a6a22', map: TEX.bark, bumpMap: TEX.bark, bumpScale: 2, roughness: 0.8 });
+		const leafM = new THREE.MeshStandardMaterial({ color: '#4caa3a', roughness: 0.5, side: THREE.DoubleSide });
 		puffs[ci] = defs.map(([w, along], k) => {
 			const pos = wallPoint(cx, cz, w, along, 0.42, 0);
-			const m = mesh(GEO.sph, skin, g, pos.x, 0.3, pos.z, 0.42, 0.32, 0.42);
-			for (let j = 0; j < 14; j++) {
-				const a = rnd() * Math.PI * 2, e = rr(0.2, 1.3);
-				mesh(GEO.sphLo, skin, m, Math.cos(a) * Math.sin(e), Math.cos(e) * 0.95, Math.sin(a) * Math.sin(e), 0.07, 0.07, 0.07);
-			}
+			const root = new THREE.Group(); root.position.copy(pos); g.add(root);
+			root.lookAt(cx, 0, cz);   // (its face to the room)
+			const sz = [0.46, 0.4, 0.5][k % 3];
+			const body = new THREE.Group(); root.add(body);   // (the squash: scaled from the ground up)
+			mesh(pumpkinGeo(), skin, body, 0, 0, 0, sz, sz * 0.82, sz);
+			// a stubby curved stem, a leaf, and a curly tendril
+			const stem = new THREE.Group(); stem.position.set(0, sz * 0.82 * 1.38, 0); body.add(stem);
+			const st = mesh(new THREE.CylinderGeometry(0.035, 0.06, 0.2, 8), stemM, stem, 0, 0.08, 0);
+			st.rotation.z = 0.35; st.position.x = 0.03;
+			const leaf = mesh(GEO.sph, leafM, stem, -0.1, 0.02, 0.04, 0.14, 0.012, 0.08);
+			leaf.rotation.set(0.3, 0.6, -0.4);
+			const curl = [];
+			for (let t = 0; t <= 1; t += 0.05) curl.push(new THREE.Vector3(0.05 + Math.cos(t * 12) * 0.06 * (1 - t * 0.5), 0.04 + t * 0.12, Math.sin(t * 12) * 0.06 * (1 - t * 0.5)));
+			mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(curl), 40, 0.008, 5), leafM, stem);
+			// its little face, on the front
+			const face = makeFace(body, sz * 1.25, 0, sz * 0.82 * 0.8, sz * 1.01, { gap: 0.3 });
 			labels.push({ ci, wall: w, at: pos.clone().setY(0.1), text: 'SQUAT HERE' });
-			return { m, pos, w, spot: spotOf(w, along), deg: [-5, -3, -1][k % 3], sq: 0, pressed: false, voice: null };
+			return { root, body, stem, face, sz, pos, w, spot: spotOf(w, along), deg: [-5, -3, -1][k % 3], sq: 0, v: 0, pressed: false, voice: null, blinkT: rr(1, 4), ph: rnd() * 6 };
 		});
 	}
 
@@ -3346,11 +3378,30 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				st.m.position.z = st.z0 + (gw.on[i] ? 0.035 + gw.flash[i] * 0.04 : 0);   // (a lit stone stands proud of the wall)
 			}
 		});
-		// puffballs squash
+		// pumpkins: a spring, so they squish, overshoot and wobble; a tremble while held; faces to match
 		for (const [ci, list] of puffs.entries()) if (list && clearingGroups[ci].visible) for (const pb of list) {
-			pb.sq = lerp(pb.sq, pb.pressed ? 1 : 0, 1 - Math.exp(-dt * 14));
-			pb.m.scale.set(0.42 * (1 + pb.sq * 0.25 + pulse * 0.03), 0.32 * (1 - pb.sq * 0.45 + pulse * 0.05), 0.42 * (1 + pb.sq * 0.25 + pulse * 0.03));
-			pb.m.position.y = 0.3 * (1 - pb.sq * 0.45);
+			const want = pb.pressed ? 1 + Math.sin(rt * 7 + pb.ph) * 0.06 : 0;   // (held: it breathes with the drone)
+			pb.v += ((want - pb.sq) * 190 - pb.v * 7) * Math.min(dt, 0.05);
+			pb.sq += pb.v * Math.min(dt, 0.05);
+			const q = pb.sq, shake = pb.pressed ? Math.sin(rt * 38) * 0.012 : 0;
+			pb.body.scale.set(1 + q * 0.32 + shake + pulse * 0.025, Math.max(0.3, 1 - q * 0.5 + pulse * 0.04), 1 + q * 0.32 - shake + pulse * 0.025);
+			pb.body.rotation.z = pb.v * 0.012 + Math.sin(rt * 1.3 + pb.ph) * 0.02;
+			pb.stem.rotation.z = -pb.v * 0.05;
+			pb.stem.rotation.x = Math.sin(rt * 9 + pb.ph) * Math.min(0.3, Math.abs(pb.v) * 0.03);
+			// its face: screwed shut and an O when squashed; wide-eyed as it bounces back; a blink now and then
+			const f = pb.face, sqz = clamp(q, 0, 1), boing = clamp(-q * 3, 0, 1);
+			pb.blinkT -= dt;
+			const blink = pb.blinkT < 0.12 && pb.blinkT > 0 ? 0.1 : 1;
+			if (pb.blinkT < 0) pb.blinkT = rr(2, 5);
+			for (const e of f.eyes) {
+				e.eye.scale.set(1 + sqz * 0.3 + boing * 0.3, Math.max(0.1, lerp(1, 0.12, sqz) * blink) * (1 + boing * 0.4), 1);
+				e.brow.position.y = 0.36 * f.s + boing * 0.06 * f.s - sqz * 0.04 * f.s;
+				e.brow.rotation.z = -e.sx * (0.28 - sqz * 0.7);
+			}
+			f.mouth.open.scale.set(0.19 * f.s * (1 - sqz * 0.4), 0.02 * f.s + (sqz * 0.16 + boing * 0.08) * f.s, 0.07 * f.s);
+			f.mouth.smile.visible = sqz < 0.3 && boing < 0.3;
+			for (const t of f.mouth.teeth) t.visible = sqz < 0.3;
+			f.mouth.tongue.visible = sqz > 0.5;
 		}
 		// the web: each pluck sends a ripple out through the strands round it, and the spider runs to see
 		for (const [ci, wb] of webs.entries()) if (wb && clearingGroups[ci].visible) {
