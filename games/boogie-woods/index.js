@@ -827,10 +827,10 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			// standing in front of a creature
 			q.at = -1;
 			if (!live || glide) continue;
-			let best = null, bd = STAND;
+			let best = null, bd = 0.48 / (2 * R);   // (within half a metre of its pad)
 			for (const cr of creatures) {
 				if (cr.clearing !== here) continue;
-				const d = Math.hypot(p.px - cr.spot.px, p.pz - cr.spot.pz);
+				const d = Math.hypot(avCap(q.x) - cr.hot.x, avCap(q.z) - cr.hot.y) / (2 * R);   // (your avatar on its hotspot)
 				if (d < bd) { bd = d; best = cr; }
 			}
 			if (best) {
@@ -1390,10 +1390,15 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		c.spot = def.wall === 1 ? { px: def.along, pz: 1 - sp } : def.wall === 0 ? { px: sp, pz: def.along } : { px: 1 - sp, pz: 1 - def.along };
 		const sh = mesh(GEO.shadow, MAT.shadow, root, 0, 0.02, 0, 1.1 * c.size, 1.1 * c.size);
 		sh.rotation.x = -Math.PI / 2; sh.castShadow = false;
-		// a ring of light at its feet: bright when someone's in front of it
-		c.ring = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.5, 40), new THREE.MeshBasicMaterial({ color: c.tint.clone().multiplyScalar(1.6), transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide }));
-		c.ring.rotation.x = -Math.PI / 2; c.ring.position.y = 0.03; c.ring.scale.setScalar(c.size);
-		root.add(c.ring);
+		// its hotspot: a glowing pad on the ground in front of it, exactly where your avatar
+		// stands when you stand on it (from the clearing's middle; placed in the clearing later)
+		const av = avatarAt(c.spot.px, c.spot.pz);
+		c.hot = new THREE.Vector2(av.x, av.z);
+		c.ring = new THREE.Group();
+		c.ringFill = new THREE.Mesh(new THREE.CircleGeometry(0.36, 40), new THREE.MeshBasicMaterial({ map: TEX.soft, color: c.tint.clone().multiplyScalar(1.2), transparent: true, opacity: 0.35, depthWrite: false }));
+		c.ringEdge = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.36, 40), new THREE.MeshBasicMaterial({ color: c.tint.clone().multiplyScalar(1.6), transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide }));
+		for (const m of [c.ringFill, c.ringEdge]) { m.rotation.x = -Math.PI / 2; c.ring.add(m); }
+		c.ring.position.y = 0.035;
 		bouncer.scale.setScalar(c.size);
 		c.touchAt = () => c.root.localToWorld(_v.set(0, 0.35 * c.size, 0.2)).clone();
 		c.headAt = () => c.root.localToWorld(_v.set(0, c.top * c.size, 0)).clone();
@@ -2253,6 +2258,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			c.root.lookAt(cx, 0, cz);
 			c.root.userData.tag = 'creatures';
 			g.add(c.root);
+			c.ring.position.x = cx + c.hot.x; c.ring.position.z = cz + c.hot.y;
+			g.add(c.ring);
 			creatures.push(c);
 		}
 		return g;
@@ -2936,9 +2943,12 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			c.bouncer.rotation.z = Math.sin(beat * Math.PI + c.phase) * 0.02;
 			c.bouncer.rotation.y = Math.sin(beat * Math.PI * 0.5 + c.phase) * 0.12;
 			// the ring at its feet lights when someone stands in front
-			c.ring.material.opacity = c.singer >= 0 ? 0.85 : 0.18 + myPulse * 0.1;
-			if (c.singer >= 0) c.ring.material.color.set(colour(c.singer)).multiplyScalar(1.8);
-			else c.ring.material.color.copy(c.tint).multiplyScalar(1.6);
+			const lit = c.singer >= 0;
+			c.ringEdge.material.opacity = lit ? 1 : 0.45 + myPulse * 0.2;
+			c.ringFill.material.opacity = lit ? 0.85 : 0.28 + myPulse * 0.12;
+			if (lit) { c.ringEdge.material.color.set(colour(c.singer)).multiplyScalar(2); c.ringFill.material.color.set(colour(c.singer)).multiplyScalar(1.4); }
+			else { c.ringEdge.material.color.copy(c.tint).multiplyScalar(1.6); c.ringFill.material.color.copy(c.tint).multiplyScalar(1.2); }
+			c.ring.scale.setScalar(1 + (lit ? 0.08 : 0) + myPulse * 0.05);
 			// the face: blinks, a bigger mouth when it sings
 			const f = c.face;
 			if (f) {
