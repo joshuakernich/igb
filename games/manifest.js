@@ -42,7 +42,7 @@ IGB.manifest = [
 			file: 'games/red-light-green-light/index.js', module: true,
 			title: { lines: [{ text: 'RED LIGHT', fill: '#ff3640', glow: '#ff3640' }, { text: 'GREEN LIGHT', fill: '#27d96b', glow: '#27d96b' }] }, box: { color: '#e5287a', bg: '#1d7a63', note: 'SURVIVAL' } },
 		{ id: 'temple-of-coins', name: 'Temple of Coins', icon: 'assets/icons/temple-of-coins.png', file: 'games/temple-of-coins.js', module: true,
-			title: { lines: [{ text: 'TEMPLE', fill: '#ffd34d', glow: '#ff9a1f', font: 'Cinzel' }, { text: 'OF COINS', fill: '#fff1c4', glow: '#ffb02b', font: 'Cinzel' }], font: 'Cinzel' }, box: { color: '#ffd34d', bg: '#2a1708', note: 'TREASURE' } },
+			title: { lines: [{ text: 'TEMPLE', fill: '#ffd34d', glow: '#ff9a1f', font: 'Bungee', scale: 1.25 }, { text: 'OF COINS', fill: '#ffd34d', glow: '#ff9a1f', font: 'Bungee', scale: 0.94, gap: 0.78 }], font: 'Bungee' }, box: { color: '#ffd34d', bg: '#2a1708', note: 'TREASURE' } },
 		{ id: 'mingle', name: 'Mingle', icon: 'assets/icons/mingle.png', file: 'games/mingle/index.js', module: true,
 			title: { lines: [{ text: 'MINGLE', fill: '#ff7eb6', glow: '#e5287a' }] }, box: { color: '#e5287a', bg: '#f3a6c8', note: 'SURVIVAL' } },
 		{ id: 'tether-net', name: 'Tether Net',

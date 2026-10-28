@@ -44,7 +44,7 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 	const WIDTH = IGB.WIDTH || W * 3;
 	const art = IGB.art;
 	const SECONDS = 600;
-	const TITLE_FONT = 'Cinzel';
+	const TITLE_FONT = 'Bungee';
 	const FONT = 'Lexend';
 	const INK = '#140b04';
 	const GOLD = '#ffd34d';
