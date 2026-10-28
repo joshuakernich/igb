@@ -2672,17 +2672,32 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const U0 = 1 / 6, US = 2 / 3;   // (the middle two thirds of the front wall)
 		for (let k = 0; k < N; k++) {
 			const u = U0 + (k + 0.5) / N * US;
-			const pos = wallPoint(cx, cz, 1, u, 0.06, 0.11);
+			const pos = wallPoint(cx, cz, 1, u, 0.06, 0.8 + rr(-0.04, 0.04));   // (well up off the ground, on a rickety frame)
 			const len = lerp(0.85, 0.5, k / (N - 1));
 			const mat = wood.clone();
 			mat.color.offsetHSL(0, 0, (k % 2 ? -0.04 : 0.04));
 			// (a flat wooden plank, the next almost touching it, longest for the lowest note)
 			const pw = 2 * (R + 0.06) * US / N * 0.9;
-			const log = mesh(new THREE.BoxGeometry(pw, 0.05, len), mat, g, pos.x, pos.y, pos.z);
-			log.rotation.y = rr(-0.03, 0.03);
+			// (wonky: every corner a little off, some ends cut on the slant, each laid a bit askew)
+			const hw = pw / 2, hl = len / 2, j = () => rr(-0.045, 0.045);
+			const outline = [[-hw + j(), -hl + j()], [hw + j(), -hl + j() + (rnd() < 0.5 ? rr(-0.08, 0.08) : 0)], [hw + rr(-0.02, 0.05), rr(-0.08, 0.08)], [hw + j(), hl + j()], [-hw + j(), hl + j() + rr(-0.06, 0.06)], [-hw + rr(-0.05, 0.02), rr(-0.08, 0.08)]];
+			const pg = new THREE.ExtrudeGeometry(new THREE.Shape(outline.map(([a, b]) => new THREE.Vector2(a, b))), { depth: rr(0.04, 0.07), bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 1 });
+			pg.rotateX(-Math.PI / 2);
+			const log = mesh(pg, mat, g, pos.x, pos.y, pos.z);
+			log.rotation.set(0.45 + rr(-0.06, 0.06), rr(-0.08, 0.08), rr(-0.07, 0.07));   // (tipped up toward you, like a lectern)
 			logs.push({ log, mat, pos, deg: k + 2, hit: 0, under: -1 });
 		}
-		for (const dz of [-0.2, 0.2]) mesh(new THREE.BoxGeometry(2 * (R + 0.06) * US * 0.98, 0.05, 0.06), wood, g, cx, 0.05, cz - R - 0.06 + dz);
+		// the rickety frame: two crooked rails on splayed legs
+		const span = 2 * (R + 0.06) * US;
+		for (const dz of [-0.24, 0.24]) {
+			const ry = 0.74 - dz * 0.48;   // (the back rail higher: the planks lean toward you)
+			const rail = mesh(new THREE.BoxGeometry(span * 1.02, 0.05, 0.06), wood, g, cx, ry - 0.05, cz - R - 0.06 + dz);
+			rail.rotation.z = rr(-0.03, 0.03);
+			for (const fx of [-0.5, -0.17, 0.17, 0.5]) {
+				const leg = mesh(new THREE.CylinderGeometry(0.03, 0.04, ry, 6), wood, g, cx + fx * span + rr(-0.05, 0.05), ry / 2 - 0.03, cz - R - 0.06 + dz * 1.15);
+				leg.rotation.set(dz > 0 ? 0.12 : -0.12, 0, rr(-0.15, 0.15));
+			}
+		}
 		// the branch they fall from, leafy
 		const pts = [-1, -0.5, 0, 0.5, 1].map((t, k) => new THREE.Vector3(cx + t * 2.1, 2.35 + Math.sin(k * 1.7) * 0.08, cz - R - 0.15));
 		mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.07, 8), MAT.bark, g);
