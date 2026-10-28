@@ -1136,24 +1136,27 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	const BUILD = {
 		mushroom(c) {
 			c.limbMat = MAT.stem;
-			const stem = new THREE.Mesh(new THREE.LatheGeometry([[0, 0], [0.28, 0], [0.3, 0.2], [0.26, 0.6], [0.24, 0.85], [0.2, 0.95], [0, 0.96]].map(([x, y]) => new THREE.Vector2(x, y)), 24), MAT.stem);
+			// a tall, slim stalk, in many rings so it bends smoothly (and no arms: just a stalk with a face)
+			const prof = [[0, 0], [0.2, 0]];
+			for (let k = 1; k <= 16; k++) { const y = k / 16 * 1.62; prof.push([0.19 - 0.05 * (k / 16) + Math.sin(k / 16 * Math.PI) * 0.015, y]); }
+			prof.push([0.12, 1.66], [0, 1.67]);
+			const stem = new THREE.Mesh(new THREE.LatheGeometry(prof.map(([x, y]) => new THREE.Vector2(x, y)), 20), MAT.stem);
 			stem.castShadow = true; c.bouncer.add(stem);
-			const cap = new THREE.Group(); cap.position.y = 0.92; c.bouncer.add(cap);
+			const cap = new THREE.Group(); cap.position.y = 1.6; c.bouncer.add(cap);
 			const capMat = new THREE.MeshPhysicalMaterial({ color: c.tint, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.1, bumpMap: TEX.skin, bumpScale: 1.5, emissive: c.tint, emissiveIntensity: 0.12 });
-			mesh(new THREE.SphereGeometry(1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), capMat, cap, 0, 0, 0, 0.62, 0.48, 0.62);
-			mesh(GEO.cyl, new THREE.MeshStandardMaterial({ color: '#f0e0c0', roughness: 0.8 }), cap, 0, 0, 0, 0.6, 0.03, 0.6);
+			mesh(new THREE.SphereGeometry(1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), capMat, cap, 0, 0, 0, 0.5, 0.42, 0.5);
+			mesh(GEO.cyl, new THREE.MeshStandardMaterial({ color: '#f0e0c0', roughness: 0.8 }), cap, 0, 0, 0, 0.48, 0.03, 0.48);
 			for (let k = 0; k < 9; k++) {
 				const a = rnd() * Math.PI * 2, e = rr(0.25, 1.2);
-				const sp = mesh(GEO.sphLo, new THREE.MeshPhysicalMaterial({ color: '#fffaf0', roughness: 0.4, emissive: '#ffffff', emissiveIntensity: 0.25 }), cap, Math.cos(a) * Math.sin(e) * 0.6, Math.cos(e) * 0.46, Math.sin(a) * Math.sin(e) * 0.6, rr(0.05, 0.09), 0.025, rr(0.05, 0.09));
+				const sp = mesh(GEO.sphLo, new THREE.MeshPhysicalMaterial({ color: '#fffaf0', roughness: 0.4, emissive: '#ffffff', emissiveIntensity: 0.25 }), cap, Math.cos(a) * Math.sin(e) * 0.48, Math.cos(e) * 0.4, Math.sin(a) * Math.sin(e) * 0.48, rr(0.05, 0.09), 0.025, rr(0.05, 0.09));
 				sp.lookAt(cap.localToWorld(new THREE.Vector3(sp.position.x * 3, sp.position.y * 3, sp.position.z * 3)));
 			}
 			c.parts.cap = cap;
-			c.face = makeFace(c.bouncer, 0.55, 0, 0.55, 0.26);
-			limb(c, [-0.24, 0.5, 0.05], [-0.5, 0.28, 0.15], 0.035, 'glove', -1);
-			limb(c, [0.24, 0.5, 0.05], [0.5, 0.3, 0.15], 0.035, 'glove', 1);
-			limb(c, [-0.12, 0.08, 0.05], [-0.18, -0.08, 0.12], 0.04, 'shoe', -1, true);
-			limb(c, [0.12, 0.08, 0.05], [0.18, -0.08, 0.12], 0.04, 'shoe', 1, true);
-			c.top = 1.45;
+			c.face = makeFace(c.bouncer, 0.42, 0, 1.12, 0.16, { gap: 0.3 });
+			limb(c, [-0.09, 0.08, 0.04], [-0.14, -0.08, 0.12], 0.035, 'shoe', -1, true);
+			limb(c, [0.09, 0.08, 0.04], [0.14, -0.08, 0.12], 0.035, 'shoe', 1, true);
+			c.top = 2.05;
+			c.bend = 2.4;   // (the bendiest thing in the woods)
 		},
 		frog(c) {
 			const skin = slickMat(c.tint);
@@ -2094,9 +2097,10 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				_m2.set(0, 0, 1).applyQuaternion(c.root.quaternion);   // (its forward: toward the walls)
 				const sway = Math.sin(beat * Math.PI + c.phase) * 0.14 + (c.trickT > 0 ? Math.sin(rt * 14 + c.phase) * 0.35 * c.trickT : 0);
 				const lean = c.singT * 0.16 - c.duckT * 0.05 + Math.sin(beat * Math.PI * 0.5 + c.phase * 2) * 0.05;
-				W2.bend.value.set(0, 0, 0).addScaledVector(_m, sway * c.size).addScaledVector(_m2, lean * c.size);
+				const bk = c.bend || 1;
+				W2.bend.value.set(0, 0, 0).addScaledVector(_m, sway * c.size * bk).addScaledVector(_m2, lean * c.size * bk);
 				W2.bend.value.y = (myPulse * 0.06 + c.duckT * 0.15) * c.size;
-				W2.jig.value = 0.03 + myPulse * 0.07 + c.singT * 0.14 + c.trickT * 0.22;
+				W2.jig.value = (0.03 + myPulse * 0.07 + c.singT * 0.14 + c.trickT * 0.22) * Math.sqrt(bk);
 			}
 			stepKind(c, dt, beat, myPulse);
 			if (!perfFlags.nonoodles && ((c.index + frameNo) % 2 === 0 || c.trickT > 0)) noodles(c, beat, myPulse);   // (half the noodles each frame: twice the speed, no one can tell)
@@ -2132,7 +2136,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const T = c.trickT, P = c.parts;
 		const arc = Math.sin(Math.min(1, 1 - T) * Math.PI);
 		if (c.kind === 'mushroom') {
-			P.cap.position.y = 0.92 + (T > 0 ? arc * 1.1 : 0) + c.singT * 0.05;
+			P.cap.position.y = 1.6 + (T > 0 ? arc * 1.1 : 0) + c.singT * 0.05;
 			P.cap.rotation.y = T > 0 ? (1 - T) * Math.PI * 6 : Math.sin(beat * Math.PI) * 0.1;
 			P.cap.rotation.z = Math.sin(beat * Math.PI + c.phase) * 0.08;
 			if (T > 0.85 && Math.random() < 0.5) spray(c.headAt(), '#' + c.tint.getHexString(), 3, 1.5);
