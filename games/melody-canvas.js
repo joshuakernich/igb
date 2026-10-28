@@ -57,6 +57,8 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 	const INK = '#26241f';
 	const PENCIL = '#a29b8e';
 	const MONO = 'Share Tech Mono';
+	const DISPLAY = 'Shrikhand';   // (the title, the round cards, the shouts: a warm, heavy italic, like an old music poster)
+	if (document.fonts) document.fonts.load(`100px "${DISPLAY}"`).catch(() => {});
 
 	const ROWS = 11;             // notes up the paper
 	const TOP = 330;             // the highest row's y
@@ -112,12 +114,12 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 	};
 
 	const KINDS = {
-		trace: { title: 'TRACE THE LINE', how: 'STAND CLOSE TO THE WALL TO PLAY HIGH', fill: '#3f9e7f', loops: 2, pens: true },
-		shapes: { title: 'DRAW BY MOVING', how: 'TOUCH A WALL TO DRAW ON IT · WALK TO DRAW · NEAR IS HIGH', fill: '#d0653f', loops: 3 },
-		chords: { title: 'HIT THE CHORDS', how: 'STAY ON THE SHADED NOTES', fill: '#7a72d8', loops: 2, pens: true },
-		shades: { title: 'PAINT BY TOUCH', how: 'TOUCH THE WALLS TO PAINT · TOUCH AGAIN TO DEEPEN', fill: '#d886b8', loops: 3 },
-		bend: { title: 'BEND THE LINE', how: 'TOUCH THE WALLS TO PULL THE LINE ONTO THE PENCIL', fill: '#4d5fc4', loops: 3 },
-		jam: { title: 'FREE JAM', how: 'PAINT ANYTHING · IT ALL FITS', fill: '#e8a83c', loops: 3, pens: true },
+		trace: { title: 'Trace the Line', how: 'STAND CLOSE TO THE WALL TO PLAY HIGH', fill: '#3f9e7f', loops: 2, pens: true },
+		shapes: { title: 'Draw by Moving', how: 'TOUCH A WALL TO DRAW ON IT · WALK TO DRAW · NEAR IS HIGH', fill: '#d0653f', loops: 3 },
+		chords: { title: 'Hit the Chords', how: 'STAY ON THE SHADED NOTES', fill: '#7a72d8', loops: 2, pens: true },
+		shades: { title: 'Paint by Touch', how: 'TOUCH THE WALLS TO PAINT · TOUCH AGAIN TO DEEPEN', fill: '#d886b8', loops: 3 },
+		bend: { title: 'Bend the Line', how: 'TOUCH THE WALLS TO PULL THE LINE ONTO THE PENCIL', fill: '#4d5fc4', loops: 3 },
+		jam: { title: 'Free Jam', how: 'PAINT ANYTHING · IT ALL FITS', fill: '#e8a83c', loops: 3, pens: true },
 	};
 	const ROUNDS = [
 		{ kind: 'trace', key: 0, scale: 'MAJOR PENTATONIC', bpm: 92 },
@@ -472,7 +474,7 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 		for (const p of pens) { p.free = false; p.stroke = null; p.wall = 1; }
 		newPass();
 		if (echo) echo.delayTime.value = 60 / round.bpm * 0.75;
-		show.label(`${round.title} · ${round.label}`);
+		show.label(`${round.title.toUpperCase()} · ${round.label}`);
 		if (show.fx) show.fx('stepIn', 0.6);
 	}
 
@@ -502,7 +504,15 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 
 	show.sequence([
 		{ id: 'squad', length: Infinity },
-		show.beats.titleDrop(),
+		show.beats.titleDrop({
+			lines: [],   // (the title is painted on by the playhead instead: titleScene)
+			enter() { title.out = -1; title.step = -1; title.loop = -1; },
+			update(dt, bt) {
+				show.blackout = 0;   // (the paper stays bright)
+				titleSound(bt);
+			},
+			draw(ctx, bt) { drawTitle(ctx, bt); },
+		}),
 		show.beats.clockIntro(),
 		show.beats.visors(),
 		show.beats.tutorial({
@@ -525,7 +535,7 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 			},
 			draw(ctx, bt) {
 				show.onWalls(ctx, function (c) {
-					show.slam(c, 'PAINT THE MUSIC!', W / 2, 300, 120, bt - 0.2, { fill: '#e8a83c' });
+					show.slam(c, 'Paint the music!', W / 2, 300, 130, bt - 0.2, { fill: '#e8a83c', font: DISPLAY });
 				});
 			},
 		},
@@ -544,7 +554,7 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 			draw(ctx) {
 				if (phase !== 'intro' || !round) return;
 				show.onWalls(ctx, function (c) {
-					show.slam(c, round.title, W / 2, 190, 110, phaseT, { fill: round.fill });
+					show.slam(c, round.title, W / 2, 190, 110, phaseT, { fill: round.fill, font: DISPLAY });
 					show.text(c, round.label, W / 2, 300, 50, { fill: 'white', glow: round.fill, alpha: clamp01((phaseT - 0.4) * 3) });
 					show.text(c, round.how, W / 2, 400, 46, { fill: '#ffd23f', glow: INK, alpha: clamp01((phaseT - 0.8) * 3) });
 				});
@@ -740,7 +750,7 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 			const key = pass * 10 + bar;
 			if (!fullBars.has(key)) {
 				fullBars.add(key);
-				pops.push({ x: stepX(s), y: TOP - 40, text: 'FULL CHORD!', fill: round.fill, age: 0, size: 64 });
+				pops.push({ x: stepX(s), y: TOP - 40, text: 'Full chord!', fill: round.fill, age: 0, size: 64 });
 				if (show.fx) show.fx('pick', 0.5);
 			}
 		}
@@ -814,7 +824,7 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 			let right = 0;
 			for (let k = 0; k < STEPS; k++) if (Math.round(line[k]) === round.melody[k]) right++;
 			if (right === STEPS) {
-				pops.push({ x: W * 1.5, y: TOP - 40, text: 'PERFECT!', fill: round.fill, age: 0, size: 90 });
+				pops.push({ x: W * 1.5, y: TOP - 40, text: 'Perfect!', fill: round.fill, age: 0, size: 90 });
 				for (let i = 0; i < count; i++) score(i, 10);
 				if (show.fx) show.fx('fanfare', 0.5);
 				round.melody = makeMelody(round);
@@ -826,6 +836,130 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 		if (i < 0 || i >= count) return;
 		scores[i] += n;
 		pens[i].flash = 1;
+	}
+
+	/* ---------- the title: painted on by a playhead ---------- */
+
+	// On every wall a playhead sweeps the paper, left to right, drawing three
+	// melody lines behind it and revealing the title as it passes; the lines
+	// play as it crosses them (a little tune in C major pentatonic, over a
+	// pad), and once it's all down the playhead keeps going round, softer,
+	// until START.
+	const TITLE = {
+		lines: [
+			{ text: 'Melody', fill: '#3f9e7f', y: 405 },
+			{ text: 'Canvas', fill: '#d0653f', y: 625 },
+		],
+		size: 215,
+		shadow: [7, 10],         // the ink under the letters, offset
+		start: 0.35,             // the playhead sets off
+		sweep: 3.2,              // seconds to cross a wall
+		steps: 16,
+		strokes: [               // rows (C major pentatonic from middle C), a step each
+			{ colour: '#7a72d8', voice: 3, rows: [5, 5, 7, 7, 8, 8, 9, 9, 8, 8, 7, 7, 5, 5, 6, 7] },
+			{ colour: '#e8a83c', voice: 2, rows: [2, 2, 2, 3, 4, 4, 3, 3, 4, 4, 3, 3, 2, 2, 3, 3] },
+			{ colour: '#4d5fc4', voice: 0, rows: [0, 0, 0, 0, 1, 1, 2, 2, 4, 4, 4, 4, 3, 3, 2, 2] },
+		],
+		top: 250, bottom: 760,   // the strokes' range up the wall
+		out: 0.5,
+	};
+	const PENTA = [0, 2, 4, 7, 9];
+	const titleMidi = (r) => 60 + 12 * Math.floor(r / 5) + PENTA[r % 5];
+	const title = { out: -1, step: -1, loop: -1, bt: 0 };
+	stage.$ui.on('start.melody-canvas', '[start]', function () { if (title.out < 0) title.out = title.bt; });
+
+	// where the playhead is: its pass, and how far across (0..1)
+	function titleHead(bt) {
+		const k = (bt - TITLE.start) / TITLE.sweep;
+		return k < 0 ? null : { pass: Math.floor(k), x: k - Math.floor(k) };
+	}
+
+	function titleSound(bt) {
+		title.bt = bt;
+		const head = titleHead(bt);
+		if (!head || title.out >= 0) return;
+		const step = Math.floor(head.x * TITLE.steps);
+		if (head.pass !== title.loop) {
+			title.loop = head.pass;
+			title.step = -1;
+			pad([48, 55, 64, 69], TITLE.sweep * 0.5, head.pass === 0 ? 1.4 : 1);       // C, then
+			stage.timeout(() => pad([45, 52, 60, 64], TITLE.sweep * 0.5, 1.1), TITLE.sweep * 500);   // A minor
+			bass(36, TITLE.sweep * 0.45);
+			stage.timeout(() => bass(33, TITLE.sweep * 0.45), TITLE.sweep * 500);
+		}
+		while (title.step < step) {
+			title.step++;
+			const s = title.step;
+			const vol = head.pass === 0 ? 0.75 : 0.35;
+			for (const st of TITLE.strokes) {
+				if (s === 0 || st.rows[s] !== st.rows[s - 1]) note(st.voice, titleMidi(st.rows[s]), vol);
+			}
+			if (head.pass === 0 && s % 2 === 1) drum('hat', 0.6);
+		}
+	}
+
+	function drawTitle(ctx, bt) {
+		const head = titleHead(bt);
+		const first = !head || head.pass === 0;
+		const reveal = !head ? 0 : first ? head.x : 1;          // how much of the wall's been painted
+		const fade = title.out < 0 ? 1 : clamp01(1 - (bt - title.out) / TITLE.out);
+		const stepW = W / TITLE.steps;
+		const yOf = (r) => TITLE.bottom - r / 10 * (TITLE.bottom - TITLE.top);
+		show.onWalls(ctx, function (c) {
+			c.save();
+			c.globalAlpha *= fade;
+			c.beginPath();
+			c.rect(0, 0, W * reveal, H);
+			c.save();
+			c.clip();
+
+			// the melody lines, behind
+			c.lineCap = 'round';
+			c.lineJoin = 'round';
+			c.lineWidth = 16;
+			for (const st of TITLE.strokes) {
+				c.strokeStyle = st.colour;
+				c.globalAlpha = fade * 0.5;
+				c.beginPath();
+				st.rows.forEach((r, s) => { const x = (s + 0.5) * stepW; if (s === 0) c.moveTo(0, yOf(r)); c.lineTo(x, yOf(r)); });
+				c.lineTo(W, yOf(st.rows[st.rows.length - 1]));
+				c.stroke();
+			}
+			c.globalAlpha = fade;
+
+			// the title, letter by letter, an ink shadow under each; once it's
+			// all down, the letters ride a gentle wave
+			const settle = clamp01((bt - TITLE.start - TITLE.sweep) / 0.8);
+			c.font = `400 ${TITLE.size}px "${DISPLAY}", serif`;
+			c.textBaseline = 'middle';
+			c.textAlign = 'left';
+			TITLE.lines.forEach(function (line, li) {
+				const total = c.measureText(line.text).width;
+				const left = W / 2 - total / 2;
+				for (let k = 0; k < line.text.length; k++) {
+					const x = left + c.measureText(line.text.slice(0, k)).width;
+					const y = line.y + Math.sin(bt * 2.2 - k * 0.55 - li * 1.2) * 7 * settle;
+					c.fillStyle = INK;
+					c.fillText(line.text[k], x + TITLE.shadow[0], y + TITLE.shadow[1]);
+					c.fillStyle = line.fill;
+					c.fillText(line.text[k], x, y);
+				}
+			});
+			c.restore();
+
+			// the playhead: bold on its first pass (with a dot on each line), faint after
+			if (head) {
+				const x = head.x * W;
+				c.globalAlpha = fade * (first ? 1 : 0.25);
+				art.rect(c, x - 2.5, TITLE.top - 60, 5, TITLE.bottom - TITLE.top + 120, { fill: INK });
+				for (const st of TITLE.strokes) {
+					const r = st.rows[Math.min(TITLE.steps - 1, Math.floor(head.x * TITLE.steps))];
+					art.circle(c, x, yOf(r), 18, { fill: INK });
+					art.circle(c, x, yOf(r), 14, { fill: st.colour });
+				}
+			}
+			c.restore();
+		});
 	}
 
 	/* ---------- drawing (every animation frame) ---------- */
@@ -862,7 +996,7 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 
 		for (const r of rings) art.circle(ctx, r.x, r.y, 14 + r.age * 70, { fill: r.colour, alpha: 0.4 * (1 - r.age / 0.6) });
 		for (const p of pops) {
-			art.text(ctx, p.text, p.x, p.y - p.age * 60, { size: p.size || 44, font: 'Lexend', fill: p.fill, alpha: clamp01(1.2 - p.age), outline: 'white', outlineWidth: 6 });
+			art.text(ctx, p.text, p.x, p.y - p.age * 60, { size: p.size || 44, font: DISPLAY, fill: p.fill, alpha: clamp01(1.2 - p.age), outline: 'white', outlineWidth: 6 });
 		}
 	}
 
@@ -1137,7 +1271,7 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 	if (show.menu && show.menu.drow) {
 		const $modes = show.menu.drow('MODES');
 		for (const kind of Object.keys(KINDS)) {
-			show.menu.dbutton(KINDS[kind].title, function () {
+			show.menu.dbutton(KINDS[kind].title.toUpperCase(), function () {
 				if (!count) return;
 				if (show.beat !== 'play') show.go('play');
 				roundNo = ROUNDS.findIndex((r) => r.kind === kind);
@@ -1157,6 +1291,7 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 
 	self.fini = function () {
 		stage.$el.off('.melody-canvas');
+		stage.$ui.off('.melody-canvas');
 		if (ac && ac.state !== 'closed') ac.close();
 		show.fini();
 	};

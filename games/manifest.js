@@ -64,7 +64,7 @@ IGB.manifest = [
 		{ id: 'gwi-ma-showdown', name: 'Gwi-Ma Showdown', icon: 'assets/icons/gwi-ma-showdown.png',
 			title: { lines: [{ text: 'GWI-MA', fill: '#ff4fd8', glow: '#ff3d7a' }, { text: 'SHOWDOWN', fill: '#ffe14d', glow: '#ff7a3d' }] }, box: { color: '#ff3df0', bg: '#12051f', note: 'BOSS' } },
 		{ id: 'melody-canvas', name: 'Melody Canvas',
-			title: { lines: [{ text: 'MELODY', fill: '#3f9e7f', glow: '#3f9e7f' }, { text: 'CANVAS', fill: '#e8a83c', glow: '#d0653f' }] }, box: { color: '#26241f', bg: '#f4f1ea', note: 'MUSIC' } },
+			title: { lines: [{ text: 'Melody', fill: '#3f9e7f', glow: '#26241f', font: 'Shrikhand' }, { text: 'Canvas', fill: '#d0653f', glow: '#26241f', font: 'Shrikhand' }], font: 'Shrikhand' }, box: { color: '#26241f', bg: '#f4f1ea', note: 'MUSIC' } },
 		{ id: 'echo', name: 'Echo',
 			box: { color: '#3ad1ff', bg: '#0b1630', note: 'DODGE' } },
 		{ id: 'template', name: 'Template', file: 'games/_template.js' },
