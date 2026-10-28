@@ -196,6 +196,11 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const keep = (w === 1 ? list : list.slice(0, 4)).sort((a2, b2) => a2.along - b2.along), [lo, hi] = SIDE[w];
 		keep.forEach((d, k) => { d.along = lo + (k + 0.5) / keep.length * (hi - lo); });
 	}
+	// the moonbeams keep to the same rules: spread over their wall's span the way the creatures are
+	for (const C of CLEARINGS) if (C.theremin) {
+		const [w, al] = C.theremin, [lo, hi] = SIDE[w];
+		C.theremin = [w, al.map((_, k) => lo + (k + 0.5) / al.length * (hi - lo))];
+	}
 	if (CLEARINGS[0].puffballs) CLEARINGS[0].puffballs = [[0, 0.35], [0, 0.6], [0, 0.84]];
 	const CHORDS = [[0, 4, 7], [9, 12, 16], [5, 9, 12], [7, 11, 14]];
 	// each clearing's sky: where its sun (or moon) hangs, ahead, and the glow round the horizon
