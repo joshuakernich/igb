@@ -677,7 +677,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const wall = clamp(Math.floor(at.x / W), 0, 2);
 		const a = at.x / W - wall;
 		ripples.push({ x: at.x, y: at.y, t: 0 });
-		if (at.y < H * TOUCH_TOP) return;   // (too high for a child: only the lower part of the wall counts)
+		if (at.y < H * FEST.reach) return;   // (too high to reach at all)
 		const who = hitters(wall, a);
 		if (!who.length) return;
 		// a festoon light under the finger: switch it
@@ -699,6 +699,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				return;
 			}
 		}
+		if (at.y < H * TOUCH_TOP) return;   // (the creatures: only the lower part of the wall, where a child can reach)
 		// the creature drawn nearest the touch, on that wall
 		let best = null, bd = 220;
 		for (const cr of creatures) {
@@ -1975,7 +1976,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	// The festoon: 24 bulbs in swags round the three walls (8 a wall, left to right),
 	// hung from posts at the corners. Each is a note of the clearing's melody: a
 	// higher note hangs higher on a shorter cord, in a different colour.
-	const FEST = { n: 24, per: 8, D: R + 0.12, top: 1.54, sag: 0.2, drop: [0.3, 0.1] };
+	const FEST = { n: 24, per: 8, D: R + 0.12, top: 1.98, sag: 0.2, drop: [0.3, 0.1], reach: 0.3 };   // (the bulbs hang about 3/5 up the wall; a touch counts on them from 0.3 down)
 	const festoons = [];
 	const bulbGeo = new THREE.SphereGeometry(0.085, 16, 12).scale(1, 1.3, 1);
 	function buildFestoon(g, ci, cx, cz) {
