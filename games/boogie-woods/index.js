@@ -66,6 +66,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	const TOUCH_TOP = 0.4;        // ...and only below this far down the wall (where a child can reach)
 	const JUMP = 0.075;           // rising this far above your usual height is a jump
 	const SQUAT = 0.13;           // ...and sinking this far, a squat
+	const AVATAR_REACH = 1.45;   // (the puffballs travel this much further than you do, so a step toward a wall carries them out among the creatures)
 	const RUN = 0.42;             // moving faster than this (rooms a second) shakes the shaker
 
 	/* ---------- the music ---------- */
@@ -146,7 +147,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				{ kind: 'gnome', wall: 2, along: 0.15, out: 0.6, note: 7, pat: 'vox', tint: '#32cd32' },
 				{ kind: 'bunny', wall: 2, along: 0.72, out: 0.5, note: 9, pat: 'mel3', tint: '#c8a07a' },
 			] },
-		{ name: 'FAIRY RING', sub: 'TOUCH THE STONES IN THE WALL · STAND IN THE MOONBEAM AND RISE AND DIP', bpm: 92, root: 329.6, grid: true, theremin: [2, 0.5],
+		{ name: 'FAIRY RING', sub: 'TOUCH THE STONES IN THE WALL · STAND IN A MOONBEAM AND RISE AND DIP', bpm: 92, root: 329.6, grid: true, theremin: [2, [0.25, 0.5, 0.75]],
 			sky: ['#0a0420', '#5a2a9a'], fog: '#2a1450', ground: '#3a4a3a', sun: '#c8b8ff', lights: ['#ff7aff', '#7ad8ff', '#fff07a', '#b07aff'],
 			groove: { kick: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], hat: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], snare: [] },
 			motif: 'ring',
@@ -739,16 +740,15 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		}
 		for (const [ci, list] of puffs.entries()) if (list && ci !== here) for (const pb of list) if (pb.voice) { pb.voice.stop(); pb.voice = null; pb.pressed = false; }
 		// the moonbeam: whoever stands in it plays it; their height bends the note
-		const th = theremins[here];
-		for (const [ci, t2] of theremins.entries()) if (t2 && ci !== here && t2.voice) { t2.voice.stop(); t2.voice = null; t2.who = -1; }
-		if (th) {
+		for (const th of theremins) {
+			if (th.ci !== here) { if (th.voice) { th.voice.stop(); th.voice = null; th.who = -1; } continue; }
 			let who = -1;
-			if (on) for (let i = 0; i < count; i++) { const p = latest[i]; if (p && pl[i].seen && near(p, th.spot, 0.16)) { who = i; break; } }
+			if (on) for (let i = 0; i < count; i++) { const p = latest[i]; if (p && pl[i].seen && near(p, th.spot, 0.12)) { who = i; break; } }
 			if (who >= 0) {
 				const p = latest[who], q = pl[who];
 				const k = clamp(0.5 + (q.base - p.py) / 0.24, 0, 1);   // (up a little is higher, down lower)
 				th.k = lerp(th.k, k, 1 - Math.exp(-dt * 10));
-				const f = freqOf(C.root, 5) * Math.pow(2, (th.k - 0.5) * 3);
+				const f = freqOf(C.root, th.deg) * Math.pow(2, (th.k - 0.5) * 2);   // (each beam its own range: low, middle, high)
 				if (!th.voice && audioOn()) th.voice = holdVoice(f, 'whistle', th.w);
 				if (th.voice) th.voice.glide(f);
 				if (th.who !== who) scores[who] += 2;
@@ -790,7 +790,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			if (pn && live && !glide) {
 				const { along, dist } = wallsOf(p);
 				const w = pn.wall;
-				const key = dist[w] < PIANO.band ? clamp(Math.floor(along[w] * PIANO.per), 0, PIANO.per - 1) : -1;
+				const u = (along[w] - 1 / 6) / (2 / 3);   // (the panels fill the middle 2/3 of the wall)
+				const key = dist[w] < PIANO.band && u > -0.04 && u < 1.04 ? clamp(Math.floor(u * PIANO.per), 0, PIANO.per - 1) : -1;
 				if (key >= 0) pn.held[key] = i;
 				if (key !== q.key) {
 					q.key = key;
@@ -912,29 +913,32 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		if (audioOn()) SND.mallet(clock(), freqOf(CLEARINGS[here].root, GRID.deg[Math.floor(bi / GRID.cols)]), gw.on[bi] ? 0.25 : 0.08, 1);
 		return true;
 	}
-	// the spoke of the web nearest a touch (within a finger's width), plucked
+	// the knot of the web nearest a touch (anywhere on the web), plucked: its spoke is the note
 	function pluckAt(at, wall, who, strum) {
 		const wb = webs[here];
 		if (!wb || wb.wall !== wall) return false;
-		let best = -1, bd = strum ? 60 : 140;   // (anywhere on the web counts: the nearest string)
-		const a = new THREE.Vector3(), b = new THREE.Vector3();
-		wb.spokes.forEach((sp, k) => {
-			const pa = proj(wall, wb.unit.localToWorld(a.copy(sp.end).multiplyScalar(0.04)));
-			const pb2 = proj(wall, wb.unit.localToWorld(b.copy(sp.end)));
-			const vx = pb2.x - pa.x, vy = pb2.y - pa.y, l2 = vx * vx + vy * vy || 1;
-			const t = clamp(((at.x - pa.x) * vx + (at.y - pa.y) * vy) / l2, 0, 1);
-			const d = Math.hypot(pa.x + vx * t - at.x, pa.y + vy * t - at.y);
-			if (d < bd) { bd = d; best = k; sp.tryAt = clamp(0.04 + t * 0.96, 0.15, 0.85); }
+		let best = -1, bd = strum ? 70 : 140;
+		const v = new THREE.Vector3();
+		wb.nodes.forEach((nd, k) => {
+			if (nd.spoke < 0) return;
+			const q = proj(wall, wb.unit.localToWorld(v.set(nd.base.x, nd.base.y, 0)));
+			const d = Math.hypot(q.x - at.x, q.y - at.y);
+			if (d < bd) { bd = d; best = k; }
 		});
-		if (best < 0 || (strum && best === wb.last)) return best >= 0;
-		wb.last = best;
-		const sp = wb.spokes[best];
-		sp.vib = 1;
-		sp.at = sp.tryAt;
-		wb.ring.position.copy(sp.end).multiplyScalar(sp.at); wb.ring.position.z = 0.03;
+		if (best < 0) return false;
+		const nd = wb.nodes[best];
+		if (strum && (nd.spoke === wb.last || rt - wb.lastT < 0.06)) return true;
+		wb.last = nd.spoke; wb.lastT = rt;
+		// the ripple, starting at that knot (shaken across its spoke, like a plucked string)
+		const ang = Math.atan2(nd.base.y, nd.base.x);
+		wb.plucks.push({ x: nd.base.x, y: nd.base.y, t: rt, px: -Math.sin(ang), py: Math.cos(ang) });
+		if (wb.plucks.length > 6) wb.plucks.shift();
+		wb.ring.position.set(nd.base.x, nd.base.y, 0.03);
 		wb.ringT = 1;
-		if (audioOn()) SND.harp(clock() + 0.005, freqOf(CLEARINGS[here].root, sp.deg), 0.28, wall);
-		spray(wb.unit.localToWorld(a.copy(sp.end).multiplyScalar(sp.at)), '#e8f8ff', 14, 1.4, 0.6);
+		// the spider runs over to see what it caught
+		Object.assign(wb.sp, { tx: nd.base.x * 0.85, ty: nd.base.y * 0.85, rush: true, wait: rr(1.2, 2.2) });
+		if (audioOn()) SND.harp(clock() + 0.005, freqOf(CLEARINGS[here].root, 2 + nd.spoke), 0.28, wall);
+		spray(wb.unit.localToWorld(v.set(nd.base.x, nd.base.y, 0)), '#e8f8ff', 14, 1.4, 0.6);
 		scores[who] += 1;
 		tut.touched[who] = true;
 		return true;
@@ -2157,7 +2161,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			if (C.pond && z < cz - R && z > cz - R - 3.2 && Math.abs(x - cx) < R + 1) return false;   // (the pond's open water)
 			if (pathDist(x - cx, z) < 1.7) return false;   // (the winding path, ahead and behind: the walk goes through)
 			if (C.xylo && z < cz - R + 0.2 && z > cz - R - 1.1 && Math.abs(x - cx) < R + 0.4) return false;   // (the logs)
-			if (C.piano !== undefined && x < cx - R + 0.2 && x > cx - R - 4.4 && Math.abs(z - cz) < R + 0.5) return false;   // (the stepping stones)
+			if (C.piano !== undefined && x < cx - 0.8 && x > cx - R - 4.6 && Math.abs(z - cz) < 0.72 * (cx - x) + 0.4) return false;   // (the piano's fan of panels and crystals)   // (the stepping stones)
 			return !spots.some(([sx, sz]) => Math.hypot(x - sx, z - sz) < 0.95 + pad);
 		};
 		// trees in rings, the nearest framing the corners between the walls
@@ -2209,15 +2213,16 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		mist(g, cx, cz);
 		MOTIF[C.motif](g, ci, cx, cz, C);
 		// (the festoon lights were here; removed at the user's request. buildFestoon still works if they come back)
+		bake(g);
+		// the devices, after the merge, so their moving parts stay their own
 		if (C.grid) buildGrid(g, ci, cx, cz);
 		if (C.piano !== undefined) buildPiano(g, ci, cx, cz);
 		if (C.puffballs) buildPuffballs(g, ci, cx, cz, C.puffballs);
 		if (C.web) buildWeb(g, ci, cx, cz, C.web);
 		if (C.pond) buildPond(g, ci, cx, cz, spots);
 		if (C.xylo) buildXylo(g, ci, cx, cz);
-		if (C.theremin) buildTheremin(g, ci, cx, cz, C.theremin);
+		if (C.theremin) C.theremin[1].forEach((al, k) => buildTheremin(g, ci, cx, cz, [C.theremin[0], al], k));
 		if (C.choir) buildChoir(g, ci, cx, cz);
-		bake(g);
 		// the creatures
 		for (const def of C.creatures) {
 			const c = frame(def, ci);
@@ -2474,13 +2479,22 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const n = PIANO.per, w = CLEARINGS[ci].piano;
 		const pn = { wall: w, keys: [], pos: [], held: new Array(n).fill(-1), press: new Float32Array(n), flash: new Float32Array(n) };
 		const lane = (lat, out, y = 0) => w === 1 ? new THREE.Vector3(cx + lat, y, cz - R - out) : w === 0 ? new THREE.Vector3(cx - R - out, y, cz - lat) : new THREE.Vector3(cx + R + out, y, cz + lat);
-		const IN = -1.65, OUT = 3.4, LEN = OUT - IN, Wk = 2 * R / n;
+		// (each panel a wedge fanning out from the eye, so on the wall they're neat
+		// upright strips filling the middle 2/3 of the screen, bottom to horizon)
+		const IN = -1.65, OUT = 3.4, dIn = R + IN, dOut = R + OUT, SPAN = 2 / 3;
+		const toWorld = new THREE.Matrix4();
+		if (w === 0) toWorld.set(0, -1, 0, cx, 0, 0, 1, 0, -1, 0, 0, cz, 0, 0, 0, 1);
+		else if (w === 2) toWorld.set(0, 1, 0, cx, 0, 0, 1, 0, 1, 0, 0, cz, 0, 0, 0, 1);
+		else toWorld.set(1, 0, 0, cx, 0, 0, 1, 0, 0, -1, 0, cz, 0, 0, 0, 1);
 		for (let k = 0; k < n; k++) {
-			const lat = ((k + 0.5) / n - 0.5) * 2 * R;
-			// the panel: a long slab, pale and dark by turns, like keys
-			const pmat = new THREE.MeshStandardMaterial({ color: k % 2 ? '#5a5a62' : '#d6d0c2', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 3, roughness: 0.7 });
-			const geo = w === 1 ? new THREE.BoxGeometry(Wk * 0.9, 0.1, LEN) : new THREE.BoxGeometry(LEN, 0.1, Wk * 0.9);
-			const mid = lane(lat, IN + LEN / 2, 0.02);
+			const sL = ((k + 0.03) / n - 0.5) * 2 * SPAN, sR = ((k + 0.97) / n - 0.5) * 2 * SPAN, sM = (sL + sR) / 2;
+			const lat = sM * (dOut - 0.25);
+			// the panel: a long tapering slab, pale and dark by turns, like keys
+			const pmat = new THREE.MeshStandardMaterial({ color: k % 2 ? '#5a5a62' : '#d6d0c2', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 3, roughness: 0.7, side: THREE.DoubleSide });
+			const shape = new THREE.Shape([new THREE.Vector2(sL * dIn, dIn), new THREE.Vector2(sR * dIn, dIn), new THREE.Vector2(sR * dOut, dOut), new THREE.Vector2(sL * dOut, dOut)]);
+			const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 2 });
+			geo.applyMatrix4(toWorld);
+			const mid = new THREE.Vector3(0, 0.0, 0);
 			const panel = mesh(geo, pmat, g, mid.x, mid.y, mid.z);
 			panel.receiveShadow = true; panel.castShadow = false;
 			// its crystal, growing from the far end: a cluster of glassy prisms on a boulder
@@ -2494,7 +2508,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				const c = mesh(CRYSTAL_GEO, cmat, cl, dx, h / 2 + 0.1, dz, r, h, r);
 				c.rotation.set(rr(-0.25, 0.25), rnd() * Math.PI, (j ? Math.sign(dx || 1) : 0) * rr(0.15, 0.4));
 			});
-			pn.keys.push({ panel, pmat, y0: mid.y, cmat, col, cl, big });
+			pn.keys.push({ panel, pmat, y0: 0, cmat, col, cl, big });
 			pn.pos[k] = foot.clone().setY(big + 0.2);
 		}
 		labels.push({ ci, wall: w, at: lane(0, -0.4, 0), text: 'WALK ALONG THE STONES' });
@@ -2529,67 +2543,83 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 
 	// SPIDERWEB HARP: a dewy web whose spokes are strings; touch one to pluck it, drag across to strum
 	const webs = [];
-	const WEB = { rx: 2.25, ry: 1.25, y: 1.35, spokes: 12, seg: 18 };
+	const WEB = { rx: 2.25, ry: 1.25, y: 1.35, spokes: 13, rings: 9 };
+	// A haphazard web, all straight strands: wonky spokes out from a hub, and rings
+	// that are straight segments from spoke to spoke (so the circle is only ever
+	// made of lines), unevenly spaced, a few broken, a few strays. Every strand is
+	// one instance of a thin rod between two knots; a pluck ripples the knots near it.
 	function buildWeb(g, ci, cx, cz, [w, along]) {
-		// a web filling most of the wall: an ellipse of spokes (the strings) round a spiral
 		const c = wallPoint(cx, cz, w, along, 0.3, WEB.y);
 		const unit = new THREE.Group(); unit.position.copy(c); unit.lookAt(cx, WEB.y, cz); g.add(unit);
-		const silk = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.4, 1.4, 1.5), transparent: true, opacity: 0.9 });
-		const dew = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 2.4, 2.6) });
-		const spokes = [];
+		const nodes = [], segs = [];
+		const node = (x, y, spoke) => { nodes.push({ base: new THREE.Vector2(x, y), at: new THREE.Vector2(x, y), spoke }); return nodes.length - 1; };
+		const hub = node(0, 0, -1);
+		const angles = [];
+		for (let k = 0; k < WEB.spokes; k++) angles.push((k + rr(-0.32, 0.32)) / WEB.spokes * Math.PI * 2 + 0.2);
+		const grid = [];   // grid[k][r]: the knot where ring r crosses spoke k
 		for (let k = 0; k < WEB.spokes; k++) {
-			const a = k / WEB.spokes * Math.PI * 2 + 0.13;
-			const end = new THREE.Vector3(Math.cos(a) * WEB.rx, Math.sin(a) * WEB.ry, 0);
-			const dir = end.clone().normalize();
-			const perp = new THREE.Vector3(-dir.y, dir.x, 0);
-			const m = new THREE.Mesh(new THREE.BufferGeometry(), silk);
-			unit.add(m);
-			const drops = [0.3, 0.5, 0.7, 0.88].map(() => { const d = mesh(GEO.sphLo, dew, unit, 0, 0, 0, 0.022); d.castShadow = false; return d; });
-			const sp = { a, end, dir, perp, m, drops, vib: 0, at: 0.5, deg: 2 + k, shape: -1 };
-			spokes.push(sp);
+			grid[k] = [];
+			let prev = hub;
+			for (let r = 0; r < WEB.rings; r++) {
+				const rad = (0.12 + (r + rr(-0.3, 0.3)) / (WEB.rings - 1) * 0.88) * rr(0.94, 1.04);
+				const a = angles[k] + rr(-0.03, 0.03);
+				const id = node(Math.cos(a) * rad * WEB.rx, Math.sin(a) * rad * WEB.ry, k);
+				segs.push([prev, id]); prev = id;
+				grid[k][r] = id;
+			}
 		}
-		// the spiral, wound out to the rim, and anchor strands off to the trees
-		const pts = [];
-		for (let t = 0; t < 1; t += 0.002) { const r = 0.06 + t * 0.94, a = t * Math.PI * 2 * 8; pts.push(new THREE.Vector3(Math.cos(a) * r * WEB.rx, Math.sin(a) * r * WEB.ry, 0)); }
-		mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 900, 0.006, 3), silk, unit).castShadow = false;
-		for (const a of [0.4, 1.2, 2.0, 2.9, 3.9, 5.0]) {
-			const p0 = new THREE.Vector3(Math.cos(a) * WEB.rx, Math.sin(a) * WEB.ry, 0), p1 = p0.clone().multiplyScalar(1.35);
-			mesh(new THREE.TubeGeometry(new THREE.LineCurve3(p0, p1), 1, 0.006, 3), silk, unit).castShadow = false;
+		for (let r = 0; r < WEB.rings; r++) for (let k = 0; k < WEB.spokes; k++) {
+			if (rnd() < 0.07 && r > 0 && r < WEB.rings - 1) continue;   // (a broken strand)
+			const k2 = (k + 1) % WEB.spokes;
+			// (some rings step out a ring as they go, so it never quite closes)
+			const r2 = r < WEB.rings - 1 && rnd() < 0.12 ? r + 1 : r;
+			segs.push([grid[k][r], grid[k2][r2]]);
 		}
-		// a spider, of course, with a face
+		// strays: from the rim out to the trees, and a few loose cross-threads
+		for (let k = 0; k < 7; k++) {
+			const kk = Math.floor(rnd() * WEB.spokes), b = nodes[grid[kk][WEB.rings - 1]].base;
+			segs.push([grid[kk][WEB.rings - 1], node(b.x * rr(1.25, 1.45), b.y * rr(1.25, 1.5), -1)]);
+		}
+		for (let k = 0; k < 5; k++) { const k1 = Math.floor(rnd() * WEB.spokes), r1 = 2 + Math.floor(rnd() * 5); segs.push([grid[k1][r1], grid[(k1 + 2) % WEB.spokes][r1 + 1]]); }
+		const silk = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.5, 1.5, 1.6), transparent: true, opacity: 0.9 });
+		const rods = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 4, 1), silk, segs.length);
+		rods.frustumCulled = false; unit.add(rods);
+		// dew on a scatter of the knots
+		const dewKnots = nodes.map((n, i) => i).filter((i) => i !== hub && rnd() < 0.45);
+		const dew = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 2.4, 2.6) }), dewKnots.length);
+		dew.frustumCulled = false; unit.add(dew);
+		// a spider, of course, with a face, and legs that scuttle
 		const spider = new THREE.Group(); spider.position.set(0, 0, 0.05); unit.add(spider);
 		mesh(GEO.sph, furMat('#3a2a3a'), spider, 0, 0, 0, 0.13, 0.12, 0.1);
 		makeFace(spider, 0.42, 0, 0.01, 0.1);
+		const legs = [];
 		for (const sx of [-1, 1]) for (let k = 0; k < 4; k++) {
-			const leg = mesh(GEO.cyl, MAT.dark, spider, sx * 0.17, 0.05 - k * 0.04, 0, 0.012, 0.22, 0.012);
-			leg.rotation.z = sx * (1.2 + k * 0.2);
+			const hip = new THREE.Group(); hip.position.set(sx * 0.1, 0.05 - k * 0.035, 0); hip.rotation.z = sx * (1.0 + k * 0.25); spider.add(hip);
+			const leg = mesh(GEO.cyl, MAT.dark, hip, 0, 0.12, 0, 0.012, 0.24, 0.012);
+			legs.push({ hip, base: hip.rotation.z, ph: k * 1.3 + (sx > 0 ? 0.6 : 0) });
 		}
-		// a ring of light where a string is plucked
+		// a ring of light where it's plucked
 		const ring = new THREE.Mesh(new THREE.RingGeometry(0.08, 0.11, 32), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.8, 2.2, 2.6), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
 		ring.position.z = 0.02; unit.add(ring);
 		labels.push({ ci, wall: w, at: c.clone().setY(0.15), text: 'STRUM THE WEB' });
-		const wb = { unit, spokes, wall: w, center: c, spider, last: -1, ring, ringT: 0 };
-		for (const sp of spokes) shapeSpoke(sp, 0);
-		webs[ci] = wb;
+		webs[ci] = { unit, nodes, segs, rods, dew, dewKnots, wall: w, center: c, spider, legs, ring, ringT: 0, plucks: [], last: -1, lastT: -9,
+			sp: { x: 0, y: 0, tx: 0, ty: 0, wait: 2, rest: 0 } };
+		layWeb(webs[ci]);
 	}
-	// a spoke's string, bent by its twang: a standing wave peaking where it was plucked
-	const _sv = new THREE.Vector3();
-	function shapeSpoke(sp, amp) {
-		const pts = [];
-		for (let k = 0; k <= WEB.seg; k++) {
-			const u = 0.04 + 0.96 * k / WEB.seg;
-			const bow = u < sp.at ? u / sp.at : (1 - u) / (1 - sp.at);   // (a pluck pulls a string into a triangle...)
-			const wave = Math.sin(u * Math.PI);                           // (...that rings as a sine)
-			const d = amp * lerp(bow, wave, 0.5);
-			pts.push(sp.end.clone().multiplyScalar(u).addScaledVector(sp.perp, d));
-		}
-		const old = sp.m.geometry;
-		sp.m.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), WEB.seg * 2, 0.01, 4);
-		old.dispose();
-		[0.3, 0.5, 0.7, 0.88].forEach((u, k) => {
-			const bow = u < sp.at ? u / sp.at : (1 - u) / (1 - sp.at);
-			sp.drops[k].position.copy(sp.end).multiplyScalar(u).addScaledVector(sp.perp, amp * lerp(bow, Math.sin(u * Math.PI), 0.5));
+	// set every strand between its two knots (as they are now)
+	const _wa = new THREE.Vector3(), _wb = new THREE.Vector3(), _wq = new THREE.Quaternion(), _wm = new THREE.Matrix4(), _wy = new THREE.Vector3(0, 1, 0), _ws = new THREE.Vector3();
+	function layWeb(wb) {
+		wb.segs.forEach(([i, j], k) => {
+			const a = wb.nodes[i].at, b = wb.nodes[j].at;
+			_wa.set(b.x - a.x, b.y - a.y, 0);
+			const len = _wa.length() || 1e-4;
+			_wq.setFromUnitVectors(_wy, _wa.multiplyScalar(1 / len));
+			_wm.compose(_wb.set((a.x + b.x) / 2, (a.y + b.y) / 2, 0), _wq, _ws.set(0.0065, len, 0.0065));
+			wb.rods.setMatrixAt(k, _wm);
 		});
+		wb.rods.instanceMatrix.needsUpdate = true;
+		wb.dewKnots.forEach((i, k) => { const a = wb.nodes[i].at; _wm.compose(_wb.set(a.x, a.y, 0.008), _wq.identity(), _ws.set(0.02, 0.02, 0.02)); wb.dew.setMatrixAt(k, _wm); });
+		wb.dew.instanceMatrix.needsUpdate = true;
 	}
 
 	// RIPPLE POND: stand still and rings spread from you across the water; every
@@ -2659,19 +2689,21 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 
 	// MOONBEAM THEREMIN: a shaft of moonlight by a wall; stand in it and rise and dip to bend a ghostly note
 	const theremins = [];
-	function buildTheremin(g, ci, cx, cz, [w, along]) {
+	const BEAM_TINT = [[1.8, 1.0, 1.6], [1.2, 1.3, 1.8], [1.0, 1.8, 1.5]];   // (low, middle, high)
+	function buildTheremin(g, ci, cx, cz, [w, along], k = 1) {
 		const pos = wallPoint(cx, cz, w, along, 0.35, 0);
-		const beamMat = new THREE.MeshBasicMaterial({ map: TEX.ray, color: new THREE.Color(1.2, 1.3, 1.8), transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+		const tint = BEAM_TINT[k % 3];
+		const beamMat = new THREE.MeshBasicMaterial({ map: TEX.ray, color: new THREE.Color(...tint), transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
 		const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 9, 24, 1, true), beamMat);
 		beam.position.set(pos.x, 4.5, pos.z); beam.renderOrder = 2;
 		g.add(beam);
-		const pool = mesh(GEO.shadow, new THREE.MeshBasicMaterial({ map: TEX.soft, color: new THREE.Color(1.2, 1.3, 1.8), transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending }), g, pos.x, 0.02, pos.z, 1.4, 1.4);
+		const pool = mesh(GEO.shadow, new THREE.MeshBasicMaterial({ map: TEX.soft, color: new THREE.Color(...tint), transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending }), g, pos.x, 0.02, pos.z, 1.4, 1.4);
 		pool.rotation.x = -Math.PI / 2; pool.castShadow = false;
-		const orbMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 2.4, 3.0) });
+		const orbMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(...tint).multiplyScalar(1.6) });
 		const orb = mesh(GEO.sph, orbMat, g, pos.x, 1, pos.z, 0.09);
 		orb.castShadow = false;
-		labels.push({ ci, wall: w, at: pos.clone().setY(0.05), text: 'STAND IN THE MOONBEAM' });
-		theremins[ci] = { beamMat, orb, pos, w, spot: spotOf(w, along), voice: null, who: -1, k: 0.5, glow: 0 };
+		if (k === 1) labels.push({ ci, wall: w, at: pos.clone().setY(0.05), text: 'STAND IN A MOONBEAM' });
+		theremins.push({ ci, beamMat, orb, pos, w, spot: spotOf(w, along), deg: [0, 5, 10][k % 3], voice: null, who: -1, k: 0.5, glow: 0 });
 	}
 
 	// BRIDGE CHOIR: stone faces on the bridge hum the chord; where everyone stands, left to right, picks it
@@ -2913,20 +2945,42 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			pb.m.scale.set(0.42 * (1 + pb.sq * 0.25 + pulse * 0.03), 0.32 * (1 - pb.sq * 0.45 + pulse * 0.05), 0.42 * (1 + pb.sq * 0.25 + pulse * 0.03));
 			pb.m.position.y = 0.3 * (1 - pb.sq * 0.45);
 		}
-		// the web's spokes shiver when plucked; its spider bobs to the beat
+		// the web: each pluck sends a ripple out through the strands round it, and the spider runs to see
 		for (const [ci, wb] of webs.entries()) if (wb && clearingGroups[ci].visible) {
-			for (const sp of wb.spokes) {
-				if (sp.vib <= 0 && sp.shape === 0) continue;
-				sp.vib = Math.max(0, sp.vib - dt * 0.9);
-				// (it swings hard and fast, then dies away: you can see it shiver)
-				const amp = sp.vib * sp.vib * 0.22 * Math.sin(rt * 38 + sp.a * 3);
-				shapeSpoke(sp, amp);
-				sp.shape = sp.vib > 0 ? 1 : 0;
+			wb.plucks = wb.plucks.filter((pk) => rt - pk.t < 1.8);
+			for (const nd of wb.nodes) {
+				nd.at.copy(nd.base);
+				for (const pk of wb.plucks) {
+					const age = rt - pk.t, dx = nd.base.x - pk.x, dy = nd.base.y - pk.y, d = Math.hypot(dx, dy) || 1e-3;
+					if (d > age * 3.2 + 0.15) continue;   // (the ripple hasn't reached it yet)
+					const amp = 0.2 * Math.exp(-age * 1.8) * Math.exp(-d / 0.9) * Math.sin(age * 30 - d * 9);   // (a big, slow-dying shiver, fading with distance)
+					nd.at.x += dx / d * amp * 0.6 + pk.px * amp; nd.at.y += dy / d * amp * 0.6 + pk.py * amp;
+				}
 			}
+			// the spider: off to a pluck, then a wander, then home
+			const S = wb.sp;
+			const d = Math.hypot(S.tx - S.x, S.ty - S.y);
+			if (d > 0.02) {
+				const step = Math.min(d, dt * (S.rush ? 2.6 : 0.9));
+				S.x += (S.tx - S.x) / d * step; S.y += (S.ty - S.y) / d * step;
+				wb.spider.rotation.z = Math.atan2(S.ty - S.y, S.tx - S.x) - Math.PI / 2;
+				for (const lg of wb.legs) lg.hip.rotation.z = lg.base + Math.sin(rt * 26 + lg.ph) * 0.35;
+			} else {
+				S.rush = false;
+				S.wait -= dt;
+				for (const lg of wb.legs) lg.hip.rotation.z = lg.base + Math.sin(rt * 3 + lg.ph) * 0.05;
+				if (S.wait <= 0) {
+					// (a wander to some knot, or home to the hub)
+					const nd = rnd() < 0.35 ? wb.nodes[0] : wb.nodes[Math.floor(rnd() * wb.nodes.length)];
+					if (Math.hypot(nd.base.x / WEB.rx, nd.base.y / WEB.ry) < 0.95) { S.tx = nd.base.x; S.ty = nd.base.y; }
+					S.wait = rr(1.5, 4);
+				}
+			}
+			wb.spider.position.set(S.x, S.y + pulse * 0.02, 0.05);
+			layWeb(wb);
 			wb.ringT = Math.max(0, wb.ringT - dt * 2);
 			wb.ring.scale.setScalar(1 + (1 - wb.ringT) * 4);
 			wb.ring.material.opacity = wb.ringT * 0.9;
-			wb.spider.position.y = pulse * 0.03 - Math.max(...wb.spokes.map((sp) => sp.vib)) * 0.06;
 		}
 		// the pond: rings spread, and each pad they reach plinks
 		for (const [ci, pd] of ponds.entries()) if (pd && clearingGroups[ci].visible) {
@@ -2974,7 +3028,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			}
 		}
 		// the moonbeam brightens with someone in it; its orb rides the pitch
-		for (const [ci, th] of theremins.entries()) if (th && clearingGroups[ci].visible) {
+		for (const th of theremins) if (clearingGroups[th.ci].visible) {
 			th.glow = lerp(th.glow, th.who >= 0 ? 1 : 0, 1 - Math.exp(-dt * 6));
 			th.beamMat.opacity = 0.3 + th.glow * 0.45 + Math.sin(rt * 2) * 0.04;
 			th.orb.position.y = 0.4 + th.k * 1.6;
@@ -3010,7 +3064,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			const q = pl[i], m = q.mesh;
 			m.visible = q.seen && phase !== 'off';
 			if (!m.visible) continue;
-			m.position.set(walls.rig.position.x + q.x, 0.3 + pulse * 0.08 + (q.jumpT > 0.3 ? 0.25 : 0), walls.rig.position.z + q.z);
+			m.position.set(walls.rig.position.x + q.x * AVATAR_REACH, 0.3 + pulse * 0.08 + (q.jumpT > 0.3 ? 0.25 : 0), walls.rig.position.z + q.z * AVATAR_REACH);
 			m.lookAt(walls.rig.position.x, 0.3, walls.rig.position.z - 4);
 			m.scale.setScalar(1 + pulse * 0.1);
 			if (q.speed > RUN && Math.random() < 0.4) spray(m.position, colour(i), 2, 0.6, 1);
@@ -3239,7 +3293,6 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 
 	self.test = {
 		// (for finding what's slow: hide a kind of thing, or switch a feature off)
-		web() { const wb = webs[here]; return wb && { vib: wb.spokes.map((sp) => Math.round(sp.vib * 100) / 100), ends: wb.spokes.map((sp) => { const q = proj(wb.wall, wb.unit.localToWorld(sp.end.clone().multiplyScalar(0.6))); return [Math.round(q.x), Math.round(q.y)]; }) }; },
 		pluck(x, y) { return pluckAt({ x, y }, 2, 0); },
 		perf() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, programs: renderer.info.programs.length, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; },
 		hide(tag, off = true) { scene.traverse((o) => { if (o.userData.tag === tag) o.visible = !off; }); },
@@ -3258,7 +3311,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		walk(k) { walkTo(k); },
 		tap(x, y) { tap({ x, y }); },
 		grid() { const gw = grids[here]; return gw && { on: gw.on.slice(), at: gw.pos.map((v) => { const q = proj(1, v); return [Math.round(q.x), Math.round(q.y)]; }) }; },
-		webHits() { const wb = webs[here]; return wb && wb.spokes.map((sp) => Math.round(sp.vib * 100)); },
+		webHits() { const wb = webs[here]; return wb && [rt - wb.lastT < 0.5 ? 100 : 0]; },
+		spider() { const wb = webs[here]; return wb && [wb.sp.x, wb.sp.y]; },
 		webAt(u, v) { const wb = webs[here]; const q = proj(wb.wall, wb.unit.localToWorld(new THREE.Vector3(u * WEB.rx, v * WEB.ry, 0))); return [Math.round(q.x), Math.round(q.y)]; },
 		trick(k) { const list = creatures.filter((c) => c.clearing === here); if (list[k]) pending.push({ kind: 'trick', c: list[k] }); },
 	};
