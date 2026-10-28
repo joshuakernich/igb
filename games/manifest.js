@@ -117,7 +117,7 @@ IGB.manifest = [
 	] },
 
 	{ folder: 'Disruption', games: [
-		{ id: 'coin-chaos', name: 'Coin Chaos', icon: 'assets/icons/coin-chaos.png',
+		{ id: 'coin-chaos', name: 'Coin Chaos', icon: 'assets/box-party/icon-coin-chaos.png',
 			box: { color: 'white', bg: 'url(assets/box-party/icon-coin-chaos.png) center / cover', note: 'HIGH ENERGY' } },
 	] },
 
@@ -131,7 +131,7 @@ IGB.manifest = [
 	] },
 
 	{ folder: 'Multiwall', games: [
-		{ id: 'milkers', name: 'Milkers', icon: 'assets/icons/milkers.png',
+		{ id: 'milkers', name: 'Milkers', icon: 'assets/box-party/icon-milk.png',
 			box: { color: '#40B0ED', bg: 'url(assets/box-party/icon-milk.png) center / cover', note: 'HIGH ENERGY' } },
 		{ id: 'popcorn-panhandlers', name: 'Popcorn Panhandlers', icon: 'assets/icons/popcorn-panhandlers.png',
 			box: { color: '#40B0ED', bg: 'url(assets/box-party/cube-popcorn.png) center / cover' } },
