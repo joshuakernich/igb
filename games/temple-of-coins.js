@@ -10,7 +10,7 @@
  *             they're in the chest: walk to the glowing chest to bank them
  *   the chest only one of the temple's exits is open at a time, and every
  *             so often it moves (it shakes first: CHEST MOVING)
- *   walls     touch the stone and you drop everything: the coins you carry
+ *   spikes    the stone blocks bristle with iron spikes: touch one and you drop everything: the coins you carry
  *             fly back to where you found them, and you're out for a moment
  *   ghosts    the same. Hunters chase what they see, patrols pace a hall,
  *             wanderers drift, and the imposter walks where you walked
@@ -304,7 +304,7 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 		{ caption: 'WALK AROUND: YOU ARE YOUR EXPLORER', min: 2, max: 10, did: () => everyone((i) => tut.moved[i] > 1.5) },
 		{ caption: 'WALK OVER THE COINS TO PICK THEM UP', min: 2, max: 25, did: () => enough(tut.picked) },
 		{ caption: 'BANK THEM IN THE GLOWING CHEST', min: 2, max: 25, did: () => enough(tut.banked) },
-		{ caption: 'DON\'T TOUCH THE STONE, OR YOU DROP IT ALL!', min: 3.5, max: 3.5, did: () => true },
+		{ caption: 'DON\'T TOUCH THE SPIKES, OR YOU DROP IT ALL!', min: 3.5, max: 3.5, did: () => true },
 	];
 
 	show.sequence([
@@ -336,7 +336,7 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 				show.onWalls(ctx, function (c) {
 					show.slam(c, 'GRAB THE GOLD.', W / 2, 250, 92, bt - 0.3, { font: TITLE_FONT, exact: true, fill: GOLD });
 					show.slam(c, 'BANK IT IN THE CHEST.', W / 2, 360, 70, bt - 1.1, { font: TITLE_FONT, exact: true, fill: 'white' });
-					show.slam(c, 'NEVER TOUCH THE STONE.', W / 2, 460, 70, bt - 1.9, { font: TITLE_FONT, exact: true, fill: '#ff6a3d' });
+					show.slam(c, 'NEVER TOUCH THE SPIKES.', W / 2, 460, 70, bt - 1.9, { font: TITLE_FONT, exact: true, fill: '#ff6a3d' });
 				});
 			},
 		},
@@ -556,7 +556,7 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 			lost += p.value;
 		}
 		e.pot = [];
-		float(e.x, e.z, why === 'stone' ? 'TOUCHED THE STONE!' : why === 'bomb' ? 'KABOOM!' : 'GOT YOU!', '#ff5a3d', 1.2);
+		float(e.x, e.z, why === 'stone' ? 'SPIKED!' : why === 'bomb' ? 'KABOOM!' : 'GOT YOU!', '#ff5a3d', 1.2);
 		if (lost) float(e.x, e.z - 0.4, '-' + lost, '#ffb03d', 1.0);
 		show.fx(why === 'bomb' ? 'explode' : 'roundFail', 0.45);
 		show.fx('thud', 0.5);
@@ -1124,7 +1124,9 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 		cap: new THREE.MeshStandardMaterial({ map: TEX.cap, roughness: 0.8 }),
 		marble: new THREE.MeshStandardMaterial({ color: 0xe9dcc4, roughness: 0.5 }),
 		bronze: new THREE.MeshStandardMaterial({ color: 0x9a6a2a, metalness: 0.8, roughness: 0.35 }),
-		gold: new THREE.MeshStandardMaterial({ color: 0xffc23a, metalness: 1, roughness: 0.22, emissive: 0x6a3a00, emissiveIntensity: 0.9 }),
+		iron: new THREE.MeshStandardMaterial({ color: 0x8a8f9a, metalness: 0.85, roughness: 0.3, emissive: 0x2a0800, emissiveIntensity: 0.4 }),
+		gold: new THREE.MeshStandardMaterial({ color: 0xffc23a, metalness: 0.55, roughness: 0.3, emissive: 0xffa21a, emissiveIntensity: 0.55 }),
+		coinGlow: new THREE.MeshBasicMaterial({ map: TEX.soft, color: new THREE.Color(1.3, 0.85, 0.2), transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending }),
 		wood: new THREE.MeshStandardMaterial({ color: 0x6a3d1c, roughness: 0.7 }),
 		dark: new THREE.MeshStandardMaterial({ color: 0x1a0f08, roughness: 0.6 }),
 		flame: new THREE.MeshBasicMaterial({ color: new THREE.Color(3.2, 1.4, 0.3), transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }),
@@ -1212,13 +1214,42 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 	const GEO = {
 		block: new THREE.BoxGeometry(CS * 0.96, WALL_H, CS * 0.96),
 		cap: new THREE.BoxGeometry(CS * 1.0, 0.08, CS * 1.0),
-		coin: new THREE.CylinderGeometry(0.15, 0.15, 0.04, 28).rotateX(Math.PI / 2),
-		coinRim: new THREE.TorusGeometry(0.15, 0.018, 8, 28),
+		coin: new THREE.CylinderGeometry(0.2, 0.2, 0.05, 32),   // (lying flat: seen from above, a coin's face is what shows)
+		coinRim: new THREE.TorusGeometry(0.2, 0.024, 8, 32).rotateX(Math.PI / 2),
 		gem: new THREE.OctahedronGeometry(0.07),
 		pad: new THREE.CylinderGeometry(0.42, 0.46, 0.06, 28),
 		rune: new THREE.PlaneGeometry(1.0, 1.0),
 		shadow: new THREE.PlaneGeometry(1, 1),
+		spikes: spikeGeometry(),
 	};
+	// a block's spikes, as one mesh: a staggered cluster on top, a pair out of each side
+	function spikeGeometry() {
+		const parts = [];
+		const add = (g) => parts.push(g.toNonIndexed());
+		const top = WALL_H + 0.08;
+		const P = [[-0.22, -0.22], [0.02, -0.24], [0.24, -0.18], [-0.2, 0.02], [0.04, 0.0], [0.24, 0.06], [-0.22, 0.24], [0.0, 0.22], [0.22, 0.25]];
+		P.forEach(function ([x, z], k) {
+			const h = 0.2 + ((k * 7) % 5) * 0.03;
+			add(new THREE.ConeGeometry(0.065, h, 7).translate(x * CS / 0.75, top + h / 2, z * CS / 0.75));
+		});
+		for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+			for (const off of [-0.17, 0.17]) {
+				const c = new THREE.ConeGeometry(0.05, 0.17, 6).rotateX(Math.PI / 2);   // (pointing along +z)
+				c.rotateY(Math.atan2(dx, dz));
+				c.translate(dx * (CS * 0.48 + 0.08) + (dz ? off : 0), WALL_H * 0.55, dz * (CS * 0.48 + 0.08) + (dx ? off : 0));
+				add(c);
+			}
+		}
+		const out = new THREE.BufferGeometry();
+		for (const name of ['position', 'normal', 'uv']) {
+			const arrays = parts.map((g) => g.attributes[name].array);
+			const merged = new Float32Array(arrays.reduce((n, a) => n + a.length, 0));
+			let at = 0;
+			for (const a of arrays) { merged.set(a, at); at += a.length; }
+			out.setAttribute(name, new THREE.BufferAttribute(merged, parts[0].attributes[name].itemSize));
+		}
+		return out;
+	}
 	const MAT_SHADOW = new THREE.MeshBasicMaterial({ map: TEX.soft, color: 0x000000, transparent: true, opacity: 0.45, depthWrite: false });
 
 	function makeBlock(group, x, z, delay) {
@@ -1227,7 +1258,9 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 		m.position.y = WALL_H / 2;
 		const cap = new THREE.Mesh(GEO.cap, MAT.cap);
 		cap.position.y = WALL_H + 0.04;
-		for (const k of [m, cap]) { k.castShadow = true; k.receiveShadow = true; g.add(k); }
+		const spikes = new THREE.Mesh(GEO.spikes, MAT.iron);
+		spikes.rotation.y = Math.floor(Math.random() * 4) * Math.PI / 2;   // (so the blocks don't all match)
+		for (const k of [m, cap, spikes]) { k.castShadow = true; k.receiveShadow = true; g.add(k); }
 		g.position.set(x, 0, z);
 		g.userData.rise = -delay;
 		g.scale.y = 0.001;
@@ -1242,7 +1275,7 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 		g.add(face, rim);
 		if (value >= BIG) {
 			const gem = new THREE.Mesh(GEO.gem, new THREE.MeshStandardMaterial({ color: 0xff2a4a, emissive: 0xff1030, emissiveIntensity: 1.4, roughness: 0.2 }));
-			gem.position.z = 0.03;
+			gem.position.y = 0.04;
 			g.add(gem);
 			g.scale.setScalar(1.55);
 		}
@@ -1251,9 +1284,15 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 		sh.scale.setScalar(0.42);
 		sh.position.set(x, 0.01, z);
 		group.add(sh);
+		const glow = new THREE.Mesh(GEO.shadow, MAT.coinGlow);
+		glow.rotation.x = -Math.PI / 2;
+		glow.scale.setScalar(value >= BIG ? 1.2 : 0.8);
+		glow.position.set(x, 0.02, z);
+		group.add(glow);
+		g.rotation.order = 'YXZ';
 		g.position.set(x, 0.3, z);
 		group.add(g);
-		return { x, z, value, present: true, fly: 1, fx: x, fz: z, mesh: g, shadow: sh, spin: Math.random() * 6, pop: -delay, big: value >= BIG, c: colOf(x), r: rowOf(z) };
+		return { x, z, value, present: true, fly: 1, fx: x, fz: z, mesh: g, shadow: sh, glow, spin: Math.random() * 6, pop: -delay, big: value >= BIG, c: colOf(x), r: rowOf(z) };
 	}
 	function makeExit(group, x, z) {
 		const pad = new THREE.Mesh(GEO.pad, MAT.bronze);
@@ -1586,10 +1625,12 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 			const arc = Math.sin(k * Math.PI) * 1.6;
 			c.mesh.visible = c.present && c.pop > 0;
 			c.shadow.visible = c.mesh.visible;
+			c.glow.visible = c.mesh.visible;
+			c.glow.position.set(x, 0.02, z);
 			const s = (c.big ? 1.55 : 1) * 1.3 * easeOut(Math.max(0, c.pop));
 			c.mesh.scale.setScalar(Math.max(0.001, s));
-			c.mesh.position.set(x, 0.3 + Math.sin(c.spin * 0.8) * 0.05 + arc + c.drop * 4, z);
-			c.mesh.rotation.y = c.spin;
+			c.mesh.position.set(x, 0.3 + Math.sin(c.spin * 0.8) * 0.05 + arc + (c.drop || 0) * 4, z);   // (drop: only the coins the treasury rains)
+			c.mesh.rotation.set(0.55, c.spin, 0);   // (tipped back a little, turning: it glints as it goes round)
 			c.shadow.position.set(x, 0.012, z);
 		}
 
