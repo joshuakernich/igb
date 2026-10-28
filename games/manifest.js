@@ -36,7 +36,7 @@ IGB.manifest = [
 	] },
 
 	{ folder: 'New', games: [
-		{ id: 'grub-o-tron', name: 'Fission Chips', icon: 'assets/icons/grub-o-tron.svg', module: true,
+		{ id: 'grub-o-tron', name: 'Fission Chips', icon: 'assets/icons/grub-o-tron.png', module: true,
 			title: { lines: [{ text: 'FISSION', fill: '#c8ff5a', glow: '#3cff7a', font: 'Monoton' }, { text: 'CHIPS', fill: '#FC1992', glow: '#9E00FF', font: 'Rubik Wet Paint' }] }, box: { color: '#9dff3a', bg: '#200033', note: 'CO-OP' } },
 		{ id: 'red-light-green-light', name: 'Red Light Green Light', icon: 'assets/icons/red-light-green-light.png',
 			file: 'games/red-light-green-light/index.js', module: true,
@@ -63,7 +63,7 @@ IGB.manifest = [
 			title: { lines: [{ text: 'BACKROOMS', fill: '#f2dc5d', glow: '#c9a227' }] }, box: { color: '#d9c56a', bg: '#3a3418', note: 'MEMORY' } },
 		{ id: 'gwi-ma-showdown', name: 'Gwi-Ma Showdown', icon: 'assets/icons/gwi-ma-showdown.png',
 			title: { lines: [{ text: 'GWI-MA', fill: '#ff4fd8', glow: '#ff3d7a' }, { text: 'SHOWDOWN', fill: '#ffe14d', glow: '#ff7a3d' }] }, box: { color: '#ff3df0', bg: '#12051f', note: 'BOSS' } },
-		{ id: 'melody-canvas', name: 'Melody Canvas',
+		{ id: 'melody-canvas', name: 'Melody Canvas', icon: 'assets/icons/melody-canvas.png',
 			title: { lines: [{ text: 'Melody', fill: '#3f9e7f', glow: '#26241f', font: 'Shrikhand' }, { text: 'Canvas', fill: '#d0653f', glow: '#26241f', font: 'Shrikhand' }], font: 'Shrikhand' }, box: { color: '#26241f', bg: '#f4f1ea', note: 'MUSIC' } },
 		{ id: 'echo', name: 'Echo',
 			box: { color: '#3ad1ff', bg: '#0b1630', note: 'DODGE' } },
@@ -87,6 +87,8 @@ IGB.manifest = [
 
 	{ folder: 'Batman', games: [
 		{ id: 'riddler', name: 'Riddler', icon: 'assets/icons/riddler.png', file: 'games/riddler.js' },
+		{ id: 'riddler-says', name: 'Riddler Says', icon: 'assets/icons/riddler-says.png', file: 'games/riddler-says.js',
+			title: { lines: [{ text: 'RIDDLER', fill: '#39ff14', glow: '#39ff14', font: 'VCRFONT' }, { text: 'SAYS', fill: '#ffffff', glow: '#39ff14', font: 'VCRFONT' }], font: 'VCRFONT' }, box: { color: '#39ff14', bg: '#0b1a07', note: 'PUZZLE' } },
 	] },
 
 	{ folder: 'Box Party Metagame', games: [
@@ -181,7 +183,7 @@ IGB.manifest = [
 
 // The only games the menu shows (in their folders above); the rest stay
 // playable by #id. Remove this (or set it to null) to show everything.
-IGB.menu = ['grub-o-tron', 'red-light-green-light', 'loop-island', 'quill-relay', 'iron-stride', 'twin-tail-tower', 'tails-escape', 'knuckles-quest', 'super-sonic-battle', 'sonic-characters', 'mingle', 'backrooms', 'gwi-ma-showdown', 'roll-call', 'melody-canvas', 'show-debug', 'gaze-test'];
+IGB.menu = ['grub-o-tron', 'red-light-green-light', 'loop-island', 'quill-relay', 'iron-stride', 'twin-tail-tower', 'tails-escape', 'knuckles-quest', 'super-sonic-battle', 'sonic-characters', 'backrooms', 'riddler-says', 'melody-canvas', 'show-debug', 'gaze-test'];
 
 // The music tracks, on or off everywhere: every music-*.mp3 (the show's music
 // included). Tunes the games synthesise (the doll's song, Mingle's waltz),

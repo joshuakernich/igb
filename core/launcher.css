@@ -4,6 +4,7 @@
  */
 
 /* a title's own lettering (games/manifest.js: title.font), wherever it's shown */
+@font-face { font-family: 'VCRFONT'; src: url('../assets/riddler/VCR_OSD_MONO_1.001.ttf') format('truetype'); font-display: swap; }
 @font-face { font-family: 'Nise Sega Sonic'; src: url('../assets/loop-island/NiseSegaSonic.ttf') format('truetype'); font-display: swap; }
 @font-face { font-family: 'Bend 2 Squares'; src: url('../assets/show-debug/Bend2Squares.ttf') format('truetype'); font-display: swap; }
 @font-face { font-family: 'Bend 2 Squares OL1'; src: url('../assets/show-debug/Bend2SquaresOL1.ttf') format('truetype'); font-display: swap; }

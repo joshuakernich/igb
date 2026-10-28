@@ -1289,6 +1289,8 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 		shades: shades.length,
 	});
 
+	self.test = { skipTo(id) { show.go(id); } };   // (jump to any beat: tools/icon-shots.mjs)
+
 	self.fini = function () {
 		stage.$el.off('.melody-canvas');
 		stage.$ui.off('.melody-canvas');

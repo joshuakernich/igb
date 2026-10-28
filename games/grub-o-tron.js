@@ -3072,6 +3072,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		portals: portals.length,
 	});
 
+	self.test = { skipTo(id) { show.go(id); } };   // (jump to any beat: tools/icon-shots.mjs)
+
 	self.fini = function () {
 		stage.$el.off('.grub-o-tron');
 		unlisten();

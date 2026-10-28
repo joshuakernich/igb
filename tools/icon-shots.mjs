@@ -13,15 +13,17 @@ fs.mkdirSync(OUT, { recursive: true });
 
 // each game's square, in the grab's pixels (x, y, size), and the icon it makes
 const CROPS = {
-	'red-light-green-light': { x: 1690, y: 0, s: 225 },              // the doll
+	'red-light-green-light': { x: 1695, y: 0, s: 210 },              // the doll
+	'grub-o-tron': { x: 1339, y: 331, s: 220 },                      // a cyborg cook
+	backrooms: { x: 1650, y: 200, s: 300 },                          // the entity, down the corridor
+	'riddler-says': { x: 605, y: 90, s: 230 },                       // the Riddler, on a screen
+	'melody-canvas': { x: 200, y: 250, s: 340 },                     // the pens at the playhead
 	'loop-island': { x: 1719, y: 252, s: 315, icon: 'sonic-dash' },   // a runner, from behind
-	mingle: { x: 162, y: 243, s: 288 },                              // a contestant
-	backrooms: { x: 1300, y: 150, s: 440 },                          // the office (it's seen through your own eyes)
-	'gwi-ma-showdown': { x: 2502, y: 0, s: 396 },                    // the Gwi-Ma
-	'roll-call': { x: 1925, y: 400, s: 310 },                        // the voters
 	'quill-relay': { x: 1368, y: 270, s: 342, icon: 'sonic-classic' },    // the loop, rings round it
 	// (iron-stride's icon, sonic-robot.png, is a posed hero shot from outside, made with IGB.current.test.hero(0.45, 12.5, 2.4, 2): not grabbed here)
 };
+// the beat to shoot in (default play) and how long after jumping to it (seconds), when it isn't play
+const BEAT = { backrooms: ['entity', 4], 'riddler-says': ['intro', 2], 'grub-o-tron': ['play', 6], 'melody-canvas': ['play', 6] };
 const WARM = { 'red-light-green-light': 9, mingle: 8, backrooms: 8, 'gwi-ma-showdown': 7, 'roll-call': 6, 'loop-island': 6, 'quill-relay': 7 };
 
 const [mode, ...rest] = process.argv.slice(2);
@@ -37,7 +39,7 @@ if (mode === 'grab') {
 	}, t);
 	for (const id of ids) {
 		const { page } = await openPage(b, { width: 3600, height: 1000 });
-		await page.goto(`${server.url}/index.html#${id}`);
+		await page.goto(`${server.url}/index.html?players=3#${id}`);
 		await page.waitForFunction(() => window.IGB && IGB.current, null, { timeout: 15000 });
 		await sleep(1200);
 		await page.evaluate(() => {
@@ -51,8 +53,9 @@ if (mode === 'grab') {
 		for (let i = 0; i < (WARM[id] || 7) * 4; i++) { await wander(page, t++); await sleep(250); }
 		await page.addStyleTag({ content: 'igb-simulator, igb-controls, igb-log, showtime-picker { display: none !important; }' });
 		await sleep(300);
-		await page.evaluate(() => { const g = IGB.current; try { (g.test.skipTo || g.test.jump)('play'); } catch (e) { /* */ } });   // (again, past anything the first jump started)
-		await sleep(1500);
+		const [beat, after] = BEAT[id] || ['play', 1.5];
+		await page.evaluate((beat) => { const g = IGB.current; try { (g.test.skipTo || g.test.jump)(beat); } catch (e) { /* */ } }, beat);   // (again, past anything the first jump started; or the beat to shoot)
+		for (let i = 0; i < after * 4; i++) { await wander(page, t++); await sleep(250); }
 		const r = await page.evaluate(() => { const r = document.querySelector('igb-world').getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; });
 		await page.screenshot({ path: path.join(OUT, id + '.png'), clip: r });
 		console.log(id, Math.round(r.width) + 'x' + Math.round(r.height));
