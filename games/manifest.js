@@ -61,6 +61,8 @@ IGB.manifest = [
 			title: { lines: [{ text: 'BACKROOMS', fill: '#f2dc5d', glow: '#c9a227' }] }, box: { color: '#d9c56a', bg: '#3a3418', note: 'MEMORY' } },
 		{ id: 'gwi-ma-showdown', name: 'Gwi-Ma Showdown', icon: 'assets/icons/gwi-ma-showdown.png',
 			title: { lines: [{ text: 'GWI-MA', fill: '#ff4fd8', glow: '#ff3d7a' }, { text: 'SHOWDOWN', fill: '#ffe14d', glow: '#ff7a3d' }] }, box: { color: '#ff3df0', bg: '#12051f', note: 'BOSS' } },
+		{ id: 'melody-canvas', name: 'Melody Canvas',
+			title: { lines: [{ text: 'MELODY', fill: '#3f9e7f', glow: '#3f9e7f' }, { text: 'CANVAS', fill: '#e8a83c', glow: '#d0653f' }] }, box: { color: '#26241f', bg: '#f4f1ea', note: 'MUSIC' } },
 		{ id: 'echo', name: 'Echo',
 			box: { color: '#3ad1ff', bg: '#0b1630', note: 'DODGE' } },
 		{ id: 'template', name: 'Template', file: 'games/_template.js' },
@@ -106,7 +108,7 @@ IGB.manifest = [
 	] },
 
 	{ folder: 'Musical', games: [
-		{ id: 'bongo-bounce', name: 'Bongo Bounce', icon: 'assets/icons/bongo-bounce.png',
+		{ id: 'bongo-bounce', name: 'Bongo Bounce', icon: 'assets/box-party/icon-drum.png',
 			box: { color: 'white', bg: 'url(assets/box-party/icon-drum.png) center / cover' } },
 		{ id: 'melody-match', name: 'Melody Match', icon: 'assets/icons/melody-match.png',
 			box: { color: 'white', bg: 'url(assets/box-party/icon-drum.png) center / cover' } },
@@ -177,7 +179,7 @@ IGB.manifest = [
 
 // The only games the menu shows (in their folders above); the rest stay
 // playable by #id. Remove this (or set it to null) to show everything.
-IGB.menu = ['red-light-green-light', 'loop-island', 'quill-relay', 'iron-stride', 'twin-tail-tower', 'tails-escape', 'knuckles-quest', 'super-sonic-battle', 'sonic-characters', 'mingle', 'backrooms', 'gwi-ma-showdown', 'roll-call', 'show-debug', 'gaze-test'];
+IGB.menu = ['red-light-green-light', 'loop-island', 'quill-relay', 'iron-stride', 'twin-tail-tower', 'tails-escape', 'knuckles-quest', 'super-sonic-battle', 'sonic-characters', 'mingle', 'backrooms', 'gwi-ma-showdown', 'roll-call', 'melody-canvas', 'show-debug', 'gaze-test'];
 
 // The music tracks, on or off everywhere: every music-*.mp3 (the show's music
 // included). Tunes the games synthesise (the doll's song, Mingle's waltz),
