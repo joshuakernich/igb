@@ -316,8 +316,8 @@ IGB.players = (function () {
 	function hud() {
 		if (!$simulator) return;
 		const state = you.sq > 0.5 ? ' · squatting' : you.jumpT >= 0 ? ' · jumping' : '';
-		$simulator.find('gamebox-player').html(selected < 0 ? 'Watching <span>(Tab or 1–6 to drive a player)</span>'
-			: `<b n="${selected}">You: player ${selected + 1}</b> · ${you.cm} cm${state}`);
+		$simulator.find('gamebox-player').attr('n', selected < 0 ? null : selected).html(selected < 0 ? 'Watching <span>Tab or 1–6 to drive a player</span>'
+			: `<b>You are P${selected + 1}</b> <span>${you.cm} cm${state}</span>`);
 		$simulator.find('gamebox-hint').toggle(you.help);
 	}
 
@@ -326,9 +326,14 @@ IGB.players = (function () {
 		const $avatars = $simulator.find('gamebox-avatar');
 		players.forEach(function (p, i) {
 			if (p.px === undefined) return;
-			$avatars.eq(i).css({ left: p.px * 100 + '%', top: p.pz * 100 + '%' })
-				.toggleClass('selected', i === selected)
-				.find('gamebox-human').css({ height: (1 - p.py) * 100 + 'px' });
+			// (a little person: their height, squatting or jumping; the one you drive from your own settings)
+			const me = i === selected, $a = $avatars.eq(i);
+			const tall = me ? you.cm / 170 : Math.max(0.7, Math.min(1.25, 1 + p.Y * 0.5));
+			const squat = me ? you.sq > 0.5 : p.Y < -0.25;
+			const lift = me ? youJump() * 60 : 0;
+			$a.css({ left: p.px * 100 + '%', top: p.pz * 100 + '%' }).toggleClass('selected', me);
+			$a.find('gamebox-human').toggleClass('squat', squat).css({ height: 60 * tall + 'px', width: 24 * tall + 'px', left: -12 * tall + 'px', transform: `rotateX(90deg) translateY(${-lift}px)` });
+			$a.find('gamebox-tag').text(me ? 'YOU' : 'P' + (i + 1));
 			// where they're looking, on the simulator's walls (its side walls run the other way across)
 			const g = p.gaze, $dot = $simulator.find('gamebox-gaze[n=' + i + ']');   // (by its player: moving between walls reorders them)
 			if (!g || i >= CONTROLLABLE) { $dot.hide(); return; }
@@ -362,15 +367,26 @@ IGB.players = (function () {
 				</gamebox-box>
 				<gamebox-panel>
 					<gamebox-player></gamebox-player>
-					<button btn=move>Random move</button>
-					<gamebox-hint>WASD walk · click the floor to walk there · Shift squat · Space jump · Q / E height<br>mouse over a wall to look · click a wall to touch it (walks over first)<br>Tab / 1–6 pick a player · 0 watch · H hide this</gamebox-hint>
+					<button btn=move>Shuffle the others</button>
+					<gamebox-hint>
+						<span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>walk</span>
+						<span><kbd class=mouse>click floor</kbd></span><span>walk there</span>
+						<span><kbd>Shift</kbd></span><span>squat</span>
+						<span><kbd>Space</kbd></span><span>jump</span>
+						<span><kbd>Q</kbd><kbd>E</kbd></span><span>shorter / taller</span>
+						<span><kbd class=mouse>point at wall</kbd></span><span>look</span>
+						<span><kbd class=mouse>click wall</kbd></span><span>touch it</span>
+						<span><kbd>Tab</kbd><kbd>1–6</kbd></span><span>pick a player</span>
+						<span><kbd>0</kbd></span><span>just watch</span>
+						<span><kbd>H</kbd></span><span>hide this</span>
+					</gamebox-hint>
 				</gamebox-panel>
 			</gamebox-simulator>
 		`).appendTo($parent);
 
 		const $floor = $simulator.find('gamebox-side.floor');
 		for (let i = 0; i < SLOTS; i++) {
-			$('<gamebox-avatar><gamebox-human></gamebox-human></gamebox-avatar>').attr('n', i).appendTo($floor);
+			$('<gamebox-avatar><gamebox-human><gamebox-body></gamebox-body><gamebox-tag></gamebox-tag></gamebox-human></gamebox-avatar>').attr('n', i).appendTo($floor);
 			$('<gamebox-gaze>').attr('n', i).hide().appendTo($floor);
 		}
 		$('<gamebox-goal>').hide().appendTo($floor);
