@@ -15,25 +15,32 @@
  *   RIGHT WALL   THE NEW WAYS: matter compressor, mutagen injector,
  *                microwave of elsewhere and cryo-blaster
  *
- * Each wall's floor is a grid of squares. Every station takes a square,
- * with a marked square next to it: stand on that one to use it.
- * Your cook works on one wall at a time (everyone starts at the front):
- * tap another wall to move there; that tap does nothing else.
- * You carry one thing at a time. Tap a hatch pod to grab an ingredient, tap
- * a station to drop it in, work the station, tap it again to take it out,
- * and tap a mutant's window to hand it over. A ticket lists each part of
- * the dish: an ingredient and the stations it goes through, in order.
- *   chop    tap the block, again and again (any of you)
+ * Each wall's floor is a grid of squares, the whole room from that wall to
+ * the far one. Where you stand in the room is where your cook stands.
+ * Everything is done by where you stand: every station takes a square, with
+ * a marked square next to it, and standing on that square uses it.
+ *   the hatch    stand on its square with empty hands: you grab what's there
+ *   a station    stand on its square holding food: it goes in. Stay on the
+ *                square to work it, and when it's done (and your hands are
+ *                empty) it comes back to you
+ *   the counter  stand at the front counter in front of a mutant holding
+ *                what it ordered: you hand it over
+ *   the chute    stand on its square a moment: what you hold goes in the bin
+ * The only touch: your cook works on one wall at a time (everyone starts at
+ * the front). Touch another wall, where you can reach it, to move there.
+ * A ticket lists each part of the dish: an ingredient and the stations it
+ * goes through, in order, and a hint over your cook says where to go next.
+ *   chop    stay on its square
  *   fry     cooks by itself; take it out while it's golden, or it burns
- *   grill   cooks by itself, but tap it to flip it when it says FLIP!
- *   stir    stand at the vat and sway from side to side
- *   press   stand at the compressor and squat (taps help a little)
- *   inject  tap when the dial's needle is in the green
+ *   grill   cooks by itself, but someone has to be there to flip it
+ *   stir    sway from side to side on its square
+ *   press   squat on its square (or wait it out, slowly)
+ *   inject  stay on its square until the needle hits the green
  *   warp    cooks by itself into another dimension, and comes back out of
- *           a portal somewhere else in the room: find it and tap it
- *   cryo    stand at the blaster and hold still
- * Burnt food left sitting starts a fire (tap the flames to put it out, or
- * it spreads); bin burnt food in the void chute.
+ *           a portal on some other square: go and stand in it
+ *   cryo    hold still on its square
+ * Burnt food left sitting starts a fire (stand on its square to put it out,
+ * or it spreads); bin burnt food in the void chute.
  *
  * Score: a finished dish pays everyone who had a hand in it (grabbed it,
  * worked it, carried it, served it) its price plus a tip for speed. The
@@ -45,9 +52,9 @@
  * kitchen at a tilt, through an orthographic camera, so the room reads as
  * one grimy, neon-lit 2.5D diorama; words, tickets and prompts are 2D over it.
  *
- * Input: px / pz (which wall you're at and where along it; pz is 1 at the
- * front wall), py (squats), movement (stir, hold still) and wall taps,
- * credited to the nearest player who can use them.
+ * Input: px / pz (which square you're on; pz is 1 at the front wall), py
+ * (squats), movement (stir, hold still), and touches on a wall, only from a
+ * player near enough that spot to reach it (to change walls).
  */
 import * as THREE from '../lib/three/three.module.min.js';
 import { createWallComposer, canvasTexture, environmentFromShader, toScreen } from '../lib/three/walls.js';
@@ -65,11 +72,15 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	/* ---------- tuning ---------- */
 
 	const SLOT = 400;             // a station's width (four to a wall)
-	const NEAR_TAP = 0.8;         // a tap goes to a player this near the spot (along + out), or no one
+	const REACH_WALL = 0.2;       // a touch on a wall counts for a player this near it, and this near the spot along it
+	const DWELL = 0.35;           // seconds on a square before it acts (drop in, take out, grab, serve)
+	const BIN_DWELL = 0.9;        // (the chute waits a little longer: no binning by accident)
+	const CHOP_TIME = 2.4;        // seconds on the block's square to chop
+	const PRESS_WAIT = 7;         // the press does it by itself this slowly (squats are quicker)
+	const DOUSE = 2;              // seconds on a burning station's square to put it out
+	const UNJAM = 2.5;            // and on the jammed hatch's to fix it
 	const HATCH = 330;            // the front wall: the hatch up to here...
 	const CHUTE = 1270;           // ...the chute from here, and the windows between
-	const PORTAL_R = 125;
-	const CHOP_TAPS = 6;
 	const FRY = { cook: 5, burn: 6 };              // seconds to golden, then golden this long
 	const GRILL = { flipAt: 2.2, flipBy: 5.2, cook: 7.5, burn: 6.5 };
 	const STIR_NEED = 1.0;        // room widths of swaying, in all
@@ -237,10 +248,10 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	const everyone = (fn) => count > 0 && chefs.every((c, i) => fn(i));
 	const TUTORIAL = [
-		{ caption: 'STAND BY THE HATCH, TAP IT TO GRAB', min: 2, max: 30, did: () => chefs.filter((c, i) => tut.held[i]).length >= Math.min(count, 3) },
-		{ caption: 'TAP A SIDE WALL TO GO TO ITS KITCHEN', min: 2, max: 20, did: () => everyone((i) => tut.moved[i]) },
-		{ caption: 'STAND ON A STATION\'S SQUARE, TAP IT', min: 2, max: 30, did: () => chefs.filter((c, i) => tut.put[i]).length >= Math.min(count, 3) },
-		{ caption: 'COOK IT, TAKE IT, SERVE A MUTANT', min: 3, max: 45, did: () => tut.served >= Math.min(count, 3) },
+		{ caption: 'STAND ON THE HATCH\'S SQUARE TO GRAB FOOD', min: 2, max: 30, did: () => chefs.filter((c, i) => tut.held[i]).length >= Math.min(count, 3) },
+		{ caption: 'TOUCH A SIDE WALL TO GO TO ITS KITCHEN', min: 2, max: 25, did: () => everyone((i) => tut.moved[i]) },
+		{ caption: 'STAND ON A STATION\'S SQUARE TO COOK', min: 2, max: 30, did: () => chefs.filter((c, i) => tut.put[i]).length >= Math.min(count, 3) },
+		{ caption: 'BACK TO THE FRONT: STAND BY A MUTANT', min: 3, max: 45, did: () => tut.served >= Math.min(count, 3) },
 	];
 
 	show.sequence([
@@ -311,7 +322,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	function clearKitchen() {
 		stations = STATIONS.map((d) => Object.assign({}, d, {
 			x0: d.wall * W + d.slot * SLOT, item: null, state: 'idle', t: 0, prog: 0, doneT: 0, burntT: 0,
-			fire: 0, fireT: 0, flipped: false, lock: 0, hit: 0, glow: 0, shake: 0, paddle: 0,
+			fire: 0, fireT: 0, douse: 0, chopT: 0, flipped: false, lock: 0, hit: 0, glow: 0, shake: 0, paddle: 0,
 		}));
 		for (let k = 0; k < 4; k++) { customers[k] = null; slotWait[k] = 1 + k; }
 		pods = [0, 1, 2].map((k) => ({ ing: null, wait: 0.3 + k * 0.3, beam: 0 }));
@@ -329,6 +340,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	function tick(dt) {
 		t += dt;
 		for (let i = 0; i < count; i++) readChef(i, dt);
+		act(dt);
 		stepStations(dt);
 		stepCustomers(dt);
 		stepHatch(dt);
@@ -439,8 +451,9 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	}
 
 	function ignite(s) {
-		s.fire = FIRE.hp;
+		s.fire = 1;
 		s.fireT = 0;
+		s.douse = 0;
 		s.item = null;
 		s.state = 'idle';
 		show.fx('fireball', 0.8);
@@ -464,29 +477,51 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		if (s.prog >= 0.999) finish(s);
 	}
 
-	function tapStation(s, hit) {
-		// (only from its square)
-		hit = hit.filter((i) => chefs[i].station === s);
-		if (!hit.length) { float(s.ui.x, s.ui.prompt - 36, 'STAND ON ITS SQUARE', '#ffffff', 32); return; }
+	// Each frame, whatever each cook is standing on acts, once they've been on
+	// it a moment (c.dwell; c.said: whether it's told them why not already)
+	function act(dt) {
+		for (let i = 0; i < count; i++) {
+			const c = chefs[i];
+			if (!latest[i] || !c.cell) continue;
+			const portal = portals.find((p) => p.wall === c.wall && p.cell[0] === c.cell.col && p.cell[1] === c.cell.row);
+			const k = serveSlot(c);
+			const here = c.station ? 's:' + c.station.kind : c.atHatch ? 'hatch' : c.atChute ? 'chute' : portal ? 'p' + portal.item.id : k >= 0 ? 'serve' + k : '';
+			if (here !== c.here) { c.here = here; c.dwell = 0; c.said = false; }
+			c.dwell += dt;
+			if (!here) continue;
+			if (c.station) useStation(c.station, i, dt);
+			else if (c.atHatch) useHatch(i, dt);
+			else if (c.atChute) useChute(i);
+			else if (portal) usePortal(portal, i);
+			else serve(k, i);
+		}
+	}
+
+	// (a word over a station, once per visit)
+	function tell(c, s, text, fill) {
+		if (c.said) return;
+		c.said = true;
+		float(s.ui.x, s.ui.prompt - 36, text, fill || '#ffffff', 32);
+	}
+
+	function useStation(s, i, dt) {
+		const c = chefs[i];
 		if (s.fire > 0) {
-			s.fire--;
-			s.shake = 1;
-			show.fx('whoosh', 0.6, 1.4);
-			if (s.fire <= 0) { float(s.ui.x, s.ui.prompt - 36, 'PUT OUT!', '#8fdcff', 50); show.fx('skip', 0.5); }
+			s.douse += dt;
+			c.work = 1;
+			s.shake = 0.4;
+			if (s.douse >= DOUSE) { s.fire = 0; s.douse = 0; float(s.ui.x, s.ui.prompt - 36, 'PUT OUT!', '#8fdcff', 50); show.fx('skip', 0.5); }
 			return;
 		}
 		if (!s.item) {
-			const i = hit.find((k) => chefs[k].held && !chefs[k].held.burnt && !chefs[k].held.steps.includes(s.kind) && chefs[k].held.steps.length < 3);
-			if (i === undefined) {
-				const j = hit.find((k) => chefs[k].held);
-				if (j === undefined) float(s.ui.x, s.ui.prompt - 36, 'BRING ME FOOD', '#ffffff', 34);
-				else if (chefs[j].held.burnt) float(s.ui.x, s.ui.prompt - 36, 'BIN THAT IN THE CHUTE', '#ff4a32', 34);
-				else float(s.ui.x, s.ui.prompt - 36, 'ALREADY ' + s.adj, '#ffffff', 34);
-				return;
-			}
-			const item = chefs[i].held;
-			chefs[i].held = null;
-			Object.assign(s, { item, state: 'work', t: 0, prog: 0, doneT: 0, burntT: 0, flipped: false, lock: 0 });
+			if (!c.held || c.dwell < DWELL) return;
+			if (c.held.burnt) return tell(c, s, 'BIN THAT IN THE VOID CHUTE', '#ff4a32');
+			if (c.held.steps.includes(s.kind)) return tell(c, s, 'ALREADY ' + s.adj);
+			if (c.held.steps.length >= 3) return tell(c, s, 'IT\'S COOKED ENOUGH');
+			const item = c.held;
+			c.held = null;
+			c.dwell = 0;
+			Object.assign(s, { item, state: 'work', t: 0, prog: 0, doneT: 0, burntT: 0, flipped: false, lock: 0, chopT: 0 });
 			credit(s, i);
 			tut.put[i] = true;
 			show.fx('tap', 0.8);
@@ -494,57 +529,42 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			return;
 		}
 		if (s.state === 'done' || s.state === 'burnt') {
-			const i = hit.find((k) => !chefs[k].held);
-			if (i === undefined) { float(s.ui.x, s.ui.prompt - 36, 'HANDS FULL!', '#ffffff', 36); return; }
-			chefs[i].held = s.item;
+			if (c.held) return tell(c, s, 'HANDS FULL!');
+			if (c.dwell < DWELL) return;
+			c.held = s.item;
+			c.dwell = 0;
 			if (!s.item.burnt && !s.item.by.includes(i)) s.item.by.push(i);
 			s.item = null;
 			s.state = 'idle';
 			show.fx('lockIn', 0.6);
 			return;
 		}
-		// working it
-		const i = hit[0];
-		if (i !== undefined) chefs[i].work = 1;
+		// working it, by being there
+		c.work = 1;
+		credit(s, i);
 		if (s.kind === 'chop') {
-			s.prog += 1 / CHOP_TAPS;
-			s.hit = 1;
-			if (i !== undefined) credit(s, i);
-			show.fx('swordSwish', 0.5, 0.9 + Math.random() * 0.3);
-			show.fx('thud', 0.35, 1.5);
-			if (s.prog >= 0.999) finish(s);
+			s.prog += dt / CHOP_TIME;
+			s.chopT += dt;
+			if (s.chopT > 0.3) { s.chopT = 0; s.hit = 1; show.fx('thud', 0.35, 1.5 + Math.random() * 0.3); }
+			if (s.prog >= 1) finish(s);
 		} else if (s.kind === 'inject') {
-			if (s.lock > 0) return;
-			if (Math.abs(needle(s) - 0.5) < INJECT.zone) {
-				if (i !== undefined) credit(s, i);
+			if (s.t > 0.6 && Math.abs(needle(s) - 0.5) < INJECT.zone) {
 				float(s.ui.x, s.ui.prompt - 36, 'PERFECT DOSE!', '#d04dff', 44);
 				show.fx('correct', 0.6);
 				finish(s);
-			} else {
-				s.lock = INJECT.lockout;
-				s.shake = 1;
-				float(s.ui.x, s.ui.prompt - 36, 'SPLORT!', '#ff2d8f', 50);
-				show.fx('wrong', 0.6);
 			}
 		} else if (s.kind === 'grill') {
 			if (!s.flipped && s.t >= GRILL.flipAt) {
 				s.flipped = true;
 				s.hit = 1;
-				if (i !== undefined) credit(s, i);
 				float(s.ui.x, s.ui.prompt - 36, 'FLIPPED!', '#ffc21a', 46);
 				show.fx('whoosh', 0.5);
-			} else float(s.ui.x, s.ui.prompt - 36, s.flipped ? 'SIZZLING...' : 'NOT YET!', '#ffffff', 34);
+			}
 		} else if (s.kind === 'press') {
-			s.prog += PRESS.tap;
-			s.hit = 0.6;
-			if (i !== undefined) credit(s, i);
-			show.fx('thud', 0.4);
+			s.prog += dt / PRESS_WAIT;
 			if (s.prog >= 0.999) finish(s);
-			else float(s.ui.x, s.ui.prompt - 36, 'SQUAT TO CRUSH!', '#e9ff4a', 34);
-		} else if (s.kind === 'stir') float(s.ui.x, s.ui.prompt - 36, 'SWAY TO STIR!', '#9dff3a', 36);
-		else if (s.kind === 'cryo') float(s.ui.x, s.ui.prompt - 36, 'HOLD STILL!', '#8fdcff', 36);
-		else if (s.kind === 'warp') float(s.ui.x, s.ui.prompt - 36, 'IT\'S IN ANOTHER DIMENSION', '#3af2ff', 32);
-		else float(s.ui.x, s.ui.prompt - 36, 'WAIT FOR GOLDEN...', '#ffc21a', 34);
+		}
+		// (stir and cryo are worked in stepStations; fry and warp look after themselves)
 	}
 
 	// the injector's needle, 0..1 and back
@@ -561,7 +581,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		for (const pod of pods) {
 			pod.beam = Math.max(0, pod.beam - dt * 1.5);
 			if (pod.ing || hatch.jam > 0) continue;
-			pod.wait -= dt;
+			pod.wait -= dt * (phase === 'tutorial' ? 2 : 1);
 			if (pod.wait <= 0) {
 				pod.ing = chooseIng();
 				pod.beam = 1;
@@ -589,48 +609,49 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		return Math.random() < 0.6 ? pick(pool) : pick(Object.keys(INGS));
 	}
 
-	function tapHatch(at, hit, k) {
-		hit = hit.filter((i) => chefs[i].atHatch);
-		if (!hit.length) { float(HATCH_UI.x, HATCH_UI.prompt - 36, 'STAND ON ITS SQUARE', '#ffffff', 30); return; }
+	function useHatch(i, dt) {
+		const c = chefs[i];
 		if (hatch.jam > 0) {
-			hatch.jam--;
-			hatch.shake = 1;
-			show.fx('thud', 0.6);
+			hatch.jam = Math.max(0, hatch.jam - dt);
+			hatch.shake = 0.5;
+			c.work = 1;
 			if (hatch.jam <= 0) { float(HATCH_UI.x, HATCH_UI.prompt - 36, 'UNJAMMED!', '#9dff3a', 44); show.fx('allSet', 0.4); }
-			else float(at.x, at.y - 40, 'BANG!', '#ffffff', 40);
 			return;
 		}
-		const pod = pods[k];
-		if (!pod.ing) return;
-		const i = hit.find((n) => !chefs[n].held);
-		if (i === undefined) { float(POD_UI[k].x, HATCH_UI.prompt - 36, 'HANDS FULL!', '#ffffff', 34); return; }
-		chefs[i].held = { id: nextId++, ing: pod.ing, steps: [], burnt: false, by: [i] };
+		if (c.held || c.dwell < DWELL) return;
+		const k = pods.findIndex((p) => p.ing);
+		if (k < 0) return;
+		c.held = { id: nextId++, ing: pods[k].ing, steps: [], burnt: false, by: [i] };
+		c.dwell = 0;
 		tut.held[i] = true;
-		pod.ing = null;
-		pod.wait = 1.0;
+		pods[k].ing = null;
+		pods[k].wait = 1.0;
 		show.fx('pop', 0.7);
+		float(POD_UI[k].x, HATCH_UI.prompt - 36, INGS[c.held.ing].name, '#9dff3a', 30);
 	}
 
-	function tapChute(hit) {
-		hit = hit.filter((i) => chefs[i].atChute);
-		if (!hit.length) { float(CHUTE_UI.x, CHUTE_UI.prompt - 36, 'STAND ON ITS SQUARE', '#ffffff', 30); return; }
-		const i = hit.find((n) => chefs[n].held);
-		if (i === undefined) return;
-		chefs[i].held = null;
+	function useChute(i) {
+		const c = chefs[i];
+		if (!c.held || c.dwell < BIN_DWELL) return;
+		c.held = null;
+		c.dwell = 0;
 		show.fx('whooshLong', 0.5, 0.7);
 		float(CHUTE_UI.x, CHUTE_UI.prompt - 36, pick(['INTO THE VOID', 'GONE FOREVER', 'THE VOID SAYS THANKS']), '#d04dff', 34);
 	}
 
 	function spawnPortal(item, from) {
-		let wall, x3, z, tries = 0;
+		// (a free square: no station, no station's square, no other portal)
+		const taken = (w, col, row) => Object.values(CELLS).some((cs, n) => (w === 1 ? n >= 8 : STATIONS[n] && STATIONS[n].wall === w) && cs.some(([cc, rr]) => cc === col && rr === row)) || portals.some((p) => p.wall === w && p.cell[0] === col && p.cell[1] === row) || (w === 1 && row === 0);
+		let wall, col, row, tries = 0;
 		do {
 			wall = Math.floor(Math.random() * 3);
-			x3 = -6.3 + Math.random() * 12.6;
-			z = -0.5 + Math.random() * 4.5;
+			col = Math.floor(Math.random() * 8);
+			row = Math.floor(Math.random() * GRID[wall].rows);
 			tries++;
-		} while (tries < 20 && wall === from.wall && Math.abs(x3 - from.sx) < 3.5);
+		} while (tries < 60 && (taken(wall, col, row) || (wall === from.wall && Math.abs(cellX(col) - from.sx) < 3)));
+		const x3 = cellX(col), z = cellZ(wall, row);
 		const sp = proj(wall, x3, 1.35, z);
-		portals.push({ item, wall, x3, z, t: 0, x: sp.x, y: sp.y });
+		portals.push({ item, wall, cell: [col, row], x3, z, t: 0, x: sp.x, y: sp.y });
 		if (portals.length > MAX_PORTALS) portals.shift();
 		show.fx('reveal', 0.5, 0.8);
 		float(from.ui.x, from.ui.prompt - 36, 'IT\'S... SOMEWHERE ELSE!', '#3af2ff', 36);
@@ -645,10 +666,11 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		}
 	}
 
-	function tapPortal(p, hit) {
-		const i = hit.find((n) => !chefs[n].held);
-		if (i === undefined) { float(p.x, p.y - 140, 'HANDS FULL!', '#ffffff', 34); return true; }
-		chefs[i].held = p.item;
+	function usePortal(p, i) {
+		const c = chefs[i];
+		if (c.held) { if (!c.said) { c.said = true; float(p.x, p.y - 140, 'HANDS FULL!', '#ffffff', 34); } return true; }
+		c.held = p.item;
+		c.dwell = 0;
 		if (!p.item.by.includes(i)) p.item.by.push(i);
 		portals.splice(portals.indexOf(p), 1);
 		show.fx('pop', 0.8, 0.8);
@@ -718,31 +740,59 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		return part.steps[0] === '*' ? item.steps.length > 0 : sameSteps(item.steps, part.steps);
 	}
 
-	function tapCustomer(k, hit) {
-		const c = customers[k];
-		if (!c || c.state !== 'wait') return;
-		for (const i of hit) {
-			const item = chefs[i].held;
-			const part = item && c.parts.find((pt) => fits(item, pt));
-			if (!part) continue;
-			part.filled = true;
-			part.item = item;
-			chefs[i].held = null;
-			for (const n of item.by.concat([i])) if (!c.by.includes(n)) c.by.push(n);
-			show.fx('lockIn', 0.7);
-			if (c.parts.every((pt) => pt.filled)) complete(c);
-			else { c.say = 'AND THE REST?'; c.sayT = 1.6; }
+	// which mutant a cook at the front counter (the front wall's first row) is standing in front of, or -1
+	function serveSlot(c) {
+		if (c.wall !== 1 || !c.cell || c.cell.row !== 0) return -1;
+		const lx = c.along * W;
+		if (lx < HATCH || lx >= CHUTE) return -1;
+		return clamp(Math.floor((lx - HATCH) / colW(windowsNow())), 0, windowsNow() - 1);
+	}
+
+	function serve(k, i) {
+		const c = chefs[i];
+		const cu = customers[k];
+		if (!cu || cu.state !== 'wait') return;
+		const item = c.held;
+		if (!item) {
+			if (!c.said && c.dwell > 0.8) { c.said = true; cu.say = 'WELL? I\'M WAITING.'; cu.sayT = 1.4; }
 			return;
 		}
-		const holder = hit.find((i) => chefs[i].held);
-		if (holder !== undefined) {
-			c.say = chefs[holder].held.burnt ? 'IS THAT... CHARCOAL?' : pick(NOPE);
-			c.sayT = 1.8;
-			show.fx('buzz', 0.5);
-		} else if (c.sayT <= 0) {
-			c.say = 'WELL? I\'M WAITING.';
-			c.sayT = 1.4;
+		const part = cu.parts.find((pt) => fits(item, pt));
+		if (!part) {
+			if (!c.said && c.dwell > 0.5) { c.said = true; cu.say = item.burnt ? 'IS THAT... CHARCOAL?' : pick(NOPE); cu.sayT = 1.8; show.fx('buzz', 0.5); }
+			return;
 		}
+		if (c.dwell < DWELL) return;
+		part.filled = true;
+		part.item = item;
+		c.held = null;
+		c.dwell = 0;
+		for (const n of item.by.concat([i])) if (!cu.by.includes(n)) cu.by.push(n);
+		show.fx('lockIn', 0.7);
+		if (cu.parts.every((pt) => pt.filled)) complete(cu);
+		else { cu.say = 'AND THE REST?'; cu.sayT = 1.6; }
+	}
+
+	// what a cook should do next, for the hint over their head
+	function hintFor(c) {
+		const it = c.held;
+		if (!it) return c.wall === 1 ? 'GRAB FOOD AT THE HATCH' : 'TOUCH THE FRONT WALL FOR FOOD';
+		if (it.burnt) return 'BIN IT IN THE VOID CHUTE';
+		let next = null, ready = false, any = false;
+		for (const cu of customers) {
+			if (!cu || cu.state !== 'wait') continue;
+			for (const pt of cu.parts) {
+				if (pt.filled || pt.ing !== it.ing) continue;
+				if (fits(it, pt)) ready = true;
+				else if (pt.steps[0] === '*') any = true;
+				else if (pt.steps.length > it.steps.length && it.steps.every((st, j) => pt.steps[j] === st)) next = next || pt.steps[it.steps.length];
+			}
+		}
+		const where = (w) => (w === c.wall ? '' : w === 0 ? ' (LEFT WALL)' : w === 2 ? ' (RIGHT WALL)' : ' (FRONT WALL)');
+		if (ready) return 'SERVE IT AT THE COUNTER' + where(1);
+		if (next) return '→ ' + KIND[next].name + where(KIND[next].wall);
+		if (any) return 'COOK IT AT ANY STATION';
+		return 'NOBODY WANTS THAT: BIN IT';
 	}
 
 	function complete(c) {
@@ -811,17 +861,17 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		if (kind === 'fire') {
 			const free = stations.filter((s) => s.fire <= 0);
 			if (free.length) ignite(pick(free));
-			setBanner('GREASE FIRE!', 'TAP THE FLAMES TO PUT THEM OUT', '#ff4a32');
+			setBanner('GREASE FIRE!', 'STAND ON ITS SQUARE TO PUT IT OUT', '#ff4a32');
 			show.fx('alarm', 0.5);
 		} else if (kind === 'jam') {
-			hatch.jam = 8;
+			hatch.jam = UNJAM;
 			hatch.shake = 1;
-			setBanner('HATCH JAMMED!', 'BANG ON THE HATCH TO FIX IT', '#ffc21a');
+			setBanner('HATCH JAMMED!', 'STAND ON ITS SQUARE TO FIX IT', '#ffc21a');
 			show.fx('alarm', 0.5);
 		} else if (kind === 'leak') {
 			const warp = stations.find((s) => s.kind === 'warp');
 			for (let n = 0; n < 3; n++) spawnPortal({ id: nextId++, ing: chooseIng(), steps: [], burnt: false, by: [] }, warp);
-			setBanner('DIMENSIONAL LEAK!', 'FREE INGREDIENTS... SOMEWHERE', '#3af2ff');
+			setBanner('DIMENSIONAL LEAK!', 'FREE INGREDIENTS ON THE FLOOR', '#3af2ff');
 		} else if (kind === 'vip') {
 			vipPending = true;
 			setBanner('THE OVERLORD APPROACHES', 'SERVE ITS FEAST FOR A FORTUNE', '#d04dff');
@@ -831,8 +881,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	/* ---------- taps ---------- */
 
-	// who a tap is for: the simulator's touching player first, then everyone
-	// near the spot, nearest first (callers pick the first that can use it)
+	// who a touch could be: the players near enough that spot on that wall to
+	// reach it (the simulator's touching player first, if they're in reach), nearest first
 	function hitters(at) {
 		const wall = clamp(Math.floor(at.x / W), 0, 2);
 		const a = at.x / W - wall;
@@ -844,34 +894,23 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		const near = [];
 		for (let i = 0; i < count; i++) {
 			const p = latest[i];
-			if (!p || i === flagged) continue;
+			if (!p) continue;
 			const { along, dist } = wallsOf(p);
-			const d = Math.abs(along[wall] - a) + dist[wall];
-			if (d < NEAR_TAP) near.push({ i, d });
+			if (dist[wall] > REACH_WALL || Math.abs(along[wall] - a) > REACH_WALL) continue;
+			near.push({ i, d: (i === flagged ? -1 : 0) + Math.abs(along[wall] - a) + dist[wall] });
 		}
 		near.sort((x, y) => x.d - y.d);
-		const list = near.map((n) => n.i);
-		if (flagged >= 0) list.unshift(flagged);
-		return list;
+		return near.map((n) => n.i);
 	}
 
 	function tap(at) {
 		if (!at || !count || (phase !== 'tutorial' && phase !== 'play')) return;
 		if (show.paused) return;
 		ripples.push({ x: at.x, y: at.y, t: 0 });
-		let hit = hitters(at);
-		const portal = portals.slice().reverse().find((p) => Math.hypot(p.x - at.x, p.y - at.y) < PORTAL_R);
-		// a tap on another wall than yours takes you there (and does nothing else)
+		// the one thing a touch does: move a cook who can reach it to that wall
 		const tw = clamp(Math.floor(at.x / W), 0, 2);
-		if (hit.length && chefs[hit[0]].wall !== tw) { moveWall(hit[0], tw); return; }
-		hit = hit.filter((i) => chefs[i].wall === tw);
-		if (portal) { tapPortal(portal, hit); return; }
-		const tg = targetAt(at);
-		if (!tg) return;
-		if (tg.kind === 'station') tapStation(tg.s, hit);
-		else if (tg.kind === 'pod') tapHatch(at, hit, tg.k);
-		else if (tg.kind === 'chute') tapChute(hit);
-		else tapCustomer(tg.k, hit);
+		const i = hitters(at).find((n) => chefs[n].wall !== tw);
+		if (i !== undefined) moveWall(i, tw);
 	}
 
 	const WALL_NAMES = ['THE OLD WAYS', 'THE COUNTER', 'THE NEW WAYS'];
@@ -1034,30 +1073,6 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	const TICKET_Y = proj(1, 0, CT.y, CT.back).y + 12;    // the tickets, laid on the serving counter
 	const SAY_Y = proj(1, 0, 2.1, QUEUE_Z).y;             // the mutants' speech, over their faces
 
-	// what a tap lands on: a station, a hatch pod, the chute or a mutant's window
-	function targetAt(at) {
-		const wall = clamp(Math.floor(at.x / W), 0, 2);
-		const found = [];
-		const box = (x0, y0, x1, y1, cx, cy, tg) => { if (at.x >= x0 && at.x <= x1 && at.y >= y0 && at.y <= y1) found.push({ d: Math.hypot(at.x - cx, at.y - cy), tg }); };
-		if (wall === 1) {
-			// the hatch: the pod nearest the tap
-			let k = 0;
-			POD_UI.forEach((p, j) => { if (Math.hypot(at.x - p.x, at.y - p.y) < Math.hypot(at.x - POD_UI[k].x, at.y - POD_UI[k].y)) k = j; });
-			box(HATCH_UI.x - 110, HATCH_UI.prompt - 30, HATCH_UI.x + 110, HATCH_UI.plate + 50, HATCH_UI.x, HATCH_UI.top, { kind: 'pod', k });
-			box(CHUTE_UI.x - 110, CHUTE_UI.prompt - 30, CHUTE_UI.x + 110, CHUTE_UI.plate + 50, CHUTE_UI.x, CHUTE_UI.top, { kind: 'chute' });
-			const n = windowsNow(), cw = colW(n);
-			for (let k = 0; k < n; k++) {
-				const x0 = W + HATCH + cw * k;
-				box(x0, 0, x0 + cw, TICKET_Y + 220, x0 + cw / 2, TICKET_Y, { kind: 'customer', k });
-			}
-		} else {
-			for (const s of stations) if (s.wall === wall) box(s.ui.x - 110, s.ui.prompt - 40, s.ui.x + 110, s.ui.plate + 50, s.ui.x, s.ui.top, { kind: 'station', s });
-			// (nothing right under it: the nearest station, if it's near)
-			if (!found.length) for (const s of stations) if (s.wall === wall) { const d = Math.hypot(at.x - s.ui.x, at.y - s.ui.top); if (d < 230) found.push({ d, tg: { kind: 'station', s } }); }
-		}
-		found.sort((a, b) => a.d - b.d);
-		return found.length ? found[0].tg : null;
-	}
 
 	/* ---------- 3D: helpers ---------- */
 
@@ -1693,8 +1708,9 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		chute.add(light);
 		const [, [hc, hr]] = CELLS.hatch, [, [cc, cr]] = CELLS.chute;
 		const hatchSpot = spotTile(sets[1], cellX(hc), cellZ(1, hr), 0x9dff3a, HATCH_AT);
+		const serveSpots = [0, 1, 2, 3, 4, 5, 6, 7].map((col) => spotTile(sets[1], cellX(col), cellZ(1, 0), 0xe9ff4a, [cellX(col), CT.z]));
 		const chuteSpot = spotTile(sets[1], cellX(cc), cellZ(1, cr), 0xd04dff, CHUTE_AT);
-		return { pods, swirl, chute, hatchSpot, chuteSpot };
+		return { pods, swirl, chute, hatchSpot, chuteSpot, serveSpots };
 	})();
 
 	/* ---------- 3D: food ---------- */
@@ -2342,6 +2358,17 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		const onHatch = chefs.findIndex((c, i) => latest[i] && c.atHatch), onChute = chefs.findIndex((c, i) => latest[i] && c.atChute);
 		spotLook(hatch3d.hatchSpot, onHatch >= 0 ? colourOf(onHatch) : 0x9dff3a, onHatch >= 0 ? 1 : 0.25);
 		spotLook(hatch3d.chuteSpot, onChute >= 0 ? colourOf(onChute) : 0xd04dff, onChute >= 0 ? 1 : 0.25);
+		// (the counter's squares: shown in front of a waiting mutant, lit by whoever's on one)
+		hatch3d.serveSpots.forEach((m, col) => {
+			const lx = (col + 0.5) / 8 * W;
+			const n = windowsNow();
+			const k = lx >= HATCH && lx < CHUTE ? clamp(Math.floor((lx - HATCH) / colW(n)), 0, n - 1) : -1;
+			const cu = k >= 0 ? customers[k] : null;
+			m.visible = !!(cu && cu.state === 'wait');
+			if (!m.visible) return;
+			const on = chefs.findIndex((c, i) => latest[i] && c.wall === 1 && c.cell && c.cell.row === 0 && c.cell.col === col);
+			spotLook(m, on >= 0 ? colourOf(on) : 0xe9ff4a, on >= 0 ? 1 : 0.2);
+		});
 
 		// the mutants
 		const n = windowsNow();
@@ -2484,13 +2511,20 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	function drawWorld(ctx) {
 		for (const s of stations) drawStationUI(ctx, s);
 		drawFrontUI(ctx);
-		for (const p of portals) art.text(ctx, 'TAP!', p.x, p.y + 95, { size: 30, weight: 800, font: FONT, fill: '#3af2ff', outline: INK, outlineWidth: 5 });
+		for (const p of portals) art.text(ctx, 'STAND HERE!', p.x, p.y + 95, { size: 28, weight: 800, font: FONT, fill: '#3af2ff', outline: INK, outlineWidth: 5 });
+		// over each cook: what they hold, and where to go with it
+		const playing = phase === 'tutorial' || phase === 'play';
 		for (let i = 0; i < count; i++) {
 			const c = chefs[i];
-			if (!c.held || !latest[i] || !chefs3[i]) continue;
+			if (!latest[i] || !chefs3[i] || chefs3[i].x === undefined) continue;
 			const at = proj(c.wall, chefs3[i].x, 3.0, chefs3[i].z);
-			const label = (c.held.burnt ? 'BURNT ' : '') + c.held.steps.map((s) => KIND[s].adj).reverse().join(' ') + (c.held.steps.length ? ' ' : '') + INGS[c.held.ing].short;
-			art.text(ctx, label, at.x, at.y, { size: 24, weight: 800, font: FONT, fill: 'white', outline: INK, outlineWidth: 5 });
+			let y = at.y;
+			if (c.held) {
+				const label = (c.held.burnt ? 'BURNT ' : '') + c.held.steps.map((s) => KIND[s].adj).reverse().join(' ') + (c.held.steps.length ? ' ' : '') + INGS[c.held.ing].short;
+				art.text(ctx, label, at.x, y, { size: 24, weight: 800, font: FONT, fill: 'white', outline: INK, outlineWidth: 5 });
+				y += 28;
+			}
+			if (playing) art.text(ctx, hintFor(c), at.x, y, { size: 20, weight: 800, font: FONT, fill: '#e9ff4a', outline: INK, outlineWidth: 5 });
 		}
 		for (const r of ripples) art.circle(ctx, r.x, r.y, 20 + r.t * 160, { stroke: 'white', lineWidth: 6, alpha: 1 - r.t / 0.5 });
 		for (const f of floaters) {
@@ -2528,21 +2562,23 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		const { x: cx, prompt: py, plate: ply } = s.ui;
 		const by = py + 36;
 		plate(ctx, cx, ply, s.name, s.colour);
-		if (s.fire > 0) prompt(ctx, cx, py, 'TAP TO PUT OUT! (' + s.fire + ')', '#ff4a32', true);
-		else if (s.state === 'done') {
-			prompt(ctx, cx, py, 'READY! TAP TO TAKE', '#9dff3a', true);
+		if (s.fire > 0) {
+			prompt(ctx, cx, py, 'FIRE! STAND HERE TO PUT OUT', '#ff4a32', true);
+			if (s.douse > 0) bar(ctx, cx, by, 220, s.douse / DOUSE, '#8fdcff');
+		} else if (s.state === 'done') {
+			prompt(ctx, cx, py, 'READY! STAND HERE TO TAKE', '#9dff3a', true);
 			if (s.kind === 'fry' || s.kind === 'grill') bar(ctx, cx, by, 220, 1 - s.doneT / (s.kind === 'fry' ? FRY.burn : GRILL.burn), '#ff4a32');
-		} else if (s.state === 'burnt') prompt(ctx, cx, py, 'BURNT! TAP, THEN BIN IT', '#ff4a32', true);
+		} else if (s.state === 'burnt') prompt(ctx, cx, py, 'BURNT! TAKE IT TO THE CHUTE', '#ff4a32', true);
 		else if (s.state === 'work') {
 			const hint = {
-				chop: ['TAP TAP TAP!', s.prog],
+				chop: ['STAND HERE TO CHOP', s.prog],
 				fry: ['FRYING...', s.t / FRY.cook],
-				grill: [!s.flipped && s.t >= GRILL.flipAt ? 'FLIP! TAP IT!' : s.flipped ? 'SIZZLING...' : 'SEARING...', s.flipped ? s.t / GRILL.cook : Math.min(s.t, GRILL.flipAt) / GRILL.cook],
-				stir: ['SWAY TO STIR!', s.prog],
-				press: ['SQUAT TO CRUSH!', s.prog],
-				inject: ['TAP IN THE GREEN!', -1],
+				grill: [!s.flipped && s.t >= GRILL.flipAt ? 'STAND HERE TO FLIP IT!' : s.flipped ? 'SIZZLING...' : 'SEARING...', s.flipped ? s.t / GRILL.cook : Math.min(s.t, GRILL.flipAt) / GRILL.cook],
+				stir: ['SWAY HERE TO STIR', s.prog],
+				press: ['SQUAT HERE TO CRUSH', s.prog],
+				inject: ['STAND HERE TO INJECT', -1],
 				warp: ['WARPING...', s.t / WARP_TIME],
-				cryo: ['HOLD STILL!', s.prog],
+				cryo: ['HOLD STILL HERE', s.prog],
 			}[s.kind];
 			const urgent = s.kind === 'grill' && !s.flipped && s.t >= GRILL.flipAt;
 			prompt(ctx, cx, py, hint[0], urgent ? '#ff4a32' : '#e9ff4a', urgent || ['chop', 'stir', 'press', 'cryo', 'inject'].includes(s.kind));
@@ -2561,9 +2597,13 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	function drawFrontUI(ctx) {
 		plate(ctx, HATCH_UI.x, HATCH_UI.plate, 'TELEPORT HATCH', '#9dff3a');
 		plate(ctx, CHUTE_UI.x, CHUTE_UI.plate, 'VOID CHUTE', '#d04dff');
-		if (hatch.jam > 0) prompt(ctx, HATCH_UI.x, HATCH_UI.prompt, 'JAMMED! BANG IT (' + hatch.jam + ')', '#ffc21a', true);
-		else prompt(ctx, HATCH_UI.x, HATCH_UI.prompt, 'TAP TO GRAB', '#9dff3a', false);
-		prompt(ctx, CHUTE_UI.x, CHUTE_UI.prompt, 'TAP TO BIN', '#d04dff', false);
+		if (hatch.jam > 0) {
+			prompt(ctx, HATCH_UI.x, HATCH_UI.prompt, 'JAMMED! STAND HERE', '#ffc21a', true);
+			bar(ctx, HATCH_UI.x, HATCH_UI.prompt + 36, 200, 1 - hatch.jam / UNJAM, '#ffc21a');
+		} else prompt(ctx, HATCH_UI.x, HATCH_UI.prompt, 'STAND HERE TO GRAB', '#9dff3a', false);
+		prompt(ctx, CHUTE_UI.x, CHUTE_UI.prompt, 'STAND HERE TO BIN', '#d04dff', false);
+		const binning = chefs.find((c, i) => latest[i] && c.atChute && c.held);
+		if (binning) bar(ctx, CHUTE_UI.x, CHUTE_UI.prompt + 36, 200, binning.dwell / BIN_DWELL, '#d04dff');
 		const n = windowsNow();
 		const cw = colW(n);
 		for (let k = 0; k < n; k++) {
