@@ -21,7 +21,7 @@
  * Five clearings, each with its own motif, creatures, key and tempo; the
  * camera glides down the forest path to the next every hundred seconds:
  *   MUSHROOM HOLLOW   the mushroom folk's marimba, under glowing giant toadstools
- *   FROGGY BOG        a croaking frog choir on a moonlit pond
+ *   FROGGY BOG        a croaking frog choir by a moonlit pond under a waterfall; wade in to make it shimmer
  *   HEDGEHOG HOEDOWN  a hedgehog drummer, kazoo bunnies and a tuba troll on a log stage
  *   FAIRY RING        bell-ringing fairies and a flower choir, and a mossy stone wall
  *                     overgrown with ivy and ferns, set with odd-shaped stones: a step
@@ -127,7 +127,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				{ kind: 'frog', wall: 1, along: 0.5, out: 0.4, note: 0, pat: 'croak', tint: '#4cc26a' },
 				{ kind: 'mushroom', wall: 1, along: 0.9, out: 0.7, note: 9, pat: 'mel3', tint: '#7a4cff', big: 0.9 },
 			] },
-		{ name: 'FROGGY BOG', sub: 'STAND STILL TO SEND RIPPLES ACROSS THE POND', bpm: 92, root: 220, pond: true,
+		{ name: 'FROGGY BOG', sub: 'WADE THROUGH THE POND TO MAKE IT SHIMMER', bpm: 92, root: 220, pond: true,
 			sky: ['#061a2e', '#2f8a9a'], fog: '#123e4a', ground: '#2f5a3a', sun: '#bfe8ff', lights: ['#4affd0', '#7ab8ff', '#d8ff6a', '#4a8aff'],
 			groove: { kick: [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0], hat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1], snare: [] },
 			motif: 'pond',
@@ -140,7 +140,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				{ kind: 'fairy', wall: 2, along: 0.15, out: 0.6, note: 10, pat: 'bells', tint: '#7affe8' },
 				{ kind: 'frog', wall: 2, along: 0.86, out: 0.5, note: 0, pat: 'croak', tint: '#6a9a2a', big: 1.5 },
 			] },
-		{ name: 'HEDGEHOG HOEDOWN', sub: 'STAND AT THE FRONT: ACORNS DROP ON THE LOG IN FRONT OF YOU', bpm: 116, root: 293.7, xylo: true,
+		{ name: 'HEDGEHOG HOEDOWN', sub: 'STAND ON A SPOT: AN ACORN DROPS ON ITS PLANK', bpm: 116, root: 293.7, xylo: true,
 			sky: ['#3a6aa0', '#ffd68a'], fog: '#c8a070', ground: '#7a8a3a', sun: '#ffe6a0', lights: ['#ffb24a', '#ff6a4a', '#ffe04a', '#ff8ad0'],
 			groove: { kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], hat: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] },
 			motif: 'stage',
@@ -520,6 +520,20 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			const g3 = vca(time, 0.001, v * 0.3, 0.03, w);
 			noise(time, 0.04, filt('bandpass', f * 6, 2, g3));
 		},
+		shimmer(time, f, v, w) {
+			for (const [m, a, d, det] of [[1, 1, 1.6, 0], [2, 0.5, 1.2, 3], [3.01, 0.3, 0.9, -4], [4.2, 0.2, 0.7, 6], [6.3, 0.12, 0.5, -7]]) {
+				const g = ac.createGain();
+				g.gain.setValueAtTime(0.0001, time);
+				g.gain.exponentialRampToValueAtTime(v * a, time + 0.06 + m * 0.01);
+				g.gain.exponentialRampToValueAtTime(0.0001, time + d);
+				g.connect(pans[w] || bus);
+				const o = osc('sine', f * m, time, d + 0.1, g);
+				o.detune.value = det;
+				const lfo = ac.createOscillator(), lg = ac.createGain();
+				lfo.frequency.value = 6 + m; lg.gain.value = f * m * 0.004;
+				lfo.connect(lg).connect(o.frequency); lfo.start(time); lfo.stop(time + d + 0.1);
+			}
+		},
 		piano(time, f, v, w) {
 			const g = vca(time, 0.003, v, 1.4, w);
 			const lp = filt('lowpass', Math.min(f * 7, 9000), 0.7, g);
@@ -666,16 +680,13 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			if (on) for (const st2 of CHOIR[cho.idx].chord) SND.vox(time, c.root / 2 * Math.pow(2, st2 / 12), 0.1, 1, 'u', 60 / bpm * 4 * 0.95);
 			visuals.push({ time, fn: () => { cho.hum = 1; } });
 		}
-		// conkers, on the beat, onto the log under whoever's in the front half
+		// acorns, on the beat, onto the plank of every hotspot someone's standing on
 		const xy = xylos[here];
 		if (xy && !glide && s16 % 2 === 0 && phase !== 'intro') {
-			// (who's at which plank: an acorn over that plank lands on it; the rest sail past behind)
+			// (an acorn over a plank that's stood for lands on it; the rest sail past behind)
 			const at = new Map();
-			for (let i = 0; i < count; i++) {
-				const p = latest[i];
-				if (!p || !pl[i].seen || p.pz < 0.45) continue;
-				at.set(clamp(Math.floor((p.px - 1 / 6) / (2 / 3) * xy.logs.length), 0, xy.logs.length - 1), i);
-			}
+			xyloStanding(xy);
+			xy.logs.forEach((lg, k) => { if (lg.who >= 0) at.set(k, lg.who); });
 			const drops = [];
 			if (s16 % 4 === 0) for (const [k, i] of at) drops.push([k, i]);   // (on every beat, onto every plank someone's at)
 			if (Math.random() < 0.7) { const k = Math.floor(Math.random() * xy.logs.length); if (!at.has(k)) drops.push([k, -1]); }   // (and always some falling, missing)
@@ -688,18 +699,6 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 					visuals.push({ time, fn: () => { lg.hit = 1; lg.col = colour(i); spray(lg.pos, '#c88a4a', 5, 1, 1); } });
 					scores[i] += 1;
 				}
-			}
-		}
-		// ripples, on the beat, from whoever's standing still
-		const pd = ponds[here];
-		if (pd && !glide && s16 % 4 === 0 && phase !== 'intro') {
-			for (let i = 0; i < count; i++) {
-				const q = pl[i];
-				if (!q.seen || q.stillT < 0.5) continue;
-				const rg = pd.rings[pd.next = (pd.next + 1) % pd.rings.length];
-				const x = walls.rig.position.x + q.x, z = walls.rig.position.z + q.z;
-				visuals.push({ time, fn: () => { rg.live = true; rg.x = x; rg.z = z; rg.t0 = clock(); rg.hit.clear(); rg.who = i; } });
-				if (on) SND.plink(time, freqOf(c.root, 0), 0.12, 1);
 			}
 		}
 		// whoever's running shakes along, on the eighths
@@ -747,8 +746,35 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		ripples = ripples.filter((r) => r.t < 0.5);
 	}
 
+	function wade(dt, on) {
+		const pd = ponds[here];
+		if (!pd) return;
+		pd.U.uNow.value = rt;
+		for (let i = 0; i < count; i++) {
+			const q = pl[i];
+			if (!q.seen || !on) continue;
+			const ax = avCap(q.x), az = avCap(q.z);
+			const inPond = az < -POND.front && Math.abs(ax) < POND.half;
+			if (!inPond) { q.wadeD = 0; continue; }
+			const v = q.speed * 2 * R;   // (m/s)
+			if (v < 0.12) continue;
+			q.wadeD = (q.wadeD || 0) + v * dt;
+			if (q.wadeD < 0.32) continue;
+			q.wadeD = 0;
+			const r = pd.rip[pd.next = (pd.next + 1) % POND.maxRip];
+			r.set(pd.cx + ax, pd.cz + az, rt, Math.min(1, 0.45 + v * 0.5));
+			if (audioOn()) {
+				const deg = 5 + Math.round((ax / POND.half * 0.5 + 0.5) * 9);
+				SND.shimmer(clock() + 0.005, freqOf(CLEARINGS[here].root, deg) * 2, 0.11 * Math.min(1, 0.5 + v * 0.4), 1);
+			}
+			scores[i] += 1;
+			tut.sung[i] = true;
+		}
+	}
+
 	function devices(dt, live) {
 		const C = CLEARINGS[here];
+		wade(dt, live && !glide);
 		const on = live && !glide;
 		// puffballs: squat on one to squash it; hold the squat for its drone
 		for (const pb of puffs[here] || []) {
@@ -1855,7 +1881,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		gills.rotation.x = Math.PI / 2;
 		for (let k = 0; k < 7; k++) {
 			const a = rnd() * Math.PI * 2, e = rr(0.2, 1.1);
-			mesh(GEO.sphLo, shared('spot', () => new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 1.6, 1.4) })), g, Math.cos(a) * Math.sin(e) * h * 0.42, h * 0.95 + Math.cos(e) * h * 0.26, Math.sin(a) * Math.sin(e) * h * 0.42, h * 0.035, h * 0.012, h * 0.035);
+			mesh(GEO.sphLo, new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 1.6, 1.4) }), g, Math.cos(a) * Math.sin(e) * h * 0.42, h * 0.95 + Math.cos(e) * h * 0.26, Math.sin(a) * Math.sin(e) * h * 0.42, h * 0.035, h * 0.012, h * 0.035);
 		}
 		g.userData.bob = rnd() * 6;
 		g.userData.unit = true;
@@ -2168,19 +2194,17 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			}
 		},
 		pond(g, ci, cx, cz, C) {
-			const water = mesh(new THREE.CircleGeometry(9, 48), new THREE.MeshPhysicalMaterial({ color: '#0a3a40', roughness: 0.04, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.02 }), g, cx, 0.015, cz - 2);
-			water.rotation.x = -Math.PI / 2; water.receiveShadow = true; water.castShadow = false;
-			for (let k = 0; k < 16; k++) {
+			for (let k = 0; k < 0; k++) {   // (the scattered pads moved into the pond itself: buildPond)
 				const a = rr(0, Math.PI * 2), r = rr(3.5, 8.5);
-				const pad = mesh(new THREE.CircleGeometry(rr(0.3, 0.6), 24, 0.3, Math.PI * 2 - 0.5), shared('pad', () => new THREE.MeshPhysicalMaterial({ color: '#2f8a3a', roughness: 0.3, clearcoat: 1, side: THREE.DoubleSide })), g, cx + Math.cos(a) * r, 0.03, cz - 2 + Math.sin(a) * r);
+				const pad = mesh(new THREE.CircleGeometry(rr(0.3, 0.6), 24, 0.3, Math.PI * 2 - 0.5), new THREE.MeshPhysicalMaterial({ color: '#2f8a3a', roughness: 0.3, clearcoat: 1, side: THREE.DoubleSide }), g, cx + Math.cos(a) * r, 0.03, cz - 2 + Math.sin(a) * r);
 				pad.rotation.x = -Math.PI / 2; pad.rotation.z = rnd() * 6;
-				if (rnd() < 0.4) mesh(GEO.sph, shared('lily', () => new THREE.MeshStandardMaterial({ color: '#ffd0f0', emissive: '#ff7ad8', emissiveIntensity: 1.2 })), g, pad.position.x, 0.12, pad.position.z, 0.12, 0.08, 0.12);
+				if (rnd() < 0.4) mesh(GEO.sph, new THREE.MeshStandardMaterial({ color: '#ffd0f0', emissive: '#ff7ad8', emissiveIntensity: 1.2 }), g, pad.position.x, 0.12, pad.position.z, 0.12, 0.08, 0.12);
 			}
 			for (let k = 0; k < 40; k++) {
 				const a = -Math.PI / 2 + rr(-2, 2), r = rr(5, 9);
-				const reed = mesh(GEO.cyl, shared('reed', () => new THREE.MeshStandardMaterial({ color: '#4a7a2a', roughness: 0.7 })), g, cx + Math.cos(a) * r, 0.8, cz + Math.sin(a) * r, 0.025, rr(1.2, 2), 0.025);
+				const reed = mesh(GEO.cyl, new THREE.MeshStandardMaterial({ color: '#4a7a2a', roughness: 0.7 }), g, cx + Math.cos(a) * r, 0.8, cz + Math.sin(a) * r, 0.025, rr(1.2, 2), 0.025);
 				reed.rotation.z = rr(-0.15, 0.15);
-				mesh(GEO.cyl, shared('reedTop', () => new THREE.MeshStandardMaterial({ color: '#5a3a1a', roughness: 0.8 })), g, reed.position.x, reed.scale.y * 0.5 + 0.8, reed.position.z, 0.05, 0.3, 0.05);
+				mesh(GEO.cyl, new THREE.MeshStandardMaterial({ color: '#5a3a1a', roughness: 0.8 }), g, reed.position.x, reed.scale.y * 0.5 + 0.8, reed.position.z, 0.05, 0.3, 0.05);
 			}
 			sparkles(g, cx, cz, 350, '#d8ff6a', 11, 0.3, 3.5, 0.12);
 		},
@@ -2201,7 +2225,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			}
 			for (let k = 0; k < 8; k++) {
 				const a = -Math.PI / 2 + rr(-1.8, 1.8);
-				const lamp = mesh(GEO.sph, shared('lamp', () => new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 1.7, 0.6) })), g, cx + Math.cos(a) * 5.8, rr(2.6, 3.6), cz + Math.sin(a) * 5.8, 0.09);
+				const lamp = mesh(GEO.sph, new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 1.7, 0.6) }), g, cx + Math.cos(a) * 5.8, rr(2.6, 3.6), cz + Math.sin(a) * 5.8, 0.09);
 				lamp.castShadow = false;
 			}
 		},
@@ -2266,7 +2290,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		});
 		plantOK = (x, z, pad = 0) => {
 			if (Math.abs(x - cx) < R + 0.35 && Math.abs(z - cz) < R + 0.35) return false;
-			if (C.pond && z < cz - R && z > cz - R - 3.2 && Math.abs(x - cx) < R + 1) return false;   // (the pond's open water)
+			if (C.pond && z < cz + 0.2 && z > cz - POND.back - 1.4 && Math.abs(x - cx) < POND.half + 0.5) return false;   // (the pond and its waterfall)
 			if (pathDist(x - cx, z) < 1.7) return false;   // (the winding path, ahead and behind: the walk goes through)
 			if (C.chimes && z < cz - 7 && z > cz - 10 && Math.abs(x - cx) < 4.6) return false;   // (under the arch: the chimes)
 			if (C.xylo && z < cz - R + 0.2 && z > cz - R - 1.1 && Math.abs(x - cx) < R + 0.4) return false;   // (the logs)
@@ -2328,7 +2352,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		if (C.piano !== undefined) buildPiano(g, ci, cx, cz);
 		if (C.puffballs) buildPuffballs(g, ci, cx, cz, C.puffballs);
 		if (C.web) buildWeb(g, ci, cx, cz, C.web);
-		if (C.pond) buildPond(g, ci, cx, cz, spots);
+		if (C.pond) buildPond(g, ci, cx, cz);
 		if (C.xylo) buildXylo(g, ci, cx, cz);
 		if (C.theremin) C.theremin[1].forEach((al, k) => buildTheremin(g, ci, cx, cz, [C.theremin[0], al], k));
 		if (C.choir) buildChoir(g, ci, cx, cz);
@@ -2402,8 +2426,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		unit.userData.unit = true;
 		g.add(unit);
 		const D = FEST.D;
-		const wireMat = shared('wire', () => new THREE.MeshStandardMaterial({ color: '#2a2018', roughness: 0.5 }));
-		const capMat = shared('bulbCap', () => new THREE.MeshStandardMaterial({ color: '#c8a050', roughness: 0.3, metalness: 0.9 }));
+		const wireMat = new THREE.MeshStandardMaterial({ color: '#2a2018', roughness: 0.5 });
+		const capMat = new THREE.MeshStandardMaterial({ color: '#c8a050', roughness: 0.3, metalness: 0.9 });
 		const point = (w, u, y) => {
 			const lat = (u - 0.5) * 2 * D;
 			return w === 1 ? new THREE.Vector3(cx + lat, y, cz - D) : w === 0 ? new THREE.Vector3(cx - D, y, cz - lat) : new THREE.Vector3(cx + D, y, cz + lat);
@@ -2477,8 +2501,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		// extruded with a rounded bevel (inset by the bevel, so neighbours meet), over a
 		// dark mortar backing. The toggles ARE wall stones: the 8 x 5 cells in the
 		// middle; the rest, round the edge, are plain (and some split in two).
-		const stoneA = shared('wallStoneA', () => new THREE.MeshStandardMaterial({ color: '#8f877a', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 6, roughness: 0.92 }));
-		const stoneB = shared('wallStoneB', () => new THREE.MeshStandardMaterial({ color: '#6f7a5e', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 6, roughness: 0.95 }));
+		const stoneA = new THREE.MeshStandardMaterial({ color: '#8f877a', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 6, roughness: 0.92 });
+		const stoneB = new THREE.MeshStandardMaterial({ color: '#6f7a5e', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 6, roughness: 0.95 });
 		const PX = (GRID.x1 - GRID.x0) / (GRID.cols - 1), NI = GRID.cols + 4;
 		const xs = Array.from({ length: NI + 1 }, (_, k) => GRID.x0 - PX / 2 + (k - 2) * PX);
 		const ys = [0, 0.2, 0.48, 0.76, 1.04, 1.32, 1.6, 1.86];   // (a footing course, the 5 toggle courses, a capping course)
@@ -2648,7 +2672,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			const col = new THREE.Color().setHSL(k / n * 0.85, 0.9, 0.55);
 			const cmat = new THREE.MeshPhysicalMaterial({ color: col, emissive: col, emissiveIntensity: 0.25, roughness: 0.08, clearcoat: 1, transparent: true, opacity: 0.88 });
 			const foot = lane(lat, OUT - 0.25, 0);
-			mesh(ROCKS[k % ROCKS.length], shared('crystalRock', () => new THREE.MeshStandardMaterial({ color: '#7a7468', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 5, roughness: 0.9 })), g, foot.x, 0.12, foot.z, 0.3, 0.2, 0.26);
+			mesh(ROCKS[k % ROCKS.length], new THREE.MeshStandardMaterial({ color: '#7a7468', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 5, roughness: 0.9 }), g, foot.x, 0.12, foot.z, 0.3, 0.2, 0.26);
 			const big = rr(1.5, 2.3);
 			const cl = new THREE.Group(); cl.position.copy(foot); g.add(cl);
 			[[0, 0, big, 0.14], [0.13, 0.06, big * 0.62, 0.1], [-0.11, -0.08, big * 0.5, 0.09], [0.05, -0.14, big * 0.38, 0.07]].forEach(([dx, dz, h, r], j) => {
@@ -2769,76 +2793,160 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		wb.dew.instanceMatrix.needsUpdate = true;
 	}
 
-	// RIPPLE POND: stand still and rings spread from you across the water; every
-	// singing lily pad a ring reaches plinks its note
+	// THE POND, in front of the front wall only: water from the room's middle out to a rock
+	// face, a waterfall pouring into it. Walk through it and your avatar leaves a smooth,
+	// spreading disturbance in the water (shaded right on the surface), and each ripple
+	// rings out a shimmer, pitched by where you are across the pond.
+	const POND = { half: 2.9, front: 0.15, back: 7.2, maxRip: 24 };
 	const ponds = [];
-	function buildPond(g, ci, cx, cz, spotsW) {
+	function buildPond(g, ci, cx, cz) {
 		const unit = new THREE.Group(); g.add(unit);
-		const padMat = shared('singPad', () => new THREE.MeshPhysicalMaterial({ color: '#3a9a3a', roughness: 0.25, clearcoat: 1, side: THREE.DoubleSide }));
+		const W2 = POND.half * 2, D2 = POND.back - POND.front, zc = cz - (POND.front + POND.back) / 2;
+		const rip = Array.from({ length: POND.maxRip }, () => new THREE.Vector4(0, 0, -99, 0));
+		const U = { uNow: { value: 0 }, uRip: { value: rip }, uSky: { value: new THREE.Color('#9ae8e0') }, uDeep: { value: new THREE.Color('#06242c') }, uMoon: { value: new THREE.Vector3(-0.35, 0.32, -1).normalize() }, uT: sparkleU.uTime };
+		const water = new THREE.Mesh(new THREE.PlaneGeometry(W2, D2, 1, 1), new THREE.ShaderMaterial({
+			uniforms: U, transparent: true, depthWrite: false,
+			vertexShader: 'varying vec3 vW; varying vec2 vUv; void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position, 1.); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
+			fragmentShader: `uniform float uNow; uniform vec4 uRip[${POND.maxRip}]; uniform vec3 uSky; uniform vec3 uDeep; uniform vec3 uMoon; uniform float uT; varying vec3 vW; varying vec2 vUv;
+				${NOISE}
+				void main(){
+					// the surface's slope: a gentle swell, the waterfall's churn, and every ripple's spreading ring
+					vec2 sl = vec2(sin(vW.x * 1.7 + uT * 0.9 + vW.z * 0.6), cos(vW.z * 1.3 - uT * 0.7)) * 0.05;
+					float churn = smoothstep(2.6, 0.0, length(vec2(vW.x - ${cx.toFixed(3)}, vW.z - ${(cz - POND.back + 0.3).toFixed(3)})));
+					sl += (vec2(fbm(vW.xz * 3.0 + uT * vec2(0.4, 1.4)), fbm(vW.xz * 3.0 - uT * vec2(0.6, 1.1))) - 0.5) * 0.9 * churn;
+					float glow = 0.0;
+					for (int i = 0; i < ${POND.maxRip}; i++) {
+						vec4 r = uRip[i];
+						float age = uNow - r.z;
+						if (age < 0.0 || age > 3.5) continue;
+						vec2 d = vW.xz - r.xy; float dist = length(d) + 1e-4;
+						float front = age * 0.85;
+						float env = exp(-pow((dist - front) / (0.22 + age * 0.12), 2.0)) * exp(-age * 1.1) * r.w;
+						float ph = (dist - front) * 16.0;
+						sl += d / dist * cos(ph) * env * 0.9;
+						glow += env * (0.5 + 0.5 * sin(ph));
+					}
+					vec3 n = normalize(vec3(-sl.x, 1.0, -sl.y));
+					vec3 v = normalize(cameraPosition - vW);
+					float fr = pow(1.0 - max(dot(n, v), 0.0), 3.0);
+					vec3 c = mix(uDeep, uSky, 0.15 + fr * 0.85);
+					vec3 h = normalize(uMoon + v);
+					c += vec3(1.0, 0.98, 0.9) * pow(max(dot(n, h), 0.0), 140.0) * 2.5;   // (the moon's glint)
+					c += uSky * glow * 0.35 + vec3(0.9, 1.0, 1.0) * churn * 0.12 * fbm(vW.xz * 6.0 + uT * vec2(0.2, 2.0));
+					// (a soft, wobbly shore all round)
+					vec2 e = min(vUv, 1.0 - vUv) * vec2(${W2.toFixed(3)}, ${D2.toFixed(3)});
+					float shore = smoothstep(0.0, 0.5, min(e.x, e.y) + (fbm(vW.xz * 1.6) - 0.5) * 0.6);
+					gl_FragColor = vec4(c, 0.92 * shore);
+				}`,
+		}));
+		water.rotation.x = -Math.PI / 2;
+		water.position.set(cx, 0.02, zc);
+		water.renderOrder = -1;   // (under the hotspots)
+		unit.add(water);
+		// a dark bed under it, so it reads deep
+		const bed = mesh(new THREE.PlaneGeometry(W2, D2), new THREE.MeshStandardMaterial({ color: '#0a1a1c', roughness: 1 }), unit, cx, 0.006, zc);
+		bed.rotation.x = -Math.PI / 2; bed.castShadow = false;
+		// stones round its edges
+		const stone = new THREE.MeshStandardMaterial({ color: '#5a6a5a', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 4, roughness: 0.85 });
+		for (let k = 0; k < 26; k++) {
+			const side = k % 2 ? 1 : -1, z = cz - POND.front - rr(0.2, D2 - 0.4);
+			mesh(ROCKS[k % ROCKS.length], stone, unit, cx + side * (POND.half + rr(-0.05, 0.25)), 0.08, z, rr(0.18, 0.32), rr(0.1, 0.18), rr(0.18, 0.3));
+		}
+		// the rock face at the back, and the waterfall pouring off it
+		const zb = cz - POND.back;
+		for (let k = 0; k < 22; k++) {
+			const x = cx + rr(-POND.half - 0.6, POND.half + 0.6), y = rr(0, 3.6) * (1 - Math.abs(x - cx) / (POND.half + 1.5) * 0.4);
+			const r = mesh(ROCKS[k % ROCKS.length], stone, unit, x, y, zb - rr(0.2, 0.7), rr(0.6, 1.1), rr(0.45, 0.8), rr(0.5, 0.8));
+			r.rotation.set(rr(-0.4, 0.4), rnd() * 6, rr(-0.4, 0.4));
+		}
+		const fallU = { uT: sparkleU.uTime };
+		const fall = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 3.6, 1, 12), new THREE.ShaderMaterial({
+			uniforms: fallU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+			vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; vec3 p = position; p.z += (1.0 - uv.y) * (1.0 - uv.y) * 0.5; gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.); }',
+			fragmentShader: `uniform float uT; varying vec2 vUv;
+				${NOISE}
+				void main(){
+					float streak = fbm(vec2(vUv.x * 9.0, vUv.y * 2.0 + uT * 2.6)) * 0.7 + fbm(vec2(vUv.x * 22.0, vUv.y * 4.0 + uT * 3.4)) * 0.5;
+					float edge = smoothstep(0.0, 0.18, vUv.x) * smoothstep(1.0, 0.82, vUv.x);
+					float a = smoothstep(0.35, 0.9, streak) * edge * (0.55 + 0.45 * smoothstep(0.0, 0.3, 1.0 - vUv.y));
+					gl_FragColor = vec4(vec3(0.75, 0.95, 1.0) * 1.6 * a, a);
+				}`,
+		}));
+		fall.position.set(cx, 1.8, zb + 0.15);
+		unit.add(fall);
+		sparkles(unit, cx, zb + 0.5, 160, '#e8ffff', 0.9, 0.05, 0.9, 0.08);   // (spray where it lands)
+		// lily pads drifting on the water, a few with glowing buds
+		const padMat = new THREE.MeshPhysicalMaterial({ color: '#3a9a3a', roughness: 0.25, clearcoat: 1, side: THREE.DoubleSide });
 		const pads = [];
-		for (let k = 0, tries = 0; k < 14 && tries < 200; tries++) {
-			const x = cx + rr(-R - 0.6, R + 0.6), z = cz - R - rr(0.4, 2.6), a = Math.atan2(z - cz, x - cx);   // (out in front of the front wall: the pond's wall, alone)
-			if (spotsW.some(([sx, sz]) => Math.hypot(x - sx, z - sz) < 0.9)) continue;
-			if (pads.some((pd) => Math.hypot(x - pd.x, z - pd.z) < 0.9)) continue;
-			const pad = mesh(new THREE.CircleGeometry(rr(0.32, 0.45), 24, 0.3, Math.PI * 2 - 0.5), padMat, unit, x, 0.035, z);
+		for (let k = 0, tries = 0; k < 12 && tries < 200; tries++) {
+			const x = cx + rr(-POND.half + 0.4, POND.half - 0.4), z = cz - POND.front - rr(0.6, D2 - 1.8);
+			if (pads.some((pd) => Math.hypot(x - pd.x, z - pd.z) < 0.8)) continue;
+			const pad = mesh(new THREE.CircleGeometry(rr(0.26, 0.4), 24, 0.3, Math.PI * 2 - 0.5), padMat, unit, x, 0.03, z);
 			pad.rotation.x = -Math.PI / 2; pad.rotation.z = rnd() * 6; pad.castShadow = false;
-			const budMat = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(0.55 + k * 0.03, 0.8, 0.6) });
-			const bud = mesh(GEO.sph, budMat, unit, x, 0.1, z, 0.08, 0.07, 0.08);
-			pads.push({ pad, bud, budMat, base: budMat.color.clone(), x, z, deg: 3 + Math.round(clamp((x - cx + R + 0.6) / (2 * R + 1.2), 0, 1) * 9), bounce: 0 });
+			const budMat = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(0.85 + k * 0.02, 0.8, 0.65) });
+			const bud = mesh(GEO.sph, budMat, unit, x, 0.09, z, 0.07, 0.06, 0.07);
+			pads.push({ pad, bud, budMat, base: budMat.color.clone(), x, z, bounce: 0, ph: rnd() * 6 });
 			k++;
 		}
-		const rings = [];
-		for (let k = 0; k < 12; k++) {
-			const rm = new THREE.Mesh(new THREE.RingGeometry(0.94, 1, 64), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.4, 1.8, 2.0), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
-			rm.rotation.x = -Math.PI / 2; rm.position.y = 0.03; rm.visible = false;
-			unit.add(rm);
-			rings.push({ m: rm, live: false, x: 0, z: 0, t0: 0, hit: new Set() });
-		}
-		ponds[ci] = { pads, rings, next: 0 };
+		labels.push({ ci, wall: 1, at: new THREE.Vector3(cx, 0.05, cz - 3.2), text: 'WADE IN THE POND' });
+		ponds[ci] = { pads, rip, U, next: 0, cx, cz };
 	}
 
-	// CONKER XYLOPHONE: hollow logs at the foot of the front wall, a branch over
-	// them; stand in the front half and a conker drops on the beat onto the log under you
+	// CONKER XYLOPHONE: wooden planks on a rickety frame by the front wall, set back past
+	// where the avatars can go, a branch over them; a row of hotspots in front, one per
+	// plank: stand on one and an acorn drops on the beat onto its plank
 	const xylos = [];
 	const FALL = 0.85;   // (from high up in the canopy: about 3.5 m)
+	const XY = { out: 0.85, y: 0.58, hotZ: 2.0, reach: 0.42 };   // (planks R + out from the middle; hotspots hotZ out, where avatars go)
 	function buildXylo(g, ci, cx, cz) {
 		const N = 7, logs = [];
 		const wood = new THREE.MeshStandardMaterial({ color: '#d8a868', map: TEX.bark, bumpMap: TEX.bark, bumpScale: 1.5, roughness: 0.55 });
 		const U0 = 1 / 6, US = 2 / 3;   // (the middle two thirds of the front wall)
 		for (let k = 0; k < N; k++) {
 			const u = U0 + (k + 0.5) / N * US;
-			const pos = wallPoint(cx, cz, 1, u, 0.06, 0.8 + rr(-0.04, 0.04));   // (well up off the ground, on a rickety frame)
+			const pos = wallPoint(cx, cz, 1, u, XY.out, XY.y + rr(-0.03, 0.03));   // (up off the ground, on a rickety frame)
 			const len = lerp(0.85, 0.5, k / (N - 1));
 			const mat = wood.clone();
 			mat.color.offsetHSL(0, 0, (k % 2 ? -0.04 : 0.04));
 			// (a flat wooden plank, the next almost touching it, longest for the lowest note)
-			const pw = 2 * (R + 0.06) * US / N * 0.86;   // (a little narrower: turned, they'd overlap)
+			const pw = 2 * (R + XY.out) * US / N * 0.86;   // (a little narrower: turned, they'd overlap)
 			// (wonky: every corner a little off, some ends cut on the slant, each laid a bit askew)
 			const hw = pw / 2, hl = len / 2, j = () => rr(-0.045, 0.045);
 			const outline = [[-hw + j(), -hl + j()], [hw + j(), -hl + j() + (rnd() < 0.5 ? rr(-0.08, 0.08) : 0)], [hw + rr(-0.02, 0.05), rr(-0.08, 0.08)], [hw + j(), hl + j()], [-hw + j(), hl + j() + rr(-0.06, 0.06)], [-hw + rr(-0.05, 0.02), rr(-0.08, 0.08)]];
-			const pg = new THREE.ExtrudeGeometry(new THREE.Shape(outline.map(([a, b]) => new THREE.Vector2(a, b))), { depth: rr(0.1, 0.13), bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 2 });
+			const pg = new THREE.ExtrudeGeometry(new THREE.Shape(outline.map(([a, b]) => new THREE.Vector2(a, b))), { depth: rr(0.18, 0.22), bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 2 });
 			pg.rotateX(-Math.PI / 2);
 			const log = mesh(pg, mat, g, pos.x, pos.y, pos.z);
 			// (tipped up toward you like a lectern, and each turned partway to point at you)
 			log.rotation.order = 'YXZ';
-			log.rotation.set(0.45 + rr(-0.06, 0.06), 0.7 * Math.atan2(-(pos.x - cx), R + 0.06) + rr(-0.05, 0.05), rr(-0.07, 0.07));
-			logs.push({ log, mat, pos, deg: k + 2, hit: 0, under: -1 });
+			log.rotation.set(0.45 + rr(-0.06, 0.06), 0.7 * Math.atan2(-(pos.x - cx), R + XY.out) + rr(-0.05, 0.05), rr(-0.07, 0.07));
+			// its hotspot, in front where an avatar can stand, its tail reaching back to the plank's foot
+			const hot = new THREE.Vector2(cx + avCap((u - 0.5) * 2 * R), cz - XY.hotZ);
+			const tdx = pos.x - hot.x, tdz = pos.z + 0.2 - hot.y, tL = Math.hypot(tdx, tdz);
+			const hue = new THREE.Color().setHSL(0.08 + k / N * 0.75, 0.75, 0.55);
+			const hotMat = new THREE.MeshBasicMaterial({ color: hue.clone().multiplyScalar(1.2), transparent: true, opacity: 0.4, depthWrite: false, side: THREE.DoubleSide });
+			const ring = new THREE.Group();
+			const fill = new THREE.Mesh(new THREE.ShapeGeometry(hotShape(0.24, 0.2, tL), 24), hotMat);
+			fill.rotation.x = -Math.PI / 2; ring.add(fill);
+			ring.position.set(hot.x, 0.035, hot.y);
+			ring.rotation.y = Math.atan2(-tdx, -tdz);
+			g.add(ring);
+			logs.push({ log, mat, pos, deg: k + 2, hit: 0, under: -1, hot, hotMat, hue, who: -1 });
 		}
 		// the rickety frame: two crooked rails on splayed legs
 		const span = 2 * (R + 0.06) * US;
 		for (const dz of [-0.24, 0.24]) {
-			const ry = 0.74 - dz * 0.48;   // (the back rail higher: the planks lean toward you)
-			const rail = mesh(new THREE.BoxGeometry(span * 1.02, 0.05, 0.06), wood, g, cx, ry - 0.05, cz - R - 0.06 + dz);
+			const ry = XY.y - 0.06 - dz * 0.48;   // (the back rail higher: the planks lean toward you)
+			const rail = mesh(new THREE.BoxGeometry(span * 1.02, 0.05, 0.06), wood, g, cx, ry - 0.05, cz - R - XY.out + dz);
 			rail.rotation.z = rr(-0.03, 0.03);
 			for (const fx of [-0.5, -0.17, 0.17, 0.5]) {
-				const leg = mesh(new THREE.CylinderGeometry(0.03, 0.04, ry, 6), wood, g, cx + fx * span + rr(-0.05, 0.05), ry / 2 - 0.03, cz - R - 0.06 + dz * 1.15);
+				const leg = mesh(new THREE.CylinderGeometry(0.03, 0.04, ry, 6), wood, g, cx + fx * span + rr(-0.05, 0.05), ry / 2 - 0.03, cz - R - XY.out + dz * 1.15);
 				leg.rotation.set(dz > 0 ? 0.12 : -0.12, 0, rr(-0.15, 0.15));
 			}
 		}
 		// the branch they fall from, leafy
-		const pts = [-1, -0.5, 0, 0.5, 1].map((t, k) => new THREE.Vector3(cx + t * 2.1, 4.5 + Math.sin(k * 1.7) * 0.12, cz - R - 0.25));
+		const pts = [-1, -0.5, 0, 0.5, 1].map((t, k) => new THREE.Vector3(cx + t * 2.3, 4.5 + Math.sin(k * 1.7) * 0.12, cz - R - XY.out - 0.2));
 		mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.07, 8), MAT.bark, g);
-		for (let k = 0; k < 14; k++) mesh(CANOPY[k % 3], leafMats[k % 4], g, cx + rr(-2.1, 2.1), 4.6 + rr(0, 0.2), cz - R - 0.2 + rr(-0.2, 0.2), rr(0.25, 0.4), rr(0.15, 0.22), rr(0.2, 0.3));
+		for (let k = 0; k < 14; k++) mesh(CANOPY[k % 3], leafMats[k % 4], g, cx + rr(-2.1, 2.1), 4.6 + rr(0, 0.2), cz - R - XY.out - 0.15 + rr(-0.2, 0.2), rr(0.25, 0.4), rr(0.15, 0.22), rr(0.2, 0.3));
 		const conkers = [];
 		const nut = new THREE.MeshPhysicalMaterial({ color: '#b8782e', roughness: 0.25, clearcoat: 1 });
 		const cupM = new THREE.MeshStandardMaterial({ color: '#5a3a1e', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 3, roughness: 0.9 });
@@ -2850,8 +2958,20 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			m.visible = false;
 			conkers.push({ m, live: false });
 		}
-		labels.push({ ci, wall: 1, at: wallPoint(cx, cz, 1, 0.5, 0.06, 0.0), text: 'STAND AT THE FRONT' });
-		xylos[ci] = { logs, conkers, next: 0 };
+		labels.push({ ci, wall: 1, at: new THREE.Vector3(cx, 0.05, cz - XY.hotZ), text: 'STAND ON A SPOT' });
+		xylos[ci] = { logs, conkers, next: 0, cx, cz };
+	}
+	// who's standing on which plank's hotspot (the nearest, if near enough)
+	function xyloStanding(xy) {
+		for (const lg of xy.logs) lg.who = -1;
+		for (let i = 0; i < count; i++) {
+			const q = pl[i];
+			if (!q.seen) continue;
+			const ax = xy.cx + avCap(q.x), az = xy.cz + avCap(q.z);
+			let best = null, bd = XY.reach;
+			for (const lg of xy.logs) { const d = Math.hypot(ax - lg.hot.x, az - lg.hot.y); if (d < bd) { bd = d; best = lg; } }
+			if (best) best.who = i;
+		}
 	}
 
 	// MOONBEAM THEREMIN: a shaft of moonlight by a wall; stand in it and rise and dip to bend a ghostly note
@@ -3252,32 +3372,20 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			wb.ring.scale.setScalar(1 + (1 - wb.ringT) * 4);
 			wb.ring.material.opacity = wb.ringT * 0.9;
 		}
-		// the pond: rings spread, and each pad they reach plinks
+		// the pond: the pads ride the ripples
 		for (const [ci, pd] of ponds.entries()) if (pd && clearingGroups[ci].visible) {
-			const nowc = clock();
-			for (const rg of pd.rings) {
-				if (!rg.live) { rg.m.visible = false; continue; }
-				const age = nowc - rg.t0, r = age * 2.3;
-				if (age > 3) { rg.live = false; rg.m.visible = false; continue; }
-				rg.m.visible = true;
-				rg.m.position.set(rg.x, 0.03, rg.z);
-				rg.m.scale.setScalar(Math.max(0.01, r));
-				rg.m.material.opacity = 0.7 * (1 - age / 3);
-				for (const [k, pad] of pd.pads.entries()) {
-					if (rg.hit.has(k)) continue;
-					if (Math.hypot(pad.x - rg.x, pad.z - rg.z) <= r) {
-						rg.hit.add(k);
-						pad.bounce = 1;
-						if (audioOn()) SND.plink(nowc + 0.005, freqOf(CLEARINGS[ci].root, pad.deg), 0.22 * (1 - age / 3), 1);
-						if (rg.who !== undefined && rg.who < count) scores[rg.who] += 1;
-					}
-				}
-			}
 			for (const pad of pd.pads) {
-				pad.bounce = Math.max(0, pad.bounce - dt * 2.5);
-				pad.bud.position.y = 0.1 + Math.sin(pad.bounce * Math.PI) * 0.12;
-				pad.pad.position.y = 0.035 + pad.bounce * 0.03;
-				pad.budMat.color.copy(pad.base).multiplyScalar(1 + pad.bounce * 2.5);
+				let lift = 0;
+				for (const r of pd.rip) {
+					const age = rt - r.z;
+					if (age < 0 || age > 3.5) continue;
+					const d = Math.hypot(pad.x - r.x, pad.z - r.y), front = age * 0.85;
+					lift += Math.exp(-Math.pow((d - front) / (0.22 + age * 0.12), 2)) * Math.exp(-age * 1.1) * r.w;
+				}
+				pad.bounce = lerp(pad.bounce, Math.min(1, lift), 1 - Math.exp(-dt * 12));
+				pad.pad.position.y = 0.03 + Math.sin(rt * 1.3 + pad.ph) * 0.006 + pad.bounce * 0.05;
+				pad.bud.position.y = 0.09 + pad.bounce * 0.07;
+				pad.budMat.color.copy(pad.base).multiplyScalar(1 + pad.bounce * 2.2);
 			}
 		}
 		// conkers fall, hit, bounce off; logs flash in the colour of whoever dropped one
@@ -3298,7 +3406,10 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				else { cn.live = false; cn.m.visible = false; }
 				if (cn.live) cn.m.rotation.set(Math.max(0, tt - 1) * 6, 0, Math.max(0, tt - 1) * -4);   // (it tumbles off the log)
 			}
+			if (ci === here) xyloStanding(xy);
 			for (const lg of xy.logs) {
+				if (lg.who >= 0) { lg.hotMat.color.set(colour(lg.who)).multiplyScalar(1.4); lg.hotMat.opacity = 0.9; }
+				else { lg.hotMat.color.copy(lg.hue).multiplyScalar(1.2); lg.hotMat.opacity = 0.4 + Math.sin(rt * 3 + lg.deg) * 0.06; }
 				lg.hit = Math.max(0, lg.hit - dt * 3);
 				lg.mat.emissive.set(lg.col || '#ffffff').multiplyScalar(lg.hit * 1.2);
 				lg.log.position.y = lg.pos.y - lg.hit * 0.02;
