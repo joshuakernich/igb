@@ -36,8 +36,8 @@ IGB.manifest = [
 	] },
 
 	{ folder: 'New', games: [
-		{ id: 'grub-o-tron', name: 'Grub-o-Tron 3000', icon: 'assets/icons/grub-o-tron.svg', module: true,
-			title: { lines: [{ text: 'GRUB-O-TRON', fill: '#9dff3a', glow: '#3cff7a' }, { text: '3000', fill: '#FC1992', glow: '#9E00FF' }] }, box: { color: '#9dff3a', bg: '#200033', note: 'CO-OP' } },
+		{ id: 'grub-o-tron', name: 'Fission Chips', icon: 'assets/icons/grub-o-tron.svg', module: true,
+			title: { lines: [{ text: 'FISSION', fill: '#9dff3a', glow: '#3cff7a' }, { text: 'CHIPS', fill: '#FC1992', glow: '#9E00FF' }] }, box: { color: '#9dff3a', bg: '#200033', note: 'CO-OP' } },
 		{ id: 'red-light-green-light', name: 'Red Light Green Light', icon: 'assets/icons/red-light-green-light.png',
 			file: 'games/red-light-green-light/index.js', module: true,
 			title: { lines: [{ text: 'RED LIGHT', fill: '#ff3640', glow: '#ff3640' }, { text: 'GREEN LIGHT', fill: '#27d96b', glow: '#27d96b' }] }, box: { color: '#e5287a', bg: '#1d7a63', note: 'SURVIVAL' } },

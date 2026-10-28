@@ -1,5 +1,5 @@
 /*
- * Grub-o-Tron 3000
+ * Fission Chips (id grub-o-tron, its first name)
  *
  * The last fast-food joint after the end of the world. The players are its
  * cyborg cooks (part survivor, part kitchen robot: a whisk for an arm, a
@@ -277,7 +277,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			update(dt, bt) { tick(dt); introT = bt; },
 			draw(ctx, bt) {
 				show.onWalls(ctx, function (c, wall) {
-					show.slam(c, 'GRUB-O-TRON IS OPEN!', W / 2, 290, 112, bt - 0.3, { fill: '#9dff3a' });
+					show.slam(c, 'FISSION CHIPS IS OPEN!', W / 2, 290, 112, bt - 0.3, { fill: '#9dff3a' });
 					show.slam(c, 'FEED THE MUTANTS. DON\'T GET EATEN.', W / 2, 410, 58, bt - 1.3, { fill: 'white' });
 					if (wall !== 1) show.slam(c, wall === 0 ? '◀ THE OLD WAYS' : 'THE NEW WAYS ▶', W / 2, 520, 54, bt - 2.2, { fill: wall === 0 ? '#ff8a2a' : '#3af2ff' });
 				});
@@ -1503,7 +1503,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			mesh(new THREE.PlaneGeometry(10.6, 2.0), new THREE.MeshBasicMaterial({ map: TEX.sky, color: new THREE.Color(0.7, 0.7, 0.7) }), g, 0, 1.65, backZ + 0.03);
 			for (const x of [-5.4, 5.4]) mesh(BOX(0.22, 2.4, 0.3), MAT.darkSteel, g, x, 1.5, backZ + 0.1);
 			mesh(BOX(11, 0.16, 0.4), MAT.rust, g, 0, 0.6, backZ + 0.2);
-			for (const [x, text, colour] of [[-6.5, 'GRUB-O-TRON', '#9dff3a'], [6.5, 'OPEN 25/8', '#FC1992']]) {
+			for (const [x, text, colour] of [[-6.5, 'FISSION CHIPS', '#9dff3a'], [6.5, 'OPEN 25/8', '#FC1992']]) {
 				const sign = mesh(new THREE.PlaneGeometry(2.0, 0.38), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), g, x, 1.75, backZ + 0.06);
 				signs.push({ m: sign, text, colour, k: 1.3, seed: x });
 			}
