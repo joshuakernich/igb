@@ -41,6 +41,7 @@ const SCALE = 0.5;                 // the hidden stage's scale (world 4800 x 100
 const STRIP = { w: 3072, h: 640 }; // the copied walls: 1024 x 640 each
 
 const params = new URLSearchParams(location.search);
+const embedded = !!params.get('embed');   // (in the storyboard: ?embed=1)
 const $world = $('igb-world');
 const $status = $('#status');
 
@@ -118,7 +119,7 @@ const floorTex = (() => {
 	const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
 	return t;
 })();
-const floor = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.w, ROOM.d), new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.55, metalness: 0.1 }));
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.w, ROOM.d), new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.3, metalness: 0.35 }));   // (glossy: the walls' light shines in it)
 floor.rotation.x = -Math.PI / 2;
 floor.receiveShadow = true;
 scene.add(floor);
@@ -131,6 +132,64 @@ scene.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints([
 	new THREE.Vector3(hw, C, -hd), new THREE.Vector3(hw, C, hd), new THREE.Vector3(-hw, 0, hd), new THREE.Vector3(-hw, C, hd),
 	new THREE.Vector3(hw, 0, hd), new THREE.Vector3(hw, C, hd),
 ]), edge));
+
+/* the box itself: framed walls, a shell round the outside, a truss of lights overhead */
+
+const shellMat = new THREE.MeshStandardMaterial({ color: '#1b0b26', roughness: 0.7, metalness: 0.2 });
+const frameMat = new THREE.MeshStandardMaterial({ color: '#0d0612', roughness: 0.4, metalness: 0.6 });
+const trimMat = new THREE.MeshBasicMaterial({ color: new THREE.Color('#c04dff').multiplyScalar(1.6), toneMapped: false });
+const T = 0.14;   // (the shell's thickness)
+const boxAt = (w, h, d, x, y, z, mat, cast = true) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.castShadow = cast; m.receiveShadow = true; scene.add(m); return m; };
+// the shell behind each wall, up to a lip over the top
+boxAt(T, C + 0.12, ROOM.d + 2 * T, -hw - T / 2 - 0.012, (C + 0.12) / 2, 0, shellMat);   // (a centimetre behind the screen, or they fight)
+boxAt(ROOM.w + 2 * T, C + 0.12, T, 0, (C + 0.12) / 2, -hd - T / 2 - 0.012, shellMat);
+boxAt(T, C + 0.12, ROOM.d + 2 * T, hw + T / 2 + 0.012, (C + 0.12) / 2, 0, shellMat);
+// frames round the walls: corner posts, a header, a skirting with a glowing line
+for (const [x, z] of [[-hw, -hd], [hw, -hd], [-hw, hd], [hw, hd]]) boxAt(0.07, C, 0.07, x, C / 2, z, frameMat);
+boxAt(ROOM.w + 0.14, 0.09, 0.09, 0, C + 0.02, -hd, frameMat);
+boxAt(0.09, 0.09, ROOM.d + 0.14, -hw, C + 0.02, 0, frameMat);
+boxAt(0.09, 0.09, ROOM.d + 0.14, hw, C + 0.02, 0, frameMat);
+boxAt(ROOM.w, 0.012, 0.012, 0, 0.03, -hd + 0.01, trimMat, false);
+boxAt(0.012, 0.012, ROOM.d, -hw + 0.01, 0.03, 0, trimMat, false);
+boxAt(0.012, 0.012, ROOM.d, hw - 0.01, 0.03, 0, trimMat, false);
+// the truss over the open top, with its tracking cameras and lamps
+for (const z of [-hd * 0.33, hd * 0.33]) boxAt(ROOM.w, 0.05, 0.05, 0, C + 0.08, z, frameMat);
+for (const x of [-hw * 0.5, hw * 0.5]) boxAt(0.05, 0.05, ROOM.d, x, C + 0.08, 0, frameMat);
+const lampMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 2.0, 1.8), toneMapped: false });
+for (const x of [-hw * 0.5, hw * 0.5]) for (const z of [-hd * 0.33, hd * 0.33]) {
+	const can = boxAt(0.1, 0.12, 0.1, x, C + 0.0, z, frameMat);
+	const lens = new THREE.Mesh(new THREE.CircleGeometry(0.035, 16), lampMat);
+	lens.rotation.x = Math.PI / 2; lens.position.set(x, C - 0.061, z); scene.add(lens);
+}
+// the ground outside the box: dark, fading out
+const groundTex = (() => {
+	const c = document.createElement('canvas'); c.width = c.height = 512;
+	const x = c.getContext('2d'), g = x.createRadialGradient(256, 256, 40, 256, 256, 256);
+	g.addColorStop(0, '#2a1238'); g.addColorStop(1, '#14001f');
+	x.fillStyle = g; x.fillRect(0, 0, 512, 512);
+	const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+})();
+const ground = new THREE.Mesh(new THREE.CircleGeometry(16, 48), new THREE.MeshStandardMaterial({ map: groundTex, roughness: 0.9 }));
+ground.rotation.x = -Math.PI / 2; ground.position.y = -0.005; ground.receiveShadow = true;
+scene.add(ground);
+// light pooling on the floor in front of each wall, in that wall's colour
+const spillTex = (() => {
+	const c = document.createElement('canvas'); c.width = 4; c.height = 256;
+	const x = c.getContext('2d'), g = x.createLinearGradient(0, 0, 0, 256);
+	g.addColorStop(0, 'rgba(255,255,255,0.9)'); g.addColorStop(0.35, 'rgba(255,255,255,0.25)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+	x.fillStyle = g; x.fillRect(0, 0, 4, 256);
+	return new THREE.CanvasTexture(c);
+})();
+const spills = [0, 1, 2].map((n) => {
+	const m = new THREE.Mesh(new THREE.PlaneGeometry(n === 1 ? ROOM.w : ROOM.d, 1.3), new THREE.MeshBasicMaterial({ map: spillTex, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+	m.rotation.x = -Math.PI / 2;
+	m.position.y = 0.008;
+	if (n === 1) m.position.z = -hd + 0.65;
+	if (n === 0) { m.rotation.z = -Math.PI / 2; m.position.x = -hw + 0.65; }
+	if (n === 2) { m.rotation.z = Math.PI / 2; m.position.x = hw - 0.65; }
+	scene.add(m);
+	return m;
+});
 
 // Light: a dim fill, a key from above the open back, and each wall's own glow.
 scene.add(new THREE.HemisphereLight('#a06bd8', '#14001f', 0.9));
@@ -156,6 +215,7 @@ function updateGlow(now) {
 	tctx.drawImage(strip, 0, 0, 3, 1);
 	const d = tctx.getImageData(0, 0, 3, 1).data;
 	glows.forEach((l, n) => l.color.setRGB(d[n * 4] / 255, d[n * 4 + 1] / 255, d[n * 4 + 2] / 255, THREE.SRGBColorSpace));
+	spills.forEach((m, n) => m.material.color.copy(glows[n].color).multiplyScalar(0.9));
 }
 
 /* ---------- the players' figures ---------- */
@@ -516,6 +576,8 @@ function GhostFigure(n) {
 		f.reachT = 0;
 	};
 	f.dispose = function () { scene.remove(root); mixer.stopAllAction(); };
+	f.setHeight = (k) => root.scale.setScalar(k);
+	f.root = root;
 	return f;
 }
 const makeFigure = (i) => (ghostKit ? GhostFigure(i) : Figure(i));
@@ -733,12 +795,13 @@ let bot = null, figures = [], botT = 0;
 
 function sendTracking() {
 	if (!bot) return;
-	const msg = bot.ps.map((p, i) => ({ Id: i, X: p.X, Y: p.Y, Z: p.Z }));
+	const msg = bot.ps.map((p, i) => (i === you.me ? you.message(i) : { Id: i, X: p.X, Y: p.Y, Z: p.Z }));
 	msg.push({ Id: 0, X: 0, Y: -0.2, Z: -0.5 });   // (the wand: the message's last entry)
 	IGB.players.receive(JSON.stringify(msg) + '|');
 }
 
 function doTap(i, tap) {
+	if (i === you.me && !tap.mine) return;   // (you're driving this one)
 	const f = figures[i];
 	if (f) f.tap(tap);
 	const x = (tap.wall + tap.x) * IGB.W, y = tap.y * IGB.H;
@@ -753,6 +816,270 @@ IGB.players.onUpdate(function (players) {
 	if (game && game.setPlayers) game.setPlayers(players);
 });
 
+/* ---------- you: driving one of the players ---------- */
+
+// Take over a player (Tab, or the YOU button; 0 hands them back to the bots):
+// walk with WASD or the arrows (or click the floor), hold Shift to squat, Space
+// to jump, Q / E to be shorter or taller, point at the walls to look at them,
+// and click a wall to touch it (you walk over first if it's out of reach).
+// Your position, height and head's rotation go to the game in the tracking
+// message, exactly as the real tracker sends them; touches go in as clicks.
+const HEIGHTS = [110, 130, 150, 170, 190];   // cm
+const keys = new Set();
+const orbit = { yaw: 0, drag: null };
+const you = (function () {
+	const Y = {
+		me: embedded && !params.get('play') ? -1 : 0, n: 0,
+		X: 0, Z: -0.2, cm: 170, sq: 0, jumpT: -1, face: 0, look: null, gaze: null, gazeAt: new THREE.Vector3(),
+		goal: null, pendingTap: null, ripples: [], help: true,
+	};
+	const base = () => (Y.cm - 170) / 112.5;   // (tracking Y: 1 unit is 1.125 m of height; 0 is a standing 170 cm adult)
+	const jumpOff = () => (Y.jumpT >= 0 ? 0.34 * Math.sin(Math.PI * Math.min(1, Y.jumpT / 0.55)) : 0);
+	const toWorld = (X, Z) => ({ x: X * hw * 0.92, z: -Z * hd * 0.92 });
+	const headY = () => Y.cm / 100 * 0.93 * (1 - Y.sq * 0.36) + jumpOff() * 1.125;
+	Y.reset = function (n) {
+		Y.n = n;
+		if (Y.me >= n) Y.me = n - 1;
+		if (Y.me >= 0 && bot && bot.ps[Y.me]) { Y.X = bot.ps[Y.me].X; Y.Z = bot.ps[Y.me].Z; }
+		Y.goal = null; Y.pendingTap = null;
+		hud();
+	};
+	Y.message = function (i) {
+		const m = { Id: i, X: Y.X, Y: base() - Y.sq * 0.32 + jumpOff(), Z: Y.Z };
+		if (Y.look) {   // (the head's rotation: the hat's +z turned to where you look)
+			const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), Y.look);
+			Object.assign(m, { rW: q.w, rX: q.x, rY: q.y, rZ: q.z });
+		}
+		return m;
+	};
+	Y.pose = () => ({ X: Y.X, Y: -Y.sq * 0.32 + jumpOff(), Z: Y.Z, face: Y.face });
+	Y.step = function (dt) {
+		if (Y.me < 0) return;
+		// walking: the keys, relative to the view; or toward where you clicked
+		let ix = 0, iz = 0;
+		if (keys.has('w') || keys.has('arrowup')) iz += 1;
+		if (keys.has('s') || keys.has('arrowdown')) iz -= 1;
+		if (keys.has('a') || keys.has('arrowleft')) ix -= 1;
+		if (keys.has('d') || keys.has('arrowright')) ix += 1;
+		const speed = (Y.sq > 0.5 ? 0.5 : 1) * 1.4 / 1.8;   // (tracking units a second: 1.4 m/s, slower squatting)
+		if (ix || iz) {
+			Y.goal = null; Y.pendingTap = null;
+			const fw = new THREE.Vector3(); camera.getWorldDirection(fw); fw.y = 0; fw.normalize();
+			const rt = new THREE.Vector3(-fw.z, 0, fw.x);
+			const mx = fw.x * iz + rt.x * ix, mz = fw.z * iz + rt.z * ix, l = Math.hypot(mx, mz) || 1;
+			Y.X += mx / l * speed * dt; Y.Z += -mz / l * speed * dt;
+		} else if (Y.goal) {
+			const dx = Y.goal.X - Y.X, dz = Y.goal.Z - Y.Z, d = Math.hypot(dx, dz);
+			if (d < 0.02) {
+				Y.goal = null;
+				if (Y.pendingTap) { touch(Y.pendingTap); Y.pendingTap = null; }
+			} else { const st = Math.min(d, speed * 1.3 * dt); Y.X += dx / d * st; Y.Z += dz / d * st; }
+		}
+		Y.X = Math.max(-0.97, Math.min(0.97, Y.X)); Y.Z = Math.max(-0.97, Math.min(0.97, Y.Z));
+		// squat and jump
+		const wantSq = keys.has('shift') || keys.has('c') ? 1 : 0;
+		Y.sq += (wantSq - Y.sq) * Math.min(1, dt * 8);
+		if (Y.jumpT >= 0) { Y.jumpT += dt; if (Y.jumpT > 0.55) Y.jumpT = -1; }
+		// looking: from your head to the point on the wall you're pointing at
+		if (Y.gaze) {
+			const w = toWorld(Y.X, Y.Z);
+			const d = new THREE.Vector3(Y.gaze.point.x - w.x, Y.gaze.point.y - headY(), Y.gaze.point.z - w.z).normalize();
+			Y.look = new THREE.Vector3(d.x, d.y, -d.z);   // (into the tracker's axes: z toward the front wall)
+			Y.face = Math.atan2(-(d.x), -d.z);
+		}
+		hudState();
+	};
+	// a touch on a wall: { wall, x, y } (fractions as you face it, y 0 at the top)
+	function touch(t) {
+		const f = figures[Y.me];
+		if (f) f.tap(t);
+		Y.ripples.push({ t: 0, point: t.point.clone(), normal: t.normal.clone() });
+		const x = (t.wall + t.x) * IGB.W, y = t.y * IGB.H;
+		if (game && game.test && game.test.tap && entry && entry.bot && entry.bot !== 'roam') { doTap(Y.me, Object.assign({ mine: true }, t)); return; }
+		clickStage(x, y);
+		flash('TOUCH!');
+	}
+	// a click on the hidden stage, where that point of the world is: the game hears a real tap
+	function clickStage(x, y) {
+		if (!game || !game.stage) return;
+		const el = game.stage.$el[0], r = $world[0].getBoundingClientRect();
+		const cx = r.left + x * IGB.scale, cy = r.top + y * IGB.scale;
+		const hit = document.elementsFromPoint(cx, cy).find((e) => el.contains(e)) || el;
+		const o = { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0, pointerId: 1, isPrimary: true };
+		hit.dispatchEvent(new PointerEvent('pointerdown', o));
+		hit.dispatchEvent(new MouseEvent('mousedown', o));
+		hit.dispatchEvent(new PointerEvent('pointerup', o));
+		hit.dispatchEvent(new MouseEvent('mouseup', o));
+		hit.dispatchEvent(new MouseEvent('click', o));
+	}
+	// is that spot on the wall in arm's reach of where you stand?
+	function reachable(t) {
+		const w = toWorld(Y.X, Y.Z), p = t.point;
+		const out = t.wall === 1 ? w.z - (-hd) : t.wall === 0 ? w.x - (-hw) : hw - w.x;
+		const along = t.wall === 1 ? Math.abs(w.x - p.x) : Math.abs(w.z - p.z);
+		return out < 0.7 && along < 0.55 && p.y < Y.cm / 100 * 1.25;
+	}
+	Y.touchWall = function (t) {
+		if (reachable(t)) { touch(t); return; }
+		Y.goal = nearWall(t.wall, t.x, 0.2);
+		Y.pendingTap = t;
+	};
+	Y.walkTo = function (pt) { Y.goal = { X: pt.x / (hw * 0.92), Z: -pt.z / (hd * 0.92) }; Y.pendingTap = null; };
+	Y.jump = function () { if (Y.jumpT < 0 && Y.me >= 0) Y.jumpT = 0; };
+	Y.height = function (d) { const k = Math.max(0, Math.min(HEIGHTS.length - 1, HEIGHTS.indexOf(Y.cm) + d)); Y.cm = HEIGHTS[k]; flash(Y.cm + ' CM'); hud(); };
+	Y.take = function (i) {
+		Y.me = i;
+		if (i >= 0 && bot && bot.ps[i]) { Y.X = bot.ps[i].X; Y.Z = bot.ps[i].Z; }
+		Y.goal = null; Y.pendingTap = null;
+		hud();
+	};
+	// the view from your eyes
+	Y.eyes = function (cam) {
+		if (Y.me < 0) return;
+		const w = toWorld(Y.X, Y.Z);
+		cam.position.set(w.x, headY() + 0.05, w.z);
+		if (Y.gaze) cam.lookAt(Y.gaze.point);
+		else cam.lookAt(w.x - Math.sin(Y.face) * 3, headY() - 0.1, w.z - Math.cos(Y.face) * 3);
+	};
+
+	/* what you see of it in the room: a YOU ring, your gaze on the wall, touch ripples, where you're walking */
+	const col = () => new THREE.Color(COLORS[Math.max(0, Y.me) % COLORS.length]);
+	const ring = new THREE.Mesh(new THREE.RingGeometry(0.34, 0.4, 48), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }));
+	ring.rotation.x = -Math.PI / 2; ring.position.y = 0.015; scene.add(ring);
+	const dotTex = poolTex;
+	const gazeDot = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.34), new THREE.MeshBasicMaterial({ map: dotTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+	scene.add(gazeDot);
+	const beam = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineDashedMaterial({ color: '#ffffff', dashSize: 0.06, gapSize: 0.05, transparent: true, opacity: 0.55, toneMapped: false }));
+	beam.frustumCulled = false; scene.add(beam);
+	const goalMark = new THREE.Mesh(new THREE.RingGeometry(0.1, 0.13, 32), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }));
+	goalMark.rotation.x = -Math.PI / 2; goalMark.position.y = 0.02; scene.add(goalMark);
+	const rippleMeshes = [];
+	const label = (() => {
+		const c = document.createElement('canvas'); c.width = 256; c.height = 96;
+		const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+		const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, depthTest: false, toneMapped: false }));
+		sp.scale.set(0.5, 0.19, 1); sp.renderOrder = 10; scene.add(sp);
+		sp.userData.paint = (cc) => { const x = c.getContext('2d'); x.clearRect(0, 0, 256, 96); x.font = '700 64px Rubik, sans-serif'; x.textAlign = 'center'; x.lineWidth = 12; x.strokeStyle = '#14001f'; x.strokeText('YOU', 128, 70); x.fillStyle = cc; x.fillText('YOU', 128, 70); t.needsUpdate = true; };
+		return sp;
+	})();
+	let labelFor = -2;
+	Y.draw = function (t, dt) {
+		const on = Y.me >= 0 && figures[Y.me];
+		ring.visible = gazeDot.visible = beam.visible = label.visible = !!on;
+		goalMark.visible = !!(on && Y.goal);
+		if (!on) return;
+		const c = col(), w = toWorld(Y.X, Y.Z);
+		ring.material.color.copy(c).multiplyScalar(1.8);
+		ring.position.x = w.x; ring.position.z = w.z;
+		ring.scale.setScalar(1 + Math.sin(t * 4) * 0.05);
+		if (labelFor !== Y.me) { label.userData.paint('#' + c.getHexString()); labelFor = Y.me; }
+		label.position.set(w.x, headY() + 0.42, w.z);
+		label.visible = view !== 'You';
+		if (Y.goal) { const g = toWorld(Y.goal.X, Y.goal.Z); goalMark.position.x = g.x; goalMark.position.z = g.z; goalMark.material.color.copy(c).multiplyScalar(1.5); }
+		gazeDot.visible = beam.visible = !!Y.gaze;
+		if (Y.gaze) {
+			gazeDot.position.copy(Y.gaze.point).addScaledVector(Y.gaze.normal, 0.01);
+			gazeDot.lookAt(gazeDot.position.clone().add(Y.gaze.normal));
+			gazeDot.material.color.copy(c).multiplyScalar(2);
+			gazeDot.scale.setScalar(1 + Math.sin(t * 6) * 0.08);
+			const a = beam.geometry.attributes.position;
+			a.setXYZ(0, w.x, headY(), w.z); a.setXYZ(1, Y.gaze.point.x, Y.gaze.point.y, Y.gaze.point.z); a.needsUpdate = true;
+			beam.computeLineDistances(); beam.material.color.copy(c).multiplyScalar(1.5);
+			beam.visible = view !== 'You';
+		}
+		// touch ripples on the wall
+		for (const r of Y.ripples) {
+			r.t += dt;
+			if (!r.m) { r.m = new THREE.Mesh(new THREE.RingGeometry(0.06, 0.09, 40), new THREE.MeshBasicMaterial({ color: c.clone().multiplyScalar(2.2), transparent: true, depthWrite: false, toneMapped: false, side: THREE.DoubleSide })); scene.add(r.m); r.m.position.copy(r.point).addScaledVector(r.normal, 0.012); r.m.lookAt(r.m.position.clone().add(r.normal)); }
+			r.m.scale.setScalar(1 + r.t * 9); r.m.material.opacity = Math.max(0, 1 - r.t / 0.6);
+		}
+		for (const r of Y.ripples) if (r.t > 0.6) { scene.remove(r.m); r.m.geometry.dispose(); }
+		Y.ripples = Y.ripples.filter((r) => r.t <= 0.6);
+	};
+
+	/* the panel: who you are, how to drive, what you're doing */
+	const $hud = $('<gamebox-hud>').appendTo('body');
+	function hud() {
+		if (embedded && !params.get('play')) { $hud.hide(); return; }
+		const n = Y.n || (bot ? bot.ps.length : 0);
+		const who = Y.me >= 0 ? `<b style="color:${COLORS[Y.me % COLORS.length]}">YOU ARE P${Y.me + 1}</b>` : '<b>WATCHING</b>';
+		$hud.html(`<div class=row>${who}<span class=chips></span></div>` + (Y.help ? `<dl>
+			<dt>Walk</dt><dd>W A S D · click the floor</dd>
+			<dt>Touch</dt><dd>click a wall</dd>
+			<dt>Look</dt><dd>point at the walls</dd>
+			<dt>Squat</dt><dd>hold Shift</dd>
+			<dt>Jump</dt><dd>Space</dd>
+			<dt>Height</dt><dd>Q / E · <i>${Y.cm} cm</i></dd>
+			<dt>Player</dt><dd>Tab · 1–${n} · 0 to watch</dd>
+			<dt>View</dt><dd>V · drag to orbit · <i>H</i> hides this</dd></dl>` : ''));
+	}
+	function hudState() {
+		const c = [];
+		if (Y.me < 0) return;
+		if (Y.sq > 0.5) c.push('SQUATTING');
+		if (Y.jumpT >= 0) c.push('JUMPING');
+		if (Y.gaze) c.push('LOOKING ' + ['LEFT', 'FRONT', 'RIGHT'][Y.gaze.wall]);
+		if (Y.pendingTap) c.push('WALKING TO TOUCH');
+		const s = c.map((x) => `<span>${x}</span>`).join('');
+		const $c = $hud.find('.chips');
+		if ($c.html() !== s) $c.html(s);
+	}
+	let flashT = 0;
+	const $flash = $('<gamebox-flash>').appendTo('body');
+	function flash(text) { $flash.text(text).addClass('on'); clearTimeout(flashT); flashT = setTimeout(() => $flash.removeClass('on'), 700); }
+	Y.hud = hud;
+	hud();
+	return Y;
+})();
+
+/* the pointer: point to look, click a wall to touch it, click the floor to walk, drag to orbit */
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+function pick(e) {
+	const r = canvas.getBoundingClientRect();
+	ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+	ray.setFromCamera(ndc, camera);
+	const hit = ray.intersectObjects([...walls, floor], false)[0];
+	if (!hit) return null;
+	const n = walls.indexOf(hit.object);
+	if (n < 0) return { floor: true, point: hit.point.clone() };
+	const u = hit.uv.x * 3 - n, v = hit.uv.y;
+	const normal = new THREE.Vector3(n === 0 ? 1 : n === 2 ? -1 : 0, 0, n === 1 ? 1 : 0);
+	return { wall: n, x: Math.max(0, Math.min(1, u)), y: Math.max(0, Math.min(1, 1 - v)), point: hit.point.clone(), normal };
+}
+const driving = () => you.me >= 0 && !(embedded && !params.get('play'));
+canvas.addEventListener('pointermove', (e) => {
+	if (orbit.drag) { orbit.yaw = orbit.drag.yaw - (e.clientX - orbit.drag.x) * 0.006; return; }
+	if (!driving()) return;
+	const h = pick(e);
+	you.gaze = h && !h.floor ? h : null;
+});
+canvas.addEventListener('pointerleave', () => { you.gaze = null; });
+canvas.addEventListener('pointerdown', (e) => {
+	const h = driving() ? pick(e) : null;
+	if (h && !h.floor && e.button === 0) { you.touchWall(h); return; }
+	if (h && h.floor && e.button === 0) { you.walkTo(h.point); return; }
+	orbit.drag = { x: e.clientX, yaw: orbit.yaw };
+	canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointerup', () => { orbit.drag = null; });
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+window.addEventListener('keydown', (e) => {
+	if (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+	const k = e.key.toLowerCase();
+	if (k === ' ') { you.jump(); e.preventDefault(); return; }
+	if (k === 'tab') { const n = bot ? bot.ps.length : 0; you.take(n ? (you.me + 1) % n : -1); e.preventDefault(); return; }
+	if (k === '0') { you.take(-1); return; }
+	if (/^[1-6]$/.test(k) && bot && +k <= bot.ps.length) { you.take(+k - 1); return; }
+	if (k === 'q' || k === '[') { you.height(-1); return; }
+	if (k === 'e' || k === ']') { you.height(1); return; }
+	if (k === 'h') { you.help = !you.help; you.hud(); return; }
+	if (k === 'v') { $('#view').trigger('click'); return; }
+	keys.add(k);
+	if (k.startsWith('arrow')) e.preventDefault();
+});
+window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
+window.addEventListener('blur', () => keys.clear());
+
 /* ---------- starting a game ---------- */
 
 async function startGame(id, n) {
@@ -761,7 +1088,7 @@ async function startGame(id, n) {
 	$world.empty();
 	figures.forEach((f) => f.dispose());
 	figures = []; bot = null;
-	entry = SONIC.find((g) => g.id === id) || SONIC[0];
+	entry = ALL.find((g) => g.id === id) || SONIC.find((g) => g.id === id) || { id, name: NAMES[id] || id, bot: 'roam' };
 	n = entry.players || n;
 	$status.text(entry.name + ' · loading');
 	$('#games button').removeClass('on').filter(`[data-id="${entry.id}"]`).addClass('on');
@@ -770,7 +1097,8 @@ async function startGame(id, n) {
 	if (token !== starting) { IGB.stop(g); return; }
 	game = g;
 	IGB.current = g;
-	bot = BOTS[entry.bot](n);
+	bot = (BOTS[entry.bot] || BOTS.roam)(n);
+	you.reset(n);
 	await ghostReady;
 	if (token !== starting) return;
 	figures = bot.ps.map((_, i) => makeFigure(i));
@@ -784,7 +1112,11 @@ async function startGame(id, n) {
 	if (!embedded) history.replaceState(null, '', '?' + q.toString());
 }
 
-$('#games').html(SONIC.filter((g) => !g.hidden).map((g) => `<button type="button" data-id="${g.id}">${g.name}</button>`).join(''));
+// (every game on the hub's menu: the Sonic ones have their own bots, the rest roam)
+const NAMES = {};
+for (const folder of IGB.manifest || []) for (const g of folder.games) NAMES[g.id] = g.name;
+const ALL = SONIC.filter((g) => !g.hidden).concat((IGB.menu || []).filter((id) => !SONIC.some((g) => g.id === id && !g.hidden) && !['show-debug', 'gaze-test', 'sonic-characters'].includes(id)).map((id) => SONIC.find((g) => g.id === id) || { id, name: NAMES[id] || id, bot: 'roam' }));
+$('#games').html(ALL.map((g) => `<button type="button" data-id="${g.id}">${g.name}</button>`).join(''));
 $('#games').on('click', 'button', function () { startGame(this.dataset.id, +$('#count').val()); });
 $('#count').on('change', function () { if (entry) startGame(entry.id, +this.value); });
 
@@ -795,6 +1127,7 @@ const VIEWS = {
 	Corner: () => ({ pos: [hw + 2.6, 3.6, hd + 3.4], at: [-0.4, 1.2, -0.8] }),
 	Overhead: () => ({ pos: [0, 10.5, hd + 2.2], at: [0, 0.6, -0.4] }),
 	Inside: (t) => ({ pos: [Math.sin(t * 0.2) * 0.4, 1.7, hd + 0.2], at: [0, 1.5, -hd] }),
+	You: () => ({ pos: [0, 1.6, 0], at: [0, 1.5, -hd] }),   // (from your own eyes: you.eyes sets it)
 };
 let view = VIEWS[params.get('view')] ? params.get('view') : 'Outside';
 const showView = () => $('#view').text('View: ' + view);
@@ -838,7 +1171,6 @@ let camReady = false;
 
 // Embedded in another page (?embed=1, the storyboard): no bar, and quiet unless ?sound=1.
 // (?clean=1 just hides the bar.)
-const embedded = !!params.get('embed');
 if (embedded || params.get('clean')) $('gamebox-bar').css('display', 'none');
 if (embedded && !params.get('sound')) IGB.setVolume(0);
 
@@ -874,20 +1206,29 @@ IGB.onFrame(function (now) {
 	if (bot) {
 		botT += dt;
 		bot.step(botT, dt, doTap);
+		you.step(dt);
 		if (now - sendAt > 33) { sendAt = now; sendTracking(); }
-		figures.forEach((f, i) => f.update(bot.ps[i], dt));
+		figures.forEach((f, i) => {
+			if (i === you.me) { f.update(you.pose(), dt); if (f.setHeight) f.setHeight(you.cm / 175); }
+			else { f.update(bot.ps[i], dt); if (f.setHeight) f.setHeight(1); }
+		});
 	}
 	copyWalls();
 	wallTex.needsUpdate = true;
 	updateGlow(now);
 	const v = VIEWS[view](now / 1000);
+	if (orbit.yaw && view !== 'You' && view !== 'Inside') { const c0 = Math.cos(orbit.yaw), s0 = Math.sin(orbit.yaw), [px, py, pz] = v.pos; v.pos = [px * c0 + pz * s0, py, -px * s0 + pz * c0]; }
 	const k = camReady ? Math.min(1, dt * 2.5) : 1;
 	camPos.lerp(new THREE.Vector3(...v.pos), k);
 	camAt.lerp(new THREE.Vector3(...v.at), k);
 	camReady = true;
 	camera.position.copy(camPos);
 	camera.lookAt(camAt);
-	if (view !== 'Inside') centreBox();   // (inside the room there's no box to frame)
+	const fov = view === 'You' ? 78 : 42;
+	if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
+	if (view === 'You') you.eyes(camera);
+	else if (view !== 'Inside') centreBox();   // (inside the room there's no box to frame)
+	you.draw(now / 1000, dt);
 	composer.render();
 });
 

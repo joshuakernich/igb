@@ -163,7 +163,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				{ kind: 'fairy', wall: 0, along: 0.62, out: 0.6, note: 12, pat: 'bells2', tint: '#a0ffd0' },
 				{ kind: 'snail', wall: 0, along: 0.87, out: 0.5, note: -5, pat: 'bass2', tint: '#b07aff' },
 			] },
-		{ name: 'TROLL BRIDGE', sub: 'WALK THE STEPPING STONES ON THE LEFT · STAND LEFT OR RIGHT TO CHANGE THE CHORD', bpm: 108, root: 246.9, piano: 0, choir: true,
+		{ name: 'TROLL BRIDGE', sub: 'WALK THE STEPPING STONES ON THE LEFT · SWIPE THE CHIMES UNDER THE ARCH', bpm: 108, root: 246.9, piano: 0, chimes: true,
 			sky: ['#1a3a3a', '#a8e0a0'], fog: '#3a6a5a', ground: '#4a6a3a', sun: '#e8ffc8', lights: ['#a8ff6a', '#ff8a4a', '#6affff', '#ff5fd0'],
 			groove: { kick: [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0], hat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] },
 			motif: 'bridge',
@@ -668,17 +668,26 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		}
 		// conkers, on the beat, onto the log under whoever's in the front half
 		const xy = xylos[here];
-		if (xy && !glide && s16 % 4 === 0 && phase !== 'intro') {
+		if (xy && !glide && s16 % 2 === 0 && phase !== 'intro') {
+			// (who's at which plank: an acorn over that plank lands on it; the rest sail past behind)
+			const at = new Map();
 			for (let i = 0; i < count; i++) {
 				const p = latest[i];
 				if (!p || !pl[i].seen || p.pz < 0.45) continue;
-				const k = clamp(Math.floor((p.px - 1 / 6) / (2 / 3) * xy.logs.length), 0, xy.logs.length - 1);   // (the log in front of you)
-				const lg = xy.logs[k];
-				if (on) SND.woodlog(time, freqOf(c.root, lg.deg), 0.5, 1);
+				at.set(clamp(Math.floor((p.px - 1 / 6) / (2 / 3) * xy.logs.length), 0, xy.logs.length - 1), i);
+			}
+			const drops = [];
+			if (s16 % 4 === 0) for (const [k, i] of at) drops.push([k, i]);   // (on every beat, onto every plank someone's at)
+			if (Math.random() < 0.7) { const k = Math.floor(Math.random() * xy.logs.length); if (!at.has(k)) drops.push([k, -1]); }   // (and always some falling, missing)
+			for (const [k, i] of drops) {
+				const lg = xy.logs[k], hit = i >= 0;
+				if (hit && on) SND.woodlog(time, freqOf(c.root, lg.deg), 0.5, 1);
 				const cn = xy.conkers[xy.next = (xy.next + 1) % xy.conkers.length];
-				visuals.push({ time: time - FALL, fn: () => { cn.live = true; cn.t0 = time - FALL; cn.lg = lg; cn.dx = rr(-0.05, 0.05); cn.m.visible = true; } });
-				visuals.push({ time, fn: () => { lg.hit = 1; lg.col = colour(i); spray(lg.pos, '#c88a4a', 5, 1, 1); } });
-				scores[i] += 1;
+				visuals.push({ time: time - FALL, fn: () => { cn.live = true; cn.t0 = time - FALL; cn.lg = lg; cn.miss = !hit; cn.dx = rr(-0.05, 0.05); cn.m.visible = true; } });
+				if (hit) {
+					visuals.push({ time, fn: () => { lg.hit = 1; lg.col = colour(i); spray(lg.pos, '#c88a4a', 5, 1, 1); } });
+					scores[i] += 1;
+				}
 			}
 		}
 		// ripples, on the beat, from whoever's standing still
@@ -867,7 +876,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		// the devices on the walls: the web and the stone wall take touches higher up and further along
 		if (at.y >= H * 0.25) {
 			const dev = hitters(wall, a, DEVICE_REACH);
-			if (dev.length && (pluckAt(at, wall, dev[0]) || gridTouch(at, wall, dev[0]))) return;
+			if (dev.length && (pluckAt(at, wall, dev[0]) || gridTouch(at, wall, dev[0]) || chimeAt(at, wall, dev[0]))) return;
 		}
 		if (at.y < H * TOUCH_TOP) return;   // (too high for a child: only the lower part of the wall counts)
 		const who = hitters(wall, a);
@@ -914,7 +923,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const wall = clamp(Math.floor(at.x / W), 0, 2);
 		if (at.y < H * 0.25) return;
 		const who = hitters(wall, at.x / W - wall, DEVICE_REACH);
-		if (who.length) pluckAt(at, wall, who[0], true);
+		if (who.length) { pluckAt(at, wall, who[0], true); chimeAt(at, wall, who[0], true); }
 	});
 	// the stone in the wall nearest a touch, switched: any touch on the stonework hits its nearest stone
 	function gridTouch(at, wall, who) {
@@ -1265,7 +1274,19 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				wpos = modelMatrix * wpos;
 				float hh = clamp((wpos.y - uBase.y) / uH, 0.0, 1.6);
 				vec2 rel = wpos.xz - uBase.xz;
-				wpos.xz += uBend.xz * hh * hh;
+				// (a real bend, not a skew: every point turned about the feet in the bend's
+				// plane, by an angle that grows with height, so the top tips over at an angle)
+				float bl = length(uBend.xz);
+				if (bl > 1e-4) {
+					vec2 bd = uBend.xz / bl;
+					float th = bl / uH * 2.4 * hh;
+					vec2 r0 = wpos.xz - uBase.xz;
+					float u = dot(r0, bd), yy = wpos.y - uBase.y;
+					vec2 perp = r0 - bd * u;
+					float c0 = cos(th), s0 = sin(th);
+					wpos.xz = uBase.xz + perp + bd * (u * c0 + yy * s0);
+					wpos.y = uBase.y - u * s0 + yy * c0;
+				}
 				wpos.xz += rel * uJig * sin(hh * 5.5 - uT * 9.0) * hh;
 				wpos.y -= uBend.y * hh * hh;
 				vec4 mvPosition = viewMatrix * wpos;
@@ -1392,11 +1413,14 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		sh.rotation.x = -Math.PI / 2; sh.castShadow = false;
 		// its hotspot: a glowing pad on the ground in front of it, exactly where your avatar
 		// stands when you stand on it (from the clearing's middle; placed in the clearing later)
-		const av = avatarAt(c.spot.px, c.spot.pz);
+		// (pulled in toward the middle of its wall, so the perspective doesn't drag it out to the screen's edge)
+		const pullA = 0.5 + (def.along - 0.5) * 0.6, sp2 = 0.12;
+		const hs = def.wall === 1 ? { px: pullA, pz: 1 - sp2 } : def.wall === 0 ? { px: sp2, pz: pullA } : { px: 1 - sp2, pz: 1 - pullA };
+		const av = avatarAt(hs.px, hs.pz);
 		c.hot = new THREE.Vector2(av.x, av.z);
 		c.ring = new THREE.Group();
-		c.ringFill = new THREE.Mesh(new THREE.CircleGeometry(0.36, 40), new THREE.MeshBasicMaterial({ map: TEX.soft, color: c.tint.clone().multiplyScalar(1.2), transparent: true, opacity: 0.35, depthWrite: false }));
-		c.ringEdge = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.36, 40), new THREE.MeshBasicMaterial({ color: c.tint.clone().multiplyScalar(1.6), transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide }));
+		c.ringFill = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color: c.tint.clone().multiplyScalar(1.2), transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide }));
+		c.ringEdge = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color: c.tint.clone().multiplyScalar(1.6), transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide }));
 		for (const m of [c.ringFill, c.ringEdge]) { m.rotation.x = -Math.PI / 2; c.ring.add(m); }
 		c.ring.position.y = 0.035;
 		bouncer.scale.setScalar(c.size);
@@ -2186,6 +2210,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			if (Math.abs(x - cx) < R + 0.35 && Math.abs(z - cz) < R + 0.35) return false;
 			if (C.pond && z < cz - R && z > cz - R - 3.2 && Math.abs(x - cx) < R + 1) return false;   // (the pond's open water)
 			if (pathDist(x - cx, z) < 1.7) return false;   // (the winding path, ahead and behind: the walk goes through)
+			if (C.chimes && z < cz - 7 && z > cz - 10 && Math.abs(x - cx) < 4.6) return false;   // (under the arch: the chimes)
 			if (C.xylo && z < cz - R + 0.2 && z > cz - R - 1.1 && Math.abs(x - cx) < R + 0.4) return false;   // (the logs)
 			if (C.piano !== undefined && x < cx - 0.8 && x > cx - R - 4.6 && Math.abs(z - cz) < Math.min(0.72 * (cx - x), R) + 0.45) return false;   // (the piano's panels and crystals)   // (the stepping stones)
 			return !spots.some(([sx, sz]) => Math.hypot(x - sx, z - sz) < 0.95 + pad);
@@ -2249,6 +2274,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		if (C.xylo) buildXylo(g, ci, cx, cz);
 		if (C.theremin) C.theremin[1].forEach((al, k) => buildTheremin(g, ci, cx, cz, [C.theremin[0], al], k));
 		if (C.choir) buildChoir(g, ci, cx, cz);
+		if (C.chimes) buildChimes(g, ci, cx, cz);
 		// the creatures
 		for (const def of C.creatures) {
 			const c = frame(def, ci);
@@ -2259,6 +2285,12 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			c.root.userData.tag = 'creatures';
 			g.add(c.root);
 			c.ring.position.x = cx + c.hot.x; c.ring.position.z = cz + c.hot.y;
+			// (a teardrop: its round end where you stand, its tail reaching to the creature's feet)
+			const tdx = c.root.position.x - c.ring.position.x, tdz = c.root.position.z - c.ring.position.z, tL = Math.max(0.5, Math.hypot(tdx, tdz) - 0.4 * c.size);
+			c.ringFill.geometry = new THREE.ShapeGeometry(new THREE.Shape(teardrop(0.34, tL)));
+			const edge = new THREE.Shape(teardrop(0.34, tL)); edge.holes.push(new THREE.Path(teardrop(0.28, tL - 0.12)));
+			c.ringEdge.geometry = new THREE.ShapeGeometry(edge);
+			c.ring.rotation.y = Math.atan2(-tdx, -tdz);
 			g.add(c.ring);
 			creatures.push(c);
 		}
@@ -2708,7 +2740,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	// CONKER XYLOPHONE: hollow logs at the foot of the front wall, a branch over
 	// them; stand in the front half and a conker drops on the beat onto the log under you
 	const xylos = [];
-	const FALL = 0.5;
+	const FALL = 0.85;   // (from high up in the canopy: about 3.5 m)
 	function buildXylo(g, ci, cx, cz) {
 		const N = 7, logs = [];
 		const wood = new THREE.MeshStandardMaterial({ color: '#d8a868', map: TEX.bark, bumpMap: TEX.bark, bumpScale: 1.5, roughness: 0.55 });
@@ -2744,9 +2776,9 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			}
 		}
 		// the branch they fall from, leafy
-		const pts = [-1, -0.5, 0, 0.5, 1].map((t, k) => new THREE.Vector3(cx + t * 2.1, 2.35 + Math.sin(k * 1.7) * 0.08, cz - R - 0.15));
+		const pts = [-1, -0.5, 0, 0.5, 1].map((t, k) => new THREE.Vector3(cx + t * 2.1, 4.5 + Math.sin(k * 1.7) * 0.12, cz - R - 0.25));
 		mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.07, 8), MAT.bark, g);
-		for (let k = 0; k < 14; k++) mesh(CANOPY[k % 3], leafMats[k % 4], g, cx + rr(-2.1, 2.1), 2.45 + rr(0, 0.2), cz - R - 0.2 + rr(-0.2, 0.2), rr(0.25, 0.4), rr(0.15, 0.22), rr(0.2, 0.3));
+		for (let k = 0; k < 14; k++) mesh(CANOPY[k % 3], leafMats[k % 4], g, cx + rr(-2.1, 2.1), 4.6 + rr(0, 0.2), cz - R - 0.2 + rr(-0.2, 0.2), rr(0.25, 0.4), rr(0.15, 0.22), rr(0.2, 0.3));
 		const conkers = [];
 		const nut = new THREE.MeshPhysicalMaterial({ color: '#b8782e', roughness: 0.25, clearcoat: 1 });
 		const cupM = new THREE.MeshStandardMaterial({ color: '#5a3a1e', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 3, roughness: 0.9 });
@@ -2782,6 +2814,49 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		theremins.push({ ci, beamMat, orb, pos, w, spot: spotOf(w, along), deg: [0, 5, 10][k % 3], voice: null, who: -1, k: 0.5, glow: 0 });
 	}
 
+	// CHIMES under the arch: brass tubes on cords, hung from its underside, lowest on
+	// the left, highest on the right. Touch one to strike it, swipe across to run them.
+	const chimeSets = [];
+	function buildChimes(g, ci, cx, cz) {
+		const N = 11, zc = cz - 8.5 + 0.3, list = [];
+		const brass = new THREE.MeshPhysicalMaterial({ color: '#e8c66a', metalness: 1, roughness: 0.18, clearcoat: 1, emissive: '#ffb030', emissiveIntensity: 0 });
+		const cord = new THREE.MeshBasicMaterial({ color: '#3a2a1a' });
+		for (let k = 0; k < N; k++) {
+			const x = (k / (N - 1) - 0.5) * 7.2;
+			const top = Math.sqrt(Math.max(0, 4.25 * 4.25 - x * x)) * 0.8 - 0.05;   // (the arch's underside, there)
+			const len = lerp(1.25, 0.6, k / (N - 1)), drop = Math.max(0.1, top - 0.95 - len);   // (their feet near 0.95 m, in reach of a touch)
+			const piv = new THREE.Group(); piv.position.set(cx + x, top, zc); g.add(piv);
+			mesh(GEO.cyl, cord, piv, 0, -drop / 2, 0, 0.012, drop, 0.012).castShadow = false;
+			const mat = brass.clone();
+			const tube = mesh(new THREE.CylinderGeometry(0.1, 0.1, len, 16, 1, false), mat, piv, 0, -drop - len / 2, 0);
+			mesh(GEO.cyl, mat, piv, 0, -drop, 0, 0.11, 0.03, 0.11);
+			list.push({ piv, mat, x: cx + x, y: top - drop - len / 2, z: zc, len, deg: k, swing: 0, v: 0, glow: 0 });
+		}
+		labels.push({ ci, wall: 1, at: new THREE.Vector3(cx, 0.5, zc), text: 'SWIPE THE CHIMES' });
+		chimeSets[ci] = { list, last: -1, lastT: -9 };
+	}
+	function chimeAt(at, wall, who, strum) {
+		const cs = chimeSets[here];
+		if (!cs || wall !== 1) return false;
+		let best = -1, bd = strum ? 70 : 130;
+		cs.list.forEach((ch, k) => {
+			const top = proj(1, _v.set(ch.x, ch.y + ch.len / 2, ch.z)), bot = proj(1, _v.set(ch.x, ch.y - ch.len / 2, ch.z));
+			const y = clamp(at.y, top.y, bot.y), d = Math.hypot(top.x - at.x, (y - at.y) * 0.5);
+			if (d < bd) { bd = d; best = k; }
+		});
+		if (best < 0) return false;
+		if (strum && (best === cs.last || rt - cs.lastT < 0.05)) return true;
+		cs.last = best; cs.lastT = rt;
+		const ch = cs.list[best];
+		ch.v += (strum ? 2.2 : 1.6) * (at.x < proj(1, _v.set(ch.x, ch.y, ch.z)).x ? 1 : -1);
+		ch.glow = 1;
+		if (audioOn()) { const f = freqOf(CLEARINGS[here].root, 3 + ch.deg); SND.bell(clock() + 0.005, f, 0.32, 1); SND.bell(clock() + 0.005, f * 2.01, 0.08, 1); }
+		spray(_v.set(ch.x, ch.y - ch.len / 2, ch.z).clone(), '#ffe8a0', 8, 1.1, 0.6);
+		scores[who] += 1;
+		tut.touched[who] = true;
+		return true;
+	}
+
 	// BRIDGE CHOIR: stone faces on the bridge hum the chord; where everyone stands, left to right, picks it
 	const choirs = [];
 	const CHOIR = [{ name: 'MOODY', chord: [9, 12, 16] }, { name: 'HOPEFUL', chord: [5, 9, 12] }, { name: 'HOME', chord: [0, 4, 7] }, { name: 'BRIGHT', chord: [7, 11, 14] }];
@@ -2799,6 +2874,12 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		choirs[ci] = { faces, idx: 2, hum: 0 };
 	}
 
+	// a teardrop outline: a circle of radius r round the origin, a tail to a point L along +y
+	function teardrop(r, L) {
+		const b = Math.acos(Math.min(0.99, r / L)), pts = [new THREE.Vector2(0, L)];
+		for (let k = 0; k <= 36; k++) { const a = Math.PI / 2 - b - k / 36 * (2 * Math.PI - 2 * b); pts.push(new THREE.Vector2(Math.cos(a) * r, Math.sin(a) * r)); }
+		return pts;
+	}
 	function showOnly(list) {
 		clearingGroups.forEach((g, k) => { g.visible = list.includes(k); });
 	}
@@ -3106,7 +3187,14 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			for (const cn of xy.conkers) {
 				if (!cn.live) continue;
 				const tt = (nowc - cn.t0) / FALL;
-				if (tt < 1) cn.m.position.set(cn.lg.pos.x + cn.dx, lerp(2.3, cn.lg.pos.y + 0.12, tt * tt), cn.lg.pos.z);
+				if (cn.miss) {   // (past the back of the planks to the ground, a little hop, gone)
+					const zB = cn.lg.pos.z - 0.55;
+					if (tt < 1.35) cn.m.position.set(cn.lg.pos.x + cn.dx, Math.max(0.05, 4.4 - (4.4 - 0.05) * (tt / 1.18) * (tt / 1.18)), zB);
+					else if (tt < 1.9) cn.m.position.set(cn.lg.pos.x + cn.dx + (tt - 1.35) * 0.3, 0.05 + Math.sin((tt - 1.35) / 0.55 * Math.PI) * 0.12, zB);
+					else { cn.live = false; cn.m.visible = false; }
+					continue;
+				}
+				if (tt < 1) cn.m.position.set(cn.lg.pos.x + cn.dx, lerp(4.4, cn.lg.pos.y + 0.12, tt * tt), cn.lg.pos.z);
 				else if (tt < 2.2) { const b = tt - 1; cn.m.position.set(cn.lg.pos.x + cn.dx + b * 0.5, cn.lg.pos.y + 0.12 + Math.sin(Math.min(1, b / 0.6) * Math.PI) * 0.25 - Math.max(0, b - 0.6) * 0.3, cn.lg.pos.z + b * 0.3); }
 				else { cn.live = false; cn.m.visible = false; }
 				if (cn.live) cn.m.rotation.set(Math.max(0, tt - 1) * 6, 0, Math.max(0, tt - 1) * -4);   // (it tumbles off the log)
@@ -3124,6 +3212,13 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			th.orb.position.y = 0.4 + th.k * 1.6;
 			th.orb.scale.setScalar(0.09 * (1 + th.glow * 0.8));
 			if (th.who >= 0 && Math.random() < 0.3) spray(th.orb.position, '#d8e8ff', 1, 0.4, 0.3);
+		}
+		// the chimes swing and ring down
+		for (const [ci, cs] of chimeSets.entries()) if (cs && clearingGroups[ci].visible) for (const ch of cs.list) {
+			ch.v += (-ch.swing * 14 - ch.v * 1.6) * dt; ch.swing += ch.v * dt;
+			ch.piv.rotation.z = ch.swing * 0.35 + Math.sin(rt * 0.9 + ch.deg) * 0.015;
+			ch.glow = Math.max(0, ch.glow - dt * 1.5);
+			ch.mat.emissiveIntensity = 0.25 + ch.glow * 2.2 + pulse * 0.1;
 		}
 		// the bridge faces hum, mouths open on each bar
 		for (const [ci, cho] of choirs.entries()) if (cho && clearingGroups[ci].visible) {

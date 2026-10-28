@@ -74,3 +74,26 @@ gamebox-bar button:hover { border-color: #9e00ff; }
 gamebox-bar button.on { background: #fc1992; border-color: #fc1992; color: #200033; }
 gamebox-bar label { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #a99bb0; display: flex; gap: 6px; align-items: center; }
 gamebox-bar select { padding: 5px 8px; background: #2e143b; }
+
+/* driving a player: the panel, bottom left, and a flash in the middle */
+gamebox-hud {
+	position: fixed; left: 16px; bottom: 16px; z-index: 4; pointer-events: none;
+	background: rgba(20, 0, 31, 0.78); border: 1px solid #4f0080; border-radius: 6px;
+	padding: 12px 16px; font-size: 13px; letter-spacing: 0.04em; min-width: 250px;
+	backdrop-filter: blur(6px);
+}
+gamebox-hud .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+gamebox-hud b { font-weight: 600; font-size: 15px; letter-spacing: 0.08em; }
+gamebox-hud .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+gamebox-hud .chips span { font-size: 11px; padding: 3px 8px; border-radius: 20px; background: #fc1992; color: #200033; font-weight: 600; }
+gamebox-hud dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 10px 0 0; }
+gamebox-hud dt { color: #a99bb0; text-transform: uppercase; font-size: 11px; letter-spacing: 0.12em; padding-top: 1px; }
+gamebox-hud dd { margin: 0; color: #fff; }
+gamebox-hud dd i { font-style: normal; color: #ffd23f; }
+gamebox-flash {
+	position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(0.8); z-index: 4; pointer-events: none;
+	font: 700 46px Rubik, sans-serif; letter-spacing: 0.06em; color: #fff;
+	-webkit-text-stroke: 7px #14001f; paint-order: stroke fill; opacity: 0; transition: opacity 0.2s, transform 0.2s;
+}
+gamebox-flash.on { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+@media (max-width: 700px) { gamebox-hud dl { display: none; } }
