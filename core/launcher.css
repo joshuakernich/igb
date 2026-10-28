@@ -333,22 +333,22 @@ igb-ripple {
 igb-simulator {
 	display: block;
 	position: absolute;
-	left: 0;
-	right: 0;
-	bottom: 70px;
-	margin: auto;
+	left: max(40px, calc(50% - 295px));   /* (the box and its card, centred together) */
+	bottom: 20px;
 	width: 224px;
-	height: 140px;
+	height: 204px;   /* (the whole box as it projects, its open front nearest you) */
 	z-index: 1000;
 	font-family: Rubik, sans-serif;
 }
 
 gamebox-simulator {
 	display: block;
+	position: absolute;
+	top: 4px;
 	width: 224px;
 	height: 140px;
-	perspective: 420px;
-	perspective-origin: 50% 20%;
+	perspective: 900px;
+	perspective-origin: 50% -42px;   /* (the eye a little above the box, looking in and down at the floor) */
 }
 
 gamebox-box {
@@ -357,7 +357,6 @@ gamebox-box {
 	width: 224px;
 	height: 140px;
 	transform-style: preserve-3d;
-	transform: rotateX(-9deg);
 }
 
 gamebox-side {
@@ -533,8 +532,8 @@ gamebox-goal {
 gamebox-panel {
 	display: block;
 	position: absolute;
-	top: -6px;
-	left: 262px;
+	top: 10px;
+	left: 290px;
 	width: 300px;
 	padding: 10px 12px 10px;
 	box-sizing: border-box;
@@ -629,7 +628,7 @@ gamebox-flash {
 	position: absolute;
 	left: 0;
 	right: 0;
-	top: -30px;
+	top: -26px;
 	text-align: center;
 	color: white;
 	font: 800 15px Rubik, sans-serif;

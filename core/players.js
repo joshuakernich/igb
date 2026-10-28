@@ -325,7 +325,7 @@ IGB.players = (function () {
 		if (!$simulator) return;
 		const $avatars = $simulator.find('gamebox-avatar');
 		players.forEach(function (p, i) {
-			if (p.px === undefined) return;
+			if (p.px === undefined || i >= CONTROLLABLE) { $avatars.eq(i).hide(); return; }
 			// (a little person: their height, squatting or jumping; the one you drive from your own settings)
 			const me = i === selected, $a = $avatars.eq(i);
 			const tall = me ? you.cm / 170 : Math.max(0.7, Math.min(1.25, 1 + p.Y * 0.5));
@@ -370,7 +370,7 @@ IGB.players = (function () {
 					<button btn=move>Shuffle the others</button>
 					<gamebox-hint>
 						<span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>walk</span>
-						<span><kbd class=mouse>click floor</kbd></span><span>walk there</span>
+						<span><kbd class=mouse>mouse on floor</kbd></span><span>move there</span>
 						<span><kbd>Shift</kbd></span><span>squat</span>
 						<span><kbd>Space</kbd></span><span>jump</span>
 						<span><kbd>Q</kbd><kbd>E</kbd></span><span>shorter / taller</span>
@@ -404,7 +404,7 @@ IGB.players = (function () {
 				t.Y = -y;
 				return;
 			}
-			if (e.buttons & 1) {   // (dragging over the floor: straight there)
+			{   // (over the floor: straight there)
 				const p = slot(selected);
 				$(p).stop(true); you.goal = null; you.pendingTouch = null;
 				p.X = x; p.Z = y;
