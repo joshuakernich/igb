@@ -23,7 +23,10 @@
  *   MUSHROOM HOLLOW   the mushroom folk's marimba, under glowing giant toadstools
  *   FROGGY BOG        a croaking frog choir on a moonlit pond
  *   HEDGEHOG HOEDOWN  a hedgehog drummer, kazoo bunnies and a tuba troll on a log stage
- *   FAIRY RING        bell-ringing fairies and a flower choir in a ring of toadstools
+ *   FAIRY RING        bell-ringing fairies and a flower choir, and a mossy stone wall
+ *                     grown over with shelf mushrooms: a step sequencer, 8 steps by 5
+ *                     notes; touch a mushroom to light it, and a shaft of light plays
+ *                     the wall left to right
  *   TROLL BRIDGE      the whole gang under a mossy bridge
  *
  * Drawn in 3D (three.js, the shared wall rig and bloom): three cameras back to
@@ -142,16 +145,13 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				{ kind: 'gnome', wall: 2, along: 0.3, out: 0.6, note: 7, pat: 'vox', tint: '#32cd32' },
 				{ kind: 'bunny', wall: 2, along: 0.72, out: 0.5, note: 9, pat: 'mel3', tint: '#c8a07a' },
 			] },
-		{ name: 'FAIRY RING', sub: 'BELLS AND A CHOIR OF FLOWERS', bpm: 84, root: 329.6,
+		{ name: 'FAIRY RING', sub: 'TOUCH THE MUSHROOMS ON THE WALL TO WRITE A TUNE', bpm: 92, root: 329.6, grid: true,
 			sky: ['#0a0420', '#5a2a9a'], fog: '#2a1450', ground: '#3a4a3a', sun: '#c8b8ff', lights: ['#ff7aff', '#7ad8ff', '#fff07a', '#b07aff'],
 			groove: { kick: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], hat: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], snare: [] },
 			motif: 'ring',
 			creatures: [
 				{ kind: 'flower', wall: 0, along: 0.28, out: 0.5, note: 0, pat: 'vox', tint: '#ff4fa8' },
 				{ kind: 'fairy', wall: 0, along: 0.72, out: 0.6, note: 10, pat: 'bells', tint: '#ffd0ff' },
-				{ kind: 'flower', wall: 1, along: 0.22, out: 0.5, note: 2, pat: 'vox', tint: '#ffd23a' },
-				{ kind: 'owl', wall: 1, along: 0.5, out: 0.9, note: 5, pat: 'hoot', tint: '#c8c0e0' },
-				{ kind: 'flower', wall: 1, along: 0.8, out: 0.5, note: 4, pat: 'vox', tint: '#5ad8ff' },
 				{ kind: 'fairy', wall: 2, along: 0.3, out: 0.6, note: 12, pat: 'bells2', tint: '#a0ffd0' },
 				{ kind: 'snail', wall: 2, along: 0.72, out: 0.5, note: -5, pat: 'bass2', tint: '#b07aff' },
 			] },
@@ -565,6 +565,20 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			if (on && fe.on[i]) { SND.bell(time, freqOf(c.root, fe.deg[i]), 0.2, fe.wall[i]); SND.mallet(time, freqOf(c.root, fe.deg[i]) * 2, 0.08, fe.wall[i]); }
 			visuals.push({ time, fn: () => { fe.head[i] = 1; if (fe.on[i]) { fe.flash[i] = 1; spray(fe.pos[i], fe.col[i].getStyle(), 5, 0.9, 0.6); } } });
 		}
+		// the fungus wall: a column an eighth, every lit mushroom in it knocks out its note
+		const gw = grids[here];
+		if (gw && !glide && s16 % 2 === 0) {
+			const col = ((Math.floor(st / 2) % GRID.cols) + GRID.cols) % GRID.cols;
+			for (let r = 0; r < GRID.rows; r++) {
+				const i = r * GRID.cols + col;
+				if (!gw.on[i]) continue;
+				if (on) { SND.mallet(time, freqOf(c.root, GRID.deg[r]), 0.32, 1); SND.bell(time, freqOf(c.root, GRID.deg[r]) * 2, 0.06, 1); }
+			}
+			visuals.push({ time, fn: () => {
+				gw.head = col; gw.beam = 1;
+				for (let r = 0; r < GRID.rows; r++) { const i = r * GRID.cols + col; if (gw.on[i]) { gw.flash[i] = 1; spray(gw.pos[i], gw.rowCol[i].getStyle(), 4, 0.9, 0.8); } }
+			} });
+		}
 		// whoever's running shakes along, on the eighths
 		if (on && s16 % 2 === 0 && phase !== 'intro') for (const p of pl) if (p.seen && p.speed > RUN) SND.shaker(time, 0.5);
 		// touches, on the next sixteenth; jumps and squats, on the next beat
@@ -696,6 +710,24 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			}
 		}
 		if (at.y < H * TOUCH_TOP) return;   // (the creatures: only the lower part of the wall, where a child can reach)
+		// a mushroom on the fungus wall under the finger: switch it
+		const gw = grids[here];
+		if (gw && wall === 1) {
+			let bi = -1, bd3 = 75;
+			for (let i = 0; i < gw.pos.length; i++) {
+				const sp = proj(1, gw.pos[i]);
+				const d = Math.hypot(sp.x - at.x, (sp.y - at.y) * 1.3);
+				if (d < bd3) { bd3 = d; bi = i; }
+			}
+			if (bi >= 0) {
+				gw.on[bi] = !gw.on[bi];
+				gw.flash[bi] = 1;
+				scores[who[0]] += 2;
+				tut.touched[who[0]] = true;
+				if (audioOn()) SND.mallet(clock(), freqOf(CLEARINGS[here].root, GRID.deg[Math.floor(bi / GRID.cols)]), gw.on[bi] ? 0.25 : 0.08, 1);
+				return;
+			}
+		}
 		// the creature drawn nearest the touch, on that wall
 		let best = null, bd = 220;
 		for (const cr of creatures) {
@@ -1955,6 +1987,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		mist(g, cx, cz);
 		MOTIF[C.motif](g, ci, cx, cz, C);
 		// (the festoon lights were here; removed at the user's request. buildFestoon still works if they come back)
+		if (C.grid) buildGrid(g, ci, cx, cz);
 		bake(g);
 		// the creatures
 		for (const def of C.creatures) {
@@ -2053,6 +2086,67 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		unit.add(bulbs);
 		f.bulbs = bulbs;
 		festoons[ci] = f;
+	}
+	// The fungus wall (a clearing with grid: true): a low wall of mossy stone across
+	// the front wall, grown over with shelf mushrooms in a grid, 8 steps across and 5
+	// notes up (the top row highest). Touch one to light it; a shaft of light sweeps
+	// across a column an eighth, and every lit mushroom in it knocks out its note.
+	const GRID = { cols: 8, rows: 5, D: R + 0.25, x0: -2.3, x1: 2.3, y0: 0.24, y1: 1.46, deg: [9, 8, 7, 6, 5] };
+	const grids = [];
+	const shelfGeo = (function () {
+		const shelf = new THREE.CylinderGeometry(0.16, 0.19, 0.055, 22, 1, false, -Math.PI / 2, Math.PI);
+		const dome = new THREE.SphereGeometry(0.16, 22, 6, -Math.PI / 2, Math.PI, 0, Math.PI / 2).scale(1, 0.32, 1).translate(0, 0.026, 0);
+		return mergeGeometries([shelf.toNonIndexed(), dome.toNonIndexed()]);
+	})();
+	function buildGrid(g, ci, cx, cz) {
+		const C = CLEARINGS[ci];
+		const z = cz - GRID.D;
+		const unit = new THREE.Group();
+		unit.userData.unit = true;
+		g.add(unit);
+		// the wall: rough blocks of mossy stone, three courses high, with moss and ferns along the top
+		const stone = shared('gridStone', () => new THREE.MeshStandardMaterial({ color: '#8a8478', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 5, roughness: 0.9 }));
+		for (let row = 0; row < 4; row++) {
+			for (let x = -3.6 + (row % 2) * 0.3; x < 3.6; x += rr(0.5, 0.75)) {
+				const w = rr(0.5, 0.78), h = rr(0.38, 0.46);
+				const b = mesh(GEO.box, stone, unit, cx + x, row * 0.42 + h / 2, z - 0.3 + rr(-0.04, 0.04), w, h, 0.5);
+				b.rotation.set(rr(-0.04, 0.04), rr(-0.06, 0.06), rr(-0.05, 0.05));
+				b.receiveShadow = true;
+			}
+		}
+		for (let x = -3.5; x < 3.5; x += 0.45) mesh(GEO.sph, leafMats[1], unit, cx + x, 1.72, z - 0.3, rr(0.3, 0.45), rr(0.12, 0.2), 0.3);
+		bake(unit);
+		// the shelf mushrooms: one instanced mesh; a lit one's colour runs past 1, and the rest of it glows
+		const mat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.4, bumpMap: TEX.skin, bumpScale: 1 });
+		mat.onBeforeCompile = (sh) => {
+			sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+				#ifdef USE_COLOR
+				totalEmissiveRadiance += max(vColor.rgb - 1.0, 0.0) * 1.4;
+				#endif`);
+		};
+		mat.customProgramCacheKey = () => 'shelfGlow';
+		const n = GRID.cols * GRID.rows;
+		const shelves = new THREE.InstancedMesh(shelfGeo, mat, n);
+		shelves.castShadow = true;
+		const gd = { on: [], pos: [], rowCol: [], flash: new Float32Array(n), head: -1, beam: 0, shelves };
+		for (let r = 0; r < GRID.rows; r++) {
+			const rc = new THREE.Color().setHSL((0.95 - r * 0.15 + 1) % 1, 0.85, 0.58);
+			for (let c = 0; c < GRID.cols; c++) {
+				const i = r * GRID.cols + c;
+				gd.pos[i] = new THREE.Vector3(cx + lerp(GRID.x0, GRID.x1, c / (GRID.cols - 1)), lerp(GRID.y1, GRID.y0, r / (GRID.rows - 1)), z - 0.04);
+				gd.rowCol[i] = rc;
+				gd.on[i] = false;
+			}
+		}
+		// a little tune to start: down the wall and back up
+		[[0, 4], [1, 3], [2, 2], [3, 1], [4, 0], [5, 2], [6, 3], [7, 1]].forEach(([c, r]) => { gd.on[r * GRID.cols + c] = true; });
+		unit.add(shelves);
+		// the shaft of light that plays it
+		const beam = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 2.2), new THREE.MeshBasicMaterial({ map: TEX.ray, color: new THREE.Color(C.lights[2]).multiplyScalar(1.4), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+		beam.position.set(cx, 0.85, z + 0.06);
+		unit.add(beam);
+		gd.beamMesh = beam;
+		grids[ci] = gd;
 	}
 	function showOnly(list) {
 		clearingGroups.forEach((g, k) => { g.visible = list.includes(k); });
@@ -2247,6 +2341,27 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			}
 			f.bulbs.instanceColor.needsUpdate = true;
 			f.bulbs.instanceMatrix.needsUpdate = true;
+		});
+		// the fungus walls
+		grids.forEach((gw, ci) => {
+			if (!gw || !clearingGroups[ci].visible) return;
+			gw.beam = Math.max(0, gw.beam - dt * 2.2);
+			if (gw.head >= 0) gw.beamMesh.position.x = gw.pos[gw.head].x;
+			gw.beamMesh.material.opacity = 0.25 + gw.beam * 0.6;
+			for (let i = 0; i < gw.pos.length; i++) {
+				gw.flash[i] = Math.max(0, gw.flash[i] - dt * 3);
+				const col = i % GRID.cols;
+				const inBeam = col === gw.head ? gw.beam : 0;
+				if (gw.on[i]) fc.copy(gw.rowCol[i]).multiplyScalar(2.6 + gw.flash[i] * 2 + pulse * 0.4);
+				else fc.copy(gw.rowCol[i]).lerp(tmpC.set('#b8ad98'), 0.8).multiplyScalar(0.55 + inBeam * 0.3);   // (unlit: dull, stony)
+				gw.shelves.setColorAt(i, fc);
+				const sc = (gw.on[i] ? 1.05 + pulse * 0.06 : 0.82) + gw.flash[i] * 0.3;
+				_p0.copy(gw.pos[i]); if (gw.on[i]) _p0.z += 0.04 + gw.flash[i] * 0.06;
+				fm4.compose(_p0, _q0.identity(), fs.set(sc, sc, sc));
+				gw.shelves.setMatrixAt(i, fm4);
+			}
+			gw.shelves.instanceColor.needsUpdate = true;
+			gw.shelves.instanceMatrix.needsUpdate = true;
 		});
 		// the players' puffballs
 		for (let i = 0; i < count; i++) {
