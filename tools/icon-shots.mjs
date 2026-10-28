@@ -18,12 +18,13 @@ const CROPS = {
 	backrooms: { x: 1650, y: 200, s: 300 },                          // the entity, down the corridor
 	'riddler-says': { x: 605, y: 90, s: 230 },                       // the Riddler, on a screen
 	'melody-canvas': { x: 200, y: 250, s: 340 },                     // the pens at the playhead
+	'temple-of-coins': { x: 1650, y: 195, s: 275 },                  // the Minotaur, in its lair
 	'loop-island': { x: 1719, y: 252, s: 315, icon: 'sonic-dash' },   // a runner, from behind
 	'quill-relay': { x: 1368, y: 270, s: 342, icon: 'sonic-classic' },    // the loop, rings round it
 	// (iron-stride's icon, sonic-robot.png, is a posed hero shot from outside, made with IGB.current.test.hero(0.45, 12.5, 2.4, 2): not grabbed here)
 };
 // the beat to shoot in (default play) and how long after jumping to it (seconds), when it isn't play
-const BEAT = { backrooms: ['entity', 4], 'riddler-says': ['intro', 2], 'grub-o-tron': ['play', 6], 'melody-canvas': ['play', 6] };
+const BEAT = { backrooms: ['entity', 4], 'riddler-says': ['intro', 2], 'grub-o-tron': ['play', 6], 'melody-canvas': ['play', 6], 'temple-of-coins': ['play', 7, 'lair'] };
 const WARM = { 'red-light-green-light': 9, mingle: 8, backrooms: 8, 'gwi-ma-showdown': 7, 'roll-call': 6, 'loop-island': 6, 'quill-relay': 7 };
 
 const [mode, ...rest] = process.argv.slice(2);
@@ -53,8 +54,9 @@ if (mode === 'grab') {
 		for (let i = 0; i < (WARM[id] || 7) * 4; i++) { await wander(page, t++); await sleep(250); }
 		await page.addStyleTag({ content: 'igb-simulator, igb-controls, igb-log, showtime-picker { display: none !important; }' });
 		await sleep(300);
-		const [beat, after] = BEAT[id] || ['play', 1.5];
-		await page.evaluate((beat) => { const g = IGB.current; try { (g.test.skipTo || g.test.jump)(beat); } catch (e) { /* */ } }, beat);   // (again, past anything the first jump started; or the beat to shoot)
+		const [beat, after, lvl] = BEAT[id] || ['play', 1.5];
+		await page.evaluate((beat) => { const g = IGB.current; try { (g.test.skipTo || g.test.jump)(beat); } catch (e) { /* */ } }, beat);
+		if (lvl !== undefined) await page.evaluate((lvl) => IGB.current.test.level(lvl), lvl);   // (a game's own scene, as well as its beat)   // (again, past anything the first jump started; or the beat to shoot)
 		for (let i = 0; i < after * 4; i++) { await wander(page, t++); await sleep(250); }
 		const r = await page.evaluate(() => { const r = document.querySelector('igb-world').getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; });
 		await page.screenshot({ path: path.join(OUT, id + '.png'), clip: r });

@@ -41,6 +41,8 @@ IGB.manifest = [
 		{ id: 'red-light-green-light', name: 'Red Light Green Light', icon: 'assets/icons/red-light-green-light.png',
 			file: 'games/red-light-green-light/index.js', module: true,
 			title: { lines: [{ text: 'RED LIGHT', fill: '#ff3640', glow: '#ff3640' }, { text: 'GREEN LIGHT', fill: '#27d96b', glow: '#27d96b' }] }, box: { color: '#e5287a', bg: '#1d7a63', note: 'SURVIVAL' } },
+		{ id: 'temple-of-coins', name: 'Temple of Coins', icon: 'assets/icons/temple-of-coins.png', file: 'games/temple-of-coins.js', module: true,
+			title: { lines: [{ text: 'TEMPLE', fill: '#ffd34d', glow: '#ff9a1f', font: 'Cinzel' }, { text: 'OF COINS', fill: '#fff1c4', glow: '#ffb02b', font: 'Cinzel' }], font: 'Cinzel' }, box: { color: '#ffd34d', bg: '#2a1708', note: 'TREASURE' } },
 		{ id: 'mingle', name: 'Mingle', icon: 'assets/icons/mingle.png', file: 'games/mingle/index.js', module: true,
 			title: { lines: [{ text: 'MINGLE', fill: '#ff7eb6', glow: '#e5287a' }] }, box: { color: '#e5287a', bg: '#f3a6c8', note: 'SURVIVAL' } },
 		{ id: 'tether-net', name: 'Tether Net',
@@ -61,6 +63,8 @@ IGB.manifest = [
 			title: { lines: [{ text: 'ROLL CALL', fill: '#a77bff', glow: '#7538D4' }] }, box: { color: '#7538D4', bg: '#f2f0ff', note: 'ICEBREAKER' } },
 		{ id: 'backrooms', name: 'Backrooms', icon: 'assets/icons/backrooms.png', file: 'games/backrooms/index.js', module: true,
 			title: { lines: [{ text: 'BACKROOMS', fill: '#f2dc5d', glow: '#c9a227' }] }, box: { color: '#d9c56a', bg: '#3a3418', note: 'MEMORY' } },
+		{ id: 'riddler-says', name: 'Riddler Says', icon: 'assets/icons/riddler-says.png', file: 'games/riddler-says.js',
+			title: { lines: [{ text: 'RIDDLER', fill: '#39ff14', glow: '#39ff14', font: 'VCRFONT' }, { text: 'SAYS', fill: '#ffffff', glow: '#39ff14', font: 'VCRFONT' }], font: 'VCRFONT' }, box: { color: '#39ff14', bg: '#0b1a07', note: 'PUZZLE' } },
 		{ id: 'gwi-ma-showdown', name: 'Gwi-Ma Showdown', icon: 'assets/icons/gwi-ma-showdown.png',
 			title: { lines: [{ text: 'GWI-MA', fill: '#ff4fd8', glow: '#ff3d7a' }, { text: 'SHOWDOWN', fill: '#ffe14d', glow: '#ff7a3d' }] }, box: { color: '#ff3df0', bg: '#12051f', note: 'BOSS' } },
 		{ id: 'melody-canvas', name: 'Melody Canvas', icon: 'assets/icons/melody-canvas.png',
@@ -87,8 +91,6 @@ IGB.manifest = [
 
 	{ folder: 'Batman', games: [
 		{ id: 'riddler', name: 'Riddler', icon: 'assets/icons/riddler.png', file: 'games/riddler.js' },
-		{ id: 'riddler-says', name: 'Riddler Says', icon: 'assets/icons/riddler-says.png', file: 'games/riddler-says.js',
-			title: { lines: [{ text: 'RIDDLER', fill: '#39ff14', glow: '#39ff14', font: 'VCRFONT' }, { text: 'SAYS', fill: '#ffffff', glow: '#39ff14', font: 'VCRFONT' }], font: 'VCRFONT' }, box: { color: '#39ff14', bg: '#0b1a07', note: 'PUZZLE' } },
 	] },
 
 	{ folder: 'Box Party Metagame', games: [
@@ -183,7 +185,7 @@ IGB.manifest = [
 
 // The only games the menu shows (in their folders above); the rest stay
 // playable by #id. Remove this (or set it to null) to show everything.
-IGB.menu = ['grub-o-tron', 'red-light-green-light', 'loop-island', 'quill-relay', 'iron-stride', 'twin-tail-tower', 'tails-escape', 'knuckles-quest', 'super-sonic-battle', 'sonic-characters', 'backrooms', 'riddler-says', 'melody-canvas', 'show-debug', 'gaze-test'];
+IGB.menu = ['grub-o-tron', 'red-light-green-light', 'temple-of-coins', 'loop-island', 'quill-relay', 'iron-stride', 'twin-tail-tower', 'tails-escape', 'knuckles-quest', 'super-sonic-battle', 'sonic-characters', 'backrooms', 'riddler-says', 'melody-canvas', 'show-debug', 'gaze-test'];
 
 // The music tracks, on or off everywhere: every music-*.mp3 (the show's music
 // included). Tunes the games synthesise (the doll's song, Mingle's waltz),
