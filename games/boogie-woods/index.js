@@ -1979,16 +1979,41 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	const FEST = { n: 24, per: 8, D: R + 0.12, top: 1.98, sag: 0.2, drop: [0.3, 0.1], reach: 0.3 };   // (the bulbs hang about 3/5 up the wall; a touch counts on them from 0.3 down)
 	const festoons = [];
 	const bulbGeo = new THREE.SphereGeometry(0.085, 16, 12).scale(1, 1.3, 1);
+	// each clearing's own kind of light on the string
+	const FEST_STYLE = ['toadstool', 'firefly', 'lantern', 'star', 'jar'];
+	const lathe = (pts, seg) => new THREE.LatheGeometry(pts.map(([x, y]) => new THREE.Vector2(x, y)), seg);
+	const LIGHT_GEO = {
+		// a glowing mini toadstool: a cap on a little stalk
+		toadstool: mergeGeometries([
+			new THREE.SphereGeometry(0.11, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.75, 1).translate(0, 0.02, 0),
+			new THREE.CylinderGeometry(0.03, 0.04, 0.1, 10).translate(0, -0.03, 0),
+		]),
+		// a firefly: a fat glowing tail (no wire: they hang in the air by themselves)
+		firefly: new THREE.SphereGeometry(0.04, 12, 8).scale(1, 0.8, 1.25),
+		// a ribbed paper lantern (eight panels)
+		lantern: lathe([[0.03, -0.13], [0.07, -0.11], [0.1, -0.05], [0.105, 0], [0.1, 0.05], [0.07, 0.11], [0.03, 0.13]], 8),
+		// a five-pointed star
+		star: (function () {
+			const sh = new THREE.Shape();
+			for (let k = 0; k < 10; k++) { const a = Math.PI / 2 + k * Math.PI / 5, r = k % 2 ? 0.05 : 0.12; const x = Math.cos(a) * r, y = Math.sin(a) * r; if (k) sh.lineTo(x, y); else sh.moveTo(x, y); }
+			const g = new THREE.ExtrudeGeometry(sh, { depth: 0.03, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.012, bevelSegments: 2 });
+			g.translate(0, 0, -0.015);
+			return g;
+		})(),
+		// a glass glow-jar with a neck
+		jar: lathe([[0, -0.1], [0.07, -0.1], [0.08, -0.08], [0.08, 0.05], [0.065, 0.08], [0.05, 0.09], [0.05, 0.11], [0, 0.11]], 16),
+	};
 	function buildFestoon(g, ci, cx, cz) {
 		const C = CLEARINGS[ci];
-		const f = { on: [], deg: [], pos: [], wall: [], col: [], flash: new Float32Array(FEST.n), head: new Float32Array(FEST.n) };
+		const style = FEST_STYLE[ci % FEST_STYLE.length];
+		const f = { style, on: [], deg: [], pos: [], wall: [], col: [], flash: new Float32Array(FEST.n), head: new Float32Array(FEST.n) };
 		// the melody: a wandering line in the clearing's key, a third of it lit to start
 		let d = 7;
 		for (let i = 0; i < FEST.n; i++) {
 			d = clamp(d + Math.round(rr(-2.4, 2.4)), 4, 13);
 			f.deg.push(d);
 			f.on.push(i % 3 === 0 || rnd() < 0.12);
-			f.col.push(new THREE.Color().setHSL(((d - 4) / 9 * 0.82 + ci * 0.13) % 1, 1, 0.6));
+			f.col.push(style === 'firefly' ? new THREE.Color().setHSL(0.16 + (d - 4) / 9 * 0.12, 1, 0.55) : new THREE.Color().setHSL(((d - 4) / 9 * 0.82 + ci * 0.13) % 1, 1, 0.6));   // (fireflies glow their own warm yellow-greens)
 		}
 		const unit = new THREE.Group();
 		unit.userData.unit = true;
@@ -2004,26 +2029,28 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		for (let w = 0; w < 3; w++) {
 			const pts = [];
 			for (let k = 0; k <= 24; k++) pts.push(point(w, k / 24, wireY(k / 24)));
-			mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.008, 4), wireMat, unit).castShadow = false;
+			if (style !== 'firefly') mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.008, 4), wireMat, unit).castShadow = false;
 			for (let j = 0; j < FEST.per; j++) {
 				const i = w * FEST.per + j, u = (j + 0.5) / FEST.per;
 				const top = point(w, u, wireY(u));
 				const drop = lerp(FEST.drop[0], FEST.drop[1], (f.deg[i] - 4) / 9);
-				const cord = mesh(GEO.cyl, wireMat, unit, top.x, top.y - drop / 2, top.z, 0.005, drop, 0.005);
-				cord.castShadow = false;
 				const pos = top.clone(); pos.y -= drop + 0.1;
-				mesh(GEO.cyl, capMat, unit, pos.x, pos.y + 0.105, pos.z, 0.04, 0.045, 0.04).castShadow = false;
+				if (style !== 'firefly') {
+					const cord = mesh(GEO.cyl, wireMat, unit, top.x, top.y - drop / 2, top.z, 0.005, drop, 0.005);
+					cord.castShadow = false;
+					if (style === 'jar' || style === 'lantern') mesh(GEO.cyl, capMat, unit, pos.x, pos.y + (style === 'jar' ? 0.115 : 0.135), pos.z, style === 'jar' ? 0.055 : 0.035, 0.03, style === 'jar' ? 0.055 : 0.035).castShadow = false;
+				} else pos.add(new THREE.Vector3(rr(-0.12, 0.12), rr(-0.1, 0.1), rr(-0.12, 0.12)));   // (fireflies: loosely along where the string would be)
 				f.pos[i] = pos; f.wall[i] = w;
 			}
 		}
 		// posts at the corners to hang it from
-		for (const [sx, sz] of [[-1, 1], [-1, -1], [1, -1], [1, 1]]) {
+		if (style !== 'firefly') for (const [sx, sz] of [[-1, 1], [-1, -1], [1, -1], [1, 1]]) {
 			mesh(new THREE.CylinderGeometry(0.045, 0.06, FEST.top + 0.1, 8), MAT.bark, unit, cx + sx * D, (FEST.top + 0.1) / 2, cz + sz * D);
 			mesh(GEO.sphLo, capMat, unit, cx + sx * D, FEST.top + 0.12, cz + sz * D, 0.06);
 		}
 		bake(unit);
 		// the bulbs themselves: one instanced mesh, each its own colour (and glow) every frame
-		const bulbs = new THREE.InstancedMesh(bulbGeo, new THREE.MeshBasicMaterial({ color: '#ffffff' }), FEST.n);
+		const bulbs = new THREE.InstancedMesh(LIGHT_GEO[style] || bulbGeo, new THREE.MeshBasicMaterial({ color: '#ffffff' }), FEST.n);
 		const m4 = new THREE.Matrix4();
 		for (let i = 0; i < FEST.n; i++) { m4.makeTranslation(f.pos[i].x, f.pos[i].y, f.pos[i].z); bulbs.setMatrixAt(i, m4); bulbs.setColorAt(i, f.col[i]); }
 		bulbs.frustumCulled = false;
@@ -2076,7 +2103,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 
 	const PAL = CLEARINGS.map((c) => ({ top: new THREE.Color(c.sky[0]), bot: new THREE.Color(c.sky[1]), fog: new THREE.Color(c.fog), sun: new THREE.Color(c.sun), lights: c.lights.map((l) => new THREE.Color(l)) }));
 	const tmpC = new THREE.Color();
-	const _q0 = new THREE.Quaternion();
+	const _q0 = new THREE.Quaternion(), _e0 = new THREE.Euler(), _p0 = new THREE.Vector3();
 	let rt = 0;
 	let frameNo = 0;
 	const perfFlags = {};
@@ -2209,7 +2236,17 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				fc.r += f.head[i] * 0.5; fc.g += f.head[i] * 0.5; fc.b += f.head[i] * 0.5;
 				f.bulbs.setColorAt(i, fc);
 				const sc = (f.on[i] ? 1 + pulse * 0.08 : 0.8) + f.flash[i] * 0.45;
-				fm4.compose(f.pos[i], _q0, fs.set(sc, sc, sc));
+				_e0.set(0, 0, 0);
+				_p0.copy(f.pos[i]);
+				if (f.style === 'star') _e0.set(0, rt * 1.4 + i, Math.sin(rt * 2 + i) * 0.15);
+				else if (f.style === 'lantern') _e0.set(0, i * 0.7 + rt * 0.3, Math.sin(rt * 1.3 + i) * 0.12);
+				else if (f.style === 'toadstool' || f.style === 'jar') _e0.set(0, i, Math.sin(rt * 1.1 + i) * 0.1);
+				else if (f.style === 'firefly') {
+					_p0.x += Math.sin(rt * 1.3 + i * 1.7) * 0.1; _p0.y += Math.sin(rt * 2.1 + i) * 0.07; _p0.z += Math.cos(rt * 1.1 + i * 2.3) * 0.1;
+					_e0.set(0, rt * 0.8 + i, 0);
+				}
+				_q0.setFromEuler(_e0);
+				fm4.compose(_p0, _q0, fs.set(sc, sc, sc));
 				f.bulbs.setMatrixAt(i, fm4);
 			}
 			f.bulbs.instanceColor.needsUpdate = true;
