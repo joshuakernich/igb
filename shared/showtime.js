@@ -150,6 +150,11 @@ window.Showtime = function (stage, opts) {
 		zone: { px: 0.5, pz: 0.5, r: 0.24 },   // where to stand: the middle of the room (floor 0..1)
 		settle: 0.8,           // seconds over which a visor's movement is averaged
 		moving: 0.08,          // speed (raw units a second, averaged) that says a visor is in play
+		// A visor that isn't in the squad only counts as a wrong one in play when it's
+		// clearly being worn: away from the back wall (where spare visors hang on their
+		// hooks, swaying and jittering in the tracking), moving like a person rather than
+		// a twitch, and keeping it up for a moment
+		wrong: { back: 0.15, speed: 0.18, sustain: 1.5 },   // nearer the back wall than this (share of the room) never counts; this fast (averaged); this long (seconds)
 		wiggle: 0.2,           // and that says it's wiggling
 		hold: 0.6,             // seconds of wiggling in the zone to tick a visor off
 		pulse: 0.9,            // the rings that pulse from a visor as it's ticked off
@@ -1141,7 +1146,13 @@ window.Showtime = function (stage, opts) {
 	// Watching for a wrong visor through the rest of the game (after the
 	// visor check, until the results): any visor not in the squad that starts
 	// moving gets flagged (with the alarm), until it stops again.
-	const watch = { motion: [], last: [], since: [] };
+	const watch = { motion: [], last: [], since: [], wornFor: [] };
+	// (a spare visor that's being worn: its time moving like a person, away from the back wall, adding up)
+	function wornFor(p, speed, was, dt) {
+		const W_ = VISORS.wrong;
+		const away = p.pz === undefined || p.pz > W_.back;
+		return away && speed > W_.speed ? (was || 0) + dt : 0;
+	}
 	function watching() {
 		if (!beat || beat.id === 'visors' || !scoreHudShown()) return false;
 		const v = beats.findIndex((b) => b.id === 'visors');
@@ -1157,7 +1168,8 @@ window.Showtime = function (stage, opts) {
 			const moved = l ? Math.hypot(p.X - l.X, p.Y - l.Y, p.Z - l.Z) : 0;
 			watch.last[i] = { X: p.X, Y: p.Y, Z: p.Z };
 			watch.motion[i] = (watch.motion[i] || 0) * k + moved / Math.max(dt, 1e-3) * (1 - k);
-			const bad = i >= count() && watch.motion[i] > VISORS.moving;
+			watch.wornFor[i] = wornFor(p, watch.motion[i], watch.wornFor[i], dt);
+			const bad = i >= count() && watch.wornFor[i] >= VISORS.wrong.sustain;
 			if (bad && watch.since[i] === undefined) { watch.since[i] = showTime; self.fx('wrongVisor'); self.shake = 0.3; }
 			if (!bad) watch.since[i] = undefined;
 		});
@@ -2374,7 +2386,8 @@ window.Showtime = function (stage, opts) {
 		// x across, left to right; d how near that wall (1: against it)
 		const viewOf = (w, px, pz) => (w === 0 ? { x: pz, d: 1 - px } : w === 2 ? { x: 1 - pz, d: px } : { x: px, d: pz });
 		const slots = () => (IGB.players && IGB.players.list) || [];
-		const wrong = () => slots().map((p, i) => i).filter((i) => i >= count() && motion[i] > V.moving);
+		const wrong = () => slots().map((p, i) => i).filter((i) => i >= count() && (wornTime[i] || 0) >= V.wrong.sustain);
+		const wornTime = [];   // (each spare visor's time being worn: see wornFor)
 		const missing = () => Array.from({ length: count() }, (_, i) => i).filter((i) => ticked[i] === undefined);
 		self.visorState = () => ({ ticked: ticked.map((t) => t !== undefined), wrong: wrong(), missing: missing(), allSet: allSetAt >= 0 });
 
@@ -2439,6 +2452,7 @@ window.Showtime = function (stage, opts) {
 					const moved = last[i] ? Math.hypot(p.X - last[i].X, p.Y - last[i].Y, p.Z - last[i].Z) : 0;
 					last[i] = { X: p.X, Y: p.Y, Z: p.Z };
 					motion[i] = (motion[i] || 0) * k + moved / Math.max(dt, 1e-3) * (1 - k);   // speed, raw units a second
+					wornTime[i] = wornFor(p, motion[i], wornTime[i], dt);
 					// their worm leans back from the way they're going, on a spring (on
 					// each wall, the way it's going across that wall's view)
 					bend[i] = bend[i] || [];
@@ -2764,7 +2778,7 @@ window.Showtime = function (stage, opts) {
 			const label = up({ x: cx, y: top }, far / near * 0.5);
 			self.text(c, ['LEFT WALL', 'FRONT', 'RIGHT WALL'][wall], label.x, label.y, 26, { fill: '#c792ff', exact: true, plain: true });   // (the wall's name, the walls' purple, plain)
 			// everyone in play, a worm each, far ones smaller (and drawn first)
-			const shown = slots().map((p, i) => ({ p, i })).filter(({ p, i }) => p && p.px !== undefined && (motion[i] > V.moving || ticked[i] !== undefined));
+			const shown = slots().map((p, i) => ({ p, i })).filter(({ p, i }) => p && p.px !== undefined && (i < count() ? motion[i] > V.moving || ticked[i] !== undefined : (wornTime[i] || 0) >= V.wrong.sustain));   // (a spare visor only once it's clearly being worn: not one swaying on its hook)
 			const seen = (p) => viewOf(wall, clamp(p.px, 0, 1), clamp(p.pz, 0, 1));
 			shown.sort((a, b) => seen(b.p).d - seen(a.p).d);
 			for (const { p, i } of shown) {
