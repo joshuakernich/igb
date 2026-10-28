@@ -140,7 +140,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				{ kind: 'fairy', wall: 2, along: 0.15, out: 0.6, note: 10, pat: 'bells', tint: '#7affe8' },
 				{ kind: 'frog', wall: 2, along: 0.86, out: 0.5, note: 0, pat: 'croak', tint: '#6a9a2a', big: 1.5 },
 			] },
-		{ name: 'HEDGEHOG HOEDOWN', sub: 'STAND ON A SPOT: AN ACORN DROPS ON ITS PLANK', bpm: 116, root: 293.7, xylo: true,
+		{ name: 'HEDGEHOG HOEDOWN', sub: 'MOVE LEFT AND RIGHT: LINE YOUR ACORN UP WITH A PLANK TO PLAY IT', bpm: 116, root: 293.7, xylo: true,
 			sky: ['#3a6aa0', '#ffd68a'], fog: '#c8a070', ground: '#7a8a3a', sun: '#ffe6a0', lights: ['#ffb24a', '#ff6a4a', '#ffe04a', '#ff8ad0'],
 			groove: { kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], hat: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] },
 			motif: 'stage',
@@ -680,26 +680,16 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			if (on) for (const st2 of CHOIR[cho.idx].chord) SND.vox(time, c.root / 2 * Math.pow(2, st2 / 12), 0.1, 1, 'u', 60 / bpm * 4 * 0.95);
 			visuals.push({ time, fn: () => { cho.hum = 1; } });
 		}
-		// acorns, on the beat, onto the plank of every hotspot someone's standing on
+		// every player's acorn lands on the beat: on a plank, a note; on the frame, nothing
 		const xy = xylos[here];
-		if (xy && !glide && s16 % 2 === 0 && phase !== 'intro') {
-			// (an acorn over a plank that's stood for lands on it; the rest sail past behind)
-			const at = new Map();
-			xyloStanding(xy);
-			xy.logs.forEach((lg, k) => { if (lg.who >= 0) at.set(k, lg.who); });
-			const drops = [];
-			if (s16 % 4 === 0) for (const [k, i] of at) drops.push([k, i]);   // (on every beat, onto every plank someone's at)
-			if (Math.random() < 0.7) { const k = Math.floor(Math.random() * xy.logs.length); if (!at.has(k)) drops.push([k, -1]); }   // (and always some falling, missing)
-			for (const [k, i] of drops) {
-				const lg = xy.logs[k], hit = i >= 0;
-				if (hit && on) SND.woodlog(time, freqOf(c.root, lg.deg), 0.5, 1);
-				const cn = xy.conkers[xy.next = (xy.next + 1) % xy.conkers.length];
-				visuals.push({ time: time - FALL, fn: () => { cn.live = true; cn.t0 = time - FALL; cn.lg = lg; cn.miss = !hit; cn.dx = rr(-0.05, 0.05); cn.m.visible = true; } });
-				if (hit) {
-					visuals.push({ time, fn: () => { lg.hit = 1; lg.col = colour(i); spray(lg.pos, '#c88a4a', 5, 1, 1); } });
-					scores[i] += 1;
-				}
-			}
+		if (xy && !glide && s16 % 4 === 0 && phase !== 'intro') for (let i = 0; i < count; i++) {
+			if (!pl[i].seen) continue;
+			const lg = plankAt(xy, xy.conkers[i].x);
+			if (!lg) continue;
+			if (on) SND.woodlog(time, freqOf(c.root, lg.deg), 0.5, 1);
+			visuals.push({ time, fn: () => { lg.hit = 1; lg.col = colour(i); } });
+			scores[i] += 1;
+			tut.sung[i] = true;
 		}
 		// whoever's running shakes along, on the eighths
 		if (on && s16 % 2 === 0 && phase !== 'intro') for (const p of pl) if (p.seen && p.speed > RUN) SND.shaker(time, 0.5);
@@ -2892,12 +2882,12 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		ponds[ci] = { pads, rip, U, next: 0, cx, cz };
 	}
 
-	// CONKER XYLOPHONE: wooden planks on a rickety frame by the front wall, set back past
-	// where the avatars can go, a branch over them; a row of hotspots in front, one per
-	// plank: stand on one and an acorn drops on the beat onto its plank
+	// ACORN XYLOPHONE: wooden planks on a rickety frame by the front wall, set back past
+	// where the avatars can go. Each player has an acorn (capped in their colour) bouncing
+	// endlessly over it, landing on every beat, lined up left and right with them: land on
+	// a plank and it plays and lights up; land between them and it just knocks the frame
 	const xylos = [];
-	const FALL = 0.85;   // (from high up in the canopy: about 3.5 m)
-	const XY = { out: 0.85, y: 0.58, hotZ: 2.0, reach: 0.42 };   // (planks R + out from the middle; hotspots hotZ out, where avatars go)
+	const XY = { out: 0.85, y: 0.58, top: 0.74, hop: 1.1 };   // (planks R + out from the middle; acorns land at top, hop up to top + hop)
 	function buildXylo(g, ci, cx, cz) {
 		const N = 7, logs = [];
 		const wood = new THREE.MeshStandardMaterial({ color: '#d8a868', map: TEX.bark, bumpMap: TEX.bark, bumpScale: 1.5, roughness: 0.55 });
@@ -2919,18 +2909,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			// (tipped up toward you like a lectern, and each turned partway to point at you)
 			log.rotation.order = 'YXZ';
 			log.rotation.set(0.45 + rr(-0.06, 0.06), 0.7 * Math.atan2(-(pos.x - cx), R + XY.out) + rr(-0.05, 0.05), rr(-0.07, 0.07));
-			// its hotspot, in front where an avatar can stand, its tail reaching back to the plank's foot
-			const hot = new THREE.Vector2(cx + avCap((u - 0.5) * 2 * R), cz - XY.hotZ);
-			const tdx = pos.x - hot.x, tdz = pos.z + 0.2 - hot.y, tL = Math.hypot(tdx, tdz);
-			const hue = new THREE.Color().setHSL(0.08 + k / N * 0.75, 0.75, 0.55);
-			const hotMat = new THREE.MeshBasicMaterial({ color: hue.clone().multiplyScalar(1.2), transparent: true, opacity: 0.4, depthWrite: false, side: THREE.DoubleSide });
-			const ring = new THREE.Group();
-			const fill = new THREE.Mesh(new THREE.ShapeGeometry(hotShape(0.24, 0.2, tL), 24), hotMat);
-			fill.rotation.x = -Math.PI / 2; ring.add(fill);
-			ring.position.set(hot.x, 0.035, hot.y);
-			ring.rotation.y = Math.atan2(-tdx, -tdz);
-			g.add(ring);
-			logs.push({ log, mat, pos, deg: k + 2, hit: 0, under: -1, hot, hotMat, hue, who: -1 });
+			logs.push({ log, mat, pos, deg: k + 2, hit: 0, hw: pw / 2 });
 		}
 		// the rickety frame: two crooked rails on splayed legs
 		const span = 2 * (R + 0.06) * US;
@@ -2947,33 +2926,26 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const pts = [-1, -0.5, 0, 0.5, 1].map((t, k) => new THREE.Vector3(cx + t * 2.3, 4.5 + Math.sin(k * 1.7) * 0.12, cz - R - XY.out - 0.2));
 		mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.07, 8), MAT.bark, g);
 		for (let k = 0; k < 14; k++) mesh(CANOPY[k % 3], leafMats[k % 4], g, cx + rr(-2.1, 2.1), 4.6 + rr(0, 0.2), cz - R - XY.out - 0.15 + rr(-0.2, 0.2), rr(0.25, 0.4), rr(0.15, 0.22), rr(0.2, 0.3));
-		const conkers = [];
 		const nut = new THREE.MeshPhysicalMaterial({ color: '#b8782e', roughness: 0.25, clearcoat: 1 });
-		const cupM = new THREE.MeshStandardMaterial({ color: '#5a3a1e', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 3, roughness: 0.9 });
-		for (let k = 0; k < 14; k++) {
-			const m = new THREE.Group(); g.add(m);   // (an acorn: a glossy nut in a knobbly cup, with a stalk)
-			mesh(GEO.sph, nut, m, 0, -0.02, 0, 0.055, 0.075, 0.055);
-			mesh(new THREE.SphereGeometry(1, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), cupM, m, 0, 0.02, 0, 0.062, 0.045, 0.062);
-			mesh(GEO.cyl, cupM, m, 0, 0.075, 0, 0.008, 0.035, 0.008);
+		const conkers = [];
+		for (let i = 0; i < 6; i++) {
+			const m = new THREE.Group(); g.add(m);   // (an acorn: a glossy nut in a knobbly cup in your colour, with a stalk)
+			const cupM = new THREE.MeshStandardMaterial({ color: colour(i), emissive: colour(i), emissiveIntensity: 0.35, map: TEX.moss, bumpMap: TEX.moss, bumpScale: 3, roughness: 0.8 });
+			mesh(GEO.sph, nut, m, 0, -0.03, 0, 0.08, 0.11, 0.08);
+			mesh(new THREE.SphereGeometry(1, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), cupM, m, 0, 0.03, 0, 0.09, 0.065, 0.09);
+			mesh(GEO.cyl, cupM, m, 0, 0.11, 0, 0.012, 0.05, 0.012);
 			m.visible = false;
-			conkers.push({ m, live: false });
+			conkers.push({ m, x: cx });
 		}
-		labels.push({ ci, wall: 1, at: new THREE.Vector3(cx, 0.05, cz - XY.hotZ), text: 'STAND ON A SPOT' });
-		xylos[ci] = { logs, conkers, next: 0, cx, cz };
+		labels.push({ ci, wall: 1, at: new THREE.Vector3(cx, 0.05, cz - R), text: 'LINE YOUR ACORN UP' });
+		xylos[ci] = { logs, conkers, cx, cz, z: cz - R - XY.out };
 	}
-	// who's standing on which plank's hotspot (the nearest, if near enough)
-	function xyloStanding(xy) {
-		for (const lg of xy.logs) lg.who = -1;
-		for (let i = 0; i < count; i++) {
-			const q = pl[i];
-			if (!q.seen) continue;
-			const ax = xy.cx + avCap(q.x), az = xy.cz + avCap(q.z);
-			let best = null, bd = XY.reach;
-			for (const lg of xy.logs) { const d = Math.hypot(ax - lg.hot.x, az - lg.hot.y); if (d < bd) { bd = d; best = lg; } }
-			if (best) best.who = i;
-		}
+	// the plank under x, if an acorn landing there would hit one (between them, or past the ends: the frame)
+	function plankAt(xy, x) {
+		let best = null, bd = Infinity;
+		for (const lg of xy.logs) { const d = Math.abs(x - lg.pos.x); if (d < bd) { bd = d; best = lg; } }
+		return best && bd < best.hw * 0.85 ? best : null;
 	}
-
 	// MOONBEAM THEREMIN: a shaft of moonlight by a wall; stand in it and rise and dip to bend a ghostly note
 	const theremins = [];
 	const BEAM_TINT = [[1.8, 1.0, 1.6], [1.2, 1.3, 1.8], [1.0, 1.8, 1.5]];   // (low, middle, high)
@@ -3388,28 +3360,21 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				pad.budMat.color.copy(pad.base).multiplyScalar(1 + pad.bounce * 2.2);
 			}
 		}
-		// conkers fall, hit, bounce off; logs flash in the colour of whoever dropped one
+		// the acorns bounce, a hop a beat, each following its player left and right; planks flash when hit
 		for (const [ci, xy] of xylos.entries()) if (xy && clearingGroups[ci].visible) {
-			const nowc = clock();
-			for (const cn of xy.conkers) {
-				if (!cn.live) continue;
-				const tt = (nowc - cn.t0) / FALL;
-				if (cn.miss) {   // (past the back of the planks to the ground, a little hop, gone)
-					const zB = cn.lg.pos.z - 0.55;
-					if (tt < 1.35) cn.m.position.set(cn.lg.pos.x + cn.dx, Math.max(0.05, 4.4 - (4.4 - 0.05) * (tt / 1.18) * (tt / 1.18)), zB);
-					else if (tt < 1.9) cn.m.position.set(cn.lg.pos.x + cn.dx + (tt - 1.35) * 0.3, 0.05 + Math.sin((tt - 1.35) / 0.55 * Math.PI) * 0.12, zB);
-					else { cn.live = false; cn.m.visible = false; }
-					continue;
-				}
-				if (tt < 1) cn.m.position.set(cn.lg.pos.x + cn.dx, lerp(4.4, cn.lg.pos.y + 0.12, tt * tt), cn.lg.pos.z);
-				else if (tt < 2.2) { const b = tt - 1; cn.m.position.set(cn.lg.pos.x + cn.dx + b * 0.5, cn.lg.pos.y + 0.12 + Math.sin(Math.min(1, b / 0.6) * Math.PI) * 0.25 - Math.max(0, b - 0.6) * 0.3, cn.lg.pos.z + b * 0.3); }
-				else { cn.live = false; cn.m.visible = false; }
-				if (cn.live) cn.m.rotation.set(Math.max(0, tt - 1) * 6, 0, Math.max(0, tt - 1) * -4);   // (it tumbles off the log)
-			}
-			if (ci === here) xyloStanding(xy);
+			const b = beatAt(clock()), f = b - Math.floor(b);
+			xy.conkers.forEach((cn, i) => {
+				const q = pl[i], show = ci === here && !glide && q && q.seen;
+				cn.m.visible = !!show;
+				if (!show) return;
+				cn.x = lerp(cn.x, xy.cx + q.x * AV_K, 1 - Math.exp(-dt * 10));
+				const y = XY.top + (plankAt(xy, cn.x) ? 0 : -0.06) + XY.hop * 4 * f * (1 - f);
+				const sq = Math.max(0, 1 - Math.min(f, 1 - f) / 0.07);   // (squashed for a moment as it lands)
+				cn.m.position.set(cn.x, y, xy.z);
+				cn.m.scale.set(1 + sq * 0.25, 1 - sq * 0.3, 1 + sq * 0.25);
+				cn.m.rotation.z = (f - 0.5) * 0.5;
+			});
 			for (const lg of xy.logs) {
-				if (lg.who >= 0) { lg.hotMat.color.set(colour(lg.who)).multiplyScalar(1.4); lg.hotMat.opacity = 0.9; }
-				else { lg.hotMat.color.copy(lg.hue).multiplyScalar(1.2); lg.hotMat.opacity = 0.4 + Math.sin(rt * 3 + lg.deg) * 0.06; }
 				lg.hit = Math.max(0, lg.hit - dt * 3);
 				lg.mat.emissive.set(lg.col || '#ffffff').multiplyScalar(lg.hit * 1.2);
 				lg.log.position.y = lg.pos.y - lg.hit * 0.02;
