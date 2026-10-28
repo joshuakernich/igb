@@ -348,6 +348,7 @@ IGB.players = (function () {
 	})();
 
 	let ctx;
+	const gazeSeen = [];   // (each player's gaze target, last drawn, and when it last moved)
 	function quad(pts, fill, stroke) {
 		ctx.beginPath();
 		pts.forEach(([X, y, Z], k) => { const [a, b] = cam.p(X, y, Z); k ? ctx.lineTo(a, b) : ctx.moveTo(a, b); });
@@ -422,12 +423,17 @@ IGB.players = (function () {
 			ctx.beginPath(); ctx.arc(hx, hyS, R, 0, Math.PI * 2); ctx.fillStyle = hg; ctx.fill();
 			heads.push({ i, me, col, X, Z, hy, hx, hyS, R, g: p.gaze, tag: me ? 'YOU' : 'P' + (i + 1), top: hyS - R });
 		}
-		// gazes: the line on the head the way it faces, then dots to a target on the wall
+		// gazes: the line on the head the way it faces; and, only while the gaze is moving
+		// (and a moment after), dots to a target on the wall
+		const now = performance.now() / 1000;
 		for (const h of heads) {
-			const a = h.me ? 0.95 : 0.45;
 			if (h.g) {
 				const T = gazePoint(h.g), [tx, ty] = cam.p(...T);
 				const d = Math.hypot(tx - h.hx, ty - h.hyS) || 1, ux = (tx - h.hx) / d, uy = (ty - h.hyS) / d;
+				const gz = gazeSeen[h.i] || (gazeSeen[h.i] = { x: tx, y: ty, t: -9 });
+				if (Math.hypot(tx - gz.x, ty - gz.y) > 0.6) gz.t = now;
+				gz.x = tx; gz.y = ty;
+				const a = (h.me ? 0.95 : 0.5) * Math.max(0, Math.min(1, 1 - (now - gz.t - 1) / 0.5));
 				ctx.globalAlpha = a;
 				ctx.beginPath(); ctx.moveTo(h.hx + ux * h.R, h.hyS + uy * h.R); ctx.lineTo(tx, ty);
 				ctx.setLineDash([1.5, 3]); ctx.strokeStyle = h.col; ctx.lineWidth = h.me ? 1.5 : 1; ctx.stroke(); ctx.setLineDash([]);
