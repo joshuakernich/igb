@@ -287,6 +287,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			id: 'play',
 			length: Infinity,
 			enter() {
+				if (!stations.length || !pods.length) clearKitchen();   // (jumped straight here, past the tutorial and intro: set the kitchen up)
 				phase = 'play';
 				shiftNo = -1;
 				slotWait.splice(0, 4, 0.8, 2.5, 4, 5);
@@ -317,6 +318,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		for (let i = 0; i < n; i++) {
 			chefs.push({ wall: 1, along: (i + 1) / (n + 1), dist: 0.5, x: W + (i + 1) / (n + 1) * W, drawWall: 1, held: null, speed: 0, moved: 0, prev: null, down: false, station: null, work: 0, bob: Math.random() * 6 });
 		}
+		clearKitchen();   // (the kitchen's there from the start, whichever beat the show goes to)
 		show.go('title');
 	}
 
