@@ -74,8 +74,8 @@ IGB.manifest = [
 	{ folder: 'UX Demo', games: [
 		{ id: 'gaze-test', name: 'Gaze Test', icon: 'assets/icons/gaze-test.svg', file: 'games/gaze-test/index.js', module: true,
 			box: { color: '#2dd4ff', bg: '#0d1118', note: 'TOOL' } },
-		{ id: 'show-debug', name: 'Worm Up', icon: 'assets/icons/ux-demo.svg', file: 'games/show-debug.js', module: true,   // (the UX Demo: everyone a worm, warming up for the real thing)
-			title: { lines: [{ text: 'WORM', fill: '#ff6fb5', glow: '#ff2d8a', font: 'Chewy' }, { text: 'UP!', fill: '#c8ff3c', glow: '#3cbf5a', font: 'Chewy' }], font: 'Chewy' }, box: { color: '#ff6fb5', bg: '#0b1022', note: 'DEMO' } },
+		{ id: 'show-debug', name: 'UX Demo', icon: 'assets/icons/ux-demo.svg', file: 'games/show-debug.js', module: true,   // (its title drop: WACKY STACKY)
+			title: { lines: [{ text: 'WACKY', fill: '#ffb21f', glow: '#ff5a1f', font: 'Kablammo' }, { text: 'STACKY', fill: '#3ee0ff', glow: '#7a3dff', font: 'Kablammo' }], font: 'Kablammo' }, box: { color: '#ffb21f', bg: '#0b1022', note: 'DEMO' } },
 	] },
 
 	{ folder: 'Experiments', games: [

@@ -1,5 +1,5 @@
 /*
- * Worm Up, the UX Demo (id show-debug): a blank game that runs the whole shared show
+ * UX Demo (its title drop: WACKY STACKY) (id show-debug): a blank game that runs the whole shared show
  * (shared/showtime.js) with nothing in the way, for stepping through the
  * choreography quickly.
  *

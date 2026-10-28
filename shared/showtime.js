@@ -3459,7 +3459,7 @@ window.Showtime = function (stage, opts) {
 						art.poly(c, star(WIN.x + S * mk, by, past ? 16 : 11), { fill: past ? theme.gold : 'rgba(255,255,255,0.4)' });
 					}
 					c.restore();
-					self.text(c, String(game.name).toUpperCase(), WIN.x + 26, top + WIN.bar / 2 - 2, 40, { align: 'left', glow: 'transparent' });
+					self.text(c, String(game.title && game.title.lines ? game.title.lines.map((l) => l.text).join(' ') : game.name).toUpperCase(), WIN.x + 26, top + WIN.bar / 2 - 2, 40, { align: 'left', glow: 'transparent' });
 					self.text(c, fmt(self.teamTotal()), WIN.x + S - 26, top + WIN.bar / 2 - 2, 40, { align: 'right', fill: theme.gold, glow: 'transparent' });
 					c.restore();
 					// and a QR code, tipped the other way: overlapping the window's right edge, halfway down it; or (m 1) under it in the corner. Scan to share your gif
