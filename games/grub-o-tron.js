@@ -1257,24 +1257,24 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	// each room's colours: its floor's checks, its wall's tiles, the floor round the grid
 	const ROOM_LOOK = [
-		{ floor: ['#e8c8a0', '#c0441e'], wall: ['#a8381c', '#d8781e'], edge: 0x3a140a },
-		{ floor: ['#c8b0ec', '#5a2aa8'], wall: ['#4a2490', '#a82a78'], edge: 0x1e0c3a },
-		{ floor: ['#a8e8d4', '#0e7a68'], wall: ['#0e6e6a', '#2a8a4a'], edge: 0x06302a },
+		{ floor: ['#7a3a22', '#6e321c'], wall: ['#a8381c', '#d8781e'], edge: 0x3a140a },
+		{ floor: ['#3e2468', '#371f5e'], wall: ['#4a2490', '#a82a78'], edge: 0x1e0c3a },
+		{ floor: ['#14504a', '#114641'], wall: ['#0e6e6a', '#2a8a4a'], edge: 0x06302a },
 	];
 	// two by two floor squares, checked, with a soft bevel and a hint of grime
 	function checkerTex(a, b) {
 		return tex(256, 256, function (c) {
 			const rnd = seeded(a.length * 7 + b.charCodeAt(2));
-			c.fillStyle = mix(b, '#000000', 0.6);
+			c.fillStyle = mix(b, '#000000', 0.18);
 			c.fillRect(0, 0, 256, 256);
 			for (let y = 0; y < 2; y++) for (let x = 0; x < 2; x++) {
 				const col = (x + y) % 2 ? a : b;
 				const g = c.createLinearGradient(x * 128, y * 128, x * 128 + 128, y * 128 + 128);
-				g.addColorStop(0, mix(col, '#ffffff', 0.25));
+				g.addColorStop(0, mix(col, '#ffffff', 0.06));
 				g.addColorStop(1, col);
 				c.fillStyle = g;
 				c.beginPath();
-				c.roundRect(x * 128 + 5, y * 128 + 5, 118, 118, 16);
+				c.roundRect(x * 128 + 2, y * 128 + 2, 124, 124, 10);
 				c.fill();
 			}
 			for (let n = 0; n < 40; n++) { c.fillStyle = `rgba(60,30,70,${rnd() * 0.08})`; c.beginPath(); c.arc(rnd() * 256, rnd() * 256, 2 + rnd() * 10, 0, Math.PI * 2); c.fill(); }
@@ -2363,15 +2363,20 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 				m.x = x3;
 				m.wall = c.wall;
 			}
-			m.x = x3;
-			m.z = z3;
+			// (tracking arrives about 20 times a second; glide between its updates rather than jump)
+			const k = 1 - Math.exp(-dt * 24);
+			const px = m.x, pz = m.z;
+			m.x = lerp(m.x, x3, k);
+			m.z = lerp(m.z, z3, k);
+			m.vx = lerp(m.vx || 0, (m.x - px) / Math.max(dt, 0.001), 1 - Math.exp(-dt * 6));
+			m.vz = lerp(m.vz || 0, (m.z - pz) / Math.max(dt, 0.001), 1 - Math.exp(-dt * 6));
 			m.g.position.set(m.x, 0, m.z);
 			// facing the counter when working at it, the room otherwise, turning toward where they move
 			// facing what they're using (from its square), or the room, turning as they go
 			const working = !!c.station || c.atHatch || c.atChute;
 			const thing = c.station ? [c.station.sx, c.station.sz] : c.atHatch ? HATCH_AT : c.atChute ? CHUTE_AT : null;
-			const face = thing ? Math.atan2(thing[0] - x3, thing[1] - z3) : clamp((m.lastX !== undefined ? (m.x - m.lastX) / Math.max(dt, 0.001) : 0) * 0.25, -0.9, 0.9);
-			m.lastX = m.x;
+			// (turning by their smoothed speed across, so it doesn't twitch)
+			const face = thing ? Math.atan2(thing[0] - m.x, thing[1] - m.z) : clamp(m.vx * 0.3, -0.9, 0.9);
 			m.yaw = lerp(m.yaw || 0, face, Math.min(1, dt * 6));
 			m.g.rotation.y = m.yaw;
 			const time = t + (c.bob || 0);
