@@ -108,7 +108,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	// and its pattern
 
 	const CLEARINGS = [
-		{ name: 'MUSHROOM HOLLOW', sub: 'THE MUSHROOM FOLK PLAY THE MARIMBA', bpm: 100, root: 261.6,
+		{ name: 'MUSHROOM HOLLOW', sub: 'SQUAT ON A PUFFBALL · STRUM THE SPIDERWEB', bpm: 100, root: 261.6, puffballs: [[0, 0.5], [1, 0.36], [1, 0.65]], web: [2, 0.5],
 			sky: ['#2a1450', '#ff8fb8'], fog: '#5a2a5e', ground: '#5d7a3a', sun: '#ffb27a', lights: ['#ff5fd0', '#7affd8', '#ffd04a', '#8a7aff'],
 			groove: { kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], hat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], snare: [] },
 			motif: 'mushrooms',
@@ -121,7 +121,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				{ kind: 'gnome', wall: 2, along: 0.3, out: 0.5, note: 5, pat: 'hey', tint: '#2f6bff' },
 				{ kind: 'mushroom', wall: 2, along: 0.72, out: 0.7, note: 3, pat: 'mel4', tint: '#ffd23a' },
 			] },
-		{ name: 'FROGGY BOG', sub: 'A FROG CHOIR ON A MOONLIT POND', bpm: 92, root: 220,
+		{ name: 'FROGGY BOG', sub: 'STAND STILL TO SEND RIPPLES ACROSS THE POND', bpm: 92, root: 220, pond: true,
 			sky: ['#061a2e', '#2f8a9a'], fog: '#123e4a', ground: '#2f5a3a', sun: '#bfe8ff', lights: ['#4affd0', '#7ab8ff', '#d8ff6a', '#4a8aff'],
 			groove: { kick: [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0], hat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1], snare: [] },
 			motif: 'pond',
@@ -134,7 +134,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				{ kind: 'fairy', wall: 2, along: 0.3, out: 0.6, note: 10, pat: 'bells', tint: '#7affe8' },
 				{ kind: 'frog', wall: 2, along: 0.72, out: 0.5, note: 0, pat: 'croak', tint: '#6a9a2a', big: 1.5 },
 			] },
-		{ name: 'HEDGEHOG HOEDOWN', sub: 'DRUMS, KAZOOS AND A TUBA TROLL', bpm: 116, root: 293.7,
+		{ name: 'HEDGEHOG HOEDOWN', sub: 'STAND AT THE FRONT: CONKERS DROP ON THE LOG UNDER YOU', bpm: 116, root: 293.7, xylo: true,
 			sky: ['#3a6aa0', '#ffd68a'], fog: '#c8a070', ground: '#7a8a3a', sun: '#ffe6a0', lights: ['#ffb24a', '#ff6a4a', '#ffe04a', '#ff8ad0'],
 			groove: { kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], hat: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] },
 			motif: 'stage',
@@ -147,7 +147,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				{ kind: 'gnome', wall: 2, along: 0.3, out: 0.6, note: 7, pat: 'vox', tint: '#32cd32' },
 				{ kind: 'bunny', wall: 2, along: 0.72, out: 0.5, note: 9, pat: 'mel3', tint: '#c8a07a' },
 			] },
-		{ name: 'FAIRY RING', sub: 'TOUCH THE STONES IN THE WALL TO WRITE A TUNE', bpm: 92, root: 329.6, grid: true,
+		{ name: 'FAIRY RING', sub: 'TOUCH THE STONES IN THE WALL · STAND IN THE MOONBEAM AND RISE AND DIP', bpm: 92, root: 329.6, grid: true, theremin: [2, 0.5],
 			sky: ['#0a0420', '#5a2a9a'], fog: '#2a1450', ground: '#3a4a3a', sun: '#c8b8ff', lights: ['#ff7aff', '#7ad8ff', '#fff07a', '#b07aff'],
 			groove: { kick: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], hat: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], snare: [] },
 			motif: 'ring',
@@ -157,7 +157,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				{ kind: 'fairy', wall: 2, along: 0.3, out: 0.6, note: 12, pat: 'bells2', tint: '#a0ffd0' },
 				{ kind: 'snail', wall: 2, along: 0.72, out: 0.5, note: -5, pat: 'bass2', tint: '#b07aff' },
 			] },
-		{ name: 'TROLL BRIDGE', sub: 'WALK ALONG THE WALLS TO PLAY THE STEPPING-STONE PIANO', bpm: 108, root: 246.9, piano: true,
+		{ name: 'TROLL BRIDGE', sub: 'WALK THE STEPPING STONES · STAND LEFT OR RIGHT TO CHANGE THE CHORD', bpm: 108, root: 246.9, piano: true, choir: true,
 			sky: ['#1a3a3a', '#a8e0a0'], fog: '#3a6a5a', ground: '#4a6a3a', sun: '#e8ffc8', lights: ['#a8ff6a', '#ff8a4a', '#6affff', '#ff5fd0'],
 			groove: { kick: [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0], hat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] },
 			motif: 'bridge',
@@ -303,6 +303,25 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
 	}
 	const resume = () => { if (ac && ac.state !== 'running') ac.resume().catch(() => {}); };
+	// a voice that holds while you hold it: a puffball's drone, the moonbeam's whistle
+	function holdVoice(f, kind, wall) {
+		if (!audioOn()) return null;
+		const t0 = ac.currentTime;
+		const g = ac.createGain();
+		g.gain.setValueAtTime(0.0001, t0);
+		g.gain.linearRampToValueAtTime(kind === 'drone' ? 0.16 : 0.14, t0 + 0.15);
+		g.connect(pans[wall] || bus);
+		const lp = filt('lowpass', kind === 'drone' ? 420 : 2400, kind === 'drone' ? 5 : 0.7, g);
+		const oscs = (kind === 'drone' ? [['sawtooth', 1], ['sawtooth', 1.007], ['sine', 0.5]] : [['sine', 1], ['triangle', 2.002]]).map(([type, m]) => { const o = osc(type, f * m, t0, 600, lp); o.mult = m; return o; });
+		const lfo = ac.createOscillator(), lg = ac.createGain();
+		lfo.frequency.value = kind === 'drone' ? 0.6 : 5.5; lg.gain.value = f * (kind === 'drone' ? 0.004 : 0.012);
+		lfo.connect(lg); for (const o of oscs) lg.connect(o.frequency);
+		lfo.start(t0); lfo.stop(t0 + 600);
+		return {
+			glide(nf) { const t = ac.currentTime; for (const o of oscs) o.frequency.setTargetAtTime(nf * o.mult, t, 0.05); lg.gain.setTargetAtTime(nf * (kind === 'drone' ? 0.004 : 0.012), t, 0.05); },
+			stop() { const t = ac.currentTime; g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(0.0001, t, 0.12); for (const o of oscs) o.stop(t + 0.8); lfo.stop(t + 0.8); },
+		};
+	}
 	stage.$el[0].addEventListener('pointerdown', resume, true);
 	const audioOn = () => ac && ac.state === 'running';
 	const perf0 = performance.now() / 1000;
@@ -453,6 +472,28 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			const o = osc('sawtooth', 70, time, 0.8, lp);
 			o.frequency.exponentialRampToValueAtTime(38, time + 0.6);
 		},
+		plink(time, f, v, w) {   // a drop on water
+			const g = vca(time, 0.002, v, 0.45, w);
+			const o = osc('sine', f * 1.5, time, 0.5, g);
+			o.frequency.exponentialRampToValueAtTime(f, time + 0.06);
+			const g2 = vca(time, 0.001, v * 0.3, 0.25, w);
+			osc('sine', f * 3.01, time, 0.3, g2);
+		},
+		harp(time, f, v, w) {    // a plucked web strand
+			const g = vca(time, 0.002, v, 1.1, w);
+			const lp = filt('lowpass', Math.min(f * 8, 10000), 0.6, g);
+			lp.frequency.setValueAtTime(Math.min(f * 10, 12000), time); lp.frequency.exponentialRampToValueAtTime(f * 2, time + 0.8);
+			osc('sawtooth', f, time, 1.2, lp);
+			osc('triangle', f * 2, time, 1.2, lp);
+		},
+		woodlog(time, f, v, w) { // a hollow log
+			const g = vca(time, 0.002, v, 0.32, w);
+			osc('sine', f, time, 0.35, g);
+			const g2 = vca(time, 0.001, v * 0.5, 0.07, w);
+			osc('triangle', f * 3.9, time, 0.1, g2);
+			const g3 = vca(time, 0.001, v * 0.3, 0.03, w);
+			noise(time, 0.04, filt('bandpass', f * 6, 2, g3));
+		},
 		piano(time, f, v, w) {
 			const g = vca(time, 0.003, v, 1.4, w);
 			const lp = filt('lowpass', Math.min(f * 7, 9000), 0.7, g);
@@ -558,7 +599,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			if (gr.kick[s16]) SND.kick(time, 0.32 * f);
 			if (gr.hat[s16]) SND.hat(time, 0.35 * f);
 			if (gr.snare[s16]) SND.snare(time, 0.22 * f);
-			if (s16 === 0) SND.pad(time, gc.root, CHORDS[Math.floor(st / 16) % 4], 60 / bpm * 4, 0.035 * Math.max(f, 0.15));
+			const ch = choirs[CLEARINGS.indexOf(gc)];
+			if (s16 === 0) SND.pad(time, gc.root, ch ? CHOIR[ch.idx].chord : CHORDS[Math.floor(st / 16) % 4], 60 / bpm * 4, 0.035 * Math.max(f, 0.15));
 		}
 		// creatures with someone in front of them sing their part
 		const singers = glide ? [] : creatures.filter((cr) => cr.clearing === here && cr.singer >= 0);
@@ -589,6 +631,41 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				gw.head = col; gw.beam = 1;
 				for (let r = 0; r < GRID.rows; r++) { const i = r * GRID.cols + col; if (gw.on[i]) { gw.flash[i] = 1; spray(gw.pos[i], gw.rowCol[i].getStyle(), 4, 0.9, 0.8); } }
 			} });
+		}
+		// the bridge choir hums the chord the room has picked, a bar at a time
+		const cho = choirs[here];
+		if (cho && !glide && s16 === 0) {
+			const seen = pl.filter((q) => q.seen);
+			if (seen.length) cho.idx = clamp(Math.floor((seen.reduce((a, q) => a + q.x, 0) / seen.length / (2 * R) + 0.5) * 4), 0, 3);
+			if (on) for (const st2 of CHOIR[cho.idx].chord) SND.vox(time, c.root / 2 * Math.pow(2, st2 / 12), 0.1, 1, 'u', 60 / bpm * 4 * 0.95);
+			visuals.push({ time, fn: () => { cho.hum = 1; } });
+		}
+		// conkers, on the beat, onto the log under whoever's in the front half
+		const xy = xylos[here];
+		if (xy && !glide && s16 % 4 === 0 && phase !== 'intro') {
+			for (let i = 0; i < count; i++) {
+				const p = latest[i];
+				if (!p || !pl[i].seen || p.pz < 0.45) continue;
+				const k = clamp(Math.floor(p.px * xy.logs.length), 0, xy.logs.length - 1);
+				const lg = xy.logs[k];
+				if (on) SND.woodlog(time, freqOf(c.root, lg.deg), 0.5, 1);
+				const cn = xy.conkers[xy.next = (xy.next + 1) % xy.conkers.length];
+				visuals.push({ time: time - FALL, fn: () => { cn.live = true; cn.t0 = time - FALL; cn.lg = lg; cn.dx = rr(-0.05, 0.05); cn.m.visible = true; } });
+				visuals.push({ time, fn: () => { lg.hit = 1; lg.col = colour(i); spray(lg.pos, '#c88a4a', 5, 1, 1); } });
+				scores[i] += 1;
+			}
+		}
+		// ripples, on the beat, from whoever's standing still
+		const pd = ponds[here];
+		if (pd && !glide && s16 % 4 === 0 && phase !== 'intro') {
+			for (let i = 0; i < count; i++) {
+				const q = pl[i];
+				if (!q.seen || q.stillT < 0.5) continue;
+				const rg = pd.rings[pd.next = (pd.next + 1) % pd.rings.length];
+				const x = walls.rig.position.x + q.x, z = walls.rig.position.z + q.z;
+				visuals.push({ time, fn: () => { rg.live = true; rg.x = x; rg.z = z; rg.t0 = clock(); rg.hit.clear(); rg.who = i; } });
+				if (on) SND.plink(time, freqOf(c.root, 0), 0.12, 1);
+			}
 		}
 		// whoever's running shakes along, on the eighths
 		if (on && s16 % 2 === 0 && phase !== 'intro') for (const p of pl) if (p.seen && p.speed > RUN) SND.shaker(time, 0.5);
@@ -628,10 +705,51 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		}
 		const live = phase === 'tutorial' || phase === 'play';
 		readPlayers(dt, live);
+		devices(dt, live);
 		for (const f of floaters) f.t += dt;
 		floaters = floaters.filter((f) => f.t < 1.4);
 		for (const r of ripples) r.t += dt;
 		ripples = ripples.filter((r) => r.t < 0.5);
+	}
+
+	function devices(dt, live) {
+		const C = CLEARINGS[here];
+		const on = live && !glide;
+		// puffballs: squat on one to squash it; hold the squat for its drone
+		for (const pb of puffs[here] || []) {
+			let who = -1;
+			if (on) for (let i = 0; i < count; i++) { const p = latest[i], q = pl[i]; if (p && q.seen && near(p, pb.spot) && q.base !== null && p.py > q.base + SQUAT * 0.7) who = i; }
+			if (who >= 0 && !pb.pressed) {
+				pb.pressed = true;
+				if (audioOn()) { SND.bwomp(clock() + 0.005, 0.5); pb.voice = holdVoice(freqOf(C.root, pb.deg) / 2, 'drone', pb.w); }
+				spray(pb.pos.clone().setY(0.6), '#f8f0c8', 30, 2.2, 2.5);
+				scores[who] += 3;
+			} else if (who < 0 && pb.pressed) {
+				pb.pressed = false;
+				if (pb.voice) { pb.voice.stop(); pb.voice = null; }
+			}
+			if (pb.pressed && Math.random() < 0.3) spray(pb.pos.clone().setY(0.5), '#f8f0c8', 2, 1, 2);
+		}
+		for (const [ci, list] of puffs.entries()) if (list && ci !== here) for (const pb of list) if (pb.voice) { pb.voice.stop(); pb.voice = null; pb.pressed = false; }
+		// the moonbeam: whoever stands in it plays it; their height bends the note
+		const th = theremins[here];
+		for (const [ci, t2] of theremins.entries()) if (t2 && ci !== here && t2.voice) { t2.voice.stop(); t2.voice = null; t2.who = -1; }
+		if (th) {
+			let who = -1;
+			if (on) for (let i = 0; i < count; i++) { const p = latest[i]; if (p && pl[i].seen && near(p, th.spot, 0.16)) { who = i; break; } }
+			if (who >= 0) {
+				const p = latest[who], q = pl[who];
+				const k = clamp(0.5 + (q.base - p.py) / 0.24, 0, 1);   // (up a little is higher, down lower)
+				th.k = lerp(th.k, k, 1 - Math.exp(-dt * 10));
+				const f = freqOf(C.root, 5) * Math.pow(2, (th.k - 0.5) * 3);
+				if (!th.voice && audioOn()) th.voice = holdVoice(f, 'whistle', th.w);
+				if (th.voice) th.voice.glide(f);
+				if (th.who !== who) scores[who] += 2;
+				th.who = who;
+				th.acc = (th.acc || 0) + dt;
+				if (th.acc > 1) { th.acc -= 1; scores[who] += 1; }   // (a point a second in the beam)
+			} else if (th.voice) { th.voice.stop(); th.voice = null; th.who = -1; }
+		}
 	}
 
 	function readPlayers(dt, live) {
@@ -647,6 +765,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			q.x += (tx - q.x) * k; q.z += (tz - q.z) * k;
 			const sp = Math.hypot(q.x - ox, q.z - oz) / Math.max(dt, 1e-3) / (2 * R);
 			q.speed = lerp(q.speed, sp, 1 - Math.exp(-dt * 6));
+			q.stillT = q.speed < 0.05 ? (q.stillT || 0) + dt : 0;
 			// jumps and squats, against your own usual height
 			if (q.base === null) q.base = p.py;
 			if (Math.abs(p.py - q.base) < 0.05) q.base = lerp(q.base, p.py, 1 - Math.exp(-dt * 0.8));
@@ -740,6 +859,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			}
 		}
 		if (at.y < H * TOUCH_TOP) return;   // (the creatures: only the lower part of the wall, where a child can reach)
+		if (pluckAt(at, wall, who[0])) return;
 		// a mushroom on the fungus wall under the finger: switch it
 		const gw = grids[here];
 		if (gw && wall === 1) {
@@ -772,6 +892,42 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		if (!pending.some((e) => e.kind === 'trick' && e.c === best)) pending.push({ kind: 'trick', c: best });
 	}
 	stage.$el.on('click.boogie-woods', (e) => tap(IGB.toWorld(e)));
+	// the web, dragged across: a strum
+	let dragging = false;
+	stage.$el.on('pointerdown.boogie-woods', () => { dragging = true; }).on('pointerup.boogie-woods pointerleave.boogie-woods', () => { dragging = false; const wb = webs[here]; if (wb) wb.last = -1; });
+	stage.$el.on('pointermove.boogie-woods', (e) => {
+		if (!dragging || !count || glide || (phase !== 'tutorial' && phase !== 'play')) return;
+		const at = IGB.toWorld(e);
+		const wall = clamp(Math.floor(at.x / W), 0, 2);
+		if (at.y < H * TOUCH_TOP) return;
+		const who = hitters(wall, at.x / W - wall);
+		if (who.length) pluckAt(at, wall, who[0], true);
+	});
+	// the spoke of the web nearest a touch (within a finger's width), plucked
+	function pluckAt(at, wall, who, strum) {
+		const wb = webs[here];
+		if (!wb || wb.wall !== wall) return false;
+		let best = -1, bd = strum ? 26 : 34;
+		const a = new THREE.Vector3(), b = new THREE.Vector3();
+		wb.spokes.forEach((sp, k) => {
+			const pa = proj(wall, wb.unit.localToWorld(a.set(0.05, 0, 0).applyAxisAngle(_zAxis, sp.a)));
+			const pb2 = proj(wall, wb.unit.localToWorld(b.set(wb.rad, 0, 0).applyAxisAngle(_zAxis, sp.a)));
+			const vx = pb2.x - pa.x, vy = pb2.y - pa.y, l2 = vx * vx + vy * vy || 1;
+			const t = clamp(((at.x - pa.x) * vx + (at.y - pa.y) * vy) / l2, 0, 1);
+			const d = Math.hypot(pa.x + vx * t - at.x, pa.y + vy * t - at.y);
+			if (d < bd) { bd = d; best = k; }
+		});
+		if (best < 0 || (strum && best === wb.last)) return best >= 0;
+		wb.last = best;
+		const sp = wb.spokes[best];
+		sp.vib = 1;
+		if (audioOn()) SND.harp(clock() + 0.005, freqOf(CLEARINGS[here].root, sp.deg), 0.28, wall);
+		spray(wb.unit.localToWorld(a.set(wb.rad * 0.6, 0, 0).applyAxisAngle(_zAxis, sp.a)), '#e8f8ff', 6, 1, 0.5);
+		scores[who] += 1;
+		tut.touched[who] = true;
+		return true;
+	}
+	const _zAxis = new THREE.Vector3(0, 0, 1);
 
 	/* ---------- the path ---------- */
 
@@ -2019,6 +2175,12 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		// (the festoon lights were here; removed at the user's request. buildFestoon still works if they come back)
 		if (C.grid) buildGrid(g, ci, cx, cz);
 		if (C.piano) buildPiano(g, ci, cx, cz);
+		if (C.puffballs) buildPuffballs(g, ci, cx, cz, C.puffballs);
+		if (C.web) buildWeb(g, ci, cx, cz, C.web);
+		if (C.pond) buildPond(g, ci, cx, cz, spots);
+		if (C.xylo) buildXylo(g, ci, cx, cz);
+		if (C.theremin) buildTheremin(g, ci, cx, cz, C.theremin);
+		if (C.choir) buildChoir(g, ci, cx, cz);
 		bake(g);
 		// the creatures
 		for (const def of C.creatures) {
@@ -2258,6 +2420,154 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		g.add(keys);
 		pianos[ci] = pn;
 	}
+	/* ---------- the other musical devices, one or two a clearing ---------- */
+
+	const wallPoint = (cx, cz, w, along, out, y = 0) => {
+		const D = R + out, lat = (along - 0.5) * 2 * D;
+		return w === 1 ? new THREE.Vector3(cx + lat, y, cz - D) : w === 0 ? new THREE.Vector3(cx - D, y, cz - lat) : new THREE.Vector3(cx + D, y, cz + lat);
+	};
+	const spotOf = (w, along, sp = 0.12) => (w === 1 ? { px: along, pz: 1 - sp } : w === 0 ? { px: sp, pz: along } : { px: 1 - sp, pz: 1 - along });
+	const near = (p, spot, r = STAND) => Math.hypot(p.px - spot.px, p.pz - spot.pz) < r;
+	const labels = [];   // little hints, drawn on the walls: { ci, wall, at, text }
+
+	// PUFFBALL BELLOWS: squat by one and it squashes with a BWOMP and a puff of
+	// spores; hold the squat and it drones
+	const puffs = [];
+	function buildPuffballs(g, ci, cx, cz, defs) {
+		const skin = skinMat('#efe4cc');
+		puffs[ci] = defs.map(([w, along], k) => {
+			const pos = wallPoint(cx, cz, w, along, 0.42, 0);
+			const m = mesh(GEO.sph, skin, g, pos.x, 0.3, pos.z, 0.42, 0.32, 0.42);
+			for (let j = 0; j < 14; j++) {
+				const a = rnd() * Math.PI * 2, e = rr(0.2, 1.3);
+				mesh(GEO.sphLo, skin, m, Math.cos(a) * Math.sin(e), Math.cos(e) * 0.95, Math.sin(a) * Math.sin(e), 0.07, 0.07, 0.07);
+			}
+			labels.push({ ci, wall: w, at: pos.clone().setY(0.1), text: 'SQUAT HERE' });
+			return { m, pos, w, spot: spotOf(w, along), deg: [-5, -3, -1][k % 3], sq: 0, pressed: false, voice: null };
+		});
+	}
+
+	// SPIDERWEB HARP: a dewy web whose spokes are strings; touch one to pluck it, drag across to strum
+	const webs = [];
+	function buildWeb(g, ci, cx, cz, [w, along]) {
+		const c = wallPoint(cx, cz, w, along, 0.3, 0.85);
+		const unit = new THREE.Group(); unit.position.copy(c); unit.lookAt(cx, 0.85, cz); g.add(unit);
+		const silk = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.3, 1.3, 1.4), transparent: true, opacity: 0.85 });
+		const dew = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 2.4, 2.6) });
+		const spokes = [];
+		const N = 9, RAD = 0.78;
+		for (let k = 0; k < N; k++) {
+			const a = k / N * Math.PI * 2 + 0.2;
+			const piv = new THREE.Group(); piv.rotation.z = a; unit.add(piv);
+			const line = mesh(GEO.cyl, silk, piv, RAD / 2, 0, 0, 0.006, RAD, 0.006); line.rotation.z = Math.PI / 2; line.castShadow = false;
+			for (let j = 1; j < 5; j++) mesh(GEO.sphLo, dew, piv, RAD * j / 5, 0, 0.01, 0.018).castShadow = false;
+			spokes.push({ piv, a, vib: 0, deg: 5 + k });
+		}
+		// the spiral, and the strands tying it to the trees
+		const pts = [];
+		for (let t = 0; t < 1; t += 0.004) { const r = 0.08 + t * RAD * 0.95, a = t * Math.PI * 2 * 5; pts.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r, 0)); }
+		mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 300, 0.004, 3), silk, unit).castShadow = false;
+		for (const a of [0.5, 2.6, 4.1]) mesh(GEO.cyl, silk, unit, Math.cos(a) * 1.2, Math.sin(a) * 1.2, 0, 0.004, 0.9, 0.004).rotation.z = a + Math.PI / 2;
+		// a spider, of course, with a face
+		const spider = new THREE.Group(); spider.position.set(0.05, 0.05, 0.04); unit.add(spider);
+		mesh(GEO.sph, furMat('#3a2a3a'), spider, 0, 0, 0, 0.09, 0.08, 0.07);
+		makeFace(spider, 0.3, 0, 0.01, 0.07);
+		labels.push({ ci, wall: w, at: c.clone().setY(0.05), text: 'STRUM THE WEB' });
+		webs[ci] = { unit, spokes, wall: w, center: c, rad: RAD, spider, last: -1 };
+	}
+
+	// RIPPLE POND: stand still and rings spread from you across the water; every
+	// singing lily pad a ring reaches plinks its note
+	const ponds = [];
+	function buildPond(g, ci, cx, cz, spotsW) {
+		const unit = new THREE.Group(); g.add(unit);
+		const padMat = shared('singPad', () => new THREE.MeshPhysicalMaterial({ color: '#3a9a3a', roughness: 0.25, clearcoat: 1, side: THREE.DoubleSide }));
+		const pads = [];
+		for (let k = 0, tries = 0; k < 14 && tries < 200; tries++) {
+			const a = -Math.PI / 2 + rr(-2.3, 2.3), r = rr(3.0, 5.4);
+			const x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r;
+			if (Math.abs(x - cx) < R + 0.15 && Math.abs(z - cz) < R + 0.15) continue;
+			if (spotsW.some(([sx, sz]) => Math.hypot(x - sx, z - sz) < 0.9)) continue;
+			if (pads.some((pd) => Math.hypot(x - pd.x, z - pd.z) < 0.9)) continue;
+			const pad = mesh(new THREE.CircleGeometry(rr(0.32, 0.45), 24, 0.3, Math.PI * 2 - 0.5), padMat, unit, x, 0.035, z);
+			pad.rotation.x = -Math.PI / 2; pad.rotation.z = rnd() * 6; pad.castShadow = false;
+			const budMat = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(0.55 + k * 0.03, 0.8, 0.6) });
+			const bud = mesh(GEO.sph, budMat, unit, x, 0.1, z, 0.08, 0.07, 0.08);
+			pads.push({ pad, bud, budMat, base: budMat.color.clone(), x, z, deg: 3 + Math.round((a + Math.PI / 2 + 2.3) / 4.6 * 9), bounce: 0 });
+			k++;
+		}
+		const rings = [];
+		for (let k = 0; k < 12; k++) {
+			const rm = new THREE.Mesh(new THREE.RingGeometry(0.94, 1, 64), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.4, 1.8, 2.0), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+			rm.rotation.x = -Math.PI / 2; rm.position.y = 0.03; rm.visible = false;
+			unit.add(rm);
+			rings.push({ m: rm, live: false, x: 0, z: 0, t0: 0, hit: new Set() });
+		}
+		ponds[ci] = { pads, rings, next: 0 };
+	}
+
+	// CONKER XYLOPHONE: hollow logs at the foot of the front wall, a branch over
+	// them; stand in the front half and a conker drops on the beat onto the log under you
+	const xylos = [];
+	const FALL = 0.5;
+	function buildXylo(g, ci, cx, cz) {
+		const N = 7, logs = [];
+		const wood = new THREE.MeshStandardMaterial({ map: TEX.bark, bumpMap: TEX.bark, bumpScale: 3, roughness: 0.8 });
+		for (let k = 0; k < N; k++) {
+			const u = (k + 0.5) / N;
+			const pos = wallPoint(cx, cz, 1, u, 0.06, 0.13);
+			const len = lerp(0.8, 0.45, k / (N - 1));
+			const mat = wood.clone();
+			const log = mesh(new THREE.CylinderGeometry(0.075, 0.08, len, 14), mat, g, pos.x, pos.y, pos.z);
+			log.rotation.x = Math.PI / 2;
+			logs.push({ log, mat, pos, deg: k + 2, hit: 0, under: -1 });
+		}
+		for (const dz of [-0.2, 0.2]) mesh(new THREE.BoxGeometry(2 * (R + 0.06) * 0.95, 0.05, 0.06), wood, g, cx, 0.05, cz - R - 0.06 + dz);
+		// the branch they fall from, leafy
+		const pts = [-1, -0.5, 0, 0.5, 1].map((t, k) => new THREE.Vector3(cx + t * 2.9, 2.35 + Math.sin(k * 1.7) * 0.08, cz - R - 0.15));
+		mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.07, 8), MAT.bark, g);
+		for (let k = 0; k < 14; k++) mesh(CANOPY[k % 3], leafMats[k % 4], g, cx + rr(-2.9, 2.9), 2.45 + rr(0, 0.2), cz - R - 0.2 + rr(-0.2, 0.2), rr(0.25, 0.4), rr(0.15, 0.22), rr(0.2, 0.3));
+		const conkers = [];
+		const ck = new THREE.MeshPhysicalMaterial({ color: '#6a2e12', roughness: 0.2, clearcoat: 1 });
+		for (let k = 0; k < 14; k++) { const m = mesh(GEO.sph, ck, g, 0, -5, 0, 0.055); m.visible = false; conkers.push({ m, live: false }); }
+		labels.push({ ci, wall: 1, at: wallPoint(cx, cz, 1, 0.5, 0.06, 0.0), text: 'STAND AT THE FRONT' });
+		xylos[ci] = { logs, conkers, next: 0 };
+	}
+
+	// MOONBEAM THEREMIN: a shaft of moonlight by a wall; stand in it and rise and dip to bend a ghostly note
+	const theremins = [];
+	function buildTheremin(g, ci, cx, cz, [w, along]) {
+		const pos = wallPoint(cx, cz, w, along, 0.35, 0);
+		const beamMat = new THREE.MeshBasicMaterial({ map: TEX.ray, color: new THREE.Color(1.2, 1.3, 1.8), transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+		const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 9, 24, 1, true), beamMat);
+		beam.position.set(pos.x, 4.5, pos.z); beam.renderOrder = 2;
+		g.add(beam);
+		const pool = mesh(GEO.shadow, new THREE.MeshBasicMaterial({ map: TEX.soft, color: new THREE.Color(1.2, 1.3, 1.8), transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending }), g, pos.x, 0.02, pos.z, 1.4, 1.4);
+		pool.rotation.x = -Math.PI / 2; pool.castShadow = false;
+		const orbMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 2.4, 3.0) });
+		const orb = mesh(GEO.sph, orbMat, g, pos.x, 1, pos.z, 0.09);
+		orb.castShadow = false;
+		labels.push({ ci, wall: w, at: pos.clone().setY(0.05), text: 'STAND IN THE MOONBEAM' });
+		theremins[ci] = { beamMat, orb, pos, w, spot: spotOf(w, along), voice: null, who: -1, k: 0.5, glow: 0 };
+	}
+
+	// BRIDGE CHOIR: stone faces on the bridge hum the chord; where everyone stands, left to right, picks it
+	const choirs = [];
+	const CHOIR = [{ name: 'MOODY', chord: [9, 12, 16] }, { name: 'HOPEFUL', chord: [5, 9, 12] }, { name: 'HOME', chord: [0, 4, 7] }, { name: 'BRIGHT', chord: [7, 11, 14] }];
+	function buildChoir(g, ci, cx, cz) {
+		const stoneMat = new THREE.MeshStandardMaterial({ color: '#9a9a8a', roughness: 0.9, bumpMap: TEX.moss, bumpScale: 4 });
+		const faces = [];
+		for (const a of [Math.PI * 0.22, Math.PI * 0.5, Math.PI * 0.78]) {
+			const grp = new THREE.Group();
+			grp.position.set(cx + Math.cos(a) * 5, Math.sin(a) * 4.0 + 0.1, cz - 8.5 + 1.15);
+			g.add(grp);
+			const disc = mesh(GEO.cyl, stoneMat, grp, 0, 0, 0, 0.7, 0.2, 0.7); disc.rotation.x = Math.PI / 2;
+			const face = makeFace(grp, 1.6, 0, 0, 0.12);
+			faces.push({ grp, face });
+		}
+		choirs[ci] = { faces, idx: 2, hum: 0 };
+	}
+
 	function showOnly(list) {
 		clearingGroups.forEach((g, k) => { g.visible = list.includes(k); });
 	}
@@ -2473,6 +2783,80 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			gw.shelves.instanceColor.needsUpdate = true;
 			gw.shelves.instanceMatrix.needsUpdate = true;
 		});
+		// puffballs squash
+		for (const [ci, list] of puffs.entries()) if (list && clearingGroups[ci].visible) for (const pb of list) {
+			pb.sq = lerp(pb.sq, pb.pressed ? 1 : 0, 1 - Math.exp(-dt * 14));
+			pb.m.scale.set(0.42 * (1 + pb.sq * 0.25 + pulse * 0.03), 0.32 * (1 - pb.sq * 0.45 + pulse * 0.05), 0.42 * (1 + pb.sq * 0.25 + pulse * 0.03));
+			pb.m.position.y = 0.3 * (1 - pb.sq * 0.45);
+		}
+		// the web's spokes shiver when plucked; its spider bobs to the beat
+		for (const [ci, wb] of webs.entries()) if (wb && clearingGroups[ci].visible) {
+			for (const sp of wb.spokes) { sp.vib = Math.max(0, sp.vib - dt * 1.4); sp.piv.rotation.z = sp.a + Math.sin(rt * 60) * sp.vib * 0.05; sp.piv.position.z = Math.sin(rt * 47) * sp.vib * 0.02; }
+			wb.spider.position.y = 0.05 + pulse * 0.03 - Math.max(...wb.spokes.map((sp) => sp.vib)) * 0.05;
+		}
+		// the pond: rings spread, and each pad they reach plinks
+		for (const [ci, pd] of ponds.entries()) if (pd && clearingGroups[ci].visible) {
+			const nowc = clock();
+			for (const rg of pd.rings) {
+				if (!rg.live) { rg.m.visible = false; continue; }
+				const age = nowc - rg.t0, r = age * 2.3;
+				if (age > 3) { rg.live = false; rg.m.visible = false; continue; }
+				rg.m.visible = true;
+				rg.m.position.set(rg.x, 0.03, rg.z);
+				rg.m.scale.setScalar(Math.max(0.01, r));
+				rg.m.material.opacity = 0.7 * (1 - age / 3);
+				for (const [k, pad] of pd.pads.entries()) {
+					if (rg.hit.has(k)) continue;
+					if (Math.hypot(pad.x - rg.x, pad.z - rg.z) <= r) {
+						rg.hit.add(k);
+						pad.bounce = 1;
+						if (audioOn()) SND.plink(nowc + 0.005, freqOf(CLEARINGS[ci].root, pad.deg), 0.22 * (1 - age / 3), 1);
+						if (rg.who !== undefined && rg.who < count) scores[rg.who] += 1;
+					}
+				}
+			}
+			for (const pad of pd.pads) {
+				pad.bounce = Math.max(0, pad.bounce - dt * 2.5);
+				pad.bud.position.y = 0.1 + Math.sin(pad.bounce * Math.PI) * 0.12;
+				pad.pad.position.y = 0.035 + pad.bounce * 0.03;
+				pad.budMat.color.copy(pad.base).multiplyScalar(1 + pad.bounce * 2.5);
+			}
+		}
+		// conkers fall, hit, bounce off; logs flash in the colour of whoever dropped one
+		for (const [ci, xy] of xylos.entries()) if (xy && clearingGroups[ci].visible) {
+			const nowc = clock();
+			for (const cn of xy.conkers) {
+				if (!cn.live) continue;
+				const tt = (nowc - cn.t0) / FALL;
+				if (tt < 1) cn.m.position.set(cn.lg.pos.x + cn.dx, lerp(2.3, cn.lg.pos.y + 0.12, tt * tt), cn.lg.pos.z);
+				else if (tt < 2.2) { const b = tt - 1; cn.m.position.set(cn.lg.pos.x + cn.dx + b * 0.5, cn.lg.pos.y + 0.12 + Math.sin(Math.min(1, b / 0.6) * Math.PI) * 0.25 - Math.max(0, b - 0.6) * 0.3, cn.lg.pos.z + b * 0.3); }
+				else { cn.live = false; cn.m.visible = false; }
+			}
+			for (const lg of xy.logs) {
+				lg.hit = Math.max(0, lg.hit - dt * 3);
+				lg.mat.emissive.set(lg.col || '#ffffff').multiplyScalar(lg.hit * 1.2);
+				lg.log.position.y = lg.pos.y - lg.hit * 0.02;
+			}
+		}
+		// the moonbeam brightens with someone in it; its orb rides the pitch
+		for (const [ci, th] of theremins.entries()) if (th && clearingGroups[ci].visible) {
+			th.glow = lerp(th.glow, th.who >= 0 ? 1 : 0, 1 - Math.exp(-dt * 6));
+			th.beamMat.opacity = 0.3 + th.glow * 0.45 + Math.sin(rt * 2) * 0.04;
+			th.orb.position.y = 0.4 + th.k * 1.6;
+			th.orb.scale.setScalar(0.09 * (1 + th.glow * 0.8));
+			if (th.who >= 0 && Math.random() < 0.3) spray(th.orb.position, '#d8e8ff', 1, 0.4, 0.3);
+		}
+		// the bridge faces hum, mouths open on each bar
+		for (const [ci, cho] of choirs.entries()) if (cho && clearingGroups[ci].visible) {
+			cho.hum = Math.max(0.25, cho.hum - dt * 0.5);
+			for (const fc2 of cho.faces) {
+				const f2 = fc2.face;
+				f2.mouth.open.scale.y = (0.02 + cho.hum * 0.12) * f2.s;
+				f2.mouth.smile.visible = false;
+				f2.mouth.tongue.visible = cho.hum > 0.4;
+				fc2.grp.scale.setScalar(1 + pulse * 0.04);
+			}
+		}
 		// the stepping-stone pianos
 		pianos.forEach((pn, ci) => {
 			if (!pn || !clearingGroups[ci].visible) return;
@@ -2652,6 +3036,15 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			}
 			ctx.restore();
 		}
+		if (playing && !glide) {
+			for (const lb of labels) {
+				if (lb.ci !== here) continue;
+				const sp = proj(lb.wall, lb.at);
+				if (sp.inside) label(ctx, lb.text, sp.x, Math.min(H - 70, sp.y + 30) + Math.sin(rt * 3) * 4, 22, '#fff6a0', 0.85);
+			}
+			const cho = choirs[here];
+			if (cho) { const sp = proj(1, _v.set(walls.rig.position.x, 4.3, walls.rig.position.z - 7.3)); label(ctx, '♪ ' + CHOIR[cho.idx].name + ' ♪', sp.x, sp.y, 40, '#fff6a0'); }
+		}
 		for (const r of ripples) art.circle(ctx, r.x, r.y, 20 + r.t * 150, { stroke: 'white', lineWidth: 6, alpha: 1 - r.t / 0.5 });
 		if (glide) show.onWalls(ctx, (c) => label(c, 'DOWN THE PATH TO ' + CLEARINGS[glide.to].name + '...', W / 2, 120, 40, '#fff6a0', Math.min(1, glide.t * 4)));
 	}
@@ -2734,6 +3127,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 
 	self.fini = function () {
 		clearInterval(sequencer);
+		for (const list of puffs) if (list) for (const pb of list) if (pb.voice) pb.voice.stop();
+		for (const th of theremins) if (th && th.voice) th.voice.stop();
 		stage.$el.off('.boogie-woods');
 		stage.$el[0].removeEventListener('pointerdown', resume, true);
 		unlisten();
