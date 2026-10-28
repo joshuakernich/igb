@@ -277,9 +277,11 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			update(dt, bt) { tick(dt); introT = bt; },
 			draw(ctx, bt) {
 				show.onWalls(ctx, function (c, wall) {
-					show.slam(c, 'FISSION CHIPS IS OPEN!', W / 2, 290, 112, bt - 0.3, { fill: '#9dff3a' });
-					show.slam(c, 'FEED THE MUTANTS. DON\'T GET EATEN.', W / 2, 410, 58, bt - 1.3, { fill: 'white' });
-					if (wall !== 1) show.slam(c, wall === 0 ? '◀ THE OLD WAYS' : 'THE NEW WAYS ▶', W / 2, 520, 54, bt - 2.2, { fill: wall === 0 ? '#ff8a2a' : '#3af2ff' });
+					// (the name in the title's own lettering: neon tubes, then a drip)
+					show.slam(c, 'FISSION CHIPS', W / 2, 250, 84, bt - 0.3, { font: 'Monoton', exact: true, fill: '#c8ff5a' });
+					show.slam(c, 'IS OPEN!', W / 2, 360, 96, bt - 0.8, { font: 'Rubik Wet Paint', exact: true, fill: '#FC1992' });
+					show.slam(c, 'FEED THE MUTANTS. DON\'T GET EATEN.', W / 2, 470, 58, bt - 1.5, { fill: 'white' });
+					if (wall !== 1) show.slam(c, wall === 0 ? '◀ THE OLD WAYS' : 'THE NEW WAYS ▶', W / 2, 570, 54, bt - 2.3, { fill: wall === 0 ? '#ff8a2a' : '#3af2ff' });
 				});
 			},
 		},
@@ -1236,10 +1238,14 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		for (let y = 0; y < 176; y += 4) { c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(0, y, 256, 2); }
 	});
 	// a neon sign: white tubes, a halo of colour
-	function signTex(text, colour) {
+	function signTex(text, colour, font) {
 		return canvasTexture(1024, 192, function (c) {
 			c.clearRect(0, 0, 1024, 192);
-			c.font = `800 118px ${FONT}, sans-serif`;
+			// (its lettering, shrunk to fit the sign)
+			const face = font ? `"${font}"` : FONT;
+			c.font = `800 118px ${face}, sans-serif`;
+			const size = Math.min(118, 118 * 940 / Math.max(1, c.measureText(text).width));
+			c.font = `800 ${size}px ${face}, sans-serif`;
 			c.textAlign = 'center';
 			c.textBaseline = 'middle';
 			c.lineJoin = 'round';
@@ -1505,7 +1511,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			mesh(BOX(11, 0.16, 0.4), MAT.rust, g, 0, 0.6, backZ + 0.2);
 			for (const [x, text, colour] of [[-6.5, 'FISSION CHIPS', '#9dff3a'], [6.5, 'OPEN 25/8', '#FC1992']]) {
 				const sign = mesh(new THREE.PlaneGeometry(2.0, 0.38), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), g, x, 1.75, backZ + 0.06);
-				signs.push({ m: sign, text, colour, k: 1.3, seed: x });
+				signs.push({ m: sign, text, colour, k: 1.3, seed: x, font: x < 0 ? 'Monoton' : null });   // (the name in the title's neon-tube lettering)
 			}
 			// the islands the hatch and the chute stand on
 		}
@@ -1514,13 +1520,13 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	function paintSigns() {
 		for (const s of signs) {
 			if (s.m.material.map) s.m.material.map.dispose();
-			s.m.material.map = signTex(s.text, s.colour);
+			s.m.material.map = signTex(s.text, s.colour, s.font);
 			s.m.material.color.setScalar(s.k);
 			s.m.material.needsUpdate = true;
 		}
 	}
 	paintSigns();
-	if (document.fonts) document.fonts.load(`800 100px ${FONT}`).then(paintSigns).catch(() => {});
+	if (document.fonts) Promise.all([`800 100px ${FONT}`, '100px "Monoton"'].map((f) => document.fonts.load(f))).then(paintSigns).catch(() => {});
 
 	// the key light, one shadow map over all three sets
 	scene.add(new THREE.HemisphereLight(0x8a94c0, 0x3a2418, 0.4));
