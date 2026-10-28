@@ -369,7 +369,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		c.x = best * W + c.along * W;   // (one to one with the player: no smoothing)
 		// the square they're on, and what it's next to
 		c.cell = cellOf(best, c.along, c.dist);
-		c.station = best !== 1 ? stations.find((s) => s.wall === best && s.spot[0] === c.cell.col && s.spot[1] === c.cell.row) || null : null;
+		c.station = best !== 1 ? stations.find((s) => s.wall === best && onSpot(c, [s.cell, s.spot])) || null : null;
 		c.atHatch = best === 1 && onSpot(c, CELLS.hatch);
 		c.atChute = best === 1 && onSpot(c, CELLS.chute);
 		c.work = Math.max(0, c.work - dt * 2);
@@ -993,7 +993,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// (the whole room, wall to far wall, is the whole grid: one to one)
 	const floorZ = (wall, dist) => GRID[wall].z0 + 0.01 + clamp(dist, 0, 1) * (GRID[wall].rows * CELL - 0.02);
 	const cellOf = (wall, along, dist) => ({ col: clamp(Math.floor(clamp(along, 0, 0.9999) * 8), 0, 7), row: clamp(Math.floor((floorZ(wall, dist) - GRID[wall].z0) / CELL), 0, GRID[wall].rows - 1) });
-	const onSpot = (c, cells) => !!c.cell && c.cell.col === cells[1][0] && c.cell.row === cells[1][1];
+	// (standing on the thing's own square counts too, as well as the marked one beside it)
+	const onSpot = (c, cells) => !!c.cell && cells.some(([col, row]) => c.cell.col === col && c.cell.row === row);
 	const HATCH_AT = [cellX(CELLS.hatch[0][0]), cellZ(1, CELLS.hatch[0][1])];
 	const CHUTE_AT = [cellX(CELLS.chute[0][0]), cellZ(1, CELLS.chute[0][1])];
 	const POD_OFF = [[-0.36, 0.28], [0.36, 0.28], [0, -0.32]];   // the hatch's three pods, in a triangle on its square
@@ -1063,6 +1064,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		d.sx = cellX(c0);
 		d.sz = cellZ(d.wall, r0);
 		d.spot = [c1, r1];
+		d.cell = [c0, r0];
 		d.spx = cellX(c1);
 		d.spz = cellZ(d.wall, r1);
 		d.ui = uiAt(d.wall, d.sx, d.sz);
