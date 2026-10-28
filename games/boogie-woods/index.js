@@ -185,6 +185,17 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		if (s < 0 || s >= PATH_AMP.length) return Math.abs(x);
 		return Math.abs(x - pathX(s, t)) / Math.sqrt(1 + Math.pow(pathSlope(s, t), 2));
 	}
+	// Side walls: no more than 4 creatures each, spread over the front 3/4 of the wall, leaving
+	// the back quarter of the screen clear (the back is the left edge of the left wall, the right
+	// edge of the right wall).
+	const SIDE = { 0: [0.3, 0.94], 2: [0.06, 0.7] };
+	for (const C of CLEARINGS) for (const w of [0, 2]) {
+		const list = C.creatures.filter((d) => d.wall === w).sort((a2, b2) => (w === 0 ? b2.along - a2.along : a2.along - b2.along));
+		for (const d of list.slice(4)) C.creatures.splice(C.creatures.indexOf(d), 1);
+		const keep = list.slice(0, 4).sort((a2, b2) => a2.along - b2.along), [lo, hi] = SIDE[w];
+		keep.forEach((d, k) => { d.along = lo + (k + 0.5) / keep.length * (hi - lo); });
+	}
+	if (CLEARINGS[0].puffballs) CLEARINGS[0].puffballs = [[0, 0.38], [0, 0.62], [0, 0.86]];
 	const CHORDS = [[0, 4, 7], [9, 12, 16], [5, 9, 12], [7, 11, 14]];
 	// each clearing's sky: where its sun (or moon) hangs, ahead, and the glow round the horizon
 	const SKY = [
@@ -2495,6 +2506,24 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		if (w === 0) toWorld.set(0, -1, 0, cx, 0, 0, 1, 0, -1, 0, 0, cz, 0, 0, 0, 1);
 		else if (w === 2) toWorld.set(0, 1, 0, cx, 0, 0, 1, 0, 1, 0, 0, cz, 0, 0, 0, 1);
 		else toWorld.set(1, 0, 0, cx, 0, 0, 1, 0, 0, -1, 0, cz, 0, 0, 0, 1);
+		// The keys: irregular stones that tessellate perfectly. Every boundary between two
+		// keys is one wobbly line, shared by both, sampled at the same depths; each key is
+		// cut across into a few stones at some of those depths. (Near, the keys taper into
+		// the middle 2/3 of the screen; far off they run parallel to the crystals.)
+		const dJ = R / SPAN, NS = 10;
+		const DS = Array.from({ length: NS + 1 }, (_, j) => dIn + (dOut - dIn) * j / NS);
+		const edge = (b, d) => ((b / n - 0.5) * 2 * SPAN) * Math.min(d, dJ);
+		const keyW = (d) => 2 * SPAN * Math.min(d, dJ) / n;
+		const BL = [];   // BL[b][j]: boundary b at sample depth j
+		for (let b = 0; b <= n; b++) BL[b] = DS.map((d, j) => new THREE.Vector2(edge(b, d) + (b > 0 && b < n ? rr(-0.36, 0.36) * keyW(d) : 0), d + (j > 0 && j < NS ? rr(-0.16, 0.16) : 0)));
+		const keyStone = (poly, mat, parent) => {
+			const c = poly.reduce((a2, q2) => a2.add(q2), new THREE.Vector2()).multiplyScalar(1 / poly.length);
+			const pts = poly.map((q2) => { const d2 = q2.clone().sub(c), l = d2.length(); return c.clone().add(d2.multiplyScalar(Math.max(0, l - 0.02) / l)); });
+			const geo = new THREE.ExtrudeGeometry(new THREE.Shape(pts), { depth: rr(0.07, 0.1), bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 2, curveSegments: 1 });
+			geo.applyMatrix4(toWorld);
+			const m2 = mesh(geo, mat, parent);
+			m2.receiveShadow = true; m2.castShadow = false;
+		};
 		for (let k = 0; k < n; k++) {
 			// (far off, the panels run parallel, as wide as the clearing; nearer than dJoin they
 			// taper into the middle 2/3 of the screen. The two meet exactly at dJoin, for every edge.)
@@ -2502,13 +2531,19 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			const LL = sL * dJoin, LR = sR * dJoin;
 			const lat = (LL + LR) / 2;
 			// the panel: a long tapering slab, pale and dark by turns, like keys
-			const pmat = new THREE.MeshStandardMaterial({ color: k % 2 ? '#5a5a62' : '#d6d0c2', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 3, roughness: 0.7, side: THREE.DoubleSide });
-			const shape = new THREE.Shape([new THREE.Vector2(sL * dIn, dIn), new THREE.Vector2(sR * dIn, dIn), new THREE.Vector2(LR, dJoin), new THREE.Vector2(LR, dOut), new THREE.Vector2(LL, dOut), new THREE.Vector2(LL, dJoin)]);
-			const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 2 });
-			geo.applyMatrix4(toWorld);
-			const mid = new THREE.Vector3(0, 0.0, 0);
-			const panel = mesh(geo, pmat, g, mid.x, mid.y, mid.z);
-			panel.receiveShadow = true; panel.castShadow = false;
+			const pmat = new THREE.MeshStandardMaterial({ color: k % 2 ? '#8a857a' : '#c9c2b2', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 5, roughness: 0.75, side: THREE.DoubleSide });   // (light and dark stones by turns, gently)
+			pmat.color.offsetHSL(0, 0, rr(-0.04, 0.04));
+			const panel = new THREE.Group(); g.add(panel);
+			// cut this key across into 3 or 4 stones, at sample depths of its own
+			const cuts = [0];
+			for (let j = 2; j < NS - 1; j++) if (rnd() < 0.5 && j - cuts[cuts.length - 1] >= 2) cuts.push(j);
+			cuts.push(NS);
+			for (let c2 = 0; c2 < cuts.length - 1; c2++) {
+				const j0 = cuts[c2], j1 = cuts[c2 + 1], poly = [];
+				for (let j = j0; j <= j1; j++) poly.push(BL[k][j]);
+				for (let j = j1; j >= j0; j--) poly.push(BL[k + 1][j]);
+				keyStone(poly, pmat, panel);
+			}
 			// its crystal, growing from the far end: a cluster of glassy prisms on a boulder
 			const col = new THREE.Color().setHSL(k / n * 0.85, 0.9, 0.55);
 			const cmat = new THREE.MeshPhysicalMaterial({ color: col, emissive: col, emissiveIntensity: 0.25, roughness: 0.08, clearcoat: 1, transparent: true, opacity: 0.88 });
