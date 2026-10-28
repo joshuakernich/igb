@@ -2828,6 +2828,16 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const tk = to > from ? k : 1 - k;
 		walls.rig.position.set(forward ? pathX(seg, tk) : 0, EYE + Math.abs(Math.sin(k * Math.PI * 6)) * 0.06, z);
 		walls.rig.rotation.y = forward ? -Math.atan(pathSlope(seg, tk)) * (to > from ? 1 : -1) * 0.8 : 0;   // (turning into the bends)
+		// (on the walk, the camera pulls back and up behind the avatars, so they're all on the front wall)
+		const pull = glide ? Math.sin(Math.min(1, glide.t / 0.12, (1 - glide.t) / 0.12) * Math.PI / 2) : 0;
+		walls.pull = pull;
+		if (pull > 0) {
+			_p0.set(0, 0, 1.6 * pull).applyAxisAngle(_yAx, walls.rig.rotation.y);
+			walls.rig.position.add(_p0);
+			walls.rig.position.y += 0.9 * pull;
+		}
+		walls.rig.rotation.order = 'YXZ';
+		walls.rig.rotation.x = -0.16 * pull;   // (the whole rig tips down together, so the walls still meet)
 		shake = Math.max(0, shake - dt);
 		if (shake > 0) walls.rig.position.x += (Math.random() - 0.5) * shake * 0.12;
 		const A = PAL[from], B = PAL[to];
@@ -3100,9 +3110,10 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			if (!m.visible) continue;
 			// (on the path between clearings, everyone's range squeezes into a tight patch on the path just ahead)
 			const sq = glide ? Math.sin(Math.min(1, glide.t / 0.12, (1 - glide.t) / 0.12) * Math.PI / 2) : 0;
-			const ax = lerp(avCap(q.x), q.x * 0.25, sq), az = lerp(avCap(q.z), -2.6 + q.z * 0.2, sq);
-			_p0.set(ax, 0, az).applyAxisAngle(_yAx, walls.rig.rotation.y);
+			const ax = lerp(avCap(q.x), q.x * 0.28, sq), az = lerp(avCap(q.z), -1.5 + q.z * 0.2, sq);
+			_p0.set(ax, 0, az - 1.6 * (walls.pull || 0)).applyAxisAngle(_yAx, walls.rig.rotation.y);
 			m.position.set(walls.rig.position.x + _p0.x, 0.3 + pulse * 0.08 + (q.jumpT > 0.3 ? 0.25 : 0), walls.rig.position.z + _p0.z);
+			if (walls.pull) m.position.y -= 0;
 			m.lookAt(walls.rig.position.x, 0.3, walls.rig.position.z - 4);
 			m.scale.setScalar(1 + pulse * 0.1);
 			if (q.speed > RUN && Math.random() < 0.4) spray(m.position, colour(i), 2, 0.6, 1);
