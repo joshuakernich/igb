@@ -354,8 +354,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		c.prev = { px: p.px, pz: p.pz };
 		c.moved = moved;
 		if (dt > 0) c.speed = lerp(c.speed, moved / dt, Math.min(1, dt * 5));
-		const tx = best * W + clamp(c.along, 0.05, 0.95) * W;
-		if (c.drawWall !== best) { c.x = tx; c.drawWall = best; } else c.x = lerp(c.x, tx, Math.min(1, dt * 12));
+		c.x = best * W + c.along * W;   // (one to one with the player: no smoothing)
 		// the square they're on, and what it's next to
 		c.cell = cellOf(best, c.along, c.dist);
 		c.station = best !== 1 ? stations.find((s) => s.wall === best && s.spot[0] === c.cell.col && s.spot[1] === c.cell.row) || null : null;
@@ -952,7 +951,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	const cellX = (col) => -VW / 2 + (col + 0.5) * CELL;
 	const cellZ = (wall, row) => GRID[wall].z0 + (row + 0.5) * CELL;
 	// where on the grid a cook is: across by where they are along the wall, back to front by how far from it
-	const floorZ = (wall, dist) => GRID[wall].z0 + 0.01 + clamp(dist / 0.6, 0, 1) * (GRID[wall].rows * CELL - 0.02);
+	// (the whole room, wall to far wall, is the whole grid: one to one)
+	const floorZ = (wall, dist) => GRID[wall].z0 + 0.01 + clamp(dist, 0, 1) * (GRID[wall].rows * CELL - 0.02);
 	const cellOf = (wall, along, dist) => ({ col: clamp(Math.floor(clamp(along, 0, 0.9999) * 8), 0, 7), row: clamp(Math.floor((floorZ(wall, dist) - GRID[wall].z0) / CELL), 0, GRID[wall].rows - 1) });
 	const onSpot = (c, cells) => !!c.cell && c.cell.col === cells[1][0] && c.cell.row === cells[1][1];
 	const HATCH_AT = [cellX(CELLS.hatch[0][0]), cellZ(1, CELLS.hatch[0][1])];
@@ -965,7 +965,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	const renderer = new THREE.WebGLRenderer({ antialias: false });   // (the composer multisamples)
 	renderer.toneMapping = THREE.NeutralToneMapping;   // (keeps the colours bright)
-	renderer.toneMappingExposure = 1.05;
+	renderer.toneMappingExposure = 0.8;
 	renderer.shadowMap.enabled = true;
 	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 	$(renderer.domElement).css({ position: 'absolute', left: 0, top: 0, width: WIDTH + 'px', height: H + 'px' }).appendTo(stage.$bg);
@@ -980,7 +980,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	resize();
 
 	const scene = new THREE.Scene();
-	scene.background = new THREE.Color(0x2a1a40);
+	scene.background = new THREE.Color(0x07040e);
 	post = createWallComposer(renderer, scene, { strength: 0.32, radius: 0.4, threshold: 1.0, cap: 1.6 });   // (a little glow on the neon, no more)
 	// what the shiny plastic reflects: a bright candy-coloured room, a strip light overhead
 	const envTex = environmentFromShader(renderer, `
@@ -994,7 +994,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		}
 	`);
 	scene.environment = envTex;
-	scene.environmentIntensity = 0.85;
+	scene.environmentIntensity = 0.35;
 
 	const cams = SET_X.map(function (ox, w) {
 		const c = new THREE.OrthographicCamera(-VW / 2, VW / 2, VH / 2, -VH / 2, 0.1, 80);
@@ -1242,7 +1242,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		counterTop: std(0xffffff, 0.25, 0.05),
 		steel: std(0xe2e8f0, 0.2, 0.85),
 		darkSteel: std(0x5a5ab0, 0.35, 0.15),
-		black: std(0x302a52, 0.45, 0.1),
+		black: std(0x1a1630, 0.45, 0.1),
 		rust: std(0xff7a5a, 0.45, 0.1),
 		pipe: std(0x3fd0c0, 0.3, 0.3),
 		wood: std(0xe0904a, 0.55, 0),
@@ -1257,15 +1257,15 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	// each room's colours: its floor's checks, its wall's tiles, the floor round the grid
 	const ROOM_LOOK = [
-		{ floor: ['#fff1d6', '#ffab7a'], wall: ['#ff8a5c', '#ffc56b'], edge: 0xd86a4a },
-		{ floor: ['#f6eaff', '#c39bff'], wall: ['#a77bff', '#ff8ad0'], edge: 0x8a5ad0 },
-		{ floor: ['#e6fff6', '#6ee0c8'], wall: ['#3ccfc4', '#8de8a8'], edge: 0x34a898 },
+		{ floor: ['#e8c8a0', '#c0441e'], wall: ['#a8381c', '#d8781e'], edge: 0x3a140a },
+		{ floor: ['#c8b0ec', '#5a2aa8'], wall: ['#4a2490', '#a82a78'], edge: 0x1e0c3a },
+		{ floor: ['#a8e8d4', '#0e7a68'], wall: ['#0e6e6a', '#2a8a4a'], edge: 0x06302a },
 	];
 	// two by two floor squares, checked, with a soft bevel and a hint of grime
 	function checkerTex(a, b) {
 		return tex(256, 256, function (c) {
 			const rnd = seeded(a.length * 7 + b.charCodeAt(2));
-			c.fillStyle = mix(b, '#000000', 0.25);
+			c.fillStyle = mix(b, '#000000', 0.6);
 			c.fillRect(0, 0, 256, 256);
 			for (let y = 0; y < 2; y++) for (let x = 0; x < 2; x++) {
 				const col = (x + y) % 2 ? a : b;
@@ -1404,11 +1404,11 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		const drain = mesh(new THREE.CircleGeometry(0.3, 20), MAT.black, g, -0.2 + rnd() * 0.4, 0.012, 0.2);
 		drain.rotation.x = -Math.PI / 2;
 		// light: a warm overhead wash, and the room's own colour of neon
-		const wash = new THREE.PointLight(0xffffff, 45, 22, 1.1);
+		const wash = new THREE.PointLight(0xffffff, 14, 20, 1.2);
 		wash.position.set(0, 7, 2);
 		wash.distance = 28;
 		g.add(wash);
-		const light = new THREE.PointLight([0xff8a5a, 0xc08aff, 0x4ae0d0][w], 18, 16, 1.3);
+		const light = new THREE.PointLight([0xff8a5a, 0xc08aff, 0x4ae0d0][w], 26, 14, 1.4);
 		light.position.set(0, 3.5, -1.5);
 		g.add(light);
 		if (w !== 1) {
@@ -1444,7 +1444,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			counter.receiveShadow = counter.castShadow = true;
 			mesh(BOX(16.6, 0.07, 0.02), MAT.hazard, g, 0, CT.y - 0.06, CT.front + 0.012);
 			mesh(BOX(16.7, 0.12, 1.1), MAT.white, g, 0, CT.y, CT.z);
-			mesh(new THREE.PlaneGeometry(10.6, 2.0), new THREE.MeshBasicMaterial({ map: TEX.sky, color: new THREE.Color(0.95, 0.95, 0.95) }), g, 0, 1.65, backZ + 0.03);
+			mesh(new THREE.PlaneGeometry(10.6, 2.0), new THREE.MeshBasicMaterial({ map: TEX.sky, color: new THREE.Color(0.7, 0.7, 0.7) }), g, 0, 1.65, backZ + 0.03);
 			for (const x of [-5.4, 5.4]) mesh(BOX(0.22, 2.4, 0.3), MAT.darkSteel, g, x, 1.5, backZ + 0.1);
 			mesh(BOX(11, 0.16, 0.4), MAT.rust, g, 0, 0.6, backZ + 0.2);
 			for (const [x, text, colour] of [[-6.5, 'GRUB-O-TRON', '#9dff3a'], [6.5, 'OPEN 25/8', '#FC1992']]) {
@@ -1467,8 +1467,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	if (document.fonts) document.fonts.load(`800 100px ${FONT}`).then(paintSigns).catch(() => {});
 
 	// the key light, one shadow map over all three sets
-	scene.add(new THREE.HemisphereLight(0xeaf2ff, 0xffe0c0, 1.5));
-	const sun = new THREE.DirectionalLight(0xfff6ea, 2.8);
+	scene.add(new THREE.HemisphereLight(0x8a94c0, 0x3a2418, 0.4));
+	const sun = new THREE.DirectionalLight(0xfff2e0, 3.6);
 	sun.position.set(0, 20, 8);
 	sun.target.position.set(0, 0, 1.5);
 	scene.add(sun, sun.target);
@@ -2348,11 +2348,14 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			if (m.g.parent !== sets[c.wall]) sets[c.wall].add(m.g);
 			if (m.tile.parent !== sets[c.wall]) sets[c.wall].add(m.tile);
 			// they stand in the middle of their square, and hop from one to the next
-			const cell = c.cell || cellOf(c.wall, c.along, c.dist);
-			const x3 = cellX(cell.col);
-			const z3 = cellZ(c.wall, cell.row);
+			// exactly where the player is, every frame; their square lit under them
+			const wp = wallsOf(latest[i]);
+			const along = clamp(wp.along[c.wall], 0, 1), dist = clamp(wp.dist[c.wall], 0, 1);
+			const cell = cellOf(c.wall, along, dist);
+			const x3 = lx3(along * W);
+			const z3 = floorZ(c.wall, dist);
 			m.tile.visible = true;
-			m.tile.position.set(x3, 0.025, z3);
+			m.tile.position.set(cellX(cell.col), 0.025, cellZ(c.wall, cell.row));
 			m.tile.material.opacity = 0.75 + Math.sin(rt * 4 + i) * 0.2;
 			if (m.wall !== c.wall) {
 				if (m.wall !== undefined) for (let n = 0; n < 16; n++) puff(c.wall, x3 + rnd1() * 0.8, 0.3 + Math.random() * 2, z3, { color: colourOf(i), size: 0.1, grow: 0.02, life: 0.7, vy: 1.5 + Math.random(), vx: rnd1() * 2, glow: 1.6, add: true, alpha: 1 });
@@ -2360,10 +2363,9 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 				m.x = x3;
 				m.wall = c.wall;
 			}
-			const hop = Math.hypot(x3 - m.x, z3 - m.z);
-			m.x = lerp(m.x, x3, Math.min(1, dt * 12));
-			m.z = lerp(m.z, z3, Math.min(1, dt * 12));
-			m.g.position.set(m.x, Math.min(0.35, hop * 0.5), m.z);
+			m.x = x3;
+			m.z = z3;
+			m.g.position.set(m.x, 0, m.z);
 			// facing the counter when working at it, the room otherwise, turning toward where they move
 			// facing what they're using (from its square), or the room, turning as they go
 			const working = !!c.station || c.atHatch || c.atChute;
