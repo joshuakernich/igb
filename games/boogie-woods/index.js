@@ -1056,7 +1056,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		g.position.set(x, y, z);
 		parent.add(g);
 		const eyes = [];
-		const gap = opts.gap || 0.26;
+		s *= 0.85;   // (faces a touch smaller than they were built)
+		const gap = (opts.gap || 0.26) * 0.72;   // (and the eyes closer together)
 		for (const sx of [-1, 1]) {
 			const eye = new THREE.Group();
 			eye.position.set(sx * gap * s, 0.1 * s, 0);
