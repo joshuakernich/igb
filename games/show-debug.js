@@ -23,7 +23,7 @@
 import { createValley } from './ux-demo-valley.js';
 
 // the title drop's lettering (its @font-face in core/launcher.css), loaded before the title comes in
-document.fonts.load('400 100px "Bend 2 Squares"');
+['Bend 2 Squares', 'Bend 2 Squares OL2'].forEach((f) => document.fonts.load(`400 100px "${f}"`));
 
 IGB.register('show-debug', function ShowDebugGame(stage, playersMeta) {
 

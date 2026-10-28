@@ -2255,12 +2255,20 @@ window.Showtime = function (stage, opts) {
 						c.drawImage(logo.canvas, -logo.canvas.width / 2, -logo.canvas.height / 2);
 						c.restore();
 					}
-					lines.forEach(function (line, li) {
-						// its full size, shrunk (exactly, not by steps) only as far as it must to fit in 70% of a wall
-						const full = T.size * (n > 1 ? 0.85 : 1);
+					// each line at its full size (line.scale: bigger or smaller than the rest), shrunk
+					// (exactly, not by steps) only as far as it must to fit in 70% of a wall; stacked
+					// line.gap of its size below the one before (1.05 by default), the whole stack centred
+					const sizes = lines.map(function (line) {
+						const full = T.size * (n > 1 ? 0.85 : 1) * (line.scale || 1);
 						const wide = measure(c, line.text, full, line.font);   // (a line can have its own lettering: line.font)
-						const size = wide > W * T.fit ? full * W * T.fit / wide : full;
-						const y = (start ? T.raised : 470) + (li - (n - 1) / 2) * size * 1.05;
+						return wide > W * T.fit ? full * W * T.fit / wide : full;
+					});
+					const steps = sizes.map((sz, li) => (li ? (sizes[li - 1] + sz) / 2 * (lines[li].gap || 1.05) : 0));
+					const ys = steps.map((_, li) => steps.slice(0, li + 1).reduce((a, b) => a + b, 0));
+					const mid = (ys[0] + ys[n - 1]) / 2;
+					lines.forEach(function (line, li) {
+						const size = sizes[li];
+						const y = (start ? T.raised : 470) + ys[li] - mid;
 						// flying in from a little way off, with the logo and the button
 						c.save();
 						c.translate(W / 2, y);
