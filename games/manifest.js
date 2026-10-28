@@ -43,6 +43,8 @@ IGB.manifest = [
 			title: { lines: [{ text: 'RED LIGHT', fill: '#ff3640', glow: '#ff3640' }, { text: 'GREEN LIGHT', fill: '#27d96b', glow: '#27d96b' }] }, box: { color: '#e5287a', bg: '#1d7a63', note: 'SURVIVAL' } },
 		{ id: 'temple-of-coins', name: 'Temple of Coins', icon: 'assets/icons/temple-of-coins.png', file: 'games/temple-of-coins.js', module: true,
 			title: { lines: [{ text: 'TEMPLE', fill: '#ffd34d', glow: '#ff9a1f', font: 'Bungee', scale: 1.25 }, { text: 'OF COINS', fill: '#ffd34d', glow: '#ff9a1f', font: 'Bungee', scale: 0.94, gap: 0.78 }], font: 'Bungee' }, box: { color: '#ffd34d', bg: '#2a1708', note: 'TREASURE' } },
+		{ id: 'boogie-woods', name: 'Boogie Woods', icon: 'assets/icons/boogie-woods.png', file: 'games/boogie-woods/index.js', module: true,
+			title: { lines: [{ text: 'BOOGIE', fill: '#ff5fb0', glow: '#ff2a8a', font: 'Shrikhand' }, { text: 'WOODS', fill: '#a8ff3e', glow: '#3cff7a', font: 'Shrikhand' }], font: 'Shrikhand' }, box: { color: '#a8ff3e', bg: '#1a0b2e', note: 'MUSIC' } },
 		{ id: 'mingle', name: 'Mingle', icon: 'assets/icons/mingle.png', file: 'games/mingle/index.js', module: true,
 			title: { lines: [{ text: 'MINGLE', fill: '#ff7eb6', glow: '#e5287a' }] }, box: { color: '#e5287a', bg: '#f3a6c8', note: 'SURVIVAL' } },
 		{ id: 'tether-net', name: 'Tether Net',
@@ -185,7 +187,7 @@ IGB.manifest = [
 
 // The only games the menu shows (in their folders above); the rest stay
 // playable by #id. Remove this (or set it to null) to show everything.
-IGB.menu = ['grub-o-tron', 'red-light-green-light', 'temple-of-coins', 'loop-island', 'quill-relay', 'iron-stride', 'twin-tail-tower', 'tails-escape', 'knuckles-quest', 'super-sonic-battle', 'sonic-characters', 'backrooms', 'riddler-says', 'melody-canvas', 'show-debug', 'gaze-test'];
+IGB.menu = ['grub-o-tron', 'red-light-green-light', 'temple-of-coins', 'boogie-woods', 'loop-island', 'quill-relay', 'iron-stride', 'twin-tail-tower', 'tails-escape', 'knuckles-quest', 'super-sonic-battle', 'sonic-characters', 'backrooms', 'riddler-says', 'melody-canvas', 'show-debug', 'gaze-test'];
 
 // The music tracks, on or off everywhere: every music-*.mp3 (the show's music
 // included). Tunes the games synthesise (the doll's song, Mingle's waltz),
