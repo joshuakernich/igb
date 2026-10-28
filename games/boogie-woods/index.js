@@ -2284,10 +2284,11 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			g.add(c.root);
 			c.ring.position.x = cx + c.hot.x; c.ring.position.z = cz + c.hot.y;
 			// (a teardrop: its round end where you stand, its tail reaching to the creature's feet)
-			const tdx = c.root.position.x - c.ring.position.x, tdz = c.root.position.z - c.ring.position.z, tL = Math.max(0.5, Math.hypot(tdx, tdz) - 0.4 * c.size);
+			const tdx = c.root.position.x - c.ring.position.x, tdz = c.root.position.z - c.ring.position.z, tL = Math.max(0.5, Math.hypot(tdx, tdz));   // (the tail reaches right to the middle of its footprint)
 			c.ringFill.geometry = new THREE.ShapeGeometry(new THREE.Shape(teardrop(0.24, tL)));
 			const edge = new THREE.Shape(teardrop(0.24, tL)); edge.holes.push(new THREE.Path(teardrop(0.19, tL - 0.1)));
 			c.ringEdge.geometry = new THREE.ShapeGeometry(edge);
+			c.ringEdge.visible = false;   // (no outline: just the glowing shape)
 			c.ring.rotation.y = Math.atan2(-tdx, -tdz);
 			g.add(c.ring);
 			creatures.push(c);
@@ -3052,7 +3053,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			// the ring at its feet lights when someone stands in front
 			const lit = c.singer >= 0;
 			c.ringEdge.material.opacity = lit ? 1 : 0.45 + myPulse * 0.2;
-			c.ringFill.material.opacity = lit ? 0.85 : 0.28 + myPulse * 0.12;
+			c.ringFill.material.opacity = lit ? 0.9 : 0.42 + myPulse * 0.14;
 			if (lit) { c.ringEdge.material.color.set(colour(c.singer)).multiplyScalar(2); c.ringFill.material.color.set(colour(c.singer)).multiplyScalar(1.4); }
 			else { c.ringEdge.material.color.copy(c.tint).multiplyScalar(1.6); c.ringFill.material.color.copy(c.tint).multiplyScalar(1.2); }
 			c.ring.scale.setScalar(1 + (lit ? 0.08 : 0) + myPulse * 0.05);
