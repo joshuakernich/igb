@@ -1531,11 +1531,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			c.face = makeFace(c.bouncer, 0.4, 0, 0.33, 0.57, { gap: 0.2 });
 			const shell = new THREE.Group(); shell.position.set(0, 0.48, -0.12); c.bouncer.add(shell);
 			const shellMat = new THREE.MeshPhysicalMaterial({ color: c.tint, roughness: 0.2, clearcoat: 1, iridescence: 1, iridescenceIOR: 1.6, bumpMap: TEX.scales, bumpScale: 0.6, emissive: c.tint, emissiveIntensity: 0.1 });
-			for (let k = 0; k < 5; k++) {
-				const r = 0.36 - k * 0.065;
-				const tor = mesh(new THREE.TorusGeometry(r, 0.11 - k * 0.016, 16, 40), shellMat, shell, 0, k * 0.03, 0.05 * k);   // (the spiral faces out, like a target, so it reads from the walls)
-				tor.scale.z = 1.4;
-			}
+			// (one fat tube coiled two and a half turns, growing as it goes, in the snail's side plane: seen side-on, a spiral)
+			mesh(spiralShellGeo(), shellMat, shell, 0, 0, 0);
 			c.parts.shell = shell; c.parts.shellMat = shellMat;
 			limb(c, [-0.08, 0.5, 0.42], [-0.16, 0.85, 0.5], 0.02, 'eye', -1);
 			limb(c, [0.08, 0.5, 0.42], [0.16, 0.85, 0.5], 0.02, 'eye', 1);
@@ -2282,6 +2279,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			wobbleCreature(c);
 			c.root.position.x += cx; c.root.position.z += cz;
 			c.root.lookAt(cx, 0, cz);
+			if (c.kind === 'snail') c.root.rotateY(c.wall === 2 ? -1.0 : 1.0);   // (three-quarters on: its shell's spiral shows, and its face)
 			c.root.userData.tag = 'creatures';
 			g.add(c.root);
 			c.ring.position.x = cx + c.hot.x; c.ring.position.z = cz + c.hot.y;
@@ -2874,6 +2872,34 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		choirs[ci] = { faces, idx: 2, hum: 0 };
 	}
 
+	// A snail's shell: a tube coiled along a growing spiral in the y-z plane (its axis along x),
+	// thick and fattening as it winds out. Built ring by ring, so its radius can grow.
+	let _shellGeo = null;
+	function spiralShellGeo() {
+		if (_shellGeo) return _shellGeo;
+		const TURNS = 2.5, OUT = 0.3, GROW = 2.7, SEG = 140, RAD = 18;
+		const b = Math.log(GROW) / (2 * Math.PI), th1 = TURNS * 2 * Math.PI;
+		const at = (th) => { const r = OUT * Math.exp(b * (th - th1)); return new THREE.Vector3(0, r * Math.sin(th), r * Math.cos(th)); };
+		const pos = [], idx = [];
+		const X = new THREE.Vector3(1, 0, 0);
+		for (let i = 0; i <= SEG; i++) {
+			const th = th1 * i / SEG, p = at(th), r = OUT * Math.exp(b * (th - th1));
+			const T2 = at(th + 0.01).sub(at(th - 0.01)).normalize(), N = new THREE.Vector3().crossVectors(X, T2).normalize();
+			const tr = r * 0.52 + 0.004;   // (a fat tube: each turn nearly touches the last)
+			for (let j = 0; j <= RAD; j++) {
+				const a = j / RAD * Math.PI * 2;
+				const v = p.clone().addScaledVector(N, Math.cos(a) * tr).addScaledVector(X, Math.sin(a) * tr * 0.92);
+				pos.push(v.x, v.y, v.z);
+				if (i && j) { const A = (i - 1) * (RAD + 1) + j - 1, B = A + RAD + 1; idx.push(A, B, A + 1, A + 1, B, B + 1); }
+			}
+		}
+		const g = new THREE.BufferGeometry();
+		g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+		g.setIndex(idx);
+		g.computeVertexNormals();
+		_shellGeo = g;
+		return g;
+	}
 	// a teardrop outline: a circle of radius r round the origin, a tail to a point L along +y
 	function teardrop(r, L) {
 		const b = Math.acos(Math.min(0.99, r / L)), pts = [new THREE.Vector2(0, L)];
@@ -3295,7 +3321,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			P.drum.scale.y = 1 - c.singT * 0.15;
 		}
 		if (c.kind === 'snail') {
-			P.shell.rotation.z = T > 0 ? (1 - T) * Math.PI * 8 : Math.sin(beat * Math.PI) * 0.1;
+			P.shell.rotation.x = T > 0 ? (1 - T) * Math.PI * 8 : Math.sin(beat * Math.PI) * 0.1;   // (it rolls about its own axis)
 			P.shellMat.emissiveIntensity = 0.1 + c.singT * 0.5 + T * 1.5;
 		}
 		if (c.kind === 'owl') {
