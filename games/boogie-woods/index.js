@@ -1482,9 +1482,6 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			c.parts.sac = mesh(GEO.sph, new THREE.MeshPhysicalMaterial({ color: '#ffd8b0', roughness: 0.15, clearcoat: 1, sheen: 0.6, sheenColor: new THREE.Color('#ffffff') }), c.bouncer, 0, 0.2, 0.3, 0.12, 0.1, 0.1);
 			c.parts.tongue = mesh(GEO.cyl, MAT.tongue, c.bouncer, 0, 0.3, 0.32, 0.03, 0.001, 0.03);
 			c.parts.tongue.rotation.x = Math.PI / 2;
-			// a lily pad under it
-			const pad = mesh(new THREE.CircleGeometry(0.7, 32, 0.3, Math.PI * 2 - 0.5), new THREE.MeshPhysicalMaterial({ color: '#2f7a3a', roughness: 0.3, clearcoat: 1, side: THREE.DoubleSide, bumpMap: TEX.leaf, bumpScale: 1 }), c.root, 0, 0.04, 0);
-			pad.rotation.x = -Math.PI / 2; pad.receiveShadow = true;
 			limb(c, [-0.3, 0.25, 0.1], [-0.42, 0.04, 0.3], 0.045, 'glove', -1);
 			limb(c, [0.3, 0.25, 0.1], [0.42, 0.04, 0.3], 0.045, 'glove', 1);
 			limb(c, [-0.3, 0.12, -0.1], [-0.5, 0.0, 0.1], 0.06, 'shoe', -1, true);
