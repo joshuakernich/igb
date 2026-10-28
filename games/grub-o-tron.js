@@ -997,7 +997,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	const onSpot = (c, cells) => !!c.cell && cells.some(([col, row]) => c.cell.col === col && c.cell.row === row);
 	const HATCH_AT = [cellX(CELLS.hatch[0][0]), cellZ(1, CELLS.hatch[0][1])];
 	const CHUTE_AT = [cellX(CELLS.chute[0][0]), cellZ(1, CELLS.chute[0][1])];
-	const POD_OFF = [[-0.36, 0.28], [0.36, 0.28], [0, -0.32]];   // the hatch's three pods, in a triangle on its square
+	const POD_OFF = [[-0.42, 0.3], [0.42, 0.3], [0, -0.36]];   // the hatch's three pods, in a triangle on its square
 	const POD_X = POD_OFF.map((o) => HATCH_AT[0] + o[0]);
 	const POD_Z = POD_OFF.map((o) => HATCH_AT[1] + o[1]);
 	const CHUTE_X = CHUTE_AT[0];
@@ -1710,6 +1710,9 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		chute.add(light);
 		const [, [hc, hr]] = CELLS.hatch, [, [cc, cr]] = CELLS.chute;
 		const hatchSpot = spotTile(sets[1], cellX(hc), cellZ(1, hr), 0x9dff3a, HATCH_AT);
+		const hatchLight = new THREE.PointLight(0xe8ffd0, 9, 4, 1.6);   // (the pods lit, so what's on them shows)
+		hatchLight.position.set(HATCH_AT[0], ISLAND.y + 1.6, HATCH_AT[1] + 0.8);
+		sets[1].add(hatchLight);
 		const serveSpots = [0, 1, 2, 3, 4, 5, 6, 7].map((col) => spotTile(sets[1], cellX(col), cellZ(1, 0), 0xe9ff4a, [cellX(col), CT.z]));
 		const chuteSpot = spotTile(sets[1], cellX(cc), cellZ(1, cr), 0xd04dff, CHUTE_AT);
 		return { pods, swirl, chute, hatchSpot, chuteSpot, serveSpots };
@@ -1806,6 +1809,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		if (has('cryo')) colour.lerp(new THREE.Color(0xbfe8ff), 0.45);
 		if (item.burnt) colour = new THREE.Color(0x120e0c);
 		const mat = std(colour, has('cryo') || has('fry') ? 0.25 : 0.45, 0.05);
+		mat.emissive.copy(colour).lerp(new THREE.Color(0xffffff), 0.15);   // (a faint glow of its own colour, so food reads in the dark)
+		mat.emissiveIntensity = 0.35;
 		if (has('inject')) { mat.emissive.set(0xb03aff); mat.emissiveIntensity = 0.45; }
 		if (has('warp')) { mat.emissive.set(0x1ad8ff); mat.emissiveIntensity = 0.55; }
 		if (item.burnt) { mat.emissive.set(0x3a1000); mat.emissiveIntensity = 0.4; mat.roughness = 0.95; }
@@ -2353,7 +2358,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			pp.rim.material.color.set(hatch.jam > 0 ? 0xffc21a : 0x9dff3a).multiplyScalar(hatch.jam > 0 && Math.sin(rt * 12) > 0 ? 0.4 : 1.8);
 			if (!pod) return;
 			const holder = pod;
-			const v = syncItem(holder, pod.ing ? { ing: pod.ing, steps: [], burnt: false } : null, sets[1], POD_X[k] + (hatch.shake ? rnd1() * 0.1 : 0), ISLAND.y + 0.34 + Math.sin(rt * 2 + k) * 0.05, POD_Z[k], 0.62);
+			const v = syncItem(holder, pod.ing ? { ing: pod.ing, steps: [], burnt: false } : null, sets[1], POD_X[k] + (hatch.shake ? rnd1() * 0.1 : 0), ISLAND.y + 0.2 + Math.sin(rt * 2 + k) * 0.05, POD_Z[k], 0.95);
 			if (v) v.rotation.y = rt * 0.8 + k;
 		});
 		hatch3d.swirl.rotation.z = -rt * 2.5;
@@ -2603,6 +2608,9 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			prompt(ctx, HATCH_UI.x, HATCH_UI.prompt, 'JAMMED! STAND HERE', '#ffc21a', true);
 			bar(ctx, HATCH_UI.x, HATCH_UI.prompt + 36, 200, 1 - hatch.jam / UNJAM, '#ffc21a');
 		} else prompt(ctx, HATCH_UI.x, HATCH_UI.prompt, 'STAND HERE TO GRAB', '#9dff3a', false);
+		// (what's in it, under its name)
+		const inHatch = pods.filter((p) => p.ing).map((p) => INGS[p.ing].short);
+		art.text(ctx, inHatch.length ? inHatch.join(' · ') : 'BEAMING IN...', HATCH_UI.x, HATCH_UI.plate + 36, { size: 18, weight: 800, font: FONT, fill: inHatch.length ? '#ffffff' : 'rgba(255,255,255,0.45)', outline: INK, outlineWidth: 4 });
 		prompt(ctx, CHUTE_UI.x, CHUTE_UI.prompt, 'STAND HERE TO BIN', '#d04dff', false);
 		const binning = chefs.find((c, i) => latest[i] && c.atChute && c.held);
 		if (binning) bar(ctx, CHUTE_UI.x, CHUTE_UI.prompt + 36, 200, binning.dwell / BIN_DWELL, '#d04dff');
