@@ -188,14 +188,15 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	// Side walls: no more than 4 creatures each, spread over the front 3/4 of the wall, leaving
 	// the back quarter of the screen clear (the back is the left edge of the left wall, the right
 	// edge of the right wall).
-	const SIDE = { 0: [0.3, 0.94], 2: [0.06, 0.7] };
-	for (const C of CLEARINGS) for (const w of [0, 2]) {
+	// Every wall keeps 1/6 of its width clear at each end, too.
+	const SIDE = { 0: [0.25, 5 / 6], 1: [1 / 6, 5 / 6], 2: [1 / 6, 0.75] };
+	for (const C of CLEARINGS) for (const w of [0, 1, 2]) {
 		const list = C.creatures.filter((d) => d.wall === w).sort((a2, b2) => (w === 0 ? b2.along - a2.along : a2.along - b2.along));
-		for (const d of list.slice(4)) C.creatures.splice(C.creatures.indexOf(d), 1);
-		const keep = list.slice(0, 4).sort((a2, b2) => a2.along - b2.along), [lo, hi] = SIDE[w];
+		if (w !== 1) for (const d of list.slice(4)) C.creatures.splice(C.creatures.indexOf(d), 1);
+		const keep = (w === 1 ? list : list.slice(0, 4)).sort((a2, b2) => a2.along - b2.along), [lo, hi] = SIDE[w];
 		keep.forEach((d, k) => { d.along = lo + (k + 0.5) / keep.length * (hi - lo); });
 	}
-	if (CLEARINGS[0].puffballs) CLEARINGS[0].puffballs = [[0, 0.38], [0, 0.62], [0, 0.86]];
+	if (CLEARINGS[0].puffballs) CLEARINGS[0].puffballs = [[0, 0.33], [0, 0.54], [0, 0.75]];
 	const CHORDS = [[0, 4, 7], [9, 12, 16], [5, 9, 12], [7, 11, 14]];
 	// each clearing's sky: where its sun (or moon) hangs, ahead, and the glow round the horizon
 	const SKY = [
