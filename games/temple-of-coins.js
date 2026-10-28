@@ -1127,7 +1127,9 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 		bronze: new THREE.MeshStandardMaterial({ color: 0x9a6a2a, metalness: 0.8, roughness: 0.35 }),
 		iron: new THREE.MeshStandardMaterial({ color: 0xd8dce6, metalness: 0.6, roughness: 0.25, emissive: 0x5a5f6a, emissiveIntensity: 0.6 }),
 		gold: new THREE.MeshStandardMaterial({ color: 0xffc23a, metalness: 0.55, roughness: 0.3, emissive: 0xffa21a, emissiveIntensity: 0.55 }),
-		coinGlow: new THREE.MeshBasicMaterial({ map: TEX.soft, color: new THREE.Color(1.3, 0.85, 0.2), transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending }),
+		coin: new THREE.MeshStandardMaterial({ color: 0xffcf45, metalness: 0.7, roughness: 0.32, emissive: 0xff9a10, emissiveIntensity: 0.14 }),
+		coinRim: new THREE.MeshStandardMaterial({ color: 0x9a5e0c, metalness: 0.75, roughness: 0.4, emissive: 0x3a1a00, emissiveIntensity: 0.3 }),
+		coinGlow: new THREE.MeshBasicMaterial({ map: TEX.soft, color: new THREE.Color(1.3, 0.85, 0.2), transparent: true, opacity: 0.25, depthWrite: false, blending: THREE.AdditiveBlending }),
 		wood: new THREE.MeshStandardMaterial({ color: 0x6a3d1c, roughness: 0.7 }),
 		dark: new THREE.MeshStandardMaterial({ color: 0x1a0f08, roughness: 0.6 }),
 		flame: new THREE.MeshBasicMaterial({ color: new THREE.Color(3.2, 1.4, 0.3), transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }),
@@ -1216,7 +1218,9 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 		block: new THREE.BoxGeometry(CS * 0.96, WALL_H, CS * 0.96),
 		cap: new THREE.BoxGeometry(CS * 1.0, 0.08, CS * 1.0),
 		coin: new THREE.CylinderGeometry(0.2, 0.2, 0.05, 32),   // (lying flat: seen from above, a coin's face is what shows)
-		coinRim: new THREE.TorusGeometry(0.2, 0.024, 8, 32).rotateX(Math.PI / 2),
+		coinRim: new THREE.TorusGeometry(0.2, 0.026, 8, 32).rotateX(Math.PI / 2),
+		coinBoss: new THREE.CylinderGeometry(0.12, 0.14, 0.03, 28),
+		coinEdge: new THREE.TorusGeometry(0.13, 0.012, 6, 28).rotateX(Math.PI / 2),
 		gem: new THREE.OctahedronGeometry(0.07),
 		pad: new THREE.CylinderGeometry(0.42, 0.46, 0.06, 28),
 		rune: new THREE.PlaneGeometry(1.0, 1.0),
@@ -1254,7 +1258,7 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 		}
 		return out;
 	}
-	const MAT_SHADOW = new THREE.MeshBasicMaterial({ map: TEX.soft, color: 0x000000, transparent: true, opacity: 0.45, depthWrite: false });
+	const MAT_SHADOW = new THREE.MeshBasicMaterial({ map: TEX.soft, color: 0x000000, transparent: true, opacity: 0.6, depthWrite: false });
 
 	function makeBlock(group, x, z, delay) {
 		const g = new THREE.Group();
@@ -1273,10 +1277,13 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 	}
 	function makeCoin(group, x, z, value, delay) {
 		const g = new THREE.Group();
-		const face = new THREE.Mesh(GEO.coin, MAT.gold);
-		const rim = new THREE.Mesh(GEO.coinRim, MAT.gold);
-		face.castShadow = true;
-		g.add(face, rim);
+		const face = new THREE.Mesh(GEO.coin, MAT.coin);
+		const rim = new THREE.Mesh(GEO.coinRim, MAT.coinRim);
+		const boss = new THREE.Mesh(GEO.coinBoss, MAT.coin);   // (the raised middle, so the face catches the light)
+		boss.position.y = 0.03;
+		const edge = new THREE.Mesh(GEO.coinEdge, MAT.coinRim);
+		edge.position.y = 0.029;
+		for (const m of [face, rim, boss, edge]) { m.castShadow = true; g.add(m); }
 		if (value >= BIG) {
 			const gem = new THREE.Mesh(GEO.gem, new THREE.MeshStandardMaterial({ color: 0xff2a4a, emissive: 0xff1030, emissiveIntensity: 1.4, roughness: 0.2 }));
 			gem.position.y = 0.04;
@@ -1285,7 +1292,7 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 		}
 		const sh = new THREE.Mesh(GEO.shadow, MAT_SHADOW);
 		sh.rotation.x = -Math.PI / 2;
-		sh.scale.setScalar(0.42);
+		sh.scale.setScalar(0.62);   // (a good dark shadow under each, so it stands off the floor)
 		sh.position.set(x, 0.01, z);
 		group.add(sh);
 		const glow = new THREE.Mesh(GEO.shadow, MAT.coinGlow);
@@ -1633,7 +1640,7 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 			c.glow.position.set(x, 0.02, z);
 			const s = (c.big ? 1.55 : 1) * 1.3 * easeOut(Math.max(0, c.pop));
 			c.mesh.scale.setScalar(Math.max(0.001, s));
-			c.mesh.position.set(x, 0.3 + Math.sin(c.spin * 0.8) * 0.05 + arc + (c.drop || 0) * 4, z);   // (drop: only the coins the treasury rains)
+			c.mesh.position.set(x, 0.36 + Math.sin(c.spin * 0.8) * 0.05 + arc + (c.drop || 0) * 4, z);   // (drop: only the coins the treasury rains)
 			c.mesh.rotation.set(0.55, c.spin, 0);   // (tipped back a little, turning: it glints as it goes round)
 			c.shadow.position.set(x, 0.012, z);
 		}
