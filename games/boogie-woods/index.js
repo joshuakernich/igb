@@ -66,7 +66,13 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	const TOUCH_TOP = 0.4;        // ...and only below this far down the wall (where a child can reach)
 	const JUMP = 0.075;           // rising this far above your usual height is a jump
 	const SQUAT = 0.13;           // ...and sinking this far, a squat
-	const AVATAR_REACH = 1.45;   // (the puffballs travel this much further than you do, so a step toward a wall carries them out among the creatures)
+	// The avatars go further than you do (a step toward a wall carries them well out),
+	// but only so far: they reach AV_MAX from the middle when you're 70% of the way to
+	// a wall, and stop there. Creatures and scenery stand beyond it; the things you stand
+	// on or in (the moonbeams, the piano) are laid out inside it, where the avatars go.
+	const AV_MAX = 2.45, AV_K = AV_MAX / (0.7 * R);
+	const avCap = (v) => Math.sign(v) * Math.min(Math.abs(v) * AV_K, AV_MAX);
+	const avatarAt = (px, pz) => ({ x: avCap((px - 0.5) * 2 * R), z: avCap((0.5 - pz) * 2 * R) });   // (from the clearing's middle)
 	const RUN = 0.42;             // moving faster than this (rooms a second) shakes the shaker
 
 	/* ---------- the music ---------- */
@@ -743,7 +749,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		for (const th of theremins) {
 			if (th.ci !== here) { if (th.voice) { th.voice.stop(); th.voice = null; th.who = -1; } continue; }
 			let who = -1;
-			if (on) for (let i = 0; i < count; i++) { const p = latest[i]; if (p && pl[i].seen && near(p, th.spot, 0.12)) { who = i; break; } }
+			if (on) for (let i = 0; i < count; i++) { const p = latest[i]; if (p && pl[i].seen && Math.hypot(avCap(pl[i].x) - (th.pos.x - walls.rig.position.x), avCap(pl[i].z) - (th.pos.z - walls.rig.position.z)) < 0.42) { who = i; break; } }   // (your avatar in the beam)
 			if (who >= 0) {
 				const p = latest[who], q = pl[who];
 				const k = clamp(0.5 + (q.base - p.py) / 0.24, 0, 1);   // (up a little is higher, down lower)
@@ -790,8 +796,11 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			if (pn && live && !glide) {
 				const { along, dist } = wallsOf(p);
 				const w = pn.wall;
-				const u = (along[w] - 1 / 6) / (2 / 3);   // (the panels fill the middle 2/3 of the wall)
-				const key = dist[w] < PIANO.band && u > -0.04 && u < 1.04 ? clamp(Math.floor(u * PIANO.per), 0, PIANO.per - 1) : -1;
+				// (the panel your avatar is standing on: its depth out toward the wall, and which strip of the fan)
+				const ax = avCap(q.x), az = avCap(q.z);
+				const depth = w === 0 ? -ax : w === 2 ? ax : -az, lat = w === 0 ? -az : w === 2 ? az : ax;
+				const sF = depth > 0.1 ? lat / depth / (2 / 3) : 9;
+				const key = depth > PIANO.from && Math.abs(sF) < 1.02 ? clamp(Math.floor((sF * 0.5 + 0.5) * PIANO.per), 0, PIANO.per - 1) : -1;
 				if (key >= 0) pn.held[key] = i;
 				if (key !== q.key) {
 					q.key = key;
@@ -1358,7 +1367,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			offbeat: rnd() < 0.3,
 		};
 		// where it stands: beyond its wall, drawn at `along` on that wall
-		const D = R + def.out;
+		const D = R + Math.max(def.out, 0.6);   // (beyond the avatars' reach, AV_MAX, with room for its own girth)
 		const lat = (def.along - 0.5) * 2 * D;
 		if (def.wall === 1) root.position.set(lat, 0, -D);
 		if (def.wall === 0) root.position.set(-D, 0, -lat);
@@ -2451,7 +2460,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	// foot of the three walls, pale and dark like keys, 6 a wall. Whoever walks
 	// along near a wall plays the stone in front of them the moment they step on
 	// it: low on the left wall, rising across the front and up the right.
-	const PIANO = { per: 12, band: 0.32 };   // (12 stones, all along one wall)
+	const PIANO = { per: 12, from: 1.15 };   // (an avatar further out than this, on the fan, is on a panel)   // (12 stones, all along one wall)
 	const pianos = [];
 	function glowInstanced(geo, n, extra = {}) {
 		const mat = new THREE.MeshStandardMaterial(Object.assign({ color: '#ffffff', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 4, roughness: 0.55 }, extra));
@@ -2659,15 +2668,18 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	const FALL = 0.5;
 	function buildXylo(g, ci, cx, cz) {
 		const N = 7, logs = [];
-		const wood = new THREE.MeshStandardMaterial({ map: TEX.bark, bumpMap: TEX.bark, bumpScale: 3, roughness: 0.8 });
+		const wood = new THREE.MeshStandardMaterial({ color: '#d8a868', map: TEX.bark, bumpMap: TEX.bark, bumpScale: 1.5, roughness: 0.55 });
 		const U0 = 1 / 6, US = 2 / 3;   // (the middle two thirds of the front wall)
 		for (let k = 0; k < N; k++) {
 			const u = U0 + (k + 0.5) / N * US;
-			const pos = wallPoint(cx, cz, 1, u, 0.06, 0.13);
-			const len = lerp(0.8, 0.45, k / (N - 1));
+			const pos = wallPoint(cx, cz, 1, u, 0.06, 0.11);
+			const len = lerp(0.85, 0.5, k / (N - 1));
 			const mat = wood.clone();
-			const log = mesh(new THREE.CylinderGeometry(0.075, 0.08, len, 14), mat, g, pos.x, pos.y, pos.z);
-			log.rotation.x = Math.PI / 2;
+			mat.color.offsetHSL(0, 0, (k % 2 ? -0.04 : 0.04));
+			// (a flat wooden plank, the next almost touching it, longest for the lowest note)
+			const pw = 2 * (R + 0.06) * US / N * 0.9;
+			const log = mesh(new THREE.BoxGeometry(pw, 0.05, len), mat, g, pos.x, pos.y, pos.z);
+			log.rotation.y = rr(-0.03, 0.03);
 			logs.push({ log, mat, pos, deg: k + 2, hit: 0, under: -1 });
 		}
 		for (const dz of [-0.2, 0.2]) mesh(new THREE.BoxGeometry(2 * (R + 0.06) * US * 0.98, 0.05, 0.06), wood, g, cx, 0.05, cz - R - 0.06 + dz);
@@ -2694,7 +2706,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	const theremins = [];
 	const BEAM_TINT = [[1.8, 1.0, 1.6], [1.2, 1.3, 1.8], [1.0, 1.8, 1.5]];   // (low, middle, high)
 	function buildTheremin(g, ci, cx, cz, [w, along], k = 1) {
-		const pos = wallPoint(cx, cz, w, along, 0.35, 0);
+		const sp0 = spotOf(w, along), av = avatarAt(sp0.px, sp0.pz);
+		const pos = new THREE.Vector3(cx + av.x, 0, cz + av.z);   // (exactly where an avatar stands in it)
 		const tint = BEAM_TINT[k % 3];
 		const beamMat = new THREE.MeshBasicMaterial({ map: TEX.ray, color: new THREE.Color(...tint), transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
 		const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 9, 24, 1, true), beamMat);
@@ -3067,7 +3080,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			const q = pl[i], m = q.mesh;
 			m.visible = q.seen && phase !== 'off';
 			if (!m.visible) continue;
-			m.position.set(walls.rig.position.x + q.x * AVATAR_REACH, 0.3 + pulse * 0.08 + (q.jumpT > 0.3 ? 0.25 : 0), walls.rig.position.z + q.z * AVATAR_REACH);
+			m.position.set(walls.rig.position.x + avCap(q.x), 0.3 + pulse * 0.08 + (q.jumpT > 0.3 ? 0.25 : 0), walls.rig.position.z + avCap(q.z));
 			m.lookAt(walls.rig.position.x, 0.3, walls.rig.position.z - 4);
 			m.scale.setScalar(1 + pulse * 0.1);
 			if (q.speed > RUN && Math.random() < 0.4) spray(m.position, colour(i), 2, 0.6, 1);
