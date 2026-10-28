@@ -1252,7 +1252,6 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		rubber: std(0x3a3458, 0.8, 0),
 		cream: std(0xfff4dc, 0.5, 0),
 		white: std(0xffffff, 0.35, 0),
-		puddle: std(0x7aff5a, 0.05, 0, { transparent: true, opacity: 0.45, emissive: 0x3aa020, emissiveIntensity: 0.3 }),
 	};
 
 	// each room's colours: its floor's checks, its wall's tiles, the floor round the grid
@@ -1368,6 +1367,47 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		return body;
 	}
 
+	// Spills: dark, glossy, barely tinted wet patches that catch the light rather
+	// than glow. Each is an irregular pool, a thinner film spreading round its
+	// edge, and a few splash droplets flicked off to one side.
+	const SPILLS = [
+		{ colour: 0x120a04, opacity: 0.72 },   // old fryer oil
+		{ colour: 0x1c3a10, opacity: 0.5 },    // something that was green once
+		{ colour: 0x3a0816, opacity: 0.55 },   // sauce, probably
+	];
+	const spillMats = SPILLS.map((k) => [1, 0.38].map((o) => std(k.colour, 0.03, 0.15, { clearcoat: 1, clearcoatRoughness: 0.04, transparent: true, opacity: k.opacity * o, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 })));
+	function blob(rnd, r, wobble) {
+		const ph = [rnd() * 6, rnd() * 6, rnd() * 6], amp = [0.18, 0.1, 0.05].map((a) => a * wobble * (0.6 + rnd() * 0.8));
+		const pts = [];
+		for (let i = 0; i < 40; i++) {
+			const a = i / 40 * Math.PI * 2;
+			const k = 1 + amp[0] * Math.sin(2 * a + ph[0]) + amp[1] * Math.sin(3 * a + ph[1]) + amp[2] * Math.sin(5 * a + ph[2]);
+			pts.push(new THREE.Vector2(Math.cos(a) * r * k, Math.sin(a) * r * k * 0.8));
+		}
+		const shape = new THREE.Shape();
+		shape.moveTo(pts[0].x, pts[0].y);
+		shape.splineThru(pts.slice(1).concat([pts[0]]));
+		return new THREE.ShapeGeometry(shape, 3);
+	}
+	function spill(g, rnd, x, z, kind) {
+		const m = spillMats[SPILLS.indexOf(kind)];
+		const r = 0.28 + rnd() * 0.42;
+		const turn = rnd() * Math.PI * 2;
+		const put = (geo, mat, dx, dz, y) => {
+			const p = mesh(geo, mat, g, x + dx, y, z + dz);
+			p.rotation.set(-Math.PI / 2, 0, turn);
+			p.receiveShadow = true;
+			return p;
+		};
+		put(blob(rnd, r * 1.25, 1.3), m[1], 0, 0, 0.006);   // (the thin film round it)
+		put(blob(rnd, r, 1), m[0], 0, 0, 0.009);            // (the pool)
+		const n = 2 + Math.floor(rnd() * 3);
+		for (let k = 0; k < n; k++) {                        // (the splashes)
+			const a = turn + (rnd() - 0.5) * 1.2, d = r * (1.4 + rnd() * 0.9);
+			put(blob(rnd, r * (0.06 + rnd() * 0.1), 0.6), m[0], Math.cos(a) * d, -Math.sin(a) * d * 0.8, 0.009);
+		}
+	}
+
 	function buildRoom(w) {
 		const g = sets[w];
 		const backZ = BACK_Z[w];
@@ -1394,13 +1434,9 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 				j.rotation.z = Math.PI / 2;
 			}
 		}
-		// puddles of something, a drain, a few crates and barrels in the corners
+		// spills, and a drain
 		const rnd = seeded(40 + w);
-		for (let n = 0; n < 6; n++) {
-			const pd = mesh(new THREE.CircleGeometry(0.3 + rnd() * 0.5, 24), MAT.puddle, g, -7 + rnd() * 14, 0.01, -0.5 + rnd() * 5.5);
-			pd.rotation.x = -Math.PI / 2;
-			pd.scale.set(1, 0.6 + rnd() * 0.5, 1);
-		}
+		for (let n = 0; n < 4; n++) spill(g, rnd, -6.5 + rnd() * 13, -1.2 + rnd() * 6, SPILLS[(n + w) % SPILLS.length]);
 		const drain = mesh(new THREE.CircleGeometry(0.3, 20), MAT.black, g, -0.2 + rnd() * 0.4, 0.012, 0.2);
 		drain.rotation.x = -Math.PI / 2;
 		// light: a warm overhead wash, and the room's own colour of neon
