@@ -21,7 +21,7 @@
  * Five clearings, each with its own motif, creatures, key and tempo; the
  * camera glides down the forest path to the next every hundred seconds:
  *   MUSHROOM HOLLOW   the mushroom folk's marimba, under glowing giant toadstools
- *   FROGGY BOG        a croaking frog choir by a moonlit pond under a waterfall; wade in to make it shimmer
+ *   FROGGY BOG        a croaking frog choir by a moonlit pond under a waterfall; wade in and your own tone shimmers
  *   HEDGEHOG HOEDOWN  a hedgehog drummer, kazoo bunnies and a tuba troll on a log stage
  *   FAIRY RING        bell-ringing fairies and a flower choir, and a mossy stone wall
  *                     overgrown with ivy and ferns, set with odd-shaped stones: a step
@@ -293,7 +293,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		count = nPlayers;
 		scores = new Array(nPlayers).fill(0);
 		for (let i = 0; i < nPlayers; i++) {
-			pl.push({ x: 0, z: 0, seen: false, base: null, jumpT: 0, squatT: 0, squatting: false, speed: 0, prev: null, mesh: buildPuff(i), at: -1 });
+			pl.push({ shim: null, shimE: 0, x: 0, z: 0, seen: false, base: null, jumpT: 0, squatT: 0, squatting: false, speed: 0, prev: null, mesh: buildPuff(i), at: -1 });
 		}
 		show.go('title');
 	}
@@ -330,6 +330,39 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	}
 	const resume = () => { if (ac && ac.state !== 'running') ac.resume().catch(() => {}); };
 	// a voice that holds while you hold it: a puffball's drone, the moonbeam's whistle
+	// a held shimmer: glassy sine partials through a lowpass, trembling; set(e, pan) swells
+	// it (louder, brighter, the upper partials blooming, the tremble quicker) and leans it
+	// left or right; stop() lets it ring away
+	function shimmerVoice(f, wall) {
+		const t0 = ac.currentTime;
+		const g = ac.createGain();
+		g.gain.setValueAtTime(0.0001, t0);
+		const pan = ac.createStereoPanner ? ac.createStereoPanner() : null;
+		if (pan) { g.connect(pan); pan.connect(pans[wall] || bus); } else g.connect(pans[wall] || bus);
+		const trem = ac.createGain(); trem.gain.value = 1; trem.connect(g);
+		const lp = filt('lowpass', 900, 0.8, trem);
+		const parts = [[1, 1, 0], [2, 0.5, 4], [3.01, 0.35, -5], [4.2, 0.25, 7], [6.3, 0.16, -8], [8.1, 0.1, 9]].map(([m, a, det]) => {
+			const pg = ac.createGain(); pg.gain.value = m === 1 ? a : 0; pg.connect(lp);
+			const o = osc('sine', f * m, t0, 600, pg); o.detune.value = det;
+			const o2 = osc('sine', f * m, t0, 600, pg); o2.detune.value = det + 7;   // (a slow beating twin)
+			return { pg, a, m, oscs: [o, o2] };
+		});
+		const lfo = ac.createOscillator(), lg = ac.createGain();
+		lfo.frequency.value = 3; lg.gain.value = 0.15;
+		lfo.connect(lg).connect(trem.gain); lfo.start(t0); lfo.stop(t0 + 600);
+		return {
+			set(e, p) {
+				const t = ac.currentTime;
+				g.gain.setTargetAtTime(0.0001 + e * 0.13, t, 0.08);
+				lp.frequency.setTargetAtTime(700 + e * e * 7000, t, 0.1);
+				for (const pt of parts) if (pt.m > 1) pt.pg.gain.setTargetAtTime(pt.a * clamp(e * 1.6 - pt.m * 0.08, 0, 1), t, 0.15);
+				lfo.frequency.setTargetAtTime(2.5 + e * 7, t, 0.2);
+				lg.gain.setTargetAtTime(0.1 + e * 0.25, t, 0.2);
+				if (pan) pan.pan.setTargetAtTime(clamp(p, -1, 1) * 0.6, t, 0.1);
+			},
+			stop() { const t = ac.currentTime; g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(0.0001, t, 0.15); for (const pt of parts) for (const o of pt.oscs) o.stop(t + 1); lfo.stop(t + 1); },
+		};
+	}
 	function holdVoice(f, kind, wall) {
 		if (!audioOn()) return null;
 		const t0 = ac.currentTime;
@@ -736,27 +769,34 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		ripples = ripples.filter((r) => r.t < 0.5);
 	}
 
+	// Each player in the pond has their own held shimmering tone (their own note of the
+	// scale): a faint glassy hum standing still, swelling and brightening as they wade,
+	// fading away when they step out of the water.
+	const WADE_DEG = [5, 7, 9, 6, 8, 10];
 	function wade(dt, on) {
 		const pd = ponds[here];
-		if (!pd) return;
-		pd.U.uNow.value = rt;
-		for (let i = 0; i < count; i++) {
+		if (pd) pd.U.uNow.value = rt;
+		for (let i = 0; i < pl.length; i++) {
 			const q = pl[i];
-			if (!q.seen || !on) continue;
 			const ax = avCap(q.x), az = avCap(q.z);
-			const inPond = az < -POND.front && Math.abs(ax) < POND.half;
+			const inPond = !!pd && on && i < count && q.seen && az < -POND.front && Math.abs(ax) < POND.half;
+			const v = inPond ? q.speed * 2 * R : 0;   // (m/s)
+			// (its energy: quick to swell while you move, slow to settle, gone a second after you leave)
+			const want = inPond ? 0.15 + 0.85 * clamp(v / 1.0, 0, 1) : 0;
+			q.shimE = lerp(q.shimE || 0, want, 1 - Math.exp(-dt * (want > (q.shimE || 0) ? 4 : inPond ? 1.2 : 2.5)));
+			if (inPond && !q.shim && audioOn()) q.shim = shimmerVoice(freqOf(CLEARINGS[here].root, WADE_DEG[i % 6]), 1);
+			if (q.shim) {
+				q.shim.set(q.shimE, ax / POND.half);
+				if (!inPond && q.shimE < 0.01) { q.shim.stop(); q.shim = null; }
+			}
 			if (!inPond) { q.wadeD = 0; continue; }
-			const v = q.speed * 2 * R;   // (m/s)
 			if (v < 0.12) continue;
+			// (and a ripple every so often as you go)
 			q.wadeD = (q.wadeD || 0) + v * dt;
 			if (q.wadeD < 0.32) continue;
 			q.wadeD = 0;
 			const r = pd.rip[pd.next = (pd.next + 1) % POND.maxRip];
 			r.set(pd.cx + ax, pd.cz + az, rt, Math.min(1, 0.45 + v * 0.5));
-			if (audioOn()) {
-				const deg = 5 + Math.round((ax / POND.half * 0.5 + 0.5) * 9);
-				SND.shimmer(clock() + 0.005, freqOf(CLEARINGS[here].root, deg) * 2, 0.11 * Math.min(1, 0.5 + v * 0.4), 1);
-			}
 			scores[i] += 1;
 			tut.sung[i] = true;
 		}
