@@ -2677,14 +2677,16 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			const mat = wood.clone();
 			mat.color.offsetHSL(0, 0, (k % 2 ? -0.04 : 0.04));
 			// (a flat wooden plank, the next almost touching it, longest for the lowest note)
-			const pw = 2 * (R + 0.06) * US / N * 0.9;
+			const pw = 2 * (R + 0.06) * US / N * 0.86;   // (a little narrower: turned, they'd overlap)
 			// (wonky: every corner a little off, some ends cut on the slant, each laid a bit askew)
 			const hw = pw / 2, hl = len / 2, j = () => rr(-0.045, 0.045);
 			const outline = [[-hw + j(), -hl + j()], [hw + j(), -hl + j() + (rnd() < 0.5 ? rr(-0.08, 0.08) : 0)], [hw + rr(-0.02, 0.05), rr(-0.08, 0.08)], [hw + j(), hl + j()], [-hw + j(), hl + j() + rr(-0.06, 0.06)], [-hw + rr(-0.05, 0.02), rr(-0.08, 0.08)]];
-			const pg = new THREE.ExtrudeGeometry(new THREE.Shape(outline.map(([a, b]) => new THREE.Vector2(a, b))), { depth: rr(0.04, 0.07), bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 1 });
+			const pg = new THREE.ExtrudeGeometry(new THREE.Shape(outline.map(([a, b]) => new THREE.Vector2(a, b))), { depth: rr(0.1, 0.13), bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 2 });
 			pg.rotateX(-Math.PI / 2);
 			const log = mesh(pg, mat, g, pos.x, pos.y, pos.z);
-			log.rotation.set(0.45 + rr(-0.06, 0.06), rr(-0.08, 0.08), rr(-0.07, 0.07));   // (tipped up toward you, like a lectern)
+			// (tipped up toward you like a lectern, and each turned partway to point at you)
+			log.rotation.order = 'YXZ';
+			log.rotation.set(0.45 + rr(-0.06, 0.06), 0.7 * Math.atan2(-(pos.x - cx), R + 0.06) + rr(-0.05, 0.05), rr(-0.07, 0.07));
 			logs.push({ log, mat, pos, deg: k + 2, hit: 0, under: -1 });
 		}
 		// the rickety frame: two crooked rails on splayed legs
