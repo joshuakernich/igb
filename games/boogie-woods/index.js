@@ -2161,7 +2161,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			if (C.pond && z < cz - R && z > cz - R - 3.2 && Math.abs(x - cx) < R + 1) return false;   // (the pond's open water)
 			if (pathDist(x - cx, z) < 1.7) return false;   // (the winding path, ahead and behind: the walk goes through)
 			if (C.xylo && z < cz - R + 0.2 && z > cz - R - 1.1 && Math.abs(x - cx) < R + 0.4) return false;   // (the logs)
-			if (C.piano !== undefined && x < cx - 0.8 && x > cx - R - 4.6 && Math.abs(z - cz) < 0.72 * (cx - x) + 0.4) return false;   // (the piano's fan of panels and crystals)   // (the stepping stones)
+			if (C.piano !== undefined && x < cx - 0.8 && x > cx - R - 4.6 && Math.abs(z - cz) < Math.min(0.72 * (cx - x), R) + 0.45) return false;   // (the piano's panels and crystals)   // (the stepping stones)
 			return !spots.some(([sx, sz]) => Math.hypot(x - sx, z - sz) < 0.95 + pad);
 		};
 		// trees in rings, the nearest framing the corners between the walls
@@ -2487,11 +2487,14 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		else if (w === 2) toWorld.set(0, 1, 0, cx, 0, 0, 1, 0, 1, 0, 0, cz, 0, 0, 0, 1);
 		else toWorld.set(1, 0, 0, cx, 0, 0, 1, 0, 0, -1, 0, cz, 0, 0, 0, 1);
 		for (let k = 0; k < n; k++) {
-			const sL = ((k + 0.03) / n - 0.5) * 2 * SPAN, sR = ((k + 0.97) / n - 0.5) * 2 * SPAN, sM = (sL + sR) / 2;
-			const lat = sM * (dOut - 0.25);
+			// (far off, the panels run parallel, as wide as the clearing; nearer than dJoin they
+			// taper into the middle 2/3 of the screen. The two meet exactly at dJoin, for every edge.)
+			const sL = ((k + 0.03) / n - 0.5) * 2 * SPAN, sR = ((k + 0.97) / n - 0.5) * 2 * SPAN, dJoin = R / SPAN;
+			const LL = sL * dJoin, LR = sR * dJoin;
+			const lat = (LL + LR) / 2;
 			// the panel: a long tapering slab, pale and dark by turns, like keys
 			const pmat = new THREE.MeshStandardMaterial({ color: k % 2 ? '#5a5a62' : '#d6d0c2', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 3, roughness: 0.7, side: THREE.DoubleSide });
-			const shape = new THREE.Shape([new THREE.Vector2(sL * dIn, dIn), new THREE.Vector2(sR * dIn, dIn), new THREE.Vector2(sR * dOut, dOut), new THREE.Vector2(sL * dOut, dOut)]);
+			const shape = new THREE.Shape([new THREE.Vector2(sL * dIn, dIn), new THREE.Vector2(sR * dIn, dIn), new THREE.Vector2(LR, dJoin), new THREE.Vector2(LR, dOut), new THREE.Vector2(LL, dOut), new THREE.Vector2(LL, dJoin)]);
 			const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 2 });
 			geo.applyMatrix4(toWorld);
 			const mid = new THREE.Vector3(0, 0.0, 0);
