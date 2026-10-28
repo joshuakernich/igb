@@ -24,10 +24,12 @@
  *   FROGGY BOG        a croaking frog choir on a moonlit pond
  *   HEDGEHOG HOEDOWN  a hedgehog drummer, kazoo bunnies and a tuba troll on a log stage
  *   FAIRY RING        bell-ringing fairies and a flower choir, and a mossy stone wall
- *                     grown over with shelf mushrooms: a step sequencer, 8 steps by 5
- *                     notes; touch a mushroom to light it, and a shaft of light plays
- *                     the wall left to right
- *   TROLL BRIDGE      the whole gang under a mossy bridge
+ *                     overgrown with ivy and ferns, set with odd-shaped stones: a step
+ *                     sequencer, 8 steps by 5 notes; touch a stone to light it, and a
+ *                     shaft of light plays the wall left to right
+ *   TROLL BRIDGE      the whole gang under a mossy bridge, and a stepping-stone piano
+ *                     round the foot of all three walls: walk along near a wall
+ *                     and each stone you step on plays its note, live
  *
  * Drawn in 3D (three.js, the shared wall rig and bloom): three cameras back to
  * back on one rig, so the three walls are one panorama. The music is all
@@ -145,7 +147,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				{ kind: 'gnome', wall: 2, along: 0.3, out: 0.6, note: 7, pat: 'vox', tint: '#32cd32' },
 				{ kind: 'bunny', wall: 2, along: 0.72, out: 0.5, note: 9, pat: 'mel3', tint: '#c8a07a' },
 			] },
-		{ name: 'FAIRY RING', sub: 'TOUCH THE MUSHROOMS ON THE WALL TO WRITE A TUNE', bpm: 92, root: 329.6, grid: true,
+		{ name: 'FAIRY RING', sub: 'TOUCH THE STONES IN THE WALL TO WRITE A TUNE', bpm: 92, root: 329.6, grid: true,
 			sky: ['#0a0420', '#5a2a9a'], fog: '#2a1450', ground: '#3a4a3a', sun: '#c8b8ff', lights: ['#ff7aff', '#7ad8ff', '#fff07a', '#b07aff'],
 			groove: { kick: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], hat: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], snare: [] },
 			motif: 'ring',
@@ -155,7 +157,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				{ kind: 'fairy', wall: 2, along: 0.3, out: 0.6, note: 12, pat: 'bells2', tint: '#a0ffd0' },
 				{ kind: 'snail', wall: 2, along: 0.72, out: 0.5, note: -5, pat: 'bass2', tint: '#b07aff' },
 			] },
-		{ name: 'TROLL BRIDGE', sub: 'THE WHOLE GANG, UNDER THE BRIDGE', bpm: 108, root: 246.9,
+		{ name: 'TROLL BRIDGE', sub: 'WALK ALONG THE WALLS TO PLAY THE STEPPING-STONE PIANO', bpm: 108, root: 246.9, piano: true,
 			sky: ['#1a3a3a', '#a8e0a0'], fog: '#3a6a5a', ground: '#4a6a3a', sun: '#e8ffc8', lights: ['#a8ff6a', '#ff8a4a', '#6affff', '#ff5fd0'],
 			groove: { kick: [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0], hat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] },
 			motif: 'bridge',
@@ -451,6 +453,15 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			const o = osc('sawtooth', 70, time, 0.8, lp);
 			o.frequency.exponentialRampToValueAtTime(38, time + 0.6);
 		},
+		piano(time, f, v, w) {
+			const g = vca(time, 0.003, v, 1.4, w);
+			const lp = filt('lowpass', Math.min(f * 7, 9000), 0.7, g);
+			osc('triangle', f, time, 1.5, lp);
+			const g2 = vca(time, 0.002, v * 0.35, 0.6, w);
+			osc('sine', f * 2.005, time, 0.7, g2);
+			const g3 = vca(time, 0.001, v * 0.25, 0.04, w);
+			noise(time, 0.05, filt('bandpass', f * 4, 1.2, g3));
+		},
 		pad(time, root, chord, len, v) {
 			for (const st of chord) {
 				const f = root / 2 * Math.pow(2, st / 12);
@@ -625,6 +636,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 
 	function readPlayers(dt, live) {
 		for (const cr of creatures) cr.singer = -1;
+		for (const pn of pianos) if (pn) pn.held.fill(-1);
 		for (let i = 0; i < count; i++) {
 			const p = latest[i], q = pl[i];
 			if (!p) { q.seen = false; continue; }
@@ -647,6 +659,24 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			}
 			if (p.py > q.base + SQUAT) { q.squatT += dt; if (live && q.squatT > 0.25 && !q.squatting) { q.squatting = true; scores[i] += 3; if (!pending.some((e) => e.kind === 'squat')) pending.push({ kind: 'squat', beat: true }); } }
 			else { q.squatT = 0; q.squatting = false; }
+			// the stepping-stone piano: the stone you step onto plays, now
+			const pn = pianos[here];
+			if (pn && live && !glide) {
+				const { along, dist } = wallsOf(p);
+				let w = 0;
+				for (let k2 = 1; k2 < 3; k2++) if (dist[k2] < dist[w]) w = k2;
+				const key = dist[w] < PIANO.band ? w * PIANO.per + clamp(Math.floor(along[w] * PIANO.per), 0, PIANO.per - 1) : -1;
+				if (key >= 0) pn.held[key] = i;
+				if (key !== q.key) {
+					q.key = key;
+					if (key >= 0) {
+						pn.flash[key] = 1;
+						scores[i] += 1;
+						if (audioOn()) SND.piano(clock() + 0.005, freqOf(CLEARINGS[here].root, key - 4), 0.45, w);
+						spray(pn.pos[key], colour(i), 6, 1, 0.8);
+					}
+				}
+			} else q.key = -1;
 			// standing in front of a creature
 			q.at = -1;
 			if (!live || glide) continue;
@@ -1988,6 +2018,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		MOTIF[C.motif](g, ci, cx, cz, C);
 		// (the festoon lights were here; removed at the user's request. buildFestoon still works if they come back)
 		if (C.grid) buildGrid(g, ci, cx, cz);
+		if (C.piano) buildPiano(g, ci, cx, cz);
 		bake(g);
 		// the creatures
 		for (const def of C.creatures) {
@@ -2098,26 +2129,69 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const dome = new THREE.SphereGeometry(0.16, 22, 6, -Math.PI / 2, Math.PI, 0, Math.PI / 2).scale(1, 0.32, 1).translate(0, 0.026, 0);
 		return mergeGeometries([shelf.toNonIndexed(), dome.toNonIndexed()]);
 	})();
+	const ROCKS = [0, 1, 2, 3, 4, 5].map((k) => {
+		const geo = new THREE.IcosahedronGeometry(1, 4);
+		const p = geo.attributes.position, v = new THREE.Vector3();
+		for (let i = 0; i < p.count; i++) {
+			v.fromBufferAttribute(p, i);
+			const n = 1 + 0.18 * Math.sin(v.x * 3.1 + k) * Math.sin(v.y * 2.3 + k * 2) + 0.12 * Math.sin(v.z * 4.7 + k * 3) + 0.06 * Math.sin((v.x + v.y) * 9 + k);
+			v.multiplyScalar(n);
+			v.y *= 0.82;
+			p.setXYZ(i, v.x, v.y, v.z);
+		}
+		geo.computeVertexNormals();
+		return geo;
+	});
 	function buildGrid(g, ci, cx, cz) {
 		const C = CLEARINGS[ci];
 		const z = cz - GRID.D;
 		const unit = new THREE.Group();
 		unit.userData.unit = true;
 		g.add(unit);
-		// the wall: rough blocks of mossy stone, three courses high, with moss and ferns along the top
-		const stone = shared('gridStone', () => new THREE.MeshStandardMaterial({ color: '#8a8478', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 5, roughness: 0.9 }));
-		for (let row = 0; row < 4; row++) {
-			for (let x = -3.6 + (row % 2) * 0.3; x < 3.6; x += rr(0.5, 0.75)) {
-				const w = rr(0.5, 0.78), h = rr(0.38, 0.46);
-				const b = mesh(GEO.box, stone, unit, cx + x, row * 0.42 + h / 2, z - 0.3 + rr(-0.04, 0.04), w, h, 0.5);
-				b.rotation.set(rr(-0.04, 0.04), rr(-0.06, 0.06), rr(-0.05, 0.05));
-				b.receiveShadow = true;
+		// the wall: dry stone, irregular rocks laid in rough courses, with a ragged top
+		const stoneA = shared('wallStoneA', () => new THREE.MeshStandardMaterial({ color: '#8f877a', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 6, roughness: 0.92 }));
+		const stoneB = shared('wallStoneB', () => new THREE.MeshStandardMaterial({ color: '#6f7a5e', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 6, roughness: 0.95 }));
+		const tops = [];
+		for (let row = 0; row < 5; row++) {
+			for (let x = -3.7 + rr(0, 0.3); x < 3.7; ) {
+				const w = rr(0.22, 0.42), h = rr(0.17, 0.25);
+				const yTop = row * 0.38 + h;
+				if (row === 4 && rnd() < 0.35) { x += w * 2; continue; }   // (gaps in the top course)
+				const rock = mesh(ROCKS[Math.floor(rnd() * ROCKS.length)], rnd() < 0.65 ? stoneA : stoneB, unit, cx + x + w, row * 0.38 + h * 0.9, z - 0.32 + rr(-0.05, 0.05), w, h, rr(0.24, 0.3));
+				rock.rotation.set(rr(-0.2, 0.2), rr(-0.4, 0.4), rr(-0.25, 0.25));
+				rock.receiveShadow = true;
+				if (row >= 3) tops.push([cx + x + w, yTop + row * 0.0]);
+				x += w * 2 * rr(0.82, 0.95);
 			}
 		}
-		for (let x = -3.5; x < 3.5; x += 0.45) mesh(GEO.sph, leafMats[1], unit, cx + x, 1.72, z - 0.3, rr(0.3, 0.45), rr(0.12, 0.2), 0.3);
+		// overgrown: moss mounds spilling over the top
+		for (const [x, y] of tops) if (rnd() < 0.7) mesh(GEO.sph, leafMats[Math.floor(rnd() * 4)], unit, x + rr(-0.1, 0.1), y + rr(0.02, 0.1), z - 0.3 + rr(-0.1, 0.12), rr(0.22, 0.42), rr(0.1, 0.2), rr(0.2, 0.3));
+		// ivy hanging down the face, in leafy strands
+		for (let k = 0; k < 16; k++) {
+			const x0 = cx + rr(-3.3, 3.3), len = rr(0.5, 1.5), y0 = rr(1.5, 1.85);
+			let px = x0, py = y0;
+			for (let j2 = 0; j2 < len / 0.12; j2++) {
+				px += rr(-0.03, 0.03); py -= 0.12;
+				const lf = mesh(bigLeafGeo, bigLeafMat, unit, px + rr(-0.06, 0.06), py, z + 0.01 + rr(0, 0.04), rr(0.13, 0.2));
+				lf.rotation.set(rr(-1.2, -0.6), rr(-0.8, 0.8), rr(-0.6, 0.6));
+				lf.castShadow = false;
+			}
+		}
+		// ferns sprouting from the cracks, and from the foot of the wall
+		for (let k = 0; k < 22; k++) {
+			const foot = k < 12;
+			const x = cx + rr(-3.4, 3.4), y = foot ? 0 : rr(0.35, 1.5);
+			for (let j2 = 0; j2 < 5; j2++) {
+				const fr = mesh(fernGeo, fernMat, unit, x, y, z - (foot ? 0 : 0.08), foot ? rr(0.7, 1.1) : rr(0.35, 0.6));
+				fr.rotation.set(foot ? 0 : -0.6, j2 / 5 * Math.PI * 2 + rnd(), 0, 'YXZ');
+				fr.castShadow = false;
+			}
+		}
 		bake(unit);
+		// little glowing toadstools at its foot
+		for (let k = 0; k < 9; k++) giantMushroom(g, cx + rr(-3.2, 3.2), z + rr(0.08, 0.3), rr(0.18, 0.36), C.lights[k % 4]);
 		// the shelf mushrooms: one instanced mesh; a lit one's colour runs past 1, and the rest of it glows
-		const mat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.4, bumpMap: TEX.skin, bumpScale: 1 });
+		const mat = new THREE.MeshStandardMaterial({ color: '#ffffff', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 4, roughness: 0.55 });
 		mat.onBeforeCompile = (sh) => {
 			sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
 				#ifdef USE_COLOR
@@ -2126,14 +2200,17 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		};
 		mat.customProgramCacheKey = () => 'shelfGlow';
 		const n = GRID.cols * GRID.rows;
-		const shelves = new THREE.InstancedMesh(shelfGeo, mat, n);
+		const shelves = new THREE.InstancedMesh(ROCKS[2], mat, n);
 		shelves.castShadow = true;
-		const gd = { on: [], pos: [], rowCol: [], flash: new Float32Array(n), head: -1, beam: 0, shelves };
+		const gd = { on: [], pos: [], rot: [], scl: [], rowCol: [], flash: new Float32Array(n), head: -1, beam: 0, shelves };
 		for (let r = 0; r < GRID.rows; r++) {
 			const rc = new THREE.Color().setHSL((0.95 - r * 0.15 + 1) % 1, 0.85, 0.58);
 			for (let c = 0; c < GRID.cols; c++) {
 				const i = r * GRID.cols + c;
-				gd.pos[i] = new THREE.Vector3(cx + lerp(GRID.x0, GRID.x1, c / (GRID.cols - 1)), lerp(GRID.y1, GRID.y0, r / (GRID.rows - 1)), z - 0.04);
+				gd.pos[i] = new THREE.Vector3(cx + lerp(GRID.x0, GRID.x1, c / (GRID.cols - 1)) + rr(-0.04, 0.04), lerp(GRID.y1, GRID.y0, r / (GRID.rows - 1)) + rr(-0.03, 0.03), z - 0.06);
+				// (every stone its own odd shape: turned and squashed its own way)
+				gd.rot[i] = new THREE.Quaternion().setFromEuler(new THREE.Euler(rr(-0.5, 0.5), rnd() * Math.PI * 2, rr(-0.6, 0.6)));
+				gd.scl[i] = new THREE.Vector3(rr(0.15, 0.22), rr(0.11, 0.16), rr(0.1, 0.14));
 				gd.rowCol[i] = rc;
 				gd.on[i] = false;
 			}
@@ -2147,6 +2224,39 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		unit.add(beam);
 		gd.beamMesh = beam;
 		grids[ci] = gd;
+	}
+	// The stepping-stone piano (a clearing with piano: true): 18 flat stones round the
+	// foot of the three walls, pale and dark like keys, 6 a wall. Whoever walks
+	// along near a wall plays the stone in front of them the moment they step on
+	// it: low on the left wall, rising across the front and up the right.
+	const PIANO = { per: 6, out: 0.24, band: 0.3 };
+	const pianos = [];
+	function glowInstanced(geo, n, extra = {}) {
+		const mat = new THREE.MeshStandardMaterial(Object.assign({ color: '#ffffff', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 4, roughness: 0.55 }, extra));
+		mat.onBeforeCompile = (sh) => {
+			sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+				#ifdef USE_COLOR
+				totalEmissiveRadiance += max(vColor.rgb - 1.0, 0.0) * 1.4;
+				#endif`);
+		};
+		mat.customProgramCacheKey = () => 'instGlow';
+		return new THREE.InstancedMesh(geo, mat, n);
+	}
+	function buildPiano(g, ci, cx, cz) {
+		const n = PIANO.per * 3;
+		const keys = glowInstanced(ROCKS[4], n);
+		keys.receiveShadow = true;
+		const pn = { pos: [], rot: [], scl: [], base: [], held: new Array(n).fill(-1), press: new Float32Array(n), flash: new Float32Array(n), keys };
+		const D = R + PIANO.out;
+		for (let w = 0; w < 3; w++) for (let k = 0; k < PIANO.per; k++) {
+			const i = w * PIANO.per + k, u = (k + 0.5) / PIANO.per, lat = (u - 0.5) * 2 * D;
+			pn.pos[i] = w === 1 ? new THREE.Vector3(cx + lat, 0.04, cz - D) : w === 0 ? new THREE.Vector3(cx - D, 0.04, cz - lat) : new THREE.Vector3(cx + D, 0.04, cz + lat);
+			pn.rot[i] = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, (w === 1 ? 0 : Math.PI / 2) + rr(-0.15, 0.15), 0));
+			pn.scl[i] = new THREE.Vector3(rr(0.36, 0.42), rr(0.06, 0.08), rr(0.2, 0.25));
+			pn.base[i] = i % 2 ? new THREE.Color('#4a4a52') : new THREE.Color('#d8d2c4');
+		}
+		g.add(keys);
+		pianos[ci] = pn;
 	}
 	function showOnly(list) {
 		clearingGroups.forEach((g, k) => { g.visible = list.includes(k); });
@@ -2353,15 +2463,32 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				const col = i % GRID.cols;
 				const inBeam = col === gw.head ? gw.beam : 0;
 				if (gw.on[i]) fc.copy(gw.rowCol[i]).multiplyScalar(2.6 + gw.flash[i] * 2 + pulse * 0.4);
-				else fc.copy(gw.rowCol[i]).lerp(tmpC.set('#b8ad98'), 0.8).multiplyScalar(0.55 + inBeam * 0.3);   // (unlit: dull, stony)
+				else fc.copy(gw.rowCol[i]).lerp(tmpC.set('#a49c8c'), 0.86).multiplyScalar(0.62 + inBeam * 0.35);   // (unlit: plain stone)
 				gw.shelves.setColorAt(i, fc);
-				const sc = (gw.on[i] ? 1.05 + pulse * 0.06 : 0.82) + gw.flash[i] * 0.3;
-				_p0.copy(gw.pos[i]); if (gw.on[i]) _p0.z += 0.04 + gw.flash[i] * 0.06;
-				fm4.compose(_p0, _q0.identity(), fs.set(sc, sc, sc));
+				const sc = (gw.on[i] ? 1.05 + pulse * 0.06 : 0.95) + gw.flash[i] * 0.3;
+				_p0.copy(gw.pos[i]); if (gw.on[i]) _p0.z += 0.03 + gw.flash[i] * 0.05;
+				fm4.compose(_p0, gw.rot[i], fs.copy(gw.scl[i]).multiplyScalar(sc));
 				gw.shelves.setMatrixAt(i, fm4);
 			}
 			gw.shelves.instanceColor.needsUpdate = true;
 			gw.shelves.instanceMatrix.needsUpdate = true;
+		});
+		// the stepping-stone pianos
+		pianos.forEach((pn, ci) => {
+			if (!pn || !clearingGroups[ci].visible) return;
+			for (let i = 0; i < pn.pos.length; i++) {
+				pn.flash[i] = Math.max(0, pn.flash[i] - dt * 2.5);
+				const on = pn.held[i] >= 0;
+				pn.press[i] = lerp(pn.press[i], on ? 1 : 0, 1 - Math.exp(-dt * 18));
+				if (on) fc.set(colour(pn.held[i])).multiplyScalar(2.2 + pn.flash[i] * 1.5);
+				else fc.copy(pn.base[i]).multiplyScalar(0.85 + pn.flash[i] * 0.5 + pulse * 0.05);
+				pn.keys.setColorAt(i, fc);
+				_p0.copy(pn.pos[i]); _p0.y -= pn.press[i] * 0.03;
+				fm4.compose(_p0, pn.rot[i], fs.copy(pn.scl[i]).multiplyScalar(1 + pn.flash[i] * 0.08));
+				pn.keys.setMatrixAt(i, fm4);
+			}
+			pn.keys.instanceColor.needsUpdate = true;
+			pn.keys.instanceMatrix.needsUpdate = true;
 		});
 		// the players' puffballs
 		for (let i = 0; i < count; i++) {
