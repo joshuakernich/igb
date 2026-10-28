@@ -293,9 +293,9 @@ function Figure(n) {
    Quaternius's Mannequin (assets/shared/mannequin.glb, CC0), one clone per
    player: idle / walk / jog / sprint blended by how fast they're really
    moving, crouch and jump from the height the game reads, and the right arm
-   reaching to the very spot on the wall a tap lands. Drawn as a ghost: a
-   rim glow in the player's colour, bright at the silhouette and nearly clear
-   through the body, with a thin glowing outline; bloom spills it into the room. */
+   reaching to the very spot on the wall a tap lands. Drawn as a plain outline
+   in the player's colour: the body itself is invisible (it only hides what's
+   inside it), a shell grown round it shows past its edge; no glow, no bloom. */
 
 const MANNEQUIN = 'assets/shared/mannequin.glb';
 const HEIGHT = 1.75;   // metres
@@ -388,21 +388,26 @@ const GHOST_FRAG = `
 		gl_FragColor = vec4(color * (core + r * rim), (core + r) * alpha);
 	}`;
 function ghostMaterial(col, outline) {
+	if (!outline) return new THREE.ShaderMaterial({   // (the body: depth only, so just the outline's edge shows round it)
+		uniforms: { color: { value: col.clone() }, grow: { value: 0 }, core: { value: 0 }, rim: { value: 0 }, power: { value: 1 }, alpha: { value: 0 } },
+		vertexShader: GHOST_VERT,
+		fragmentShader: GHOST_FRAG,
+		colorWrite: false,
+	});
 	return new THREE.ShaderMaterial({
 		uniforms: {
 			color: { value: col.clone() },
-			grow: { value: outline ? 0.012 : 0 },
-			core: { value: outline ? 0.0 : 0.05 },
-			rim: { value: outline ? 2.6 : 2.2 },
-			power: { value: outline ? 1.2 : 2.4 },
-			alpha: { value: outline ? 0.9 : 0.85 },
+			grow: { value: 0.014 },
+			core: { value: 0.85 },   // (flat: the same all over, under the bloom's threshold)
+			rim: { value: 0 },
+			power: { value: 1 },
+			alpha: { value: 0.75 },
 		},
 		vertexShader: GHOST_VERT,
 		fragmentShader: GHOST_FRAG,
 		transparent: true,
 		depthWrite: false,
-		blending: THREE.AdditiveBlending,
-		side: outline ? THREE.BackSide : THREE.FrontSide,
+		side: THREE.BackSide,
 		toneMapped: false,
 	});
 }
@@ -419,7 +424,7 @@ const poolTex = (() => {
 const tmpV = new THREE.Vector3(), tmpV2 = new THREE.Vector3(), tmpQ = new THREE.Quaternion(), tmpQ2 = new THREE.Quaternion(), Y_AXIS = new THREE.Vector3(0, 1, 0);
 
 function GhostFigure(n) {
-	const col = new THREE.Color(COLORS[n % COLORS.length]).multiplyScalar(1.4);
+	const col = new THREE.Color(COLORS[n % COLORS.length]);
 	const root = new THREE.Group();
 	const body = cloneSkinned(ghostKit.scene);
 	body.scale.setScalar(ghostKit.scale);
@@ -431,6 +436,7 @@ function GhostFigure(n) {
 		m.frustumCulled = false;
 		const shell = m.clone();
 		shell.material = ghostMaterial(col, true);
+		shell.renderOrder = 1;   // (after the body has laid down its depth)
 		shell.frustumCulled = false;
 		shell.bind(m.skeleton, m.bindMatrix);
 		m.parent.add(shell);
@@ -438,7 +444,7 @@ function GhostFigure(n) {
 	const lift = new THREE.Group();
 	lift.add(body);
 	root.add(lift);
-	const pool = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 1.0), new THREE.MeshBasicMaterial({ map: poolTex, color: col, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+	const pool = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 1.0), new THREE.MeshBasicMaterial({ map: poolTex, color: col, transparent: true, opacity: 0.16, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
 	pool.rotation.x = -Math.PI / 2; pool.position.y = 0.012;
 	root.add(pool);
 	scene.add(root);
