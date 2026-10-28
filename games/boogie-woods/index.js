@@ -35,6 +35,7 @@
  */
 import * as THREE from '../../lib/three/three.module.min.js';
 import { createWallComposer, createWallRig, canvasTexture, environmentFromShader, toScreen } from '../../lib/three/walls.js';
+import { ShaderPass } from '../../lib/three/addons/postprocessing/ShaderPass.js';
 
 IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 
@@ -167,7 +168,15 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				{ kind: 'fairy', wall: 2, along: 0.72, out: 0.6, note: 12, pat: 'bells', tint: '#ff9ad0' },
 			] },
 	];
-	const CHORDS = [[0, 4, 7], [9, 12, 16], [5, 9, 12], [7, 11, 14]];   // I vi IV V, a bar each
+	const CHORDS = [[0, 4, 7], [9, 12, 16], [5, 9, 12], [7, 11, 14]];
+	// each clearing's sky: where its sun (or moon) hangs, ahead, and the glow round the horizon
+	const SKY = [
+		{ dir: [0.42, 0.13, -1], glow: '#ffa080', night: 0 },
+		{ dir: [-0.35, 0.32, -1], glow: '#4ad0c8', night: 1 },
+		{ dir: [0.55, 0.26, -1], glow: '#ffd890', night: 0 },
+		{ dir: [0.3, 0.38, -1], glow: '#b07aff', night: 1 },
+		{ dir: [-0.5, 0.2, -1], glow: '#d8ffc8', night: 0 },
+	];   // I vi IV V, a bar each
 
 	/* ---------- state ---------- */
 
@@ -528,12 +537,16 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const c = CLEARINGS[here];
 		const on = audioOn();
 		// the groove underneath
-		if (on && !glide) {
-			const gr = c.groove;
-			if (gr.kick[s16]) SND.kick(time, 0.32);
-			if (gr.hat[s16]) SND.hat(time, 0.35);
-			if (gr.snare[s16]) SND.snare(time, 0.22);
-			if (s16 === 0) SND.pad(time, c.root, CHORDS[Math.floor(st / 16) % 4], 60 / bpm * 4, 0.035);
+		// (on the path, the clearing behind fades away, then the one ahead fades up)
+		const gc = glide ? CLEARINGS[glide.switched ? glide.to : glide.from] : c;
+		const away = glide ? (glide.switched ? clamp(glide.t * 2 - 1, 0, 1) : clamp(1 - glide.t * 2, 0, 1)) : 1;
+		const f = away * away * (3 - 2 * away);
+		if (on && f > 0.02) {
+			const gr = gc.groove;
+			if (gr.kick[s16]) SND.kick(time, 0.32 * f);
+			if (gr.hat[s16]) SND.hat(time, 0.35 * f);
+			if (gr.snare[s16]) SND.snare(time, 0.22 * f);
+			if (s16 === 0) SND.pad(time, gc.root, CHORDS[Math.floor(st / 16) % 4], 60 / bpm * 4, 0.035 * Math.max(f, 0.15));
 		}
 		// creatures with someone in front of them sing their part
 		const singers = glide ? [] : creatures.filter((cr) => cr.clearing === here && cr.singer >= 0);
@@ -566,6 +579,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		if (banner) banner.t += dt;
 		if (glide) {
 			glide.t += dt / GLIDE;
+			if (!glide.switched && glide.t >= 0.5) { glide.switched = true; setTempo(CLEARINGS[glide.to].bpm); }   // (halfway, the next clearing's tempo takes over, faded right down)
 			if (glide.t >= 1) {
 				here = glide.to;
 				glide = null;
@@ -718,6 +732,29 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		}
 	`);
 	scene.environment = envTex;
+	const gradeU = { tDiffuse: { value: null }, uTime: sparkleU.uTime, uShadow: { value: new THREE.Color(1, 1, 1) }, uHigh: { value: new THREE.Color(1, 1, 1) }, uSat: { value: 1.18 } };
+	const grade = new ShaderPass({
+		uniforms: gradeU,
+		vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+		fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime; uniform vec3 uShadow; uniform vec3 uHigh; uniform float uSat; varying vec2 vUv;
+			float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+			void main(){
+				vec4 c = texture2D(tDiffuse, vUv);
+				vec3 col = c.rgb;
+				float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
+				col = max(mix(vec3(l), col, uSat), 0.);
+				col *= mix(uShadow, uHigh, clamp(l / (l + 0.5), 0., 1.));
+				// (a vignette top and bottom, and at the strip's two far ends: never at the corners between walls)
+				float v = smoothstep(0., 0.35, vUv.y) * 0.25 + 0.75;
+				v *= 1. - smoothstep(0.75, 1.0, vUv.y) * 0.35;
+				v *= smoothstep(0., 0.08, vUv.x) * 0.25 + 0.75;
+				v *= smoothstep(1., 0.92, vUv.x) * 0.25 + 0.75;
+				col *= v;
+				col += (hash(vUv * 1024. + fract(uTime) * 61.) - 0.5) * 0.015;
+				gl_FragColor = vec4(col, c.a);
+			}`,
+	});
+	post.composer.insertPass(grade, post.composer.passes.length - 1);
 	scene.environmentIntensity = 0.55;
 
 	const walls = createWallRig({ fov: 64, aspect: W / H, near: 0.05, far: 160 });
@@ -741,17 +778,43 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	const GLOW_AT = [[-3.4, 1.4, -1.5], [-1.5, 1.6, -3.6], [1.8, 1.4, -3.4], [3.5, 1.5, 1.2]];
 
 	// the sky, round the walls
-	const skyU = { top: { value: new THREE.Color() }, bot: { value: new THREE.Color() }, stars: { value: 0 } };
-	const sky = new THREE.Mesh(new THREE.SphereGeometry(140, 32, 16), new THREE.ShaderMaterial({
+	const NOISE = `
+		float hh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+		float n2(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
+			return mix(mix(hh(i), hh(i + vec2(1., 0.)), f.x), mix(hh(i + vec2(0., 1.)), hh(i + vec2(1., 1.)), f.x), f.y); }
+		float fbm(vec2 p){ float s = 0., a = 0.5; for (int i = 0; i < 4; i++) { s += a * n2(p); p = p * 2.03 + 17.1; a *= 0.5; } return s; }
+`;
+	const skyU = { top: { value: new THREE.Color() }, bot: { value: new THREE.Color() }, glowC: { value: new THREE.Color() }, sunC: { value: new THREE.Color() },
+		sunDir: { value: new THREE.Vector3(0, 0.2, -1) }, stars: { value: 0 }, moon: { value: 0 }, time: sparkleU.uTime };
+	const sky = new THREE.Mesh(new THREE.SphereGeometry(140, 48, 24), new THREE.ShaderMaterial({
 		uniforms: skyU, side: THREE.BackSide, depthWrite: false, fog: false,
 		vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }',
-		fragmentShader: `uniform vec3 top; uniform vec3 bot; uniform float stars; varying vec3 vP;
-			float h(vec3 p){ return fract(sin(dot(p, vec3(12.9898,78.233,45.164)))*43758.5453); }
-			void main(){ float k = smoothstep(-0.1, 0.7, vP.y); vec3 c = mix(bot, top, k);
-				vec3 q = floor(vP * 260.); float s = step(0.996, h(q)) * stars * smoothstep(0.1, 0.5, vP.y);
-				gl_FragColor = vec4(c + s * 1.5, 1.); }`,
+		fragmentShader: `uniform vec3 top; uniform vec3 bot; uniform vec3 glowC; uniform vec3 sunC; uniform vec3 sunDir; uniform float stars; uniform float moon; uniform float time; varying vec3 vP;
+			${NOISE}
+			float h3(vec3 p){ return fract(sin(dot(p, vec3(12.9898, 78.233, 45.164))) * 43758.5453); }
+			void main(){
+				vec3 d = normalize(vP);
+				vec3 c = mix(bot, top, smoothstep(-0.05, 0.75, d.y));
+				float sd = max(dot(d, normalize(sunDir)), 0.);
+				c += glowC * pow(1. - abs(d.y), 5.) * 0.7;
+				c += sunC * (pow(sd, 6.) * 0.35 + pow(sd, 48.) * 1.2 + pow(sd, 400.) * 2.);
+				float disc = smoothstep(0.9988, 0.9993, sd);
+				c = mix(c, sunC * mix(5., 2.2, moon), disc);
+				if (d.y > 0.0) {
+					vec2 uv = d.xz / (d.y + 0.18) * 1.1 + vec2(time * 0.012, time * 0.005);
+					float cl = smoothstep(0.42, 0.82, fbm(uv));
+					vec3 cc = mix(top * 1.5 + 0.03, glowC * 0.9, 0.35) + sunC * pow(sd, 3.) * 0.8;
+					c = mix(c, cc, cl * 0.6 * smoothstep(0.0, 0.25, d.y));
+				}
+				vec3 q = floor(d * 280.);
+				float st = step(0.9965, h3(q)) * stars * smoothstep(0.08, 0.5, d.y) * (0.55 + 0.45 * sin(time * 2.5 + h3(q) * 60.));
+				gl_FragColor = vec4(c + st * 1.8, 1.);
+			}`,
 	}));
 	scene.add(sky);
+	// the sun (or moon) ahead lights everything from behind: a rim on every edge
+	const rimL = new THREE.DirectionalLight(0xffffff, 2.5);
+	scene.add(rimL, rimL.target);
 
 	/* textures, painted: the bump that makes fur, scales and skin */
 
@@ -832,6 +895,27 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			c.fillStyle = '#000000'; c.beginPath(); c.ellipse(x, y, r, r * 0.8, 0, 0, Math.PI * 2); c.fill();
 		}
 	}, false, 1);
+	TEX.floor = paint(1024, 1024, function (c, w) {
+		c.fillStyle = '#6a8a4a'; c.fillRect(0, 0, w, w);
+		for (let i = 0; i < 700; i++) {
+			const x = Math.random() * w, y = Math.random() * w, r = 10 + Math.random() * 70;
+			const g = c.createRadialGradient(x, y, 0, x, y, r);
+			const pick = Math.random();
+			const col = pick < 0.25 ? '90,70,40' : pick < 0.5 ? '40,70,30' : pick < 0.8 ? '120,150,70' : '70,100,50';
+			g.addColorStop(0, `rgba(${col},0.45)`); g.addColorStop(1, `rgba(${col},0)`);
+			c.fillStyle = g; c.fillRect(x - r, y - r, r * 2, r * 2);
+		}
+		for (let i = 0; i < 14000; i++) {
+			const v = Math.random();
+			c.fillStyle = v < 0.5 ? 'rgba(30,50,20,0.35)' : 'rgba(170,200,110,0.3)';
+			c.fillRect(Math.random() * w, Math.random() * w, 2, 2);
+		}
+		for (let i = 0; i < 160; i++) {
+			c.fillStyle = `rgba(${Math.random() < 0.5 ? '150,90,40' : '200,160,60'},0.6)`;
+			c.save(); c.translate(Math.random() * w, Math.random() * w); c.rotate(Math.random() * 6);
+			c.beginPath(); c.ellipse(0, 0, 7, 3, 0, 0, Math.PI * 2); c.fill(); c.restore();
+		}
+	}, true, 5);
 	TEX.soft = canvasTexture(128, 128, function (c, w) {
 		const g = c.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2);
 		g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)');
@@ -848,13 +932,25 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 
 	/* materials */
 
-	const furMat = (col, sheen) => new THREE.MeshPhysicalMaterial({ color: col, roughness: 0.85, bumpMap: TEX.fur, bumpScale: 3, sheen: 1, sheenColor: new THREE.Color(sheen || col).lerp(new THREE.Color('#ffffff'), 0.2), sheenRoughness: 0.5 });
-	const slickMat = (col) => new THREE.MeshPhysicalMaterial({ color: col, roughness: 0.32, bumpMap: TEX.skin, bumpScale: 1.6, clearcoat: 1, clearcoatRoughness: 0.08, sheen: 0.4, sheenColor: new THREE.Color('#ffffff') });
-	const scaleMat = (col) => new THREE.MeshPhysicalMaterial({ color: col, roughness: 0.45, bumpMap: TEX.scales, bumpScale: 2.5, clearcoat: 0.6, clearcoatRoughness: 0.2, iridescence: 0.5, iridescenceIOR: 1.4 });
-	const skinMat = (col) => new THREE.MeshPhysicalMaterial({ color: col, roughness: 0.55, bumpMap: TEX.skin, bumpScale: 1.4, sheen: 0.5, sheenColor: new THREE.Color('#ffe8d8'), clearcoat: 0.2 });
+	// a rim of the clearing's magic light round every creature's edge (and, fainter, the leaves)
+	const rimU = { uRim: { value: new THREE.Color() } };
+	function rimify(m, k = 1) {
+		m.onBeforeCompile = (sh) => {
+			sh.uniforms.uRim = rimU.uRim;
+			sh.fragmentShader = 'uniform vec3 uRim;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+				totalEmissiveRadiance += uRim * ${k.toFixed(2)} * pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0);`);
+		};
+		m.customProgramCacheKey = () => 'rim' + k;
+		return m;
+	}
+	const furMat = (col, sheen) => rimify(new THREE.MeshPhysicalMaterial({ color: col, roughness: 0.85, bumpMap: TEX.fur, bumpScale: 3, sheen: 1, sheenColor: new THREE.Color(sheen || col).lerp(new THREE.Color('#ffffff'), 0.2), sheenRoughness: 0.5 }));
+	const slickMat = (col) => rimify(new THREE.MeshPhysicalMaterial({ color: col, roughness: 0.32, bumpMap: TEX.skin, bumpScale: 1.6, clearcoat: 1, clearcoatRoughness: 0.08, sheen: 0.4, sheenColor: new THREE.Color('#ffffff') }));
+	const scaleMat = (col) => rimify(new THREE.MeshPhysicalMaterial({ color: col, roughness: 0.45, bumpMap: TEX.scales, bumpScale: 2.5, clearcoat: 0.6, clearcoatRoughness: 0.2, iridescence: 0.5, iridescenceIOR: 1.4 }));
+	const skinMat = (col) => rimify(new THREE.MeshPhysicalMaterial({ color: col, roughness: 0.55, bumpMap: TEX.skin, bumpScale: 1.4, sheen: 0.5, sheenColor: new THREE.Color('#ffe8d8'), clearcoat: 0.2 }));
 	const MAT = {
 		eyeWhite: new THREE.MeshPhysicalMaterial({ color: '#f8f2e2', roughness: 0.15, clearcoat: 1 }),
 		pupil: new THREE.MeshBasicMaterial({ color: '#0a0a0c' }),
+		pupilGloss: new THREE.MeshPhysicalMaterial({ color: '#0a0a0c', roughness: 0.1, clearcoat: 1 }),
 		shine: new THREE.MeshBasicMaterial({ color: new THREE.Color(2, 2, 2) }),
 		mouth: new THREE.MeshStandardMaterial({ color: '#3a0a10', roughness: 0.6 }),
 		tongue: new THREE.MeshPhysicalMaterial({ color: '#ff5a7a', roughness: 0.3, clearcoat: 1 }),
@@ -899,8 +995,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			const eye = new THREE.Group();
 			eye.position.set(sx * gap * s, 0.1 * s, 0);
 			g.add(eye);
-			mesh(GEO.sph, MAT.eyeWhite, eye, 0, 0, 0, 0.2 * s, 0.29 * s, 0.11 * s);
-			const pupil = mesh(GEO.pie, MAT.pupil, eye, 0, -0.04 * s, 0.112 * s, 0.085 * s, 0.13 * s);
+			// (no whites: just the black, pie-cut, like the old cartoons)
+			const pupil = mesh(GEO.pie, MAT.pupil, eye, 0, 0, 0.05 * s, 0.12 * s, 0.19 * s);
 			pupil.castShadow = false;
 			mesh(GEO.disc, MAT.shine, pupil, -0.3, 0.42, 0.01, 0.22).castShadow = false;
 			const brow = mesh(GEO.box, MAT.pupil, eye, 0, 0.36 * s, 0.03 * s, 0.26 * s, 0.045 * s, 0.03 * s);
@@ -964,8 +1060,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		if (end === 'shoe') { tip = mesh(GEO.sph, MAT.shoe, c.bouncer, 0, 0, 0, r * 2.2, r * 1.4, r * 3.4); }
 		if (end === 'eye') {
 			tip = new THREE.Group(); c.bouncer.add(tip);
-			mesh(GEO.sph, MAT.eyeWhite, tip, 0, 0, 0, r * 3.2, r * 3.6, r * 3.2);
-			const p = mesh(GEO.pie, MAT.pupil, tip, 0, 0, r * 3.25, r * 1.4, r * 1.9); p.castShadow = false;
+			mesh(GEO.sph, MAT.pupilGloss, tip, 0, 0, 0, r * 2.4, r * 3.2, r * 2.4);
+			mesh(GEO.sph, MAT.shine, tip, -r * 0.8, r * 1.2, r * 2.1, r * 0.6).castShadow = false;
 		}
 		c.limbs.push({ m, from: new THREE.Vector3(...from), rest: new THREE.Vector3(...rest), r, tip, side, leg, end });
 	}
@@ -1232,7 +1328,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		g.translate(0, 3.5, 0);
 		return g;
 	});
-	const leafMats = ['#3f8a3a', '#2f7a4a', '#5a9a2a', '#7aa83a'].map((cl) => new THREE.MeshPhysicalMaterial({ color: cl, map: TEX.leaf, bumpMap: TEX.leaf, bumpScale: 3, roughness: 0.6, sheen: 1, sheenColor: new THREE.Color('#d8ff9a'), sheenRoughness: 0.5, clearcoat: 0.3, clearcoatRoughness: 0.4 }));
+	const leafMats = ['#3f8a3a', '#2f7a4a', '#5a9a2a', '#7aa83a'].map((cl) => rimify(new THREE.MeshPhysicalMaterial({ color: cl, map: TEX.leaf, bumpMap: TEX.leaf, bumpScale: 3, roughness: 0.6, sheen: 1, sheenColor: new THREE.Color('#d8ff9a'), sheenRoughness: 0.5, clearcoat: 0.3, clearcoatRoughness: 0.4 }), 0.35));
 
 	function tree(group, x, z, s) {
 		const g = new THREE.Group();
@@ -1252,7 +1348,12 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			const a = rnd() * Math.PI * 2, r = rr(0, 1.4);
 			const b = mesh(CANOPY[k % 3], lm, g, Math.cos(a) * r, rr(6.2, 8.2), Math.sin(a) * r, rr(1.4, 2.3), rr(1.1, 1.6), rr(1.4, 2.3));
 			b.receiveShadow = true;
+			g.updateMatrixWorld(true);
+			const wp = b.getWorldPosition(new THREE.Vector3());
+			canopySpots.push({ x: wp.x + group.position.x, y: wp.y, z: wp.z + group.position.z, s: b.scale.x * s });
 		}
+		const pool = mesh(GEO.shadow, MAT.shadow, group, x, 0.015, z, 5 * s, 5 * s);
+		pool.rotation.x = -Math.PI / 2; pool.castShadow = false;
 		group.add(g);
 		return g;
 	}
@@ -1367,6 +1468,166 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		}
 	}
 
+	// light shafts: open cones leaning from the sun, brightest where you look through them
+	const shaftU = { uTime: sparkleU.uTime, uCol: { value: new THREE.Color() } };
+	const shaftMat = new THREE.ShaderMaterial({
+		uniforms: shaftU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+		vertexShader: 'varying vec2 vUv; varying vec3 vN; varying vec3 vV; void main(){ vUv = uv; vec4 wp = modelMatrix * vec4(position, 1.); vN = normalize(mat3(modelMatrix) * normal); vV = normalize(cameraPosition - wp.xyz); gl_Position = projectionMatrix * viewMatrix * wp; }',
+		fragmentShader: `uniform float uTime; uniform vec3 uCol; varying vec2 vUv; varying vec3 vN; varying vec3 vV;
+			void main(){
+				float edge = pow(abs(dot(vN, vV)), 2.2);
+				float along = smoothstep(0., 0.2, vUv.y) * smoothstep(1., 0.45, vUv.y);
+				float flick = 0.7 + 0.3 * sin(uTime * 0.6 + vUv.x * 12.566) * sin(uTime * 0.37 + vUv.x * 6.283 + 1.3);
+				gl_FragColor = vec4(uCol * edge * along * flick * 0.2, 1.);
+			}`,
+	});
+	function shafts(group, cx, cz, ci) {
+		const d = new THREE.Vector3(...SKY[ci].dir);
+		d.set(d.x * 0.55, Math.max(d.y, 0.55), d.z * 0.55).normalize();
+		const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d);
+		for (let k = 0; k < 9; k++) {
+			const a = -Math.PI / 2 + rr(-2.1, 2.1), r = rr(3.6, 11);
+			const len = rr(13, 18);
+			const m = new THREE.Mesh(new THREE.CylinderGeometry(rr(0.25, 0.6), rr(0.9, 1.9), len, 24, 1, true), shaftMat);
+			m.quaternion.copy(q);
+			m.position.set(cx + Math.cos(a) * r, 0, cz + Math.sin(a) * r).addScaledVector(d, len / 2 - 0.3);
+			m.renderOrder = 2;
+			group.add(m);
+		}
+		// dust drifting in the light
+		sparkles(group, cx, cz - 3, 380, '#fff6e0', 9, 0.4, 6, 0.035);
+	}
+	// ground mist: soft, drifting layers, thin near you and thicker out among the trees
+	const mistU = { uTime: sparkleU.uTime, uCol: { value: new THREE.Color() }, uA: { value: 0.4 } };
+	const mistMat = new THREE.ShaderMaterial({
+		uniforms: mistU, transparent: true, depthWrite: false, fog: false, side: THREE.DoubleSide,
+		vertexShader: 'varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
+		fragmentShader: `uniform float uTime; uniform vec3 uCol; uniform float uA; varying vec3 vW;
+			${NOISE}
+			void main(){
+				vec2 p = vW.xz * 0.11 + vec2(uTime * 0.03, uTime * 0.013) + vW.y * 2.7;
+				float m = smoothstep(0.3, 0.8, fbm(p));
+				float dd = distance(vW.xz, cameraPosition.xz);
+				float a = m * uA * smoothstep(2.7, 6.5, dd) * (1. - smoothstep(22., 34., dd));
+				gl_FragColor = vec4(uCol, a);
+			}`,
+	});
+	function mist(group, cx, cz) {
+		for (const [y, s] of [[0.18, 1], [0.7, 0.75]]) {
+			const m = new THREE.Mesh(new THREE.PlaneGeometry(64, 64), mistMat);
+			m.rotation.x = -Math.PI / 2;
+			m.position.set(cx, y, cz);
+			m.scale.setScalar(s);
+			m.renderOrder = 3;
+			group.add(m);
+		}
+	}
+
+	// leaf cards: clumps of painted leaves round each canopy, so the trees have a ragged, leafy edge
+	TEX.cards = canvasTexture(256, 256, function (c, w) {
+		c.clearRect(0, 0, w, w);
+		for (let i = 0; i < 46; i++) {
+			const a = Math.random() * Math.PI * 2, r = Math.random() * w * 0.36;
+			const x = w / 2 + Math.cos(a) * r, y = w / 2 + Math.sin(a) * r, s = 14 + Math.random() * 18;
+			c.save(); c.translate(x, y); c.rotate(a + Math.PI / 2 + (Math.random() - 0.5));
+			const g = Math.floor(110 + Math.random() * 100);
+			c.fillStyle = `rgb(${Math.floor(g * 0.45)},${g},${Math.floor(g * 0.35)})`;
+			c.beginPath(); c.moveTo(0, -s); c.quadraticCurveTo(s * 0.55, 0, 0, s); c.quadraticCurveTo(-s * 0.55, 0, 0, -s); c.fill();
+			c.strokeStyle = 'rgba(20,50,10,0.5)'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(0, -s); c.lineTo(0, s); c.stroke();
+			c.restore();
+		}
+	});
+	TEX.fern = canvasTexture(128, 512, function (c, w, h) {
+		c.clearRect(0, 0, w, h);
+		c.strokeStyle = '#2f6a1f'; c.lineWidth = 4; c.beginPath(); c.moveTo(w / 2, h); c.lineTo(w / 2, 0); c.stroke();
+		for (let y = 20; y < h - 10; y += 14) {
+			const s = (1 - y / h) * 0.2 + Math.sin(y / h * Math.PI) * 0.8;
+			for (const sx of [-1, 1]) {
+				c.fillStyle = `rgb(${60 + Math.random() * 30},${140 + Math.random() * 50},${40 + Math.random() * 20})`;
+				c.beginPath(); c.ellipse(w / 2 + sx * s * 26, y, s * 26, 6, sx * 0.4, 0, Math.PI * 2); c.fill();
+			}
+		}
+	});
+	const cardMat = rimify(new THREE.MeshStandardMaterial({ map: TEX.cards, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.55 }), 0.5);
+	const fernMat = rimify(new THREE.MeshStandardMaterial({ map: TEX.fern, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.5 }), 0.4);
+	const fernGeo = (function () {
+		const g = new THREE.PlaneGeometry(0.34, 1.1, 1, 8);
+		const p = g.attributes.position;
+		for (let i = 0; i < p.count; i++) { const y = p.getY(i) + 0.55; p.setY(i, y * 0.8); p.setZ(i, y * y * 0.45); }
+		g.computeVertexNormals();
+		return g;
+	})();
+	let canopySpots = [];
+	function vegetation(group, cx, cz, C) {
+		const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3();
+		// leaf cards round every canopy blob
+		const NC = canopySpots.length * 9;
+		const cards = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), cardMat, NC);
+		let k = 0;
+		for (const sp of canopySpots) for (let j = 0; j < 9; j++) {
+			v.set(rr(-1, 1), rr(-0.9, 0.6), rr(-1, 1)).normalize();
+			e.set(rnd() * 6, rnd() * 6, rnd() * 6); q.setFromEuler(e);
+			const s = sp.s * rr(0.8, 1.4);
+			m4.compose(new THREE.Vector3(sp.x + v.x * sp.s * 0.95, sp.y + v.y * sp.s * 0.7, sp.z + v.z * sp.s * 0.95), q, new THREE.Vector3(s, s, s));
+			cards.setMatrixAt(k++, m4);
+		}
+		group.add(cards);
+		// ferns, in clumps round the shrubs and trunks
+		const NF = 70 * 7;
+		const ferns = new THREE.InstancedMesh(fernGeo, fernMat, NF);
+		k = 0;
+		for (let c = 0; c < 70; c++) {
+			const a = rnd() * Math.PI * 2, r = rr(3.2, 12);
+			const x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r;
+			for (let j = 0; j < 7; j++) {
+				e.set(0, j / 7 * Math.PI * 2 + rnd(), 0); q.setFromEuler(e);
+				const s = rr(0.6, 1.2);
+				m4.compose(new THREE.Vector3(x, 0, z), q, new THREE.Vector3(s, s, s));
+				ferns.setMatrixAt(k++, m4);
+			}
+		}
+		ferns.receiveShadow = true;
+		group.add(ferns);
+		// little glowing flowers scattered through the grass
+		const NFl = 520;
+		const flowers = new THREE.InstancedMesh(new THREE.SphereGeometry(0.045, 8, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.7, 1.7, 1.7) }), NFl);
+		const tint = new THREE.Color();
+		for (let j = 0; j < NFl; j++) {
+			const a = rnd() * Math.PI * 2, r = rr(3, 12);
+			m4.compose(new THREE.Vector3(cx + Math.cos(a) * r, rr(0.05, 0.3), cz + Math.sin(a) * r), q.identity(), new THREE.Vector3(1, rr(0.5, 0.8), 1));
+			flowers.setMatrixAt(j, m4);
+			flowers.setColorAt(j, tint.set(C.lights[j % 4]).lerp(new THREE.Color('#ffffff'), rnd() * 0.3));
+		}
+		group.add(flowers);
+		// pebbles
+		const NP = 140;
+		const pebbles = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.1, 0), new THREE.MeshPhysicalMaterial({ color: '#8a8478', roughness: 0.55, clearcoat: 0.6, bumpMap: TEX.skin, bumpScale: 1 }), NP);
+		for (let j = 0; j < NP; j++) {
+			const a = rnd() * Math.PI * 2, r = rr(3, 11);
+			e.set(rnd() * 3, rnd() * 3, rnd() * 3); q.setFromEuler(e);
+			const s = rr(0.4, 1.6);
+			m4.compose(new THREE.Vector3(cx + Math.cos(a) * r, 0.03, cz + Math.sin(a) * r), q, new THREE.Vector3(s, s * 0.6, s));
+			pebbles.setMatrixAt(j, m4);
+		}
+		pebbles.receiveShadow = true;
+		group.add(pebbles);
+		// vines hanging from the canopies, a glowing bulb on the end of each
+		const vineMat = rimify(new THREE.MeshPhysicalMaterial({ color: '#3a7a2a', roughness: 0.5, bumpMap: TEX.leaf, bumpScale: 2, sheen: 1, sheenColor: new THREE.Color('#c8ff8a') }), 0.5);
+		const bulbMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(C.lights[2]).multiplyScalar(2.2) });
+		group.userData.bulbMat = bulbMat;
+		group.userData.bulbBase = bulbMat.color.clone();
+		for (const sp of canopySpots) {
+			if (rnd() < 0.55) continue;
+			const top = new THREE.Vector3(sp.x + rr(-0.6, 0.6), sp.y - sp.s * 0.5, sp.z + rr(-0.6, 0.6));
+			const len = rr(1.8, 4.2);
+			const pts = [top, top.clone().add(new THREE.Vector3(rr(-0.3, 0.3), -len * 0.4, rr(-0.3, 0.3))), top.clone().add(new THREE.Vector3(rr(-0.4, 0.4), -len, rr(-0.4, 0.4)))];
+			const vine = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 12, 0.025, 5), vineMat);
+			group.add(vine);
+			const bulb = mesh(GEO.sphLo, bulbMat, group, pts[2].x, pts[2].y - 0.06, pts[2].z, 0.07);
+			bulb.castShadow = false;
+		}
+	}
+
 	// each clearing's own motif
 	const MOTIF = {
 		mushrooms(g, ci, cx, cz, C) {
@@ -1420,8 +1681,6 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				const a = -Math.PI / 2 + (k / 15 - 0.5) * 3.6, r = 4.3;
 				giantMushroom(g, cx + Math.cos(a) * r, cz + Math.sin(a) * r, rr(0.35, 0.6), cols[k % 3]);
 			}
-			const moon = mesh(GEO.disc, new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 2.3, 2.0), fog: false }), g, cx + 18, 26, cz - 60, 6);
-			moon.lookAt(cx, EYE, cz); moon.castShadow = false;
 			sparkles(g, cx, cz, 500, '#ffd8ff', 12, 0.4, 5, 0.1);
 		},
 		bridge(g, ci, cx, cz, C) {
@@ -1445,10 +1704,11 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		clearingGroups.push(g);
 		seed = 1000 + ci * 77;
 		// the floor: moss, and the path running through
-		const ground = mesh(new THREE.CircleGeometry(30, 48), new THREE.MeshStandardMaterial({ color: C.ground, map: TEX.moss, bumpMap: TEX.moss, bumpScale: 3, roughness: 0.95 }), g, cx, 0, cz);
+		const ground = mesh(new THREE.CircleGeometry(30, 48), new THREE.MeshStandardMaterial({ color: new THREE.Color(C.ground).lerp(new THREE.Color('#ffffff'), 0.35), map: TEX.floor, bumpMap: TEX.moss, bumpScale: 3, roughness: 0.92 }), g, cx, 0, cz);
 		ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; ground.castShadow = false;
 		const path = mesh(new THREE.PlaneGeometry(2.4, SPACING), new THREE.MeshStandardMaterial({ color: '#8a6a4a', roughness: 1, bumpMap: TEX.moss, bumpScale: 2 }), g, cx, 0.005, cz - SPACING / 2);
 		path.rotation.x = -Math.PI / 2; path.receiveShadow = true; path.castShadow = false;
+		canopySpots = [];
 		// trees in rings, the nearest framing the corners between the walls
 		for (const a of [-Math.PI * 0.75, -Math.PI * 0.25, Math.PI * 0.25]) tree(g, cx + Math.cos(a) * 6.2, cz + Math.sin(a) * 6.2, rr(0.9, 1.1));
 		for (let k = 0; k < 22; k++) {
@@ -1477,7 +1737,10 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		// glistening: dew and drifting spores everywhere
 		sparkles(g, cx, cz, 260, '#ffffff', 10, 0.05, 0.5, 0.06);
 		sparkles(g, cx, cz, 220, C.lights[1], 12, 1, 6, 0.09);
-		rays(g, cx, cz, C.sun);
+		vegetation(g, cx, cz, C);
+		canopySpots = [];
+		shafts(g, cx, cz, ci);
+		mist(g, cx, cz);
 		MOTIF[C.motif](g, ci, cx, cz, C);
 		// the creatures
 		for (const def of C.creatures) {
@@ -1536,8 +1799,10 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	const PAL = CLEARINGS.map((c) => ({ top: new THREE.Color(c.sky[0]), bot: new THREE.Color(c.sky[1]), fog: new THREE.Color(c.fog), sun: new THREE.Color(c.sun), lights: c.lights.map((l) => new THREE.Color(l)) }));
 	const tmpC = new THREE.Color();
 	let rt = 0;
+	let frameNo = 0;
 	function update3D(dt) {
 		rt += dt;
+		frameNo++;
 		sparkleU.uTime.value = rt;
 		swayU.uTime.value = rt;
 		const now = clock();
@@ -1560,6 +1825,23 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		skyU.bot.value.copy(A.bot).lerp(B.bot, k);
 		const starA = [0, 1, 3].includes(from) ? 1 : 0, starB = [0, 1, 3].includes(to) ? 1 : 0;
 		skyU.stars.value = lerp(starA, starB, k);
+		const SA = SKY[from], SB = SKY[to];
+		skyU.moon.value = lerp(SA.night, SB.night, k);
+		skyU.sunDir.value.set(...SA.dir).lerp(_m.set(...SB.dir), k).normalize();
+		skyU.glowC.value.set(SA.glow).lerp(tmpC.set(SB.glow), k);
+		skyU.sunC.value.copy(A.sun).lerp(B.sun, k).multiplyScalar(lerp(SA.night ? 0.7 : 1.2, SB.night ? 0.7 : 1.2, k));
+		// the sun ahead: a rim light from behind everything, the shafts, the mist
+		rimL.color.copy(skyU.sunC.value);
+		rimL.intensity = lerp(SA.night ? 1.6 : 3.2, SB.night ? 1.6 : 3.2, k);
+		rimL.position.copy(walls.rig.position).addScaledVector(skyU.sunDir.value, 30);
+		rimL.target.position.copy(walls.rig.position);
+		rimU.uRim.value.copy(skyU.glowC.value).lerp(skyU.sunC.value, 0.4).multiplyScalar(0.55 + pulse * 0.25);
+		shaftU.uCol.value.copy(skyU.sunC.value).multiplyScalar(lerp(SA.night ? 0.6 : 1, SB.night ? 0.6 : 1, k));
+		mistU.uCol.value.copy(A.fog).lerp(B.fog, k).lerp(skyU.glowC.value, 0.35).multiplyScalar(1.25);
+		mistU.uA.value = 0.32 + Math.sin(k * Math.PI) * 0.25;
+		gradeU.uShadow.value.set(1, 1, 1).lerp(tmpC.copy(A.fog).lerp(B.fog, k), 0.3).multiplyScalar(1.05);
+		gradeU.uHigh.value.set(1, 1, 1).lerp(tmpC.copy(A.sun).lerp(B.sun, k), 0.2);
+		for (const g of clearingGroups) if (g.visible && g.userData.bulbMat) g.userData.bulbMat.color.copy(g.userData.bulbBase).multiplyScalar(0.7 + pulse * 0.6);
 		sky.position.copy(walls.rig.position);
 		scene.fog.color.copy(A.fog).lerp(B.fog, k);
 		scene.fog.density = 0.028 + Math.sin(k * Math.PI) * 0.02;
@@ -1619,7 +1901,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				f.mouth.smile.visible = open < 0.2;
 			}
 			stepKind(c, dt, beat, myPulse);
-			noodles(c, beat, myPulse);
+			if ((c.index + frameNo) % 2 === 0 || c.trickT > 0) noodles(c, beat, myPulse);   // (half the noodles each frame: twice the speed, no one can tell)
 		}
 
 		// the players' puffballs
@@ -1807,10 +2089,11 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		art.circle(ctx, x, cy, r, { fill: colour(n), stroke: INK, lineWidth: Math.max(3, size * 0.03) });
 		for (const s of [-1, 1]) {
 			ctx.save();
-			ctx.fillStyle = '#f8f2e2'; ctx.strokeStyle = INK; ctx.lineWidth = 3;
-			ctx.beginPath(); ctx.ellipse(x + s * r * 0.3, cy - r * 0.12, r * 0.22, r * 0.32, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+			const ex = x + s * r * 0.3, ey = cy - r * 0.1;
 			ctx.fillStyle = INK;
-			ctx.beginPath(); ctx.moveTo(x + s * r * 0.3, cy - r * 0.08); ctx.arc(x + s * r * 0.3, cy - r * 0.08, r * 0.12, -0.3, Math.PI * 2 - 0.9); ctx.fill();
+			ctx.beginPath(); ctx.moveTo(ex, ey); ctx.ellipse(ex, ey, r * 0.13, r * 0.2, 0, -0.35, Math.PI * 2 - 1.05); ctx.closePath(); ctx.fill();
+			ctx.fillStyle = 'white';
+			ctx.beginPath(); ctx.arc(ex - r * 0.05, ey - r * 0.09, r * 0.035, 0, Math.PI * 2); ctx.fill();
 			ctx.restore();
 		}
 		ctx.save();
