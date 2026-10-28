@@ -37,10 +37,17 @@
  * patience, and from the second shift, trouble (grease fires, a jammed
  * hatch, dimensional leaks, the Overlord's feast).
  *
+ * Drawn in 3D (three.js): each wall looks down on its own part of the
+ * kitchen at a tilt, through an orthographic camera, so the room reads as
+ * one grimy, neon-lit 2.5D diorama; words, tickets and prompts are 2D over it.
+ *
  * Input: px / pz (which wall you're at and where along it; pz is 1 at the
  * front wall), py (squats), movement (stir, hold still) and wall taps,
  * credited to the nearest player who can use them.
  */
+import * as THREE from '../lib/three/three.module.min.js';
+import { createWallComposer, canvasTexture, environmentFromShader, toScreen } from '../lib/three/walls.js';
+
 IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	const self = this;
@@ -53,16 +60,11 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	/* ---------- tuning ---------- */
 
-	const COUNTER = 660;          // the counter top, on every wall
 	const SLOT = 400;             // a station's width (four to a wall)
 	const AT = 0.34;              // this near a wall (0..1 of the room) and you're working its stations
 	const NEAR_TAP = 0.8;         // a tap goes to a player this near the spot (along + out), or no one
 	const HATCH = 330;            // the front wall: the hatch up to here...
 	const CHUTE = 1270;           // ...the chute from here, and the windows between
-	const WIN_TOP = 112;
-	const WIN_H = 290;
-	const POD_Y = [318, 452, 586];
-	const POD_R = 56;
 	const PORTAL_R = 125;
 	const CHOP_TAPS = 6;
 	const FRY = { cook: 5, burn: 6 };              // seconds to golden, then golden this long
@@ -256,9 +258,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			id: 'intro',
 			length: 5,
 			enter() { clearKitchen(); phase = 'intro'; scores = scores.map(() => 0); },
-			update(dt) { tick(dt); },
+			update(dt, bt) { tick(dt); introT = bt; },
 			draw(ctx, bt) {
-				drawManager(ctx, bt);
 				show.onWalls(ctx, function (c, wall) {
 					show.slam(c, 'GRUB-O-TRON IS OPEN!', W / 2, 290, 112, bt - 0.3, { fill: '#9dff3a' });
 					show.slam(c, 'FEED THE MUTANTS. DON\'T GET EATEN.', W / 2, 410, 58, bt - 1.3, { fill: 'white' });
@@ -309,7 +310,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			fire: 0, fireT: 0, flipped: false, lock: 0, hit: 0, glow: 0, shake: 0, paddle: 0,
 		}));
 		for (let k = 0; k < 4; k++) { customers[k] = null; slotWait[k] = 1 + k; }
-		pods = POD_Y.map((y, k) => ({ ing: null, wait: 0.3 + k * 0.3, beam: 0 }));
+		pods = [0, 1, 2].map((k) => ({ ing: null, wait: 0.3 + k * 0.3, beam: 0 }));
 		hatch.jam = 0;
 		portals = [];
 		floaters = [];
@@ -421,7 +422,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		s.doneT = 0;
 		s.glow = 1;
 		show.fx('glint', 0.6);
-		float(s.x0 + 200, 420, s.kind === 'fry' ? 'GOLDEN!' : 'DONE!', '#9dff3a', 44);
+		float(s.x0 + 200, FLOAT_Y, s.kind === 'fry' ? 'GOLDEN!' : 'DONE!', '#9dff3a', 44);
 	}
 
 	function burn(s) {
@@ -430,7 +431,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		s.burntT = 0;
 		burns++;
 		show.fx('fizzle', 0.7);
-		float(s.x0 + 200, 420, 'BURNT!', '#ff4a32', 50);
+		float(s.x0 + 200, FLOAT_Y, 'BURNT!', '#ff4a32', 50);
 	}
 
 	function ignite(s) {
@@ -440,7 +441,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		s.state = 'idle';
 		show.fx('fireball', 0.8);
 		show.shake = Math.max(show.shake, 0.25);
-		float(s.x0 + 200, 400, 'FIRE!', '#ff4a32', 64);
+		float(s.x0 + 200, FLOAT_Y, 'FIRE!', '#ff4a32', 64);
 	}
 
 	function spread(s) {
@@ -464,16 +465,16 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			s.fire--;
 			s.shake = 1;
 			show.fx('whoosh', 0.6, 1.4);
-			if (s.fire <= 0) { float(s.x0 + 200, 420, 'PUT OUT!', '#8fdcff', 50); show.fx('skip', 0.5); }
+			if (s.fire <= 0) { float(s.x0 + 200, FLOAT_Y, 'PUT OUT!', '#8fdcff', 50); show.fx('skip', 0.5); }
 			return;
 		}
 		if (!s.item) {
 			const i = hit.find((k) => chefs[k].held && !chefs[k].held.burnt && !chefs[k].held.steps.includes(s.kind) && chefs[k].held.steps.length < 3);
 			if (i === undefined) {
 				const j = hit.find((k) => chefs[k].held);
-				if (j === undefined) float(s.x0 + 200, 420, 'BRING ME FOOD', '#ffffff', 34);
-				else if (chefs[j].held.burnt) float(s.x0 + 200, 420, 'BIN THAT IN THE CHUTE', '#ff4a32', 34);
-				else float(s.x0 + 200, 420, 'ALREADY ' + s.adj, '#ffffff', 34);
+				if (j === undefined) float(s.x0 + 200, FLOAT_Y, 'BRING ME FOOD', '#ffffff', 34);
+				else if (chefs[j].held.burnt) float(s.x0 + 200, FLOAT_Y, 'BIN THAT IN THE CHUTE', '#ff4a32', 34);
+				else float(s.x0 + 200, FLOAT_Y, 'ALREADY ' + s.adj, '#ffffff', 34);
 				return;
 			}
 			const item = chefs[i].held;
@@ -487,7 +488,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		}
 		if (s.state === 'done' || s.state === 'burnt') {
 			const i = hit.find((k) => !chefs[k].held);
-			if (i === undefined) { float(s.x0 + 200, 420, 'HANDS FULL!', '#ffffff', 36); return; }
+			if (i === undefined) { float(s.x0 + 200, FLOAT_Y, 'HANDS FULL!', '#ffffff', 36); return; }
 			chefs[i].held = s.item;
 			if (!s.item.burnt && !s.item.by.includes(i)) s.item.by.push(i);
 			s.item = null;
@@ -509,13 +510,13 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			if (s.lock > 0) return;
 			if (Math.abs(needle(s) - 0.5) < INJECT.zone) {
 				if (i !== undefined) credit(s, i);
-				float(s.x0 + 200, 380, 'PERFECT DOSE!', '#d04dff', 44);
+				float(s.x0 + 200, FLOAT_Y, 'PERFECT DOSE!', '#d04dff', 44);
 				show.fx('correct', 0.6);
 				finish(s);
 			} else {
 				s.lock = INJECT.lockout;
 				s.shake = 1;
-				float(s.x0 + 200, 380, 'SPLORT!', '#ff2d8f', 50);
+				float(s.x0 + 200, FLOAT_Y, 'SPLORT!', '#ff2d8f', 50);
 				show.fx('wrong', 0.6);
 			}
 		} else if (s.kind === 'grill') {
@@ -523,20 +524,20 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 				s.flipped = true;
 				s.hit = 1;
 				if (i !== undefined) credit(s, i);
-				float(s.x0 + 200, 380, 'FLIPPED!', '#ffc21a', 46);
+				float(s.x0 + 200, FLOAT_Y, 'FLIPPED!', '#ffc21a', 46);
 				show.fx('whoosh', 0.5);
-			} else float(s.x0 + 200, 380, s.flipped ? 'SIZZLING...' : 'NOT YET!', '#ffffff', 34);
+			} else float(s.x0 + 200, FLOAT_Y, s.flipped ? 'SIZZLING...' : 'NOT YET!', '#ffffff', 34);
 		} else if (s.kind === 'press') {
 			s.prog += PRESS.tap;
 			s.hit = 0.6;
 			if (i !== undefined) credit(s, i);
 			show.fx('thud', 0.4);
 			if (s.prog >= 0.999) finish(s);
-			else float(s.x0 + 200, 380, 'SQUAT TO CRUSH!', '#e9ff4a', 34);
-		} else if (s.kind === 'stir') float(s.x0 + 200, 380, 'SWAY TO STIR!', '#9dff3a', 36);
-		else if (s.kind === 'cryo') float(s.x0 + 200, 380, 'HOLD STILL!', '#8fdcff', 36);
-		else if (s.kind === 'warp') float(s.x0 + 200, 380, 'IT\'S IN ANOTHER DIMENSION', '#3af2ff', 32);
-		else float(s.x0 + 200, 380, 'WAIT FOR GOLDEN...', '#ffc21a', 34);
+			else float(s.x0 + 200, FLOAT_Y, 'SQUAT TO CRUSH!', '#e9ff4a', 34);
+		} else if (s.kind === 'stir') float(s.x0 + 200, FLOAT_Y, 'SWAY TO STIR!', '#9dff3a', 36);
+		else if (s.kind === 'cryo') float(s.x0 + 200, FLOAT_Y, 'HOLD STILL!', '#8fdcff', 36);
+		else if (s.kind === 'warp') float(s.x0 + 200, FLOAT_Y, 'IT\'S IN ANOTHER DIMENSION', '#3af2ff', 32);
+		else float(s.x0 + 200, FLOAT_Y, 'WAIT FOR GOLDEN...', '#ffc21a', 34);
 	}
 
 	// the injector's needle, 0..1 and back
@@ -586,16 +587,15 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			hatch.jam--;
 			hatch.shake = 1;
 			show.fx('thud', 0.6);
-			if (hatch.jam <= 0) { float(HATCH / 2 + W, 230, 'UNJAMMED!', '#9dff3a', 44); show.fx('allSet', 0.4); }
+			if (hatch.jam <= 0) { float(HATCH / 2 + W, FLOAT_Y, 'UNJAMMED!', '#9dff3a', 44); show.fx('allSet', 0.4); }
 			else float(at.x, at.y - 40, 'BANG!', '#ffffff', 40);
 			return;
 		}
-		let k = 0;
-		for (let j = 1; j < POD_Y.length; j++) if (Math.abs(at.y - POD_Y[j]) < Math.abs(at.y - POD_Y[k])) k = j;
+		const k = clamp(Math.floor((at.x - W) / (HATCH / 3)), 0, 2);
 		const pod = pods[k];
 		if (!pod.ing) return;
 		const i = hit.find((n) => !chefs[n].held);
-		if (i === undefined) { float(W + HATCH / 2, POD_Y[k] - 70, 'HANDS FULL!', '#ffffff', 34); return; }
+		if (i === undefined) { float(W + (k + 0.5) * HATCH / 3, FLOAT_Y, 'HANDS FULL!', '#ffffff', 34); return; }
 		chefs[i].held = { id: nextId++, ing: pod.ing, steps: [], burnt: false, by: [i] };
 		tut.held[i] = true;
 		pod.ing = null;
@@ -608,25 +608,31 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		if (i === undefined) return;
 		chefs[i].held = null;
 		show.fx('whooshLong', 0.5, 0.7);
-		float(W + (CHUTE + W) / 2, 400, pick(['INTO THE VOID', 'GONE FOREVER', 'THE VOID SAYS THANKS']), '#d04dff', 34);
+		float(W + (CHUTE + W) / 2, FLOAT_Y, pick(['INTO THE VOID', 'GONE FOREVER', 'THE VOID SAYS THANKS']), '#d04dff', 34);
 	}
 
 	function spawnPortal(item, from) {
-		let x, y, tries = 0;
+		let wall, x3, z, tries = 0;
 		do {
-			const wall = Math.floor(Math.random() * 3);
-			x = wall * W + (0.12 + Math.random() * 0.76) * W;
-			y = 190 + Math.random() * 300;
+			wall = Math.floor(Math.random() * 3);
+			x3 = -5 + Math.random() * 10;
+			z = -0.1 + Math.random() * 2.3;
 			tries++;
-		} while (tries < 20 && (Math.abs(x - (from.x0 + 200)) < 600 || (x > W + HATCH - 60 && x < W + CHUTE + 60)));
-		portals.push({ item, x, y, t: 0 });
+		} while (tries < 20 && wall === from.wall && Math.abs(x3 - SLOT_X[from.slot]) < 3.5);
+		const sp = proj(wall, x3, 1.35, z);
+		portals.push({ item, wall, x3, z, t: 0, x: sp.x, y: sp.y });
 		if (portals.length > MAX_PORTALS) portals.shift();
 		show.fx('reveal', 0.5, 0.8);
-		float(from.x0 + 200, 400, 'IT\'S... SOMEWHERE ELSE!', '#3af2ff', 36);
+		float(from.x0 + 200, FLOAT_Y, 'IT\'S... SOMEWHERE ELSE!', '#3af2ff', 36);
 	}
 
 	function stepPortals(dt) {
-		for (const p of portals) p.t += dt;
+		for (const p of portals) {
+			p.t += dt;
+			const sp = proj(p.wall, p.x3, 1.35, p.z);
+			p.x = sp.x;
+			p.y = sp.y;
+		}
 	}
 
 	function tapPortal(p, hit) {
@@ -740,9 +746,10 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		const tip = Math.round(price * 0.5 * clamp(c.left / c.patience, 0, 1));
 		for (const i of c.by) {
 			scores[i] += price + tip;
-			float(chefs[i].x, 560, '+' + (price + tip), colourOf(i), 52);
+			const o = overChef(i);
+			float(o.x, o.y, '+' + (price + tip), colourOf(i), 52);
 		}
-		float(c.x, WIN_TOP + 60, tip > 0 ? 'TIP +' + tip : 'SERVED', '#e9ff4a', 40);
+		float(c.x, TICKET_Y - 20, tip > 0 ? 'TIP +' + tip : 'SERVED', '#e9ff4a', 40);
 		served++;
 		streak++;
 		if (streak % STREAK.every === 0) {
@@ -761,7 +768,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		streak = 0;
 		walkouts++;
 		show.fx('roundFail', 0.35);
-		float(c.x, WIN_TOP + 60, 'WALKOUT!', '#ff4a32', 46);
+		float(c.x, TICKET_Y - 20, 'WALKOUT!', '#ff4a32', 46);
 	}
 
 	/* ---------- the shifts and their trouble ---------- */
@@ -888,147 +895,1417 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		ctx.restore();
 	}
 
-	/* ---------- drawing: the walls (built once) ---------- */
+	/* ---------- 3D: the kitchen, three sets seen from above ---------- */
 
-	const bgs = [];
-	function buildWall(w) {
-		const cv = document.createElement('canvas');
-		cv.width = W;
-		cv.height = H;
-		const c = cv.getContext('2d');
-		const rnd = seeded(91 + w * 17);
-		// grimy tiles
-		c.fillStyle = '#0c0f0d';
-		c.fillRect(0, 0, W, H);
-		const T = 64;
-		for (let y = 0; y < COUNTER; y += T) {
-			for (let x = 0; x < W; x += T) {
-				const broken = rnd() < 0.06;
-				const l = broken ? 5 : 11 + rnd() * 6;
-				c.fillStyle = `hsl(${105 + rnd() * 40},${8 + rnd() * 10}%,${l}%)`;
-				c.fillRect(x + 2, y + 2, T - 4, T - 4);
-				if (!broken && rnd() < 0.12) {   // (a crack)
-					c.strokeStyle = 'rgba(0,0,0,0.6)';
-					c.lineWidth = 2;
-					c.beginPath();
-					c.moveTo(x + rnd() * T, y + 2);
-					c.lineTo(x + rnd() * T, y + T / 2);
-					c.lineTo(x + rnd() * T, y + T - 2);
-					c.stroke();
-				}
+	// Every wall looks down on its own set at a tilt through an orthographic
+	// camera (2.5D: no perspective), so a wall's x maps straight onto its
+	// set's x, and the taps' columns line up with what's drawn. A wall is 12
+	// units across; the counter runs the width of every set, the cooks stand
+	// on the floor in front of it (further out the further they are from the
+	// wall), and on the front wall the mutants wait behind it.
+	const U = 12 / W;
+	const SET_X = [-40, 0, 40];
+	const PITCH = 50 * Math.PI / 180;
+	const AIM_Z = -1.75;
+	const CT = { y: 1, front: -1.2, back: -2.6, z: -1.9 };   // the counter: its top, its front and back faces, the middle of its top
+	const STAND = { near: -0.55, far: 2.6 };                  // where the cooks stand: right at the counter ... out in the room
+	const QUEUE_Z = -3.35;                                    // where the mutants stand, behind the front counter
+	const lx3 = (lx) => lx * U - 6;
+	const SLOT_X = [0, 1, 2, 3].map((k) => lx3((k + 0.5) * SLOT));
+	const POD_X = [0, 1, 2].map((k) => lx3((k + 0.5) * HATCH / 3));
+	const CHUTE_X = lx3((CHUTE + W) / 2);
+	const ITEM_AT = { chop: 0.78, fry: 0.92, grill: 0.72, stir: 1.02, press: 0.5, inject: 0.62, warp: 0.7, cryo: 0.5 };   // an item's height on each station (over the counter top)
+
+	const renderer = new THREE.WebGLRenderer({ antialias: false });   // (the composer multisamples)
+	renderer.toneMapping = THREE.ACESFilmicToneMapping;
+	renderer.toneMappingExposure = 1.15;
+	renderer.shadowMap.enabled = true;
+	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+	$(renderer.domElement).css({ position: 'absolute', left: 0, top: 0, width: WIDTH + 'px', height: H + 'px' }).appendTo(stage.$bg);
+	let post = null;
+	function resize() {
+		const k = Math.min(IGB.scale * IGB.pixelRatio, 1);
+		renderer.setPixelRatio(1);
+		renderer.setSize(Math.round(WIDTH * k), Math.round(H * k), false);
+		if (post) post.setSize();
+	}
+	const unlisten = IGB.onResize(resize);
+	resize();
+
+	const scene = new THREE.Scene();
+	scene.background = new THREE.Color(0x030405);
+	post = createWallComposer(renderer, scene, { strength: 0.75, radius: 0.55, threshold: 0.9 });
+	// what the metal reflects: a dim, greasy room with neon down both sides and a strip light overhead
+	const envTex = environmentFromShader(renderer, `
+		vec3 envColor(vec3 d) {
+			float up = d.y * 0.5 + 0.5;
+			vec3 c = mix(vec3(0.015, 0.02, 0.015), vec3(0.09, 0.1, 0.09), up);
+			c += vec3(0.9, 0.35, 0.06) * pow(max(0.0, dot(d, normalize(vec3(-1.0, 0.3, 0.2)))), 6.0);
+			c += vec3(0.05, 0.55, 0.7) * pow(max(0.0, dot(d, normalize(vec3(1.0, 0.3, 0.2)))), 6.0);
+			c += vec3(0.4, 0.9, 0.2) * pow(max(0.0, dot(d, normalize(vec3(0.0, 0.2, -1.0)))), 10.0) * 0.6;
+			c += vec3(1.0, 0.97, 0.9) * pow(max(0.0, d.y), 24.0) * 2.0;
+			return c;
+		}
+	`);
+	scene.environment = envTex;
+	scene.environmentIntensity = 0.7;
+
+	const cams = SET_X.map(function (ox) {
+		const c = new THREE.OrthographicCamera(-6, 6, 3.75, -3.75, 0.1, 80);
+		c.position.set(ox, Math.sin(PITCH) * 30, AIM_Z + Math.cos(PITCH) * 30);
+		c.lookAt(ox, 0, AIM_Z);
+		c.updateMatrixWorld();
+		return c;
+	});
+	function views() {
+		const w = renderer.domElement.width, h = renderer.domElement.height;
+		return cams.map((camera, i) => {
+			const x0 = Math.round(i * w / 3), x1 = Math.round((i + 1) * w / 3);
+			return { camera, x: x0, y: 0, width: x1 - x0, height: h };
+		});
+	}
+	// where a point in a wall's set lands on that wall (world pixels)
+	const _v = new THREE.Vector3();
+	function proj(wall, x, y, z) {
+		_v.set(SET_X[wall] + x, y, z);
+		return toScreen(_v, cams[wall], wall * W, 0, W, H) || { x: wall * W + W / 2, y: H / 2 };
+	}
+	const PROMPT_Y = proj(0, 0, CT.y + 2.15, CT.z).y;     // a station's prompt, over its machine
+	const BAR_Y = PROMPT_Y + 36;                          // and its progress bar
+	const PLATE_Y = proj(0, 0, 0.5, CT.front).y;          // its name plate, on the counter's front
+	const TICKET_Y = proj(1, 0, CT.y, CT.back).y + 16;    // the tickets, laid on the front counter
+	const SAY_Y = proj(1, 0, 2.5, QUEUE_Z).y + 20;        // the mutants' speech, over their faces
+	const FLOAT_Y = PROMPT_Y - 30;
+
+	/* ---------- 3D: helpers ---------- */
+
+	const std = (color, rough = 0.6, metal = 0.1, extra) => new THREE.MeshStandardMaterial(Object.assign({ color, roughness: rough, metalness: metal }, extra));
+	const glowMat = (color, k = 2, extra) => { const m = new THREE.MeshBasicMaterial(Object.assign({ color }, extra)); m.color.multiplyScalar(k); return m; };
+	function mesh(geo, mat, parent, x = 0, y = 0, z = 0) {
+		const m = new THREE.Mesh(geo, mat);
+		m.position.set(x, y, z);
+		if (parent) parent.add(m);
+		return m;
+	}
+	const BOX = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+	const CYL = (rt, rb, h, seg = 20, open = false) => new THREE.CylinderGeometry(rt, rb, h, seg, 1, open);
+	const SPH = (r, seg = 18) => new THREE.SphereGeometry(r, seg, Math.max(8, Math.round(seg * 0.7)));
+	const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
+	// a rod from a to b
+	function limb(parent, a, b, r, mat, seg = 8) {
+		_a.set(a[0], a[1], a[2]);
+		_b.set(b[0], b[1], b[2]);
+		const m = new THREE.Mesh(CYL(r, r, _a.distanceTo(_b), seg), mat);
+		m.position.copy(_a).add(_b).multiplyScalar(0.5);
+		m.quaternion.setFromUnitVectors(_up, _b.clone().sub(_a).normalize());
+		parent.add(m);
+		return m;
+	}
+	function shadows(obj, cast = true) {
+		obj.traverse((o) => {
+			if (!o.isMesh) return;
+			const lit = !o.material.isMeshBasicMaterial && !o.material.transparent;
+			o.castShadow = cast && lit;
+			o.receiveShadow = lit;
+		});
+		return obj;
+	}
+	function tex(w, h, paint, rx = 1, ry = 1) {
+		const t = canvasTexture(w, h, paint);
+		t.wrapS = t.wrapT = THREE.RepeatWrapping;
+		t.repeat.set(rx, ry);
+		t.anisotropy = 4;
+		return t;
+	}
+	// the camera's way back: what faces it, faces the players
+	const TOWARD = new THREE.Vector3(0, Math.sin(PITCH), Math.cos(PITCH));
+	const faceCam = (m) => m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), TOWARD);
+
+	/* ---------- 3D: textures ---------- */
+
+	const TEX = {};
+	TEX.tiles = tex(512, 512, function (c) {
+		const rnd = seeded(5);
+		c.fillStyle = '#080a09';
+		c.fillRect(0, 0, 512, 512);
+		for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
+			const broken = rnd() < 0.07;
+			c.fillStyle = `hsl(${110 + rnd() * 50},${10 + rnd() * 12}%,${broken ? 6 : 16 + rnd() * 9}%)`;
+			c.fillRect(x * 64 + 3, y * 64 + 3, 58, 58);
+			if (!broken && rnd() < 0.15) { c.strokeStyle = 'rgba(0,0,0,0.7)'; c.lineWidth = 2; c.beginPath(); c.moveTo(x * 64 + rnd() * 64, y * 64); c.lineTo(x * 64 + rnd() * 64, y * 64 + 64); c.stroke(); }
+		}
+		for (let n = 0; n < 10; n++) {
+			const x = rnd() * 512, y = rnd() * 512, r = 30 + rnd() * 120;
+			const g = c.createRadialGradient(x, y, 0, x, y, r);
+			g.addColorStop(0, rnd() < 0.5 ? 'rgba(70,45,10,0.5)' : 'rgba(40,80,20,0.4)');
+			g.addColorStop(1, 'rgba(0,0,0,0)');
+			c.fillStyle = g;
+			c.fillRect(0, 0, 512, 512);
+		}
+		for (let n = 0; n < 14; n++) { c.fillStyle = 'rgba(60,40,15,0.45)'; c.fillRect(rnd() * 512, rnd() * 200, 3 + rnd() * 4, 60 + rnd() * 240); }
+	}, 7, 4);
+	TEX.floor = tex(512, 512, function (c) {
+		const rnd = seeded(9);
+		for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
+			c.fillStyle = (x + y) % 2 ? `hsl(30,6%,${13 + rnd() * 4}%)` : `hsl(40,8%,${24 + rnd() * 6}%)`;
+			c.fillRect(x * 128, y * 128, 128, 128);
+		}
+		c.strokeStyle = 'rgba(0,0,0,0.6)';
+		c.lineWidth = 4;
+		for (let k = 0; k <= 4; k++) { c.beginPath(); c.moveTo(k * 128, 0); c.lineTo(k * 128, 512); c.moveTo(0, k * 128); c.lineTo(512, k * 128); c.stroke(); }
+		for (let n = 0; n < 16; n++) {
+			const x = rnd() * 512, y = rnd() * 512, r = 20 + rnd() * 110;
+			const g = c.createRadialGradient(x, y, 0, x, y, r);
+			g.addColorStop(0, `rgba(${rnd() < 0.5 ? '30,20,5' : '20,40,10'},0.55)`);
+			g.addColorStop(1, 'rgba(0,0,0,0)');
+			c.fillStyle = g;
+			c.fillRect(0, 0, 512, 512);
+		}
+	}, 4, 2.5);
+	TEX.counter = tex(1024, 128, function (c) {
+		const rnd = seeded(13);
+		c.fillStyle = '#1a1e1d';
+		c.fillRect(0, 0, 1024, 128);
+		for (let x = 0; x < 1024; x += 128) {
+			c.fillStyle = `rgba(255,255,255,${0.03 + rnd() * 0.04})`;
+			c.fillRect(x + 6, 8, 116, 112);
+			c.fillStyle = '#58605e';
+			for (const [rx, ry] of [[14, 16], [114, 16], [14, 112], [114, 112]]) { c.beginPath(); c.arc(x + rx, ry, 4, 0, Math.PI * 2); c.fill(); }
+			if (rnd() < 0.6) {
+				const g = c.createLinearGradient(0, 0, 0, 128);
+				g.addColorStop(0, 'rgba(150,70,20,0.75)');
+				g.addColorStop(1, 'rgba(150,70,20,0)');
+				c.fillStyle = g;
+				c.fillRect(x + rnd() * 100, 0, 8 + rnd() * 18, 128);
 			}
 		}
-		// grime: a dark top, stains, drips
-		const g = c.createLinearGradient(0, 0, 0, COUNTER);
-		g.addColorStop(0, 'rgba(0,0,0,0.75)');
-		g.addColorStop(0.5, 'rgba(0,0,0,0.25)');
-		g.addColorStop(1, 'rgba(20,10,0,0.55)');
-		c.fillStyle = g;
-		c.fillRect(0, 0, W, COUNTER);
-		for (let n = 0; n < 14; n++) {
-			const x = rnd() * W, y = 120 + rnd() * 480, r = 40 + rnd() * 140;
-			const st = c.createRadialGradient(x, y, 0, x, y, r);
-			const hue = rnd() < 0.5 ? '60,40,10' : '40,80,20';
-			st.addColorStop(0, `rgba(${hue},0.35)`);
-			st.addColorStop(1, `rgba(${hue},0)`);
-			c.fillStyle = st;
-			c.fillRect(x - r, y - r, r * 2, r * 2);
+	});
+	TEX.steel = tex(512, 128, function (c) {
+		const rnd = seeded(21);
+		c.fillStyle = '#8f9896';
+		c.fillRect(0, 0, 512, 128);
+		for (let n = 0; n < 500; n++) { c.fillStyle = `rgba(${rnd() < 0.5 ? '255,255,255' : '0,0,0'},${rnd() * 0.08})`; c.fillRect(rnd() * 512, rnd() * 128, 40 + rnd() * 120, 1); }
+		for (let n = 0; n < 6; n++) {
+			const x = rnd() * 512, y = rnd() * 128;
+			const g = c.createRadialGradient(x, y, 0, x, y, 30);
+			g.addColorStop(0, 'rgba(90,60,20,0.5)');
+			g.addColorStop(1, 'rgba(0,0,0,0)');
+			c.fillStyle = g;
+			c.fillRect(0, 0, 512, 128);
 		}
-		for (let n = 0; n < 26; n++) {
-			const x = rnd() * W, y = 100 + rnd() * 80, len = 40 + rnd() * 260;
-			c.strokeStyle = rnd() < 0.5 ? 'rgba(120,160,40,0.25)' : 'rgba(90,50,20,0.35)';
-			c.lineWidth = 3 + rnd() * 5;
-			c.lineCap = 'round';
+	}, 3, 1);
+	TEX.hazard = tex(128, 32, function (c) {
+		c.fillStyle = '#141410';
+		c.fillRect(0, 0, 128, 32);
+		c.fillStyle = '#d9b51a';
+		for (let x = -32; x < 160; x += 32) { c.beginPath(); c.moveTo(x, 32); c.lineTo(x + 16, 32); c.lineTo(x + 32, 0); c.lineTo(x + 16, 0); c.fill(); }
+	}, 14, 1);
+	TEX.wood = tex(256, 256, function (c) {
+		c.fillStyle = '#a5703e';
+		c.fillRect(0, 0, 256, 256);
+		for (let r = 120; r > 0; r -= 9) { c.strokeStyle = `rgba(80,40,10,${0.25 + (r % 18 ? 0.1 : 0.25)})`; c.lineWidth = 3; c.beginPath(); c.arc(128, 128, r, 0, Math.PI * 2); c.stroke(); }
+		c.strokeStyle = 'rgba(30,15,5,0.8)';
+		c.lineWidth = 3;
+		for (let n = 0; n < 9; n++) { const a = n * 0.7; c.beginPath(); c.moveTo(128 + Math.cos(a) * 20, 128 + Math.sin(a) * 20); c.lineTo(128 + Math.cos(a) * 110, 128 + Math.sin(a) * 110); c.stroke(); }
+	});
+	TEX.sky = canvasTexture(1024, 320, function (c) {
+		const g = c.createLinearGradient(0, 0, 0, 320);
+		g.addColorStop(0, '#2a0806');
+		g.addColorStop(0.45, '#a23a12');
+		g.addColorStop(1, '#f0a04a');
+		c.fillStyle = g;
+		c.fillRect(0, 0, 1024, 320);
+		const sun = c.createRadialGradient(700, 200, 0, 700, 200, 130);
+		sun.addColorStop(0, 'rgba(255,240,180,1)');
+		sun.addColorStop(0.3, 'rgba(255,190,90,0.8)');
+		sun.addColorStop(1, 'rgba(255,120,40,0)');
+		c.fillStyle = sun;
+		c.fillRect(0, 0, 1024, 320);
+		const rnd = seeded(33);
+		for (const [shade, base, top] of [['#5a1c0c', 250, 120], ['#2a0a04', 300, 70]]) {
+			c.fillStyle = shade;
+			for (let x = 0; x < 1024; x += 20 + rnd() * 50) {
+				const w = 18 + rnd() * 50, h = top + rnd() * 120;
+				c.beginPath();
+				c.moveTo(x, 320);
+				c.lineTo(x, base - h);
+				c.lineTo(x + w * (0.3 + rnd() * 0.4), base - h - rnd() * 30);   // (broken tops)
+				c.lineTo(x + w, base - h + rnd() * 40);
+				c.lineTo(x + w, 320);
+				c.fill();
+			}
+		}
+		for (let n = 0; n < 4; n++) {   // (smoke rising off the ruins)
+			const x = 80 + rnd() * 860;
+			for (let k = 0; k < 8; k++) { c.fillStyle = `rgba(30,10,5,${0.25 - k * 0.025})`; c.beginPath(); c.arc(x + k * 12, 200 - k * 26, 14 + k * 6, 0, Math.PI * 2); c.fill(); }
+		}
+	});
+	TEX.swirl = canvasTexture(256, 256, function (c) {
+		c.fillStyle = '#000';
+		c.fillRect(0, 0, 256, 256);
+		c.translate(128, 128);
+		for (let n = 0; n < 420; n++) {
+			const a = n * 0.31, r = Math.sqrt(n / 420) * 124;
+			c.fillStyle = n % 3 ? 'rgba(58,242,255,0.9)' : 'rgba(255,45,143,0.9)';
 			c.beginPath();
-			c.moveTo(x, y);
-			c.lineTo(x + (rnd() - 0.5) * 6, y + len);
+			c.arc(Math.cos(a + r * 0.05) * r, Math.sin(a + r * 0.05) * r, 1 + (n % 4) * 0.6, 0, Math.PI * 2);
+			c.fill();
+		}
+		for (let k = 0; k < 5; k++) {
+			c.strokeStyle = k % 2 ? 'rgba(208,77,255,0.6)' : 'rgba(58,242,255,0.5)';
+			c.lineWidth = 6;
+			c.beginPath();
+			for (let s = 0; s < 60; s++) { const a = k * 1.256 + s * 0.12, r = s * 2; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
 			c.stroke();
 		}
-		// pipes along the top
-		for (const [y, r] of [[96, 16], [128, 9]]) {
-			const pg = c.createLinearGradient(0, y - r, 0, y + r);
-			pg.addColorStop(0, '#5b4a3a');
-			pg.addColorStop(0.4, '#8b6b4a');
-			pg.addColorStop(1, '#2a1e14');
-			c.fillStyle = pg;
-			c.fillRect(0, y - r, W, r * 2);
-			for (let x = 40 + rnd() * 100; x < W; x += 180 + rnd() * 160) {
-				c.fillStyle = '#3a2a1c';
-				c.fillRect(x, y - r - 4, 16, r * 2 + 8);
-				if (rnd() < 0.3) { c.fillStyle = 'rgba(140,90,40,0.5)'; c.fillRect(x + 4, y + r, 6, 30 + rnd() * 60); }
-			}
-		}
-		// hazard stripes over the counter
-		c.save();
+	});
+	TEX.swirl.center.set(0.5, 0.5);
+	TEX.soft = canvasTexture(64, 64, function (c) {
+		const g = c.createRadialGradient(32, 32, 0, 32, 32, 32);
+		g.addColorStop(0, 'rgba(255,255,255,1)');
+		g.addColorStop(0.5, 'rgba(255,255,255,0.45)');
+		g.addColorStop(1, 'rgba(255,255,255,0)');
+		c.fillStyle = g;
+		c.fillRect(0, 0, 64, 64);
+	});
+	TEX.crt = canvasTexture(256, 176, function (c) {
+		c.fillStyle = '#04200a';
+		c.fillRect(0, 0, 256, 176);
+		c.fillStyle = '#9dff3a';
+		c.fillRect(60, 46, 34, 34);
+		c.fillRect(162, 46, 34, 34);
+		const pts = [[56, 116], [86, 140], [116, 116], [146, 140], [176, 116], [204, 128]];
+		c.strokeStyle = '#9dff3a';
+		c.lineWidth = 10;
 		c.beginPath();
-		c.rect(0, COUNTER - 26, W, 14);
-		c.clip();
-		c.fillStyle = '#1a1a10';
-		c.fillRect(0, COUNTER - 26, W, 14);
-		c.fillStyle = '#b89a1a';
-		for (let x = -20; x < W; x += 40) { c.beginPath(); c.moveTo(x, COUNTER - 12); c.lineTo(x + 20, COUNTER - 12); c.lineTo(x + 34, COUNTER - 26); c.lineTo(x + 14, COUNTER - 26); c.fill(); }
-		c.restore();
-		// the counter: a steel top, a dented front
-		const tg = c.createLinearGradient(0, COUNTER, 0, COUNTER + 40);
-		tg.addColorStop(0, '#9aa3a0');
-		tg.addColorStop(0.3, '#5d6563');
-		tg.addColorStop(1, '#2a302e');
-		c.fillStyle = tg;
-		c.fillRect(0, COUNTER, W, 40);
-		c.fillStyle = '#171b1a';
-		c.fillRect(0, COUNTER + 40, W, H - COUNTER - 40);
-		for (let x = 0; x < W; x += 200) {
-			c.fillStyle = `rgba(255,255,255,${0.02 + rnd() * 0.03})`;
-			c.fillRect(x + 8, COUNTER + 52, 184, H - COUNTER - 60);
-			c.fillStyle = '#4a514f';
-			for (const [rx, ry] of [[18, COUNTER + 64], [182, COUNTER + 64], [18, H - 20], [182, H - 20]]) { c.beginPath(); c.arc(x + rx, ry, 4, 0, Math.PI * 2); c.fill(); }
-			if (rnd() < 0.5) {   // (rust)
-				const rx = x + rnd() * 180;
-				const rg = c.createLinearGradient(0, COUNTER + 40, 0, COUNTER + 200);
-				rg.addColorStop(0, 'rgba(140,70,20,0.6)');
-				rg.addColorStop(1, 'rgba(140,70,20,0)');
-				c.fillStyle = rg;
-				c.fillRect(rx, COUNTER + 40, 10 + rnd() * 20, 160);
+		pts.forEach(([x, y], k) => (k ? c.lineTo(x, y) : c.moveTo(x, y)));
+		c.stroke();
+		for (let y = 0; y < 176; y += 4) { c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(0, y, 256, 2); }
+	});
+	// a neon sign: white tubes, a halo of colour
+	function signTex(text, colour) {
+		return canvasTexture(1024, 192, function (c) {
+			c.clearRect(0, 0, 1024, 192);
+			c.font = `800 118px ${FONT}, sans-serif`;
+			c.textAlign = 'center';
+			c.textBaseline = 'middle';
+			c.lineJoin = 'round';
+			c.shadowColor = colour;
+			c.shadowBlur = 28;
+			c.strokeStyle = colour;
+			c.lineWidth = 16;
+			c.strokeText(text, 512, 100);
+			c.shadowBlur = 0;
+			c.fillStyle = '#ffffff';
+			c.fillText(text, 512, 100);
+		});
+	}
+
+	/* ---------- 3D: shared materials ---------- */
+
+	const MAT = {
+		tiles: std(0xffffff, 0.75, 0.05, { map: TEX.tiles }),
+		floor: std(0xffffff, 0.55, 0.15, { map: TEX.floor }),
+		counterFront: std(0xffffff, 0.6, 0.6, { map: TEX.counter }),
+		counterTop: std(0xffffff, 0.28, 0.85, { map: TEX.steel }),
+		hazard: std(0xffffff, 0.6, 0.2, { map: TEX.hazard }),
+		steel: std(0xb4bcba, 0.25, 0.9),
+		darkSteel: std(0x3c4241, 0.4, 0.8),
+		black: std(0x141616, 0.5, 0.5),
+		rust: std(0x7a4422, 0.85, 0.35),
+		pipe: std(0x6a5a46, 0.5, 0.7),
+		wood: std(0x7a4c26, 0.8, 0),
+		woodTop: std(0xffffff, 0.75, 0, { map: TEX.wood }),
+		beige: std(0xd6ccb0, 0.55, 0.15),
+		glass: std(0xb8e4ff, 0.05, 0.1, { transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide }),
+		rubber: std(0x1c1c1c, 0.9, 0),
+		cream: std(0xe8e0c8, 0.7, 0),
+		white: std(0xf0ece0, 0.6, 0),
+		puddle: std(0x0a1408, 0.02, 0.3, { transparent: true, opacity: 0.75 }),
+	};
+
+	/* ---------- 3D: the room ---------- */
+
+	const sets = SET_X.map(function (ox) {
+		const g = new THREE.Group();
+		g.position.x = ox;
+		scene.add(g);
+		return g;
+	});
+	const fans = [];
+	const signs = [];
+	const lamps = [];
+
+	function buildRoom(w) {
+		const g = sets[w];
+		const backZ = w === 1 ? -4.45 : -2.65;
+		const floor = mesh(new THREE.PlaneGeometry(14, 9.5), MAT.floor, g, 0, 0, 0.1);
+		floor.rotation.x = -Math.PI / 2;
+		const wall = mesh(new THREE.PlaneGeometry(14, 8), MAT.tiles, g, 0, 4, backZ);
+		wall.receiveShadow = true;
+		// the counter: steel on top, dented panels down the front
+		const counter = mesh(BOX(12.6, CT.y, CT.front - CT.back), [MAT.darkSteel, MAT.darkSteel, MAT.counterTop, MAT.black, MAT.counterFront, MAT.black], g, 0, CT.y / 2, CT.z);
+		counter.receiveShadow = true;
+		counter.castShadow = true;
+		mesh(BOX(12.6, 0.07, 0.02), MAT.hazard, g, 0, CT.y - 0.06, CT.front + 0.012);
+		mesh(BOX(12.6, 0.05, 1.5), MAT.steel, g, 0, CT.y + 0.005, CT.z);
+		mesh(BOX(12.6, 0.12, 0.05), MAT.black, g, 0, 0.06, CT.front + 0.03);
+		// pipes along the back wall, dripping rust
+		for (const [y, r] of [[w === 1 ? 3.6 : 4.3, 0.13], [w === 1 ? 3.9 : 4.65, 0.08]]) {
+			const p = mesh(CYL(r, r, 14, 14), MAT.pipe, g, 0, y, backZ + 0.2);
+			p.rotation.z = Math.PI / 2;
+			for (let x = -6; x <= 6; x += 2.3 + (y % 1)) {
+				const j = mesh(CYL(r * 1.35, r * 1.35, 0.14, 14), MAT.rust, g, x, y, backZ + 0.2);
+				j.rotation.z = Math.PI / 2;
 			}
 		}
-		// the front wall: the window frames' backing, the hatch's bulkhead and the chute's
-		if (w === 1) {
-			c.fillStyle = '#1d2422';
-			c.fillRect(20, 210, HATCH - 40, 440);
-			c.fillRect(CHUTE + 20, 210, W - CHUTE - 40, 440);
-			c.strokeStyle = '#3a4442';
-			c.lineWidth = 6;
-			c.strokeRect(20, 210, HATCH - 40, 440);
-			c.strokeRect(CHUTE + 20, 210, W - CHUTE - 40, 440);
+		// puddles of something
+		const rnd = seeded(40 + w);
+		for (let n = 0; n < 3; n++) {
+			const pd = mesh(new THREE.CircleGeometry(0.35 + rnd() * 0.5, 24), MAT.puddle, g, -5 + rnd() * 10, 0.01, 0 + rnd() * 2.2);
+			pd.rotation.x = -Math.PI / 2;
+			pd.scale.set(1, 0.6 + rnd() * 0.5, 1);
 		}
-		return cv;
+		const drain = mesh(new THREE.CircleGeometry(0.28, 20), MAT.black, g, -2 + rnd() * 4, 0.012, 1.5);
+		drain.rotation.x = -Math.PI / 2;
+		// the set's own colour of neon light
+		const light = new THREE.PointLight([0xff8a3a, 0x9dff6a, 0x3ad8ff][w], 28, 16, 1.6);
+		light.position.set(0, 4.4, 0.8);
+		g.add(light);
+		if (w !== 1) {
+			// the sign, a shelf of glowing jars either side, the fans
+			const sign = mesh(new THREE.PlaneGeometry(4.6, 0.86), new THREE.MeshBasicMaterial({ map: null, transparent: true, depthWrite: false }), g, 0, 3.55, backZ + 0.06);
+			signs.push({ m: sign, text: w === 0 ? 'THE OLD WAYS' : 'THE NEW WAYS', colour: w === 0 ? '#ff8a2a' : '#3af2ff', k: 1.6, seed: w });
+			for (const side of [-1, 1]) {
+				const sx = side * 4.4;
+				mesh(BOX(2.6, 0.08, 0.36), MAT.rust, g, sx, 3.25, backZ + 0.18);
+				for (let k = 0; k < 4; k++) {
+					const hue = [0x9dff3a, 0xff2d8f, 0xe9ff4a, 0x3af2ff][(k + w) % 4];
+					mesh(CYL(0.15, 0.15, 0.36 + (k % 2) * 0.12, 14), MAT.glass, g, sx - 0.9 + k * 0.6, 3.48 + (k % 2) * 0.06, backZ + 0.18);
+					mesh(CYL(0.12, 0.12, 0.22 + (k % 2) * 0.1, 14), glowMat(hue, 1.4), g, sx - 0.9 + k * 0.6, 3.42 + (k % 2) * 0.06, backZ + 0.18);
+				}
+				const fan = new THREE.Group();
+				fan.position.set(side * 5.65, 2.15, backZ + 0.1);
+				g.add(fan);
+				const ring = mesh(new THREE.TorusGeometry(0.42, 0.06, 8, 24), MAT.darkSteel, fan);
+				ring.castShadow = false;
+				mesh(new THREE.CircleGeometry(0.42, 24), MAT.black, fan, 0, 0, -0.02);
+				const blades = new THREE.Group();
+				fan.add(blades);
+				for (let b = 0; b < 4; b++) {
+					const bl = mesh(BOX(0.12, 0.38, 0.02), MAT.steel, blades, 0, 0.2, 0.02);
+					const pivot = new THREE.Group();
+					pivot.rotation.z = b * Math.PI / 2;
+					pivot.add(bl);
+					blades.add(pivot);
+				}
+				fans.push(blades);
+			}
+		} else {
+			// the serving window onto the wasteland, and the signs over it
+			mesh(new THREE.PlaneGeometry(7.2, 2.6), new THREE.MeshBasicMaterial({ map: TEX.sky, color: new THREE.Color(1.1, 1.1, 1.1) }), g, 0, 2.05, backZ + 0.03);
+			for (const x of [-3.65, 3.65]) mesh(BOX(0.22, 2.9, 0.3), MAT.darkSteel, g, x, 2.05, backZ + 0.1);
+			mesh(BOX(7.5, 0.24, 0.3), MAT.darkSteel, g, 0, 3.42, backZ + 0.1);
+			mesh(BOX(7.5, 0.16, 0.5), MAT.rust, g, 0, 0.72, backZ + 0.2);
+			for (const [x, text, colour] of [[-2.3, 'GRUB-O-TRON', '#9dff3a'], [2.3, 'OPEN 25/8', '#FC1992']]) {
+				const sign = mesh(new THREE.PlaneGeometry(2.7, 0.5), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), g, x, 3.1, -2.9);
+				sign.rotation.x = -0.35;
+				signs.push({ m: sign, text, colour, k: 1.7, seed: x });
+				limb(g, [x - 1, 3.38, -2.95], [x - 1, 4.4, -3], 0.015, MAT.black);
+				limb(g, [x + 1, 3.38, -2.95], [x + 1, 4.4, -3], 0.015, MAT.black);
+			}
+		}
+		// hanging strip lamps, flickering
+		for (const x of [-3, 3]) {
+			const lamp = mesh(BOX(1.8, 0.07, 0.16), glowMat(0xeaf6ff, 2.2), g, x, w === 1 ? 3.7 : 4.0, w === 1 ? -2.0 : -1.2);
+			lamps.push({ m: lamp, seed: x * 7 + w * 13 });
+		}
+	}
+	for (let w = 0; w < 3; w++) buildRoom(w);
+	function paintSigns() {
+		for (const s of signs) {
+			if (s.m.material.map) s.m.material.map.dispose();
+			s.m.material.map = signTex(s.text, s.colour);
+			s.m.material.color.setScalar(s.k);
+			s.m.material.needsUpdate = true;
+		}
+	}
+	paintSigns();
+	if (document.fonts) document.fonts.load(`800 100px ${FONT}`).then(paintSigns).catch(() => {});
+
+	// the key light, one shadow map over all three sets
+	scene.add(new THREE.HemisphereLight(0x8a98a4, 0x1c140a, 0.55));
+	const sun = new THREE.DirectionalLight(0xfff0e0, 2.1);
+	sun.position.set(0, 20, 8);
+	sun.target.position.set(0, 0, -1.5);
+	scene.add(sun, sun.target);
+	sun.castShadow = true;
+	sun.shadow.mapSize.set(4096, 1024);
+	Object.assign(sun.shadow.camera, { left: -47, right: 47, top: 9, bottom: -9, near: 1, far: 50 });
+	sun.shadow.camera.updateProjectionMatrix();
+	sun.shadow.bias = -0.0004;
+	sun.shadow.normalBias = 0.02;
+
+	/* ---------- 3D: the stations ---------- */
+
+	const STATION_3D = {
+		chop(g, p) {
+			mesh(CYL(1.0, 1.12, 0.56, 32), [MAT.wood, MAT.woodTop, MAT.wood], g, 0, 0.28, 0);
+			const goo = mesh(new THREE.CircleGeometry(0.26, 16), glowMat(0x7aff2a, 0.9), g, -0.45, 0.565, 0.15);
+			goo.rotation.x = -Math.PI / 2;
+			const cleaver = new THREE.Group();
+			cleaver.position.set(0.9, 0.78, 0.1);
+			g.add(cleaver);
+			mesh(BOX(0.42, 0.1, 0.1), MAT.wood, cleaver, 0.18, 0, 0);
+			mesh(BOX(0.78, 0.44, 0.04), MAT.steel, cleaver, -0.4, -0.02, 0);
+			mesh(BOX(0.78, 0.05, 0.05), std(0xe8f0ee, 0.1, 1), cleaver, -0.4, -0.23, 0);
+			p.cleaver = cleaver;
+		},
+		fry(g, p) {
+			mesh(BOX(2.2, 0.86, 1.3), MAT.steel, g, 0, 0.43, 0);
+			mesh(BOX(2.3, 0.08, 1.4), MAT.darkSteel, g, 0, 0.88, 0);
+			p.oilMat = std(0xffc94a, 0.1, 0.2, { emissive: 0xff8a10, emissiveIntensity: 0.2 });
+			const oil = mesh(new THREE.PlaneGeometry(1.95, 1.05), p.oilMat, g, 0, 0.9, 0);
+			oil.rotation.x = -Math.PI / 2;
+			limb(g, [0.75, 0.95, 0.35], [1.25, 1.55, 0.45], 0.05, MAT.black);
+			const basket = new THREE.LineSegments(new THREE.EdgesGeometry(BOX(1.1, 0.32, 0.7)), new THREE.LineBasicMaterial({ color: 0x9aa4a2 }));
+			basket.position.set(0, 0.86, 0);
+			g.add(basket);
+			mesh(BOX(0.7, 0.32, 0.04), MAT.black, g, 0, 0.45, 0.66);
+			p.display = mesh(new THREE.PlaneGeometry(0.5, 0.16), glowMat(0xffc21a, 1.6), g, 0, 0.47, 0.685);
+			p.light = new THREE.PointLight(0xffa030, 0, 4, 2);
+			p.light.position.set(0, 1.5, 0.2);
+			g.add(p.light);
+		},
+		grill(g, p) {
+			mesh(BOX(2.4, 0.5, 1.3), MAT.black, g, 0, 0.25, 0);
+			mesh(BOX(2.4, 0.9, 0.1), MAT.darkSteel, g, 0, 0.7, -0.62);
+			p.glow = glowMat(0xff6a1a, 0.3);
+			const coals = mesh(new THREE.PlaneGeometry(2.2, 1.1), p.glow, g, 0, 0.505, 0);
+			coals.rotation.x = -Math.PI / 2;
+			for (let n = 0; n < 11; n++) mesh(BOX(0.05, 0.05, 1.15), MAT.darkSteel, g, -1.05 + n * 0.21, 0.56, 0);
+			for (let n = 0; n < 4; n++) {
+				const k = mesh(CYL(0.08, 0.08, 0.08, 14), MAT.steel, g, -0.8 + n * 0.53, 0.25, 0.68);
+				k.rotation.x = Math.PI / 2;
+			}
+			p.light = new THREE.PointLight(0xff5a1a, 0, 4, 2);
+			p.light.position.set(0, 1.2, 0.2);
+			g.add(p.light);
+		},
+		stir(g, p) {
+			const pot = mesh(CYL(0.95, 0.78, 1.0, 32, true), std(0x30363a, 0.35, 0.85, { side: THREE.DoubleSide }), g, 0, 0.5, 0);
+			pot.castShadow = true;
+			mesh(new THREE.CircleGeometry(0.78, 32), MAT.black, g, 0, 0.02, 0).rotation.x = -Math.PI / 2;
+			const rim = mesh(new THREE.TorusGeometry(0.95, 0.06, 10, 40), MAT.steel, g, 0, 1.0, 0);
+			rim.rotation.x = Math.PI / 2;
+			p.sludge = std(0x5aa82a, 0.15, 0.1, { emissive: 0x6aff2a, emissiveIntensity: 0.5 });
+			const s = mesh(new THREE.CircleGeometry(0.9, 32), p.sludge, g, 0, 0.9, 0);
+			s.rotation.x = -Math.PI / 2;
+			const burner = mesh(new THREE.TorusGeometry(0.6, 0.05, 8, 32), glowMat(0xff6a1a, 1.5), g, 0, 0.04, 0);
+			burner.rotation.x = Math.PI / 2;
+			const paddle = new THREE.Group();
+			paddle.position.set(0, 0.9, 0);
+			g.add(paddle);
+			mesh(BOX(0.09, 1.7, 0.09), MAT.wood, paddle, 0, 0.45, 0);
+			mesh(BOX(0.32, 0.4, 0.06), MAT.wood, paddle, 0, -0.3, 0);
+			p.paddle = paddle;
+		},
+		press(g, p) {
+			for (const x of [-1.05, 1.05]) mesh(BOX(0.26, 2.0, 0.3), MAT.darkSteel, g, x, 1.0, 0);
+			mesh(BOX(2.5, 0.38, 0.5), MAT.hazard, g, 0, 2.05, 0);
+			mesh(BOX(1.9, 0.22, 1.1), MAT.black, g, 0, 0.11, 0);
+			p.rod = mesh(CYL(0.13, 0.13, 1, 16), MAT.steel, g, 0, 1.5, 0);
+			p.plate = mesh(BOX(1.6, 0.2, 1.0), std(0x6e7472, 0.35, 0.85), g, 0, 1.3, 0);
+			p.beacon = mesh(SPH(0.13, 14), glowMat(0xe9ff4a, 2), g, 0, 2.36, 0);
+		},
+		inject(g, p) {
+			mesh(BOX(1.6, 0.24, 1.1), MAT.black, g, 0, 0.12, 0);
+			mesh(CYL(0.66, 0.66, 1.5, 32, true), MAT.glass, g, 0, 1.0, 0);
+			p.fluid = std(0x9a2ad0, 0.1, 0.1, { emissive: 0xc04dff, emissiveIntensity: 0.9, transparent: true, opacity: 0.55, depthWrite: false });
+			mesh(CYL(0.6, 0.6, 0.62, 32), p.fluid, g, 0, 0.55, 0);
+			mesh(BOX(1.1, 0.2, 1.1), MAT.darkSteel, g, 0, 1.82, 0);
+			mesh(CYL(0.14, 0.14, 0.5, 16), glowMat(0xd04dff, 1.6), g, 0, 2.15, 0);
+			p.needle = mesh(CYL(0.025, 0.005, 0.7, 8), MAT.steel, g, 0, 1.45, 0);
+			p.light = new THREE.PointLight(0xc04dff, 3, 3.5, 2);
+			p.light.position.set(0, 1.2, 0.5);
+			g.add(p.light);
+		},
+		warp(g, p) {
+			mesh(BOX(2.35, 1.35, 1.25), MAT.beige, g, 0, 0.675, 0);
+			mesh(BOX(1.6, 1.05, 0.06), MAT.darkSteel, g, -0.3, 0.7, 0.63);
+			p.window = glowMat(0xffffff, 0.5, { map: TEX.swirl });
+			mesh(new THREE.PlaneGeometry(1.45, 0.92), p.window, g, -0.3, 0.7, 0.665);
+			mesh(BOX(0.5, 1.05, 0.05), MAT.darkSteel, g, 0.85, 0.7, 0.63);
+			for (const y of [0.98, 0.62]) {
+				const k = mesh(CYL(0.12, 0.12, 0.08, 16), MAT.steel, g, 0.85, y, 0.7);
+				k.rotation.x = Math.PI / 2;
+			}
+			p.dial = mesh(BOX(0.03, 0.12, 0.02), glowMat(0x3af2ff, 2), g, 0.85, 0.98, 0.75);
+			p.light = new THREE.PointLight(0x3af2ff, 0, 4, 2);
+			p.light.position.set(-0.3, 0.8, 1.0);
+			g.add(p.light);
+		},
+		cryo(g, p) {
+			mesh(CYL(0.85, 0.95, 0.12, 32), std(0x8aa8b8, 0.2, 0.8), g, 0, 0.06, 0);
+			const ring = mesh(new THREE.TorusGeometry(0.8, 0.04, 8, 40), glowMat(0x8fdcff, 1.8), g, 0, 0.13, 0);
+			ring.rotation.x = Math.PI / 2;
+			mesh(BOX(0.16, 1.9, 0.16), MAT.darkSteel, g, 1.05, 0.95, -0.45);
+			const gun = new THREE.Group();
+			gun.position.set(0.85, 1.75, -0.3);
+			gun.rotation.z = 0.9;
+			g.add(gun);
+			mesh(CYL(0.22, 0.26, 0.8, 18), std(0x5a7a8a, 0.35, 0.8), gun, 0, 0, 0);
+			mesh(CYL(0.12, 0.2, 0.3, 18), MAT.steel, gun, 0, -0.5, 0);
+			p.nozzle = mesh(new THREE.TorusGeometry(0.12, 0.035, 8, 20), glowMat(0x8fdcff, 2), gun, 0, -0.66, 0);
+			p.nozzle.rotation.x = Math.PI / 2;
+			p.light = new THREE.PointLight(0x8fdcff, 0, 4, 2);
+			p.light.position.set(0, 1.0, 0.4);
+			g.add(p.light);
+		},
+	};
+
+	// the 3D for each station's state (rebuilt with the kitchen, so made fresh each time)
+	const station3d = {};
+	function buildStations() {
+		for (const s of STATIONS) {
+			const g = new THREE.Group();
+			g.position.set(SLOT_X[s.slot], CT.y, CT.z);
+			sets[s.wall].add(g);
+			const p = { g };
+			STATION_3D[s.kind](g, p);
+			// the ring on the floor when someone's at it, and its fire
+			p.ring = mesh(new THREE.RingGeometry(1.0, 1.18, 48), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, depthWrite: false }), sets[s.wall], SLOT_X[s.slot], 0.02, -0.25);
+			p.ring.rotation.x = -Math.PI / 2;
+			p.ring.scale.set(1, 0.55, 1);
+			p.fire = new THREE.Group();
+			g.add(p.fire);
+			p.flames = [];
+			for (let n = 0; n < 9; n++) {
+				const f = mesh(new THREE.ConeGeometry(0.2, 0.9, 10), glowMat(n % 3 ? 0xff6a10 : 0xffd23a, 2.2, { transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }), p.fire, -0.9 + n * 0.22, 0.9, (n % 3 - 1) * 0.3);
+				p.flames.push(f);
+			}
+			shadows(g);
+			station3d[s.kind] = p;
+		}
+	}
+	buildStations();
+
+	/* ---------- 3D: the hatch, the chute ---------- */
+
+	const hatch3d = (function () {
+		const g = new THREE.Group();
+		g.position.set(0, CT.y, CT.z);
+		sets[1].add(g);
+		const cx = lx3(HATCH / 2);
+		mesh(BOX(2.35, 0.3, 1.25), MAT.darkSteel, g, cx, 0.15, 0);
+		for (const x of [cx - 1.1, cx + 1.1]) mesh(BOX(0.14, 1.55, 0.2), MAT.darkSteel, g, x, 0.9, -0.45);
+		const hood = mesh(BOX(2.45, 0.22, 0.9), MAT.steel, g, cx, 1.72, -0.2);
+		hood.castShadow = true;
+		const pods = POD_X.map(function (x) {
+			const pad = mesh(CYL(0.34, 0.36, 0.08, 24), std(0x2a3a2a, 0.3, 0.6), g, x, 0.34, 0);
+			pad.receiveShadow = true;
+			const rim = mesh(new THREE.TorusGeometry(0.34, 0.035, 8, 28), glowMat(0x9dff3a, 1.8), g, x, 0.39, 0);
+			rim.rotation.x = Math.PI / 2;
+			mesh(CYL(0.12, 0.12, 0.05, 16), glowMat(0x9dff3a, 2.2), g, x, 1.6, -0.05);
+			const beam = mesh(CYL(0.3, 0.34, 1.2, 24, true), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x9dff3a).multiplyScalar(1.5), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }), g, x, 0.98, 0);
+			return { rim, beam };
+		});
+		shadows(g);
+		// the chute: a hole in the counter, onto somewhere else
+		const chute = new THREE.Group();
+		chute.position.set(CHUTE_X, CT.y + 0.02, CT.z);
+		sets[1].add(chute);
+		mesh(new THREE.CircleGeometry(0.72, 40), new THREE.MeshBasicMaterial({ color: 0x000000 }), chute, 0, 0.005, 0).rotation.x = -Math.PI / 2;
+		const swirlMat = glowMat(0xffffff, 1.2, { map: TEX.swirl, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+		const swirl = mesh(new THREE.CircleGeometry(0.7, 40), swirlMat, chute, 0, 0.02, 0);
+		swirl.rotation.x = -Math.PI / 2;
+		const ring = mesh(new THREE.TorusGeometry(0.74, 0.08, 10, 40), glowMat(0xd04dff, 2), chute, 0, 0.04, 0);
+		ring.rotation.x = Math.PI / 2;
+		const lip = mesh(new THREE.TorusGeometry(0.86, 0.05, 8, 40), MAT.steel, chute, 0, 0.03, 0);
+		lip.rotation.x = Math.PI / 2;
+		const light = new THREE.PointLight(0xd04dff, 4, 3, 2);
+		light.position.set(0, 0.6, 0.3);
+		chute.add(light);
+		return { pods, swirl, chute };
+	})();
+
+	/* ---------- 3D: food ---------- */
+
+	// each ingredient, about 0.6 across, sitting on y = 0
+	const ING_3D = {
+		roach(g, mat, glow) {
+			const leg = MAT.black;
+			for (let n = 0; n < 3; n++) for (const side of [-1, 1]) {
+				const z = -0.14 + n * 0.14;
+				limb(g, [side * 0.12, 0.12, z], [side * 0.3, 0.14, z - 0.04], 0.018, leg);
+				limb(g, [side * 0.3, 0.14, z - 0.04], [side * 0.36, 0.0, z + 0.02], 0.016, leg);
+			}
+			const body = mesh(SPH(0.2, 20), mat, g, 0, 0.13, 0);
+			body.scale.set(0.95, 0.55, 1.45);
+			mesh(SPH(0.095, 14), mat, g, 0, 0.12, 0.3);
+			limb(g, [-0.04, 0.16, 0.36], [-0.14, 0.3, 0.56], 0.01, leg);
+			limb(g, [0.04, 0.16, 0.36], [0.14, 0.3, 0.56], 0.01, leg);
+			for (const [x, z] of [[-0.08, -0.05], [0.07, 0.08], [0.02, -0.18]]) mesh(SPH(0.035, 8), glow, g, x, 0.23, z);
+		},
+		eel(g, mat, glow) {
+			const pts = [];
+			for (let n = 0; n <= 10; n++) pts.push(new THREE.Vector3(-0.36 + n * 0.072, 0.09, Math.sin(n * 0.9) * 0.12));
+			mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 32, 0.075, 10), mat, g);
+			const head = pts[pts.length - 1];
+			mesh(SPH(0.1, 14), mat, g, head.x + 0.04, 0.1, head.z);
+			mesh(SPH(0.03, 8), glow, g, head.x + 0.07, 0.16, head.z + 0.05);
+			for (let n = 1; n < 10; n += 2) mesh(SPH(0.028, 6), glow, g, pts[n].x, 0.16, pts[n].z);
+		},
+		shroom(g, mat, glow) {
+			mesh(CYL(0.08, 0.11, 0.26, 14), MAT.cream, g, 0, 0.13, 0);
+			const cap = mesh(new THREE.SphereGeometry(0.27, 22, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat, g, 0, 0.22, 0);
+			cap.scale.set(1, 0.85, 1);
+			for (const [x, y, z] of [[-0.12, 0.38, 0.08], [0.1, 0.4, -0.06], [0.04, 0.33, 0.18], [-0.04, 0.42, -0.14]]) mesh(SPH(0.04, 8), glow, g, x, y, z);
+			mesh(SPH(0.02, 6), MAT.black, g, -0.04, 0.15, 0.09);
+			mesh(SPH(0.02, 6), MAT.black, g, 0.04, 0.15, 0.09);
+		},
+		ooze(g, mat, glow) {
+			const jelly = mat.clone();
+			jelly.transparent = true;
+			jelly.opacity = 0.82;
+			jelly.emissive = new THREE.Color(0x4a8a10);
+			jelly.emissiveIntensity = 0.4;
+			jelly.roughness = 0.08;
+			const cube = mesh(BOX(0.44, 0.4, 0.44), jelly, g, 0, 0.2, 0);
+			cube.userData.wobble = true;
+			for (const [x, y, z] of [[0.08, 0.14, 0.05], [-0.1, 0.26, -0.06], [0.02, 0.3, 0.1]]) mesh(SPH(0.04, 8), glow, g, x, y, z);
+			mesh(SPH(0.03, 8), MAT.black, g, -0.09, 0.27, 0.22);
+			mesh(SPH(0.03, 8), MAT.black, g, 0.09, 0.27, 0.22);
+		},
+		eye(g, mat) {
+			mesh(SPH(0.24, 24), mat, g, 0, 0.24, 0);
+			const iris = mesh(new THREE.CircleGeometry(0.11, 24), std(0xff2d8f, 0.3, 0, { emissive: 0xff2d8f, emissiveIntensity: 0.4 }), g, 0, 0.24, 0);
+			iris.position.addScaledVector(TOWARD, 0.235);
+			faceCam(iris);
+			const pupil = mesh(new THREE.CircleGeometry(0.05, 20), MAT.black, g, 0, 0.24, 0);
+			pupil.position.addScaledVector(TOWARD, 0.238);
+			faceCam(pupil);
+		},
+		tentacle(g, mat) {
+			const pts = [];
+			for (let n = 0; n <= 16; n++) {
+				const a = n * 0.42, r = 0.3 - n * 0.016;
+				pts.push(new THREE.Vector3(Math.cos(a) * r, 0.08 + n * 0.012, Math.sin(a) * r));
+			}
+			const curve = new THREE.CatmullRomCurve3(pts);
+			const geo = new THREE.TubeGeometry(curve, 48, 0.075, 10);
+			// (taper it: thinner towards the tip)
+			const pos = geo.attributes.position;
+			const tmp = new THREE.Vector3();
+			for (let i = 0; i < pos.count; i++) {
+				const k = Math.floor(i / 11) / 48;
+				const c = curve.getPointAt(Math.min(1, k));
+				tmp.fromBufferAttribute(pos, i).sub(c).multiplyScalar(1 - k * 0.75).add(c);
+				pos.setXYZ(i, tmp.x, tmp.y, tmp.z);
+			}
+			geo.computeVertexNormals();
+			mesh(geo, mat, g);
+			for (let n = 1; n < 14; n += 2) mesh(SPH(0.026, 6), MAT.white, g, pts[n].x * 0.8, pts[n].y + 0.06, pts[n].z * 0.8);
+		},
+	};
+
+	const itemCache = new Map();
+	const keyOf = (item) => item.ing + ':' + item.steps.join(',') + (item.burnt ? ':burnt' : '');
+	function buildItem(item) {
+		const has = (k) => item.steps.includes(k);
+		const ing = INGS[item.ing];
+		let colour = new THREE.Color(ing.colour);
+		if (has('fry')) colour.lerp(new THREE.Color(0xc8892b), 0.65);
+		if (has('grill')) colour.lerp(new THREE.Color(0x4a2410), 0.35);
+		if (has('cryo')) colour.lerp(new THREE.Color(0xbfe8ff), 0.45);
+		if (item.burnt) colour = new THREE.Color(0x120e0c);
+		const mat = std(colour, has('cryo') || has('fry') ? 0.25 : 0.45, 0.05);
+		if (has('inject')) { mat.emissive.set(0xb03aff); mat.emissiveIntensity = 0.45; }
+		if (has('warp')) { mat.emissive.set(0x1ad8ff); mat.emissiveIntensity = 0.55; }
+		if (item.burnt) { mat.emissive.set(0x3a1000); mat.emissiveIntensity = 0.4; mat.roughness = 0.95; }
+		const glow = glowMat(item.burnt ? 0x2a1a10 : ing.glow, 1.8);
+		const root = new THREE.Group();
+		const inner = new THREE.Group();
+		root.add(inner);
+		const pieces = has('chop') ? [[-0.2, 0, 0.08, 0.6, -0.4], [0.2, 0, 0.1, 0.6, 0.7], [0, 0.02, -0.16, 0.6, 2]] : [[0, 0, 0, 1, 0]];
+		for (const [x, y, z, s, r] of pieces) {
+			const g = new THREE.Group();
+			g.position.set(x, y, z);
+			g.scale.setScalar(s);
+			g.rotation.y = r;
+			ING_3D[item.ing](g, mat, glow);
+			inner.add(g);
+		}
+		if (has('grill') && !item.burnt) for (let n = -1; n <= 1; n++) {
+			const st = mesh(BOX(0.5, 0.015, 0.035), MAT.black, inner, 0, item.ing === 'eye' ? 0.47 : 0.27, n * 0.12);
+			st.rotation.y = 0.5;
+		}
+		if (has('stir')) {
+			mesh(CYL(0.44, 0.3, 0.22, 24, true), std(0x5a6360, 0.35, 0.7, { side: THREE.DoubleSide }), root, 0, 0.11, 0);
+			mesh(CYL(0.3, 0.3, 0.02, 24), std(0x5a6360, 0.35, 0.7), root, 0, 0.01, 0);
+			const s = mesh(new THREE.CircleGeometry(0.41, 24), std(0x5aa82a, 0.15, 0, { emissive: 0x6aff2a, emissiveIntensity: 0.4 }), root, 0, 0.18, 0);
+			s.rotation.x = -Math.PI / 2;
+			inner.position.y = 0.1;
+			inner.scale.setScalar(0.8);
+		}
+		if (has('press')) {
+			inner.scale.multiplyScalar(0.6);
+			const cage = new THREE.LineSegments(new THREE.EdgesGeometry(BOX(0.52, 0.52, 0.52)), new THREE.LineBasicMaterial({ color: new THREE.Color(0xe9ff4a).multiplyScalar(2) }));
+			cage.position.y = 0.26;
+			root.add(cage);
+		}
+		if (has('inject') && !item.burnt) {
+			mesh(SPH(0.09, 14), MAT.white, root, 0.17, 0.36, 0.06);
+			mesh(SPH(0.045, 10), glowMat(0xd04dff, 1.6), root, 0.17, 0.36, 0.06).position.addScaledVector(TOWARD, 0.07);
+		}
+		if (has('cryo')) {
+			mesh(BOX(0.66, 0.56, 0.66), std(0xcff0ff, 0.05, 0.1, { transparent: true, opacity: 0.38, depthWrite: false }), root, 0, 0.28, 0);
+			const edge = new THREE.LineSegments(new THREE.EdgesGeometry(BOX(0.66, 0.56, 0.66)), new THREE.LineBasicMaterial({ color: new THREE.Color(0xdff6ff).multiplyScalar(1.6) }));
+			edge.position.y = 0.28;
+			root.add(edge);
+		}
+		if (has('fry') && !item.burnt) for (let n = 0; n < 7; n++) mesh(SPH(0.025, 6), std(0xe8b04a, 0.6, 0), root, Math.cos(n * 2.1) * 0.28, 0.02, Math.sin(n * 2.7) * 0.25);
+		root.userData = { warp: has('warp'), burnt: item.burnt };   // (its first child is the food itself)
+		return shadows(root);
+	}
+	function itemView(item) {
+		const key = keyOf(item);
+		if (!itemCache.has(key)) itemCache.set(key, buildItem(item));
+		const v = itemCache.get(key).clone();
+		v.userData = Object.assign({}, itemCache.get(key).userData, { key });
+		return v;
+	}
+	// keep a holder's item on show: holder.view follows holder's item; views not touched this frame go
+	const itemsLive = new Set();
+	function syncItem(holder, item, parent, x, y, z, s) {
+		const key = item ? keyOf(item) : '';
+		if (holder.view && (holder.viewKey !== key || holder.view.parent !== parent)) { holder.view.removeFromParent(); holder.view = null; }
+		holder.viewKey = key;
+		if (!item) return null;
+		if (!holder.view) { holder.view = itemView(item); parent.add(holder.view); }
+		holder.view.position.set(x, y, z);
+		holder.view.scale.setScalar(s || 1);
+		itemsLive.add(holder.view);
+		return holder.view;
+	}
+	const itemViews = () => { const all = []; for (const g of sets) g.traverse((o) => { if (o.userData && o.userData.key) all.push(o); }); return all; };
+
+	/* ---------- 3D: the mutants ---------- */
+
+	function eyeBall(g, x, y, z, r, mats) {
+		const w = std(0xf4f2ea, 0.3, 0);
+		mesh(SPH(r, 16), w, g, x, y, z);
+		const pupil = mesh(SPH(r * 0.5, 12), MAT.black, g, x, y, z);
+		pupil.position.addScaledVector(TOWARD, r * 0.62);
+		if (mats) mats.push(w);
+		return pupil;
 	}
 
-	function wallBg(w) {
-		if (!bgs[w]) bgs[w] = buildWall(w);
-		return bgs[w];
+	const MUTANT_3D = {
+		blob(g, skin, m) {
+			const body = mesh(SPH(0.95, 28), skin, g, 0, 0.75, 0);
+			body.scale.set(1.25, 0.85, 1);
+			m.heads = [];
+			for (const x of [-0.5, 0.5]) {
+				const h = new THREE.Group();
+				h.position.set(x, 1.75, 0);
+				g.add(h);
+				mesh(SPH(0.46, 24), skin, h);
+				eyeBall(h, -0.16, 0.08, 0.36, 0.11);
+				eyeBall(h, 0.16, 0.08, 0.36, 0.11);
+				mesh(new THREE.TorusGeometry(0.12, 0.03, 6, 16, Math.PI), MAT.black, h, 0, -0.14, 0.42).rotation.z = Math.PI;
+				m.heads.push(h);
+			}
+			for (const [x, y] of [[-0.4, 0.8], [0.3, 0.5], [0.6, 1.0]]) mesh(SPH(0.09, 10), glowMat(0xb8ff6a, 1.5), g, x, y, 0.85);
+		},
+		cyclops(g, skin) {
+			mesh(CYL(0.5, 0.62, 1.15, 24), std(0x2a1a4a, 0.55, 0.1), g, 0, 0.58, 0);
+			mesh(BOX(0.12, 0.6, 0.05), std(0xe0d8c8, 0.6, 0), g, 0, 0.85, 0.55);
+			mesh(SPH(0.58, 28), skin, g, 0, 1.65, 0);
+			eyeBall(g, 0, 1.72, 0.42, 0.28);
+			const mono = mesh(new THREE.TorusGeometry(0.32, 0.03, 8, 28), std(0xe9c04a, 0.2, 1), g, 0, 1.72, 0.45);
+			faceCam(mono);
+			mesh(CYL(0.3, 0.3, 0.55, 24), std(0x111111, 0.4, 0.2), g, 0, 2.42, -0.05);
+			mesh(CYL(0.5, 0.5, 0.05, 24), std(0x111111, 0.4, 0.2), g, 0, 2.15, -0.05);
+			mesh(CYL(0.31, 0.31, 0.08, 24), std(0x8a1a2a, 0.5, 0), g, 0, 2.2, -0.05);
+		},
+		mold(g, skin) {
+			const rnd = seeded(7);
+			const dark = skin.clone();
+			dark.color.multiplyScalar(0.7);
+			for (let n = 0; n < 11; n++) mesh(SPH(0.38 + rnd() * 0.18, 18), n % 2 ? skin : dark, g, (rnd() - 0.5) * 1.4, 0.5 + rnd() * 1.6, (rnd() - 0.5) * 0.5);
+			for (const [x, y, r] of [[-0.4, 1.6, 0.1], [0.05, 1.9, 0.14], [0.4, 1.5, 0.09], [0.55, 1.95, 0.08], [-0.1, 1.2, 0.08], [-0.55, 1.05, 0.07]]) eyeBall(g, x, y, 0.55, r);
+			for (let n = 0; n < 8; n++) mesh(SPH(0.04, 6), glowMat(0xe9ff4a, 1.3), g, (rnd() - 0.5) * 1.4, 0.6 + rnd() * 1.5, 0.6);
+		},
+		pigeon(g, skin, m) {
+			const suit = std(0x23262f, 0.6, 0.05);
+			const body = mesh(SPH(0.7, 24), suit, g, 0, 0.75, 0);
+			body.scale.set(0.9, 1.05, 0.8);
+			mesh(BOX(0.12, 0.55, 0.05), std(0xc02a2a, 0.5, 0), g, 0, 0.95, 0.56).rotation.x = -0.1;
+			const head = new THREE.Group();
+			head.position.set(0, 1.75, 0.05);
+			g.add(head);
+			mesh(SPH(0.4, 22), skin, head);
+			const neck = mesh(CYL(0.3, 0.36, 0.3, 18), std(0x4ab09a, 0.25, 0.6), head, 0, -0.38, 0);
+			neck.castShadow = false;
+			eyeBall(head, -0.2, 0.08, 0.3, 0.1);
+			eyeBall(head, 0.2, 0.08, 0.3, 0.1);
+			const beak = mesh(new THREE.ConeGeometry(0.1, 0.3, 12), std(0xe8a83c, 0.4, 0), head, 0, -0.04, 0.48);
+			beak.rotation.x = Math.PI / 2;
+			mesh(CYL(0.22, 0.22, 0.04, 20), std(0x111111, 0.5, 0), head, 0, 0.42, 0);
+			mesh(CYL(0.14, 0.14, 0.3, 20), std(0x111111, 0.5, 0), head, 0, 0.58, 0);
+			m.head = head;
+		},
+		skull(g, skin) {
+			mesh(BOX(1.15, 1.0, 0.75), std(0x4a5254, 0.35, 0.85), g, 0, 0.55, 0);
+			for (const x of [-0.35, 0, 0.35]) mesh(SPH(0.07, 10), glowMat(x ? 0xff4a32 : 0x9dff3a, 2), g, x, 0.75, 0.39);
+			for (const x of [-0.72, 0.72]) limb(g, [x, 0.9, 0], [x * 1.2, 0.3, 0.3], 0.08, MAT.steel);
+			mesh(SPH(0.58, 28), MAT.glass, g, 0, 1.55, 0);
+			mesh(SPH(0.38, 24), skin, g, 0, 1.5, 0);
+			for (const x of [-0.13, 0.13]) {
+				const s = mesh(SPH(0.1, 12), MAT.black, g, x, 1.55, 0);
+				s.position.addScaledVector(TOWARD, 0.31);
+				const glint = mesh(SPH(0.035, 8), glowMat(0x9dff3a, 2.2), g, x, 1.55, 0);
+				glint.position.addScaledVector(TOWARD, 0.4);
+			}
+			for (let n = -2; n <= 2; n++) mesh(BOX(0.05, 0.07, 0.03), MAT.white, g, n * 0.06, 1.3, 0.33);
+		},
+		squid(g, skin, m) {
+			m.arms = [];
+			for (let n = -3; n <= 3; n++) {
+				const arm = new THREE.Group();
+				arm.position.set(n * 0.16, 0.95, 0.1);
+				g.add(arm);
+				limb(arm, [0, 0, 0], [n * 0.08, -0.5, 0.2], 0.1, skin);
+				limb(arm, [n * 0.08, -0.5, 0.2], [n * 0.18, -0.95, 0.35], 0.07, skin);
+				m.arms.push(arm);
+			}
+			const head = mesh(SPH(0.7, 28), skin, g, 0, 1.6, 0);
+			head.scale.set(0.95, 1.2, 0.9);
+			eyeBall(g, -0.24, 1.6, 0.52, 0.13);
+			eyeBall(g, 0.24, 1.6, 0.52, 0.13);
+			for (const [x, z] of [[-0.3, 0], [0, -0.1], [0.3, 0]]) {
+				const c = mesh(CYL(0.1, 0.1, 0.24, 14), std(0x7ad8ff, 0.4, 0.1), g, x, 2.42, z);
+				c.rotation.z = Math.PI / 2;
+			}
+			mesh(new THREE.TorusGeometry(0.12, 0.03, 6, 16, Math.PI), std(0xc02a6a, 0.4, 0), g, 0, 1.25, 0.58).rotation.z = Math.PI;
+		},
+		fungus(g, skin) {
+			mesh(CYL(0.34, 0.42, 1.3, 22), MAT.cream, g, 0, 0.65, 0);
+			const cap = mesh(new THREE.SphereGeometry(0.95, 30, 14, 0, Math.PI * 2, 0, Math.PI / 2), skin, g, 0, 1.3, 0);
+			cap.scale.set(1, 0.7, 1);
+			mesh(new THREE.CircleGeometry(0.95, 30), std(0xd8c8a8, 0.8, 0, { side: THREE.DoubleSide }), g, 0, 1.3, 0).rotation.x = Math.PI / 2;
+			for (const [x, y, z] of [[-0.45, 1.6, 0.45], [0.2, 1.88, 0.3], [0.6, 1.55, 0.3], [-0.1, 1.75, -0.4]]) mesh(SPH(0.13, 12), MAT.white, g, x, y, z);
+			const shades = mesh(BOX(0.62, 0.13, 0.06), std(0x080808, 0.05, 0.9), g, 0, 1.0, 0.36);
+			shades.rotation.x = -0.2;
+			mesh(new THREE.TorusGeometry(0.1, 0.025, 6, 14, Math.PI), MAT.black, g, 0, 0.75, 0.38).rotation.z = Math.PI;
+		},
+		overlord(g, skin, m) {
+			mesh(CYL(0.75, 0.95, 1.4, 28), std(0x2a2a1a, 0.4, 0.8), g, 0, 0.7, 0);
+			for (const x of [-0.8, 0.8]) mesh(SPH(0.35, 16), std(0xe9c04a, 0.25, 1), g, x, 1.35, 0);
+			const brain = mesh(SPH(0.85, 32), std(0xe88aa8, 0.35, 0, { emissive: 0x501030, emissiveIntensity: 0.3 }), g, 0, 2.05, 0);
+			brain.scale.set(1.1, 0.85, 0.95);
+			for (let n = 0; n < 6; n++) {
+				const fold = mesh(new THREE.TorusGeometry(0.75 - Math.abs(n - 2.5) * 0.08, 0.035, 6, 30, Math.PI), std(0xb05a78, 0.4, 0), g, (n - 2.5) * 0.15, 2.05, 0);
+				fold.rotation.y = Math.PI / 2;
+			}
+			eyeBall(g, -0.3, 1.75, 0.62, 0.16);
+			eyeBall(g, 0.3, 1.75, 0.62, 0.16);
+			const crown = new THREE.Group();
+			crown.position.set(0, 2.7, 0);
+			g.add(crown);
+			mesh(CYL(0.55, 0.6, 0.2, 28, true), std(0xe9c04a, 0.2, 1, { side: THREE.DoubleSide }), crown);
+			for (let n = 0; n < 7; n++) {
+				const a = n / 7 * Math.PI * 2;
+				mesh(new THREE.ConeGeometry(0.08, 0.3, 8), std(0xe9c04a, 0.2, 1), crown, Math.sin(a) * 0.55, 0.22, Math.cos(a) * 0.55);
+			}
+			mesh(SPH(0.09, 10), glowMat(0xff2d8f, 2), crown, 0, 0.1, 0.6);
+			m.crown = crown;
+		},
+	};
+
+	function buildMutant(type) {
+		const g = new THREE.Group();
+		const skin = std(type.skin, 0.45, 0.05);
+		const m = { g, skin };
+		MUTANT_3D[type.id](g, skin, m);
+		shadows(g);
+		return m;
 	}
 
-	/* ---------- drawing: the world ---------- */
+	/* ---------- 3D: the cyborg cooks ---------- */
+
+	const TOOL_3D = {
+		whisk(g) {
+			mesh(CYL(0.025, 0.025, 0.14, 8), MAT.steel, g, 0, -0.07, 0);
+			for (const r of [0, 1, 2]) {
+				const loop = mesh(new THREE.TorusGeometry(0.075, 0.008, 6, 18), MAT.steel, g, 0, -0.22, 0);
+				loop.scale.set(1, 1.7, 1);
+				loop.rotation.y = r * Math.PI / 3;
+			}
+		},
+		cleaver(g) { mesh(CYL(0.025, 0.025, 0.1, 8), MAT.wood, g, 0, -0.05, 0); mesh(BOX(0.04, 0.24, 0.2), MAT.steel, g, 0, -0.2, 0.05); },
+		spatula(g) { mesh(CYL(0.02, 0.02, 0.18, 8), MAT.steel, g, 0, -0.09, 0); mesh(BOX(0.18, 0.2, 0.02), MAT.steel, g, 0, -0.27, 0); },
+		ladle(g) { mesh(CYL(0.02, 0.02, 0.22, 8), MAT.steel, g, 0, -0.11, 0); mesh(new THREE.SphereGeometry(0.09, 12, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), std(0xb4bcba, 0.25, 0.9, { side: THREE.DoubleSide }), g, 0, -0.24, 0); },
+		tongs(g) { limb(g, [0, 0, 0], [-0.05, -0.3, 0], 0.015, MAT.steel); limb(g, [0, 0, 0], [0.05, -0.3, 0], 0.015, MAT.steel); },
+		drill(g, col) {
+			mesh(BOX(0.12, 0.12, 0.12), std(col, 0.4, 0.3), g, 0, -0.06, 0);
+			const bit = mesh(new THREE.ConeGeometry(0.05, 0.22, 10), MAT.steel, g, 0, -0.23, 0);
+			bit.rotation.x = Math.PI;
+			g.userData.spin = bit;
+		},
+		cutter(g) { mesh(CYL(0.02, 0.02, 0.1, 8), MAT.steel, g, 0, -0.05, 0); mesh(CYL(0.11, 0.11, 0.02, 20), MAT.steel, g, 0, -0.18, 0).rotation.z = Math.PI / 2; },
+		grater(g) { mesh(BOX(0.14, 0.26, 0.06), MAT.steel, g, 0, -0.15, 0); },
+		fork(g) {
+			mesh(CYL(0.02, 0.02, 0.16, 8), MAT.steel, g, 0, -0.08, 0);
+			mesh(BOX(0.14, 0.02, 0.02), MAT.steel, g, 0, -0.16, 0);
+			for (const x of [-0.06, 0, 0.06]) mesh(BOX(0.015, 0.14, 0.015), MAT.steel, g, x, -0.23, 0);
+		},
+	};
+
+	function buildChef(n) {
+		const look = COOKS[n % COOKS.length];
+		const col = new THREE.Color(colourOf(n));
+		const g = new THREE.Group();
+		const skin = std(look.skin, 0.55, 0);
+		const metal = std(0xa8b2b0, 0.25, 0.9);
+		const dark = std(0x30363a, 0.45, 0.7);
+		const apron = std(col, 0.5, 0.05, { emissive: col, emissiveIntensity: 0.12, side: THREE.DoubleSide });
+		const glow = glowMat(col, 2.4);
+		const parts = { g, legs: new THREE.Group() };
+		g.add(parts.legs);
+		// legs: 0 to 0.55
+		const L = parts.legs;
+		if (look.legs === 'treads') {
+			mesh(BOX(0.62, 0.18, 0.36), MAT.rubber, L, 0, 0.09, 0);
+			for (const x of [-0.22, 0, 0.22]) mesh(CYL(0.08, 0.08, 0.38, 12), metal, L, x, 0.09, 0).rotation.x = Math.PI / 2;
+			mesh(CYL(0.08, 0.1, 0.4, 12), metal, L, 0, 0.38, 0);
+		} else if (look.legs === 'pogo') {
+			limb(L, [-0.13, 0.55, 0], [-0.13, 0.04, 0.02], 0.08, std(0x2a3a5a, 0.7, 0));
+			mesh(BOX(0.16, 0.08, 0.26), MAT.rubber, L, -0.13, 0.04, 0.06);
+			for (let k = 0; k < 6; k++) mesh(new THREE.TorusGeometry(0.07, 0.015, 6, 14), metal, L, 0.14, 0.08 + k * 0.075, 0).rotation.x = Math.PI / 2;
+			mesh(CYL(0.1, 0.1, 0.03, 14), metal, L, 0.14, 0.02, 0);
+		} else if (look.legs === 'wheel') {
+			mesh(CYL(0.07, 0.07, 0.4, 12), metal, L, 0, 0.42, 0);
+			mesh(CYL(0.22, 0.22, 0.12, 22), MAT.rubber, L, 0, 0.22, 0).rotation.z = Math.PI / 2;
+			mesh(CYL(0.1, 0.1, 0.14, 14), metal, L, 0, 0.22, 0).rotation.z = Math.PI / 2;
+		} else if (look.legs === 'spider') {
+			for (const s of [-1, 1]) for (const z of [-0.12, 0.12]) {
+				limb(L, [s * 0.08, 0.5, z], [s * 0.32, 0.38, z * 2], 0.025, metal);
+				limb(L, [s * 0.32, 0.38, z * 2], [s * 0.4, 0.0, z * 2.5], 0.02, metal);
+			}
+		} else if (look.legs === 'chicken') {
+			for (const s of [-1, 1]) {
+				limb(L, [s * 0.12, 0.55, 0], [s * 0.15, 0.3, -0.1], 0.045, metal);
+				limb(L, [s * 0.15, 0.3, -0.1], [s * 0.12, 0.03, 0.02], 0.035, metal);
+				for (const a of [-0.5, 0, 0.5]) limb(L, [s * 0.12, 0.03, 0.02], [s * 0.12 + Math.sin(a) * 0.14, 0.01, 0.02 + Math.cos(a) * 0.14], 0.015, metal);
+			}
+		} else {   // a jet
+			const cone = mesh(new THREE.ConeGeometry(0.22, 0.42, 16), metal, L, 0, 0.36, 0);
+			cone.rotation.x = Math.PI;
+			parts.flame = mesh(new THREE.ConeGeometry(0.13, 0.4, 12), glowMat(0xffa21a, 2.5, { transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }), L, 0, 0.0, 0);
+			parts.flame.rotation.x = Math.PI;
+		}
+		// the body
+		const body = new THREE.Group();
+		body.position.y = 0.55;
+		g.add(body);
+		parts.body = body;
+		mesh(new THREE.CapsuleGeometry(0.3, 0.4, 6, 18), dark, body, 0, 0.42, 0);
+		mesh(new THREE.CylinderGeometry(0.315, 0.335, 0.52, 22, 1, true, -1.25, 2.5), apron, body, 0, 0.3, 0);
+		mesh(CYL(0.04, 0.04, 0.66, 8), std(col, 0.5, 0), body, 0, 0.6, 0).rotation.z = Math.PI / 2;
+		// the gadget belly, glowing through the apron
+		const bz = 0.33;
+		if (look.belly === 'fryer') {
+			mesh(BOX(0.3, 0.2, 0.05), MAT.black, body, 0, 0.33, bz);
+			mesh(new THREE.PlaneGeometry(0.24, 0.12), glowMat(0xffb21a, 2), body, 0, 0.33, bz + 0.03);
+		} else if (look.belly === 'micro') {
+			mesh(BOX(0.32, 0.2, 0.05), MAT.black, body, 0, 0.33, bz);
+			mesh(new THREE.PlaneGeometry(0.2, 0.12), glowMat(0x9dff3a, 1.8), body, -0.04, 0.33, bz + 0.03);
+		} else if (look.belly === 'blender') {
+			mesh(CYL(0.09, 0.09, 0.24, 14), MAT.glass, body, 0, 0.35, bz);
+			parts.blend = mesh(CYL(0.07, 0.07, 0.14, 12), glowMat(0xe9ff4a, 1.5), body, 0, 0.31, bz);
+		} else if (look.belly === 'toaster') {
+			mesh(BOX(0.3, 0.2, 0.08), metal, body, 0, 0.33, bz);
+			for (const x of [-0.07, 0.07]) mesh(BOX(0.08, 0.02, 0.06), glowMat(0xff6a1a, 1.6), body, x, 0.43, bz);
+			parts.toast = mesh(BOX(0.07, 0.08, 0.05), std(0xc8892b, 0.8, 0), body, -0.07, 0.44, bz);
+		} else {
+			mesh(BOX(0.3, 0.2, 0.05), MAT.black, body, 0, 0.33, bz);
+			for (const x of [-0.09, -0.03, 0.03, 0.09]) mesh(BOX(0.02, 0.16, 0.02), glowMat(0xff8a2a, 2), body, x, 0.33, bz + 0.03);
+		}
+		// arms, from the shoulders, each ending in its tool
+		const arm = (side, tool) => {
+			const pivot = new THREE.Group();
+			pivot.position.set(side * 0.37, 0.72, 0);
+			body.add(pivot);
+			mesh(SPH(0.09, 12), metal, pivot);
+			mesh(CYL(0.065, 0.06, 0.5, 10), side < 0 ? skin : metal, pivot, 0, -0.26, 0);
+			const t = new THREE.Group();
+			t.position.y = -0.52;
+			pivot.add(t);
+			TOOL_3D[tool](t, col);
+			return pivot;
+		};
+		parts.armL = arm(-1, look.arms[0]);
+		parts.armR = arm(1, look.arms[1]);
+		// the head
+		const head = new THREE.Group();
+		head.position.y = 1.1;
+		body.add(head);
+		parts.head = head;
+		mesh(CYL(0.08, 0.1, 0.12, 12), metal, head, 0, -0.2, 0);
+		mesh(SPH(0.24, 22), skin, head);
+		const eye = (x, y) => mesh(SPH(0.035, 8), MAT.black, head, x, y, 0.22);
+		const cyber = (x, y) => mesh(SPH(0.055, 12), glow, head, x, y, 0.2);
+		const hat = (mat) => {
+			mesh(CYL(0.18, 0.2, 0.14, 18), mat, head, 0, 0.26, 0);
+			for (const [x, z, r] of [[-0.1, 0, 0.12], [0.1, 0, 0.12], [0, 0.06, 0.13], [0, -0.08, 0.12]]) mesh(SPH(r, 14), mat, head, x, 0.38, z);
+		};
+		if (look.head === 'bolts') {
+			mesh(new THREE.SphereGeometry(0.245, 18, 12, Math.PI / 2, Math.PI), metal, head);
+			cyber(0.09, 0.03);
+			eye(-0.09, 0.03);
+			for (const y of [0.1, -0.06]) mesh(CYL(0.025, 0.025, 0.04, 8), MAT.darkSteel, head, 0.23, y, 0.04).rotation.z = Math.PI / 2;
+			hat(MAT.white);
+		} else if (look.head === 'mohawk') {
+			for (let k = -2; k <= 2; k++) mesh(new THREE.ConeGeometry(0.05, 0.22 - Math.abs(k) * 0.03, 8), std(col, 0.5, 0), head, 0, 0.27, k * 0.07);
+			for (const x of [-0.09, 0.09]) {
+				mesh(new THREE.TorusGeometry(0.06, 0.018, 6, 16), MAT.black, head, x, 0.04, 0.21);
+				mesh(new THREE.CircleGeometry(0.05, 14), glowMat(0x3af2ff, 1.8), head, x, 0.04, 0.215);
+			}
+			mesh(BOX(0.5, 0.03, 0.03), MAT.black, head, 0, 0.04, 0.18);
+		} else if (look.head === 'dome') {
+			mesh(BOX(0.4, 0.07, 0.06), glow, head, 0, 0.03, 0.2);
+			hat(metal);
+		} else if (look.head === 'brain') {
+			mesh(SPH(0.2, 18), MAT.glass, head, 0, 0.24, 0);
+			mesh(SPH(0.15, 16), std(0xe88aa8, 0.4, 0, { emissive: 0x501030, emissiveIntensity: 0.4 }), head, 0, 0.22, 0);
+			eye(-0.09, 0.02);
+			cyber(0.09, 0.02);
+		} else if (look.head === 'beard') {
+			const beard = mesh(new THREE.ConeGeometry(0.2, 0.3, 14), std(0x5a5a5a, 0.9, 0), head, 0, -0.18, 0.1);
+			beard.rotation.x = Math.PI;
+			mesh(BOX(0.14, 0.16, 0.05), metal, head, 0.1, 0.04, 0.2);
+			cyber(0.1, 0.04);
+			eye(-0.09, 0.04);
+			hat(MAT.white);
+		} else {
+			limb(head, [0, 0.22, 0], [0.05, 0.5, 0], 0.012, metal);
+			mesh(SPH(0.05, 10), glow, head, 0.05, 0.52, 0);
+			for (const s of [-1, 1]) mesh(SPH(0.09, 12), std(0x5a3a2a, 0.8, 0), head, s * 0.25, 0.02, -0.04);
+			eye(-0.08, 0.03);
+			eye(0.08, 0.03);
+		}
+		// a ring of their colour on the floor, so they know which they are
+		parts.ring = mesh(new THREE.RingGeometry(0.42, 0.56, 40), glowMat(col, 1.8, { transparent: true, opacity: 0.9, depthWrite: false }), g, 0, 0.02, 0);
+		parts.ring.rotation.x = -Math.PI / 2;
+		parts.spot = mesh(new THREE.CircleGeometry(0.42, 32), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.25, depthWrite: false }), g, 0, 0.015, 0);
+		parts.spot.rotation.x = -Math.PI / 2;
+		parts.hold = new THREE.Group();
+		parts.hold.position.y = 2.2;
+		g.add(parts.hold);
+		parts.tools = [];
+		g.traverse((o) => { if (o.userData && o.userData.spin) parts.tools.push(o.userData.spin); });
+		shadows(g);
+		parts.ring.castShadow = false;
+		g.scale.setScalar(1.1);
+		return parts;
+	}
+
+	/* ---------- 3D: portals, the manager, particles ---------- */
+
+	function buildPortal() {
+		const g = new THREE.Group();
+		const face = new THREE.Group();
+		face.rotation.x = -PITCH;
+		g.add(face);
+		const disc = mesh(new THREE.CircleGeometry(0.6, 40), glowMat(0xffffff, 0.9, { map: TEX.swirl, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }), face);
+		const r1 = mesh(new THREE.TorusGeometry(0.64, 0.06, 10, 48), glowMat(0x3af2ff, 2.4), face);
+		const r2 = mesh(new THREE.TorusGeometry(0.74, 0.03, 8, 48), glowMat(0xff2d8f, 2.4), face);
+		const hold = new THREE.Group();
+		g.add(hold);
+		return { g, disc, r1, r2, hold };
+	}
+
+	const manager = (function () {
+		const g = new THREE.Group();
+		sets[1].add(g);
+		mesh(CYL(0.06, 0.06, 6, 10), MAT.black, g, 0, 3.7, -0.2);
+		mesh(BOX(2.1, 1.55, 1.3), std(0x5a605c, 0.45, 0.6), g, 0, 0, 0);
+		mesh(BOX(1.9, 1.3, 0.06), MAT.black, g, 0, 0, 0.66);
+		mesh(new THREE.PlaneGeometry(1.75, 1.18), glowMat(0xffffff, 1.6, { map: TEX.crt }), g, 0, 0, 0.7);
+		for (const x of [-0.5, 0.5]) limb(g, [x, 0.77, 0], [x * 1.6, 1.4, 0], 0.025, MAT.steel);
+		mesh(SPH(0.07, 10), glowMat(0xff2d8f, 2), g, -0.8, 1.42, 0);
+		mesh(SPH(0.07, 10), glowMat(0x9dff3a, 2), g, 0.8, 1.42, 0);
+		g.visible = false;
+		return shadows(g);
+	})();
+
+	const parts3 = [];
+	function puff(wall, x, y, z, o) {
+		let p = parts3.find((q) => !q.alive);
+		if (!p) {
+			if (parts3.length >= 260) return;
+			p = { s: new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.soft, transparent: true, depthWrite: false })) };
+			parts3.push(p);
+		}
+		Object.assign(p, { alive: true, age: 0, life: o.life || 1, vx: o.vx || 0, vy: o.vy === undefined ? 0.6 : o.vy, vz: o.vz || 0, s0: o.size || 0.3, s1: o.grow || (o.size || 0.3) * 2.2, a: o.alpha || 0.6 });
+		p.s.material.color.set(o.color || 0x777777);
+		if (o.glow) p.s.material.color.multiplyScalar(o.glow);
+		p.s.material.blending = o.add ? THREE.AdditiveBlending : THREE.NormalBlending;
+		p.s.position.set(x, y, z);
+		p.s.visible = true;
+		sets[wall].add(p.s);
+	}
+	function stepPuffs(dt) {
+		for (const p of parts3) {
+			if (!p.alive) continue;
+			p.age += dt;
+			const k = p.age / p.life;
+			if (k >= 1) { p.alive = false; p.s.visible = false; continue; }
+			p.s.position.x += p.vx * dt;
+			p.s.position.y += p.vy * dt;
+			p.s.position.z += p.vz * dt;
+			p.s.scale.setScalar(lerp(p.s0, p.s1, k));
+			p.s.material.opacity = p.a * (k < 0.15 ? k / 0.15 : 1 - (k - 0.15) / 0.85);
+		}
+	}
+	const rates = {};
+	// fn() about `per` times a second
+	function every(key, per, dt, fn) {
+		rates[key] = (rates[key] || Math.random()) + dt * per;
+		while (rates[key] >= 1) { rates[key] -= 1; fn(); }
+	}
+	const rnd1 = () => Math.random() - 0.5;
+	const smoke = (w, x, y, z, k = 1) => puff(w, x + rnd1() * 0.4, y, z + rnd1() * 0.3, { color: 0x3a3a36, size: 0.3 * k, grow: 1.1 * k, life: 2.2, vy: 0.7, vx: rnd1() * 0.2, alpha: 0.5 });
+
+	/* ---------- 3D: every frame ---------- */
+
+	const chefs3 = [];
+	let introT = 0;
+	let rt = 0;   // (real time, for what moves whatever the game's doing)
+
+	function update3D(dt) {
+		itemsLive.clear();
+		for (const f of fans) f.rotation.z -= dt * 7;
+		for (const s of signs) {
+			const flick = Math.sin(rt * 23 + s.seed * 5) > -0.94 && Math.sin(rt * 2.7 + s.seed) > -0.97;
+			s.m.material.color.setScalar(flick ? s.k : 0.25);
+		}
+		for (const l of lamps) l.m.material.color.setScalar(Math.sin(rt * 31 + l.seed) > -0.97 ? 2.2 : 0.4);
+
+		// the stations
+		for (const s of stations) {
+			const p = station3d[s.kind];
+			const w = s.wall, cx = SLOT_X[s.slot];
+			const hot = s.state === 'work' || s.state === 'done';
+			const k = s.kind;
+			if (k === 'chop') p.cleaver.rotation.z = lerp(-0.95, 0.03, s.hit);
+			else if (k === 'fry') {
+				p.oilMat.emissiveIntensity = s.item ? (s.state === 'burnt' ? 0.15 : 0.9 + Math.sin(rt * 9) * 0.1) : 0.25;
+				p.light.intensity = s.item && s.state !== 'burnt' ? 5 : 0;
+				p.display.material.color.set(s.state === 'burnt' ? 0xff3020 : hot ? 0xffc21a : 0x333333).multiplyScalar(1.6);
+				if (hot) every('fry', 14, dt, () => puff(w, cx + rnd1() * 1.6, CT.y + 0.95, CT.z + rnd1() * 0.8, { color: 0xfff0b0, size: 0.06, grow: 0.12, life: 0.5, vy: 0.5, glow: 1.5, add: true, alpha: 0.8 }));
+				if (hot) every('fry-steam', 3, dt, () => smoke(w, cx, CT.y + 1.0, CT.z, 0.8));
+			} else if (k === 'grill') {
+				p.glow.color.set(0xff6a1a).multiplyScalar(s.item && s.state !== 'burnt' ? 1.8 + Math.sin(rt * 12) * 0.3 : 0.3);
+				p.light.intensity = s.item && s.state !== 'burnt' ? 6 + Math.sin(rt * 17) * 1.5 : 0;
+				if (s.state === 'work') {
+					every('grill', 4, dt, () => smoke(w, cx, CT.y + 0.8, CT.z, 0.9));
+					every('grill-spark', 8, dt, () => puff(w, cx + rnd1() * 2, CT.y + 0.6, CT.z + rnd1(), { color: 0xffa040, size: 0.05, grow: 0.03, life: 0.7, vy: 1.4, vx: rnd1(), glow: 2, add: true, alpha: 1 }));
+				}
+			} else if (k === 'stir') {
+				p.paddle.rotation.z = Math.sin(s.paddle) * 0.45;
+				p.paddle.rotation.x = Math.cos(s.paddle * 0.7) * 0.2;
+				every('stir', s.item ? 6 : 1.5, dt, () => puff(w, cx + rnd1() * 1.3, CT.y + 0.92, CT.z + rnd1() * 0.9, { color: 0x9dff3a, size: 0.08, grow: 0.2, life: 0.6, vy: 0.2, glow: 1.4, add: true, alpha: 0.8 }));
+			} else if (k === 'press') {
+				const kk = s.state === 'work' ? s.prog : s.state === 'done' ? 1 : 0;
+				const y = lerp(1.62, 0.78, kk) - s.hit * 0.12;
+				p.plate.position.y = y;
+				p.rod.position.y = (y + 1.86) / 2;
+				p.rod.scale.y = 1.86 - y;
+				p.beacon.material.color.set(0xe9ff4a).multiplyScalar(s.state === 'work' && Math.sin(rt * 10) > 0 ? 3 : 0.4);
+			} else if (k === 'inject') {
+				p.needle.position.y = s.state === 'work' ? 1.25 + Math.sin(rt * 4) * 0.05 : 1.55;
+				p.fluid.emissiveIntensity = s.lock > 0 ? 2.5 : 0.9;
+				every('inject', 4, dt, () => puff(w, cx + rnd1() * 0.9, CT.y + 0.3, CT.z + rnd1() * 0.6, { color: 0xe0a0ff, size: 0.05, grow: 0.08, life: 1.1, vy: 0.9, glow: 1.5, add: true, alpha: 0.8 }));
+			} else if (k === 'warp') {
+				const on = s.state === 'work';
+				TEX.swirl.rotation = rt * (on ? 6 : 0.8);
+				p.window.color.setScalar(on ? 2.4 : 0.55);
+				p.light.intensity = on ? 7 : 0;
+				p.dial.rotation.z = -rt * (on ? 8 : 0.3);
+			} else if (k === 'cryo') {
+				const on = s.state === 'work';
+				p.light.intensity = on ? 5 : 0.5;
+				p.nozzle.material.color.set(0x8fdcff).multiplyScalar(on ? 3 : 1.2);
+				if (on) every('cryo', 22, dt, () => puff(w, cx + 0.55 + rnd1() * 0.2, CT.y + 1.25, CT.z - 0.1, { color: 0xd8f4ff, size: 0.12, grow: 0.5, life: 0.7, vx: -1.0 + rnd1() * 0.4, vy: -1.1, vz: 0.3, alpha: 0.55, glow: 1.3 }));
+			}
+			// the food in it
+			const item = s.kind === 'warp' ? null : s.item;
+			const v = syncItem(s, item, p.g, 0, ITEM_AT[k] + (s.state === 'done' ? 0.06 + Math.sin(rt * 5) * 0.05 : 0), 0, 1.05);
+			if (v && k === 'fry' && s.state === 'work') v.position.y -= 0.12;
+			if (v && k === 'press') v.scale.y = 1.05 * (1 - (s.state === 'work' ? s.prog : 1) * 0.35);
+			if (s.state === 'burnt') every('burnt-' + k, 3, dt, () => smoke(w, cx, CT.y + 1.0, CT.z, 1.1));
+			// fire
+			p.fire.visible = s.fire > 0;
+			if (s.fire > 0) {
+				p.flames.forEach((f, n) => {
+					const ph = rt * 9 + n * 1.7;
+					f.scale.set(1, 0.8 + Math.sin(ph) * 0.35 + (n % 3) * 0.2, 1);
+					f.position.y = 0.9 + f.scale.y * 0.3;
+				});
+				every('fire-' + k, 7, dt, () => smoke(w, cx, CT.y + 1.6, CT.z, 1.6));
+				every('ember-' + k, 10, dt, () => puff(w, cx + rnd1() * 2, CT.y + 0.8, CT.z + rnd1(), { color: 0xffa040, size: 0.06, grow: 0.03, life: 1.0, vy: 1.8, vx: rnd1() * 0.6, glow: 2.2, add: true, alpha: 1 }));
+			}
+			// who's at it
+			const at = chefsAt(s);
+			p.ring.visible = at.length > 0 || s.state === 'done';
+			if (p.ring.visible) {
+				p.ring.material.color.set(at.length ? colourOf(at[0]) : '#9dff3a').multiplyScalar(at.length ? 1.6 : 0.6 + Math.sin(rt * 6) * 0.4);
+			}
+		}
+
+		// the hatch and the chute
+		hatch3d.pods.forEach((pp, k) => {
+			const pod = pods[k];
+			pp.beam.material.opacity = pod ? pod.beam * 0.7 : 0;
+			pp.rim.material.color.set(hatch.jam > 0 ? 0xffc21a : 0x9dff3a).multiplyScalar(hatch.jam > 0 && Math.sin(rt * 12) > 0 ? 0.4 : 1.8);
+			if (!pod) return;
+			const holder = pod;
+			const v = syncItem(holder, pod.ing ? { ing: pod.ing, steps: [], burnt: false } : null, sets[1], POD_X[k] + (hatch.shake ? rnd1() * 0.1 : 0), CT.y + 0.42 + Math.sin(rt * 2 + k) * 0.05, CT.z, 0.8);
+			if (v) v.rotation.y = rt * 0.8 + k;
+		});
+		hatch3d.swirl.rotation.z = -rt * 2.5;
+
+		// the mutants
+		const n = windowsNow();
+		for (let k = 0; k < 4; k++) {
+			const c = customers[k];
+			if (!c) continue;
+			if (!c.model) { c.model = buildMutant(c.type); sets[1].add(c.model.g); }
+			const m = c.model;
+			const x3 = lx3(c.x - W);
+			const enter = c.state === 'leave' ? -Math.min(1, c.stateT / 0.7) * 2.6 : -(1 - Math.min(1, c.age / 0.5)) * 2.6;
+			const panic = c.state === 'wait' && c.left / c.patience < 0.25;
+			m.g.position.set(x3 + (panic ? Math.sin(rt * 45) * 0.04 : 0), enter + Math.sin(rt * 2 + c.seed) * 0.04, QUEUE_Z);
+			const sq = c.state === 'eat' ? Math.sin(c.stateT * 12) * 0.06 : 0;
+			const sc = Math.min(1, colW(n) * U / 2.4) * (c.recipe === FEAST ? 1.05 : 1);
+			m.g.scale.set(sc * (1 + sq), sc * (1 - sq), sc);
+			const angry = c.state === 'angry' || panic;
+			m.skin.emissive.set(angry ? 0xff1a00 : c.state === 'eat' ? 0x40ff40 : 0x000000);
+			m.skin.emissiveIntensity = angry ? 0.25 + Math.sin(rt * 10) * 0.15 : c.state === 'eat' ? 0.2 : 0;
+			if (m.heads) m.heads.forEach((h, j) => { h.rotation.z = Math.sin(rt * 3 + j * 2) * 0.15; h.position.y = 1.75 + Math.sin(rt * 4 + j * 2) * 0.05; });
+			if (m.head) { m.head.position.z = 0.05 + Math.max(0, Math.sin(rt * 6)) * 0.12; }
+			if (m.arms) m.arms.forEach((a, j) => { a.rotation.z = Math.sin(rt * 3 + j) * 0.25; a.rotation.x = Math.cos(rt * 2.4 + j) * 0.2; });
+			if (m.crown) m.crown.rotation.y = rt * 0.6;
+			// what's been handed over so far, on the counter in front of them
+			c.parts.forEach((part, j) => {
+				const off = (j - (c.parts.length - 1) / 2) * 0.6;
+				syncItem(part, part.filled && c.state !== 'leave' ? part.item : null, sets[1], x3 + off, CT.y + 0.05, CT.z + 0.35, 0.6);
+			});
+		}
+		// (mutants gone: their models go too)
+		for (const o of sets[1].children.slice()) if (o.userData.mutant && !customers.some((c) => c && c.model && c.model.g === o)) o.removeFromParent();
+		for (const c of customers) if (c && c.model) c.model.g.userData.mutant = true;
+
+		// the cooks
+		for (let i = 0; i < count; i++) {
+			const c = chefs[i];
+			if (!chefs3[i]) chefs3[i] = buildChef(i);
+			const m = chefs3[i];
+			if (!latest[i]) { m.g.visible = false; continue; }
+			m.g.visible = true;
+			if (m.g.parent !== sets[c.wall]) sets[c.wall].add(m.g);
+			const x3 = lx3(c.x - c.wall * W);
+			const z3 = lerp(STAND.near, STAND.far, clamp(c.dist / 0.6, 0, 1));
+			if (m.wall !== c.wall) { m.z = z3; m.wall = c.wall; }
+			m.z = lerp(m.z, z3, Math.min(1, dt * 10));
+			m.g.position.set(x3, 0, m.z);
+			// facing the counter when working at it, the room otherwise, turning toward where they move
+			const working = !!c.station || (c.wall === 1 && c.dist < AT);
+			const face = working ? Math.PI : clamp((m.lastX !== undefined ? (x3 - m.lastX) / Math.max(dt, 0.001) : 0) * 0.25, -0.9, 0.9);
+			m.lastX = x3;
+			m.yaw = lerp(m.yaw || 0, face, Math.min(1, dt * 6));
+			m.g.rotation.y = m.yaw;
+			const time = t + (c.bob || 0);
+			m.body.position.y = 0.55 + Math.abs(Math.sin(time * (c.speed > 0.05 ? 12 : 2))) * (c.speed > 0.05 ? 0.06 : 0.015) + (m.flame ? 0.1 + Math.sin(time * 3) * 0.04 : 0);
+			if (m.flame) m.flame.scale.y = 0.8 + Math.sin(rt * 40) * 0.25;
+			const swing = c.work * Math.sin(time * 22) * 0.9;
+			if (c.held) { m.armL.rotation.x = lerp(m.armL.rotation.x, -2.75, Math.min(1, dt * 10)); m.armR.rotation.x = m.armL.rotation.x; }
+			else {
+				m.armL.rotation.x = lerp(m.armL.rotation.x, working ? -1.1 + swing : Math.sin(time * 2) * 0.1, Math.min(1, dt * 12));
+				m.armR.rotation.x = lerp(m.armR.rotation.x, working ? -1.1 - swing : -Math.sin(time * 2) * 0.1, Math.min(1, dt * 12));
+			}
+			m.armL.rotation.z = -0.15;
+			m.armR.rotation.z = 0.15;
+			m.head.rotation.y = Math.sin(time * 0.7) * 0.25;
+			for (const tl of m.tools) tl.rotation.y += dt * 30;
+			if (m.blend) m.blend.rotation.y += dt * 20;
+			if (m.toast) m.toast.position.y = 0.44 + Math.max(0, Math.sin(time * 1.5)) * 0.08;
+			m.ring.material.opacity = 0.65 + Math.sin(rt * 4 + i) * 0.25;
+			const hv = syncItem(c, c.held, m.hold, 0, Math.sin(rt * 3 + i) * 0.04, 0, 0.95);
+			if (hv) hv.rotation.y = -m.yaw + Math.sin(rt * 1.5) * 0.3;
+			if (c.held && c.held.burnt) every('held-smoke-' + i, 2, dt, () => smoke(c.wall, x3, 2.7, m.z, 0.6));
+		}
+
+		// the portals
+		for (const p of portals) {
+			if (!p.ring) { p.ring = buildPortal(); sets[p.wall].add(p.ring.g); }
+			const v = p.ring;
+			const grow = Math.min(1, p.t * 3) * (1 + Math.sin(p.t * 5) * 0.05);
+			v.g.position.set(p.x3, 1.35 + Math.sin(p.t * 2) * 0.1, p.z);
+			v.g.scale.setScalar(grow);
+			v.disc.rotation.z = -p.t * 3;
+			v.r1.rotation.z = p.t * 1.5;
+			v.r2.rotation.z = -p.t * 2.2;
+			const iv = syncItem(p, p.item, v.hold, 0, -0.3, 0, 0.9);
+			if (iv) iv.rotation.y = p.t * 1.5;
+			every('portal-' + p.item.id, 6, dt, () => puff(p.wall, p.x3 + rnd1() * 1.2, 1.35 + rnd1() * 1.2, p.z, { color: Math.random() < 0.5 ? 0x3af2ff : 0xff2d8f, size: 0.06, grow: 0.02, life: 0.8, vy: 0, vx: rnd1() * 0.5, glow: 2, add: true, alpha: 1 }));
+		}
+		for (const g of sets) for (const o of g.children.slice()) if (o.userData.portal && !portals.some((p) => p.ring && p.ring.g === o)) o.removeFromParent();
+		for (const p of portals) p.ring.g.userData.portal = true;
+
+		// the manager comes down on its cable for the intro
+		manager.visible = phase === 'intro';
+		if (manager.visible) {
+			const k = clamp(introT / 0.9, 0, 1);
+			manager.position.set(0, lerp(7, 1.7, 1 - Math.pow(1 - k, 3)) + Math.sin(rt * 2.4) * 0.06, 0.9);
+			manager.rotation.z = Math.sin(rt * 1.7) * 0.05;
+		}
+
+		// spinning, warping, wobbling food; views no one holds any more go
+		for (const v of itemViews()) {
+			if (!itemsLive.has(v)) { v.removeFromParent(); continue; }
+			if (v.userData.warp) v.children[0].rotation.z = Math.sin(rt * 3 + v.id) * 0.25;
+		}
+		stepPuffs(dt);
+	}
+
+	/* ---------- the 2D layer: words over the kitchen ---------- */
 
 	let last;
 	self.draw = function (ctx, time) {
 		const now = (time || performance.now()) / 1000;
 		const dt = last === undefined ? 0 : Math.min(0.05, Math.max(0, now - last));
 		last = now;
+		rt += dt;
+		update3D(show.paused ? 0 : dt);
+		post.render(views());
 		show.frame(ctx, dt, drawWorld);
 	};
 
 	function drawWorld(ctx) {
-		for (let w = 0; w < 3; w++) ctx.drawImage(wallBg(w), w * W, 0, W, H);
-		drawSigns(ctx);
-		for (const s of stations) drawStation(ctx, s);
-		drawHatch(ctx);
-		drawChute(ctx);
-		drawWindows(ctx);
-		for (const p of portals) drawPortal(ctx, p);
-		const order = chefs.map((c, i) => i).sort((a, b) => chefs[b].dist - chefs[a].dist);
-		for (const i of order) drawChefInWorld(ctx, i);
+		for (const s of stations) drawStationUI(ctx, s);
+		drawFrontUI(ctx);
+		for (const p of portals) art.text(ctx, 'TAP!', p.x, p.y + 95, { size: 30, weight: 800, font: FONT, fill: '#3af2ff', outline: INK, outlineWidth: 5 });
+		for (let i = 0; i < count; i++) {
+			const c = chefs[i];
+			if (!c.held || !latest[i] || !chefs3[i]) continue;
+			const at = proj(c.wall, lx3(c.x - c.wall * W), 3.0, chefs3[i].z);
+			const label = (c.held.burnt ? 'BURNT ' : '') + c.held.steps.map((s) => KIND[s].adj).reverse().join(' ') + (c.held.steps.length ? ' ' : '') + INGS[c.held.ing].short;
+			art.text(ctx, label, at.x, at.y, { size: 24, weight: 800, font: FONT, fill: 'white', outline: INK, outlineWidth: 5 });
+		}
 		for (const r of ripples) art.circle(ctx, r.x, r.y, 20 + r.t * 160, { stroke: 'white', lineWidth: 6, alpha: 1 - r.t / 0.5 });
 		for (const f of floaters) {
 			const k = f.t / 1.5;
@@ -1036,25 +2313,11 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		}
 	}
 
-	function neon(ctx, text, x, y, size, colour, flicker) {
-		const on = flicker ? (Math.sin(t * 23 + x) > -0.92 || Math.sin(t * 3.1 + x) > 0.3) : true;
-		art.text(ctx, text, x, y, { size, weight: 800, font: FONT, fill: on ? '#ffffff' : '#555', outline: on ? colour : '#333', outlineWidth: 5, shadow: on ? { color: colour, blur: 30 } : null });
-	}
-
-	function drawSigns(ctx) {
-		neon(ctx, 'THE OLD WAYS', W / 2, 172, 56, '#ff8a2a', true);
-		neon(ctx, 'THE NEW WAYS', 2 * W + W / 2, 172, 56, '#3af2ff', true);
-		neon(ctx, 'TELEPORT HATCH', W + HATCH / 2, 178, 30, '#9dff3a', false);
-		neon(ctx, 'VOID CHUTE', W + (CHUTE + W) / 2, 178, 30, '#d04dff', true);
-		// fans in the corners, spinning
-		for (const x of [120, W - 120, 2 * W + 120, 3 * W - 120]) {
-			art.circle(ctx, x, 190, 52, { fill: '#141816', stroke: '#3a4442', lineWidth: 5 });
-			for (let b = 0; b < 4; b++) {
-				const a = t * 6 + b * Math.PI / 2;
-				art.line(ctx, [[x, 190], [x + Math.cos(a) * 44, 190 + Math.sin(a) * 44]], { stroke: '#4a5452', lineWidth: 14 });
-			}
-			art.circle(ctx, x, 190, 8, { fill: '#6a7472' });
-		}
+	// where a cook's floating words go: over their head
+	function overChef(i) {
+		const c = chefs[i];
+		const z = chefs3[i] ? chefs3[i].z : 1;
+		return proj(c.wall, lx3(c.x - c.wall * W), 2.9, z);
 	}
 
 	function bar(ctx, x, y, w, k, colour, back) {
@@ -1064,41 +2327,26 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	}
 
 	function prompt(ctx, x, text, fill, pulse) {
-		const s = pulse ? 1 + Math.sin(t * 10) * 0.06 : 1;
-		art.text(ctx, text, x, 282, { size: 30 * s, weight: 800, font: FONT, fill, outline: INK, outlineWidth: 6 });
+		const s = pulse ? 1 + Math.sin(rt * 10) * 0.06 : 1;
+		art.text(ctx, text, x, PROMPT_Y, { size: 32 * s, weight: 800, font: FONT, fill, outline: INK, outlineWidth: 6 });
 	}
 
-	function drawStation(ctx, s) {
+	function plate(ctx, x, text, colour) {
+		ctx.font = `800 24px ${FONT}`;
+		const w = Math.min(380, ctx.measureText(text).width + 40);
+		art.roundRect(ctx, x - w / 2, PLATE_Y - 21, w, 42, 8, { fill: 'rgba(8,10,9,0.9)', stroke: colour, lineWidth: 3 });
+		art.text(ctx, text, x, PLATE_Y, { size: text.length > 18 ? 20 : 24, weight: 800, font: FONT, fill: colour });
+	}
+
+	function drawStationUI(ctx, s) {
 		const cx = s.x0 + SLOT / 2;
-		const base = COUNTER;
-		const at = chefsAt(s);
-		const sx = s.shake ? (Math.random() - 0.5) * 16 * s.shake : 0;
-		ctx.save();
-		ctx.translate(sx, 0);
-		// a glow in the colour of whoever's at it
-		if (at.length) {
-			const g = ctx.createRadialGradient(cx, base - 120, 20, cx, base - 120, 260);
-			g.addColorStop(0, hexA(colourOf(at[0]), 0.35));
-			g.addColorStop(1, hexA(colourOf(at[0]), 0));
-			ctx.fillStyle = g;
-			ctx.fillRect(s.x0, 220, SLOT, base - 220);
-		}
-		// the name plate
-		art.roundRect(ctx, cx - 180, 214, 360, 44, 10, { fill: '#0d100f', stroke: s.colour, lineWidth: 3 });
-		art.text(ctx, s.name, cx, 237, { size: s.name.length > 16 ? 22 : 26, weight: 800, font: FONT, fill: s.colour });
-		STATION_ART[s.kind](ctx, s, cx, base);
-		if (s.item && s.kind !== 'warp') drawItem(ctx, s.item, cx, itemY(s), 0.95);
-		// state: a prompt and a bar
-		if (s.fire > 0) {
-			drawFire(ctx, cx, base, s);
-			prompt(ctx, cx, 'TAP TO PUT OUT! (' + s.fire + ')', '#ff4a32', true);
-		} else if (s.state === 'done') {
+		plate(ctx, cx, s.name, s.colour);
+		if (s.fire > 0) prompt(ctx, cx, 'TAP TO PUT OUT! (' + s.fire + ')', '#ff4a32', true);
+		else if (s.state === 'done') {
 			prompt(ctx, cx, 'READY! TAP TO TAKE', '#9dff3a', true);
-			if (s.kind === 'fry' || s.kind === 'grill') bar(ctx, cx, 314, 240, 1 - s.doneT / (s.kind === 'fry' ? FRY.burn : GRILL.burn), '#ff4a32');
-		} else if (s.state === 'burnt') {
-			prompt(ctx, cx, 'BURNT! TAP, THEN BIN IT', '#ff4a32', true);
-			drawSmoke(ctx, cx, base - 160, 1);
-		} else if (s.state === 'work') {
+			if (s.kind === 'fry' || s.kind === 'grill') bar(ctx, cx, BAR_Y, 240, 1 - s.doneT / (s.kind === 'fry' ? FRY.burn : GRILL.burn), '#ff4a32');
+		} else if (s.state === 'burnt') prompt(ctx, cx, 'BURNT! TAP, THEN BIN IT', '#ff4a32', true);
+		else if (s.state === 'work') {
 			const hint = {
 				chop: ['TAP TAP TAP!', s.prog],
 				fry: ['FRYING...', s.t / FRY.cook],
@@ -1111,257 +2359,39 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			}[s.kind];
 			const urgent = s.kind === 'grill' && !s.flipped && s.t >= GRILL.flipAt;
 			prompt(ctx, cx, hint[0], urgent ? '#ff4a32' : '#e9ff4a', urgent || ['chop', 'stir', 'press', 'cryo', 'inject'].includes(s.kind));
-			if (hint[1] >= 0) bar(ctx, cx, 314, 240, hint[1], s.colour);
-		} else if (!s.item) {
-			art.text(ctx, 'EMPTY', cx, 282, { size: 22, weight: 700, font: FONT, fill: 'rgba(255,255,255,0.35)' });
-		}
-		ctx.restore();
-	}
-
-	function hexA(c, a) {
-		const [r, g, b] = c.startsWith('#') ? hex(c) : ({ red: [255, 0, 0], blue: [0, 0, 255], limegreen: [50, 205, 50] }[c] || [255, 255, 255]);
-		return `rgba(${r},${g},${b},${a})`;
-	}
-
-	const itemY = (s) => ({ chop: COUNTER - 150, fry: COUNTER - 215, grill: COUNTER - 175, stir: COUNTER - 215, press: COUNTER - 135, inject: COUNTER - 165, warp: COUNTER - 150, cryo: COUNTER - 140 }[s.kind]);
-
-	function drawFire(ctx, cx, base, s) {
-		for (let n = 0; n < 9; n++) {
-			const ph = t * 7 + n * 1.7;
-			const x = cx + (n - 4) * 34 + Math.sin(ph) * 10;
-			const h = 120 + Math.sin(ph * 1.3) * 40 + (n % 3) * 30;
-			ctx.save();
-			ctx.globalCompositeOperation = 'lighter';
-			art.ellipse(ctx, x, base - 120 - h * 0.3, 34, h * 0.6, { fill: art.radial(ctx, x, base - 120, 5, h, ['rgba(255,240,120,0.95)', 'rgba(255,120,20,0.7)', 'rgba(255,40,0,0)']) });
-			ctx.restore();
-		}
-		drawSmoke(ctx, cx, base - 300, 1.4);
-	}
-
-	function drawSmoke(ctx, x, y, k) {
-		for (let n = 0; n < 4; n++) {
-			const ph = (t * 0.5 + n / 4) % 1;
-			art.circle(ctx, x + Math.sin(ph * 6 + n) * 30, y - ph * 160, (20 + ph * 50) * k, { fill: 'rgba(60,60,55,0.5)', alpha: 1 - ph });
-		}
-	}
-
-	// each station's own machine, standing on the counter
-	const STATION_ART = {
-		chop(ctx, s, cx, base) {
-			art.ellipse(ctx, cx, base - 10, 160, 20, { fill: 'rgba(0,0,0,0.5)' });
-			art.roundRect(ctx, cx - 150, base - 120, 300, 112, 16, { fill: art.linear(ctx, 0, base - 120, 0, base, ['#8a5a32', '#4a2a14']), stroke: INK, lineWidth: 4 });
-			art.ellipse(ctx, cx, base - 120, 150, 26, { fill: '#b07a48', stroke: INK, lineWidth: 4 });
-			for (const r of [100, 64, 30]) art.ellipse(ctx, cx, base - 120, r, r * 0.17, { stroke: 'rgba(80,40,10,0.6)', lineWidth: 3 });
-			art.ellipse(ctx, cx - 60, base - 116, 34, 7, { fill: 'rgba(120,200,40,0.55)' });
-			// the cleaver: up, and down on every chop
-			const a = s.hit > 0 ? -0.1 : -0.9;
-			art.with(ctx, { x: cx + 120, y: base - 128, rotate: a * 57.3 }, function () {
-				art.rect(ctx, -12, -10, 24, -110, { fill: '#3a2414' });
-				art.roundRect(ctx, -90, -190, 110, 80, 8, { fill: art.linear(ctx, -90, 0, 20, 0, ['#e6ecea', '#8a9492']), stroke: INK, lineWidth: 4 });
-				art.circle(ctx, -60, -170, 8, { fill: INK });
-			});
-		},
-		fry(ctx, s, cx, base) {
-			art.roundRect(ctx, cx - 160, base - 230, 320, 230, [10, 10, 24, 24], { fill: art.linear(ctx, cx - 160, 0, cx + 160, 0, ['#4a5250', '#a8b0ae', '#3a4240']), stroke: INK, lineWidth: 5 });
-			const hot = s.state === 'work' || s.state === 'done';
-			art.roundRect(ctx, cx - 140, base - 222, 280, 40, 18, { fill: hot ? art.linear(ctx, 0, base - 222, 0, base - 182, ['#ffe066', '#c88a10']) : '#7a6a2a' });
-			if (hot) for (let n = 0; n < 8; n++) {
-				const ph = (t * 1.6 + n * 0.37) % 1;
-				art.circle(ctx, cx - 120 + n * 34, base - 205 - ph * 10, 4 + ph * 7, { stroke: '#fff3b0', lineWidth: 3, alpha: 1 - ph });
-			}
-			art.rect(ctx, cx - 60, base - 150, 120, 60, { fill: '#202624', stroke: INK, lineWidth: 3 });
-			art.text(ctx, s.state === 'burnt' ? 'XX' : hot ? '350°' : 'OFF', cx, base - 120, { size: 30, font: 'Share Tech Mono', fill: s.state === 'burnt' ? '#ff4a32' : '#ffc21a' });
-			art.line(ctx, [[cx + 100, base - 230], [cx + 150, base - 300], [cx + 210, base - 300]], { stroke: '#2a2a2a', lineWidth: 10 });
-		},
-		grill(ctx, s, cx, base) {
-			art.roundRect(ctx, cx - 165, base - 160, 330, 160, 12, { fill: '#1c1e1d', stroke: INK, lineWidth: 5 });
-			const hot = s.state === 'work' || s.state === 'done';
-			art.rect(ctx, cx - 150, base - 150, 300, 40, { fill: hot ? art.linear(ctx, 0, base - 150, 0, base - 110, ['#ff9a2a', '#a01a00']) : '#3a1a10' });
-			for (let n = 0; n <= 8; n++) art.line(ctx, [[cx - 150 + n * 37.5, base - 160], [cx - 150 + n * 37.5, base - 114]], { stroke: '#555b59', lineWidth: 6 });
-			if (hot) for (let n = 0; n < 6; n++) {
-				const ph = t * 9 + n * 2.1;
-				art.ellipse(ctx, cx - 125 + n * 50, base - 118, 12, 14 + Math.sin(ph) * 6, { fill: 'rgba(255,200,60,0.8)' });
-			}
-			for (let n = 0; n < 4; n++) art.circle(ctx, cx - 105 + n * 70, base - 50, 14, { fill: '#3a3e3c', stroke: '#777', lineWidth: 3 });
-			if (s.state === 'work') drawSmoke(ctx, cx, base - 220, 0.7);
-		},
-		stir(ctx, s, cx, base) {
-			art.ellipse(ctx, cx, base - 8, 170, 18, { fill: 'rgba(0,0,0,0.5)' });
-			art.poly(ctx, [[cx - 170, base - 230], [cx + 170, base - 230], [cx + 140, base - 10], [cx - 140, base - 10]], { fill: art.linear(ctx, cx - 170, 0, cx + 170, 0, ['#2a2e2c', '#6a706e', '#222624']), stroke: INK, lineWidth: 5 });
-			art.ellipse(ctx, cx, base - 230, 170, 30, { fill: '#3a403e', stroke: INK, lineWidth: 5 });
-			art.ellipse(ctx, cx, base - 226, 152, 22, { fill: '#6abf2a' });
-			for (let n = 0; n < 5; n++) {
-				const ph = (t * 0.9 + n * 0.21) % 1;
-				art.circle(ctx, cx - 110 + n * 55, base - 226, 6 + ph * 12, { fill: '#9dff3a', alpha: 1 - ph });
-			}
-			// the paddle, swinging as it's stirred
-			const a = Math.sin(s.paddle) * 0.5;
-			art.with(ctx, { x: cx, y: base - 226, rotate: a * 57.3 }, function () {
-				art.roundRect(ctx, -9, -200, 18, 200, 9, { fill: '#7a5230', stroke: INK, lineWidth: 3 });
-			});
-		},
-		press(ctx, s, cx, base) {
-			art.rect(ctx, cx - 160, base - 360, 30, 360, { fill: '#3a3e3c', stroke: INK, lineWidth: 4 });
-			art.rect(ctx, cx + 130, base - 360, 30, 360, { fill: '#3a3e3c', stroke: INK, lineWidth: 4 });
-			art.rect(ctx, cx - 170, base - 380, 340, 50, { fill: '#5a5f2a', stroke: INK, lineWidth: 4 });
-			// warning stripes on the top beam
-			ctx.save();
-			ctx.beginPath();
-			ctx.rect(cx - 166, base - 376, 332, 42);
-			ctx.clip();
-			for (let x = -180; x < 180; x += 40) art.poly(ctx, [[cx + x, base - 334], [cx + x + 20, base - 334], [cx + x + 44, base - 376], [cx + x + 24, base - 376]], { fill: '#e9ff4a' });
-			ctx.restore();
-			const k = s.state === 'work' ? s.prog : s.state === 'done' ? 1 : 0;
-			const plate = lerp(base - 320, base - 190, k) + (s.hit > 0 ? 18 * s.hit : 0);
-			art.rect(ctx, cx - 18, base - 330, 36, plate - (base - 330), { fill: '#a8b0ae', stroke: INK, lineWidth: 3 });
-			art.rect(ctx, cx - 120, plate, 240, 30, { fill: '#6a706e', stroke: INK, lineWidth: 4 });
-			art.rect(ctx, cx - 130, base - 90, 260, 90, { fill: '#2a2e2c', stroke: INK, lineWidth: 4 });
-		},
-		inject(ctx, s, cx, base) {
-			art.roundRect(ctx, cx - 110, base - 300, 220, 300, 30, { fill: 'rgba(120,60,160,0.25)', stroke: '#8a6aa0', lineWidth: 5 });
-			art.roundRect(ctx, cx - 100, base - 140, 200, 130, [0, 0, 24, 24], { fill: 'rgba(208,77,255,0.45)' });
-			for (let n = 0; n < 5; n++) {
-				const ph = (t * 0.7 + n * 0.23) % 1;
-				art.circle(ctx, cx - 70 + n * 35, base - 20 - ph * 110, 5, { fill: '#f0b0ff', alpha: 1 - ph });
-			}
-			// the syringe arm, down when it's working
-			const down = s.state === 'work' ? 40 + Math.sin(t * 4) * 6 : 0;
-			art.rect(ctx, cx - 8, base - 380, 16, 90 + down, { fill: '#c8d0ce', stroke: INK, lineWidth: 3 });
-			art.roundRect(ctx, cx - 30, base - 420, 60, 60, 10, { fill: '#d04dff', stroke: INK, lineWidth: 4 });
-			art.line(ctx, [[cx, base - 290 + down], [cx, base - 240 + down]], { stroke: '#eeeeee', lineWidth: 4 });
-			// the dial: a needle that sweeps, a green band to hit
-			if (s.state === 'work') {
-				const y = base - 330;
-				art.roundRect(ctx, cx - 150, y - 26, 300, 52, 26, { fill: INK });
-				art.roundRect(ctx, cx - 140, y - 16, 280, 32, 16, { fill: '#3a1a2a' });
-				art.rect(ctx, cx - 140 + 280 * (0.5 - INJECT.zone), y - 16, 280 * INJECT.zone * 2, 32, { fill: '#3cdc7a' });
+			if (hint[1] >= 0) bar(ctx, cx, BAR_Y, 240, hint[1], s.colour);
+			if (s.kind === 'inject') {   // the dial: a needle that sweeps, a green band to hit
+				const y = BAR_Y + 4;
+				art.roundRect(ctx, cx - 150, y - 24, 300, 48, 24, { fill: INK });
+				art.roundRect(ctx, cx - 140, y - 15, 280, 30, 15, { fill: '#3a1a2a' });
+				art.rect(ctx, cx - 140 + 280 * (0.5 - INJECT.zone), y - 15, 280 * INJECT.zone * 2, 30, { fill: '#3cdc7a' });
 				const nx = cx - 140 + 280 * needle(s);
-				art.poly(ctx, [[nx, y + 22], [nx - 12, y - 26], [nx + 12, y - 26]], { fill: s.lock > 0 ? '#ff4a32' : 'white', stroke: INK, lineWidth: 3 });
-			}
-		},
-		warp(ctx, s, cx, base) {
-			art.roundRect(ctx, cx - 165, base - 250, 330, 240, 18, { fill: art.linear(ctx, 0, base - 250, 0, base, ['#d8d0b8', '#8a8470']), stroke: INK, lineWidth: 5 });
-			// its window onto elsewhere
-			const wx = cx - 140, wy = base - 228, ww = 210, wh = 190;
-			ctx.save();
-			ctx.beginPath();
-			art.roundRectPath(ctx, wx, wy, ww, wh, 12);
-			ctx.clip();
-			ctx.fillStyle = '#05010f';
-			ctx.fillRect(wx, wy, ww, wh);
-			const speed = s.state === 'work' ? 5 : 0.6;
-			for (let n = 0; n < 24; n++) {
-				const a = t * speed * (0.3 + (n % 5) * 0.1) + n * 2.39;
-				const r = 10 + (n * 37 % 100);
-				art.circle(ctx, wx + ww / 2 + Math.cos(a) * r, wy + wh / 2 + Math.sin(a) * r * 0.8, 2 + (n % 3), { fill: n % 2 ? '#3af2ff' : '#ff2d8f' });
-			}
-			if (s.state === 'work') {
-				const k = s.t / WARP_TIME;
-				art.circle(ctx, wx + ww / 2, wy + wh / 2, 70 * (1 - k) + 6, { fill: INGS[s.item.ing].colour, alpha: 1 - k });
-			}
-			ctx.restore();
-			art.roundRect(ctx, wx, wy, ww, wh, 12, { stroke: INK, lineWidth: 5 });
-			art.circle(ctx, cx + 118, base - 180, 22, { fill: '#5a5440', stroke: INK, lineWidth: 4 });
-			art.line(ctx, [[cx + 118, base - 180], [cx + 118 + Math.cos(t * (s.state === 'work' ? 9 : 0.4)) * 18, base - 180 + Math.sin(t * (s.state === 'work' ? 9 : 0.4)) * 18]], { stroke: '#3af2ff', lineWidth: 5 });
-			art.text(ctx, 'DIMENSION', cx + 118, base - 140, { size: 13, weight: 700, font: FONT, fill: INK });
-			art.text(ctx, s.state === 'work' ? '???' : 'C-137½', cx + 118, base - 112, { size: 18, font: 'Share Tech Mono', fill: '#2a2a20' });
-		},
-		cryo(ctx, s, cx, base) {
-			art.ellipse(ctx, cx, base - 20, 140, 24, { fill: '#2a3a44', stroke: '#8fdcff', lineWidth: 4 });
-			art.ellipse(ctx, cx, base - 26, 110, 16, { fill: 'rgba(143,220,255,0.35)' });
-			// the blaster, over the pad
-			art.with(ctx, { x: cx + 120, y: base - 330, rotate: 30 }, function () {
-				art.roundRect(ctx, -40, -40, 140, 80, 20, { fill: '#5a7a8a', stroke: INK, lineWidth: 4 });
-				art.rect(ctx, -90, -22, 60, 44, { fill: '#8fa8b4', stroke: INK, lineWidth: 4 });
-				art.circle(ctx, 40, 0, 14, { fill: '#8fdcff' });
-			});
-			if (s.state === 'work') {
-				ctx.save();
-				ctx.globalCompositeOperation = 'lighter';
-				for (let n = 0; n < 14; n++) {
-					const ph = (t * 2 + n / 14) % 1;
-					const x = lerp(cx + 50, cx - 10 + Math.sin(n * 3) * 60, ph);
-					const y = lerp(base - 300, base - 120, ph);
-					art.circle(ctx, x, y, 6 + ph * 14, { fill: 'rgba(170,230,255,0.5)', alpha: 1 - ph * 0.6 });
-				}
-				ctx.restore();
-			}
-		},
-	};
-
-	/* ---------- drawing: the front wall ---------- */
-
-	function drawHatch(ctx) {
-		const x = W + HATCH / 2;
-		const sx = hatch.shake ? (Math.random() - 0.5) * 20 * hatch.shake : 0;
-		for (let k = 0; k < pods.length; k++) {
-			const pod = pods[k];
-			const y = POD_Y[k];
-			art.circle(ctx, x + sx, y, POD_R + 12, { fill: '#2a3230', stroke: '#9dff3a', lineWidth: 4, alpha: hatch.jam > 0 ? 0.5 : 1 });
-			art.circle(ctx, x + sx, y, POD_R, { fill: art.radial(ctx, x, y, 4, POD_R, ['#1a3a1a', '#050a05']) });
-			if (pod.ing) drawItem(ctx, { ing: pod.ing, steps: [], burnt: false }, x + sx, y + Math.sin(t * 2 + k) * 4, 0.75);
-			if (pod.beam > 0) {
-				ctx.save();
-				ctx.globalCompositeOperation = 'lighter';
-				art.rect(ctx, x - POD_R * pod.beam, y - POD_R - 60, POD_R * 2 * pod.beam, POD_R * 2 + 60, { fill: 'rgba(157,255,58,0.45)', alpha: pod.beam });
-				ctx.restore();
+				art.poly(ctx, [[nx, y + 20], [nx - 12, y - 24], [nx + 12, y - 24]], { fill: s.lock > 0 ? '#ff4a32' : 'white', stroke: INK, lineWidth: 3 });
 			}
 		}
+	}
+
+	function drawFrontUI(ctx) {
+		const hx = W + HATCH / 2, chx = W + (CHUTE + W) / 2;
+		plate(ctx, hx, 'TELEPORT HATCH', '#9dff3a');
+		plate(ctx, chx, 'VOID CHUTE', '#d04dff');
 		if (hatch.jam > 0) {
-			art.text(ctx, 'JAMMED!', x, 240, { size: 40, weight: 800, font: FONT, fill: '#ffc21a', outline: INK, outlineWidth: 6 });
-			art.text(ctx, 'BANG ON IT (' + hatch.jam + ')', x, 640, { size: 26, weight: 800, font: FONT, fill: '#ffffff', outline: INK, outlineWidth: 5 });
-			for (let n = 0; n < 3; n++) art.line(ctx, [[x - 120, 300 + n * 130], [x + 120, 340 + n * 130]], { stroke: '#ffc21a', lineWidth: 10, alpha: 0.8 });
-		} else {
-			art.text(ctx, 'TAP TO GRAB', x, 640, { size: 24, weight: 800, font: FONT, fill: '#9dff3a', outline: INK, outlineWidth: 5 });
-		}
-	}
-
-	function drawChute(ctx) {
-		const x = W + (CHUTE + W) / 2, y = 420;
-		for (let r = 120; r > 10; r -= 18) {
-			art.circle(ctx, x, y, r, { fill: r % 36 ? '#1a0626' : '#2a0a40' });
-		}
-		ctx.save();
-		ctx.translate(x, y);
-		ctx.rotate(t * 1.5);
-		for (let n = 0; n < 6; n++) {
-			ctx.rotate(Math.PI / 3);
-			art.line(ctx, [[0, 0], [40, 30], [110, 10]], { stroke: '#d04dff', lineWidth: 4, alpha: 0.7 });
-		}
-		ctx.restore();
-		art.circle(ctx, x, y, 126, { stroke: '#d04dff', lineWidth: 6 });
-		art.text(ctx, 'TAP TO BIN', x, 600, { size: 24, weight: 800, font: FONT, fill: '#d04dff', outline: INK, outlineWidth: 5 });
-	}
-
-	function drawWindows(ctx) {
+			prompt(ctx, hx, 'JAMMED! BANG IT (' + hatch.jam + ')', '#ffc21a', true);
+		} else prompt(ctx, hx, 'TAP TO GRAB', '#9dff3a', false);
+		prompt(ctx, chx, 'TAP TO BIN', '#d04dff', false);
 		const n = windowsNow();
 		const cw = colW(n);
 		for (let k = 0; k < n; k++) {
-			const x0 = W + HATCH + cw * k + 10;
-			const ww = cw - 20;
-			// the window: the wasteland outside, a mutant in it
-			ctx.save();
-			ctx.beginPath();
-			ctx.rect(x0, WIN_TOP, ww, WIN_H);
-			ctx.clip();
-			ctx.fillStyle = art.linear(ctx, 0, WIN_TOP, 0, WIN_TOP + WIN_H, ['#3a1408', '#a0481a', '#e08a3a']);
-			ctx.fillRect(x0, WIN_TOP, ww, WIN_H);
-			art.circle(ctx, x0 + ww * 0.7, WIN_TOP + 110, 40, { fill: 'rgba(255,220,140,0.6)' });
-			ctx.fillStyle = '#2a1008';
-			const rnd = seeded(k * 31 + 7);
-			for (let bx = x0; bx < x0 + ww; bx += 24 + rnd() * 30) {
-				const bh = 40 + rnd() * 90;
-				ctx.fillRect(bx, WIN_TOP + WIN_H - 70 - bh, 20 + rnd() * 20, bh + 70);
-			}
 			const c = customers[k];
-			if (c) drawCustomer(ctx, c, c.x, WIN_TOP + WIN_H, Math.min(1, ww / 230));
-			ctx.restore();
-			art.rect(ctx, x0, WIN_TOP, ww, WIN_H, { stroke: '#3a4442', lineWidth: 10 });
-			art.rect(ctx, x0 - 8, WIN_TOP + WIN_H - 6, ww + 16, 18, { fill: '#5d6563', stroke: INK, lineWidth: 3 });
-			if (c) drawTicket(ctx, c, x0 + ww / 2, WIN_TOP + WIN_H + 20, ww);
-			if (c && c.sayT > 0 && c.say) drawSpeech(ctx, c.say, x0 + ww / 2, WIN_TOP + 40, ww + 10, c.state === 'angry' ? '#ff4a32' : c.state === 'eat' ? '#9dff3a' : 'white');
+			if (!c) continue;
+			const x = W + HATCH + cw * k + cw / 2;
+			if (c.state !== 'leave') drawTicket(ctx, c, x, TICKET_Y, cw - 26);
+			if (c.sayT > 0 && c.say) drawSpeech(ctx, c.say, x, SAY_Y, cw - 10, c.state === 'angry' ? '#ff4a32' : c.state === 'eat' ? '#9dff3a' : 'white');
 		}
 	}
+
+
+	/* ---------- 2D: tickets, speech ---------- */
 
 	function drawSpeech(ctx, text, x, y, w, fill) {
 		ctx.font = `800 22px ${FONT}`;
@@ -1423,25 +2453,15 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		ctx.restore();
 	}
 
-	function drawPortal(ctx, p) {
-		const pulse = 1 + Math.sin(p.t * 5) * 0.06;
-		const grow = Math.min(1, p.t * 3);
-		ctx.save();
-		ctx.translate(p.x, p.y);
-		ctx.scale(grow * pulse, grow * pulse);
-		for (let r = 110; r > 20; r -= 15) art.circle(ctx, 0, 0, r, { fill: r % 30 ? 'rgba(58,242,255,0.18)' : 'rgba(255,45,143,0.2)' });
-		ctx.rotate(p.t * 2);
-		for (let n = 0; n < 8; n++) {
-			ctx.rotate(Math.PI / 4);
-			art.line(ctx, [[30, 0], [80, 30], [105, 0]], { stroke: n % 2 ? '#3af2ff' : '#ff2d8f', lineWidth: 5 });
+	function drawSmoke(ctx, x, y, k) {
+		for (let n = 0; n < 4; n++) {
+			const ph = (t * 0.5 + n / 4) % 1;
+			art.circle(ctx, x + Math.sin(ph * 6 + n) * 30, y - ph * 160, (20 + ph * 50) * k, { fill: 'rgba(60,60,55,0.5)', alpha: 1 - ph });
 		}
-		ctx.restore();
-		if (p.t < 1.2) art.circle(ctx, p.x, p.y, 120 + p.t * 400, { stroke: '#3af2ff', lineWidth: 10, alpha: 1 - p.t / 1.2 });
-		drawItem(ctx, p.item, p.x, p.y + Math.sin(p.t * 3) * 8, 0.85);
-		art.text(ctx, 'TAP!', p.x, p.y + 92, { size: 30, weight: 800, font: FONT, fill: '#3af2ff', outline: INK, outlineWidth: 5 });
 	}
 
-	/* ---------- drawing: food ---------- */
+	/* ---------- 2D: food, for the tickets ---------- */
+	
 
 	// an item, centred at (x, y), about 110 * s across: its ingredient, changed by every station it's been through
 	function drawItem(ctx, item, x, y, s) {
@@ -1579,136 +2599,9 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		ctx.restore();
 	}
 
-	/* ---------- drawing: the mutants ---------- */
+	/* ---------- 2D: the cooks, for the results screens ---------- */
 
-	function drawCustomer(ctx, c, x, base, s) {
-		const ty = c.type;
-		const rise = c.state === 'leave' ? -Math.min(1, c.stateT / 0.7) * 300 : -(1 - Math.min(1, c.age / 0.5)) * 300;
-		const panic = c.state === 'wait' && c.left / c.patience < 0.25;
-		const jx = panic ? Math.sin(t * 40) * 4 : 0;
-		const happy = c.state === 'eat';
-		const angry = c.state === 'angry' || panic;
-		ctx.save();
-		ctx.translate(x + jx, base - rise);
-		ctx.scale(s, s);
-		if (c.state === 'eat') ctx.scale(1 + Math.sin(c.stateT * 12) * 0.04, 1 - Math.sin(c.stateT * 12) * 0.04);
-		const skin = ty.skin;
-		const mouth = (mx, my, w) => {
-			if (happy) { ctx.beginPath(); ctx.arc(mx, my - 4, w, 0.1, Math.PI - 0.1); ctx.fillStyle = INK; ctx.fill(); }
-			else if (angry) art.line(ctx, [[mx - w, my + 4], [mx - w / 2, my - 4], [mx, my + 4], [mx + w / 2, my - 4], [mx + w, my + 4]], { stroke: INK, lineWidth: 4 });
-			else art.line(ctx, [[mx - w, my], [mx + w, my + 3]], { stroke: INK, lineWidth: 4 });
-		};
-		const eye = (ex, ey, r, look) => {
-			art.circle(ctx, ex, ey, r, { fill: 'white', stroke: INK, lineWidth: 3 });
-			art.circle(ctx, ex + (look || Math.sin(t + c.seed) * r * 0.3), ey, r * 0.45, { fill: INK });
-			if (angry) art.line(ctx, [[ex - r, ey - r - 4], [ex + r, ey - r + 4]], { stroke: INK, lineWidth: 4 });
-		};
-		const body = (w, h, col) => art.roundRect(ctx, -w / 2, -h, w, h + 40, [w / 2, w / 2, 0, 0], { fill: col, stroke: INK, lineWidth: 4 });
-		if (ty.id === 'blob') {
-			body(200, 130, skin);
-			for (const [hx, ph] of [[-50, 0], [50, 2]]) {
-				const hy = -150 + Math.sin(t * 3 + ph) * 6;
-				art.circle(ctx, hx, hy, 46, { fill: skin, stroke: INK, lineWidth: 4 });
-				eye(hx - 14, hy - 8, 10);
-				eye(hx + 14, hy - 8, 10);
-				mouth(hx, hy + 18, 16);
-			}
-			art.circle(ctx, -20, -60, 10, { fill: '#a8ff7a' });
-		} else if (ty.id === 'cyclops') {
-			body(170, 120, '#3a2a5a');
-			art.circle(ctx, 0, -170, 70, { fill: skin, stroke: INK, lineWidth: 4 });
-			eye(0, -180, 34);
-			art.circle(ctx, 0, -180, 40, { stroke: '#e9c04a', lineWidth: 5 });
-			art.line(ctx, [[36, -170], [44, -110]], { stroke: '#e9c04a', lineWidth: 3 });
-			mouth(0, -128, 22);
-			art.rect(ctx, -44, -300, 88, 70, { fill: '#1a1a1a', stroke: INK, lineWidth: 4 });
-			art.rect(ctx, -66, -236, 132, 14, { fill: '#1a1a1a', stroke: INK, lineWidth: 4 });
-		} else if (ty.id === 'mold') {
-			for (let n = 0; n < 9; n++) art.circle(ctx, Math.cos(n * 0.7) * 70, -130 + Math.sin(n * 1.3) * 60, 50, { fill: n % 2 ? skin : mix(skin, '#6a7a3a', 0.4) });
-			for (const [ex, ey, r] of [[-50, -150, 10], [-10, -170, 14], [30, -140, 9], [60, -175, 8], [10, -110, 7], [-60, -100, 6]]) eye(ex, ey, r);
-			mouth(0, -80, 26);
-		} else if (ty.id === 'pigeon') {
-			body(160, 110, '#2a2e3a');
-			art.poly(ctx, [[-16, -110], [16, -110], [6, -40], [-6, -40]], { fill: '#c02a2a', stroke: INK, lineWidth: 3 });
-			art.ellipse(ctx, 0, -175, 60, 66, { fill: skin, stroke: INK, lineWidth: 4 });
-			art.ellipse(ctx, 0, -140, 46, 24, { fill: '#6abfa0', alpha: 0.8 });
-			eye(-26, -192, 14);
-			eye(26, -192, 14);
-			art.poly(ctx, [[-14, -168], [14, -168], [0, -138]], { fill: '#e8a83c', stroke: INK, lineWidth: 3 });
-			art.line(ctx, [[0, -240], [-10, -270], [10, -282]], { stroke: INK, lineWidth: 4 });
-		} else if (ty.id === 'skull') {
-			body(180, 100, '#5a6466');
-			for (const sx of [-60, 60]) art.circle(ctx, sx, -60, 12, { fill: '#ff4a32' });
-			art.roundRect(ctx, -70, -250, 140, 150, 40, { fill: 'rgba(160,230,255,0.25)', stroke: '#8fdcff', lineWidth: 5 });
-			art.circle(ctx, 0, -180, 46, { fill: skin, stroke: INK, lineWidth: 4 });
-			art.circle(ctx, -17, -188, 13, { fill: INK });
-			art.circle(ctx, 17, -188, 13, { fill: INK });
-			art.circle(ctx, -17, -188, 4, { fill: angry ? '#ff4a32' : '#9dff3a' });
-			art.circle(ctx, 17, -188, 4, { fill: angry ? '#ff4a32' : '#9dff3a' });
-			for (let n = -2; n <= 2; n++) art.rect(ctx, n * 9 - 4, -158, 7, 12, { fill: 'white', stroke: INK, lineWidth: 2 });
-		} else if (ty.id === 'squid') {
-			for (let n = -3; n <= 3; n++) art.line(ctx, [[n * 22, -60], [n * 30 + Math.sin(t * 3 + n) * 12, 0], [n * 34, 30]], { stroke: skin, lineWidth: 22 });
-			art.ellipse(ctx, 0, -150, 76, 100, { fill: skin, stroke: INK, lineWidth: 4 });
-			eye(-26, -150, 14);
-			eye(26, -150, 14);
-			mouth(0, -110, 16);
-			for (const [rx, ry] of [[-40, -235], [0, -250], [40, -235]]) art.roundRect(ctx, rx - 14, ry - 10, 28, 20, 8, { fill: '#7ad8ff', stroke: INK, lineWidth: 3 });
-		} else if (ty.id === 'fungus') {
-			body(110, 120, '#e8e0c8');
-			ctx.beginPath();
-			ctx.ellipse(0, -130, 110, 80, 0, Math.PI, 0);
-			ctx.closePath();
-			ctx.fillStyle = skin;
-			ctx.fill();
-			ctx.strokeStyle = INK;
-			ctx.lineWidth = 4;
-			ctx.stroke();
-			for (const [sx, sy] of [[-50, -165], [20, -185], [65, -150]]) art.circle(ctx, sx, sy, 13, { fill: 'white' });
-			art.roundRect(ctx, -50, -110, 100, 26, 10, { fill: INK });
-			art.line(ctx, [[-6, -98], [6, -98]], { stroke: '#555', lineWidth: 3 });
-			mouth(0, -62, 18);
-		} else {   // the Overlord: a huge brain in a war-crown
-			body(230, 150, '#2a2a1a');
-			art.ellipse(ctx, 0, -200, 105, 85, { fill: '#e88aa8', stroke: INK, lineWidth: 5 });
-			for (let n = -3; n <= 3; n++) art.line(ctx, [[n * 26, -275], [n * 22 + 10, -200], [n * 26, -130]], { stroke: '#b05a78', lineWidth: 4 });
-			art.poly(ctx, [[-90, -280], [-60, -330], [-30, -290], [0, -345], [30, -290], [60, -330], [90, -280]], { fill: '#e9c04a', stroke: INK, lineWidth: 4 });
-			eye(-36, -160, 18);
-			eye(36, -160, 18);
-			mouth(0, -110, 30);
-		}
-		ctx.restore();
-	}
-
-	/* ---------- the manager (the intro) ---------- */
-
-	function drawManager(ctx, bt) {
-		const x = W + W / 2;
-		const k = clamp(bt / 0.8, 0, 1);
-		const y = lerp(-200, 720, 1 - Math.pow(1 - k, 3)) + Math.sin(bt * 3) * 10;
-		art.line(ctx, [[x, 0], [x, y - 120]], { stroke: '#2a2e2c', lineWidth: 18 });
-		art.roundRect(ctx, x - 150, y - 120, 300, 220, 24, { fill: '#5a5f5c', stroke: INK, lineWidth: 6 });
-		art.roundRect(ctx, x - 125, y - 98, 250, 170, 16, { fill: '#082a10' });
-		const blink = Math.sin(bt * 2.3) > 0.95;
-		for (const ex of [-55, 55]) art.rect(ctx, x + ex - 18, y - 60, 36, blink ? 6 : 36, { fill: '#9dff3a' });
-		art.line(ctx, [[x - 70, y + 10], [x - 40, y + 30], [x - 10, y + 10], [x + 20, y + 30], [x + 50, y + 10], [x + 70, y + 20]], { stroke: '#9dff3a', lineWidth: 8 });
-		art.text(ctx, 'MANAGER-UNIT 9', x, y + 130, { size: 30, weight: 800, font: FONT, fill: '#9dff3a', outline: INK, outlineWidth: 6 });
-	}
-
-	/* ---------- drawing: the cyborg cooks ---------- */
-
-	function drawChefInWorld(ctx, i) {
-		const c = chefs[i];
-		if (!latest[i]) return;
-		const k = clamp(c.dist / 0.6, 0, 1);
-		const h = lerp(400, 250, k);
-		const x = c.x;
-		const y = H + 18;
-		// a pool of their colour at their feet
-		art.ellipse(ctx, x, H - 8, h * 0.32, 26, { fill: hexA(colourOf(i), 0.45) });
-		drawChef(ctx, i, x, y, h, { work: c.work, held: c.held, bob: c.bob, alpha: lerp(1, 0.75, k) });
-	}
-
-	// A cyborg cook, feet at (x, y), h tall. o: { pose ('stand' | 'cheer' | 'win'), work (0..1), held, alpha }
+		// A cyborg cook, feet at (x, y), h tall. o: { pose ('stand' | 'cheer' | 'win'), work (0..1), held, alpha }
 	function drawChef(ctx, n, x, y, h, o) {
 		o = o || {};
 		const look = COOKS[n % COOKS.length];
@@ -1937,7 +2830,12 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	self.fini = function () {
 		stage.$el.off('.grub-o-tron');
+		unlisten();
 		show.fini();
+		post.dispose();
+		envTex.dispose();
+		renderer.dispose();
+		renderer.forceContextLoss();
 	};
 
 	show.go('squad');
