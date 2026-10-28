@@ -17,9 +17,10 @@
  *                    you stand to the wall it's on, the higher your note. A
  *                    pencil melody is sketched on the paper; keep your pen
  *                    on it (a point a step)
- *   DRAW BY MOVING   your pen is free: the floor unrolls onto the walls, so
- *                    walking along a wall draws along it and stepping in
- *                    towards it draws upwards. Draw any shape; wherever the
+ *   DRAW BY MOVING   your pen is free on the wall you last touched (the
+ *                    front wall to start): walking along it draws along it,
+ *                    stepping in towards it draws upwards. Touch another
+ *                    wall to draw there. Draw any shape; wherever the
  *                    playhead crosses your lines they sing (a point a note)
  *   HIT THE CHORDS   pens on the playhead again; each bar is a chord (its
  *                    name over it, its notes shaded); stay on a chord note
@@ -34,7 +35,7 @@
  *                    you, and the whole line right is PERFECT
  *   FREE JAM         pens on the playhead; paint anything; every pass leaves
  *                    an echo that plays on under the next (a point a note)
- * In the pen rounds, a tap on a wall drops a drum dot (high a shaker, the
+ * In the playhead-pen rounds, a tap on a wall drops a drum dot (high a shaker, the
  * middle a snap, low a kick) that plays every time the playhead passes.
  *
  * Input: walls[n].dist and walls[n].px (pitch, and the free pen), clicks on
@@ -71,10 +72,10 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 	const LINE = 13;
 	const PEN_R = 22;
 
-	// the free pen (DRAW BY MOVING): the nearest wall, at your place along it;
-	// right at it is the top of the paper, the middle of the room the bottom
-	const FREE_NEAR = 0.06;
-	const FREE_FAR = 0.48;
+	// the free pen (DRAW BY MOVING): on the wall you touched, at your place
+	// along it; right at it is the top of the paper, the far side of the room the bottom
+	const FREE_NEAR = 0.08;
+	const FREE_FAR = 0.85;
 	const FREE_GAP = 14;         // how far the pen moves before it adds a point
 	const FREE_POINTS = 700;     // a player's ink, at most (the oldest goes first)
 
@@ -112,7 +113,7 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 
 	const KINDS = {
 		trace: { title: 'TRACE THE LINE', how: 'STAND CLOSE TO THE WALL TO PLAY HIGH', fill: '#3f9e7f', loops: 2, pens: true },
-		shapes: { title: 'DRAW BY MOVING', how: 'WALK THE ROOM TO DRAW · NEAR THE WALL IS HIGH', fill: '#d0653f', loops: 3 },
+		shapes: { title: 'DRAW BY MOVING', how: 'TOUCH A WALL TO DRAW ON IT · WALK TO DRAW · NEAR IS HIGH', fill: '#d0653f', loops: 3 },
 		chords: { title: 'HIT THE CHORDS', how: 'STAY ON THE SHADED NOTES', fill: '#7a72d8', loops: 2, pens: true },
 		shades: { title: 'PAINT BY TOUCH', how: 'TOUCH THE WALLS TO PAINT · TOUCH AGAIN TO DEEPEN', fill: '#d886b8', loops: 3 },
 		bend: { title: 'BEND THE LINE', how: 'TOUCH THE WALLS TO PULL THE LINE ONTO THE PENCIL', fill: '#4d5fc4', loops: 3 },
@@ -468,7 +469,7 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 		lineShown = new Float32Array(STEPS).fill(5);
 		lineBy = new Int8Array(STEPS).fill(-1);
 		lineLast = -1;
-		for (const p of pens) { p.free = false; p.stroke = null; }
+		for (const p of pens) { p.free = false; p.stroke = null; p.wall = 1; }
 		newPass();
 		if (echo) echo.delayTime.value = 60 / round.bpm * 0.75;
 		show.label(`${round.title} · ${round.label}`);
@@ -566,7 +567,7 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 	function initGame(n) {
 		count = n;
 		scores = new Array(n).fill(0);
-		pens = Array.from({ length: n }, (_, i) => ({ row: 5, y: rowY(5), heldFor: 0, flash: 0, colour: PLAYER_COLORS[i % PLAYER_COLORS.length], fx: W * 1.5, fy: BOTTOM, free: false, stroke: null }));
+		pens = Array.from({ length: n }, (_, i) => ({ row: 5, y: rowY(5), heldFor: 0, flash: 0, colour: PLAYER_COLORS[i % PLAYER_COLORS.length], fx: W * 1.5, fy: BOTTOM, free: false, stroke: null, wall: 1 }));
 		heard = pens.map(() => new Set());
 		show.go('title');
 	}
@@ -626,15 +627,13 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 		});
 	}
 
-	// The free pens: the floor unrolled onto the walls. Your nearest wall,
-	// at your place along it; the nearer you are, the higher up it. (Along
-	// the diagonals two walls meet at their shared corner at the same
-	// height, so the pen never jumps.)
-	function freeSpot(p) {
+	// The free pens: on the wall you last touched, at your place along it;
+	// the nearer you are, the higher up it.
+	function freeSpot(p, wall) {
 		if (!p || !p.walls) return null;
-		let best = 0;
-		for (let n = 1; n < 3; n++) if (p.walls[n].dist < p.walls[best].dist) best = n;
+		const best = wall;
 		const w = p.walls[best];
+		if (!w) return null;
 		if (isNaN(w.px) || isNaN(w.dist)) return null;
 		return {
 			x: (best + clamp01(w.px)) * W,
@@ -644,7 +643,7 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 
 	function steerFree(dt) {
 		pens.forEach(function (pen, i) {
-			const at = freeSpot(latest[i]);
+			const at = freeSpot(latest[i], pen.wall);
 			if (!at) return;
 			if (!pen.free) { pen.fx = at.x; pen.fy = at.y; pen.free = true; }
 			const k = Math.min(1, dt * 9);
@@ -1073,6 +1072,7 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 		taps++;
 		if (round.kind === 'shades') return paint(at);
 		if (round.kind === 'bend') return bend(at);
+		if (round.kind === 'shapes') return pickWall(at);
 		// a drum dot where it lands (snapped to the eighth)
 		const s = Math.max(0, Math.min(STEPS - 1, Math.floor(at.x / STEP_W)));
 		const kind = at.y < H * 0.45 ? 'hat' : at.y < H * 0.7 ? 'clap' : 'kick';
@@ -1084,6 +1084,20 @@ IGB.register('melody-canvas', function MelodyCanvas(stage, playersMeta) {
 			if (dots.length > MAX_DOTS) dots.shift();
 			drum(kind);
 		}
+	}
+
+	// draw on the wall you touch (a fresh stroke there, the pen jumping straight across)
+	function pickWall(at) {
+		const i = toucher(at);
+		const pen = pens[i];
+		const wall = Math.max(0, Math.min(2, Math.floor(at.x / W)));
+		if (!pen || pen.wall === wall) return;
+		pen.wall = wall;
+		pen.free = false;
+		pen.stroke = null;
+		pen.flash = 1;
+		rings.push({ x: at.x, y: Math.max(TOP, Math.min(BOTTOM, at.y)), colour: pen.colour, age: 0 });
+		note(i, round.midiAt(yRow(at.y)), 0.5);
 	}
 
 	// a shade where you touch, or a deeper, bigger one where you touched before
