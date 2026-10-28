@@ -75,7 +75,7 @@ IGB.manifest = [
 		{ id: 'gaze-test', name: 'Gaze Test', icon: 'assets/icons/gaze-test.svg', file: 'games/gaze-test/index.js', module: true,
 			box: { color: '#2dd4ff', bg: '#0d1118', note: 'TOOL' } },
 		{ id: 'show-debug', name: 'UX Demo', icon: 'assets/icons/ux-demo.svg', file: 'games/show-debug.js', module: true,   // (its title drop: WACKY STACKY)
-			title: { lines: [{ text: 'WACKY', fill: '#ffb21f', glow: '#ff5a1f', font: 'Bend 2 Squares', scale: 1.45 }, { text: 'STACKY', fill: '#3ee0ff', glow: '#7a3dff', font: 'Bend 2 Squares OL2', scale: 1.45, gap: 0.82 }], font: 'Bend 2 Squares' }, box: { color: '#ffb21f', bg: '#0b1022', note: 'DEMO' } },
+			title: { lines: [{ text: 'WACKY', fill: 'white', glow: '#9E00FF', font: 'Bend 2 Squares', scale: 1.85 }, { text: 'STACKY', rainbow: true, font: 'Bend 2 Squares OL2', scale: 1.85, gap: 0.8 }], font: 'Bend 2 Squares' }, box: { color: '#ffb21f', bg: '#0b1022', note: 'DEMO' } },
 	] },
 
 	{ folder: 'Experiments', games: [

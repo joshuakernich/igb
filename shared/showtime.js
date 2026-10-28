@@ -2273,7 +2273,19 @@ window.Showtime = function (stage, opts) {
 						c.save();
 						c.translate(W / 2, y);
 						c.scale(flyScale(bt), flyScale(bt));
-						self.text(c, line.text, 0, 0, size, { fill: line.fill || 'white', glow: line.glow || theme.accent, alpha: fade * flyAlpha(bt), exact: true, font: line.font });
+						const look = { fill: line.fill || 'white', glow: line.glow || theme.accent, alpha: fade * flyAlpha(bt), exact: true, font: line.font };
+						if (!line.rainbow) self.text(c, line.text, 0, 0, size, look);
+						else {
+							// (line.rainbow: a letter at a time, each in the next player's colour, glowing in it)
+							const chars = Array.from(line.text);
+							const widths = chars.map((ch) => measure(c, ch, size, line.font));
+							let x = -widths.reduce((a, b) => a + b, 0) / 2;
+							chars.forEach(function (ch, k) {
+								const col = colour(k % PLAYER_COLORS.length);
+								self.text(c, ch, x + widths[k] / 2, 0, size, Object.assign({}, look, { fill: col, glow: col }));
+								x += widths[k];
+							});
+						}
 						c.restore();
 					});
 				});
