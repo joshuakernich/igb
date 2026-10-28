@@ -62,7 +62,7 @@
  *                      a shot is { x, y, z }: the world point at the centre
  *                      of the screen and the zoom. The view never shows past
  *                      the world's edges.
- *   the skip button    "SKIP TUTORIAL ▶▶" in the middle of the front wall, only
+ *   the skip button    "Played before? / Skip tutorial >" floating on the left wall beside the pause panel, only
  *                      through the tutorial (the 'controls' beat); it jumps to
  *                      the beat after it (opts.skip: { during, to, label,
  *                      at: { x, y } }; at: false puts it in the bottom corner)
@@ -1256,7 +1256,24 @@ window.Showtime = function (stage, opts) {
 		// whatever comes after it; a game can say otherwise with opts.skip)
 		const during = (opts.skip && opts.skip.during) || ['controls'];
 		const intro = during.includes(id);
-		if (intro && !$skip) {
+		if (intro && !$skip && !(opts.skip && (opts.skip.at || opts.skip.at === false))) {
+			// (the standard: words floating on the left wall, just right of the pause panel)
+			$skip = $('<button skip>').css({
+				position: 'absolute', left: (PAUSE.button + 28) + 'px', top: (H / 2 + 35) + 'px', transform: 'translateY(-50%)', zIndex: 21,
+				background: 'none', border: 'none', padding: '10px 6px', cursor: 'pointer', pointerEvents: 'auto', textAlign: 'left',
+				display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px', lineHeight: 1,
+				fontFamily: `"${TYPE.font}", sans-serif`, letterSpacing: '1px', whiteSpace: 'nowrap',
+				WebkitTextStroke: `5px ${TYPE.colours.ink}`, paintOrder: 'stroke fill', textShadow: '0 4px 0 rgba(0,0,0,0.55)',
+				opacity: 0, transition: 'opacity 0.4s',
+			}).appendTo(stage.$ui).on('click', function (e) {
+				e.stopPropagation();
+				self.fx('skip');
+				self.go(skipTo());
+			});
+			$('<span>').text('PLAYED BEFORE?').css({ fontSize: '30px', color: 'white' }).appendTo($skip);
+			$('<span>').text((opts.skip && opts.skip.label) || 'SKIP TUTORIAL >').css({ fontSize: '40px', color: TYPE.colours.gold }).appendTo($skip);
+			stage.timeout(() => $skip && $skip.css({ opacity: 1 }), 30);
+		} else if (intro && !$skip) {
 			$skip = $('<button skip>').text((opts.skip && opts.skip.label) || 'SKIP TUTORIAL ▶▶').css({
 				position: 'absolute', whiteSpace: 'nowrap', zIndex: 5,
 				...((opts.skip && opts.skip.at === false)
@@ -1273,7 +1290,8 @@ window.Showtime = function (stage, opts) {
 				self.go(skipTo());
 			});
 			stage.timeout(() => $skip && $skip.css({ opacity: 1 }), 30);
-		} else if (!intro && $skip) {
+		}
+		if (!intro && $skip) {
 			$skip.remove();
 			$skip = null;
 		}
