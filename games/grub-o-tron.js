@@ -7,13 +7,13 @@
  * the wasteland demanding food nobody should eat.
  *
  * The room is the kitchen:
- *   LEFT WALL    THE OLD WAYS: chopping block, deep fryer, scorch grill and
- *                sludge vat
- *   FRONT WALL   the teleport hatch (ingredients beam in, left), the serving
- *                windows (the mutants and their order tickets, middle) and
- *                the void chute (the bin, right)
- *   RIGHT WALL   THE NEW WAYS: matter compressor, mutagen injector,
- *                microwave of elsewhere and cryo-blaster
+ *   LEFT WALL    THE OLD WAYS: the CHOPPER, FRYER, GRILLER and SOAKER
+ *   FRONT WALL   the GRABBER (a teleport hatch: ingredients beam in, left),
+ *                the mutants at the counter with a SERVER square in front
+ *                of each (middle) and the BINNER (a void chute, right)
+ *   RIGHT WALL   THE NEW WAYS: the CRUSHER, MUTATOR, WARPER and FREEZER
+ * Every device is named for what it does, and the hint over each cook is
+ * the same thing in two words: GRAB IT, FRY IT, SOAK IT, SERVE IT, BIN IT.
  *
  * Each wall's floor is a grid of squares, the whole room from that wall to
  * the far one. Where you stand in the room is where your cook stands.
@@ -114,14 +114,15 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	};
 
 	const STATIONS = [
-		{ kind: 'chop', wall: 0, slot: 0, name: 'CHOPPING BLOCK', adj: 'CHOPPED', colour: '#ff8a2a' },
-		{ kind: 'fry', wall: 0, slot: 1, name: 'DEEP FRYER', adj: 'FRIED', colour: '#ffc21a' },
-		{ kind: 'grill', wall: 0, slot: 2, name: 'SCORCH GRILL', adj: 'GRILLED', colour: '#ff4a32' },
-		{ kind: 'stir', wall: 0, slot: 3, name: 'SLUDGE VAT', adj: 'STEWED', colour: '#9dff3a' },
-		{ kind: 'press', wall: 2, slot: 0, name: 'MATTER COMPRESSOR', adj: 'CRUSHED', colour: '#e9ff4a' },
-		{ kind: 'inject', wall: 2, slot: 1, name: 'MUTAGEN INJECTOR', adj: 'MUTATED', colour: '#d04dff' },
-		{ kind: 'warp', wall: 2, slot: 2, name: 'MICROWAVE OF ELSEWHERE', adj: 'WARPED', colour: '#3af2ff' },
-		{ kind: 'cryo', wall: 2, slot: 3, name: 'CRYO-BLASTER', adj: 'FROZEN', colour: '#8fdcff' },
+		// (each device is named for what it does, and the hint over a cook says that in two words: FRY IT, the FRYER)
+		{ kind: 'chop', wall: 0, slot: 0, name: 'CHOPPER', verb: 'CHOP IT', adj: 'CHOPPED', colour: '#ff8a2a' },
+		{ kind: 'fry', wall: 0, slot: 1, name: 'FRYER', verb: 'FRY IT', adj: 'FRIED', colour: '#ffc21a' },
+		{ kind: 'grill', wall: 0, slot: 2, name: 'GRILLER', verb: 'GRILL IT', adj: 'GRILLED', colour: '#ff4a32' },
+		{ kind: 'stir', wall: 0, slot: 3, name: 'SOAKER', verb: 'SOAK IT', adj: 'SOAKED', colour: '#9dff3a' },
+		{ kind: 'press', wall: 2, slot: 0, name: 'CRUSHER', verb: 'CRUSH IT', adj: 'CRUSHED', colour: '#e9ff4a' },
+		{ kind: 'inject', wall: 2, slot: 1, name: 'MUTATOR', verb: 'MUTATE IT', adj: 'MUTATED', colour: '#d04dff' },
+		{ kind: 'warp', wall: 2, slot: 2, name: 'WARPER', verb: 'WARP IT', adj: 'WARPED', colour: '#3af2ff' },
+		{ kind: 'cryo', wall: 2, slot: 3, name: 'FREEZER', verb: 'FREEZE IT', adj: 'FROZEN', colour: '#8fdcff' },
 	];
 	const KIND = {};
 	for (const d of STATIONS) KIND[d.kind] = d;
@@ -248,10 +249,10 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	const everyone = (fn) => count > 0 && chefs.every((c, i) => fn(i));
 	const TUTORIAL = [
-		{ caption: 'STAND ON THE HATCH\'S SQUARE TO GRAB FOOD', min: 2, max: 30, did: () => chefs.filter((c, i) => tut.held[i]).length >= Math.min(count, 3) },
+		{ caption: 'GRAB IT: STAND ON THE GRABBER', min: 2, max: 30, did: () => chefs.filter((c, i) => tut.held[i]).length >= Math.min(count, 3) },
 		{ caption: 'TOUCH A SIDE WALL TO GO TO ITS KITCHEN', min: 2, max: 25, did: () => everyone((i) => tut.moved[i]) },
-		{ caption: 'STAND ON A STATION\'S SQUARE TO COOK', min: 2, max: 30, did: () => chefs.filter((c, i) => tut.put[i]).length >= Math.min(count, 3) },
-		{ caption: 'BACK TO THE FRONT: STAND BY A MUTANT', min: 3, max: 45, did: () => tut.served >= Math.min(count, 3) },
+		{ caption: 'COOK IT: STAND ON A STATION', min: 2, max: 30, did: () => chefs.filter((c, i) => tut.put[i]).length >= Math.min(count, 3) },
+		{ caption: 'SERVE IT: STAND ON A SERVER', min: 3, max: 45, did: () => tut.served >= Math.min(count, 3) },
 	];
 
 	show.sequence([
@@ -515,9 +516,9 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		}
 		if (!s.item) {
 			if (!c.held || c.dwell < DWELL) return;
-			if (c.held.burnt) return tell(c, s, 'BIN THAT IN THE VOID CHUTE', '#ff4a32');
+			if (c.held.burnt) return tell(c, s, 'BIN IT', '#ff4a32');
 			if (c.held.steps.includes(s.kind)) return tell(c, s, 'ALREADY ' + s.adj);
-			if (c.held.steps.length >= 3) return tell(c, s, 'IT\'S COOKED ENOUGH');
+			if (c.held.steps.length >= 3) return tell(c, s, 'SERVE IT');
 			const item = c.held;
 			c.held = null;
 			c.dwell = 0;
@@ -776,8 +777,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// what a cook should do next, for the hint over their head
 	function hintFor(c) {
 		const it = c.held;
-		if (!it) return c.wall === 1 ? 'GRAB FOOD AT THE HATCH' : 'TOUCH THE FRONT WALL FOR FOOD';
-		if (it.burnt) return 'BIN IT IN THE VOID CHUTE';
+		if (!it) return 'GRAB IT';
+		if (it.burnt) return 'BIN IT';
 		let next = null, ready = false, any = false;
 		for (const cu of customers) {
 			if (!cu || cu.state !== 'wait') continue;
@@ -788,11 +789,10 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 				else if (pt.steps.length > it.steps.length && it.steps.every((st, j) => pt.steps[j] === st)) next = next || pt.steps[it.steps.length];
 			}
 		}
-		const where = (w) => (w === c.wall ? '' : w === 0 ? ' (LEFT WALL)' : w === 2 ? ' (RIGHT WALL)' : ' (FRONT WALL)');
-		if (ready) return 'SERVE IT AT THE COUNTER' + where(1);
-		if (next) return '→ ' + KIND[next].name + where(KIND[next].wall);
-		if (any) return 'COOK IT AT ANY STATION';
-		return 'NOBODY WANTS THAT: BIN IT';
+		if (ready) return 'SERVE IT';
+		if (next) return KIND[next].verb;
+		if (any) return 'COOK IT';
+		return 'BIN IT';
 	}
 
 	function complete(c) {
@@ -861,12 +861,12 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		if (kind === 'fire') {
 			const free = stations.filter((s) => s.fire <= 0);
 			if (free.length) ignite(pick(free));
-			setBanner('GREASE FIRE!', 'STAND ON ITS SQUARE TO PUT IT OUT', '#ff4a32');
+			setBanner('GREASE FIRE!', 'STAND ON IT TO PUT IT OUT', '#ff4a32');
 			show.fx('alarm', 0.5);
 		} else if (kind === 'jam') {
 			hatch.jam = UNJAM;
 			hatch.shake = 1;
-			setBanner('HATCH JAMMED!', 'STAND ON ITS SQUARE TO FIX IT', '#ffc21a');
+			setBanner('GRABBER JAMMED!', 'STAND ON IT TO FIX IT', '#ffc21a');
 			show.fx('alarm', 0.5);
 		} else if (kind === 'leak') {
 			const warp = stations.find((s) => s.kind === 'warp');
@@ -1074,6 +1074,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	const CHUTE_UI = uiAt(1, CHUTE_AT[0], CHUTE_AT[1]);
 	const TICKET_Y = proj(1, 0, CT.y, CT.back).y + 12;    // the tickets, laid on the serving counter
 	const SAY_Y = proj(1, 0, 2.1, QUEUE_Z).y;             // the mutants' speech, over their faces
+	const SERVE_Y = proj(1, 0, 0, cellZ(1, 0) + 0.45).y;  // the SERVER plates, on the squares in front of them
 
 
 	/* ---------- 3D: helpers ---------- */
@@ -2518,7 +2519,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	function drawWorld(ctx) {
 		for (const s of stations) drawStationUI(ctx, s);
 		drawFrontUI(ctx);
-		for (const p of portals) art.text(ctx, 'STAND HERE!', p.x, p.y + 95, { size: 28, weight: 800, font: FONT, fill: '#3af2ff', outline: INK, outlineWidth: 5 });
+		for (const p of portals) art.text(ctx, 'GRAB IT', p.x, p.y + 95, { size: 28, weight: 800, font: FONT, fill: '#3af2ff', outline: INK, outlineWidth: 5 });
 		// over each cook: what they hold, and where to go with it
 		const playing = phase === 'tutorial' || phase === 'play';
 		for (let i = 0; i < count; i++) {
@@ -2570,22 +2571,22 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		const by = py + 36;
 		plate(ctx, cx, ply, s.name, s.colour);
 		if (s.fire > 0) {
-			prompt(ctx, cx, py, 'FIRE! STAND HERE TO PUT OUT', '#ff4a32', true);
+			prompt(ctx, cx, py, 'FIRE! STAND HERE', '#ff4a32', true);
 			if (s.douse > 0) bar(ctx, cx, by, 220, s.douse / DOUSE, '#8fdcff');
 		} else if (s.state === 'done') {
-			prompt(ctx, cx, py, 'READY! STAND HERE TO TAKE', '#9dff3a', true);
+			prompt(ctx, cx, py, 'READY! STAND HERE', '#9dff3a', true);
 			if (s.kind === 'fry' || s.kind === 'grill') bar(ctx, cx, by, 220, 1 - s.doneT / (s.kind === 'fry' ? FRY.burn : GRILL.burn), '#ff4a32');
-		} else if (s.state === 'burnt') prompt(ctx, cx, py, 'BURNT! TAKE IT TO THE CHUTE', '#ff4a32', true);
+		} else if (s.state === 'burnt') prompt(ctx, cx, py, 'BURNT! BIN IT', '#ff4a32', true);
 		else if (s.state === 'work') {
 			const hint = {
-				chop: ['STAND HERE TO CHOP', s.prog],
+				chop: ['STAND HERE', s.prog],
 				fry: ['FRYING...', s.t / FRY.cook],
-				grill: [!s.flipped && s.t >= GRILL.flipAt ? 'STAND HERE TO FLIP IT!' : s.flipped ? 'SIZZLING...' : 'SEARING...', s.flipped ? s.t / GRILL.cook : Math.min(s.t, GRILL.flipAt) / GRILL.cook],
-				stir: ['SWAY HERE TO STIR', s.prog],
-				press: ['SQUAT HERE TO CRUSH', s.prog],
-				inject: ['STAND HERE TO INJECT', -1],
+				grill: [!s.flipped && s.t >= GRILL.flipAt ? 'FLIP! STAND HERE' : s.flipped ? 'SIZZLING...' : 'SEARING...', s.flipped ? s.t / GRILL.cook : Math.min(s.t, GRILL.flipAt) / GRILL.cook],
+				stir: ['SWAY HERE', s.prog],
+				press: ['SQUAT HERE', s.prog],
+				inject: ['STAND HERE', -1],
 				warp: ['WARPING...', s.t / WARP_TIME],
-				cryo: ['HOLD STILL HERE', s.prog],
+				cryo: ['HOLD STILL', s.prog],
 			}[s.kind];
 			const urgent = s.kind === 'grill' && !s.flipped && s.t >= GRILL.flipAt;
 			prompt(ctx, cx, py, hint[0], urgent ? '#ff4a32' : '#e9ff4a', urgent || ['chop', 'stir', 'press', 'cryo', 'inject'].includes(s.kind));
@@ -2602,16 +2603,16 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	}
 
 	function drawFrontUI(ctx) {
-		plate(ctx, HATCH_UI.x, HATCH_UI.plate, 'TELEPORT HATCH', '#9dff3a');
-		plate(ctx, CHUTE_UI.x, CHUTE_UI.plate, 'VOID CHUTE', '#d04dff');
+		plate(ctx, HATCH_UI.x, HATCH_UI.plate, 'GRABBER', '#9dff3a');
+		plate(ctx, CHUTE_UI.x, CHUTE_UI.plate, 'BINNER', '#d04dff');
 		if (hatch.jam > 0) {
 			prompt(ctx, HATCH_UI.x, HATCH_UI.prompt, 'JAMMED! STAND HERE', '#ffc21a', true);
 			bar(ctx, HATCH_UI.x, HATCH_UI.prompt + 36, 200, 1 - hatch.jam / UNJAM, '#ffc21a');
-		} else prompt(ctx, HATCH_UI.x, HATCH_UI.prompt, 'STAND HERE TO GRAB', '#9dff3a', false);
+		} else prompt(ctx, HATCH_UI.x, HATCH_UI.prompt, 'STAND HERE', '#9dff3a', false);
 		// (what's in it, under its name)
 		const inHatch = pods.filter((p) => p.ing).map((p) => INGS[p.ing].short);
 		art.text(ctx, inHatch.length ? inHatch.join(' · ') : 'BEAMING IN...', HATCH_UI.x, HATCH_UI.plate + 36, { size: 18, weight: 800, font: FONT, fill: inHatch.length ? '#ffffff' : 'rgba(255,255,255,0.45)', outline: INK, outlineWidth: 4 });
-		prompt(ctx, CHUTE_UI.x, CHUTE_UI.prompt, 'STAND HERE TO BIN', '#d04dff', false);
+		prompt(ctx, CHUTE_UI.x, CHUTE_UI.prompt, 'STAND HERE', '#d04dff', false);
 		const binning = chefs.find((c, i) => latest[i] && c.atChute && c.held);
 		if (binning) bar(ctx, CHUTE_UI.x, CHUTE_UI.prompt + 36, 200, binning.dwell / BIN_DWELL, '#d04dff');
 		const n = windowsNow();
@@ -2621,6 +2622,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			if (!c) continue;
 			const x = W + HATCH + cw * k + cw / 2;
 			if (c.state !== 'leave') drawTicket(ctx, c, x, TICKET_Y, cw - 26);
+			if (c.state === 'wait') plate(ctx, x, SERVE_Y, 'SERVER', '#e9ff4a');
 			if (c.sayT > 0 && c.say) drawSpeech(ctx, c.say, x, SAY_Y, cw - 10, c.state === 'angry' ? '#ff4a32' : c.state === 'eat' ? '#9dff3a' : 'white');
 		}
 	}
