@@ -15,6 +15,9 @@
  *   jump                           the whole clearing hops, with a crash
  *   squat                          everyone ducks, with a big low BWOMP
  *   run about                      a shaker follows you
+ *   touch a festoon light          strung round all three walls, the lights are a
+ *                                  sequencer: each is a note of a melody, and a playhead
+ *                                  runs along them; touch one to switch it on or off
  * So a room of kids makes a band: the more creatures with someone in front
  * of them, the fuller the song.
  *
@@ -193,7 +196,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	let floaters = [];
 	let ripples = [];
 	let t = 0;
-	const tut = { sung: [], touched: [], jumped: [] };
+	const tut = { sung: [], touched: [], jumped: [], lit: [] };
 
 	/* ---------- the show ---------- */
 
@@ -213,6 +216,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	const TUTORIAL = [
 		{ caption: 'STAND IN FRONT OF A CREATURE TO MAKE IT SING', min: 3, max: 25, did: () => enough(tut.sung) },
 		{ caption: 'TOUCH ONE, LOW ON THE WALL, FOR A TRICK', min: 2, max: 25, did: () => enough(tut.touched) },
+		{ caption: 'TOUCH THE LIGHTS TO WRITE A TUNE', min: 3, max: 20, did: () => tut.lit.length >= Math.min(count, 2) && enough(tut.lit) },
 		{ caption: 'NOW EVERYBODY JUMP!', min: 2, max: 15, did: () => enough(tut.jumped) },
 	];
 
@@ -223,7 +227,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		show.beats.visors(),
 		show.beats.tutorial({
 			steps: TUTORIAL,
-			enter() { phase = 'tutorial'; tut.sung = []; tut.touched = []; tut.jumped = []; goTo(0, true); },
+			enter() { phase = 'tutorial'; tut.sung = []; tut.touched = []; tut.jumped = []; tut.lit = []; goTo(0, true); },
 			update(dt) { tick(dt); },
 		}),
 		{
@@ -558,6 +562,13 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			visuals.push({ time, fn: () => { cr.singT = 1; cr.notes++; } });
 			if (cr.singer < count) scores[cr.singer] += 1;
 		}
+		// the festoon: the playhead moves a light along on every eighth, and a lit one chimes
+		const fe = festoons[here];
+		if (fe && !glide && s16 % 2 === 0) {
+			const i = ((Math.floor(st / 2) % FEST.n) + FEST.n) % FEST.n;
+			if (on && fe.on[i]) { SND.bell(time, freqOf(c.root, fe.deg[i]), 0.2, fe.wall[i]); SND.mallet(time, freqOf(c.root, fe.deg[i]) * 2, 0.08, fe.wall[i]); }
+			visuals.push({ time, fn: () => { fe.head[i] = 1; if (fe.on[i]) { fe.flash[i] = 1; spray(fe.pos[i], fe.col[i].getStyle(), 5, 0.9, 0.6); } } });
+		}
 		// whoever's running shakes along, on the eighths
 		if (on && s16 % 2 === 0 && phase !== 'intro') for (const p of pl) if (p.seen && p.speed > RUN) SND.shaker(time, 0.5);
 		// touches, on the next sixteenth; jumps and squats, on the next beat
@@ -669,6 +680,25 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		if (at.y < H * TOUCH_TOP) return;   // (too high for a child: only the lower part of the wall counts)
 		const who = hitters(wall, a);
 		if (!who.length) return;
+		// a festoon light under the finger: switch it
+		const fe = festoons[here];
+		if (fe) {
+			let bi = -1, bd2 = 85;
+			for (let i = 0; i < FEST.n; i++) {
+				if (fe.wall[i] !== wall) continue;
+				const sp = proj(wall, fe.pos[i]);
+				const d = Math.hypot(sp.x - at.x, sp.y - at.y);
+				if (d < bd2) { bd2 = d; bi = i; }
+			}
+			if (bi >= 0) {
+				fe.on[bi] = !fe.on[bi];
+				fe.flash[bi] = 1;
+				tut.lit[who[0]] = true;
+				scores[who[0]] += 2;
+				if (audioOn()) SND.mallet(clock(), freqOf(CLEARINGS[here].root, fe.deg[bi]) * 2, fe.on[bi] ? 0.18 : 0.06, wall);
+				return;
+			}
+		}
 		// the creature drawn nearest the touch, on that wall
 		let best = null, bd = 220;
 		for (const cr of creatures) {
@@ -1152,7 +1182,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				sp.lookAt(cap.localToWorld(new THREE.Vector3(sp.position.x * 3, sp.position.y * 3, sp.position.z * 3)));
 			}
 			c.parts.cap = cap;
-			c.face = makeFace(c.bouncer, 0.42, 0, 1.12, 0.16, { gap: 0.3 });
+			c.face = makeFace(c.bouncer, 0.42, 0, 0.9, 0.165, { gap: 0.3 });
 			limb(c, [-0.09, 0.08, 0.04], [-0.14, -0.08, 0.12], 0.035, 'shoe', -1, true);
 			limb(c, [0.09, 0.08, 0.04], [0.14, -0.08, 0.12], 0.035, 'shoe', 1, true);
 			c.top = 2.05;
@@ -1164,7 +1194,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			mesh(GEO.sph, skin, c.bouncer, 0, 0.32, 0, 0.42, 0.32, 0.36);
 			mesh(GEO.sph, slickMat(new THREE.Color(c.tint).lerp(new THREE.Color('#fff6c8'), 0.6)), c.bouncer, 0, 0.26, 0.14, 0.32, 0.22, 0.26);
 			for (const sx of [-1, 1]) mesh(GEO.sph, skin, c.bouncer, sx * 0.2, 0.56, 0.08, 0.16, 0.14, 0.15);
-			c.face = makeFace(c.bouncer, 0.62, 0, 0.5, 0.26, { gap: 0.32 });
+			c.face = makeFace(c.bouncer, 0.62, 0, 0.5, 0.26, { gap: 0.53 });   // (the eyes sit on its two eye-bumps, x ±0.2)
 			c.parts.sac = mesh(GEO.sph, new THREE.MeshPhysicalMaterial({ color: '#ffd8b0', roughness: 0.15, clearcoat: 1, sheen: 0.6, sheenColor: new THREE.Color('#ffffff') }), c.bouncer, 0, 0.2, 0.3, 0.12, 0.1, 0.1);
 			c.parts.tongue = mesh(GEO.cyl, MAT.tongue, c.bouncer, 0, 0.3, 0.32, 0.03, 0.001, 0.03);
 			c.parts.tongue.rotation.x = Math.PI / 2;
@@ -1927,6 +1957,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		shafts(g, cx, cz, ci);
 		mist(g, cx, cz);
 		MOTIF[C.motif](g, ci, cx, cz, C);
+		buildFestoon(g, ci, cx, cz);
 		bake(g);
 		// the creatures
 		for (const def of C.creatures) {
@@ -1940,6 +1971,64 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			creatures.push(c);
 		}
 		return g;
+	}
+	// The festoon: 24 bulbs in swags round the three walls (8 a wall, left to right),
+	// hung from posts at the corners. Each is a note of the clearing's melody: a
+	// higher note hangs higher on a shorter cord, in a different colour.
+	const FEST = { n: 24, per: 8, D: R + 0.12, top: 1.54, sag: 0.2, drop: [0.3, 0.1] };
+	const festoons = [];
+	const bulbGeo = new THREE.SphereGeometry(0.085, 16, 12).scale(1, 1.3, 1);
+	function buildFestoon(g, ci, cx, cz) {
+		const C = CLEARINGS[ci];
+		const f = { on: [], deg: [], pos: [], wall: [], col: [], flash: new Float32Array(FEST.n), head: new Float32Array(FEST.n) };
+		// the melody: a wandering line in the clearing's key, a third of it lit to start
+		let d = 7;
+		for (let i = 0; i < FEST.n; i++) {
+			d = clamp(d + Math.round(rr(-2.4, 2.4)), 4, 13);
+			f.deg.push(d);
+			f.on.push(i % 3 === 0 || rnd() < 0.12);
+			f.col.push(new THREE.Color().setHSL(((d - 4) / 9 * 0.82 + ci * 0.13) % 1, 1, 0.6));
+		}
+		const unit = new THREE.Group();
+		unit.userData.unit = true;
+		g.add(unit);
+		const D = FEST.D;
+		const wireMat = shared('wire', () => new THREE.MeshStandardMaterial({ color: '#2a2018', roughness: 0.5 }));
+		const capMat = shared('bulbCap', () => new THREE.MeshStandardMaterial({ color: '#c8a050', roughness: 0.3, metalness: 0.9 }));
+		const point = (w, u, y) => {
+			const lat = (u - 0.5) * 2 * D;
+			return w === 1 ? new THREE.Vector3(cx + lat, y, cz - D) : w === 0 ? new THREE.Vector3(cx - D, y, cz - lat) : new THREE.Vector3(cx + D, y, cz + lat);
+		};
+		const wireY = (u) => FEST.top - FEST.sag * (1 - Math.pow(2 * u - 1, 2));
+		for (let w = 0; w < 3; w++) {
+			const pts = [];
+			for (let k = 0; k <= 24; k++) pts.push(point(w, k / 24, wireY(k / 24)));
+			mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.008, 4), wireMat, unit).castShadow = false;
+			for (let j = 0; j < FEST.per; j++) {
+				const i = w * FEST.per + j, u = (j + 0.5) / FEST.per;
+				const top = point(w, u, wireY(u));
+				const drop = lerp(FEST.drop[0], FEST.drop[1], (f.deg[i] - 4) / 9);
+				const cord = mesh(GEO.cyl, wireMat, unit, top.x, top.y - drop / 2, top.z, 0.005, drop, 0.005);
+				cord.castShadow = false;
+				const pos = top.clone(); pos.y -= drop + 0.1;
+				mesh(GEO.cyl, capMat, unit, pos.x, pos.y + 0.105, pos.z, 0.04, 0.045, 0.04).castShadow = false;
+				f.pos[i] = pos; f.wall[i] = w;
+			}
+		}
+		// posts at the corners to hang it from
+		for (const [sx, sz] of [[-1, 1], [-1, -1], [1, -1], [1, 1]]) {
+			mesh(new THREE.CylinderGeometry(0.045, 0.06, FEST.top + 0.1, 8), MAT.bark, unit, cx + sx * D, (FEST.top + 0.1) / 2, cz + sz * D);
+			mesh(GEO.sphLo, capMat, unit, cx + sx * D, FEST.top + 0.12, cz + sz * D, 0.06);
+		}
+		bake(unit);
+		// the bulbs themselves: one instanced mesh, each its own colour (and glow) every frame
+		const bulbs = new THREE.InstancedMesh(bulbGeo, new THREE.MeshBasicMaterial({ color: '#ffffff' }), FEST.n);
+		const m4 = new THREE.Matrix4();
+		for (let i = 0; i < FEST.n; i++) { m4.makeTranslation(f.pos[i].x, f.pos[i].y, f.pos[i].z); bulbs.setMatrixAt(i, m4); bulbs.setColorAt(i, f.col[i]); }
+		bulbs.frustumCulled = false;
+		unit.add(bulbs);
+		f.bulbs = bulbs;
+		festoons[ci] = f;
 	}
 	function showOnly(list) {
 		clearingGroups.forEach((g, k) => { g.visible = list.includes(k); });
@@ -1986,6 +2075,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 
 	const PAL = CLEARINGS.map((c) => ({ top: new THREE.Color(c.sky[0]), bot: new THREE.Color(c.sky[1]), fog: new THREE.Color(c.fog), sun: new THREE.Color(c.sun), lights: c.lights.map((l) => new THREE.Color(l)) }));
 	const tmpC = new THREE.Color();
+	const _q0 = new THREE.Quaternion();
 	let rt = 0;
 	let frameNo = 0;
 	const perfFlags = {};
@@ -2106,6 +2196,24 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			if (!perfFlags.nonoodles && ((c.index + frameNo) % 2 === 0 || c.trickT > 0)) noodles(c, beat, myPulse);   // (half the noodles each frame: twice the speed, no one can tell)
 		}
 
+		// the festoons
+		const fm4 = new THREE.Matrix4(), fc = new THREE.Color(), fs = new THREE.Vector3();
+		festoons.forEach((f, ci) => {
+			if (!f || !clearingGroups[ci].visible) return;
+			for (let i = 0; i < FEST.n; i++) {
+				f.flash[i] = Math.max(0, f.flash[i] - dt * 3);
+				f.head[i] = Math.max(0, f.head[i] - dt * 2.2);
+				if (f.on[i]) fc.copy(f.col[i]).multiplyScalar(2.2 + f.flash[i] * 2.5 + pulse * 0.4);
+				else fc.setRGB(0.045, 0.035, 0.03).lerp(f.col[i], 0.06);   // (unlit: a dark glass bulb)
+				fc.r += f.head[i] * 0.5; fc.g += f.head[i] * 0.5; fc.b += f.head[i] * 0.5;
+				f.bulbs.setColorAt(i, fc);
+				const sc = (f.on[i] ? 1 + pulse * 0.08 : 0.8) + f.flash[i] * 0.45;
+				fm4.compose(f.pos[i], _q0, fs.set(sc, sc, sc));
+				f.bulbs.setMatrixAt(i, fm4);
+			}
+			f.bulbs.instanceColor.needsUpdate = true;
+			f.bulbs.instanceMatrix.needsUpdate = true;
+		});
 		// the players' puffballs
 		for (let i = 0; i < count; i++) {
 			const q = pl[i], m = q.mesh;
