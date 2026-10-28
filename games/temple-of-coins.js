@@ -29,7 +29,8 @@
  * mostly top-down through a perspective camera, so it narrows toward the top.
  * The temple is square and the room maps onto it exactly (px across, pz from
  * the front wall), whichever wall you watch. The room's outer EDGE (12% by
- * each wall) already counts as the temple's edge, so nobody has to hug a wall.
+ * each side wall, EDGE_Z 24% by the front and back) already counts as the
+ * temple's edge, so nobody has to hug a wall.
  *
  * Input: px / pz only (where you are on the floor; pz is 1 at the front wall).
  */
@@ -54,7 +55,8 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 	const SIZE = 12;              // world units across (the whole room)
 	const CS = SIZE / N;          // a square
 	const HALF = SIZE / 2;
-	const EDGE = 0.12;            // this much of the room on each side is already the temple's edge: nobody has to go right up to a wall
+	const EDGE = 0.12;            // this much of the room by each side wall is already the temple's edge: nobody has to go right up to a wall
+	const EDGE_Z = 0.24;          // ...and by the front and back (people keep further from those: the screen ahead, the wall behind)
 	const WALL_H = 0.62;          // how tall the stone stands
 	const E_R = 0.2;             // an explorer's radius (for the walls)
 	const SPIKE = 0.3;           // how far the spikes stick out of the stone
@@ -481,9 +483,9 @@ IGB.register('temple-of-coins', function TempleOfCoins(stage, playersMeta) {
 			const e = ex[i];
 			const p = latest[i];
 			if (!p) { e.seen = false; continue; }
-			const span = (v) => clamp((v - EDGE) / (1 - EDGE * 2), 0, 1);   // (the room, less a margin by each wall, over the whole temple)
-			const tx = (span(p.px) - 0.5) * SIZE;
-			const tz = (0.5 - span(p.pz)) * SIZE;   // (pz is 1 at the front wall: the far edge, z -HALF)
+			const span = (v, m) => clamp((v - m) / (1 - m * 2), 0, 1);   // (the room, less a margin by each wall, over the whole temple)
+			const tx = (span(p.px, EDGE) - 0.5) * SIZE;
+			const tz = (0.5 - span(p.pz, EDGE_Z)) * SIZE;   // (pz is 1 at the front wall: the far edge, z -HALF)
 			if (!e.seen) { e.x = tx; e.z = tz; e.seen = true; }
 			const k = 1 - Math.exp(-dt * 24);   // (tracking comes about 20 times a second: glide between)
 			const dx = (tx - e.x) * k, dz = (tz - e.z) * k;
