@@ -15,9 +15,6 @@
  *   jump                           the whole clearing hops, with a crash
  *   squat                          everyone ducks, with a big low BWOMP
  *   run about                      a shaker follows you
- *   touch a festoon light          strung round all three walls, the lights are a
- *                                  sequencer: each is a note of a melody, and a playhead
- *                                  runs along them; touch one to switch it on or off
  * So a room of kids makes a band: the more creatures with someone in front
  * of them, the fuller the song.
  *
@@ -216,7 +213,6 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	const TUTORIAL = [
 		{ caption: 'STAND IN FRONT OF A CREATURE TO MAKE IT SING', min: 3, max: 25, did: () => enough(tut.sung) },
 		{ caption: 'TOUCH ONE, LOW ON THE WALL, FOR A TRICK', min: 2, max: 25, did: () => enough(tut.touched) },
-		{ caption: 'TOUCH THE LIGHTS TO WRITE A TUNE', min: 3, max: 20, did: () => tut.lit.length >= Math.min(count, 2) && enough(tut.lit) },
 		{ caption: 'NOW EVERYBODY JUMP!', min: 2, max: 15, did: () => enough(tut.jumped) },
 	];
 
@@ -677,7 +673,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const wall = clamp(Math.floor(at.x / W), 0, 2);
 		const a = at.x / W - wall;
 		ripples.push({ x: at.x, y: at.y, t: 0 });
-		if (at.y < H * FEST.reach) return;   // (too high to reach at all)
+		if (at.y < H * TOUCH_TOP) return;   // (too high for a child: only the lower part of the wall counts)
 		const who = hitters(wall, a);
 		if (!who.length) return;
 		// a festoon light under the finger: switch it
@@ -1958,7 +1954,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		shafts(g, cx, cz, ci);
 		mist(g, cx, cz);
 		MOTIF[C.motif](g, ci, cx, cz, C);
-		buildFestoon(g, ci, cx, cz);
+		// (the festoon lights were here; removed at the user's request. buildFestoon still works if they come back)
 		bake(g);
 		// the creatures
 		for (const def of C.creatures) {
