@@ -36,6 +36,7 @@
 import * as THREE from '../../lib/three/three.module.min.js';
 import { createWallComposer, createWallRig, canvasTexture, environmentFromShader, toScreen } from '../../lib/three/walls.js';
 import { ShaderPass } from '../../lib/three/addons/postprocessing/ShaderPass.js';
+import { mergeGeometries } from '../../lib/three/addons/utils/BufferGeometryUtils.js';
 
 IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 
@@ -706,9 +707,10 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	renderer.toneMapping = THREE.ACESFilmicToneMapping;
 	renderer.toneMappingExposure = 0.92;
 	renderer.shadowMap.enabled = true;
-	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+	renderer.shadowMap.type = THREE.PCFShadowMap;
 	$(renderer.domElement).css({ position: 'absolute', left: 0, top: 0, width: WIDTH + 'px', height: H + 'px' }).appendTo(stage.$bg);
 	let post = null;
+	let gradePx = null;   // (the grade's pixel size, once it exists)
 	const sparkleU = { uTime: { value: 0 }, uPx: { value: 400 } };
 	function resize() {
 		const k = Math.min(IGB.scale * IGB.pixelRatio, 1);
@@ -716,13 +718,14 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		renderer.setSize(Math.round(WIDTH * k), Math.round(H * k), false);
 		if (post) post.setSize();
 		sparkleU.uPx.value = renderer.domElement.height / (2 * Math.tan(32 * Math.PI / 180));
+		if (gradePx) gradePx.set(1 / renderer.domElement.width, 1 / renderer.domElement.height);
 	}
 	const unlisten = IGB.onResize(resize);
 	resize();
 
 	const scene = new THREE.Scene();
 	scene.fog = new THREE.FogExp2(0x5a2a5e, 0.035);
-	post = createWallComposer(renderer, scene, { strength: 0.45, radius: 0.5, threshold: 1.0, cap: 2.4 });
+	post = createWallComposer(renderer, scene, { strength: 0.45, radius: 0.5, threshold: 1.0, cap: 2.4, samples: 0 });   // (no multisampling: it halved the frame rate. FXAA in the grade does the edges instead)
 	const envTex = environmentFromShader(renderer, `
 		vec3 envColor(vec3 d) {
 			float up = d.y * 0.5 + 0.5;
@@ -732,15 +735,32 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		}
 	`);
 	scene.environment = envTex;
-	const gradeU = { tDiffuse: { value: null }, uTime: sparkleU.uTime, uShadow: { value: new THREE.Color(1, 1, 1) }, uHigh: { value: new THREE.Color(1, 1, 1) }, uSat: { value: 1.18 } };
+	const gradeU = { tDiffuse: { value: null }, uPx: { value: new THREE.Vector2(1 / 3600, 1 / 750) }, uTime: sparkleU.uTime, uShadow: { value: new THREE.Color(1, 1, 1) }, uHigh: { value: new THREE.Color(1, 1, 1) }, uSat: { value: 1.18 } };
 	const grade = new ShaderPass({
 		uniforms: gradeU,
 		vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
-		fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime; uniform vec3 uShadow; uniform vec3 uHigh; uniform float uSat; varying vec2 vUv;
+		fragmentShader: `uniform sampler2D tDiffuse; uniform vec2 uPx; uniform float uTime; uniform vec3 uShadow; uniform vec3 uHigh; uniform float uSat; varying vec2 vUv;
 			float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+			float lum(vec3 c){ return dot(min(c, vec3(1.)), vec3(0.299, 0.587, 0.114)); }
+			// FXAA (the classic cheap one): blur along an edge, only where there is one
+			vec3 fxaa(vec2 uv){
+				vec3 nw = texture2D(tDiffuse, uv + vec2(-1., -1.) * uPx).rgb, ne = texture2D(tDiffuse, uv + vec2(1., -1.) * uPx).rgb;
+				vec3 sw = texture2D(tDiffuse, uv + vec2(-1., 1.) * uPx).rgb, se = texture2D(tDiffuse, uv + vec2(1., 1.) * uPx).rgb;
+				vec3 m = texture2D(tDiffuse, uv).rgb;
+				float lNW = lum(nw), lNE = lum(ne), lSW = lum(sw), lSE = lum(se), lM = lum(m);
+				float lMin = min(lM, min(min(lNW, lNE), min(lSW, lSE))), lMax = max(lM, max(max(lNW, lNE), max(lSW, lSE)));
+				if (lMax - lMin < 0.04) return m;
+				vec2 dir = vec2(-((lNW + lNE) - (lSW + lSE)), (lNW + lSW) - (lNE + lSE));
+				float red = max((lNW + lNE + lSW + lSE) * 0.03125, 1. / 128.);
+				dir = clamp(dir / (min(abs(dir.x), abs(dir.y)) + red), -8., 8.) * uPx;
+				vec3 a = 0.5 * (texture2D(tDiffuse, uv + dir * (1. / 3. - 0.5)).rgb + texture2D(tDiffuse, uv + dir * (2. / 3. - 0.5)).rgb);
+				vec3 b = a * 0.5 + 0.25 * (texture2D(tDiffuse, uv - dir * 0.5).rgb + texture2D(tDiffuse, uv + dir * 0.5).rgb);
+				float lB = lum(b);
+				return (lB < lMin || lB > lMax) ? a : b;
+			}
 			void main(){
 				vec4 c = texture2D(tDiffuse, vUv);
-				vec3 col = c.rgb;
+				vec3 col = fxaa(vUv);
 				float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
 				col = max(mix(vec3(l), col, uSat), 0.);
 				col *= mix(uShadow, uHigh, clamp(l / (l + 0.5), 0., 1.));
@@ -755,6 +775,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			}`,
 	});
 	post.composer.insertPass(grade, post.composer.passes.length - 1);
+	gradePx = gradeU.uPx.value;
+	resize();
 	scene.environmentIntensity = 0.55;
 
 	const walls = createWallRig({ fov: 64, aspect: W / H, near: 0.05, far: 160 });
@@ -1095,7 +1117,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			mesh(GEO.sph, slickMat(new THREE.Color(c.tint).lerp(new THREE.Color('#fff6c8'), 0.6)), c.bouncer, 0, 0.26, 0.14, 0.32, 0.22, 0.26);
 			for (const sx of [-1, 1]) mesh(GEO.sph, skin, c.bouncer, sx * 0.2, 0.56, 0.08, 0.16, 0.14, 0.15);
 			c.face = makeFace(c.bouncer, 0.62, 0, 0.5, 0.26, { gap: 0.32 });
-			c.parts.sac = mesh(GEO.sph, new THREE.MeshPhysicalMaterial({ color: '#ffd8b0', roughness: 0.15, clearcoat: 1, transmission: 0.2, thickness: 0.2 }), c.bouncer, 0, 0.2, 0.3, 0.12, 0.1, 0.1);
+			c.parts.sac = mesh(GEO.sph, new THREE.MeshPhysicalMaterial({ color: '#ffd8b0', roughness: 0.15, clearcoat: 1, sheen: 0.6, sheenColor: new THREE.Color('#ffffff') }), c.bouncer, 0, 0.2, 0.3, 0.12, 0.1, 0.1);
 			c.parts.tongue = mesh(GEO.cyl, MAT.tongue, c.bouncer, 0, 0.3, 0.32, 0.03, 0.001, 0.03);
 			c.parts.tongue.rotation.x = Math.PI / 2;
 			// a lily pad under it
@@ -1300,6 +1322,45 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 
 	/* the forest */
 
+	// one material per look, shared (so the baking below can merge everything wearing it)
+	const MC = new Map();
+	const shared = (key, make) => { if (!MC.has(key)) MC.set(key, make()); return MC.get(key); };
+
+	// Bake a group's still scenery: every mesh under it (but not the creatures, the
+	// fluttering flags, or nested units with their own bounce) merged into one mesh
+	// per material, in the group's own space. Hundreds of draw calls a wall become a few dozen.
+	function bake(unit) {
+		unit.updateMatrixWorld(true);
+		const inv = new THREE.Matrix4().copy(unit.matrixWorld).invert();
+		const buckets = new Map(), gone = [], m4 = new THREE.Matrix4();
+		const walk = (o) => {
+			for (const ch of o.children) {
+				if (ch.userData.tag === 'creatures' || ch.userData.flutter !== undefined || ch.userData.unit) continue;
+				if (ch.isMesh && !ch.isInstancedMesh && !ch.material.isShaderMaterial && !Array.isArray(ch.material)) {
+					const key = ch.material.uuid + '|' + ch.castShadow + '|' + ch.receiveShadow + '|' + ch.renderOrder;
+					if (!buckets.has(key)) buckets.set(key, { mat: ch.material, cast: ch.castShadow, recv: ch.receiveShadow, order: ch.renderOrder, geos: [] });
+					const geo = ch.geometry.index ? ch.geometry.toNonIndexed() : ch.geometry.clone();
+					for (const name of Object.keys(geo.attributes)) if (name !== 'position' && name !== 'normal' && name !== 'uv') geo.deleteAttribute(name);
+					geo.clearGroups();
+					geo.applyMatrix4(m4.multiplyMatrices(inv, ch.matrixWorld));
+					buckets.get(key).geos.push(geo);
+					gone.push(ch);
+				}
+				walk(ch);
+			}
+		};
+		walk(unit);
+		for (const ch of gone) if (ch.parent) ch.parent.remove(ch);
+		for (const b of buckets.values()) {
+			const merged = mergeGeometries(b.geos, false);
+			for (const g of b.geos) g.dispose();
+			if (!merged) continue;
+			const m = new THREE.Mesh(merged, b.mat);
+			m.castShadow = b.cast; m.receiveShadow = b.recv; m.renderOrder = b.order;
+			unit.add(m);
+		}
+	}
+
 	// a canopy blob: an icosphere pushed about by a little noise, in leaves
 	function blobGeo(detail, lumpy, s) {
 		const g = new THREE.IcosahedronGeometry(1, detail);
@@ -1354,6 +1415,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		}
 		const pool = mesh(GEO.shadow, MAT.shadow, group, x, 0.015, z, 5 * s, 5 * s);
 		pool.rotation.x = -Math.PI / 2; pool.castShadow = false;
+		g.userData.tag = 'trees';
 		group.add(g);
 		return g;
 	}
@@ -1363,22 +1425,24 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		// a few berries or blossoms that glow
 		for (let k = 0; k < 6; k++) {
 			const a = rnd() * Math.PI * 2, e = rr(0.2, 1.2);
-			mesh(GEO.sphLo, new THREE.MeshStandardMaterial({ color: cl, emissive: cl, emissiveIntensity: 1.6 }), group, x + Math.cos(a) * Math.sin(e) * s, s * 0.55 + Math.cos(e) * s * 0.75, z + Math.sin(a) * Math.sin(e) * s, 0.06);
+			mesh(GEO.sphLo, shared('berry' + cl, () => new THREE.MeshStandardMaterial({ color: cl, emissive: cl, emissiveIntensity: 1.6 })), group, x + Math.cos(a) * Math.sin(e) * s, s * 0.55 + Math.cos(e) * s * 0.75, z + Math.sin(a) * Math.sin(e) * s, 0.06);
 		}
 	}
 	function giantMushroom(group, x, z, h, cl) {
 		const g = new THREE.Group(); g.position.set(x, 0, z); group.add(g);
 		const stem = mesh(new THREE.CylinderGeometry(h * 0.07, h * 0.1, h, 16), MAT.stem, g, 0, h / 2, 0);
 		stem.receiveShadow = true;
-		const capMat = new THREE.MeshPhysicalMaterial({ color: cl, roughness: 0.35, clearcoat: 1, emissive: cl, emissiveIntensity: 0.35, bumpMap: TEX.skin, bumpScale: 2 });
+		const capMat = shared('cap' + cl, () => new THREE.MeshPhysicalMaterial({ color: cl, roughness: 0.35, clearcoat: 1, emissive: cl, emissiveIntensity: 0.35, bumpMap: TEX.skin, bumpScale: 2 }));
 		mesh(new THREE.SphereGeometry(1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), capMat, g, 0, h * 0.95, 0, h * 0.42, h * 0.26, h * 0.42);
-		const gills = mesh(new THREE.CircleGeometry(h * 0.41, 32), new THREE.MeshBasicMaterial({ color: new THREE.Color(cl).multiplyScalar(1.6), side: THREE.DoubleSide }), g, 0, h * 0.95, 0);
+		const gills = mesh(new THREE.CircleGeometry(h * 0.41, 32), shared('gill' + cl, () => new THREE.MeshBasicMaterial({ color: new THREE.Color(cl).multiplyScalar(1.6), side: THREE.DoubleSide })), g, 0, h * 0.95, 0);
 		gills.rotation.x = Math.PI / 2;
 		for (let k = 0; k < 7; k++) {
 			const a = rnd() * Math.PI * 2, e = rr(0.2, 1.1);
-			mesh(GEO.sphLo, new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 1.6, 1.4) }), g, Math.cos(a) * Math.sin(e) * h * 0.42, h * 0.95 + Math.cos(e) * h * 0.26, Math.sin(a) * Math.sin(e) * h * 0.42, h * 0.035, h * 0.012, h * 0.035);
+			mesh(GEO.sphLo, shared('spot', () => new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 1.6, 1.4) })), g, Math.cos(a) * Math.sin(e) * h * 0.42, h * 0.95 + Math.cos(e) * h * 0.26, Math.sin(a) * Math.sin(e) * h * 0.42, h * 0.035, h * 0.012, h * 0.035);
 		}
 		g.userData.bob = rnd() * 6;
+		g.userData.unit = true;
+		bake(g);
 		return g;
 	}
 
@@ -1431,6 +1495,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 					gl_FragColor = vec4(uColor * (core + cr * 0.7) * vA, 1.); }`,
 		});
 		const pts = new THREE.Points(g, m);
+		pts.userData.tag = 'sparkles';
 		pts.frustumCulled = false;
 		group.add(pts);
 	}
@@ -1492,6 +1557,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			m.quaternion.copy(q);
 			m.position.set(cx + Math.cos(a) * r, 0, cz + Math.sin(a) * r).addScaledVector(d, len / 2 - 0.3);
 			m.renderOrder = 2;
+			m.userData.tag = 'shafts';
 			group.add(m);
 		}
 		// dust drifting in the light
@@ -1519,6 +1585,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			m.position.set(cx, y, cz);
 			m.scale.setScalar(s);
 			m.renderOrder = 3;
+			m.userData.tag = 'mist';
 			group.add(m);
 		}
 	}
@@ -1571,6 +1638,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			m4.compose(new THREE.Vector3(sp.x + v.x * sp.s * 0.95, sp.y + v.y * sp.s * 0.7, sp.z + v.z * sp.s * 0.95), q, new THREE.Vector3(s, s, s));
 			cards.setMatrixAt(k++, m4);
 		}
+		cards.userData.tag = 'cards';
 		group.add(cards);
 		// ferns, in clumps round the shrubs and trunks
 		const NF = 70 * 7;
@@ -1587,6 +1655,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			}
 		}
 		ferns.receiveShadow = true;
+		ferns.userData.tag = 'ferns';
 		group.add(ferns);
 		// little glowing flowers scattered through the grass
 		const NFl = 520;
@@ -1598,6 +1667,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			flowers.setMatrixAt(j, m4);
 			flowers.setColorAt(j, tint.set(C.lights[j % 4]).lerp(new THREE.Color('#ffffff'), rnd() * 0.3));
 		}
+		flowers.userData.tag = 'flowers';
 		group.add(flowers);
 		// pebbles
 		const NP = 140;
@@ -1610,6 +1680,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			pebbles.setMatrixAt(j, m4);
 		}
 		pebbles.receiveShadow = true;
+		pebbles.userData.tag = 'pebbles';
 		group.add(pebbles);
 		// vines hanging from the canopies, a glowing bulb on the end of each
 		const vineMat = rimify(new THREE.MeshPhysicalMaterial({ color: '#3a7a2a', roughness: 0.5, bumpMap: TEX.leaf, bumpScale: 2, sheen: 1, sheenColor: new THREE.Color('#c8ff8a') }), 0.5);
@@ -1642,15 +1713,15 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			water.rotation.x = -Math.PI / 2; water.receiveShadow = true; water.castShadow = false;
 			for (let k = 0; k < 16; k++) {
 				const a = rr(0, Math.PI * 2), r = rr(3.5, 8.5);
-				const pad = mesh(new THREE.CircleGeometry(rr(0.3, 0.6), 24, 0.3, Math.PI * 2 - 0.5), new THREE.MeshPhysicalMaterial({ color: '#2f8a3a', roughness: 0.3, clearcoat: 1, side: THREE.DoubleSide }), g, cx + Math.cos(a) * r, 0.03, cz - 2 + Math.sin(a) * r);
+				const pad = mesh(new THREE.CircleGeometry(rr(0.3, 0.6), 24, 0.3, Math.PI * 2 - 0.5), shared('pad', () => new THREE.MeshPhysicalMaterial({ color: '#2f8a3a', roughness: 0.3, clearcoat: 1, side: THREE.DoubleSide })), g, cx + Math.cos(a) * r, 0.03, cz - 2 + Math.sin(a) * r);
 				pad.rotation.x = -Math.PI / 2; pad.rotation.z = rnd() * 6;
-				if (rnd() < 0.4) mesh(GEO.sph, new THREE.MeshStandardMaterial({ color: '#ffd0f0', emissive: '#ff7ad8', emissiveIntensity: 1.2 }), g, pad.position.x, 0.12, pad.position.z, 0.12, 0.08, 0.12);
+				if (rnd() < 0.4) mesh(GEO.sph, shared('lily', () => new THREE.MeshStandardMaterial({ color: '#ffd0f0', emissive: '#ff7ad8', emissiveIntensity: 1.2 })), g, pad.position.x, 0.12, pad.position.z, 0.12, 0.08, 0.12);
 			}
 			for (let k = 0; k < 40; k++) {
 				const a = -Math.PI / 2 + rr(-2, 2), r = rr(5, 9);
-				const reed = mesh(GEO.cyl, new THREE.MeshStandardMaterial({ color: '#4a7a2a', roughness: 0.7 }), g, cx + Math.cos(a) * r, 0.8, cz + Math.sin(a) * r, 0.025, rr(1.2, 2), 0.025);
+				const reed = mesh(GEO.cyl, shared('reed', () => new THREE.MeshStandardMaterial({ color: '#4a7a2a', roughness: 0.7 })), g, cx + Math.cos(a) * r, 0.8, cz + Math.sin(a) * r, 0.025, rr(1.2, 2), 0.025);
 				reed.rotation.z = rr(-0.15, 0.15);
-				mesh(GEO.cyl, new THREE.MeshStandardMaterial({ color: '#5a3a1a', roughness: 0.8 }), g, reed.position.x, reed.scale.y * 0.5 + 0.8, reed.position.z, 0.05, 0.3, 0.05);
+				mesh(GEO.cyl, shared('reedTop', () => new THREE.MeshStandardMaterial({ color: '#5a3a1a', roughness: 0.8 })), g, reed.position.x, reed.scale.y * 0.5 + 0.8, reed.position.z, 0.05, 0.3, 0.05);
 			}
 			sparkles(g, cx, cz, 350, '#d8ff6a', 11, 0.3, 3.5, 0.12);
 		},
@@ -1664,14 +1735,14 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				for (let k = 0; k < 10; k++) {
 					const u = k / 9;
 					const a = a0 + (u - 0.5) * 1.0, r = 6;
-					const flag = mesh(new THREE.ConeGeometry(0.16, 0.36, 3), new THREE.MeshStandardMaterial({ color: cols[k % 5], emissive: cols[k % 5], emissiveIntensity: 0.25, side: THREE.DoubleSide }), g, cx + Math.cos(a) * r, 3.4 - Math.sin(u * Math.PI) * 0.8, cz + Math.sin(a) * r);
+					const flag = mesh(new THREE.ConeGeometry(0.16, 0.36, 3), shared('flag' + cols[k % 5], () => new THREE.MeshStandardMaterial({ color: cols[k % 5], emissive: cols[k % 5], emissiveIntensity: 0.25, side: THREE.DoubleSide })), g, cx + Math.cos(a) * r, 3.4 - Math.sin(u * Math.PI) * 0.8, cz + Math.sin(a) * r);
 					flag.rotation.x = Math.PI;
 					flag.userData.flutter = rnd() * 6;
 				}
 			}
 			for (let k = 0; k < 8; k++) {
 				const a = -Math.PI / 2 + rr(-1.8, 1.8);
-				const lamp = mesh(GEO.sph, new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 1.7, 0.6) }), g, cx + Math.cos(a) * 5.8, rr(2.6, 3.6), cz + Math.sin(a) * 5.8, 0.09);
+				const lamp = mesh(GEO.sph, shared('lamp', () => new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 1.7, 0.6) })), g, cx + Math.cos(a) * 5.8, rr(2.6, 3.6), cz + Math.sin(a) * 5.8, 0.09);
 				lamp.castShadow = false;
 			}
 		},
@@ -1733,6 +1804,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			grass.setMatrixAt(k, m4);
 		}
 		grass.receiveShadow = true;
+		grass.userData.tag = 'grass';
 		g.add(grass);
 		// glistening: dew and drifting spores everywhere
 		sparkles(g, cx, cz, 260, '#ffffff', 10, 0.05, 0.5, 0.06);
@@ -1742,12 +1814,14 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		shafts(g, cx, cz, ci);
 		mist(g, cx, cz);
 		MOTIF[C.motif](g, ci, cx, cz, C);
+		bake(g);
 		// the creatures
 		for (const def of C.creatures) {
 			const c = frame(def, ci);
 			BUILD[c.kind](c);
 			c.root.position.x += cx; c.root.position.z += cz;
 			c.root.lookAt(cx, 0, cz);
+			c.root.userData.tag = 'creatures';
 			g.add(c.root);
 			creatures.push(c);
 		}
@@ -1800,6 +1874,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	const tmpC = new THREE.Color();
 	let rt = 0;
 	let frameNo = 0;
+	const perfFlags = {};
 	function update3D(dt) {
 		rt += dt;
 		frameNo++;
@@ -1901,7 +1976,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				f.mouth.smile.visible = open < 0.2;
 			}
 			stepKind(c, dt, beat, myPulse);
-			if ((c.index + frameNo) % 2 === 0 || c.trickT > 0) noodles(c, beat, myPulse);   // (half the noodles each frame: twice the speed, no one can tell)
+			if (!perfFlags.nonoodles && ((c.index + frameNo) % 2 === 0 || c.trickT > 0)) noodles(c, beat, myPulse);   // (half the noodles each frame: twice the speed, no one can tell)
 		}
 
 		// the players' puffballs
@@ -2012,7 +2087,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			_m2.x += L.side * bend * 0.3; _m2.y += bend * (L.leg ? 0.2 : -0.1) + Math.sin(rt * 3 + L.side) * 0.03;
 			const curve = new THREE.CatmullRomCurve3([_a.clone(), _m.clone(), _m2.clone(), _b.clone()]);
 			const old = L.m.geometry;
-			L.m.geometry = new THREE.TubeGeometry(curve, 12, L.r, 6, false);
+			L.m.geometry = new THREE.TubeGeometry(curve, 9, L.r, 5, false);
 			old.dispose();
 			if (!L.m.material || L.m.material === MAT.dark) L.m.material = c.limbMat || MAT.dark;
 			if (L.tip) {
@@ -2031,7 +2106,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const dt = last === undefined ? 0 : Math.min(0.05, Math.max(0, now - last));
 		last = now;
 		update3D(show.paused ? 0 : dt);
-		post.render(walls.views(renderer.domElement.width, renderer.domElement.height));
+		if (perfFlags.nopost) for (const v of walls.views(renderer.domElement.width, renderer.domElement.height)) { renderer.setViewport(v.x, v.y, v.width, v.height); renderer.setScissor(v.x, v.y, v.width, v.height); renderer.setScissorTest(true); renderer.render(scene, v.camera); }
+		else post.render(walls.views(renderer.domElement.width, renderer.domElement.height));
 		show.frame(ctx, dt, drawWorld);
 	};
 
@@ -2127,6 +2203,18 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	});
 
 	self.test = {
+		// (for finding what's slow: hide a kind of thing, or switch a feature off)
+		perf() { return { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, programs: renderer.info.programs.length, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures }; },
+		hide(tag, off = true) { scene.traverse((o) => { if (o.userData.tag === tag) o.visible = !off; }); },
+		post(opts, noGrade) {
+			post.dispose();
+			post = createWallComposer(renderer, scene, Object.assign({ strength: 0.45, radius: 0.5, threshold: 1.0, cap: 2.4 }, opts));
+			if (!noGrade) post.composer.insertPass(grade, post.composer.passes.length - 1);
+			post.setSize();
+		},
+		res(k) { renderer.setSize(Math.round(WIDTH * k), Math.round(H * k), false); post.setSize(); },
+		lights(off) { glows.forEach((l) => { l.visible = !off; }); },
+		flag(name, on = true) { perfFlags[name] = on; if (name === 'noshadow') { sun.castShadow = !on; renderer.shadowMap.enabled = !on; } },
 		skipTo(id) { show.go(id); },
 		jump(id) { show.go(id); },
 		clearing(k) { goTo(k, true); },
