@@ -677,7 +677,7 @@ IGB.players = (function () {
 				<gamebox-panel>
 					<gamebox-player></gamebox-player>
 					<button btn=move>Shuffle the others</button>
-					<gamebox-pips>${COLS.map((c, i) => `<button pip=${i} style="--c:${c}" title="Drive player ${i + 1}"></button>`).join('')}</gamebox-pips>
+					<gamebox-pips>${COLS.map((c, i) => `<button pip=${i} style="--c:${c}" title="Drive player ${i + 1}">${i + 1}</button>`).join('')}</gamebox-pips>
 					<gamebox-hint>
 						<span><kbd k=w>W</kbd><kbd k=a>A</kbd><kbd k=s>S</kbd><kbd k=d>D</kbd></span><span>WALK</span>
 						<span><kbd k=floor class=mouse>MOUSE ON FLOOR</kbd></span><span>MOVE THERE</span>
