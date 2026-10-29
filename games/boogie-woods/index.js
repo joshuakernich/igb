@@ -1883,7 +1883,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			mesh(GEO.sph, fur, head, 0, 0, 0, 0.32, 0.29, 0.28);                 // (the big round head)
 			mesh(GEO.sph, white, head, 0, -0.1, 0.12, 0.24, 0.16, 0.18);          // (the white muzzle, lower face)
 			mesh(GEO.cone, skinMat('#ff7a7a'), head, 0, -0.02, 0.3, 0.035, 0.03, 0.02).rotation.x = Math.PI;   // (a pink nose, pointing down)
-			c.face = makeFace(head, 0.5, 0, 0.02, 0.27, { gap: 0.42 });           // (the standard face, eyes set wide)
+			c.face = makeFace(head, 0.5, 0, 0.02, 0.27, { gap: 0.2 });            // (the standard face, eyes close together)
 			c.face.mouth.open.parent.position.y -= 0.02;
 			for (const e of c.face.eyes) e.pupil.scale.multiplyScalar(0.65);   // (smaller eyes)
 			// whiskers: three a side, fanning out from the muzzle
