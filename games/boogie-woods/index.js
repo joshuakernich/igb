@@ -1870,29 +1870,44 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			c.top = 1.65;
 		},
 		bunny(c) {
+			// a cartoon bunny sat up: a big round head, wider than its body, on a small pear of a body with
+			// a white chest; long wide ears, pink inside; a white muzzle with a pink nose and whiskers; little
+			// white-tipped paws and white hind feet; a cotton tail. The standard face, eyes set wide.
 			const fur = furMat(c.tint, '#ffffff');
+			const white = furMat('#fffaf4', '#ffffff');
 			c.limbMat = fur;
-			mesh(GEO.sph, fur, c.bouncer, 0, 0.36, 0, 0.3, 0.34, 0.28);
-			mesh(GEO.sph, furMat('#fffaf4'), c.bouncer, 0, 0.32, 0.14, 0.2, 0.24, 0.16);
-			const head = new THREE.Group(); head.position.y = 0.82; c.bouncer.add(head);
-			mesh(GEO.sph, fur, head, 0, 0, 0, 0.25, 0.23, 0.23);
-			mesh(GEO.sph, skinMat('#ff8aa8'), head, 0, -0.02, 0.23, 0.04);
-			for (const sx of [-1, 1]) mesh(GEO.box, MAT.tooth, head, sx * 0.025, -0.13, 0.2, 0.04, 0.07, 0.02);
-			c.face = makeFace(head, 0.42, 0, 0.04, 0.2);
+			mesh(GEO.sph, fur, c.bouncer, 0, 0.3, 0, 0.26, 0.3, 0.24);          // (the body)
+			mesh(GEO.sph, white, c.bouncer, 0, 0.32, 0.1, 0.17, 0.22, 0.16);   // (its white chest)
+			for (const sx of [-1, 1]) {
+				mesh(GEO.sph, fur, c.bouncer, sx * 0.2, 0.14, 0.0, 0.13, 0.14, 0.2);    // (haunches)
+				mesh(GEO.sph, white, c.bouncer, sx * 0.21, 0.035, 0.17, 0.075, 0.04, 0.12);   // (hind feet, poking out in front)
+				mesh(GEO.sph, white, c.bouncer, sx * 0.09, 0.06, 0.2, 0.06, 0.05, 0.07);    // (front paws, on the ground)
+				mesh(GEO.cyl, fur, c.bouncer, sx * 0.09, 0.22, 0.17, 0.05, 0.3, 0.05);     // (little arms, straight down)
+			}
+			const head = new THREE.Group(); head.position.y = 0.8; c.bouncer.add(head);
+			mesh(GEO.sph, fur, head, 0, 0, 0, 0.32, 0.29, 0.28);                 // (the big round head)
+			mesh(GEO.sph, white, head, 0, -0.1, 0.12, 0.24, 0.16, 0.18);          // (the white muzzle, lower face)
+			mesh(GEO.cone, skinMat('#ff7a7a'), head, 0, -0.02, 0.3, 0.035, 0.03, 0.02).rotation.x = Math.PI;   // (a pink nose, pointing down)
+			c.face = makeFace(head, 0.5, 0, 0.02, 0.27, { gap: 0.42 });           // (the standard face, eyes set wide)
+			c.face.mouth.open.parent.position.y -= 0.02;
+			// whiskers: three a side, fanning out from the muzzle
+			const wMat = new THREE.MeshBasicMaterial({ color: '#4a3a3a' });
+			for (const sx of [-1, 1]) for (const k of [-1, 0, 1]) {
+				const w = mesh(GEO.cyl, wMat, head, sx * 0.24, -0.06 + k * 0.025, 0.24, 0.0035, 0.2, 0.0035);
+				w.rotation.z = sx * (Math.PI / 2 - k * 0.15); w.castShadow = false;
+			}
+			// the ears: long wide flat ovals, pink inside, from the top of the head; they flick as it sings
+			c.parts.ears = [-1, 1].map((sx) => {
+				const ear = new THREE.Group(); ear.position.set(sx * 0.13, 0.22, -0.02); ear.rotation.z = -sx * 0.22; head.add(ear);
+				mesh(GEO.sph, fur, ear, 0, 0.32, 0, 0.1, 0.34, 0.045);
+				mesh(GEO.sph, skinMat('#ff8a7a'), ear, 0, 0.32, 0.03, 0.065, 0.28, 0.02).castShadow = false;
+				return { ear, sx };
+			});
 			c.parts.head = head;
-			// ears are noodles too
-			c.limbMatSave = c.limbMat;
-			limb(c, [-0.1, 1.0, 0], [-0.18, 1.55, -0.05], 0.06, null, -1);
-			limb(c, [0.1, 1.0, 0], [0.22, 1.55, -0.05], 0.06, null, 1);
-			c.limbs[0].ear = c.limbs[1].ear = true;
-			limb(c, [-0.24, 0.5, 0.05], [-0.42, 0.3, 0.2], 0.035, 'glove', -1);
-			limb(c, [0.24, 0.5, 0.05], [0.42, 0.32, 0.2], 0.035, 'glove', 1);
-			limb(c, [-0.13, 0.1, 0.05], [-0.18, -0.06, 0.18], 0.045, 'shoe', -1, true);
-			limb(c, [0.13, 0.1, 0.05], [0.18, -0.06, 0.18], 0.045, 'shoe', 1, true);
 			// a cotton tail, and soft fur all over
-			mesh(GEO.sph, furMat('#ffffff'), c.bouncer, 0, 0.28, -0.3, 0.11);
-			fuzz(c.bouncer, [0, 0.36, 0], [0.3, 0.34, 0.28], c.tint, 300, 0.06);
-			fuzz(c.parts.head, [0, 0, 0], [0.25, 0.23, 0.23], c.tint, 200, 0.05);
+			mesh(GEO.sph, white, c.bouncer, 0, 0.18, -0.26, 0.1);
+			fuzz(c.bouncer, [0, 0.3, 0], [0.26, 0.3, 0.24], c.tint, 260, 0.05);
+			fuzz(c.parts.head, [0, 0, 0], [0.32, 0.29, 0.28], c.tint, 240, 0.045);
 			c.top = 1.75;
 		},
 		troll(c) {
@@ -3840,6 +3855,11 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		}
 		if (c.kind === 'bunny') {
 			P.head.rotation.z = Math.sin(beat * Math.PI + c.phase) * 0.15;
+			// (ears: a sway to the beat, flicking up and out as it sings, spinning round on a trick)
+			for (const e of P.ears) {
+				e.ear.rotation.z = -e.sx * (0.22 + c.singT * 0.3) + Math.sin(beat * Math.PI + c.phase + e.sx) * 0.08;
+				e.ear.rotation.x = -c.singT * 0.25 + (T > 0 ? Math.sin(Math.min(1, 1 - T) * Math.PI) * -1.2 : 0);
+			}
 		}
 		if (c.kind === 'troll') {
 			const b = 1 + c.singT * 0.12 + (T > 0 ? Math.abs(Math.sin((1 - T) * Math.PI * 8)) * 0.15 : 0);
