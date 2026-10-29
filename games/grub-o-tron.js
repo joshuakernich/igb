@@ -50,7 +50,7 @@
  * the walls, from players near enough to reach that spot.
  */
 import * as THREE from '../lib/three/three.module.min.js';
-import { createWallComposer, canvasTexture, environmentFromShader, toScreen } from '../lib/three/walls.js';
+import { createWallComposer, createWallRig, canvasTexture, environmentFromShader, toScreen } from '../lib/three/walls.js';
 
 IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
@@ -72,10 +72,13 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	const SLOT_W = (ACTIVE[0][1] - ACTIVE[0][0]) / 4;          // a side-wall device's share of its wall
 	const slotAlong = (w, k) => ACTIVE[w][0] + (k + 0.5) * SLOT_W;
 	const REACH = { out: 0.25, along: 0.2 };   // a touch counts for a player this near the wall (room widths) and this near the spot along it
-	const SHOW = { full: 0.12, gone: 0.45 };   // a cook rises into view at the foot of a wall as their player comes within this of it
 	const FRONT_L = ACTIVE[1][0] * W, FRONT_R = ACTIVE[1][1] * W;   // the front wall's active stretch (world px across it):
-	const HATCH = FRONT_L + 200;  // the GRABBER up to here...
-	const CHUTE = FRONT_R - 200;  // ...the BINNER from here, and the mutants' windows between
+	const HATCH = FRONT_L, CHUTE = FRONT_R;   // (the mutants' windows span it)
+	// along the front counter, a food hatch for each ingredient (each its own place to grab
+	// it from), then the BINNER at the right-hand end
+	const DISPENSERS = ['roach', 'eel', 'shroom', 'ooze', 'eye', 'tentacle'];
+	const BIN_L = FRONT_R - 150;
+	const DISP_W = (BIN_L - FRONT_L) / DISPENSERS.length;
 	const CHOP_TAPS = 6;
 	const JAM_TAPS = 6;
 	const ACT_TIME = 0.6;         // how long a cook takes to act out a tap
@@ -147,7 +150,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		{ tier: 3, name: 'COLD FUSION CURRY', parts: [['shroom', 'stir', 'cryo'], ['eel', 'chop']] },
 	];
 	const FEAST = { tier: 4, name: 'THE OVERLORD\'S FEAST', parts: [['eye', 'inject', 'grill'], ['eel', 'chop', 'warp'], ['ooze', 'cryo']] };
-	const PRACTICE = { tier: 0, name: 'ROACH, ANY WAY YOU LIKE', parts: [['roach', '*']] };
+	const PRACTICE = { tier: 0, name: 'ANYTHING, ANY WAY YOU LIKE', parts: [['*', '*']] };
 
 	const TYPES = [
 		{ id: 'blob', name: 'BLOBBO & BLOBBA', skin: '#7cd957' },
@@ -173,15 +176,6 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	];
 	const NOPE = ['THAT\'S NOT WHAT I ORDERED!', 'DO I LOOK LIKE I EAT THAT?', 'WRONG! READ THE TICKET!', 'NOPE. NOT TODAY.'];
 
-	// the cyborg cooks, one look a player: [head, left arm, right arm, belly, legs]
-	const COOKS = [
-		{ head: 'bolts', arms: ['whisk', 'cleaver'], belly: 'fryer', legs: 'treads', skin: '#e0b48f' },
-		{ head: 'mohawk', arms: ['spatula', 'ladle'], belly: 'micro', legs: 'pogo', skin: '#b07a52' },
-		{ head: 'dome', arms: ['tongs', 'drill'], belly: 'blender', legs: 'wheel', skin: '#f0c9a8' },
-		{ head: 'brain', arms: ['cutter', 'whisk'], belly: 'toaster', legs: 'spider', skin: '#8a5a3c' },
-		{ head: 'beard', arms: ['grater', 'spatula'], belly: 'grill', legs: 'chicken', skin: '#d9a07a' },
-		{ head: 'antenna', arms: ['ladle', 'fork'], belly: 'fryer', legs: 'jet', skin: '#f2d2b6' },
-	];
 
 	/* ---------- helpers ---------- */
 
@@ -214,8 +208,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	let stations = [];
 	const customers = [null, null, null, null];
 	const slotWait = [0, 0, 0, 0];
-	let pods = [];
-	const hatch = { jam: 0, shake: 0 };
+	let disp = [];                // the food hatches: each its ingredient, jammed or not
+	let binFlash = 0;
 	let portals = [];
 	let floaters = [];
 	let ripples = [];
@@ -246,7 +240,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	});
 
 	const TUTORIAL = [
-		{ caption: 'WALK TO THE GRABBER AND TAP IT', min: 2, max: 30, did: () => chefs.filter((c, i) => tut.held[i]).length >= Math.min(count, 3) },
+		{ caption: 'WALK TO A FOOD HATCH AND TAP IT', min: 2, max: 30, did: () => chefs.filter((c, i) => tut.held[i]).length >= Math.min(count, 3) },
 		{ caption: 'TAKE IT TO A STATION AND TAP IT', min: 2, max: 30, did: () => chefs.filter((c, i) => tut.put[i]).length >= Math.min(count, 3) },
 		{ caption: 'COOK IT, THEN TAP A MUTANT', min: 3, max: 45, did: () => tut.served >= Math.min(count, 3) },
 	];
@@ -285,7 +279,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			id: 'play',
 			length: Infinity,
 			enter() {
-				if (!stations.length || !pods.length) clearKitchen();   // (jumped straight here, past the tutorial and intro: set the kitchen up)
+				if (!stations.length || !disp.length) clearKitchen();   // (jumped straight here, past the tutorial and intro: set the kitchen up)
 				phase = 'play';
 				shiftNo = -1;
 				slotWait.splice(0, 4, 0.8, 2.5, 4, 5);
@@ -326,8 +320,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			fire: 0, fireT: 0, douse: 0, chopT: 0, flipped: false, lock: 0, hit: 0, glow: 0, shake: 0, paddle: 0,
 		}));
 		for (let k = 0; k < 4; k++) { customers[k] = null; slotWait[k] = 1 + k; }
-		pods = [0, 1, 2].map((k) => ({ ing: null, wait: 0.3 + k * 0.3, beam: 0 }));
-		hatch.jam = 0;
+		disp = DISPENSERS.map((ing) => ({ ing, jam: 0, shake: 0, flash: 0 }));
 		portals = [];
 		floaters = [];
 		banner = null;
@@ -343,7 +336,6 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		for (let i = 0; i < count; i++) readChef(i, dt);
 		stepStations(dt);
 		stepCustomers(dt);
-		stepHatch(dt);
 		stepPortals(dt);
 		stepFx(dt);
 		if (phase === 'play') stepShift(dt);
@@ -585,82 +577,56 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	/* ---------- the hatch, the chute and the portals ---------- */
 
-	function stepHatch(dt) {
-		hatch.shake = Math.max(0, hatch.shake - dt * 3);
-		if (phase === 'off') return;
-		for (const pod of pods) {
-			pod.beam = Math.max(0, pod.beam - dt * 1.5);
-			if (pod.ing || hatch.jam > 0) continue;
-			pod.wait -= dt * (phase === 'tutorial' ? 2 : 1);
-			if (pod.wait <= 0) {
-				pod.ing = chooseIng();
-				pod.beam = 1;
-				show.fx('reveal', 0.18, 1.3);
-			}
-		}
-	}
-
-	// what the hatch beams in next: mostly what the tickets need and nobody has yet
+	// what a dimensional leak spills: mostly what the tickets need
 	function chooseIng() {
-		if (phase === 'tutorial') return 'roach';
-		const need = {};
-		for (const c of customers) if (c && c.state === 'wait') for (const part of c.parts) if (!part.filled) need[part.ing] = (need[part.ing] || 0) + 1;
-		const have = (ing) => {
-			let n = 0;
-			for (const c of chefs) if (c.held && c.held.ing === ing) n++;
-			for (const s of stations) if (s.item && s.item.ing === ing) n++;
-			for (const p of portals) if (p.item.ing === ing) n++;
-			for (const p of pods) if (p.ing === ing) n++;
-			return n;
-		};
-		const short = Object.keys(need).filter((ing) => need[ing] > have(ing));
-		if (short.length && Math.random() < 0.85) return pick(short);
-		const pool = Object.keys(need).length ? Object.keys(need) : Object.keys(INGS);
-		return Math.random() < 0.6 ? pick(pool) : pick(Object.keys(INGS));
+		const need = [];
+		for (const c of customers) if (c && c.state === 'wait') for (const part of c.parts) if (!part.filled && part.ing !== '*') need.push(part.ing);
+		return need.length && Math.random() < 0.8 ? pick(need) : pick(DISPENSERS);
 	}
 
-	function tapGrabber(hit) {
-		const say = (text, fill, size) => float(HATCH_UI.x, HATCH_UI.prompt - 40, text, fill || '#ffffff', size || 34);
-		if (hatch.jam > 0) {
-			hatch.jam--;
-			hatch.shake = 1;
+	// A food hatch: tap with empty hands and you've got its ingredient
+	function tapDispenser(k, hit) {
+		const d = disp[k], ui = DISP_UI[k];
+		const say = (text, fill, size) => float(ui.x, ui.prompt - 40, text, fill || '#ffffff', size || 30);
+		if (d.jam > 0) {
+			d.jam--;
+			d.shake = 1;
 			doing(hit[0], 'douse');
 			show.fx('thud', 0.6);
-			if (hatch.jam <= 0) { say('UNJAMMED!', '#9dff3a', 44); show.fx('allSet', 0.4); }
+			if (d.jam <= 0) { say('UNJAMMED!', '#9dff3a', 40); show.fx('allSet', 0.4); }
 			return;
 		}
 		const i = hit.find((n) => !chefs[n].held);
 		if (i === undefined) { say('HANDS FULL!'); return; }
-		const k = pods.findIndex((p) => p.ing);
-		if (k < 0) { say('BEAMING IN...'); return; }
-		chefs[i].held = { id: nextId++, ing: pods[k].ing, steps: [], burnt: false, by: [i] };
+		chefs[i].held = { id: nextId++, ing: d.ing, steps: [], burnt: false, by: [i] };
 		tut.held[i] = true;
-		pods[k].ing = null;
-		pods[k].wait = 1.0;
+		d.flash = 1;
 		doing(i, 'grab');
 		show.fx('pop', 0.7);
-		say(INGS[chefs[i].held.ing].name, '#9dff3a', 30);
+		say(INGS[d.ing].short, '#9dff3a', 30);
 	}
 
 	function tapBinner(hit) {
 		const i = hit.find((n) => chefs[n].held);
-		if (i === undefined) { float(CHUTE_UI.x, CHUTE_UI.prompt - 40, 'NOTHING TO BIN', '#ffffff', 30); return; }
+		if (i === undefined) { float(BIN_UI.x, BIN_UI.prompt - 40, 'NOTHING TO BIN', '#ffffff', 28); return; }
 		chefs[i].held = null;
 		doing(i, 'bin');
+		binFlash = 1;
 		show.fx('whooshLong', 0.5, 0.7);
-		float(CHUTE_UI.x, CHUTE_UI.prompt - 40, pick(['INTO THE VOID', 'GONE FOREVER', 'THE VOID SAYS THANKS']), '#d04dff', 34);
+		float(BIN_UI.x, BIN_UI.prompt - 40, pick(['INTO THE VOID', 'GONE FOREVER', 'THE VOID SAYS THANKS']), '#d04dff', 30);
 	}
 
-	// The warper sends food somewhere else: it comes back in a portal hanging in front of the counter, on some wall, between two devices
+	// The warper sends food somewhere else: it comes back in a portal hanging just in front of some wall's counter
 	function spawnPortal(item, from) {
-		let wall, x3, tries = 0;
+		let wall, along, tries = 0;
 		do {
 			wall = Math.floor(Math.random() * 3);
-			x3 = lx3((ACTIVE[wall][0] + 0.05 + Math.random() * (ACTIVE[wall][1] - ACTIVE[wall][0] - 0.1)) * W);
+			along = ACTIVE[wall][0] + 0.05 + Math.random() * (ACTIVE[wall][1] - ACTIVE[wall][0] - 0.1);
 			tries++;
-		} while (tries < 30 && ((wall === from.wall && Math.abs(x3 - from.sx) < 2) || portals.some((p) => p.wall === wall && Math.abs(p.x3 - x3) < 1.5)));
-		const sp = proj(wall, x3, PORTAL_Y, PORTAL_Z);
-		portals.push({ item, wall, x3, t: 0, x: sp.x, y: sp.y });
+		} while (tries < 30 && ((wall === from.wall && Math.abs(along - slotAlong(from.wall, from.slot)) < 0.15) || portals.some((p) => p.wall === wall && Math.abs(p.along - along) < 0.12)));
+		const q = wallPoint(wall, along, PORTAL_D);
+		const sp = proj(wall, q.x, PORTAL_Y, q.z);
+		portals.push({ item, wall, along, x3: q.x, z3: q.z, t: 0, x: sp.x, y: sp.y });
 		if (portals.length > MAX_PORTALS) portals.shift();
 		show.fx('reveal', 0.5, 0.8);
 		float(from.ui.x, from.ui.prompt - 40, 'IT\'S... SOMEWHERE ELSE!', '#3af2ff', 36);
@@ -669,7 +635,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	function stepPortals(dt) {
 		for (const p of portals) {
 			p.t += dt;
-			const sp = proj(p.wall, p.x3, PORTAL_Y, PORTAL_Z);
+			const sp = proj(p.wall, p.x3, PORTAL_Y, p.z3);
 			p.x = sp.x;
 			p.y = sp.y;
 		}
@@ -677,13 +643,13 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	function tapPortal(p, hit) {
 		const i = hit.find((n) => !chefs[n].held);
-		if (i === undefined) { float(p.x, p.y - 140, 'HANDS FULL!', '#ffffff', 34); return; }
+		if (i === undefined) { float(p.x, p.y - 100, 'HANDS FULL!', '#ffffff', 34); return; }
 		chefs[i].held = p.item;
 		if (!p.item.by.includes(i)) p.item.by.push(i);
 		portals.splice(portals.indexOf(p), 1);
 		doing(i, 'grab');
 		show.fx('pop', 0.8, 0.8);
-		float(p.x, p.y - 100, 'GOT IT!', '#3af2ff', 40);
+		float(p.x, p.y - 80, 'GOT IT!', '#3af2ff', 40);
 	}
 
 	/* ---------- the customers ---------- */
@@ -744,7 +710,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	const sameSteps = (a, b) => a.length === b.length && a.every((s, i) => s === b[i]);
 	function fits(item, part) {
-		if (!item || item.burnt || item.ing !== part.ing || part.filled) return false;
+		if (!item || item.burnt || (part.ing !== '*' && item.ing !== part.ing) || part.filled) return false;
 		return part.steps[0] === '*' ? item.steps.length > 0 : sameSteps(item.steps, part.steps);
 	}
 
@@ -776,27 +742,6 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		}
 	}
 
-	// what a cook should do next, for the hint over their head
-	function hintFor(c) {
-		const it = c.held;
-		if (!it) return 'GRAB IT';
-		if (it.burnt) return 'BIN IT';
-		let next = null, ready = false, any = false;
-		for (const cu of customers) {
-			if (!cu || cu.state !== 'wait') continue;
-			for (const pt of cu.parts) {
-				if (pt.filled || pt.ing !== it.ing) continue;
-				if (fits(it, pt)) ready = true;
-				else if (pt.steps[0] === '*') any = true;
-				else if (pt.steps.length > it.steps.length && it.steps.every((st, j) => pt.steps[j] === st)) next = next || pt.steps[it.steps.length];
-			}
-		}
-		if (ready) return 'SERVE IT';
-		if (next) return KIND[next].verb;
-		if (any) return 'COOK IT';
-		return 'BIN IT';
-	}
-
 	function complete(c) {
 		c.state = 'eat';
 		c.stateT = 0;
@@ -811,7 +756,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			const o = overChef(i);
 			float(o.x, o.y, '+' + (price + tip), colourOf(i), 52);
 		}
-		float(c.x, SAY_Y - 70, tip > 0 ? 'TIP +' + tip : 'SERVED', '#e9ff4a', 40);
+		float(c.x, queueAt(c.k, windowsNow()).say - 70, tip > 0 ? 'TIP +' + tip : 'SERVED', '#e9ff4a', 40);
 		served++;
 		streak++;
 		if (streak % STREAK.every === 0) {
@@ -830,7 +775,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		streak = 0;
 		walkouts++;
 		show.fx('roundFail', 0.35);
-		float(c.x, SAY_Y - 70, 'WALKOUT!', '#ff4a32', 46);
+		float(c.x, queueAt(c.k, windowsNow()).say - 70, 'WALKOUT!', '#ff4a32', 46);
 	}
 
 	/* ---------- the shifts and their trouble ---------- */
@@ -866,9 +811,10 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			setBanner('GREASE FIRE!', 'TAP IT TO PUT IT OUT', '#ff4a32');
 			show.fx('alarm', 0.5);
 		} else if (kind === 'jam') {
-			hatch.jam = JAM_TAPS;
-			hatch.shake = 1;
-			setBanner('GRABBER JAMMED!', 'TAP IT TO FIX IT', '#ffc21a');
+			const d = pick(disp);
+			d.jam = JAM_TAPS;
+			d.shake = 1;
+			setBanner('THE ' + INGS[d.ing].short + ' HATCH JAMMED!', 'TAP IT TO FIX IT', '#ffc21a');
 			show.fx('alarm', 0.5);
 		} else if (kind === 'leak') {
 			const warp = stations.find((s) => s.kind === 'warp');
@@ -914,13 +860,14 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		const lx = at.x - wall * W;
 		const hit = hitters(at);
 		if (!hit.length) { float(at.x, at.y - 40, 'WALK OVER HERE', '#ffffff', 28); return; }
-		const portal = portals.find((p) => p.wall === wall && Math.abs(p.x - at.x) < 130 && Math.abs(p.y - at.y) < 160);
+		const portal = portals.find((p) => p.wall === wall && Math.abs(p.x - at.x) < 110 && Math.abs(p.y - at.y) < 130);
 		if (portal) { tapPortal(portal, hit); return; }
 		if (wall === 1) {
 			if (lx < FRONT_L || lx >= FRONT_R) return;   // (the empty ends)
-			if (lx < HATCH) tapGrabber(hit);
-			else if (lx >= CHUTE) tapBinner(hit);
-			else tapCustomer(clamp(Math.floor((lx - HATCH) / colW(windowsNow())), 0, windowsNow() - 1), hit);
+			// (high up: a mutant behind the counter; low down: a food hatch, or the binner, on it)
+			if (at.y < SERVE_SPLIT) tapCustomer(clamp(Math.floor((lx - HATCH) / colW(windowsNow())), 0, windowsNow() - 1), hit);
+			else if (lx >= BIN_L) tapBinner(hit);
+			else tapDispenser(clamp(Math.floor((lx - FRONT_L) / DISP_W), 0, DISPENSERS.length - 1), hit);
 			return;
 		}
 		const s = stations.find((o) => o.wall === wall && Math.abs(lx / W - slotAlong(wall, o.slot)) < SLOT_W / 2);
@@ -958,37 +905,42 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		ctx.restore();
 	}
 
-	/* ---------- 3D: the kitchen, seen side on ---------- */
+	/* ---------- 3D: one kitchen, all the way round ---------- */
 
-	// Each wall is a side-on view of its own stretch of kitchen: a long
-	// counter across the wall with its devices standing on it, the tiled wall
-	// behind, and the cooks along the bottom, in front of the counter. An
-	// orthographic camera, tilted down a little, so a wall's x maps straight
-	// onto its kitchen's x (12 units across a wall). A cook rises into view at
-	// the foot of a wall as their player walks over to it and sinks away as
-	// they leave, so a player near a corner shows on both walls. On the front
-	// wall the mutants wait behind the counter, with the GRABBER and the
-	// BINNER at its ends.
-	const VW = 12;                 // a wall's view, units across (and 12 / 1.6 down)
-	const VH = VW / 1.6;
-	const U = VW / W;
-	const SET_X = [-40, 0, 40];    // each wall's kitchen, side by side in one scene
-	const PITCH = 12 * Math.PI / 180;
-	const AIM = { y: 3.5, z: 0 };  // where every camera looks
-	const CT = { y: 1.6, front: -0.2, back: -1.8, z: -1.0 };   // the counter: its top, its front and back faces, its middle
-	const BACK_Z = [-2.3, -3.5, -2.3];                         // each kitchen's back wall
-	const STAND_Z = 0.9;           // where the cooks stand, in front of the counter
-	const QUEUE_Z = -2.6;          // where the mutants stand, behind the front counter
-	const ISLAND = { y: CT.y };    // (the devices stand on the counter)
-	const MS = 0.72;               // (their machines, scaled to their share of the wall)
-	const PORTAL_Y = CT.y + 1.0, PORTAL_Z = CT.front + 0.7;   // a portal hangs in front of the counter
-	const lx3 = (lx) => lx * U - VW / 2;
-	const HATCH_X = lx3((FRONT_L + HATCH) / 2);
-	const CHUTE_X = lx3((CHUTE + FRONT_R) / 2);
-	const FRONT_MS = 0.62;          // (the grabber and binner, scaled to their narrower spots)
-	const POD_X = [-0.62, 0, 0.62].map((d) => HATCH_X + d * FRONT_MS);
-	const POD_Z = POD_X.map(() => CT.z + 0.15 * FRONT_MS);
-	const ITEM_AT = { chop: 0.78, fry: 0.92, grill: 0.72, stir: 1.02, press: 0.5, inject: 0.62, warp: 0.7, cryo: 0.5 };   // an item's height on each device (over the counter)
+	// One kitchen wraps round the room: the three walls look out from one
+	// eye in the middle (createWallRig: one camera a wall, 90° apart, so they
+	// meet seamlessly), at counters standing just beyond where the cooks can
+	// reach. The room is the kitchen's floor: a player's cook stands where they
+	// stand, carried further out as they near a wall (as GrooveWood's avatars
+	// are), so each cook shows on the one wall it's in front of. A device sits
+	// on its wall where the player stands to use it: a wall's along maps to the
+	// same spot on screen at every depth (wallPoint). The outer eighth of every
+	// wall is left empty (lockers and crates), and so is the back quarter of
+	// each side wall; the devices share what's left.
+	const R = 2.6;                 // the room's half-width, in kitchen metres
+	const EYE = 1.25;              // the walls look out from this high
+	const AV_MAX = 2.45, AV_K = AV_MAX / (0.7 * R);   // (the cooks go further than you do, out to AV_MAX at 70% of the way to a wall)
+	const avCap = (v) => Math.sign(v) * Math.min(Math.abs(v) * AV_K, AV_MAX);
+	const CT = { y: 0.92, d: 3.1, deep: 0.7 };   // the counters: their top, how far out their front edge is, how deep they are
+	const DEV_D = CT.d + 0.32;     // the devices stand this far out, on the counter
+	const BACK = 4.3;              // the walls behind the counters (the front one's further, behind the window)
+	const FRONT_BACK = 5.4;
+	const QUEUE_D = 4.5;           // the mutants wait this far out, behind the front counter
+	const MS = 0.4;                // the devices' machines, at kitchen size
+	const PITCH = 0;               // (the walls look straight out)
+	// a point on wall w, `along` it (0..1, as the tracking measures), `d` out from the middle
+	function wallPoint(w, along, d) {
+		if (w === 0) return { x: -d, z: (0.5 - along) * 2 * d };
+		if (w === 1) return { x: (along - 0.5) * 2 * d, z: -d };
+		return { x: d, z: (along - 0.5) * 2 * d };
+	}
+	const faceEye = (x, z) => Math.atan2(-x, -z);   // (the yaw that turns a thing's front, +z, to the middle)
+	const ISLAND = { y: CT.y };    // (the devices stand on the counters)
+	// the front counter: a food hatch for each ingredient, then the binner
+	const DISP_ALONG = DISPENSERS.map((ing, k) => (FRONT_L + (k + 0.5) * DISP_W) / W);
+	const BIN_ALONG = (BIN_L + FRONT_R) / 2 / W;
+	const ITEM_AT = { chop: 0.78, fry: 0.92, grill: 0.72, stir: 1.02, press: 0.5, inject: 0.62, warp: 0.7, cryo: 0.5 };   // an item's height on each device (its own units)
+	const PORTAL_Y = 1.35, PORTAL_D = CT.d - 0.35;   // a portal hangs just in front of a counter
 
 	const renderer = new THREE.WebGLRenderer({ antialias: false });   // (the composer multisamples)
 	renderer.toneMapping = THREE.NeutralToneMapping;   // (keeps the colours bright)
@@ -1023,38 +975,40 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	scene.environment = envTex;
 	scene.environmentIntensity = 0.35;
 
-	const cams = SET_X.map(function (ox) {
-		const c = new THREE.OrthographicCamera(-VW / 2, VW / 2, VH / 2, -VH / 2, 0.1, 80);
-		c.position.set(ox, AIM.y + Math.sin(PITCH) * 30, AIM.z + Math.cos(PITCH) * 30);
-		c.lookAt(ox, AIM.y, AIM.z);
-		c.updateMatrixWorld();
-		return c;
-	});
-	function views() {
-		const w = renderer.domElement.width, h = renderer.domElement.height;
-		return cams.map((camera, i) => {
-			const x0 = Math.round(i * w / 3), x1 = Math.round((i + 1) * w / 3);
-			return { camera, x: x0, y: 0, width: x1 - x0, height: h };
-		});
-	}
-	// where a point in a wall's kitchen lands on that wall (world pixels)
+	const walls = createWallRig({ fov: 64, aspect: W / H, near: 0.05, far: 60 });
+	walls.rig.position.set(0, EYE, 0);
+	scene.add(walls.rig);
+	const cams = walls.cameras;
+	for (const c of cams) c.updateMatrixWorld();
+	const views = () => walls.views(renderer.domElement.width, renderer.domElement.height);
+	// where a point in the kitchen lands on a wall (world pixels)
 	const _v = new THREE.Vector3();
 	function proj(wall, x, y, z) {
-		_v.set(SET_X[wall] + x, y, z);
-		return toScreen(_v, cams[wall], wall * W, 0, W, H) || { x: wall * W + W / 2, y: H / 2 };
+		_v.set(x, y, z);
+		return toScreen(_v, cams[wall], wall * W, 0, W, H) || { x: wall * W + W / 2, y: H / 2, inside: false };
 	}
-	// a device's words: its name plate over it (all in a row), its prompt and bar under that, its middle
-	const uiAt = (wall, x) => ({ x: proj(wall, x, 0, CT.z).x, plate: proj(wall, x, CT.y + 3.0, CT.z).y, prompt: proj(wall, x, CT.y + 3.0, CT.z).y + 46, top: proj(wall, x, CT.y + 1, CT.z).y });
+	// a device's words: its sign over it, its prompt and bar under that, its middle
+	function uiAt(wall, along, d) {
+		const p = wallPoint(wall, along, d);
+		return { x: proj(wall, p.x, 0, p.z).x, prompt: proj(wall, p.x, CT.y + 0.95, p.z).y, top: proj(wall, p.x, CT.y + 0.4, p.z).y };
+	}
 	for (const d of STATIONS) {
-		d.sx = lx3(slotAlong(d.wall, d.slot) * W);
-		d.sz = CT.z;
-		d.ui = uiAt(d.wall, d.sx);
+		const a = slotAlong(d.wall, d.slot);
+		const p = wallPoint(d.wall, a, DEV_D);
+		d.sx = p.x;
+		d.sz = p.z;
+		d.ui = uiAt(d.wall, a, DEV_D);
 	}
-	const HATCH_UI = uiAt(1, HATCH_X);
-	const CHUTE_UI = uiAt(1, CHUTE_X);
-	const TICKET_BOTTOM = proj(1, 0, 3.9, QUEUE_Z).y;     // the tickets, over the mutants' heads
-	const SAY_Y = proj(1, 0, 2.6, QUEUE_Z).y;             // their speech, over their faces
-	const SERVE_Y = proj(1, 0, CT.y + 0.15, CT.front).y - 20;   // a SERVER plate on the counter in front of each
+	const DISP_UI = DISP_ALONG.map((a) => uiAt(1, a, DEV_D));
+	const BIN_UI = uiAt(1, BIN_ALONG, DEV_D);
+	// a front-wall tap above this is for a mutant behind the counter; below, the food hatches and binner on it
+	const SERVE_SPLIT = proj(1, 0, CT.y + 0.62, -DEV_D).y;
+	// the mutants' windows: where the k-th of n stands, and where their words go
+	function queueAt(k, n) {
+		const a = (HATCH + colW(n) * (k + 0.5)) / W;
+		const p = wallPoint(1, a, QUEUE_D);
+		return { a, x: p.x, z: p.z, ticket: proj(1, p.x, 2.75, p.z).y, say: proj(1, p.x, 1.9, p.z).y, serve: proj(1, (a - 0.5) * 2 * CT.d, CT.y + 0.12, -CT.d).y - 18 };
+	}
 
 	/* ---------- 3D: helpers ---------- */
 
@@ -1259,7 +1213,6 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// (one look for the whole kitchen, every wall the same: muted, dark slate-green
 	// tiles, so the devices, the food and the neon carry the colour)
 	const KITCHEN = { wall: ['#2a3834', '#2f3e38'], edge: 0x161c1a, counter: 0x2a2230, light: 0xffd8b0 };
-	const ROOM_LOOK = [KITCHEN, KITCHEN, KITCHEN];
 	// glossy wall tiles in two colours, banded, the odd crack and drip
 	function wallTex(a, b) {
 		return tex(512, 512, function (c) {
@@ -1279,101 +1232,111 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			for (let n = 0; n < 6; n++) { c.fillStyle = 'rgba(120,255,80,0.1)'; c.fillRect(rnd() * 512, rnd() * 200, 4, 40 + rnd() * 120); }
 		}, 9, 3);
 	}
-	/* ---------- 3D: the kitchens ---------- */
+	/* ---------- 3D: the kitchen ---------- */
 
-	const sets = SET_X.map(function (ox) {
-		const g = new THREE.Group();
-		g.position.x = ox;
-		scene.add(g);
-		return g;
-	});
+	const room = new THREE.Group();
+	scene.add(room);
+	const sets = [room, room, room];   // (one kitchen: every wall's things in it)
 	const fans = [];
 	const signs = [];
 
-	function buildRoom(w) {
-		const g = sets[w];
-		const backZ = BACK_Z[w];
-		const look = ROOM_LOOK[w];
-		// the floor the cooks stand on, the tiled wall behind
-		const floor = mesh(new THREE.PlaneGeometry(14, 8), std(look.edge, 0.4, 0.05), g, 0, 0, 2);
+	function buildRoom() {
+		const look = KITCHEN;
+		const g = room;
+		// the floor, the ceiling
+		const floor = mesh(new THREE.PlaneGeometry(14, 14), std(look.edge, 0.45, 0.05), g, 0, 0, -0.5);
 		floor.rotation.x = -Math.PI / 2;
 		floor.receiveShadow = true;
-		const wt = wallTex(look.wall[0], look.wall[1]);
-		wt.repeat.set(7, 4.5);
-		const wall = mesh(new THREE.PlaneGeometry(14, 9), std(0xffffff, 0.35, 0, { map: wt }), g, 0, 4.5, backZ);
-		wall.receiveShadow = true;
-		// the counter right across: steel on top, the room's colour down the front
-		const front = new THREE.Color(look.counter);
-		const x0 = lx3(ACTIVE[w][0] * W), x1 = lx3(ACTIVE[w][1] * W), cw = x1 - x0, cx = (x0 + x1) / 2;
-		const counter = mesh(BOX(cw, CT.y, CT.front - CT.back), std(front, 0.35, 0.1), g, cx, CT.y / 2, CT.z);
-		counter.receiveShadow = counter.castShadow = true;
-		mesh(BOX(cw + 0.2, 0.12, CT.front - CT.back + 0.15), MAT.steel, g, cx, CT.y, CT.z).receiveShadow = true;
-		mesh(BOX(cw, 0.08, 0.02), MAT.hazard, g, cx, CT.y - 0.12, CT.front + 0.012);
-		mesh(BOX(cw, 0.16, 0.05), MAT.black, g, cx, 0.08, CT.front + 0.03);
-		// (the empty ends: a locker in a corner, a pile of crates and a barrel at the back)
-		for (const [ea, eb] of [[0, ACTIVE[w][0]], [ACTIVE[w][1], 1]]) {
-			const ex = lx3((ea + eb) / 2 * W), ew = (eb - ea) * VW;
-			if (ew < 2) {
-				const locker = mesh(BOX(1.1, 3.4, 0.9), std(0x3a4440, 0.5, 0.4), g, ex, 1.7, backZ + 0.6);
-				locker.castShadow = true;
-				for (const ly of [2.6, 0.9]) mesh(BOX(0.8, 0.05, 0.02), MAT.black, g, ex, ly, backZ + 1.06);
-				mesh(BOX(0.06, 0.4, 0.04), MAT.steel, g, ex + 0.35, 1.8, backZ + 1.08);
-			} else {
-				for (const [dx, dy, sz] of [[-0.7, 0.45, 0.9], [0.3, 0.45, 0.9], [-0.2, 1.3, 0.8]]) mesh(BOX(sz, sz, sz), std(0x5a4430, 0.8, 0), g, ex + dx, dy, backZ + 0.8).castShadow = true;
-				mesh(CYL(0.4, 0.4, 1.1, 20), std(0x6a5a20, 0.55, 0.4), g, ex + 1.1, 0.55, backZ + 1.0).castShadow = true;
+		const ceil = mesh(new THREE.PlaneGeometry(14, 14), std(0x14181a, 0.8, 0), g, 0, 3.4, -0.5);
+		ceil.rotation.x = Math.PI / 2;
+		// the walls: tiled, behind the counters (the front one further back, behind the window)
+		const wallMat = (w, h) => { const t = wallTex(look.wall[0], look.wall[1]); t.repeat.set(w / 2, h / 2); return std(0xffffff, 0.35, 0, { map: t }); };
+		const L = mesh(new THREE.PlaneGeometry(BACK + FRONT_BACK, 3.4), wallMat(BACK + FRONT_BACK, 3.4), g, -BACK, 1.7, (BACK - FRONT_BACK) / 2);
+		L.rotation.y = Math.PI / 2;
+		const Rw = mesh(new THREE.PlaneGeometry(BACK + FRONT_BACK, 3.4), wallMat(BACK + FRONT_BACK, 3.4), g, BACK, 1.7, (BACK - FRONT_BACK) / 2);
+		Rw.rotation.y = -Math.PI / 2;
+		mesh(new THREE.PlaneGeometry(2 * BACK, 3.4), wallMat(2 * BACK, 3.4), g, 0, 1.7, -FRONT_BACK);
+		for (const m of [L, Rw]) m.receiveShadow = true;
+		// strip lights along the ceiling, flickering
+		for (const [x, z, ry] of [[-2.6, 0, 0], [2.6, 0, 0], [0, -3.2, Math.PI / 2]]) {
+			const strip = mesh(BOX(0.12, 0.05, 3.2), glowMat(0xeaf6ff, 1.6), g, x, 3.35, z);
+			strip.rotation.y = ry;
+		}
+		// the counters: one along each wall's active stretch, and the empty ends
+		const counterMat = std(look.counter, 0.35, 0.1);
+		for (let w = 0; w < 3; w++) {
+			const [a0, a1] = ACTIVE[w];
+			const p0 = wallPoint(w, a0, CT.d + CT.deep / 2), p1 = wallPoint(w, a1, CT.d + CT.deep / 2);
+			const len = Math.hypot(p1.x - p0.x, p1.z - p0.z);
+			const cg = new THREE.Group();
+			cg.position.set((p0.x + p1.x) / 2, 0, (p0.z + p1.z) / 2);
+			cg.rotation.y = [Math.PI / 2, 0, -Math.PI / 2][w];   // (its front, +z, toward the room)
+			g.add(cg);
+			const body = mesh(BOX(len, CT.y, CT.deep), counterMat, cg, 0, CT.y / 2, 0);
+			body.castShadow = body.receiveShadow = true;
+			mesh(BOX(len + 0.08, 0.05, CT.deep + 0.06), MAT.steel, cg, 0, CT.y, 0).receiveShadow = true;
+			mesh(BOX(len, 0.05, 0.01), MAT.hazard, cg, 0, CT.y - 0.06, CT.deep / 2 + 0.006);
+			mesh(BOX(len, 0.08, 0.02), MAT.black, cg, 0, 0.04, CT.deep / 2 + 0.012);
+			// (the empty ends: a locker, or a pile of crates and a barrel)
+			for (const [ea, eb] of [[0, a0], [a1, 1]]) {
+				const e = wallPoint(w, (ea + eb) / 2, CT.d + 0.4);
+				if (eb - ea < 0.2) {
+					const locker = mesh(BOX(0.6, 1.9, 0.5), std(0x3a4440, 0.5, 0.4), g, e.x, 0.95, e.z);
+					locker.rotation.y = faceEye(e.x, e.z);
+					locker.castShadow = true;
+				} else {
+					for (const [dx, dy, sz] of [[-0.35, 0.22, 0.45], [0.15, 0.22, 0.45], [-0.1, 0.65, 0.4]]) {
+						const c = mesh(BOX(sz, sz, sz), std(0x5a4430, 0.8, 0), g, e.x + dx * 0.6, dy, e.z + dx * 0.6);
+						c.rotation.y = faceEye(e.x, e.z) + dx;
+						c.castShadow = true;
+					}
+				}
 			}
 		}
-		// pipes high on the wall, dripping rust
-		for (const [y, r] of [[6.3, 0.13], [6.65, 0.08]]) {
-			const p = mesh(CYL(r, r, 14, 14), MAT.pipe, g, 0, y, backZ + 0.2);
-			p.rotation.z = Math.PI / 2;
-			for (let x = -6; x <= 6; x += 2.3 + (y % 1)) mesh(CYL(r * 1.35, r * 1.35, 0.14, 14), MAT.rust, g, x, y, backZ + 0.2).rotation.z = Math.PI / 2;
+		// pipes high along the side walls, dripping rust
+		for (const x of [-BACK + 0.12, BACK - 0.12]) for (const [y, r] of [[3.0, 0.07], [3.18, 0.045]]) {
+			const p = mesh(CYL(r, r, BACK + FRONT_BACK, 12), MAT.pipe, g, x, y, (BACK - FRONT_BACK) / 2);
+			p.rotation.x = Math.PI / 2;
 		}
-		// light: a warm wash from overhead, and the room's own colour of neon
-		const wash = new THREE.PointLight(0xffffff, 18, 26, 1.2);
-		wash.position.set(0, 8, 3);
-		g.add(wash);
-		const light = new THREE.PointLight(look.light, 16, 14, 1.4);
-		light.position.set(0, 5, -0.5);
-		g.add(light);
-		if (w !== 1) {
-			// the sign, a shelf of glowing jars and a fan, high on the wall
-			const sign = mesh(new THREE.PlaneGeometry(2.8, 0.52), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), g, w === 0 ? -4.4 : 4.4, 5.75, backZ + 0.06);
+		// the side walls' signs, the jars and a fan
+		for (const [w, x] of [[0, -BACK + 0.04], [2, BACK - 0.04]]) {
+			const sign = mesh(new THREE.PlaneGeometry(1.7, 0.32), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), g, x, 2.45, 2.2);
+			sign.rotation.y = w === 0 ? Math.PI / 2 : -Math.PI / 2;
 			signs.push({ m: sign, text: w === 0 ? 'THE OLD WAYS' : 'THE NEW WAYS', colour: '#9dff3a', k: 1.15, seed: w });
-			const jx = w === 0 ? 3.2 : -3.2;
-			mesh(BOX(2.6, 0.08, 0.36), MAT.rust, g, jx, 5.4, backZ + 0.18);
-			for (let k = 0; k < 4; k++) {
-				const hue = [0x9dff3a, 0xff2d8f, 0xe9ff4a, 0x3af2ff][(k + w) % 4];
-				mesh(CYL(0.15, 0.15, 0.36 + (k % 2) * 0.12, 14), MAT.glass, g, jx - 0.9 + k * 0.6, 5.63 + (k % 2) * 0.06, backZ + 0.18);
-				mesh(CYL(0.12, 0.12, 0.22 + (k % 2) * 0.1, 14), glowMat(hue, 1.1), g, jx - 0.9 + k * 0.6, 5.57 + (k % 2) * 0.06, backZ + 0.18);
-			}
 			const fan = new THREE.Group();
-			fan.position.set(w === 0 ? 0.3 : -0.3, 5.7, backZ + 0.1);
+			fan.position.set(x, 2.4, -0.4);
+			fan.rotation.y = w === 0 ? Math.PI / 2 : -Math.PI / 2;
 			g.add(fan);
-			mesh(new THREE.TorusGeometry(0.4, 0.05, 8, 24), MAT.darkSteel, fan);
-			mesh(new THREE.CircleGeometry(0.4, 24), MAT.black, fan, 0, 0, -0.02);
+			mesh(new THREE.TorusGeometry(0.24, 0.03, 8, 24), MAT.darkSteel, fan);
+			mesh(new THREE.CircleGeometry(0.24, 24), MAT.black, fan, 0, 0, -0.01);
 			const blades = new THREE.Group();
 			fan.add(blades);
 			for (let b = 0; b < 4; b++) {
 				const pivot = new THREE.Group();
 				pivot.rotation.z = b * Math.PI / 2;
-				mesh(BOX(0.12, 0.34, 0.02), MAT.steel, pivot, 0, 0.18, 0.02);
+				mesh(BOX(0.07, 0.2, 0.01), MAT.steel, pivot, 0, 0.11, 0.01);
 				blades.add(pivot);
 			}
 			fans.push(blades);
-		} else {
-			// the window onto the wasteland behind the mutants, its posts, the neon over it
-			const ww = (CHUTE - HATCH) * U;
-			mesh(new THREE.PlaneGeometry(ww, 4.2), new THREE.MeshBasicMaterial({ map: TEX.sky, color: new THREE.Color(0.42, 0.42, 0.42) }), g, 0, 3.6, backZ + 0.03);
-			for (const x of [-ww / 2 - 0.05, ww / 2 + 0.05]) mesh(BOX(0.24, 4.6, 0.3), MAT.darkSteel, g, x, 3.5, backZ + 0.12);
-			mesh(BOX(ww + 0.4, 0.24, 0.3), MAT.darkSteel, g, 0, 5.75, backZ + 0.12);
-			for (const [x, text, colour] of [[-2.6, 'FISSION CHIPS', '#9dff3a'], [2.6, 'OPEN 25/8', '#FC1992']]) {
-				const sign = mesh(new THREE.PlaneGeometry(3.4, 0.62), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), g, x, 6.0, backZ + 0.06);
-				signs.push({ m: sign, text, colour, k: 1.3, seed: x, font: x < 0 ? 'Monoton' : null });   // (the name in the title's neon-tube lettering)
-			}
+		}
+		// the front: the window onto the wasteland behind the mutants, and the neon over it
+		const wa = HATCH / W, wb = CHUTE / W;
+		const wl = wallPoint(1, wa, FRONT_BACK - 0.02), wr = wallPoint(1, wb, FRONT_BACK - 0.02);
+		mesh(new THREE.PlaneGeometry(wr.x - wl.x, 2.4), new THREE.MeshBasicMaterial({ map: TEX.sky, color: new THREE.Color(0.42, 0.42, 0.42) }), g, 0, 1.6, -FRONT_BACK + 0.02);
+		for (const x of [wl.x - 0.06, wr.x + 0.06]) mesh(BOX(0.14, 2.6, 0.16), MAT.darkSteel, g, x, 1.55, -FRONT_BACK + 0.08);
+		mesh(BOX(wr.x - wl.x + 0.3, 0.14, 0.16), MAT.darkSteel, g, 0, 2.85, -FRONT_BACK + 0.08);
+		for (const [x, text, colour] of [[-1.2, 'FISSION CHIPS', '#9dff3a'], [1.2, 'OPEN 25/8', '#FC1992']]) {
+			const sign = mesh(new THREE.PlaneGeometry(2.0, 0.37), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), g, x, 3.1, -FRONT_BACK + 0.06);
+			signs.push({ m: sign, text, colour, k: 1.3, seed: x, font: x < 0 ? 'Monoton' : null });   // (the name in the title's neon-tube lettering)
+		}
+		// light: a warm wash from overhead, a glow over each wall's counter
+		for (const [x, z] of [[-2.2, 0], [0, -2.6], [2.2, 0]]) {
+			const l = new THREE.PointLight(look.light, 9, 7, 1.4);
+			l.position.set(x, 2.9, z);
+			g.add(l);
 		}
 	}
-	for (let w = 0; w < 3; w++) buildRoom(w);
+	buildRoom();
 	function paintSigns() {
 		for (const s of signs) {
 			if (s.m.material.map) s.m.material.map.dispose();
@@ -1385,15 +1348,15 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	paintSigns();
 	if (document.fonts) Promise.all([`800 100px ${FONT}`, '100px "Monoton"'].map((f) => document.fonts.load(f))).then(paintSigns).catch(() => {});
 
-	// the key light, from up and in front, one shadow map over all three kitchens
-	scene.add(new THREE.HemisphereLight(0x8a94c0, 0x3a2418, 0.5));
-	const sun = new THREE.DirectionalLight(0xfff2e0, 3.4);
-	sun.position.set(0, 18, 14);
-	sun.target.position.set(0, 2, -1);
+	// the key light, from overhead behind the eye, its shadow over the whole kitchen
+	scene.add(new THREE.HemisphereLight(0x8a94c0, 0x3a2418, 0.55));
+	const sun = new THREE.DirectionalLight(0xfff2e0, 2.6);
+	sun.position.set(0.5, 9, 3);
+	sun.target.position.set(0, 0, -1);
 	scene.add(sun, sun.target);
 	sun.castShadow = true;
-	sun.shadow.mapSize.set(4096, 1024);
-	Object.assign(sun.shadow.camera, { left: -47, right: 47, top: 9, bottom: -9, near: 1, far: 50 });
+	sun.shadow.mapSize.set(2048, 2048);
+	Object.assign(sun.shadow.camera, { left: -7, right: 7, top: 7, bottom: -7, near: 1, far: 30 });
 	sun.shadow.camera.updateProjectionMatrix();
 	sun.shadow.bias = -0.0004;
 	sun.shadow.normalBias = 0.02;
@@ -1521,12 +1484,12 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	function buildStations() {
 		for (const s of STATIONS) {
 			const g = new THREE.Group();
-			g.position.set(s.sx, CT.y, CT.z);
+			g.position.set(s.sx, CT.y + 0.02, s.sz);
+			g.rotation.y = faceEye(s.sx, s.sz);
 			g.scale.setScalar(MS);
 			sets[s.wall].add(g);
 			const p = { g };
 			STATION_3D[s.kind](g, p);
-			// its fire
 			p.fire = new THREE.Group();
 			g.add(p.fire);
 			p.flames = [];
@@ -1540,44 +1503,104 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	}
 	buildStations();
 
-	/* ---------- 3D: the grabber, the binner ---------- */
+	/* ---------- 3D: the food hatches, the binner ---------- */
 
-	const hatch3d = (function () {
-		const g = new THREE.Group();
-		g.position.set(HATCH_X, CT.y, CT.z);
-		g.scale.setScalar(FRONT_MS);
-		sets[1].add(g);
-		mesh(BOX(2.3, 0.3, 1.2), MAT.darkSteel, g, 0, 0.15, 0);
-		for (const x of [-1.05, 1.05]) mesh(BOX(0.16, 2.1, 0.2), MAT.darkSteel, g, x, 1.05, -0.4);
-		mesh(BOX(2.5, 0.26, 0.6), MAT.steel, g, 0, 2.15, -0.3);
-		mesh(BOX(2.0, 0.07, 0.07), glowMat(0x9dff3a, 1.4), g, 0, 2.0, -0.02);
-		const pods = [-0.62, 0, 0.62].map(function (ox) {
-			mesh(CYL(0.26, 0.28, 0.1, 32), std(0x8af06a, 0.3, 0.1), g, ox, 0.35, 0.15).receiveShadow = true;
-			const rim = mesh(new THREE.TorusGeometry(0.26, 0.03, 10, 36), glowMat(0x9dff3a, 1.4), g, ox, 0.4, 0.15);
-			rim.rotation.x = Math.PI / 2;
-			const beam = mesh(CYL(0.24, 0.27, 1.6, 32, true), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x9dff3a).multiplyScalar(1.2), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }), g, ox, 1.2, 0.15);
-			return { rim, beam };
+	// An icon (the same picture the order tickets use) and a name, painted
+	// straight onto a wall or a machine: on a clear texture, the paint a little
+	// worn, a few runs under the letters
+	function labelTex(text, colour, icon, rnd) {
+		return canvasTexture(512, 160, function (c, cw, ch) {
+			c.clearRect(0, 0, cw, ch);
+			c.save();
+			icon(c, 80, ch / 2);
+			c.restore();
+			c.font = `800 ${text.length > 7 ? 56 : 66}px ${FONT}, sans-serif`;
+			c.textAlign = 'center';
+			c.textBaseline = 'middle';
+			c.fillStyle = colour;
+			c.fillText(text, 156 + (cw - 166) / 2, ch / 2 + 3, cw - 176);
+			// (runs of paint from the bottoms of the letters)
+			for (let n = 0; n < 5; n++) { const x = 175 + rnd() * (cw - 210), y = ch / 2 + 22; c.fillRect(x, y, 3 + rnd() * 2, 6 + rnd() * 26); }
+			// (worn: specks of the wall showing through)
+			c.globalCompositeOperation = 'destination-out';
+			for (let n = 0; n < 140; n++) { c.fillStyle = `rgba(0,0,0,${0.3 + rnd() * 0.7})`; c.beginPath(); c.arc(rnd() * cw, rnd() * ch, 0.6 + rnd() * 3.2, 0, Math.PI * 2); c.fill(); }
 		});
-		const hl = new THREE.PointLight(0xe8ffd0, 9, 4, 1.6);   // (the pods lit, so what's on them shows)
-		hl.position.set(HATCH_X, CT.y + 1.6, CT.z + 1.2);
-		sets[1].add(hl);
+	}
+	// (painted once everything's defined, the food pictures included, and again once the lettering's loaded)
+	const paintJobs = [];
+	function paintMat(make) {
+		const m = std(0xffffff, 0.75, 0, { transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, emissive: 0xffffff, emissiveIntensity: 0.25 });
+		paintJobs.push(function () {
+			if (m.map) m.map.dispose();
+			const tex = make();
+			Object.assign(m, { map: tex, emissiveMap: tex, opacity: 1 });
+			m.needsUpdate = true;
+		});
+		return m;
+	}
+	const stepIcon = (kind) => (c, x, y) => drawStepIcon(c, kind, x, y, 52);
+	const ingIcon = (ing) => (c, x, y) => drawItem(c, { ing, steps: [], burnt: false }, x, y, 0.95);
+	const binIcon = (c, x, y) => {
+		art.roundRect(c, x - 34, y - 30, 68, 66, 8, { fill: '#2a1a3a', stroke: '#d04dff', lineWidth: 6 });
+		art.rect(c, x - 42, y - 42, 84, 12, { fill: '#d04dff' });
+		for (const dx of [-14, 0, 14]) art.rect(c, x + dx - 3, y - 18, 6, 44, { fill: '#d04dff' });
+	};
+
+	const disp3d = DISPENSERS.map(function (ing, k) {
+		const a = DISP_ALONG[k];
+		const p = wallPoint(1, a, DEV_D);
+		const g = new THREE.Group();
+		g.position.set(p.x, CT.y + 0.01, p.z);
+		g.rotation.y = faceEye(p.x, p.z);
+		room.add(g);
+		const glow = new THREE.Color(INGS[ing].glow);
+		// a squat hopper with a glass dome on top, its ingredient inside on a lit pad
+		mesh(BOX(0.56, 0.36, 0.46), std(0x3a3644, 0.4, 0.4), g, 0, 0.18, 0);
+		mesh(BOX(0.6, 0.05, 0.5), MAT.steel, g, 0, 0.37, 0);
+		const pad = mesh(CYL(0.17, 0.19, 0.03, 32), glowMat(glow, 1.2), g, 0, 0.41, 0);
+		mesh(new THREE.SphereGeometry(0.21, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2), MAT.glass, g, 0, 0.41, 0);
+		mesh(new THREE.TorusGeometry(0.21, 0.018, 8, 32), MAT.steel, g, 0, 0.41, 0).rotation.x = Math.PI / 2;
+		mesh(BOX(0.18, 0.08, 0.1), MAT.darkSteel, g, 0, 0.06, 0.26);   // (its spout)
+		// its label on the front: the ingredient's picture and its name
+		mesh(new THREE.PlaneGeometry(0.52, 0.163), paintMat(() => labelTex(INGS[ing].short, INGS[ing].glow, ingIcon(ing), seeded(k * 31 + 5))), g, 0, 0.2, 0.232);
+		const hold = new THREE.Group();
+		hold.position.y = 0.44;
+		g.add(hold);
+		const l = new THREE.PointLight(glow, 0.8, 1.2, 2);
+		l.position.set(0, 0.7, 0.25);
+		g.add(l);
 		shadows(g);
-		// the binner: a hopper with a door onto the void
-		const chute = new THREE.Group();
-		chute.position.set(CHUTE_X, CT.y, CT.z);
-		chute.scale.setScalar(FRONT_MS);
-		sets[1].add(chute);
-		mesh(BOX(2.2, 1.9, 1.2), std(0x4a2a7a, 0.35, 0.2), chute, 0, 0.95, 0);
-		mesh(BOX(2.35, 0.14, 1.3), MAT.steel, chute, 0, 1.95, 0);
-		mesh(new THREE.CircleGeometry(0.66, 48), new THREE.MeshBasicMaterial({ color: 0x0a0418 }), chute, 0, 0.95, 0.61);
-		const swirl = mesh(new THREE.CircleGeometry(0.62, 48), glowMat(0xffffff, 1.1, { map: TEX.swirl, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), chute, 0, 0.95, 0.62);
-		mesh(new THREE.TorusGeometry(0.68, 0.07, 12, 48), glowMat(0xd04dff, 1.4), chute, 0, 0.95, 0.63);
-		const cl = new THREE.PointLight(0xd04dff, 3, 3, 2);
-		cl.position.set(0, 1, 1);
-		chute.add(cl);
-		shadows(chute);
-		return { pods, swirl, chute };
+		return { g, pad, hold, holder: {} };
+	});
+	const bin3d = (function () {
+		const p = wallPoint(1, BIN_ALONG, DEV_D);
+		const g = new THREE.Group();
+		g.position.set(p.x, CT.y + 0.01, p.z);
+		g.rotation.y = faceEye(p.x, p.z);
+		room.add(g);
+		mesh(BOX(0.52, 0.62, 0.46), std(0x4a2a7a, 0.35, 0.2), g, 0, 0.31, 0);
+		mesh(BOX(0.56, 0.05, 0.5), MAT.steel, g, 0, 0.63, 0);
+		mesh(new THREE.CircleGeometry(0.16, 40), new THREE.MeshBasicMaterial({ color: 0x0a0418 }), g, 0, 0.42, 0.232);
+		const swirl = mesh(new THREE.CircleGeometry(0.15, 40), glowMat(0xffffff, 1.1, { map: TEX.swirl, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), g, 0, 0.42, 0.234);
+		mesh(new THREE.TorusGeometry(0.165, 0.018, 10, 40), glowMat(0xd04dff, 1.4), g, 0, 0.42, 0.236);
+		mesh(new THREE.PlaneGeometry(0.48, 0.15), paintMat(() => labelTex('BINNER', '#d04dff', binIcon, seeded(77))), g, 0, 0.13, 0.232);
+		const l = new THREE.PointLight(0xd04dff, 0.8, 1.2, 2);
+		l.position.set(0, 0.5, 0.35);
+		g.add(l);
+		shadows(g);
+		return { g, swirl };
 	})();
+
+	/* ---------- 3D: the stations' names, painted on the wall ---------- */
+
+	// Each station's icon (the same one as on the tickets) and its name,
+	// painted straight onto the tiles behind it
+	for (const st of STATIONS) {
+		const rnd = seeded(st.wall * 4 + st.slot + 7);
+		const p = wallPoint(st.wall, slotAlong(st.wall, st.slot), BACK - 0.01);
+		const m = mesh(new THREE.PlaneGeometry(1.0, 0.31), paintMat(() => labelTex(st.name, st.colour, stepIcon(st.kind), seeded(st.wall * 4 + st.slot + 7))), room, p.x, 2.15, p.z);
+		m.rotation.set(0, [Math.PI / 2, 0, -Math.PI / 2][st.wall], (rnd() - 0.5) * 0.05);
+	}
 
 	/* ---------- 3D: food ---------- */
 
@@ -1885,177 +1908,76 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		return m;
 	}
 
-	/* ---------- 3D: the cyborg cooks ---------- */
+	/* ---------- 3D: the players: robotic dinner trays with a claw ---------- */
 
-	const TOOL_3D = {
-		whisk(g) {
-			mesh(CYL(0.025, 0.025, 0.14, 8), MAT.steel, g, 0, -0.07, 0);
-			for (const r of [0, 1, 2]) {
-				const loop = mesh(new THREE.TorusGeometry(0.075, 0.008, 6, 18), MAT.steel, g, 0, -0.22, 0);
-				loop.scale.set(1, 1.7, 1);
-				loop.rotation.y = r * Math.PI / 3;
-			}
-		},
-		cleaver(g) { mesh(CYL(0.025, 0.025, 0.1, 8), MAT.wood, g, 0, -0.05, 0); mesh(BOX(0.04, 0.24, 0.2), MAT.steel, g, 0, -0.2, 0.05); },
-		spatula(g) { mesh(CYL(0.02, 0.02, 0.18, 8), MAT.steel, g, 0, -0.09, 0); mesh(BOX(0.18, 0.2, 0.02), MAT.steel, g, 0, -0.27, 0); },
-		ladle(g) { mesh(CYL(0.02, 0.02, 0.22, 8), MAT.steel, g, 0, -0.11, 0); mesh(new THREE.SphereGeometry(0.09, 12, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), std(0xb4bcba, 0.25, 0.9, { side: THREE.DoubleSide }), g, 0, -0.24, 0); },
-		tongs(g) { limb(g, [0, 0, 0], [-0.05, -0.3, 0], 0.015, MAT.steel); limb(g, [0, 0, 0], [0.05, -0.3, 0], 0.015, MAT.steel); },
-		drill(g, col) {
-			mesh(BOX(0.12, 0.12, 0.12), std(col, 0.4, 0.3), g, 0, -0.06, 0);
-			const bit = mesh(new THREE.ConeGeometry(0.05, 0.22, 10), MAT.steel, g, 0, -0.23, 0);
-			bit.rotation.x = Math.PI;
-			g.userData.spin = bit;
-		},
-		cutter(g) { mesh(CYL(0.02, 0.02, 0.1, 8), MAT.steel, g, 0, -0.05, 0); mesh(CYL(0.11, 0.11, 0.02, 20), MAT.steel, g, 0, -0.18, 0).rotation.z = Math.PI / 2; },
-		grater(g) { mesh(BOX(0.14, 0.26, 0.06), MAT.steel, g, 0, -0.15, 0); },
-		fork(g) {
-			mesh(CYL(0.02, 0.02, 0.16, 8), MAT.steel, g, 0, -0.08, 0);
-			mesh(BOX(0.14, 0.02, 0.02), MAT.steel, g, 0, -0.16, 0);
-			for (const x of [-0.06, 0, 0.06]) mesh(BOX(0.015, 0.14, 0.015), MAT.steel, g, x, -0.23, 0);
-		},
-	};
-
-	function buildChef(n) {
-		const look = COOKS[n % COOKS.length];
+	// A hovering tray in the player's colour: a chrome platter on a stalk over a
+	// little jet puck, a two-eyed screen on its rim, and a jointed arm with a
+	// three-fingered claw that does the work. What they're carrying rides on the tray.
+	function buildTray(n) {
 		const col = new THREE.Color(colourOf(n));
 		const g = new THREE.Group();
-		const skin = std(look.skin, 0.55, 0);
-		const metal = std(0xd8e0ea, 0.2, 0.85);
-		const dark = std(0xf6f4fb, 0.3, 0.05, { clearcoat: 0.7 });
-		const apron = std(col, 0.5, 0.05, { emissive: col, emissiveIntensity: 0.12, side: THREE.DoubleSide });
-		const glow = glowMat(col, 2.4);
-		const parts = { g, legs: new THREE.Group() };
-		g.add(parts.legs);
-		// legs: 0 to 0.55
-		const L = parts.legs;
-		if (look.legs === 'treads') {
-			mesh(BOX(0.62, 0.18, 0.36), MAT.rubber, L, 0, 0.09, 0);
-			for (const x of [-0.22, 0, 0.22]) mesh(CYL(0.08, 0.08, 0.38, 12), metal, L, x, 0.09, 0).rotation.x = Math.PI / 2;
-			mesh(CYL(0.08, 0.1, 0.4, 12), metal, L, 0, 0.38, 0);
-		} else if (look.legs === 'pogo') {
-			limb(L, [-0.13, 0.55, 0], [-0.13, 0.04, 0.02], 0.08, std(0x2a3a5a, 0.7, 0));
-			mesh(BOX(0.16, 0.08, 0.26), MAT.rubber, L, -0.13, 0.04, 0.06);
-			for (let k = 0; k < 6; k++) mesh(new THREE.TorusGeometry(0.07, 0.015, 6, 14), metal, L, 0.14, 0.08 + k * 0.075, 0).rotation.x = Math.PI / 2;
-			mesh(CYL(0.1, 0.1, 0.03, 14), metal, L, 0.14, 0.02, 0);
-		} else if (look.legs === 'wheel') {
-			mesh(CYL(0.07, 0.07, 0.4, 12), metal, L, 0, 0.42, 0);
-			mesh(CYL(0.22, 0.22, 0.12, 22), MAT.rubber, L, 0, 0.22, 0).rotation.z = Math.PI / 2;
-			mesh(CYL(0.1, 0.1, 0.14, 14), metal, L, 0, 0.22, 0).rotation.z = Math.PI / 2;
-		} else if (look.legs === 'spider') {
-			for (const s of [-1, 1]) for (const z of [-0.12, 0.12]) {
-				limb(L, [s * 0.08, 0.5, z], [s * 0.32, 0.38, z * 2], 0.025, metal);
-				limb(L, [s * 0.32, 0.38, z * 2], [s * 0.4, 0.0, z * 2.5], 0.02, metal);
-			}
-		} else if (look.legs === 'chicken') {
-			for (const s of [-1, 1]) {
-				limb(L, [s * 0.12, 0.55, 0], [s * 0.15, 0.3, -0.1], 0.045, metal);
-				limb(L, [s * 0.15, 0.3, -0.1], [s * 0.12, 0.03, 0.02], 0.035, metal);
-				for (const a of [-0.5, 0, 0.5]) limb(L, [s * 0.12, 0.03, 0.02], [s * 0.12 + Math.sin(a) * 0.14, 0.01, 0.02 + Math.cos(a) * 0.14], 0.015, metal);
-			}
-		} else {   // a jet
-			const cone = mesh(new THREE.ConeGeometry(0.22, 0.42, 16), metal, L, 0, 0.36, 0);
-			cone.rotation.x = Math.PI;
-			parts.flame = mesh(new THREE.ConeGeometry(0.13, 0.4, 12), glowMat(0xffa21a, 2.5, { transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }), L, 0, 0.0, 0);
-			parts.flame.rotation.x = Math.PI;
-		}
-		// the body
+		const p = { g };
+		const chrome = std(0xdfe6ee, 0.18, 0.9);
+		const dark = std(0x2a2836, 0.45, 0.3);
+		const paint = std(col, 0.35, 0.15, { clearcoat: 0.8 });
+		// the puck it hovers on, its jet glow, its shadow-glow on the floor
+		mesh(CYL(0.2, 0.24, 0.1, 32), dark, g, 0, 0.12, 0);
+		p.jet = mesh(new THREE.CircleGeometry(0.17, 32), glowMat(col, 1.6, { transparent: true, opacity: 0.9, depthWrite: false }), g, 0, 0.065, 0);
+		p.jet.rotation.x = Math.PI / 2;
+		p.glow = mesh(new THREE.CircleGeometry(0.42, 40), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.28, depthWrite: false }), g, 0, 0.01, 0);
+		p.glow.rotation.x = -Math.PI / 2;
+		// the tray, up on its stalk (p.body bobs)
 		const body = new THREE.Group();
-		body.position.y = 0.55;
+		body.position.y = 0.62;
 		g.add(body);
-		parts.body = body;
-		mesh(new THREE.CapsuleGeometry(0.3, 0.4, 6, 18), dark, body, 0, 0.42, 0);
-		mesh(new THREE.CylinderGeometry(0.315, 0.335, 0.52, 22, 1, true, -1.25, 2.5), apron, body, 0, 0.3, 0);
-		mesh(CYL(0.04, 0.04, 0.66, 8), std(col, 0.5, 0), body, 0, 0.6, 0).rotation.z = Math.PI / 2;
-		// the gadget belly, glowing through the apron
-		const bz = 0.33;
-		if (look.belly === 'fryer') {
-			mesh(BOX(0.3, 0.2, 0.05), MAT.black, body, 0, 0.33, bz);
-			mesh(new THREE.PlaneGeometry(0.24, 0.12), glowMat(0xffb21a, 2), body, 0, 0.33, bz + 0.03);
-		} else if (look.belly === 'micro') {
-			mesh(BOX(0.32, 0.2, 0.05), MAT.black, body, 0, 0.33, bz);
-			mesh(new THREE.PlaneGeometry(0.2, 0.12), glowMat(0x9dff3a, 1.8), body, -0.04, 0.33, bz + 0.03);
-		} else if (look.belly === 'blender') {
-			mesh(CYL(0.09, 0.09, 0.24, 14), MAT.glass, body, 0, 0.35, bz);
-			parts.blend = mesh(CYL(0.07, 0.07, 0.14, 12), glowMat(0xe9ff4a, 1.5), body, 0, 0.31, bz);
-		} else if (look.belly === 'toaster') {
-			mesh(BOX(0.3, 0.2, 0.08), metal, body, 0, 0.33, bz);
-			for (const x of [-0.07, 0.07]) mesh(BOX(0.08, 0.02, 0.06), glowMat(0xff6a1a, 1.6), body, x, 0.43, bz);
-			parts.toast = mesh(BOX(0.07, 0.08, 0.05), std(0xc8892b, 0.8, 0), body, -0.07, 0.44, bz);
-		} else {
-			mesh(BOX(0.3, 0.2, 0.05), MAT.black, body, 0, 0.33, bz);
-			for (const x of [-0.09, -0.03, 0.03, 0.09]) mesh(BOX(0.02, 0.16, 0.02), glowMat(0xff8a2a, 2), body, x, 0.33, bz + 0.03);
-		}
-		// arms, from the shoulders, each ending in its tool
-		const arm = (side, tool) => {
-			const pivot = new THREE.Group();
-			pivot.position.set(side * 0.37, 0.72, 0);
-			body.add(pivot);
-			mesh(SPH(0.09, 12), metal, pivot);
-			mesh(CYL(0.065, 0.06, 0.5, 10), side < 0 ? skin : metal, pivot, 0, -0.26, 0);
-			const t = new THREE.Group();
-			t.position.y = -0.52;
-			pivot.add(t);
-			TOOL_3D[tool](t, col);
-			return pivot;
-		};
-		parts.armL = arm(-1, look.arms[0]);
-		parts.armR = arm(1, look.arms[1]);
-		// the head
-		const head = new THREE.Group();
-		head.position.y = 1.1;
-		body.add(head);
-		parts.head = head;
-		mesh(CYL(0.08, 0.1, 0.12, 12), metal, head, 0, -0.2, 0);
-		mesh(SPH(0.24, 22), skin, head);
-		const eye = (x, y) => mesh(SPH(0.035, 8), MAT.black, head, x, y, 0.22);
-		const cyber = (x, y) => mesh(SPH(0.055, 12), glow, head, x, y, 0.2);
-		const hat = (mat) => {
-			mesh(CYL(0.18, 0.2, 0.14, 18), mat, head, 0, 0.26, 0);
-			for (const [x, z, r] of [[-0.1, 0, 0.12], [0.1, 0, 0.12], [0, 0.06, 0.13], [0, -0.08, 0.12]]) mesh(SPH(r, 14), mat, head, x, 0.38, z);
-		};
-		if (look.head === 'bolts') {
-			mesh(new THREE.SphereGeometry(0.245, 18, 12, Math.PI / 2, Math.PI), metal, head);
-			cyber(0.09, 0.03);
-			eye(-0.09, 0.03);
-			for (const y of [0.1, -0.06]) mesh(CYL(0.025, 0.025, 0.04, 8), MAT.darkSteel, head, 0.23, y, 0.04).rotation.z = Math.PI / 2;
-			hat(MAT.white);
-		} else if (look.head === 'mohawk') {
-			for (let k = -2; k <= 2; k++) mesh(new THREE.ConeGeometry(0.05, 0.22 - Math.abs(k) * 0.03, 8), std(col, 0.5, 0), head, 0, 0.27, k * 0.07);
-			for (const x of [-0.09, 0.09]) {
-				mesh(new THREE.TorusGeometry(0.06, 0.018, 6, 16), MAT.black, head, x, 0.04, 0.21);
-				mesh(new THREE.CircleGeometry(0.05, 14), glowMat(0x3af2ff, 1.8), head, x, 0.04, 0.215);
-			}
-			mesh(BOX(0.5, 0.03, 0.03), MAT.black, head, 0, 0.04, 0.18);
-		} else if (look.head === 'dome') {
-			mesh(BOX(0.4, 0.07, 0.06), glow, head, 0, 0.03, 0.2);
-			hat(metal);
-		} else if (look.head === 'brain') {
-			mesh(SPH(0.2, 18), MAT.glass, head, 0, 0.24, 0);
-			mesh(SPH(0.15, 16), std(0xe88aa8, 0.4, 0, { emissive: 0x501030, emissiveIntensity: 0.4 }), head, 0, 0.22, 0);
-			eye(-0.09, 0.02);
-			cyber(0.09, 0.02);
-		} else if (look.head === 'beard') {
-			const beard = mesh(new THREE.ConeGeometry(0.2, 0.3, 14), std(0x5a5a5a, 0.9, 0), head, 0, -0.18, 0.1);
-			beard.rotation.x = Math.PI;
-			mesh(BOX(0.14, 0.16, 0.05), metal, head, 0.1, 0.04, 0.2);
-			cyber(0.1, 0.04);
-			eye(-0.09, 0.04);
-			hat(MAT.white);
-		} else {
-			limb(head, [0, 0.22, 0], [0.05, 0.5, 0], 0.012, metal);
-			mesh(SPH(0.05, 10), glow, head, 0.05, 0.52, 0);
-			for (const s of [-1, 1]) mesh(SPH(0.09, 12), std(0x5a3a2a, 0.8, 0), head, s * 0.25, 0.02, -0.04);
-			eye(-0.08, 0.03);
-			eye(0.08, 0.03);
-		}
-		parts.hold = new THREE.Group();
-		parts.hold.position.y = 2.2;
-		g.add(parts.hold);
-		parts.tools = [];
-		g.traverse((o) => { if (o.userData && o.userData.spin) parts.tools.push(o.userData.spin); });
+		p.body = body;
+		mesh(CYL(0.04, 0.05, 0.5, 16), chrome, body, 0, -0.27, 0);
+		mesh(CYL(0.46, 0.4, 0.07, 48), chrome, body, 0, 0, 0);
+		mesh(CYL(0.4, 0.4, 0.012, 48), std(0x9aa4b0, 0.25, 0.8), body, 0, 0.04, 0);
+		mesh(new THREE.TorusGeometry(0.455, 0.035, 10, 56), paint, body, 0, 0.035, 0).rotation.x = Math.PI / 2;
+		// its face: a little screen on the rim at the front, two eyes in its colour
+		const face = new THREE.Group();
+		face.position.set(0, 0.05, 0.44);
+		body.add(face);
+		mesh(BOX(0.24, 0.11, 0.04), dark, face, 0, 0, 0);
+		p.eyes = [-0.05, 0.05].map((x) => mesh(new THREE.CircleGeometry(0.022, 16), glowMat(col, 2.2), face, x, 0, 0.022));
+		// the arm: shoulder at the back of the tray, elbow, wrist, a claw of three fingers
+		const shoulder = new THREE.Group();
+		shoulder.position.set(0, 0.06, -0.3);
+		body.add(shoulder);
+		mesh(SPH(0.065, 16), paint, shoulder);
+		mesh(CYL(0.032, 0.036, 0.5, 12), chrome, shoulder, 0, 0.25, 0);
+		const elbow = new THREE.Group();
+		elbow.position.y = 0.5;
+		shoulder.add(elbow);
+		mesh(SPH(0.05, 14), paint, elbow);
+		mesh(CYL(0.026, 0.03, 0.42, 12), chrome, elbow, 0, 0.21, 0);
+		const wrist = new THREE.Group();
+		wrist.position.y = 0.42;
+		elbow.add(wrist);
+		mesh(CYL(0.05, 0.04, 0.06, 16), dark, wrist, 0, 0.02, 0);
+		p.fingers = [0, 1, 2].map(function (k) {
+			const turn = new THREE.Group();
+			turn.rotation.y = k * Math.PI * 2 / 3;
+			wrist.add(turn);
+			const hinge = new THREE.Group();
+			hinge.position.set(0, 0.05, 0.035);
+			turn.add(hinge);
+			mesh(BOX(0.022, 0.1, 0.018), chrome, hinge, 0, 0.05, 0);
+			const tip = new THREE.Group();
+			tip.position.y = 0.1;
+			hinge.add(tip);
+			mesh(BOX(0.02, 0.06, 0.016), paint, tip, 0, 0.03, 0).rotation.x = -0.6;
+			return hinge;
+		});
+		Object.assign(p, { shoulder, elbow, wrist });
+		// where what it carries sits: on the tray
+		p.hold = new THREE.Group();
+		p.hold.position.y = 0.05;
+		body.add(p.hold);
 		shadows(g);
-		g.scale.setScalar(1.1);
-		return parts;
+		p.glow.castShadow = false;
+		return p;
 	}
 
 	/* ---------- 3D: portals, the manager, particles ---------- */
@@ -2205,16 +2127,18 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			}
 		}
 
-		// the grabber's pods and the binner
-		hatch3d.pods.forEach((pp, k) => {
-			const pod = pods[k];
-			pp.beam.material.opacity = pod ? pod.beam * 0.7 : 0;
-			pp.rim.material.color.set(hatch.jam > 0 ? 0xffc21a : 0x9dff3a).multiplyScalar(hatch.jam > 0 && Math.sin(rt * 12) > 0 ? 0.4 : 1.8);
-			if (!pod) return;
-			const v = syncItem(pod, pod.ing ? { ing: pod.ing, steps: [], burnt: false } : null, sets[1], POD_X[k] + (hatch.shake ? rnd1() * 0.1 : 0), CT.y + 0.42 + Math.sin(rt * 2 + k) * 0.05, POD_Z[k], 0.95);
+		// the food hatches: their ingredient turning under the dome; and the binner
+		disp3d.forEach((d3, k) => {
+			const d = disp[k];
+			if (!d) return;
+			d.flash = Math.max(0, d.flash - dt * 2.5);
+			d.shake = Math.max(0, d.shake - dt * 3);
+			const v = syncItem(d3.holder, { ing: d.ing, steps: [], burnt: false }, d3.hold, d.shake ? rnd1() * 0.05 : 0, 0.02 + d.flash * 0.1, 0, 0.42);
 			if (v) v.rotation.y = rt * 0.8 + k;
+			d3.pad.material.color.set(d.jam > 0 ? 0xffc21a : INGS[d.ing].glow).multiplyScalar(d.jam > 0 && Math.sin(rt * 12) > 0 ? 0.3 : 1.2 + d.flash * 1.5);
 		});
-		hatch3d.swirl.rotation.z = -rt * 2.5;
+		binFlash = Math.max(0, binFlash - dt * 2);
+		bin3d.swirl.rotation.z = -rt * (2.5 + binFlash * 10);
 
 		// the mutants
 		const n = windowsNow();
@@ -2223,12 +2147,14 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			if (!c) continue;
 			if (!c.model) { c.model = buildMutant(c.type); sets[1].add(c.model.g); }
 			const m = c.model;
-			const x3 = lx3(c.x - W);
-			const enter = c.state === 'leave' ? -Math.min(1, c.stateT / 0.7) * 4.2 : -(1 - Math.min(1, c.age / 0.5)) * 4.2;
+			const qa = (c.x - W) / W;
+			const qp = wallPoint(1, qa, QUEUE_D);
+			const enter = c.state === 'leave' ? -Math.min(1, c.stateT / 0.7) * 2.6 : -(1 - Math.min(1, c.age / 0.5)) * 2.6;
 			const panic = c.state === 'wait' && c.left / c.patience < 0.25;
-			m.g.position.set(x3 + (panic ? Math.sin(rt * 45) * 0.04 : 0), enter + Math.sin(rt * 2 + c.seed) * 0.04, QUEUE_Z);
+			m.g.position.set(qp.x + (panic ? Math.sin(rt * 45) * 0.03 : 0), enter + Math.sin(rt * 2 + c.seed) * 0.03, qp.z);
+			m.g.rotation.y = faceEye(qp.x, qp.z);
 			const sq = c.state === 'eat' ? Math.sin(c.stateT * 12) * 0.06 : 0;
-			const sc = Math.min(1.6, colW(n) * U / 1.6) * (c.recipe === FEAST ? 1.05 : 1);   // (big, to show over the counter)
+			const sc = Math.min(0.85, colW(n) / W * 2 * QUEUE_D / 1.7) * (c.recipe === FEAST ? 1.1 : 1);   // (as wide as its window)
 			m.g.scale.set(sc * (1 + sq), sc * (1 - sq), sc);
 			const angry = c.state === 'angry' || panic;
 			m.skin.emissive.set(angry ? 0xff1a00 : c.state === 'eat' ? 0x40ff40 : 0x000000);
@@ -2239,74 +2165,75 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			if (m.crown) m.crown.rotation.y = rt * 0.6;
 			// what's been handed over so far, on the counter in front of them
 			c.parts.forEach((part, j) => {
-				const off = (j - (c.parts.length - 1) / 2) * 0.6;
-				syncItem(part, part.filled && c.state !== 'leave' ? part.item : null, sets[1], x3 + off, CT.y + 0.05, CT.z + 0.35, 0.6);
+				const tp = wallPoint(1, qa, CT.d + 0.3);
+				const off = (j - (c.parts.length - 1) / 2) * 0.32;
+				syncItem(part, part.filled && c.state !== 'leave' ? part.item : null, sets[1], tp.x + off, CT.y + 0.03, tp.z, 0.4);
 			});
 		}
 		// (mutants gone: their models go too)
 		for (const o of sets[1].children.slice()) if (o.userData.mutant && !customers.some((c) => c && c.model && c.model.g === o)) o.removeFromParent();
 		for (const c of customers) if (c && c.model) c.model.g.userData.mutant = true;
 
-		// the cooks: one on every wall for every player, risen into view on the walls they're near
+		// the trays: one each, where their player stands (carried further out near a wall)
 		for (let i = 0; i < count; i++) {
 			const c = chefs[i];
-			if (!chefs3[i]) chefs3[i] = [0, 1, 2].map((w) => { const m = buildChef(i); sets[w].add(m.g); m.holder = {}; return m; });
+			if (!chefs3[i]) { const m = buildTray(i); room.add(m.g); m.holder = {}; chefs3[i] = m; }
+			const m = chefs3[i];
 			const p = latest[i];
-			const wp = p ? wallsOf(p) : null;
+			m.g.visible = !!p && phase !== 'off';
+			if (!m.g.visible) continue;
 			const time = t + (c.bob || 0);
-			for (let w = 0; w < 3; w++) {
-				const m = chefs3[i][w];
-				const dist = wp ? clamp(wp.dist[w], 0, 1) : 1;
-				const along = wp ? clamp(wp.along[w], 0, 1) : 0.5;
-				// (risen, 1, at the wall; gone, 0, once they've walked away from it)
-				const rise = 1 - clamp((dist - SHOW.full) / (SHOW.gone - SHOW.full), 0, 1);
-				m.rise = lerp(m.rise || 0, rise, 1 - Math.exp(-dt * 10));
-				const tx = lx3(along * W);
-				// (tracking arrives about 20 times a second; glide between its updates rather than jump)
-				const k = 1 - Math.exp(-dt * 24);
-				const px = m.x === undefined ? tx : m.x;
-				m.x = m.x === undefined ? tx : lerp(m.x, tx, k);
-				m.vx = lerp(m.vx || 0, (m.x - px) / Math.max(dt, 0.001), 1 - Math.exp(-dt * 6));
-				m.g.visible = m.rise > 0.02;
-				if (!m.g.visible) continue;
-				m.g.position.set(m.x, -(1 - m.rise) * 2.8, STAND_Z);
-				// facing the counter, back to us, turned a little the way they're walking
-				m.yaw = lerp(m.yaw === undefined ? Math.PI : m.yaw, Math.PI - clamp(m.vx * 0.12, -0.6, 0.6), Math.min(1, dt * 6));
-				m.g.rotation.y = m.yaw;
-				const walking = c.speed > 0.05;
-				m.body.position.y = 0.55 + Math.abs(Math.sin(time * (walking ? 12 : 2))) * (walking ? 0.06 : 0.015) + (m.flame ? 0.1 + Math.sin(time * 3) * 0.04 : 0);
-				if (m.flame) m.flame.scale.y = 0.8 + Math.sin(rt * 40) * 0.25;
-				// the arms, acting out the last tap (or the device they're working by being there)
-				let L = Math.sin(time * 2) * 0.1, R = -L;
-				if (c.held) L = R = -2.75;
-				const s = c.station && c.station.wall === w && c.station.state === 'work' ? c.station : null;
-				if (s && s.kind === 'stir') { L = -1.3 + Math.sin(time * 8) * 0.45; R = -1.3 + Math.cos(time * 8) * 0.45; }
-				else if (s && s.kind === 'cryo') { L = R = -1.45; }
-				const a = c.act;
-				if (a) {
-					const u = clamp(a.t / ACT_TIME, 0, 1), pulse = Math.sin(u * Math.PI);
-					if (a.kind === 'chop') { R = u < 0.35 ? lerp(R, -2.9, u / 0.35) : lerp(-2.9, -0.7, clamp((u - 0.35) / 0.2, 0, 1)); L = -0.8; }
-					else if (a.kind === 'grab' || a.kind === 'take') { L = lerp(L, -2.4, pulse); R = lerp(R, -2.4, pulse); }
-					else if (a.kind === 'put' || a.kind === 'serve') { L = R = lerp(-2.75, -1.5, Math.min(1, u * 3)); if (u > 0.5) L = R = lerp(-1.5, Math.sin(time * 2) * 0.1, (u - 0.5) * 2); }
-					else if (a.kind === 'bin') R = -3.1 * pulse;
-					else if (a.kind === 'flip') { R = -1.0 - 1.8 * pulse; L = -0.9; }
-					else if (a.kind === 'jab') R = -1.6 * pulse;
-					else if (a.kind === 'pump') { L = R = -1.4; m.body.position.y -= 0.28 * pulse; }
-					else if (a.kind === 'douse') { L = R = -1.4 + Math.sin(a.t * 40) * 0.3; }
-				}
-				const ease = Math.min(1, dt * 16);
-				m.armL.rotation.x = lerp(m.armL.rotation.x, L, ease);
-				m.armR.rotation.x = lerp(m.armR.rotation.x, R, ease);
-				m.armL.rotation.z = -0.15;
-				m.armR.rotation.z = 0.15;
-				m.head.rotation.y = Math.sin(time * 0.7) * 0.25;
-				for (const tl of m.tools) tl.rotation.y += dt * 30;
-				if (m.blend) m.blend.rotation.y += dt * 20;
-				if (m.toast) m.toast.position.y = 0.44 + Math.max(0, Math.sin(time * 1.5)) * 0.08;
-				const hv = syncItem(m.holder, c.held, m.hold, 0, Math.sin(rt * 3 + i) * 0.04, 0, 0.95);
-				if (hv) hv.rotation.y = -m.yaw + Math.PI + Math.sin(rt * 1.5) * 0.3;
-				if (c.held && c.held.burnt && m.rise > 0.5) every('held-smoke-' + i + '-' + w, 2, dt, () => smoke(w, m.x, 2.9, STAND_Z, 0.6));
+			// (tracking arrives about 20 times a second; glide between its updates rather than jump)
+			const tx = avCap((p.px - 0.5) * 2 * R), tz = avCap((0.5 - p.pz) * 2 * R);
+			const k = 1 - Math.exp(-dt * 20);
+			if (m.x === undefined) { m.x = tx; m.z = tz; }
+			const ox = m.x, oz = m.z;
+			m.x = lerp(m.x, tx, k);
+			m.z = lerp(m.z, tz, k);
+			m.vx = lerp(m.vx || 0, (m.x - ox) / Math.max(dt, 0.001), 1 - Math.exp(-dt * 6));
+			m.vz = lerp(m.vz || 0, (m.z - oz) / Math.max(dt, 0.001), 1 - Math.exp(-dt * 6));
+			m.g.position.set(m.x, 0, m.z);
+			// facing the wall they're in front of, back to us (turning round as they cross a corner)
+			const wallNow = Math.abs(m.x) > -m.z + 0.15 ? (m.x < 0 ? 0 : 2) : Math.abs(m.x) < -m.z - 0.15 ? 1 : (m.wallAt ?? 1);
+			m.wallAt = wallNow;
+			const fx = wallNow === 0 ? -9 : wallNow === 2 ? 9 : 0, fz = wallNow === 1 ? -9 : 0;
+			const want = Math.atan2(fx - m.x, fz - m.z);
+			m.yaw = m.yaw === undefined ? want : m.yaw + Math.atan2(Math.sin(want - m.yaw), Math.cos(want - m.yaw)) * (1 - Math.exp(-dt * 8));
+			m.g.rotation.y = m.yaw;
+			// hovering, bobbing, the tray leaning into the way it's going
+			m.body.position.y = 0.62 + Math.sin(time * 2.4) * 0.025;
+			const fwd = Math.sin(m.yaw) * m.vx + Math.cos(m.yaw) * m.vz, side = Math.cos(m.yaw) * m.vx - Math.sin(m.yaw) * m.vz;
+			m.body.rotation.x = lerp(m.body.rotation.x, clamp(fwd * 0.12, -0.25, 0.25), Math.min(1, dt * 8));
+			m.body.rotation.z = lerp(m.body.rotation.z, clamp(-side * 0.12, -0.25, 0.25), Math.min(1, dt * 8));
+			m.jet.material.opacity = 0.6 + Math.sin(rt * 30 + i) * 0.3;
+			m.eyes.forEach((e) => { e.scale.y = (rt + i * 0.7) % 3.5 < 0.12 ? 0.15 : 1; });
+			// the arm and claw: curled over the tray at rest, acting out the last tap
+			let S = 0.35, E = 1.25, Wr = 0.6, open = 0.35;
+			if (c.held) { S = 0.15; E = 1.45; Wr = 0.9; open = 0.15; }
+			const s = c.station && c.station.state === 'work' ? c.station : null;
+			if (s && s.kind === 'stir') { S = 0.85 + Math.sin(time * 8) * 0.25; E = 0.6 + Math.cos(time * 8) * 0.3; open = 0.05; }
+			else if (s && s.kind === 'cryo') { S = 1.0; E = 0.35; Wr = 0.2; open = 0.05; }
+			const a = c.act;
+			if (a) {
+				const u = clamp(a.t / ACT_TIME, 0, 1), pulse = Math.sin(u * Math.PI);
+				if (a.kind === 'chop') { S = 0.7; E = u < 0.35 ? lerp(E, -0.5, u / 0.35) : lerp(-0.5, 1.7, clamp((u - 0.35) / 0.18, 0, 1)); Wr = 0.2; open = 0; }
+				else if (a.kind === 'grab' || a.kind === 'take') { S = lerp(S, 1.15, pulse); E = lerp(E, 0.3, pulse); Wr = lerp(Wr, 0.3, pulse); open = u < 0.45 ? 0.8 : 0.02; }
+				else if (a.kind === 'put' || a.kind === 'serve') { S = lerp(S, 1.2, pulse); E = lerp(E, 0.25, pulse); Wr = lerp(Wr, 0.35, pulse); open = u < 0.5 ? 0.02 : 0.8; }
+				else if (a.kind === 'bin') { S = lerp(S, -0.3, pulse); E = lerp(E, 0.2, pulse); open = u > 0.4 ? 0.9 : 0.02; }
+				else if (a.kind === 'flip') { S = 0.9; E = 0.5; Wr = lerp(0.3, -1.4, pulse); open = 0.02; }
+				else if (a.kind === 'jab') { S = lerp(S, 1.25, pulse); E = lerp(E, 0.15, pulse); Wr = 0.1; open = 0; }
+				else if (a.kind === 'pump') { S = 0.6; E = 0.9; m.body.position.y -= 0.18 * pulse; open = 0; }
+				else if (a.kind === 'douse') { S = 1.0 + Math.sin(a.t * 40) * 0.15; E = 0.4; Wr = Math.sin(a.t * 30) * 0.5; open = 0.9; }
 			}
+			const ease = Math.min(1, dt * 16);
+			m.shoulder.rotation.x = lerp(m.shoulder.rotation.x, S, ease);
+			m.elbow.rotation.x = lerp(m.elbow.rotation.x, E, ease);
+			m.wrist.rotation.x = lerp(m.wrist.rotation.x, Wr, ease);
+			for (const f of m.fingers) f.rotation.x = lerp(f.rotation.x, open, ease);
+			// what they're carrying, riding on the tray, turned to face the middle
+			const hv = syncItem(m.holder, c.held, m.hold, 0, 0, 0, 0.62);
+			if (hv) hv.rotation.y = faceEye(m.x, m.z) - m.yaw + Math.sin(rt * 1.5) * 0.3;
+			if (c.held && c.held.burnt) every('held-smoke-' + i, 2, dt, () => smoke(0, m.x, 1.0, m.z, 0.35));
 		}
 
 		// the portals
@@ -2314,14 +2241,15 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			if (!p.ring) { p.ring = buildPortal(); sets[p.wall].add(p.ring.g); }
 			const v = p.ring;
 			const grow = Math.min(1, p.t * 3) * (1 + Math.sin(p.t * 5) * 0.05);
-			v.g.position.set(p.x3, PORTAL_Y + Math.sin(p.t * 2) * 0.1, PORTAL_Z);
-			v.g.scale.setScalar(grow);
+			v.g.position.set(p.x3, PORTAL_Y + Math.sin(p.t * 2) * 0.06, p.z3);
+			v.g.scale.setScalar(grow * 0.45);
+			v.g.rotation.y = faceEye(p.x3, p.z3);
 			v.disc.rotation.z = -p.t * 3;
 			v.r1.rotation.z = p.t * 1.5;
 			v.r2.rotation.z = -p.t * 2.2;
 			const iv = syncItem(p, p.item, v.hold, 0, -0.3, 0, 0.9);
 			if (iv) iv.rotation.y = p.t * 1.5;
-			every('portal-' + p.item.id, 6, dt, () => puff(p.wall, p.x3 + rnd1() * 1.2, PORTAL_Y + rnd1() * 1.2, PORTAL_Z, { color: Math.random() < 0.5 ? 0x3af2ff : 0xff2d8f, size: 0.06, grow: 0.02, life: 0.8, vy: 0, vx: rnd1() * 0.5, glow: 2, add: true, alpha: 1 }));
+			every('portal-' + p.item.id, 6, dt, () => puff(p.wall, p.x3 + rnd1() * 0.5, PORTAL_Y + rnd1() * 0.5, p.z3, { color: Math.random() < 0.5 ? 0x3af2ff : 0xff2d8f, size: 0.06, grow: 0.02, life: 0.8, vy: 0, vx: rnd1() * 0.5, glow: 2, add: true, alpha: 1 }));
 		}
 		for (const g of sets) for (const o of g.children.slice()) if (o.userData.portal && !portals.some((p) => p.ring && p.ring.g === o)) o.removeFromParent();
 		for (const p of portals) p.ring.g.userData.portal = true;
@@ -2330,7 +2258,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		manager.visible = phase === 'intro';
 		if (manager.visible) {
 			const k = clamp(introT / 0.9, 0, 1);
-			manager.position.set(0, lerp(9, 3.6, 1 - Math.pow(1 - k, 3)) + Math.sin(rt * 2.4) * 0.06, 0.6);
+			manager.scale.setScalar(0.45);
+			manager.position.set(0, lerp(4.5, 1.7, 1 - Math.pow(1 - k, 3)) + Math.sin(rt * 2.4) * 0.03, -2.4);
 			manager.rotation.z = Math.sin(rt * 1.7) * 0.05;
 		}
 
@@ -2355,26 +2284,29 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		show.frame(ctx, dt, drawWorld);
 	};
 
+	// where a point in the kitchen shows: the wall it's on, and where on it (null if none sees it)
+	function onWall(x, y, z) {
+		for (let w = 0; w < 3; w++) {
+			const p = proj(w, x, y, z);
+			if (p.inside) return p;
+		}
+		return null;
+	}
+
 	function drawWorld(ctx) {
 		for (const s of stations) drawStationUI(ctx, s);
 		drawFrontUI(ctx);
-		for (const p of portals) art.text(ctx, 'GRAB IT', p.x, p.y + 92, { size: 28, weight: 800, font: FONT, fill: '#3af2ff', outline: INK, outlineWidth: 5 });
-		// over each cook, on each wall they've risen into: what they hold, and what to do with it
-		const playing = phase === 'tutorial' || phase === 'play';
+		for (const p of portals) art.text(ctx, 'GRAB IT', p.x, p.y + 70, { size: 26, weight: 800, font: FONT, fill: '#3af2ff', outline: INK, outlineWidth: 5 });
+		// over each tray: what it's carrying
 		for (let i = 0; i < count; i++) {
-			const c = chefs[i];
-			if (!latest[i] || !chefs3[i]) continue;
-			for (let w = 0; w < 3; w++) {
-				const m = chefs3[i][w];
-				if (!m.g.visible || m.rise < 0.6) continue;
-				const at = proj(w, m.x, 3.05 - (1 - m.rise) * 2.8, STAND_Z);
-				let y = at.y;
-				if (c.held) {
-					const label = (c.held.burnt ? 'BURNT ' : '') + c.held.steps.map((s) => KIND[s].adj).reverse().join(' ') + (c.held.steps.length ? ' ' : '') + INGS[c.held.ing].short;
-					art.text(ctx, label, at.x, y, { size: 22, weight: 800, font: FONT, fill: 'white', outline: INK, outlineWidth: 5 });
-					y += 26;
-				}
-				if (playing) art.text(ctx, hintFor(c), at.x, y, { size: 22, weight: 800, font: FONT, fill: '#e9ff4a', outline: INK, outlineWidth: 5 });
+			const c = chefs[i], m = chefs3[i];
+			if (!latest[i] || !m || !m.g.visible || m.x === undefined) continue;
+			const at = onWall(m.x, 1.3, m.z);
+			if (!at) continue;
+			const y = at.y;
+			if (c.held) {
+				const label = (c.held.burnt ? 'BURNT ' : '') + c.held.steps.map((s) => KIND[s].adj).reverse().join(' ') + (c.held.steps.length ? ' ' : '') + INGS[c.held.ing].short;
+				art.text(ctx, label, at.x, y, { size: 22, weight: 800, font: FONT, fill: 'white', outline: INK, outlineWidth: 5 });
 			}
 		}
 		for (const r of ripples) art.circle(ctx, r.x, r.y, 20 + r.t * 160, { stroke: 'white', lineWidth: 6, alpha: 1 - r.t / 0.5 });
@@ -2384,11 +2316,10 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		}
 	}
 
-	// where a cook's floating words go: over their head, on the wall they're nearest
+	// where a cook's floating words go: over their head
 	function overChef(i) {
-		const c = chefs[i];
-		const m = chefs3[i] && chefs3[i][c.wall];
-		return m && m.x !== undefined ? proj(c.wall, m.x, 3.0, STAND_Z) : { x: c.x, y: 600 };
+		const c = chefs[i], m = chefs3[i];
+		return (m && m.x !== undefined && onWall(m.x, 1.5, m.z)) || { x: c.x, y: 500 };
 	}
 
 	function bar(ctx, x, y, w, k, colour, back) {
@@ -2399,46 +2330,16 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	function prompt(ctx, x, y, text, fill, pulse) {
 		const s = pulse ? 1 + Math.sin(rt * 10) * 0.06 : 1;
-		art.text(ctx, text, x, y, { size: 25 * s, weight: 800, font: FONT, fill, outline: INK, outlineWidth: 5 });
-	}
-
-	// A device's name: a sign hung on two chains from above, each a little
-	// crooked in its own way (seed), swaying gently
-	function hangSign(ctx, x, y, text, colour, seed) {
-		ctx.font = `800 24px ${FONT}`;
-		const w = Math.min(230, ctx.measureText(text).width + 40), h = 44;
-		const tilt = Math.sin(seed * 12.9898) * 0.09 + Math.sin(rt * 1.3 + seed * 3) * 0.012;
-		ctx.save();
-		ctx.translate(x, y - h / 2 - 70);   // (where it hangs from)
-		ctx.rotate(tilt);
-		const top = 70;
-		for (const sx of [-w * 0.34, w * 0.34]) {
-			art.line(ctx, [[sx * 0.9, 0], [sx, top]], { stroke: '#0b0d0c', lineWidth: 6 });
-			for (let k = 6; k < top; k += 12) art.ellipse(ctx, sx * (0.9 + 0.1 * k / top), k, 3.5, 6, { stroke: '#7a8480', lineWidth: 2.5 });
-		}
-		art.roundRect(ctx, -w / 2 + 3, top + 6, w, h, 8, { fill: 'rgba(0,0,0,0.45)' });
-		art.roundRect(ctx, -w / 2, top, w, h, 8, { fill: '#17151d', stroke: colour, lineWidth: 4 });
-		art.roundRect(ctx, -w / 2 + 6, top + 6, w - 12, h - 12, 5, { stroke: 'rgba(255,255,255,0.08)', lineWidth: 2 });
-		for (const sx of [-w * 0.34, w * 0.34]) art.circle(ctx, sx, top + 7, 3.5, { fill: '#9aa4a0', stroke: '#0b0d0c', lineWidth: 1.5 });
-		art.text(ctx, text, 0, top + h / 2 + 1, { size: 24, weight: 800, font: FONT, fill: colour, shadow: { color: colour, blur: 8 } });
-		ctx.restore();
-	}
-
-	function plate(ctx, x, y, text, colour) {
-		ctx.font = `800 26px ${FONT}`;
-		const w = Math.min(340, ctx.measureText(text).width + 40);
-		art.roundRect(ctx, x - w / 2, y - 22, w, 44, 10, { fill: 'rgba(8,10,9,0.88)', stroke: colour, lineWidth: 3 });
-		art.text(ctx, text, x, y, { size: 26, weight: 800, font: FONT, fill: colour });
+		art.text(ctx, text, x, y, { size: 24 * s, weight: 800, font: FONT, fill, outline: INK, outlineWidth: 5 });
 	}
 
 	function drawStationUI(ctx, s) {
-		const { x: cx, prompt: py, plate: ply } = s.ui;
-		const by = py + 36;
-		hangSign(ctx, cx, ply, s.name, s.colour, s.wall * 4 + s.slot + 1);
+		const { x: cx, prompt: py } = s.ui;
+		const by = py + 32;
 		if (s.fire > 0) prompt(ctx, cx, py, 'FIRE! TAP ×' + s.fire, '#ff4a32', true);
 		else if (s.state === 'done') {
 			prompt(ctx, cx, py, 'READY! TAP', '#9dff3a', true);
-			if (s.kind === 'fry' || s.kind === 'grill') bar(ctx, cx, by, 180, 1 - s.doneT / (s.kind === 'fry' ? FRY.burn : GRILL.burn), '#ff4a32');
+			if (s.kind === 'fry' || s.kind === 'grill') bar(ctx, cx, by, 160, 1 - s.doneT / (s.kind === 'fry' ? FRY.burn : GRILL.burn), '#ff4a32');
 		} else if (s.state === 'burnt') prompt(ctx, cx, py, 'BURNT! TAP', '#ff4a32', true);
 		else if (s.state === 'work') {
 			const hint = {
@@ -2453,37 +2354,30 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			}[s.kind];
 			const urgent = s.kind === 'grill' && !s.flipped && s.t >= GRILL.flipAt;
 			prompt(ctx, cx, py, hint[0], urgent ? '#ff4a32' : '#e9ff4a', urgent || ['chop', 'stir', 'press', 'cryo', 'inject'].includes(s.kind));
-			if (hint[1] >= 0) bar(ctx, cx, by, 180, hint[1], s.colour);
+			if (hint[1] >= 0) bar(ctx, cx, by, 160, hint[1], s.colour);
 			if (s.kind === 'inject') {   // the dial: a needle that sweeps, a green band to hit
 				const y = by + 4;
-				art.roundRect(ctx, cx - 115, y - 22, 230, 44, 22, { fill: INK });
-				art.roundRect(ctx, cx - 105, y - 13, 210, 26, 13, { fill: '#3a1a2a' });
-				art.rect(ctx, cx - 105 + 210 * (0.5 - INJECT.zone), y - 13, 210 * INJECT.zone * 2, 26, { fill: '#3cdc7a' });
-				const nx = cx - 105 + 210 * needle(s);
-				art.poly(ctx, [[nx, y + 20], [nx - 12, y - 24], [nx + 12, y - 24]], { fill: s.lock > 0 ? '#ff4a32' : 'white', stroke: INK, lineWidth: 3 });
+				art.roundRect(ctx, cx - 95, y - 20, 190, 40, 20, { fill: INK });
+				art.roundRect(ctx, cx - 86, y - 12, 172, 24, 12, { fill: '#3a1a2a' });
+				art.rect(ctx, cx - 86 + 172 * (0.5 - INJECT.zone), y - 12, 172 * INJECT.zone * 2, 24, { fill: '#3cdc7a' });
+				const nx = cx - 86 + 172 * needle(s);
+				art.poly(ctx, [[nx, y + 18], [nx - 10, y - 20], [nx + 10, y - 20]], { fill: s.lock > 0 ? '#ff4a32' : 'white', stroke: INK, lineWidth: 3 });
 			}
 		}
 	}
 
 	const ticketH = (c) => 62 + c.parts.length * 58 + 24;
 	function drawFrontUI(ctx) {
-		hangSign(ctx, HATCH_UI.x, HATCH_UI.plate, 'GRABBER', '#9dff3a', 21);
-		hangSign(ctx, CHUTE_UI.x, CHUTE_UI.plate, 'BINNER', '#d04dff', 37);
-		if (hatch.jam > 0) prompt(ctx, HATCH_UI.x, HATCH_UI.prompt, 'JAMMED! TAP ×' + hatch.jam, '#ffc21a', true);
-		else prompt(ctx, HATCH_UI.x, HATCH_UI.prompt, 'TAP TO GRAB', '#9dff3a', false);
-		// (what's in it, under that)
-		const inHatch = pods.filter((p) => p.ing).map((p) => INGS[p.ing].short);
-		art.text(ctx, inHatch.length ? inHatch.join(' · ') : 'BEAMING IN...', HATCH_UI.x, HATCH_UI.prompt + 36, { size: 18, weight: 800, font: FONT, fill: inHatch.length ? '#ffffff' : 'rgba(255,255,255,0.45)', outline: INK, outlineWidth: 4 });
-		prompt(ctx, CHUTE_UI.x, CHUTE_UI.prompt, 'TAP TO BIN', '#d04dff', false);
+		disp.forEach((d, k) => { if (d.jam > 0) prompt(ctx, DISP_UI[k].x, DISP_UI[k].prompt, 'JAMMED! TAP ×' + d.jam, '#ffc21a', true); });
 		const n = windowsNow();
 		const cw = colW(n);
 		for (let k = 0; k < n; k++) {
 			const c = customers[k];
 			if (!c) continue;
+			const q = queueAt(k, n);
 			const x = W + HATCH + cw * k + cw / 2;
-			if (c.state !== 'leave') drawTicket(ctx, c, x, TICKET_BOTTOM - ticketH(c), cw - 26);
-			if (c.state === 'wait') plate(ctx, x, SERVE_Y, 'SERVER', '#e9ff4a');
-			if (c.sayT > 0 && c.say) drawSpeech(ctx, c.say, x, SAY_Y, cw - 10, c.state === 'angry' ? '#ff4a32' : c.state === 'eat' ? '#9dff3a' : 'white');
+			if (c.state !== 'leave') drawTicket(ctx, c, x, q.ticket - ticketH(c), Math.min(260, cw - 20));
+			if (c.sayT > 0 && c.say) drawSpeech(ctx, c.say, x, q.say, Math.min(300, cw - 10), c.state === 'angry' ? '#ff4a32' : c.state === 'eat' ? '#9dff3a' : 'white');
 		}
 	}
 
@@ -2531,7 +2425,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			const span = 56 + steps.length * 50;
 			let px = -span / 2 + 28;
 			if (part.filled) art.roundRect(ctx, -w / 2 + 6, ry - 27, w - 12, 54, 8, { fill: 'rgba(60,220,122,0.45)' });
-			drawItem(ctx, { ing: part.ing, steps: [], burnt: false }, px, ry, 0.42);
+			if (part.ing === '*') art.text(ctx, 'ANY', px, ry, { size: 18, weight: 800, font: FONT, fill: '#1a1408' });
+			else drawItem(ctx, { ing: part.ing, steps: [], burnt: false }, px, ry, 0.42);
 			for (const st of steps) {
 				px += 50;
 				art.text(ctx, '›', px - 26, ry, { size: 30, weight: 800, font: FONT, fill: '#6a604a' });
@@ -2695,202 +2590,43 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		ctx.restore();
 	}
 
-	/* ---------- 2D: the cooks, for the results screens ---------- */
+	/* ---------- 2D: the trays, for the results screens ---------- */
 
-		// A cyborg cook, feet at (x, y), h tall. o: { pose ('stand' | 'cheer' | 'win'), work (0..1), held, alpha }
+	// A player's tray robot, feet (its puck) at (x, y), h tall. o: { pose: 'stand' | 'cheer' | 'win' }
 	function drawChef(ctx, n, x, y, h, o) {
 		o = o || {};
-		const look = COOKS[n % COOKS.length];
 		const col = colourOf(n);
 		const k = h / 100;
-		const time = (o.pose ? performance.now() / 1000 : t) + (o.bob || 0);   // (the results' cooks keep moving after the kitchen stops)
+		const time = performance.now() / 1000 + n;
 		const cheer = o.pose === 'cheer' || o.pose === 'win';
+		const bob = cheer ? Math.abs(Math.sin(time * 6)) * 6 : Math.sin(time * 2.4) * 1.5;
 		ctx.save();
 		ctx.translate(x, y);
 		ctx.scale(k, k);
-		if (o.alpha !== undefined) ctx.globalAlpha *= o.alpha;
-		const lw = 2.2;
-		const line = { stroke: INK, lineWidth: lw };
-		const bounce = cheer ? Math.abs(Math.sin(time * 6)) * 4 : Math.sin(time * 2) * 0.8;
-		ctx.translate(0, -bounce);
-
-		// legs (0 to -30)
-		const metal = '#8a9492';
-		if (look.legs === 'treads') {
-			art.roundRect(ctx, -20, -14, 40, 14, 7, { fill: '#2a2e2c', ...line });
-			for (let w = -14; w <= 14; w += 9) art.circle(ctx, w, -7, 3.5, { fill: metal });
-			art.rect(ctx, -6, -30, 12, 17, { fill: metal, ...line });
-		} else if (look.legs === 'pogo') {
-			art.rect(ctx, -12, -30, 8, 28, { fill: '#3a3a5a', ...line });
-			art.line(ctx, [[8, -30], [4, -26], [12, -22], [4, -18], [12, -14], [4, -10], [8, -4]], { stroke: metal, lineWidth: 2.5 });
-			art.rect(ctx, 2, -3, 12, 3, { fill: metal });
-			art.ellipse(ctx, -8, -2, 8, 3, { fill: INK });
-		} else if (look.legs === 'wheel') {
-			art.rect(ctx, -4, -30, 8, 18, { fill: metal, ...line });
-			art.circle(ctx, 0, -9, 9, { fill: '#2a2e2c', ...line });
-			art.circle(ctx, 0, -9, 3, { fill: metal });
-		} else if (look.legs === 'spider') {
-			for (const s of [-1, 1]) for (const d of [10, 20]) art.line(ctx, [[s * 4, -28], [s * d, -18], [s * (d + 4), 0]], { stroke: metal, lineWidth: 2.5 });
-		} else if (look.legs === 'chicken') {
-			for (const s of [-1, 1]) {
-				art.line(ctx, [[s * 6, -30], [s * 10, -16], [s * 6, -3]], { stroke: metal, lineWidth: 3.5 });
-				art.line(ctx, [[s * 6, -3], [s * 14, 0]], { stroke: metal, lineWidth: 2.5 });
-				art.line(ctx, [[s * 6, -3], [s * 1, 0]], { stroke: metal, lineWidth: 2.5 });
-			}
-		} else {   // jet
-			art.poly(ctx, [[-12, -30], [12, -30], [7, -12], [-7, -12]], { fill: metal, ...line });
-			const f = 8 + Math.sin(time * 30) * 3;
-			art.poly(ctx, [[-6, -12], [6, -12], [0, -12 + f]], { fill: '#ffc21a' });
-		}
-
-		// arms, behind the body: each ends in its tool
-		const swing = (o.work || 0) * Math.sin(time * 22) * 0.6;
-		const arm = (side, tool) => {
-			const sx = side * 17, sy = -56;
-			let a;
-			if (cheer) a = side * (2.4 + Math.sin(time * 8 + side) * 0.2);
-			else if (o.held && side === 1) a = 2.6;
-			else a = side * (0.35 + (side === 1 ? swing : -swing));
-			const hx = sx + Math.sin(a) * 22;
-			const hy = sy + Math.cos(a) * 22;
-			art.line(ctx, [[sx, sy], [hx, hy]], { stroke: INK, lineWidth: 7 });
-			art.line(ctx, [[sx, sy], [hx, hy]], { stroke: side === -1 ? look.skin : metal, lineWidth: 4.5 });
-			ctx.save();
-			ctx.translate(hx, hy);
-			ctx.rotate(-a);
-			TOOLS[tool](ctx, col);
-			ctx.restore();
-			return [hx, hy];
-		};
-		arm(-1, look.arms[0]);
-		const hand = arm(1, look.arms[1]);
-
-		// the body, with its apron and its gadget belly
-		art.roundRect(ctx, -18, -62, 36, 34, 8, { fill: '#4a514f', ...line });
-		art.poly(ctx, [[-14, -50], [14, -50], [16, -28], [-16, -28]], { fill: col, ...line });
-		const belly = look.belly;
-		if (belly === 'fryer') {
-			art.roundRect(ctx, -9, -48, 18, 13, 3, { fill: '#202624', ...line });
-			art.rect(ctx, -7, -42, 14, 6, { fill: '#ffc21a' });
-			art.circle(ctx, -3 + Math.sin(time * 5) * 3, -44, 1.6, { fill: '#fff3b0' });
-		} else if (belly === 'micro') {
-			art.roundRect(ctx, -10, -48, 20, 14, 2, { fill: '#202624', ...line });
-			art.text(ctx, Math.floor(time % 60).toString().padStart(2, '0'), -1, -41, { size: 7, font: 'Share Tech Mono', fill: '#9dff3a' });
-		} else if (belly === 'blender') {
-			art.roundRect(ctx, -8, -50, 16, 18, 3, { fill: 'rgba(160,230,255,0.6)', ...line });
-			art.line(ctx, [[-4, -40 + Math.sin(time * 20) * 2], [4, -40 - Math.sin(time * 20) * 2]], { stroke: '#e9ff4a', lineWidth: 2 });
-		} else if (belly === 'toaster') {
-			art.roundRect(ctx, -10, -48, 20, 14, 3, { fill: metal, ...line });
-			art.rect(ctx, -7, -47, 5, 2, { fill: INK });
-			art.rect(ctx, 2, -47, 5, 2, { fill: INK });
-			const pop = Math.max(0, Math.sin(time * 1.5)) * 5;
-			art.rect(ctx, -6, -50 - pop, 3, 3, { fill: '#c8892b' });
-		} else {   // grill
-			art.roundRect(ctx, -10, -48, 20, 13, 2, { fill: '#202624', ...line });
-			for (let g = -6; g <= 6; g += 4) art.line(ctx, [[g, -47], [g, -36]], { stroke: '#ff8a2a', lineWidth: 1.5 });
-		}
-
-		// the head
-		const hy = -74;
-		art.rect(ctx, -4, -64, 8, 4, { fill: metal });
-		art.circle(ctx, 0, hy, 12, { fill: look.skin, ...line });
-		const head = look.head;
-		// half the face is machine, more or less
-		if (head === 'bolts') {
-			ctx.save(); ctx.beginPath(); ctx.arc(0, hy, 12, -Math.PI / 2, Math.PI / 2); ctx.closePath(); ctx.fillStyle = metal; ctx.fill(); ctx.restore();
-			art.circle(ctx, 5, hy - 2, 4, { fill: col, shadow: { color: col, blur: 6 } });
-			art.circle(ctx, -5, hy - 2, 2, { fill: INK });
-			for (const [bx, by] of [[11, hy - 7], [11, hy + 5]]) art.circle(ctx, bx, by, 2, { fill: '#555' });
-		} else if (head === 'mohawk') {
-			for (let m = -2; m <= 2; m++) art.poly(ctx, [[m * 3 - 2, hy - 10], [m * 3 + 2, hy - 10], [m * 3, hy - 20 - (2 - Math.abs(m)) * 2]], { fill: col });
-			art.roundRect(ctx, -11, hy - 5, 22, 7, 3, { fill: INK });
-			art.circle(ctx, -5, hy - 1.5, 2.5, { fill: '#3af2ff' });
-			art.circle(ctx, 5, hy - 1.5, 2.5, { fill: '#3af2ff' });
-		} else if (head === 'dome') {
-			art.rect(ctx, -11, hy - 4, 22, 6, { fill: col, shadow: { color: col, blur: 6 } });
-		} else if (head === 'brain') {
-			art.circle(ctx, 0, hy - 8, 10, { fill: 'rgba(170,230,255,0.4)', stroke: '#8fdcff', lineWidth: 1.5 });
-			art.ellipse(ctx, 0, hy - 8, 7, 5, { fill: '#e88aa8' });
-			art.circle(ctx, -4, hy + 1, 2, { fill: INK });
-			art.circle(ctx, 4, hy + 1, 2.6, { fill: col });
-		} else if (head === 'beard') {
-			art.poly(ctx, [[-11, hy + 2], [11, hy + 2], [0, hy + 16]], { fill: '#6a6a6a', ...line });
-			art.rect(ctx, 1, hy - 6, 10, 8, { fill: metal });
-			art.circle(ctx, 6, hy - 2, 2.5, { fill: col });
-			art.circle(ctx, -5, hy - 2, 2, { fill: INK });
-		} else {   // antenna and pigtails
-			art.line(ctx, [[0, hy - 12], [0, hy - 24]], { stroke: metal, lineWidth: 1.5 });
-			art.circle(ctx, 0, hy - 25, 2.5, { fill: col, shadow: { color: col, blur: 6 } });
-			for (const s of [-1, 1]) art.circle(ctx, s * 13, hy - 4, 4, { fill: '#5a3a2a', ...line });
-			art.circle(ctx, -4, hy - 1, 2, { fill: INK });
-			art.circle(ctx, 4, hy - 1, 2, { fill: INK });
-		}
-		if (head !== 'beard') {
-			if (cheer) { ctx.beginPath(); ctx.arc(0, hy + 4, 4, 0, Math.PI); ctx.fillStyle = INK; ctx.fill(); }
-			else art.line(ctx, [[-3, hy + 6], [3, hy + 6]], { stroke: INK, lineWidth: 1.5 });
-		}
-		// the chef's hat (a dented steel one for the dome; none for the brain jar)
-		if (head === 'dome') {
-			art.roundRect(ctx, -10, hy - 26, 20, 16, [8, 8, 0, 0], { fill: metal, ...line });
-			art.line(ctx, [[-6, hy - 20], [-2, hy - 18]], { stroke: '#555', lineWidth: 1 });
-		} else if (head !== 'brain' && head !== 'mohawk') {
-			art.rect(ctx, -9, hy - 15, 18, 5, { fill: '#e8e4d8', ...line });
-			for (const [cx, cy, r] of [[-6, hy - 19, 6], [6, hy - 19, 6], [0, hy - 23, 7]]) art.circle(ctx, cx, cy, r, { fill: '#e8e4d8', ...line });
-			art.circle(ctx, -3, hy - 20, 1.5, { fill: '#8a7a5a' });
-		}
-
+		const line = { stroke: INK, lineWidth: 2.5 };
+		// the puck and its jet
+		art.ellipse(ctx, 0, -4, 16, 5, { fill: col, alpha: 0.5 });
+		art.roundRect(ctx, -14, -14, 28, 9, 4, { fill: '#2a2836', ...line });
+		ctx.translate(0, -bob);
+		// the stalk, the tray
+		art.rect(ctx, -3, -48, 6, 34, { fill: '#c8d0da', ...line });
+		art.ellipse(ctx, 0, -50, 34, 8, { fill: '#dfe6ee', ...line });
+		art.ellipse(ctx, 0, -52, 30, 6, { fill: '#9aa4b0' });
+		art.ellipse(ctx, 0, -50, 34, 8, { stroke: col, lineWidth: 4 });
+		art.roundRect(ctx, -9, -50, 18, 8, 2, { fill: '#2a2836', ...line });
+		for (const ex of [-4, 4]) art.circle(ctx, ex, -46, 1.8, { fill: col });
+		// the arm and its claw, up and waving when cheering
+		const a = cheer ? -0.6 + Math.sin(time * 8) * 0.3 : -0.2;
+		const sx = 18, sy = -54;
+		const ex = sx + Math.sin(a) * 26, ey = sy - Math.cos(a) * 26;
+		const wx = ex + Math.sin(a + (cheer ? 0.2 : 1.2)) * 22, wy = ey - Math.cos(a + (cheer ? 0.2 : 1.2)) * 22;
+		art.line(ctx, [[sx, sy], [ex, ey], [wx, wy]], { stroke: INK, lineWidth: 6 });
+		art.line(ctx, [[sx, sy], [ex, ey], [wx, wy]], { stroke: '#dfe6ee', lineWidth: 3.5 });
+		for (const j of [[sx, sy], [ex, ey]]) art.circle(ctx, j[0], j[1], 3.5, { fill: col, ...line });
+		const open = cheer ? 0.6 + Math.sin(time * 10) * 0.3 : 0.4;
+		for (const f of [-1, 1]) art.line(ctx, [[wx, wy], [wx + f * 6 * open + 1, wy - 6], [wx + f * 3 * open, wy - 11]], { stroke: INK, lineWidth: 2.5 });
 		ctx.restore();
-		// the food in hand, held up, in its own size
-		if (o.held) {
-			const hx = x + hand[0] * k;
-			const hyw = y - bounce * k + hand[1] * k - 30;
-			drawItem(ctx, o.held, hx, hyw, 0.9);
-			const label = (o.held.burnt ? 'BURNT ' : '') + o.held.steps.map((s) => KIND[s].adj).reverse().join(' ') + (o.held.steps.length ? ' ' : '') + INGS[o.held.ing].short;
-			art.text(ctx, label, hx, hyw - 74, { size: 24, weight: 800, font: FONT, fill: 'white', outline: INK, outlineWidth: 5 });
-		}
 	}
-
-	// the tools at the ends of the cooks' arms, pointing along +y from the wrist
-	const TOOLS = {
-		whisk(ctx) {
-			art.rect(ctx, -1.5, 0, 3, 7, { fill: '#8a9492' });
-			for (const w of [-4, 0, 4]) art.ellipse(ctx, 0, 12, Math.abs(w) + 1.2, 6, { stroke: '#d8dedc', lineWidth: 1.2 });
-		},
-		cleaver(ctx) {
-			art.rect(ctx, -1.5, 0, 3, 5, { fill: '#3a2414' });
-			art.rect(ctx, -6, 5, 10, 11, { fill: '#d8dedc', stroke: INK, lineWidth: 1.2 });
-		},
-		spatula(ctx) {
-			art.rect(ctx, -1.2, 0, 2.4, 8, { fill: '#8a9492' });
-			art.roundRect(ctx, -5, 8, 10, 9, 2, { fill: '#d8dedc', stroke: INK, lineWidth: 1.2 });
-		},
-		ladle(ctx) {
-			art.rect(ctx, -1.2, 0, 2.4, 10, { fill: '#8a9492' });
-			art.circle(ctx, 0, 13, 4.5, { fill: '#d8dedc', stroke: INK, lineWidth: 1.2 });
-		},
-		tongs(ctx) {
-			art.line(ctx, [[0, 0], [-3, 15]], { stroke: '#d8dedc', lineWidth: 2 });
-			art.line(ctx, [[0, 0], [3, 15]], { stroke: '#d8dedc', lineWidth: 2 });
-		},
-		drill(ctx, col) {
-			art.roundRect(ctx, -4, 0, 8, 7, 2, { fill: col, stroke: INK, lineWidth: 1.2 });
-			art.poly(ctx, [[-2.5, 7], [2.5, 7], [0, 17]], { fill: '#d8dedc', stroke: INK, lineWidth: 1 });
-		},
-		cutter(ctx) {
-			art.rect(ctx, -1.2, 0, 2.4, 6, { fill: '#8a9492' });
-			art.circle(ctx, 0, 11, 5.5, { fill: '#d8dedc', stroke: INK, lineWidth: 1.2 });
-			art.circle(ctx, 0, 11, 1.2, { fill: INK });
-		},
-		grater(ctx) {
-			art.rect(ctx, -4, 1, 8, 15, { fill: '#c8d0ce', stroke: INK, lineWidth: 1.2 });
-			for (let g = 4; g < 15; g += 3) art.rect(ctx, -2, g, 4, 1, { fill: INK });
-		},
-		fork(ctx) {
-			art.rect(ctx, -1.2, 0, 2.4, 8, { fill: '#8a9492' });
-			art.rect(ctx, -4, 8, 8, 1.5, { fill: '#d8dedc' });
-			for (const f of [-4, 0, 4]) art.rect(ctx, f - 0.6, 8, 1.2, 8, { fill: '#d8dedc' });
-		},
-	};
 
 	/* ---------- input ---------- */
 
@@ -2935,6 +2671,11 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		renderer.dispose();
 		renderer.forceContextLoss();
 	};
+
+	// the painted names and pictures, now that the food's drawing is defined (and again once the lettering's loaded)
+	const paintAll = () => { for (const job of paintJobs) job(); };
+	paintAll();
+	if (document.fonts) document.fonts.load(`800 60px ${FONT}`).then(paintAll).catch(() => {});
 
 	show.go('squad');
 	if (playersMeta) stage.timeout(() => initGame(playersMeta.length));
