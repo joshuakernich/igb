@@ -123,7 +123,8 @@ export function generate(seed, phase = 0) {
 			return { t, x: p.x, z: p.z, y: opts.y || 0, act, look, fire: !!opts.fire };
 		});
 	}
-	for (const [name, track] of Object.entries(tracks)) {
+	// (which way each faces, from the scene as written, before any detours)
+	for (const track of Object.values(tracks)) {
 		for (const k of track) {
 			const target = k.look === 'eye' ? { x: 0, z: 0 }
 				: k.look === 'wall' ? { x: k.x, z: k.z - 5 }
@@ -131,6 +132,15 @@ export function generate(seed, phase = 0) {
 				: tracks[k.look] ? trackAt(tracks[k.look], k.t) : { x: 0, z: 0 };
 			k.yaw = facing(k, target);
 		}
+	}
+	// walking round the furniture, not through it: the cake, the lectern, the
+	// tables and chairs, and where anyone else in the scene sits
+	const obstacles = footprints(items);
+	for (const [name, track] of Object.entries(tracks)) {
+		for (const [other, t2] of Object.entries(tracks)) if (other !== name && t2[0].act.startsWith('sit-')) obstacles.push({ x: t2[0].x, z: t2[0].z, r: 0.45 });
+		tracks[name] = routeAround(track, obstacles);
+	}
+	for (const [name, track] of Object.entries(tracks)) {
 		const looks = CAST[name].looks;
 		const props = Object.assign({ seed: name.length * 977 + phase * 31, act: track[0].act, star: name, track, fire: track.some((k) => k.fire) },
 			JSON.parse(JSON.stringify(looks)));
@@ -282,6 +292,66 @@ export function generate(seed, phase = 0) {
 	}
 
 	return { seed, phase, items, openings, next };
+}
+
+// What a piece of furniture covers on the floor, as circles: { x, z, r }.
+const FOOT = { cake: 0.45, lectern: 0.35, portrait: 0.4, radio: 0.32, roundTable: 0.85, banquetChair: 0.3, ladder: 0.45, boxes: 0.35, plant: 0.3, coatStand: 0.3, balloons: 0.15, door: 0 };
+function footprints(items) {
+	const out = [];
+	for (const it of items) {
+		if (it.flip || it.y > 1) continue;
+		if (it.type === 'buffet' || it.type === 'drinks') {
+			// a long table: three circles along it
+			const half = it.type === 'buffet' ? 0.8 : 0.5;
+			for (const k of [-1, 0, 1]) out.push({ x: it.x + Math.cos(it.rot) * half * k, z: it.z - Math.sin(it.rot) * half * k, r: 0.48 });
+		} else if (FOOT[it.type]) out.push({ x: it.x, z: it.z, r: FOOT[it.type] });
+	}
+	return out;
+}
+
+// A track with its walks bent round anything in the way: extra keys at the
+// corners, the walk taking the same time as before.
+const BODY = 0.3;   // how wide a berth a walker needs (their own half-width)
+function routeAround(track, obstacles) {
+	const out = [track[0]];
+	for (let i = 1; i < track.length; i++) {
+		const a = out[out.length - 1], b = track[i];
+		if (Math.hypot(b.x - a.x, b.z - a.z) < 0.01) { out.push(b); continue; }
+		const via = detour(a, b, obstacles, 0);
+		if (via.length) {
+			const pts = [a, ...via, b];
+			const lens = pts.slice(1).map((p, j) => Math.hypot(p.x - pts[j].x, p.z - pts[j].z));
+			const total = lens.reduce((x, y) => x + y, 0);
+			let done = 0;
+			via.forEach(function (p, j) {
+				done += lens[j];
+				out.push(Object.assign({}, b, { t: a.t + (b.t - a.t) * done / total, x: p.x, z: p.z }));
+			});
+		}
+		out.push(b);
+	}
+	return out;
+}
+function detour(a, b, obstacles, depth) {
+	if (depth > 3) return [];
+	const dx = b.x - a.x, dz = b.z - a.z, len2 = dx * dx + dz * dz;
+	let worst = null;
+	for (const o of obstacles) {
+		// (not what they're walking to or from: their own chair, the table they're going to)
+		if (Math.hypot(a.x - o.x, a.z - o.z) < o.r + BODY || Math.hypot(b.x - o.x, b.z - o.z) < o.r + BODY) continue;
+		const k = Math.max(0, Math.min(1, ((o.x - a.x) * dx + (o.z - a.z) * dz) / len2));
+		const qx = a.x + dx * k, qz = a.z + dz * k;
+		const gap = Math.hypot(qx - o.x, qz - o.z) - o.r - BODY;
+		if (gap < 0 && (!worst || k < worst.k)) worst = { o, k, qx, qz };
+	}
+	if (!worst) return [];
+	// round it, on whichever side the line already passes
+	const { o, qx, qz } = worst;
+	let nx = qx - o.x, nz = qz - o.z;
+	let n = Math.hypot(nx, nz);
+	if (n < 1e-3) { nx = -dz; nz = dx; n = Math.hypot(nx, nz); }
+	const w = { x: o.x + nx / n * (o.r + BODY + 0.15), z: o.z + nz / n * (o.r + BODY + 0.15) };
+	return [...detour(a, w, obstacles, depth + 1), w, ...detour(w, b, obstacles, depth + 1)];
 }
 
 function propsFor(type, r, phase) {

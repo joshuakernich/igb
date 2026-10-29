@@ -576,16 +576,18 @@ const ACTS = {
 	},
 	carry(a) { arms(a, -0.35, -1.3); swing(a.r, a.b.faR, Y, 0.25); swing(a.r, a.b.faL, Y, -0.25); },
 	hang(a, t) {
-		swing(a.r, a.b.uaR, Z, -2.6 - 0.12 * S(t * 2.1)); swing(a.r, a.b.uaL, Z, 2.6 + 0.12 * S(t * 1.7));
-		swing(a.r, a.b.faR, Z, -0.4); swing(a.r, a.b.faL, Z, 0.4);
+		swing(a.r, a.b.uaR, X, -2.5 - 0.12 * S(t * 2.1)); swing(a.r, a.b.uaL, X, -2.5 - 0.12 * S(t * 1.7));
+		swing(a.r, a.b.faR, X, -0.3); swing(a.r, a.b.faL, X, -0.3);
 		swing(a.r, a.b.head, X, -0.35);
 	},
 	dance(a, t, T) {
+		// (arms in: elbows bent, fists pumping in turn, never flung out)
 		a.fig.position.y += 0.06 * Math.abs(S(T * Math.PI * 2));
 		swing(a.r, a.b.spine, Y, 0.3 * S(T * Math.PI + a.k));
-		swing(a.r, a.b.uaR, Z, -(1.0 + 1.3 * up(S(t * Math.PI))));
-		swing(a.r, a.b.uaL, Z, 1.0 + 1.3 * up(-S(t * Math.PI)));
-		swing(a.r, a.b.faR, Z, -0.6); swing(a.r, a.b.faL, Z, 0.6);
+		swing(a.r, a.b.uaR, X, -0.35 - 0.45 * up(S(t * Math.PI)));
+		swing(a.r, a.b.uaL, X, -0.35 - 0.45 * up(-S(t * Math.PI)));
+		swing(a.r, a.b.faR, X, -1.5); swing(a.r, a.b.faL, X, -1.5);
+		swing(a.r, a.b.faR, Y, 0.3); swing(a.r, a.b.faL, Y, -0.3);
 		swing(a.r, a.b.head, X, 0.15 * S(T * Math.PI * 4));
 		swing(a.r, a.b.thighL, X, -0.35 * up(S(T * Math.PI * 2)));
 		swing(a.r, a.b.thighR, X, -0.35 * up(-S(T * Math.PI * 2)));
@@ -604,8 +606,11 @@ const ACTS = {
 	panic(a, t) {
 		a.fig.position.y += 0.05 * Math.abs(S(t * 8));
 		a.fig.rotation.y += 0.6 * S(t * 1.7);
-		swing(a.r, a.b.uaR, Z, -(2.4 + 0.45 * S(t * 11)));
-		swing(a.r, a.b.uaL, Z, 2.4 + 0.45 * S(t * 9.3));
+		// (hands clapped to their cheeks, not flung out)
+		swing(a.r, a.b.uaR, X, -0.75 - 0.1 * S(t * 11));
+		swing(a.r, a.b.uaL, X, -0.75 - 0.1 * S(t * 9.3));
+		swing(a.r, a.b.faR, X, -1.9); swing(a.r, a.b.faL, X, -1.9);
+		swing(a.r, a.b.faR, Y, 0.55); swing(a.r, a.b.faL, Y, -0.55);
 		swing(a.r, a.b.head, Y, 0.4 * S(t * 3));
 	},
 	spray(a, t) {
@@ -621,14 +626,14 @@ const ACTS = {
 	},
 	reach() {},
 	dead(a) {
-		swing(a.r, a.b.uaR, Z, -1.3); swing(a.r, a.b.uaL, Z, 1.2);
-		swing(a.r, a.b.faR, Z, -0.5);
+		swing(a.r, a.b.uaR, Z, -0.35); swing(a.r, a.b.uaL, Z, 0.3);
+		swing(a.r, a.b.faR, X, -0.6);
 		swing(a.r, a.b.thighL, Z, 0.25); swing(a.r, a.b.thighR, Z, -0.2);
 		swing(a.r, a.b.head, Y, 0.5);
 	},
 	'dead-wave'(a, t) {
 		ACTS.dead(a);
-		swing(a.r, a.b.uaR, Z, 1.3);
+		swing(a.r, a.b.uaR, Z, 0.35);
 		swing(a.r, a.b.uaR, X, -1.5);
 		swing(a.r, a.b.faR, Z, 0.5 * S(t * 7));
 	},
@@ -967,6 +972,7 @@ export function person(p) {
 			}
 			actor.head.setFromMatrixPosition(b.head.matrixWorld);
 		};
+		actor.tick(0, 0, false);   // (posed at once: never seen in the mannequin's T-pose)
 	};
 	if (kit) dress(); else waiting.push(dress);
 	return g;
