@@ -30,6 +30,7 @@ const SONIC = [
 	{ id: 'twin-tail-tower', name: 'Tails Jump', bot: 'weave', hidden: true },
 	{ id: 'red-light-green-light', name: 'Red Light Green Light', bot: 'rlgl', hidden: true },
 	{ id: 'temple-of-coins', name: 'Temple of Coins', bot: 'roam', hidden: true },
+	{ id: 'small-talk', name: 'Small Talk', bot: 'spotter', hidden: true },
 ];
 const COLORS = ['#ff2a2a', '#2f6bff', '#32cd32', '#dd00ff', '#ff6600', '#ffbb00'];
 
@@ -48,6 +49,9 @@ const $status = $('#status');
 /* ---------- the hidden stage ---------- */
 
 $world.css({ transform: `scale(${SCALE})` });
+// (the games render at the strip's resolution, not the screen's: 4800 world units -> 3072 pixels)
+const setScale = IGB.setScale;
+IGB.setScale = function (k) { setScale(k); IGB.pixelRatio = STRIP.w / (4800 * k); };
 IGB.setScale(SCALE);
 
 let game = null, entry = null, starting = 0;
@@ -56,10 +60,10 @@ strip.width = STRIP.w; strip.height = STRIP.h;
 const sctx = strip.getContext('2d');
 
 // Copy every canvas the stage shows into the strip, where it sits in the world.
-function copyWalls() {
-	sctx.fillStyle = '#000';
-	sctx.fillRect(0, 0, STRIP.w, STRIP.h);
-	if (!game || !game.stage || game.stage.stopped) return;
+// (which canvases, and where, is looked up a few times a second, not every frame)
+let layers = [], layersAt = 0, layersOf = null;
+function findLayers(now) {
+	layersAt = now; layersOf = game; layers = [];
 	const box = game.stage.$el[0].getBoundingClientRect();
 	if (!box.width) return;
 	const kx = STRIP.w / box.width, ky = STRIP.h / box.height;
@@ -69,18 +73,29 @@ function copyWalls() {
 		if (st.display === 'none' || st.visibility === 'hidden' || +st.opacity === 0) continue;
 		const r = c.getBoundingClientRect();
 		if (r.width < 2 || r.height < 2) continue;
-		try { sctx.drawImage(c, (r.left - box.left) * kx, (r.top - box.top) * ky, r.width * kx, r.height * ky); } catch (e) { /* (a canvas mid-resize) */ }
+		layers.push({ c, x: (r.left - box.left) * kx, y: (r.top - box.top) * ky, w: r.width * kx, h: r.height * ky });
+	}
+}
+function copyWalls(now) {
+	sctx.fillStyle = '#000';
+	sctx.fillRect(0, 0, STRIP.w, STRIP.h);
+	if (!game || !game.stage || game.stage.stopped) return;
+	if (layersOf !== game || now - layersAt > 400) findLayers(now);
+	for (const l of layers) {
+		if (!l.c.width || !l.c.height) continue;
+		try { sctx.drawImage(l.c, l.x, l.y, l.w, l.h); } catch (e) { /* (a canvas mid-resize) */ }
 	}
 }
 
 /* ---------- the room ---------- */
 
 const canvas = document.getElementById('room');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });   // (no MSAA: the bloom composer draws off-screen anyway)
+let pixelRatio = Math.min(1.5, window.devicePixelRatio || 1);
+renderer.setPixelRatio(pixelRatio);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#200033');
@@ -205,17 +220,36 @@ const glows = [0, 1, 2].map((n) => {
 	scene.add(l);
 	return l;
 });
-// (each wall's average colour, a few times a second)
-const tiny = document.createElement('canvas'); tiny.width = 3; tiny.height = 1;
-const tctx = tiny.getContext('2d', { willReadFrequently: true });
-let glowAt = 0;
+// (each wall's average colour, a few times a second: averaged on the GPU into
+// three pixels and read back without waiting, so the frame never stalls on it)
+const glowRT = new THREE.WebGLRenderTarget(3, 1, { depthBuffer: false });
+const glowCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+const glowScene = new THREE.Scene();
+glowScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
+	uniforms: { map: { value: wallTex } },
+	vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+	fragmentShader: `uniform sampler2D map; varying vec2 vUv;
+		void main() {
+			float x0 = floor(vUv.x * 3.0) / 3.0; vec3 c = vec3(0.0);
+			for (int i = 0; i < 12; i++) for (int j = 0; j < 6; j++)
+				c += textureLod(map, vec2(x0 + (float(i) + 0.5) / 36.0, (float(j) + 0.5) / 6.0), 5.0).rgb;
+			gl_FragColor = vec4(pow(c / 72.0, vec3(1.0 / 2.2)), 1.0);
+		}`,
+	depthTest: false, depthWrite: false,
+})));
+const glowPx = new Uint8Array(12);
+let glowAt = 0, glowBusy = false;
 function updateGlow(now) {
-	if (now - glowAt < 200) return;
-	glowAt = now;
-	tctx.drawImage(strip, 0, 0, 3, 1);
-	const d = tctx.getImageData(0, 0, 3, 1).data;
-	glows.forEach((l, n) => l.color.setRGB(d[n * 4] / 255, d[n * 4 + 1] / 255, d[n * 4 + 2] / 255, THREE.SRGBColorSpace));
-	spills.forEach((m, n) => m.material.color.copy(glows[n].color).multiplyScalar(0.9));
+	if (glowBusy || now - glowAt < 200) return;
+	glowAt = now; glowBusy = true;
+	renderer.setRenderTarget(glowRT);
+	renderer.render(glowScene, glowCam);
+	renderer.setRenderTarget(null);
+	renderer.readRenderTargetPixelsAsync(glowRT, 0, 0, 3, 1, glowPx).then(() => {
+		const d = glowPx;
+		glows.forEach((l, n) => l.color.setRGB(d[n * 4] / 255, d[n * 4 + 1] / 255, d[n * 4 + 2] / 255, THREE.SRGBColorSpace));
+		spills.forEach((m, n) => m.material.color.copy(glows[n].color).multiplyScalar(0.9));
+	}).catch(() => {}).finally(() => { glowBusy = false; });
 }
 
 /* ---------- the players' figures ---------- */
@@ -715,6 +749,45 @@ const BOTS = {
 				const to = { X: Math.max(-0.8, Math.min(0.8, Math.sin(t * 0.6 + i * 2.1) * 0.55 + (i - (n - 1) / 2) * 0.22)), Z: Math.max(-0.7, Math.min(0.7, Math.sin(t * 0.45 + i * 1.7) * 0.5)) };
 				approach(p, to, 1.1, dt);
 				p.face = Math.max(-0.5, Math.min(0.5, -(to.X - p.X) * 2));
+			});
+		} };
+	},
+	// Small Talk: while the scene plays they turn slowly round the room,
+	// taking it in; once it's time to tap, each in turn walks up to something
+	// weird on the wall and taps it (most of them, not all: the rest are
+	// shown at the end of the round).
+	spotter(n) {
+		const ps = Array.from({ length: n }, (_, i) => ({ X: (i - (n - 1) / 2) * 0.5, Y: 0, Z: 0.1, face: 0 }));
+		let st = null, stAt = -1, next = 0, claimed = new Set(), level = -1;
+		return { ps, step(t, dt, taps) {
+			if (t - stAt > 0.2) { stAt = t; try { st = game && game.state ? game.state() : null; } catch (e) { st = null; } }
+			if (st && st.level !== level) { level = st.level; claimed = new Set(); }
+			const tapping = st && st.phase === 'tap';
+			const left = tapping ? (st.differences || []).filter((d) => !d.found && !claimed.has(d.id)) : [];
+			// send the next free player to the next anomaly (leaving one or two unfound)
+			if (tapping && t > next && left.length > 1) {
+				const free = ps.findIndex((p) => !p.goal);
+				if (free >= 0) {
+					const d = left[Math.floor(Math.random() * left.length)];
+					const along = (d.x - d.wall * IGB.W) / IGB.W;
+					claimed.add(d.id);
+					ps[free].goal = { ...nearWall(d.wall, along, 0.2), tap: { wall: d.wall, x: along, y: d.y / IGB.H } };
+					next = t + 1.6 + Math.random() * 1.4;
+				}
+			}
+			ps.forEach((p, i) => {
+				if (p.goal) {
+					p.face = faceToward(p, p.goal);
+					if (approach(p, p.goal, 1.1, dt)) { taps(i, p.goal.tap); p.goal = null; p.back = t + 0.8; }
+					return;
+				}
+				if (t < (p.back || 0)) return;
+				// drifting about the middle, looking round the walls
+				const to = { X: Math.sin(t * 0.25 + i * 2.1) * 0.35, Z: 0.1 + Math.cos(t * 0.2 + i * 1.3) * 0.3 };
+				approach(p, to, 0.5, dt);
+				const look = Math.sin(t * 0.3 + i * 1.9) * 1.4;
+				let d = look - p.face; d = Math.atan2(Math.sin(d), Math.cos(d));
+				p.face += d * Math.min(1, dt * 1.5);
 			});
 		} };
 	},
@@ -1219,7 +1292,7 @@ IGB.onFrame(function (now) {
 			else { f.update(bot.ps[i], dt); if (f.setHeight) f.setHeight(1); }
 		});
 	}
-	copyWalls();
+	copyWalls(now);
 	wallTex.needsUpdate = true;
 	updateGlow(now);
 	const v = VIEWS[view](now / 1000);
@@ -1236,7 +1309,18 @@ IGB.onFrame(function (now) {
 	else if (view !== 'Inside') centreBox();   // (inside the room there's no box to frame)
 	you.draw(now / 1000, dt);
 	composer.render();
+	adapt(now, dt);
 });
+
+// If frames run slow for a couple of seconds, draw the room at a lower resolution.
+let slowT = 0, fastT = 0;
+function adapt(now, dt) {
+	if (fixed[0] > 0 || document.hidden || dt >= 0.1) return;   // (a hidden or paused page isn't slow)
+	if (dt > 1 / 40) { slowT += dt; fastT = 0; } else { fastT += dt; slowT = Math.max(0, slowT - dt * 0.5); }
+	const top = Math.min(1.5, window.devicePixelRatio || 1);
+	if (slowT > 2 && pixelRatio > 0.75) { pixelRatio = Math.max(0.75, pixelRatio - 0.25); slowT = 0; renderer.setPixelRatio(pixelRatio); resize(); }
+	else if (fastT > 8 && pixelRatio < top) { pixelRatio = Math.min(top, pixelRatio + 0.25); fastT = 0; renderer.setPixelRatio(pixelRatio); resize(); }
+}
 
 /* ---------- one loop of the game ----------
    The storyboard's animatic holds on a live frame for one full loop of its
@@ -1252,6 +1336,7 @@ const LOOPS = {
 	'tails-escape': { min: 6, max: 45, done: (a, b) => b.pilot !== a.pilot },                               // a junction taken, the next pilot up
 	'red-light-green-light': { min: 10, max: 45, done: (a, b) => b.phase === 'cleared' && a.phase !== 'cleared' },   // a round cleared
 	'super-sonic-battle': { min: 10, max: 60, done: (a, b) => b.phase === 'handover' || b.phase === 'finale' },   // a whole turn as Sonic
+	'small-talk': { min: 15, max: 70, done: (a, b) => b.phase === 'reveal' && a.phase !== 'reveal' },          // a round: the scene, the hunt, the reveal
 };
 let loopStart = null, loopFrom = null;
 const stateNow = () => { try { return (game && game.state && game.state()) || {}; } catch (e) { return {}; } };
