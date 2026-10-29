@@ -1643,6 +1643,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			limb(c, [0.3, 0.25, 0.1], [0.42, 0.04, 0.3], 0.045, 'glove', 1);
 			limb(c, [-0.3, 0.12, -0.1], [-0.5, 0.0, 0.1], 0.06, 'shoe', -1, true);
 			limb(c, [0.3, 0.12, -0.1], [0.5, 0.0, 0.1], 0.06, 'shoe', 1, true);
+			for (const L of c.limbs) L.planted = true;   // (hands and feet resting on the ground, however it bounces)
 			// spots on its back
 			for (let k = 0; k < 7; k++) { const a = rr(-1.2, 1.2), e = rr(0.3, 1.1); mesh(GEO.sphLo, slickMat(new THREE.Color(c.tint).multiplyScalar(0.55)), c.bouncer, Math.sin(a) * Math.sin(e) * 0.42, 0.32 + Math.cos(e) * 0.32, -Math.cos(a) * Math.sin(e) * 0.36, rr(0.04, 0.07), 0.02, rr(0.04, 0.07)).castShadow = false; }
 			c.top = 0.9;
@@ -1947,7 +1948,9 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	});
 	const leafMats = ['#3f8a3a', '#2f7a4a', '#5a9a2a', '#7aa83a'].map((cl) => rimify(new THREE.MeshPhysicalMaterial({ color: cl, map: TEX.leaf, bumpMap: TEX.leaf, bumpScale: 3, roughness: 0.6, sheen: 1, sheenColor: new THREE.Color('#d8ff9a'), sheenRoughness: 0.5, clearcoat: 0.3, clearcoatRoughness: 0.4 }), 0.35));
 
+	let trunkSpots = [];   // (this clearing's tree trunks, so the giant mushrooms can keep clear of them)
 	function tree(group, x, z, s) {
+		trunkSpots.push({ x, z, r: 0.75 * s });
 		const g = new THREE.Group();
 		g.position.set(x, 0, z);
 		g.rotation.y = rnd() * Math.PI * 2;
@@ -1985,6 +1988,20 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		}
 	}
 	function giantMushroom(group, x, z, h, cl) {
+		// (a big one keeps its cap clear of the trees' trunks: nudged to somewhere near that's clear, or made
+		// smaller to fit, or left out)
+		if (h > 1.2) {
+			const room = (x2, z2) => Math.min(...trunkSpots.map((t) => Math.hypot(x2 - t.x, z2 - t.z) - t.r - 0.25), 99);
+			let best = { x, z, d: room(x, z) };
+			for (let k = 0; k < 16 && best.d < h * 0.42; k++) {
+				const a = rnd() * Math.PI * 2, r = rr(0.5, 3), x2 = x + Math.cos(a) * r, z2 = z + Math.sin(a) * r;
+				if (plantOK && !plantOK(x2, z2, 0.5)) continue;
+				const d = room(x2, z2);
+				if (d > best.d) best = { x: x2, z: z2, d };
+			}
+			x = best.x; z = best.z;
+			if (best.d < h * 0.42) { h = best.d / 0.42; if (h < 1.4) return null; }
+		}
 		const g = new THREE.Group(); g.position.set(x, 0, z); group.add(g);
 		const stem = mesh(new THREE.CylinderGeometry(h * 0.07, h * 0.1, h, 16), MAT.stem, g, 0, h / 2, 0);
 		stem.receiveShadow = true;
@@ -2423,6 +2440,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			g.add(path);
 		}
 		canopySpots = [];
+		trunkSpots = [];
 		// where the creatures will stand (they're built last): plants keep clear of them, the room and the path
 		const spots = C.creatures.map((d) => {
 			const D = R + d.out, lat = (d.along - 0.5) * 2 * D;
@@ -3787,7 +3805,13 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			_a.copy(L.from);
 			_b.copy(L.rest);
 			const sw = Math.sin(beat * Math.PI + c.phase + L.side);
-			if (L.ear) {
+			if (L.planted) {
+				// (flat on the ground, wherever the body bobs to; tucked up with it, mid-hop)
+				const air = Math.max(c.hopT, c.croakHop || 0) > 0.05, sy = c.bouncer.scale.y || 1;
+				const half = L.r * (L.end === 'shoe' ? 0.7 : 1.1);   // (half the tip's height)
+				_b.y = air ? L.rest.y + 0.06 : (half - c.bouncer.position.y) / sy;
+				_b.x += sw * 0.015;   // (a little shuffle to the beat, still on the ground)
+			} else if (L.ear) {
 				_b.y += S * 0.15 + (c.kind === 'bunny' && T > 0 ? Math.sin(Math.min(1, 1 - T) * Math.PI) * 0.9 : 0);
 				_b.x += sw * 0.05;
 			} else if (L.leg) {
