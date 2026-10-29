@@ -359,6 +359,14 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const lfo = ac.createOscillator(), lg = ac.createGain();
 		lfo.frequency.value = 3; lg.gain.value = 0.15;
 		lfo.connect(lg).connect(trem.gain); lfo.start(t0); lfo.stop(t0 + 600);
+		// a vibrato (in cents, on every partial), and a slower wavering of it: the water rippling
+		const vib = ac.createOscillator(), vg = ac.createGain(), wob = ac.createOscillator(), wg = ac.createGain();
+		vib.frequency.value = 5.5; vg.gain.value = 18;
+		wob.frequency.value = 0.7; wg.gain.value = 1.5;
+		wob.connect(wg).connect(vib.frequency);
+		vib.connect(vg);
+		for (const pt of parts) for (const o of pt.oscs) vg.connect(o.detune);
+		for (const o of [vib, wob]) { o.start(t0); o.stop(t0 + 600); }
 		return {
 			set(e, p) {
 				const t = ac.currentTime;
@@ -367,10 +375,11 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				for (const pt of parts) if (pt.m > 1) pt.pg.gain.setTargetAtTime(pt.a * clamp(e * 1.6 - pt.m * 0.08, 0, 1), t, 0.15);
 				lfo.frequency.setTargetAtTime(2.5 + e * 7, t, 0.2);
 				lg.gain.setTargetAtTime(0.1 + e * 0.25, t, 0.2);
+				vg.gain.setTargetAtTime(14 + e * 26, t, 0.2);   // (deeper vibrato as you go faster)
 				if (pan) pan.pan.setTargetAtTime(clamp(p, -1, 1) * 0.6, t, 0.1);
 			},
-			glide(nf) { const t = ac.currentTime; for (const pt of parts) for (const o of pt.oscs) o.frequency.setTargetAtTime(nf * pt.m, t, 0.12); },
-			stop() { const t = ac.currentTime; g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(0.0001, t, 0.15); for (const pt of parts) for (const o of pt.oscs) o.stop(t + 1); lfo.stop(t + 1); },
+			glide(nf) { const t = ac.currentTime; for (const pt of parts) for (const o of pt.oscs) o.frequency.setTargetAtTime(nf * pt.m, t, 0.06); },   // (a quick slide to each new note)
+			stop() { const t = ac.currentTime; g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(0.0001, t, 0.15); for (const pt of parts) for (const o of pt.oscs) o.stop(t + 1); for (const o of [lfo, vib, wob]) o.stop(t + 1); },
 		};
 	}
 	function holdVoice(f, kind, wall) {
@@ -780,9 +789,10 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		ripples = ripples.filter((r) => r.t < 0.5);
 	}
 
-	// Each player in the pond has their own held shimmering tone, its pitch set by how fast
-	// they wade: a faint low glassy hum standing still, swelling, brightening and rising as
-	// they go faster, fading away when they step out of the water.
+	// Each player in the pond has their own held shimmering tone, its note of the pentatonic
+	// scale set by how fast they wade (four notes, from its octave up), with a rippling
+	// vibrato: a faint hum standing still, swelling, brightening and stepping up as they go
+	// faster, fading away when they step out of the water.
 	function wade(dt, on) {
 		const pd = ponds[here];
 		if (pd) pd.U.uNow.value = rt;
@@ -794,9 +804,9 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			// (its energy: quick to swell while you move, slow to settle, gone a second after you leave)
 			const want = inPond ? 0.15 + 0.85 * clamp(v / 1.0, 0, 1) : 0;
 			q.shimE = lerp(q.shimE || 0, want, 1 - Math.exp(-dt * (want > (q.shimE || 0) ? 4 : inPond ? 1.2 : 2.5)));
-			// (the pitch: how fast you wade, gliding up an octave and a half from the scale's fifth)
+			// (the pitch: how fast you wade, stepping up the pentatonic scale, four notes from its octave)
 			q.shimV = lerp(q.shimV || 0, v, 1 - Math.exp(-dt * 3));
-			const wf = freqOf(CLEARINGS[here].root, 3) * Math.pow(2, clamp(q.shimV / 1.3, 0, 1) * 1.5);
+			const wf = freqOf(CLEARINGS[here].root, 5 + Math.round(clamp(q.shimV / 1.2, 0, 1) * 3));
 			if (inPond && !q.shim && audioOn()) q.shim = shimmerVoice(wf, 1);
 			if (q.shim) {
 				q.shim.glide(wf);
