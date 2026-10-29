@@ -1522,13 +1522,14 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	const creatures = [];
 	const clearingGroups = [];
 	// a creature's frame: a root that turns to face the middle, a bouncer that squashes on the beat
+	const KIND_SIZE = { frog: 0.8, snail: 0.8 };   // (some kinds a little smaller all round)
 	function frame(def, ci) {
 		const root = new THREE.Group();
 		const bouncer = new THREE.Group();
 		root.add(bouncer);
 		const c = {
 			kind: def.kind, clearing: ci, wall: def.wall, note: def.note, pat: def.pat, tint: new THREE.Color(def.tint),
-			root, bouncer, limbs: [], face: null, parts: {}, size: def.big || 1,
+			root, bouncer, limbs: [], face: null, parts: {}, size: (def.big || 1) * (KIND_SIZE[def.kind] || 1),
 			singer: -1, singT: 0, trickT: 0, hopT: 0, duckT: 0, notes: 0, phase: rnd() * Math.PI * 2, index: creatures.length,
 			offbeat: rnd() < 0.3,
 		};
@@ -1638,22 +1639,26 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			const pale = slickMat(new THREE.Color(c.tint).lerp(new THREE.Color('#fff6c8'), 0.6));
 			mesh(GEO.sph, skin, c.bouncer, 0, 0.36, -0.02, 0.3, 0.34, 0.27);   // (the body)
 			mesh(GEO.sph, pale, c.bouncer, 0, 0.3, 0.1, 0.23, 0.25, 0.18);     // (the belly)
-			for (const sx of [-1, 1]) mesh(GEO.sph, skin, c.bouncer, sx * 0.3, 0.17, -0.06, 0.15, 0.14, 0.24);   // (folded thighs)
 			mesh(GEO.sph, skin, c.bouncer, 0, 0.78, 0.04, 0.42, 0.28, 0.36);   // (the big wide head)
 			for (const sx of [-1, 1]) mesh(GEO.sph, skin, c.bouncer, sx * 0.22, 1.0, 0.2, 0.17, 0.17, 0.17);   // (its eye bulges)
 			// (its face: the eyes on the bulges, a grin right across)
 			c.face = makeFace(c.bouncer, 0.9, 0, 0.93, 0.36, { gap: 0.4 });
-			c.face.mouth.smile.scale.x *= 2.3; c.face.mouth.open.scale.x *= 2.3;
+			for (const e of c.face.eyes) e.pupil.scale.multiplyScalar(0.5);   // (small black eyes on its big eye bulges)
+			// (a one-line smirk: just the smile, a little lopsided; no teeth or tongue)
+			c.face.mouth.smile.scale.multiplyScalar(0.6);
+			c.face.mouth.smile.position.x += 0.04;
+			c.face.mouth.smile.rotation.z += 0.35;
+			c.face.smirk = true;
 			for (const t of c.face.mouth.teeth) t.scale.set(0.0001, 0.0001, 0.0001);
 			for (const sx of [-1, 1]) mesh(GEO.sph, MAT.pupil, c.bouncer, sx * 0.05, 0.86, 0.39, 0.012).castShadow = false;   // (nostrils)
-			c.parts.sac = mesh(GEO.sph, new THREE.MeshPhysicalMaterial({ color: '#ffd8b0', roughness: 0.15, clearcoat: 1, sheen: 0.6, sheenColor: new THREE.Color('#ffffff') }), c.bouncer, 0, 0.6, 0.3, 0.12, 0.1, 0.1);
+			c.parts.sac = mesh(GEO.sph, new THREE.MeshPhysicalMaterial({ color: '#ffd8b0', roughness: 0.15, clearcoat: 1, sheen: 0.6, sheenColor: new THREE.Color('#ffffff') }), c.bouncer, 0, 0.55, 0.12, 0.2, 0.08, 0.2);   // (a flat pouch tucked up under its chin)
 			c.parts.tongue = mesh(GEO.cyl, MAT.tongue, c.bouncer, 0, 0.72, 0.38, 0.03, 0.001, 0.03);
 			c.parts.tongue.rotation.x = Math.PI / 2;
 			// arms straight down to the ground, legs folded, feet long and forward
 			limb(c, [-0.22, 0.5, 0.14], [-0.25, 0.0, 0.3], 0.04, 'glove', -1);
 			limb(c, [0.22, 0.5, 0.14], [0.25, 0.0, 0.3], 0.04, 'glove', 1);
-			limb(c, [-0.32, 0.12, 0.08], [-0.45, 0.0, 0.32], 0.05, 'shoe', -1, true);
-			limb(c, [0.32, 0.12, 0.08], [0.45, 0.0, 0.32], 0.05, 'shoe', 1, true);
+			limb(c, [-0.18, 0.2, 0.0], [-0.45, 0.0, 0.32], 0.05, 'shoe', -1, true);   // (legs noodling straight out of the body)
+			limb(c, [0.18, 0.2, 0.0], [0.45, 0.0, 0.32], 0.05, 'shoe', 1, true);
 			for (const L of c.limbs) {
 				L.planted = true;   // (hands and feet resting on the ground, however it bounces)
 				// (a webbed hand or foot: a flat pad of skin and three round toes splayed out in front)
@@ -1729,7 +1734,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			// (just a mouth on its face: its eyes are the ones on its stalks)
 			for (const e of c.face.eyes) e.eye.visible = false;
 			c.face.g.traverse((o) => { if (o.material === MAT.cheek) o.visible = false; });
-			const shell = new THREE.Group(); shell.position.set(0, 0.5, -0.12); shell.scale.setScalar(1.7); c.bouncer.add(shell);
+			const shell = new THREE.Group(); shell.position.set(0, 0.42, -0.1); shell.scale.setScalar(1.35); c.bouncer.add(shell);
 			const shellMat = new THREE.MeshPhysicalMaterial({ color: c.tint, roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.2, emissive: c.tint, emissiveIntensity: 0.08 });
 			// (one fat ribbed tube coiled two and a half turns, growing as it goes, in the snail's side plane:
 			// seen side-on, a spiral. Mirrored and turned so that, head to the left, it winds clockwise: its
@@ -1742,7 +1747,13 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			limb(c, [-0.07, 0.84, 0.5], [-0.13, 1.06, 0.55], 0.035, 'eye', -1);   // (the stalks out of the top of its head)
 			limb(c, [0.07, 0.84, 0.5], [0.13, 1.06, 0.55], 0.035, 'eye', 1);
 			// (each eye in a lid of its skin, behind the black)
-			for (const L of c.limbs) if (L.end === 'eye') { mesh(GEO.sph, body, L.tip, 0, 0, -0.03, 0.1, 0.11, 0.1); L.tip.scale.setScalar(1.25); }
+			for (const L of c.limbs) if (L.end === 'eye') {
+				mesh(GEO.sph, body, L.tip, 0, 0, -0.03, 0.1, 0.11, 0.1);
+				const [pupil, shine] = L.tip.children;   // (a small black eye on the front of the ball)
+				pupil.scale.multiplyScalar(0.45); pupil.position.z = 0.06;
+				shine.position.set(-0.012, 0.018, 0.088); shine.scale.multiplyScalar(0.45);
+				L.tip.scale.setScalar(1.25);
+			}
 			c.top = 1.2;   // (no arms: just its eye stalks)
 		},
 		owl(c) {
@@ -2558,7 +2569,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			wobbleCreature(c);
 			c.root.position.x += cx; c.root.position.z += cz;
 			c.root.lookAt(cx, 0, cz);
-			if (c.kind === 'snail') c.root.rotateY(c.wall === 2 ? -1.0 : 1.0);   // (three-quarters on: its shell's spiral shows, and its face)
+			if (c.kind === 'snail') c.root.rotateY(c.wall === 2 ? -0.6 : 0.6);   // (turned mostly toward us: its face, and still its shell's spiral)
 			c.root.userData.tag = 'creatures';
 			g.add(c.root);
 			c.ring.position.x = cx + c.hot.x; c.ring.position.z = cz + c.hot.y;
@@ -2929,7 +2940,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			for (let j = 0, n = [3, 2, 3][k % 3]; j < n; j++) {
 				const pk = new THREE.Group(); pk.position.set(j ? rr(-0.04, 0.04) : 0, y, j ? rr(-0.03, 0.03) : 0); pk.rotation.set(rr(-0.06, 0.06), rr(-0.4, 0.4), rr(-0.08, 0.08)); body.add(pk);
 				mesh(pumpkinGeo(), skin, pk, 0, 0, 0, s2, s2 * 0.82, s2);
-				faces.push(makeFace(pk, s2 * 1.25, 0, s2 * 0.82 * 0.8, s2 * 1.01, { gap: 0.3 }));
+				faces.push(makeFace(pk, Math.min(s2, 0.42) * 1.25, 0, s2 * 0.82 * 0.8, s2 * 1.01, { gap: 0.3 }));   // (the big ones' faces no bigger than a middling one's)
 				top = y + s2 * 0.82 * 1.38;
 				y += s2 * 0.82 * 1.3;
 				s2 *= 0.74;
@@ -3524,7 +3535,10 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 					e.pupil.position.x = Math.sin(rt * 0.7 + c.phase) * 0.02 * f.s;
 					e.brow.position.y = (0.36 + open * 0.06 + myPulse * 0.03) * f.s;
 				}
-				if (!f.noMouth) {
+				if (f.smirk) {
+					f.mouth.open.visible = f.mouth.tongue.visible = false;
+					f.mouth.smile.visible = true;
+				} else if (!f.noMouth) {
 					f.mouth.open.scale.y = (0.02 + open * 0.17) * f.s;
 					f.mouth.tongue.visible = open > 0.2;
 					f.mouth.teeth.forEach((m) => { m.visible = open > 0.2; m.position.y = (0.03 + open * 0.1) * f.s; });
@@ -3791,8 +3805,9 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			if (T > 0.85 && Math.random() < 0.5) spray(c.headAt(), '#' + c.tint.getHexString(), 3, 1.5);
 		}
 		if (c.kind === 'frog') {
-			const s = 1 + c.singT * 1.4;
-			P.sac.scale.set(0.12 * s, 0.1 * s, 0.1 * s);
+			const S2 = c.singT;   // (the pouch under its chin balloons down and forward as it croaks)
+			P.sac.scale.set(0.2 * (1 + S2 * 0.3), 0.08 * (1 + S2 * 1.8), 0.2 * (1 + S2 * 0.35));
+			P.sac.position.set(0, 0.55 - S2 * 0.08, 0.12 + S2 * 0.08);
 			P.tongue.scale.set(0.03, T > 0 ? arc * 1.6 + 0.001 : 0.001, 0.03);
 			P.tongue.position.z = 0.32 + (T > 0 ? arc * 0.8 : 0);
 		}
