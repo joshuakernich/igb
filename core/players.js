@@ -473,7 +473,7 @@ IGB.players = (function () {
 		};
 		const tokens = COLS.map((col, i) => {
 			const g = new THREE.Group(); scene.add(g);
-			const mat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.32, metalness: 0.08 });
+			const mat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.32, metalness: 0.08, transparent: true });
 			const body = new THREE.Mesh(bodyGeo, mat); body.castShadow = true; g.add(body);
 			const head = new THREE.Group(); g.add(head);
 			const ball = new THREE.Mesh(headGeo, mat); ball.castShadow = true; head.add(ball);
@@ -494,7 +494,7 @@ IGB.players = (function () {
 			const lineMat = new THREE.MeshBasicMaterial({ color: col, transparent: true, depthWrite: false });
 			const ln = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), lineMat, 40);
 			ln.frustumCulled = false; scene.add(ln);
-			return { g, body, head, ball, dot, nose, tag, tagMe: null, mat, ring, tgt, tMat, glowMat, ln, lineMat, at: null, seen: { p: null, t: -9 } };
+			return { g, body, head, ball, dot, nose, tag, tagMe: null, mat, ring, tgt, tMat, glowMat, ln, lineMat, at: null, seen: { p: null, t: -9 }, last: null, movedT: -99, here: 1 };
 		});
 		// where you're walking to
 		const goal = new THREE.Mesh(new THREE.RingGeometry(0.075, 0.095, 32, 1, 0, Math.PI * 1.6), new THREE.MeshBasicMaterial({ color: 'white', transparent: true, depthWrite: false, side: THREE.DoubleSide }));
@@ -506,6 +506,7 @@ IGB.players = (function () {
 
 		const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), tmp = new THREE.Vector3(), _m = new THREE.Matrix4(), _v = new THREE.Vector3();
 		let last = performance.now();
+		const lerp3 = (a, b, k) => a + (b - a) * k;
 		function frame() {
 			requestAnimationFrame(frame);
 			if (!simOn() || document.hidden) return;
@@ -534,7 +535,18 @@ IGB.players = (function () {
 				tk.ring.visible = me;
 				tk.tag.position.y = lift + Ht + 0.1;
 				if (tk.tagMe !== me) { tk.tag.material.map.dispose(); tk.tag.material.map = tagFor(me ? 'YOU' : 'P' + (i + 1), COLS[i]); tk.tagMe = me; }
-				tk.tag.material.opacity = me ? 1 : 0.8;
+				// (not playing, by the look of it: still for a while by the back wall, where the visors
+				// hang. Then mostly see-through, till they move)
+				if (!tk.last || Math.hypot(p.X - tk.last.X, p.Z - tk.last.Z, p.Y - tk.last.Y) > 0.004) tk.movedT = ts;
+				tk.last = { X: p.X, Y: p.Y, Z: p.Z };
+				const idle = p.Z < -0.7 && ts - tk.movedT > 2.5;
+				tk.here = lerp3(tk.here, idle ? 0.16 : 1, 1 - Math.exp(-dt * 5));
+				tk.mat.opacity = tk.here;
+				tk.mat.depthWrite = tk.here > 0.95;
+				tk.body.castShadow = tk.ball.castShadow = tk.here > 0.5;
+				tk.dot.visible = tk.nose.visible = tk.here > 0.5;
+				tk.ring.material.opacity = 0.9 * tk.here;
+				tk.tag.material.opacity = (me ? 1 : 0.8) * Math.max(0.3, tk.here);
 				// the gaze: head turned to it, a target on the wall, dots while it moves
 				const g = p.gaze;
 				tk.tgt.visible = tk.ln.visible = !!g;
@@ -544,7 +556,7 @@ IGB.players = (function () {
 				tk.head.lookAt(T.x, headW.y, T.z);
 				if (!tk.seen.p || tk.seen.p.distanceTo(T) > 0.004) tk.seen.t = ts;
 				tk.seen.p = T.clone();
-				const base = me ? 0.95 : 0.5, fade = Math.max(0, Math.min(1, 1 - (ts - tk.seen.t - 1) / 0.5));
+				const base = (me ? 0.95 : 0.5) * tk.here, fade = Math.max(0, Math.min(1, 1 - (ts - tk.seen.t - 1) / 0.5));
 				onWall(tk.tgt, g.wall, T);
 				// (moving, it stands out: a bigger, brighter target on a soft disc, and a bold dotted line; still, just a faint target)
 				tk.tgt.scale.setScalar(1 + fade * 0.7);
@@ -789,8 +801,19 @@ IGB.players = (function () {
 		select(selected);
 	}
 
+	// Everyone starts where the visors hang: in a row along the back wall, on the right, in order,
+	// looking straight ahead
+	function hangAll() {
+		for (let i = 0; i < CONTROLLABLE; i++) {
+			const p = slot(i);
+			$(p).stop(true);
+			Object.assign(p, { X: EDGE - (CONTROLLABLE - 1 - i) * 0.14, Y: 0, Z: -EDGE, wall: 1 });
+			Object.assign(simTarget(i), { X: p.X, Y: 0, Z: 1 });
+		}
+	}
+
 	function startSimulator() {
-		randomMove();
+		hangAll();
 		debugInterval = setInterval(stepDebug, 1000 / DEBUG_RATE);
 	}
 
