@@ -718,6 +718,21 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			if (on) for (const st2 of CHOIR[cho.idx].chord) SND.vox(time, c.root / 2 * Math.pow(2, st2 / 12), 0.1, 1, 'u', 60 / bpm * 4 * 0.95);
 			visuals.push({ time, fn: () => { cho.hum = 1; } });
 		}
+		// squashed pumpkins play their bass notes: straight in on the next eighth, then on every
+		// beat, with a soft pickup on the last sixteenth before each, the pumpkin pumping to it
+		if (!glide && phase !== 'intro') for (const pb of puffs[here] || []) {
+			if (!pb.pressed) continue;
+			const f = freqOf(c.root, pb.deg) / 2;
+			let v = 0;
+			if (pb.fresh && s16 % 2 === 0) { v = 0.6; pb.fresh = false; }
+			else if (!pb.fresh && s16 % 4 === 0) v = 0.45;
+			else if (!pb.fresh && s16 % 4 === 3) v = 0.18;
+			if (!v) continue;
+			if (on) SND.bass(time, f, v, pb.w);
+			if (on && v > 0.5) SND.bass(time, f * 2, 0.18, pb.w);
+			visuals.push({ time, fn: () => { pb.v -= 7 * v; pb.glow = 1; } });
+			if (v > 0.3) scores[pb.who] += 1;
+		}
 		// every player's acorn lands on the beat: on a plank, a note; on the frame, nothing
 		const xy = xylos[here];
 		if (xy && !glide && s16 % 4 === 0 && phase !== 'intro') for (let i = 0; i < count; i++) {
@@ -811,20 +826,25 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const C = CLEARINGS[here];
 		wade(dt, live && !glide);
 		const on = live && !glide;
-		// pumpkins: squat by one to squash it; hold the squat for its drone
+		// pumpkins: stand on one's hotspot to wake it; squat there and it plays its own bass note,
+		// on the beat, for as long as you hold the squat (playStep)
 		for (const pb of puffs[here] || []) {
 			let who = -1;
-			if (on) for (let i = 0; i < count; i++) { const p = latest[i], q = pl[i]; if (p && q.seen && near(p, pb.spot) && q.base !== null && p.py > q.base + SQUAT * 0.7) who = i; }
+			pb.stand = -1;
+			if (on) for (let i = 0; i < count; i++) {
+				const p = latest[i], q = pl[i];
+				if (!p || !q.seen || !near(p, pb.spot)) continue;
+				pb.stand = i;
+				if (q.base !== null && p.py > q.base + SQUAT * 0.7) who = i;
+			}
 			if (who >= 0 && !pb.pressed) {
-				pb.pressed = true;
-				if (audioOn()) { SND.bwomp(clock() + 0.005, 0.5); pb.voice = holdVoice(freqOf(C.root, pb.deg) / 2, 'drone', pb.w); }
+				pb.pressed = true; pb.who = who; pb.fresh = true;
 				spray(pb.pos.clone().setY(0.6), '#ffd27a', 30, 2.2, 2.5);   // (a burst of seeds)
 				pb.v -= 6;   // (a thump down)
 				scores[who] += 3;
 			} else if (who < 0 && pb.pressed) {
 				pb.pressed = false;
 				pb.v += 5;   // (and it springs back up)
-				if (pb.voice) { pb.voice.stop(); pb.voice = null; }
 			}
 			if (pb.pressed && Math.random() < 0.3) spray(pb.pos.clone().setY(0.5), '#ffb84a', 2, 1, 2);
 		}
@@ -2732,9 +2752,9 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	const near = (p, spot, r = STAND) => Math.hypot(p.px - spot.px, p.pz - spot.pz) < r;
 	const labels = [];   // little hints, drawn on the walls: { ci, wall, at, text }
 
-	// PUMPKIN BELLOWS: plump ribbed pumpkins with little faces; squat by one and it
-	// squashes (eyes screwed shut, mouth an O) with a BWOMP and a burst of seeds, drones
-	// while you hold it, and springs back up, wobbling, when you stand
+	// PUMPKIN BASS: plump ribbed pumpkins with little faces, a hotspot each; squat on one and it
+	// squashes (eyes screwed shut, mouth an O) with a burst of seeds and plays its own bass
+	// note on the beat, pumping to it, while you hold it; and springs back up, wobbling, when you stand
 	const puffs = [];
 	let _pumpkinGeo = null;
 	function pumpkinGeo() {   // (a squat sphere, eight deep ribs, dimpled top and bottom; its base on the ground)
@@ -2774,8 +2794,17 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(curl), 40, 0.008, 5), leafM, stem);
 			// its little face, on the front
 			const face = makeFace(body, sz * 1.25, 0, sz * 0.82 * 0.8, sz * 1.01, { gap: 0.3 });
+			// its hotspot: a pad where your avatar stands, its tail reaching under the pumpkin
+			const spot = spotOf(w, along), av = avatarAt(spot.px, spot.pz);
+			const hot = new THREE.Group(); hot.position.set(cx + av.x, 0.035, cz + av.z); g.add(hot);
+			const tdx = pos.x - hot.position.x, tdz = pos.z - hot.position.z, tL = Math.max(0.5, Math.hypot(tdx, tdz));
+			const hotMat = new THREE.MeshBasicMaterial({ color: new THREE.Color('#ff9a30').multiplyScalar(1.2), transparent: true, opacity: 0.4, depthWrite: false, side: THREE.DoubleSide });
+			const pad = new THREE.Mesh(new THREE.ShapeGeometry(hotShape(0.24, sz * 0.62, tL), 24), hotMat);
+			pad.rotation.x = -Math.PI / 2; hot.add(pad);
+			hot.rotation.y = Math.atan2(-tdx, -tdz);
 			labels.push({ ci, wall: w, at: pos.clone().setY(0.1), text: 'SQUAT HERE' });
-			return { root, body, stem, face, sz, pos, w, spot: spotOf(w, along), deg: [-5, -3, -1][k % 3], sq: 0, v: 0, pressed: false, voice: null, blinkT: rr(1, 4), ph: rnd() * 6 };
+			// its own bass note: the root, the fifth, the fourth below
+			return { root, body, stem, face, sz, pos, w, spot, hotMat, deg: [0, 3, -2][k % 3], sq: 0, v: 0, pressed: false, fresh: false, who: -1, stand: -1, glow: 0, voice: null, blinkT: rr(1, 4), ph: rnd() * 6 };
 		});
 	}
 
@@ -3380,7 +3409,12 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		});
 		// pumpkins: a spring, so they squish, overshoot and wobble; a tremble while held; faces to match
 		for (const [ci, list] of puffs.entries()) if (list && clearingGroups[ci].visible) for (const pb of list) {
-			const want = pb.pressed ? 1 + Math.sin(rt * 7 + pb.ph) * 0.06 : 0;   // (held: it breathes with the drone)
+			// (its hotspot: glowing in your colour while you're on it, flaring on each note)
+			pb.glow = Math.max(0, pb.glow - dt * 4);
+			const on = ci === here && pb.stand >= 0;
+			if (on) pb.hotMat.color.set(colour(pb.stand)).multiplyScalar(1.4 + pb.glow * 0.8); else pb.hotMat.color.set('#ff9a30').multiplyScalar(1.2);
+			pb.hotMat.opacity = on ? 0.85 : 0.4 + pulse * 0.12;
+			const want = pb.pressed ? 1 + Math.sin(rt * 7 + pb.ph) * 0.06 : 0;   // (held: it breathes, and pumps to its bass)
 			pb.v += ((want - pb.sq) * 190 - pb.v * 7) * Math.min(dt, 0.05);
 			pb.sq += pb.v * Math.min(dt, 0.05);
 			const q = pb.sq, shake = pb.pressed ? Math.sin(rt * 38) * 0.012 : 0;
