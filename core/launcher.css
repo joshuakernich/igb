@@ -350,6 +350,12 @@ gamebox-simulator {
 	height: 210px;
 }
 
+gamebox-view {
+	display: block;
+	width: 300px;
+	height: 210px;
+}
+
 gamebox-simulator canvas {
 	display: block;
 }
@@ -430,7 +436,7 @@ gamebox-pips button.on {
 	box-shadow: 0 0 0 2px rgba(14, 16, 32, 1), 0 0 0 3.5px white;
 }
 
-/* the controls: a key (or two) and what it does, two to a row */
+/* the controls: a key (or two) and what it does, two to a row; keys light up as they're used */
 gamebox-hint {
 	display: grid;
 	grid-template-columns: auto 1fr auto 1fr;
@@ -439,7 +445,10 @@ gamebox-hint {
 	margin-top: 9px;
 	padding-top: 9px;
 	border-top: 1px solid rgba(255, 255, 255, 0.1);
-	color: rgba(255, 255, 255, 0.72);
+	color: rgba(255, 255, 255, 0.6);
+	font: 600 8px/1 Rubik, sans-serif;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
 	white-space: nowrap;
 }
 
@@ -451,20 +460,27 @@ gamebox-hint > span:nth-child(odd) {
 
 gamebox-hint kbd {
 	display: inline-block;
-	min-width: 12px;
-	padding: 0 4px;
-	border-radius: 4px;
-	background: linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08));
-	box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.18);
+	min-width: 9px;
+	padding: 0 3px;
+	border-radius: 0;
+	background: rgba(255, 255, 255, 0.12);
+	box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.28);
 	color: white;
-	font: 600 9px/15px Rubik, sans-serif;
+	font: 700 7px/12px Rubik, sans-serif;
+	letter-spacing: 0.06em;
 	text-align: center;
+	transition: background 0.08s, color 0.08s, box-shadow 0.08s;
 }
 
 gamebox-hint kbd.mouse {
 	background: none;
-	box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3);
-	font-weight: 400;
+	font-weight: 500;
+}
+
+gamebox-hint kbd.lit {
+	background: white;
+	color: #14162c;
+	box-shadow: 0 0 0 1px white, 0 0 8px rgba(255, 255, 255, 0.7);
 }
 
 /* TOUCH!, 150 CM: a word over the little box for a moment */
