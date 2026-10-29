@@ -2492,10 +2492,11 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// (the food, then each tool in turn), ticked off as it's handed over; how
 	// patient it still is along the bottom
 	const BROW = 66;
+	const ORDER_TOP = 160;   // (the clock hangs from the top of every wall, its label under it)
 	function drawOrder(ctx, c, x, headY, w) {
 		const rows = c.parts.length;
 		const h = 46 + rows * BROW + 18;
-		const y = headY - h - 26;
+		const y = Math.max(ORDER_TOP, headY - h - 26);   // (always below the clock and its label)
 		const bob = Math.sin(rt * 2 + c.seed) * 3;
 		ctx.save();
 		ctx.translate(x, y + bob);
