@@ -360,34 +360,39 @@ gamebox-simulator canvas {
 	display: block;
 }
 
-/* the controls card, beside the box */
+/* the controls card, close beside the box: a blueprint panel */
 gamebox-panel {
 	display: block;
 	position: absolute;
-	top: 20px;
-	left: 318px;
-	width: 290px;
-	padding: 10px 12px 10px;
+	top: 26px;
+	left: 300px;
+	padding: 9px 11px 10px;
 	box-sizing: border-box;
-	border-radius: 12px;
-	background: rgba(14, 16, 32, 0.78);
-	border: 1px solid rgba(160, 200, 255, 0.18);
-	box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
-	backdrop-filter: blur(6px);
-	color: white;
-	font: 400 11px/1.4 Rubik, sans-serif;
+	border: 1px solid rgba(220, 235, 255, 0.75);
+	background:
+		linear-gradient(rgba(220, 235, 255, 0.07) 1px, transparent 1px) 0 0 / 8px 8px,
+		linear-gradient(90deg, rgba(220, 235, 255, 0.07) 1px, transparent 1px) 0 0 / 8px 8px,
+		linear-gradient(rgba(220, 235, 255, 0.14) 1px, transparent 1px) 0 0 / 40px 40px,
+		linear-gradient(90deg, rgba(220, 235, 255, 0.14) 1px, transparent 1px) 0 0 / 40px 40px,
+		#1c3f8c;
+	box-shadow: 0 0 0 3px rgba(28, 63, 140, 0.35);
+	color: #eaf2ff;
 }
 
+/* who you are: in the same small capitals as the list */
 gamebox-player {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	font-weight: 400;
-	font-size: 13px;
+	gap: 6px;
+	margin-bottom: 8px;
+	font: 400 8px/1 Rubik, sans-serif;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	white-space: nowrap;
 }
 
 gamebox-player b { font-weight: 400; }
-gamebox-player span { opacity: 0.55; font-weight: 400; font-size: 11px; }
+gamebox-player span { opacity: 0.6; }
 
 /* a numbered square per player: click one to drive them (again to let go) */
 gamebox-pips {
@@ -426,10 +431,7 @@ gamebox-hint {
 	grid-template-columns: auto 1fr;
 	gap: 5px 8px;
 	align-items: center;
-	margin-top: 9px;
-	padding-top: 9px;
-	border-top: 1px solid rgba(255, 255, 255, 0.1);
-	color: rgba(255, 255, 255, 0.6);
+	color: rgba(234, 242, 255, 0.75);
 	font: 400 8px/1 Rubik, sans-serif;
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
@@ -447,8 +449,8 @@ gamebox-hint kbd {
 	min-width: 9px;
 	padding: 0 3px;
 	border-radius: 0;
-	background: rgba(255, 255, 255, 0.12);
-	box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.28);
+	background: rgba(220, 235, 255, 0.1);
+	box-shadow: 0 0 0 1px rgba(220, 235, 255, 0.7);
 	color: white;
 	font: 400 7px/12px Rubik, sans-serif;
 	letter-spacing: 0.06em;
@@ -473,7 +475,7 @@ gamebox-hint kbd.mouse.lit {
 
 gamebox-hint kbd.lit {
 	background: white;
-	color: #14162c;
+	color: #1c3f8c;
 	box-shadow: 0 0 0 1px white, 0 0 8px rgba(255, 255, 255, 0.7);
 }
 
