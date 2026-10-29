@@ -1630,23 +1630,44 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			c.bend = 1.6;   // (the bendiest thing in the woods)
 		},
 		frog(c) {
+			// a cartoon frog sat up on its haunches: a big wide head with bulging eyes up top, a huge
+			// grin and two nostrils; a pear-shaped body with a pale belly; straight arms down to splayed
+			// webbed hands; folded back legs at its sides and long webbed feet, all on the ground
 			const skin = slickMat(c.tint);
 			c.limbMat = skin;
-			mesh(GEO.sph, skin, c.bouncer, 0, 0.32, 0, 0.42, 0.32, 0.36);
-			mesh(GEO.sph, slickMat(new THREE.Color(c.tint).lerp(new THREE.Color('#fff6c8'), 0.6)), c.bouncer, 0, 0.26, 0.14, 0.32, 0.22, 0.26);
-			for (const sx of [-1, 1]) mesh(GEO.sph, skin, c.bouncer, sx * 0.2, 0.56, 0.08, 0.16, 0.14, 0.15);
-			c.face = makeFace(c.bouncer, 0.62, 0, 0.5, 0.26, { gap: 0.53 });   // (the eyes sit on its two eye-bumps, x ±0.2)
-			c.parts.sac = mesh(GEO.sph, new THREE.MeshPhysicalMaterial({ color: '#ffd8b0', roughness: 0.15, clearcoat: 1, sheen: 0.6, sheenColor: new THREE.Color('#ffffff') }), c.bouncer, 0, 0.2, 0.3, 0.12, 0.1, 0.1);
-			c.parts.tongue = mesh(GEO.cyl, MAT.tongue, c.bouncer, 0, 0.3, 0.32, 0.03, 0.001, 0.03);
+			const pale = slickMat(new THREE.Color(c.tint).lerp(new THREE.Color('#fff6c8'), 0.6));
+			mesh(GEO.sph, skin, c.bouncer, 0, 0.36, -0.02, 0.3, 0.34, 0.27);   // (the body)
+			mesh(GEO.sph, pale, c.bouncer, 0, 0.3, 0.1, 0.23, 0.25, 0.18);     // (the belly)
+			for (const sx of [-1, 1]) mesh(GEO.sph, skin, c.bouncer, sx * 0.3, 0.17, -0.06, 0.15, 0.14, 0.24);   // (folded thighs)
+			mesh(GEO.sph, skin, c.bouncer, 0, 0.78, 0.04, 0.42, 0.28, 0.36);   // (the big wide head)
+			for (const sx of [-1, 1]) mesh(GEO.sph, skin, c.bouncer, sx * 0.22, 1.0, 0.2, 0.17, 0.17, 0.17);   // (its eye bulges)
+			// (its face: the eyes on the bulges, a grin right across)
+			c.face = makeFace(c.bouncer, 0.9, 0, 0.93, 0.36, { gap: 0.4 });
+			c.face.mouth.smile.scale.x *= 2.3; c.face.mouth.open.scale.x *= 2.3;
+			for (const t of c.face.mouth.teeth) t.scale.set(0.0001, 0.0001, 0.0001);
+			for (const sx of [-1, 1]) mesh(GEO.sph, MAT.pupil, c.bouncer, sx * 0.05, 0.86, 0.39, 0.012).castShadow = false;   // (nostrils)
+			c.parts.sac = mesh(GEO.sph, new THREE.MeshPhysicalMaterial({ color: '#ffd8b0', roughness: 0.15, clearcoat: 1, sheen: 0.6, sheenColor: new THREE.Color('#ffffff') }), c.bouncer, 0, 0.6, 0.3, 0.12, 0.1, 0.1);
+			c.parts.tongue = mesh(GEO.cyl, MAT.tongue, c.bouncer, 0, 0.72, 0.38, 0.03, 0.001, 0.03);
 			c.parts.tongue.rotation.x = Math.PI / 2;
-			limb(c, [-0.3, 0.25, 0.1], [-0.42, 0.04, 0.3], 0.045, 'glove', -1);
-			limb(c, [0.3, 0.25, 0.1], [0.42, 0.04, 0.3], 0.045, 'glove', 1);
-			limb(c, [-0.3, 0.12, -0.1], [-0.5, 0.0, 0.1], 0.06, 'shoe', -1, true);
-			limb(c, [0.3, 0.12, -0.1], [0.5, 0.0, 0.1], 0.06, 'shoe', 1, true);
-			for (const L of c.limbs) L.planted = true;   // (hands and feet resting on the ground, however it bounces)
+			// arms straight down to the ground, legs folded, feet long and forward
+			limb(c, [-0.22, 0.5, 0.14], [-0.25, 0.0, 0.3], 0.04, 'glove', -1);
+			limb(c, [0.22, 0.5, 0.14], [0.25, 0.0, 0.3], 0.04, 'glove', 1);
+			limb(c, [-0.32, 0.12, 0.08], [-0.45, 0.0, 0.32], 0.05, 'shoe', -1, true);
+			limb(c, [0.32, 0.12, 0.08], [0.45, 0.0, 0.32], 0.05, 'shoe', 1, true);
+			for (const L of c.limbs) {
+				L.planted = true;   // (hands and feet resting on the ground, however it bounces)
+				// (a webbed hand or foot: a flat pad of skin and three round toes splayed out in front)
+				const big = L.leg ? 1.25 : 1;
+				L.tip.material = skin;
+				L.tip.scale.set(0.075 * big, 0.022, 0.075 * big);
+				for (const a of [-0.7, 0, 0.7]) {
+					const toe = mesh(GEO.sph, skin, L.tip, Math.sin(a) * 1.25, 0.2, Math.cos(a) * 1.25, 0.4, 1.3, 0.4);
+					toe.castShadow = false;
+				}
+			}
 			// spots on its back
-			for (let k = 0; k < 7; k++) { const a = rr(-1.2, 1.2), e = rr(0.3, 1.1); mesh(GEO.sphLo, slickMat(new THREE.Color(c.tint).multiplyScalar(0.55)), c.bouncer, Math.sin(a) * Math.sin(e) * 0.42, 0.32 + Math.cos(e) * 0.32, -Math.cos(a) * Math.sin(e) * 0.36, rr(0.04, 0.07), 0.02, rr(0.04, 0.07)).castShadow = false; }
-			c.top = 0.9;
+			for (let k = 0; k < 7; k++) { const a = rr(-1.2, 1.2), e = rr(0.3, 1.1); mesh(GEO.sphLo, slickMat(new THREE.Color(c.tint).multiplyScalar(0.55)), c.bouncer, Math.sin(a) * Math.sin(e) * 0.3, 0.36 + Math.cos(e) * 0.34, -Math.cos(a) * Math.sin(e) * 0.27, rr(0.035, 0.06), 0.02, rr(0.035, 0.06)).castShadow = false; }
+			c.top = 1.25;
 		},
 		hedgehog(c) {
 			const fur = furMat(c.tint);
@@ -1687,27 +1708,42 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			c.top = 1.0;
 		},
 		snail(c) {
-			const body = slickMat('#c8b890');
+			// a classic cartoon snail: a long foot tapering to a point behind, a tall rounded neck rising
+			// at its front with a sly smile, short thick eye stalks with big eyes in their lids, and a
+			// big round ribbed shell sat snug on its back
+			const body = slickMat('#e8c896');
 			c.limbMat = body;
-			const foot = mesh(GEO.sph, body, c.bouncer, 0, 0.14, 0.05, 0.25, 0.14, 0.55);
-			foot.rotation.x = 0.1;
-			const head = mesh(GEO.sph, body, c.bouncer, 0, 0.32, 0.4, 0.2, 0.24, 0.2);
-			c.face = makeFace(c.bouncer, 0.4, 0, 0.33, 0.57, { gap: 0.2 });
+			// (its head and body one worm-like piece: a tube from a pointed tail, flat along the ground as its
+			// foot, curving up into its neck and ending in a round head, thinning only at the tail)
+			const spine = new THREE.CatmullRomCurve3([[0, 0.05, -0.88], [0, 0.09, -0.45], [0, 0.11, 0.0], [0, 0.17, 0.36], [0, 0.42, 0.52], [0, 0.7, 0.5]].map((v) => new THREE.Vector3(...v)));
+			const SEG = 60, RADS = 20, wg = new THREE.TubeGeometry(spine, SEG, 0.2, RADS), wa = wg.attributes.position, wc = new THREE.Vector3(), wv = new THREE.Vector3();
+			for (let i = 0; i <= SEG; i++) {
+				const t = i / SEG, k = Math.min(1, 0.08 + t * 3.5), flat = lerp(0.5, 1, clamp((t - 0.45) / 0.3, 0, 1));   // (tapered at the tail; flattened along the foot)
+				spine.getPointAt(t, wc);
+				for (let j = 0; j <= RADS; j++) { const n = i * (RADS + 1) + j; wv.fromBufferAttribute(wa, n).sub(wc); wv.y *= flat; wv.multiplyScalar(k).add(wc); wa.setXYZ(n, wv.x, wv.y, wv.z); }
+			}
+			wg.computeVertexNormals();
+			mesh(wg, body, c.bouncer);
+			mesh(GEO.sph, body, c.bouncer, 0, 0.7, 0.5, 0.2, 0.2, 0.2);   // (the round head capping it)
+			c.face = makeFace(c.bouncer, 0.42, 0, 0.6, 0.69, { gap: 0.2 });
 			// (just a mouth on its face: its eyes are the ones on its stalks)
 			for (const e of c.face.eyes) e.eye.visible = false;
 			c.face.g.traverse((o) => { if (o.material === MAT.cheek) o.visible = false; });
-			const shell = new THREE.Group(); shell.position.set(0, 0.48, -0.12); c.bouncer.add(shell);
-			const shellMat = new THREE.MeshPhysicalMaterial({ color: c.tint, roughness: 0.2, clearcoat: 1, iridescence: 1, iridescenceIOR: 1.6, bumpMap: TEX.scales, bumpScale: 0.6, emissive: c.tint, emissiveIntensity: 0.1 });
-			// (one fat tube coiled two and a half turns, growing as it goes, in the snail's side plane: seen side-on, a spiral)
-			// (turned so its mouth, the coil's outer end, sits low at the front, over the body, and the coil winds up and back)
+			const shell = new THREE.Group(); shell.position.set(0, 0.5, -0.12); shell.scale.setScalar(1.7); c.bouncer.add(shell);
+			const shellMat = new THREE.MeshPhysicalMaterial({ color: c.tint, roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.2, emissive: c.tint, emissiveIntensity: 0.08 });
+			// (one fat ribbed tube coiled two and a half turns, growing as it goes, in the snail's side plane:
+			// seen side-on, a spiral. Mirrored and turned so that, head to the left, it winds clockwise: its
+			// mouth, the coil's outer end, flush behind the neck on the back, the coil rising up from there,
+			// over the top and round and in)
 			const coil = mesh(spiralShellGeo(), shellMat, shell, 0, 0, 0);
-			coil.rotation.x = -Math.PI * 0.75;
+			coil.scale.y = -1;
+			coil.rotation.x = Math.PI * 1.22;
 			c.parts.shell = shell; c.parts.shellMat = shellMat;
-			limb(c, [-0.08, 0.5, 0.42], [-0.16, 0.85, 0.5], 0.02, 'eye', -1);
-			limb(c, [0.08, 0.5, 0.42], [0.16, 0.85, 0.5], 0.02, 'eye', 1);
-			limb(c, [-0.18, 0.3, 0.35], [-0.42, 0.25, 0.5], 0.03, 'glove', -1);
-			limb(c, [0.18, 0.3, 0.35], [0.42, 0.3, 0.5], 0.03, 'glove', 1);
-			c.top = 1.05;
+			limb(c, [-0.07, 0.84, 0.5], [-0.13, 1.06, 0.55], 0.035, 'eye', -1);   // (the stalks out of the top of its head)
+			limb(c, [0.07, 0.84, 0.5], [0.13, 1.06, 0.55], 0.035, 'eye', 1);
+			// (each eye in a lid of its skin, behind the black)
+			for (const L of c.limbs) if (L.end === 'eye') { mesh(GEO.sph, body, L.tip, 0, 0, -0.03, 0.1, 0.11, 0.1); L.tip.scale.setScalar(1.25); }
+			c.top = 1.2;   // (no arms: just its eye stalks)
 		},
 		owl(c) {
 			const fur = furMat(c.tint, '#ffe8c8');
@@ -3279,12 +3315,12 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		for (let i = 0; i <= SEG; i++) {
 			const th = th1 * i / SEG, p = at(th), r = OUT * Math.exp(b * (th - th1));
 			const T2 = at(th + 0.01).sub(at(th - 0.01)).normalize(), N = new THREE.Vector3().crossVectors(X, T2).normalize();
-			const tr = r * 0.52 + 0.004;   // (a fat tube: each turn nearly touches the last)
+			const tr = (r * 0.52 + 0.004) * (1 + 0.07 * Math.cos(th * 10));   // (a fat tube, each turn nearly touching the last, ribbed across: ten ribs a turn)
 			for (let j = 0; j <= RAD; j++) {
 				const a = j / RAD * Math.PI * 2;
 				const v = p.clone().addScaledVector(N, Math.cos(a) * tr).addScaledVector(X, Math.sin(a) * tr * 0.92);
 				pos.push(v.x, v.y, v.z);
-				if (i && j) { const A = (i - 1) * (RAD + 1) + j - 1, B = A + RAD + 1; idx.push(A, B, A + 1, A + 1, B, B + 1); }
+				if (i && j) { const A = (i - 1) * (RAD + 1) + j - 1, B = A + RAD + 1; idx.push(A, A + 1, B, A + 1, B + 1, B); }   // (wound to face outward)
 			}
 		}
 		const g = new THREE.BufferGeometry();
@@ -3808,7 +3844,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			if (L.planted) {
 				// (flat on the ground, wherever the body bobs to; tucked up with it, mid-hop)
 				const air = Math.max(c.hopT, c.croakHop || 0) > 0.05, sy = c.bouncer.scale.y || 1;
-				const half = L.r * (L.end === 'shoe' ? 0.7 : 1.1);   // (half the tip's height)
+				const half = L.tip ? L.tip.scale.y : L.r;   // (half the tip's height: it's a unit sphere, scaled)
 				_b.y = air ? L.rest.y + 0.06 : (half - c.bouncer.position.y) / sy;
 				_b.x += sw * 0.015;   // (a little shuffle to the beat, still on the ground)
 			} else if (L.ear) {
@@ -3838,7 +3874,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			if (!L.m.material || L.m.material === MAT.dark) L.m.material = c.limbMat || MAT.dark;
 			if (L.tip) {
 				L.tip.position.copy(_b);
-				if (L.end === 'glove') L.tip.rotation.z = sw * 0.4;
+				if (L.end === 'glove' && !L.planted) L.tip.rotation.z = sw * 0.4;
 				if (L.end === 'eye') L.tip.lookAt(walls.rig.position);   // (stalk eyes watch the walls)
 			}
 		}
