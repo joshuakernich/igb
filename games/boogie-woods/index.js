@@ -369,6 +369,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				lg.gain.setTargetAtTime(0.1 + e * 0.25, t, 0.2);
 				if (pan) pan.pan.setTargetAtTime(clamp(p, -1, 1) * 0.6, t, 0.1);
 			},
+			glide(nf) { const t = ac.currentTime; for (const pt of parts) for (const o of pt.oscs) o.frequency.setTargetAtTime(nf * pt.m, t, 0.12); },
 			stop() { const t = ac.currentTime; g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(0.0001, t, 0.15); for (const pt of parts) for (const o of pt.oscs) o.stop(t + 1); lfo.stop(t + 1); },
 		};
 	}
@@ -778,23 +779,26 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		ripples = ripples.filter((r) => r.t < 0.5);
 	}
 
-	// Each player in the pond has their own held shimmering tone (their own note of the
-	// scale): a faint glassy hum standing still, swelling and brightening as they wade,
-	// fading away when they step out of the water.
-	const WADE_DEG = [5, 7, 9, 6, 8, 10];
+	// Each player in the pond has their own held shimmering tone, its pitch set by how fast
+	// they wade: a faint low glassy hum standing still, swelling, brightening and rising as
+	// they go faster, fading away when they step out of the water.
 	function wade(dt, on) {
 		const pd = ponds[here];
 		if (pd) pd.U.uNow.value = rt;
 		for (let i = 0; i < pl.length; i++) {
 			const q = pl[i];
 			const ax = avCap(q.x), az = avCap(q.z);
-			const inPond = !!pd && on && i < count && q.seen && az < -POND.front && Math.abs(ax) < POND.half;
+			const inPond = !!pd && on && i < count && q.seen && inWedge(ax, -az);
 			const v = inPond ? q.speed * 2 * R : 0;   // (m/s)
 			// (its energy: quick to swell while you move, slow to settle, gone a second after you leave)
 			const want = inPond ? 0.15 + 0.85 * clamp(v / 1.0, 0, 1) : 0;
 			q.shimE = lerp(q.shimE || 0, want, 1 - Math.exp(-dt * (want > (q.shimE || 0) ? 4 : inPond ? 1.2 : 2.5)));
-			if (inPond && !q.shim && audioOn()) q.shim = shimmerVoice(freqOf(CLEARINGS[here].root, WADE_DEG[i % 6]), 1);
+			// (the pitch: how fast you wade, gliding up an octave and a half from the scale's fifth)
+			q.shimV = lerp(q.shimV || 0, v, 1 - Math.exp(-dt * 3));
+			const wf = freqOf(CLEARINGS[here].root, 3) * Math.pow(2, clamp(q.shimV / 1.3, 0, 1) * 1.5);
+			if (inPond && !q.shim && audioOn()) q.shim = shimmerVoice(wf, 1);
 			if (q.shim) {
+				q.shim.glide(wf);
 				q.shim.set(q.shimE, ax / POND.half);
 				if (!inPond && q.shimE < 0.01) { q.shim.stop(); q.shim = null; }
 			}
@@ -2350,7 +2354,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		});
 		plantOK = (x, z, pad = 0) => {
 			if (Math.abs(x - cx) < R + 0.35 && Math.abs(z - cz) < R + 0.35) return false;
-			if (C.pond && z < cz + 0.2 && z > cz - POND.back - 1.4 && Math.abs(x - cx) < POND.half + 0.5) return false;   // (the pond and its waterfall)
+			if (C.pond && z < cz + 0.2 && z > cz - POND.back - 1.4 && Math.abs(x - cx) < Math.min(POND.half, (cz - z) * POND.k) + 0.5) return false;   // (the pond and its waterfall)
 			if (pathDist(x - cx, z) < 1.7) return false;   // (the winding path, ahead and behind: the walk goes through)
 			if (C.chimes && z < cz - 7 && z > cz - 10 && Math.abs(x - cx) < 4.6) return false;   // (under the arch: the chimes)
 			if (C.xylo && z < cz - R + 0.2 && z > cz - R - 1.1 && Math.abs(x - cx) < R + 0.4) return false;   // (the logs)
@@ -2908,9 +2912,16 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	// face, a waterfall pouring into it. Walk through it and your avatar leaves a smooth,
 	// spreading disturbance in the water (shaded right on the surface), and each ripple
 	// rings out a shimmer, pitched by where you are across the pond.
-	const POND = { half: 2.9, front: 0.15, back: 7.2, maxRip: 24 };
+	// (a wedge, narrowing toward the room's middle, so it lies only in the front wall's view: |x| < k·depth)
+	const POND = { half: 2.9, front: 0.15, back: 7.2, maxRip: 24, k: 0.85, gap: 1.1 };
+	const inWedge = (dx, dz) => dz > POND.front && Math.abs(dx) < Math.min(POND.half, dz * POND.k);   // (dz: metres out from the middle toward the front)
 	const ponds = [];
 	function buildPond(g, ci, cx, cz) {
+		// (where the path runs on past the back of the pond: the rocks part there, and the
+		// waterfall pours off the other side)
+		const zb = cz - POND.back, s0 = Math.floor(-zb / SPACING), t0 = -zb / SPACING - s0;
+		const gapX = cx + (s0 >= 0 && s0 < PATH_AMP.length ? pathX(s0, t0) : 0);
+		const fallX = gapX - cx >= 0 ? -1.9 : 1.9;
 		const unit = new THREE.Group(); g.add(unit);
 		const W2 = POND.half * 2, D2 = POND.back - POND.front, zc = cz - (POND.front + POND.back) / 2;
 		const rip = Array.from({ length: POND.maxRip }, () => new THREE.Vector4(0, 0, -99, 0));
@@ -2923,7 +2934,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				void main(){
 					// the surface's slope: a gentle swell, the waterfall's churn, and every ripple's spreading ring
 					vec2 sl = vec2(sin(vW.x * 1.7 + uT * 0.9 + vW.z * 0.6), cos(vW.z * 1.3 - uT * 0.7)) * 0.05;
-					float churn = smoothstep(2.6, 0.0, length(vec2(vW.x - ${cx.toFixed(3)}, vW.z - ${(cz - POND.back + 0.3).toFixed(3)})));
+					float churn = smoothstep(2.6, 0.0, length(vec2(vW.x - ${(cx + fallX).toFixed(3)}, vW.z - ${(cz - POND.back + 0.3).toFixed(3)})));
 					sl += (vec2(fbm(vW.xz * 3.0 + uT * vec2(0.4, 1.4)), fbm(vW.xz * 3.0 - uT * vec2(0.6, 1.1))) - 0.5) * 0.9 * churn;
 					float glow = 0.0;
 					for (int i = 0; i < ${POND.maxRip}; i++) {
@@ -2946,7 +2957,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 					c += uSky * glow * 0.35 + vec3(0.9, 1.0, 1.0) * churn * 0.12 * fbm(vW.xz * 6.0 + uT * vec2(0.2, 2.0));
 					// (a soft, wobbly shore all round)
 					vec2 e = min(vUv, 1.0 - vUv) * vec2(${W2.toFixed(3)}, ${D2.toFixed(3)});
-					float shore = smoothstep(0.0, 0.5, min(e.x, e.y) + (fbm(vW.xz * 1.6) - 0.5) * 0.6);
+					float wedge = (${cz.toFixed(3)} - vW.z) * ${POND.k.toFixed(3)} - abs(vW.x - ${cx.toFixed(3)});   // (only in the front wall's view)
+					float shore = smoothstep(0.0, 0.5, min(min(e.x, e.y), wedge * 0.8) + (fbm(vW.xz * 1.6) - 0.5) * 0.6);
 					gl_FragColor = vec4(c, 0.92 * shore);
 				}`,
 		}));
@@ -2961,12 +2973,14 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const stone = new THREE.MeshStandardMaterial({ color: '#5a6a5a', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 4, roughness: 0.85 });
 		for (let k = 0; k < 26; k++) {
 			const side = k % 2 ? 1 : -1, z = cz - POND.front - rr(0.2, D2 - 0.4);
-			mesh(ROCKS[k % ROCKS.length], stone, unit, cx + side * (POND.half + rr(-0.05, 0.25)), 0.08, z, rr(0.18, 0.32), rr(0.1, 0.18), rr(0.18, 0.3));
+			mesh(ROCKS[k % ROCKS.length], stone, unit, cx + side * (Math.min(POND.half, (cz - z) * POND.k) + rr(-0.05, 0.25)), 0.08, z, rr(0.18, 0.32), rr(0.1, 0.18), rr(0.18, 0.3));
 		}
 		// the rock face at the back, and the waterfall pouring off it
-		const zb = cz - POND.back;
-		for (let k = 0; k < 22; k++) {
+		// (split down the middle where the path runs on: a gap through the rocks)
+		for (let k = 0, n = 0; n < 26 && k < 200; k++) {
 			const x = cx + rr(-POND.half - 0.6, POND.half + 0.6), y = rr(0, 3.6) * (1 - Math.abs(x - cx) / (POND.half + 1.5) * 0.4);
+			if (Math.abs(x - gapX) < POND.gap + 0.5) continue;
+			n++;
 			const r = mesh(ROCKS[k % ROCKS.length], stone, unit, x, y, zb - rr(0.2, 0.7), rr(0.6, 1.1), rr(0.45, 0.8), rr(0.5, 0.8));
 			r.rotation.set(rr(-0.4, 0.4), rnd() * 6, rr(-0.4, 0.4));
 		}
@@ -2983,15 +2997,15 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 					gl_FragColor = vec4(vec3(0.75, 0.95, 1.0) * 1.6 * a, a);
 				}`,
 		}));
-		fall.position.set(cx, 1.8, zb + 0.15);
+		fall.position.set(cx + fallX, 1.8, zb + 0.15);   // (off to one side of the gap)
 		unit.add(fall);
-		sparkles(unit, cx, zb + 0.5, 160, '#e8ffff', 0.9, 0.05, 0.9, 0.08);   // (spray where it lands)
+		sparkles(unit, cx + fallX, zb + 0.5, 160, '#e8ffff', 0.9, 0.05, 0.9, 0.08);   // (spray where it lands)
 		// lily pads drifting on the water, a few with glowing buds
 		const padMat = new THREE.MeshPhysicalMaterial({ color: '#3a9a3a', roughness: 0.25, clearcoat: 1, side: THREE.DoubleSide });
 		const pads = [];
 		for (let k = 0, tries = 0; k < 12 && tries < 200; tries++) {
 			const x = cx + rr(-POND.half + 0.4, POND.half - 0.4), z = cz - POND.front - rr(0.6, D2 - 1.8);
-			if (pads.some((pd) => Math.hypot(x - pd.x, z - pd.z) < 0.8)) continue;
+			if (pads.some((pd) => Math.hypot(x - pd.x, z - pd.z) < 0.8) || !inWedge(x - cx, cz - z - 0.3)) continue;
 			const pad = mesh(new THREE.CircleGeometry(rr(0.26, 0.4), 24, 0.3, Math.PI * 2 - 0.5), padMat, unit, x, 0.03, z);
 			pad.rotation.x = -Math.PI / 2; pad.rotation.z = rnd() * 6; pad.castShadow = false;
 			const budMat = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(0.85 + k * 0.02, 0.8, 0.65) });
