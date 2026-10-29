@@ -685,11 +685,11 @@ IGB.players = (function () {
 						<span><kbd k=w>W</kbd><kbd k=a>A</kbd><kbd k=s>S</kbd><kbd k=d>D</kbd></span><span>WALK</span>
 						<span><kbd k=shift>SHIFT</kbd></span><span>SQUAT</span>
 						<span><kbd k=space>SPACE</kbd></span><span>JUMP</span>
-						<span><kbd k=q>Q</kbd><kbd k=e>E</kbd></span><span>SHORTER / TALLER</span>
-						<span><kbd k=r>R</kbd></span><span>SHUFFLE THE OTHERS</span>
-						<span><kbd k=floor class=mouse>MOUSE ON FLOOR</kbd></span><span>MOVE THERE</span>
+						<span><kbd k=q>Q</kbd><kbd k=e>E</kbd></span><span>HEIGHT</span>
+						<span><kbd k=r>R</kbd></span><span>SCATTER</span>
+						<span><kbd k=floor class=mouse>MOUSE ON FLOOR</kbd></span><span>MOVE</span>
 						<span><kbd k=wall class=mouse>MOUSE ON WALL</kbd></span><span>GAZE</span>
-						<span><kbd k=click class=mouse>CLICK WALL</kbd></span><span>TOUCH IT</span>
+						<span><kbd k=click class=mouse>CLICK WALL</kbd></span><span>TOUCH</span>
 					</gamebox-hint>
 				</gamebox-panel>
 			</gamebox-simulator>
