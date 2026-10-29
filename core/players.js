@@ -667,6 +667,9 @@ IGB.players = (function () {
 		drawSimulator();
 	}
 
+	// a little mouse, for the mouse controls
+	const MOUSE = '<svg viewBox="0 0 8 12" width="6" height="9"><rect x="0.6" y="0.6" width="6.8" height="10.8" rx="3.4" fill="none" stroke="currentColor" stroke-width="1.1"/><path d="M4 1v3.4" stroke="currentColor" stroke-width="1.1"/></svg>';
+
 	// Build the simulator inside $parent. Side order: left wall, front wall,
 	// right wall, floor. Coordinates come from the mouse position over each side.
 	function mountSimulator($parent) {
@@ -678,13 +681,13 @@ IGB.players = (function () {
 					<gamebox-hint>
 						<span><gamebox-pips>${COLS.map((c, i) => `<button pip=${i} style="--c:${c}" title="Drive player ${i + 1}">${i + 1}</button>`).join('')}</gamebox-pips><kbd k=tab>TAB</kbd></span><span>PICK A PLAYER</span>
 						<span><kbd k=w>W</kbd><kbd k=a>A</kbd><kbd k=s>S</kbd><kbd k=d>D</kbd></span><span>WALK</span>
-						<span><kbd k=floor class=mouse>MOUSE ON FLOOR</kbd></span><span>MOVE THERE</span>
 						<span><kbd k=shift>SHIFT</kbd></span><span>SQUAT</span>
 						<span><kbd k=space>SPACE</kbd></span><span>JUMP</span>
 						<span><kbd k=q>Q</kbd><kbd k=e>E</kbd></span><span>SHORTER / TALLER</span>
-						<span><kbd k=wall class=mouse>POINT AT WALL</kbd></span><span>LOOK</span>
-						<span><kbd k=click class=mouse>CLICK WALL</kbd></span><span>TOUCH IT</span>
 						<span><kbd k=r>R</kbd></span><span>SHUFFLE THE OTHERS</span>
+						<span><kbd k=floor class=mouse>${MOUSE}MOUSE ON FLOOR</kbd></span><span>MOVE THERE</span>
+						<span><kbd k=wall class=mouse>${MOUSE}POINT AT WALL</kbd></span><span>LOOK</span>
+						<span><kbd k=click class=mouse>${MOUSE}CLICK WALL</kbd></span><span>TOUCH IT</span>
 					</gamebox-hint>
 				</gamebox-panel>
 			</gamebox-simulator>

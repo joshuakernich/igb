@@ -444,8 +444,8 @@ gamebox-hint kbd {
 	min-width: 9px;
 	padding: 0 3px;
 	border-radius: 0;
-	background: rgba(220, 235, 255, 0.1);
-	box-shadow: 0 0 0 1px rgba(220, 235, 255, 0.7);
+	background: rgba(255, 255, 255, 0.16);
+	box-shadow: none;
 	color: white;
 	font: 400 7px/12px Rubik, sans-serif;
 	letter-spacing: 0.06em;
@@ -455,6 +455,9 @@ gamebox-hint kbd {
 
 /* (a mouse control: just words, no key round it) */
 gamebox-hint kbd.mouse {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
 	padding: 0;
 	background: none;
 	box-shadow: none;
@@ -471,7 +474,6 @@ gamebox-hint kbd.mouse.lit {
 gamebox-hint kbd.lit {
 	background: white;
 	color: #1c3f8c;
-	box-shadow: 0 0 0 1px white, 0 0 8px rgba(255, 255, 255, 0.7);
 }
 
 /* TOUCH!, 150 CM: a word over the little box for a moment */
