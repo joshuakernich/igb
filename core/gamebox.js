@@ -1352,5 +1352,5 @@ function loopState() {
 	return { t, done, max: L.max };
 }
 
-window.gamebox = { canvas, startLoop, loopState, start: startGame, setView(v) { if (VIEWS[v]) { view = v; showView(); } }, games: SONIC, get game() { return game; }, get beat() { return game && game.state ? (game.state() || {}).beat : null; } };
+window.gamebox = { canvas, strip, startLoop, loopState, start: startGame, setView(v) { if (VIEWS[v]) { view = v; showView(); } }, games: SONIC, get game() { return game; }, get beat() { return game && game.state ? (game.state() || {}).beat : null; } };
 startGame(params.get('game') || SONIC[0].id, +(params.get('players') || 3));

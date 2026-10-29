@@ -1860,6 +1860,14 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		},
 		timeLeft(s) { show.setTimeLeft(s); },   // the show's clock
 		tapLeft(s) { if (phase === 'tap') timeLeft = s; },   // this round's tape
+		tap(x, y) { tap({ x, y }); },   // a tap on the walls at world pixels x, y (the virtual gamebox's players)
+		party(n) {   // straight to a phase of the night (vignettes.js PHASES), from this round's title card
+			partyPhase = clamp(n, 0, PHASES.length - 1);
+			dropFloor(2 * level);
+			dropFloor(2 * level + 1);
+			prepareLevel(level);
+			startReady();
+		},
 		findOne() { const d = diffs.find((x) => !x.found); if (phase === 'tap' && d) found(d, { x: d.x, y: d.y }); },   // as if someone tapped it
 	};
 
