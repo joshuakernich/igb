@@ -1074,26 +1074,73 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		}
 		return rows;
 	}
+	// Each line in a little chat bubble over its speaker's head: it pops up
+	// (a quick overshoot) as they start, and fades as they finish. Their
+	// name rides on a tab in their colour.
+	const BUBBLE = { font: 34, line: 40, chars: 22, pad: 18, tail: 26, lift: 0.3 };
+	const NAME_COLOURS = { gary: '#a82a2a', linda: '#2f7a78', dave: '#d0701a', priya: '#7a5ad0', caterer: '#2a2a2a' };
 	function drawCaptions(ctx) {
 		if (!voicesLive()) return;
 		const V = sceneOf();
 		const T = sceneT();
 		const f = floors.get(floorN);
 		if (!f) return;
+		const B = BUBBLE;
 		V.lines.forEach(function ([t, who, text], i) {
 			const d = lineDur(V, i);
-			if (T < t || T > t + d + 0.4) return;
+			if (T < t || T > t + d + 0.3) return;
 			const st = f.stars[who];
 			if (!st || !st.actor.ready) return;
-			const p = toWalls(headAt.copy(st.actor.head).add(v3.set(0, 0.35, 0)));
+			const p = toWalls(headAt.copy(st.actor.head).add(v3.set(0, B.lift, 0)));
 			if (!p) return;
-			const a = Math.min(1, (T - t) / 0.12, (t + d + 0.4 - T) / 0.3);
-			const rows = wrapText(text, 28);
-			const x = clamp(p.x, p.wall * W + 300, p.wall * W + W - 300);
-			const y0 = clamp(p.y - 30 - rows.length * 54, 150, H - 200);
-			band(ctx, x - 340, y0 + (rows.length - 1) * 27 - 20, 680, rows.length * 54 + 80, 0.4 * a);
-			vhsText(ctx, CAST[who].name, x, y0 - 50, 38, { fill: YELLOW, alpha: a, flicker: false, split: 1 });
-			rows.forEach((row, k) => vhsText(ctx, row, x, y0 + k * 54, 52, { alpha: a, flicker: false, split: 2 }));
+			const age = T - t;
+			const pop = age < 0.2 ? 1 + 2.2 * Math.pow(age / 0.2 - 1, 3) + 1.2 * Math.pow(age / 0.2 - 1, 2) : 1;   // (a back ease)
+			const alpha = clamp((t + d + 0.3 - T) / 0.25, 0, 1);
+			const rows = wrapText(text, B.chars);
+			ctx.save();
+			ctx.font = `500 ${B.font}px Lexend, sans-serif`;
+			const w = Math.max(...rows.map((r) => ctx.measureText(r).width)) + B.pad * 2;
+			const h = rows.length * B.line + B.pad * 1.4;
+			// the tip at the head; the bubble above it, kept on its wall and clear of the clock
+			const tipX = p.x, tipY = Math.max(260 + h + B.tail, p.y);
+			const bx = clamp(tipX - w / 2, p.wall * W + 20, p.wall * W + W - 20 - w);
+			const by = tipY - B.tail - h;
+			ctx.globalAlpha = alpha;
+			ctx.translate(tipX, tipY);
+			ctx.scale(pop, pop);
+			ctx.translate(-tipX, -tipY);
+			const body = () => {
+				ctx.beginPath();
+				ctx.roundRect(bx, by, w, h, 22);
+				const tx = clamp(tipX, bx + 30, bx + w - 30);
+				ctx.moveTo(tx - 16, by + h - 1);
+				ctx.lineTo(tipX, tipY);
+				ctx.lineTo(tx + 14, by + h - 1);
+			};
+			body();
+			ctx.lineWidth = 8;
+			ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+			ctx.stroke();
+			ctx.fillStyle = '#fffdf6';
+			ctx.fill();
+			// their name on a tab
+			ctx.font = `500 ${Math.round(B.font * 0.62)}px Lexend, sans-serif`;
+			const name = CAST[who].name;
+			const nw = ctx.measureText(name).width + 22;
+			ctx.beginPath();
+			ctx.roundRect(bx + 14, by - 16, nw, 30, 10);
+			ctx.fillStyle = NAME_COLOURS[who] || '#333';
+			ctx.fill();
+			ctx.fillStyle = 'white';
+			ctx.textAlign = 'left';
+			ctx.textBaseline = 'middle';
+			ctx.fillText(name, bx + 25, by - 1);
+			// the words
+			ctx.font = `500 ${B.font}px Lexend, sans-serif`;
+			ctx.fillStyle = '#1a1416';
+			ctx.textAlign = 'center';
+			rows.forEach((row, k) => ctx.fillText(row, bx + w / 2, by + B.pad * 0.7 + B.line * (k + 0.5) + 4));
+			ctx.restore();
 		});
 	}
 
@@ -1317,14 +1364,36 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 	}
 
 	// The tape left this round: a bar across the top of the front wall.
-	function tapeBar(ctx, left, max, y) {
-		const bw = 700;
+	// The time left (the look, or the tape), top left of every wall under the
+	// deck's PLAY: a ring of white segments going out one by one, the seconds
+	// in the middle; red at the end.
+	const RING = { x: 92, y: 190, r: 56, segments: 24 };
+	function timerRing(ctx, left, max, alpha = 1) {
 		const k = clamp(left / max, 0, 1);
-		const urgent = left < 10;
-		art.roundRect(ctx, W * 1.5 - bw / 2 - 6, y - 17, bw + 12, 34, 17, { fill: 'rgba(10,8,2,0.6)' });
-		art.roundRect(ctx, W * 1.5 - bw / 2, y - 11, Math.max(22, bw * k), 22, 11, { fill: urgent ? RED : YELLOW });
-		vhsText(ctx, 'TAPE', W * 1.5 - bw / 2 - 30, y, 46, { align: 'right', flicker: false, split: 2 });
-		vhsText(ctx, String(Math.ceil(left)), W * 1.5 + bw / 2 + 30, y, 50, { align: 'left', fill: urgent ? RED : '#f6f1dc', flicker: urgent, split: 2 });
+		const lit = Math.ceil(k * RING.segments);
+		const urgent = left < 5;
+		const colour = urgent ? RED : '#f6f1dc';
+		const step = Math.PI * 2 / RING.segments;
+		for (let wall = 0; wall < 3; wall++) {
+			const cx = wall * W + RING.x, cy = RING.y;
+			ctx.save();
+			ctx.globalAlpha = alpha;
+			ctx.lineCap = 'butt';
+			for (let i = 0; i < RING.segments; i++) {
+				const a0 = -Math.PI / 2 + i * step + step * 0.14;
+				const a1 = a0 + step * 0.72;
+				ctx.beginPath();
+				ctx.arc(cx, cy, RING.r, a0, a1);
+				ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+				ctx.lineWidth = 17;
+				ctx.stroke();
+				ctx.strokeStyle = i < lit ? colour : 'rgba(246,241,220,0.18)';
+				ctx.lineWidth = 11;
+				ctx.stroke();
+			}
+			ctx.restore();
+			vhsText(ctx, String(Math.ceil(left)), cx, cy + 3, 56, { fill: colour, alpha, flicker: urgent, split: 2 });
+		}
 	}
 
 	// How shut the eyes are through the blink (0 open, 1 shut): a couple of
@@ -1404,21 +1473,19 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 			const fadeOut = Math.min(1, (callout.dur - callout.age) / 0.4);
 			const a = fadeIn * fadeOut;
 			// (just under the show's clock, the same size on every wall, nothing behind it)
-			for (let wall = 0; wall < 3; wall++) vhsText(ctx, callout.text, wall * W + W / 2, 165, 100, { alpha: a });
-			if (phase === 'look') {
-				const left = Math.max(0, phaseDur - phaseT);
-				for (let wall = 0; wall < 3; wall++) vhsText(ctx, `00:${String(Math.ceil(left)).padStart(2, '0')}`, wall * W + W / 2, 255, 64, { alpha: a, fill: left < 4 ? RED : '#f6f1dc' });
-			}
+			for (let wall = 0; wall < 3; wall++) vhsText(ctx, callout.text, wall * W + W / 2, 140, 64, { alpha: a });   // (the clock's size)
 		}
+		if (phase === 'look') timerRing(ctx, Math.max(0, phaseDur - phaseT), phaseDur);
 		drawCaptions(ctx);
 		if (glitch > 0 && (phase === 'tap' || phase === 'reveal')) {
 			art.rect(ctx, 0, 0, WIDTH, H, { fill: `rgba(0,0,0,${0.5 * Math.sin(glitch / LOOP_GAP * Math.PI)})` });
 			for (let wall = 0; wall < 3; wall++) vhsText(ctx, '◀◀', wall * W + W / 2, H / 2, 90, { alpha: Math.sin(glitch / LOOP_GAP * Math.PI) });
 		}
+		if (phase === 'tap') timerRing(ctx, timeLeft, levelCfg(level).tap);
 		if (phase === 'tap' && (!callout || callout.age > 2.6)) {
-			band(ctx, W * 1.2, 215, W * 0.6, 150, 0.4);
-			vhsText(ctx, `FOUND ${diffs.filter((d) => d.found).length}/${diffs.length}`, W * 1.5, 190, 60, { flicker: false, split: 2 });
-			tapeBar(ctx, timeLeft, levelCfg(level).tap, 250);
+			// (like the prompts: under the clock, the same size, every wall, nothing behind)
+			const a = Math.min(1, callout ? (callout.age - 2.6) / 0.3 : 1);
+			for (let wall = 0; wall < 3; wall++) vhsText(ctx, `FOUND ${diffs.filter((d) => d.found).length}/${diffs.length}`, wall * W + W / 2, 140, 64, { alpha: a, flicker: false });
 		}
 		if (phase === 'descend' || phase === 'rewind') {
 			const a = Math.sin(phaseT / phaseDur * Math.PI);
@@ -1499,14 +1566,55 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		});
 
 		// the on-screen display
+		const deck = show.beat === 'title' ? 'play' : show.beat !== 'play' ? 'rec'
+			: phase === 'rewind' || ((phase === 'tap' || phase === 'reveal') && glitch > 0) ? 'rewind'
+			: phase === 'look' || phase === 'tap' || phase === 'reveal' ? 'play' : 'rec';
 		for (let i = 0; i < 3; i++) {
 			const x = i * W;
-			if (Math.floor(clock * 1.2) % 2 === 0) art.circle(ctx, x + 70, 64, 17, { fill: '#ff2a2a' });
-			vhsText(ctx, 'REC', x + 100, 64, 54, { align: 'left', flicker: false, split: 2 });
+			// the deck's state: PLAY while the scene plays, REWIND while it goes back, otherwise REC
+			if (deck === 'play') art.poly(ctx, [[x + 56, 46], [x + 88, 64], [x + 56, 82]], { fill: '#f6f1dc' });
+			else if (deck === 'rewind') for (const dx of [0, 22]) art.poly(ctx, [[x + 76 + dx, 46], [x + 50 + dx, 64], [x + 76 + dx, 82]], { fill: '#f6f1dc' });
+			else if (Math.floor(clock * 1.2) % 2 === 0) art.circle(ctx, x + 70, 64, 17, { fill: '#ff2a2a' });
+			vhsText(ctx, deck === 'play' ? 'PLAY' : deck === 'rewind' ? 'REWIND' : 'REC', x + (deck === 'rewind' ? 112 : 100), 64, 54, { align: 'left', flicker: false, split: 2 });
 			vhsText(ctx, `CAM 0${i + 1}`, x + W - 70, 64, 48, { align: 'right', flicker: false, split: 2 });
 		}
 		vhsText(ctx, partyTime(), W + W - 70, 118, 44, { align: 'right', flicker: false, split: 2 });
 
+	}
+
+	// How badly the tape's playing through the title: torn as it starts,
+	// a jolt as the title lands, a hiccup every few seconds after (0..1).
+	function tapeGlitch(bt) {
+		const start = 1 - between(bt, 0.1, 0.9);
+		const land = Math.max(0, 1 - Math.abs(bt - 1.35) / 0.25);
+		const hiccup = (bt % 2.7) < 0.14 && bt > 2 ? 0.6 : 0;
+		return Math.max(start, land, hiccup);
+	}
+	// The VHS treatment over the title (drawn after it): bands of the picture
+	// torn sideways, a bright tracking line rolling through, colour bleeding.
+	function vhsTitle(ctx, bt) {
+		const k = tapeGlitch(bt);
+		if (k <= 0.02) return;
+		const m = ctx.getTransform();
+		const src = ctx.canvas;
+		ctx.save();
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+		const n = Math.round(3 + 9 * k);
+		for (let i = 0; i < n; i++) {
+			const y = (180 + Math.random() * 640) * m.d + m.f;
+			const h = (6 + Math.random() * 40 * k) * m.d;
+			const dx = (Math.random() - 0.5) * 140 * k * m.a;
+			ctx.drawImage(src, 0, y, src.width, h, dx, y, src.width, h);
+		}
+		// the colours slipping: the picture again, faintly, a little to each side
+		ctx.globalAlpha = 0.18 * k;
+		ctx.globalCompositeOperation = 'lighter';
+		ctx.drawImage(src, -10 * k * m.a, 0);
+		ctx.drawImage(src, 10 * k * m.a, 0);
+		ctx.restore();
+		// a bright tracking line rolling down
+		const ty = (bt * 900) % (H + 200) - 100;
+		art.rect(ctx, 0, ty, WIDTH, 10 + 30 * k, { fill: `rgba(255,255,255,${0.12 + 0.25 * k})` });
 	}
 
 	// The controls' captions, step pips and live aids.
@@ -1525,7 +1633,7 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 				}
 			}
 		}
-		if (step.id === 'wrong') tapeBar(ctx, practice.tape, CONTROLS.tape, 380);
+		if (step.id === 'wrong') timerRing(ctx, practice.tape, CONTROLS.tape);
 		show.onWalls(ctx, function (c) {
 			show.slam(c, step.caption, W / 2, 210, step.caption.length > 30 ? 84 : 104, practice.age, { fill: '#ffd23f' });   // (tutorial captions: yellow)
 			show.pips(c, CONTROLS.steps.length, practice.i, practice.done, W / 2, 290);   // (the standard step pips)
@@ -1546,11 +1654,18 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 			draw(ctx) { camcorder(ctx); },
 		},
 
-		// 1b. the title, crashing in over the buzzing office
+		// 1b. the title, in the tape's own lettering, as the tape starts to play:
+		// tearing and rolling, then a glitch as it lands, and the odd hiccup after
 		show.beats.titleDrop({
-			// (its lines: the manifest's title, shared with the end screen's carousel)
-			update(dt) { if (Math.random() < dt * 0.7) stutter = 0.2 + Math.random() * 0.25; },
-			draw(ctx) { camcorder(ctx); },
+			// (its lines: the manifest's title, in VCRFONT, shared with the end screen's carousel)
+			update(dt) {
+				if (Math.random() < dt * 0.7) stutter = 0.2 + Math.random() * 0.25;
+				if (show.cue(0.05) || show.cue(1.3)) sound.crackle();
+			},
+			draw(ctx, bt) {
+				vhsTitle(ctx, bt);
+				camcorder(ctx, { noise: 0.5 * tapeGlitch(bt) });
+			},
 		}),
 
 		// 2. the ten-minute clock; it starts counting a moment after it lands

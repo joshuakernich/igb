@@ -66,7 +66,7 @@ IGB.manifest = [
 		{ id: 'roll-call', name: 'Roll Call', icon: 'assets/icons/roll-call.png',
 			title: { lines: [{ text: 'ROLL CALL', fill: '#a77bff', glow: '#7538D4' }] }, box: { color: '#7538D4', bg: '#f2f0ff', note: 'ICEBREAKER' } },
 		{ id: 'small-talk', name: 'Small Talk', icon: 'assets/icons/small-talk.png', file: 'games/small-talk/index.js', module: true,
-			title: { lines: [{ text: 'SMALL', fill: '#ffd166', glow: '#ff6fa8' }, { text: 'TALK', fill: '#ff6fa8', glow: '#ffd166' }] }, box: { color: '#ff6fa8', bg: '#2a0f1c', note: 'MEMORY' } },
+			title: { lines: [{ text: 'SMALL', fill: '#f6f1dc', glow: '#ff3ad0', font: 'VCRFONT' }, { text: 'TALK', fill: '#ffd166', glow: '#3ad8ff', font: 'VCRFONT' }], font: 'VCRFONT' }, box: { color: '#ff6fa8', bg: '#2a0f1c', note: 'MEMORY' } },
 		{ id: 'riddler-says', name: 'Riddler Says', icon: 'assets/icons/riddler-says.png', file: 'games/riddler-says.js',
 			title: { lines: [{ text: 'RIDDLER', fill: '#39ff14', glow: '#39ff14', font: 'VCRFONT' }, { text: 'SAYS', fill: '#ffffff', glow: '#39ff14', font: 'VCRFONT' }], font: 'VCRFONT' }, box: { color: '#39ff14', bg: '#0b1a07', note: 'PUZZLE' } },
 		{ id: 'gwi-ma-showdown', name: 'Gwi-Ma Showdown', icon: 'assets/icons/gwi-ma-showdown.png',

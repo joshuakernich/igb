@@ -687,16 +687,45 @@ const HELD = {
 		return g;
 	},
 	extinguisher() {
+		// a red can with a black hose and horn, and a billowing white jet:
+		// puffs that leave the horn fast and tight, slow, swell, drift and fade
 		const g = new THREE.Group();
-		const can = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.4, 12), holdMat(0xc8261e));
+		const can = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.42, 14), holdMat(0xc8261e));
 		can.rotation.x = Math.PI / 2 * 0.8;
-		const spray = new THREE.Mesh(new THREE.ConeGeometry(0.22, 1.1, 12, 1, true), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide }));
-		spray.rotation.x = -Math.PI / 2;
-		spray.position.z = 0.75;
-		spray.name = 'spray';
-		g.add(can, spray);
+		const top = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.06, 8), holdMat(0x2a2a2a));
+		top.position.set(0, 0.06, 0.2);
+		const horn = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.012, 0.16, 10), holdMat(0x1a1a1a));
+		horn.rotation.x = Math.PI / 2;
+		horn.position.set(0, 0.04, 0.3);
+		g.add(can, top, horn);
+		const jet = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.45, 10, 1, true), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide }));
+		jet.rotation.x = -Math.PI / 2;
+		jet.position.set(0, 0.04, 0.6);
+		g.add(jet);
+		const puffs = [];
+		for (let i = 0; i < 26; i++) {
+			const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: puffTex(), color: 0xf4f6f8, transparent: true, depthWrite: false }));
+			sp.userData.noOcclude = true;
+			g.add(sp);
+			puffs.push(sp);
+		}
 		g.userData.both = true;
 		g.userData.at = [0, 0, 0.12];
+		// the spray at time t (a function of time, so it loops with the scene)
+		g.userData.spray = function (t) {
+			jet.scale.set(1 + 0.2 * S(t * 37), 1 + 0.15 * S(t * 23), 1 + 0.2 * S(t * 31));
+			puffs.forEach(function (sp, i) {
+				const k = (t * 1.6 + i / puffs.length) % 1;          // its age, 0..1
+				const seed = i * 12.9898;
+				const sx = Math.sin(seed) * 0.5, sy = Math.cos(seed * 1.7) * 0.5;
+				const reach = 1 - Math.pow(1 - k, 2);                 // fast out of the horn, slowing
+				sp.position.set(sx * k * 0.55, 0.04 + sy * k * 0.35 - k * k * 0.35, 0.4 + reach * 1.9);
+				const size = 0.08 + k * 0.75;
+				sp.scale.set(size, size, 1);
+				sp.material.opacity = 0.75 * Math.min(1, k * 8) * (1 - k);
+				sp.material.rotation = seed + k * 2;
+			});
+		};
 		return g;
 	},
 	broom() {
@@ -711,6 +740,25 @@ const HELD = {
 		return g;
 	},
 };
+
+// A soft round puff, for smoke and spray.
+let puff = null;
+function puffTex() {
+	if (puff) return puff;
+	const c = document.createElement('canvas');
+	c.width = c.height = 64;
+	const x = c.getContext('2d');
+	for (let i = 0; i < 5; i++) {
+		const px = 22 + (i * 37) % 20, py = 22 + (i * 23) % 20, r = 16 + (i * 7) % 12;
+		const g = x.createRadialGradient(px, py, 0, px, py, r);
+		g.addColorStop(0, 'rgba(255,255,255,0.8)');
+		g.addColorStop(1, 'rgba(255,255,255,0)');
+		x.fillStyle = g;
+		x.fillRect(0, 0, 64, 64);
+	}
+	puff = new THREE.CanvasTexture(c);
+	return puff;
+}
 
 // A flame (and its glow), flickering on its own clock. size: metres tall.
 const flameTex = (() => {
@@ -915,8 +963,7 @@ export function person(p) {
 				v1.applyMatrix4(m4);
 				const [ox, oy, oz] = item.userData.at;
 				item.position.set(v1.x + ox, v1.y + oy, v1.z + oz);
-				const spray = item.getObjectByName('spray');
-				if (spray) spray.scale.setScalar(0.8 + 0.25 * S(t * 31));
+				if (item.userData.spray) item.userData.spray(t);
 			}
 			actor.head.setFromMatrixPosition(b.head.matrixWorld);
 		};
