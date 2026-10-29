@@ -802,23 +802,33 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	}
 
 	// Each player in the pond has their own held shimmering tone, its note of the pentatonic
-	// scale set by how fast they wade (four notes, from its octave up), with a rippling
-	// vibrato: a faint hum standing still, swelling, brightening and stepping up as they go
-	// faster, fading away when they step out of the water.
+	// scale set by how fast they wade (four notes, from its octave up), and lifted higher still
+	// (up to four notes more) the harder everyone else in the water wades too: together, they
+	// reach notes no one can alone. A rippling vibrato; a faint hum standing still, swelling,
+	// brightening and stepping up as they go faster, fading away when they step out of the water.
 	function wade(dt, on) {
 		const pd = ponds[here];
 		if (pd) pd.U.uNow.value = rt;
+		// (everyone's wading first, so each can hear the others': together, the notes climb higher)
+		let total = 0;
+		for (let i = 0; i < pl.length; i++) {
+			const q = pl[i], ax = avCap(q.x), az = avCap(q.z);
+			q.inPond = !!pd && on && i < count && q.seen && inWedge(ax, -az);
+			q.shimV = lerp(q.shimV || 0, q.inPond ? q.speed * 2 * R : 0, 1 - Math.exp(-dt * 3));
+			if (q.inPond) total += q.shimV;
+		}
 		for (let i = 0; i < pl.length; i++) {
 			const q = pl[i];
 			const ax = avCap(q.x), az = avCap(q.z);
-			const inPond = !!pd && on && i < count && q.seen && inWedge(ax, -az);
+			const inPond = q.inPond;
 			const v = inPond ? q.speed * 2 * R : 0;   // (m/s)
 			// (its energy: quick to swell while you move, slow to settle, gone a second after you leave)
 			const want = inPond ? 0.15 + 0.85 * clamp(v / 1.0, 0, 1) : 0;
 			q.shimE = lerp(q.shimE || 0, want, 1 - Math.exp(-dt * (want > (q.shimE || 0) ? 4 : inPond ? 1.2 : 2.5)));
-			// (the pitch: how fast you wade, stepping up the pentatonic scale, four notes from its octave)
-			q.shimV = lerp(q.shimV || 0, v, 1 - Math.exp(-dt * 3));
-			const wf = freqOf(CLEARINGS[here].root, 5 + Math.round(clamp(q.shimV / 1.2, 0, 1) * 3));
+			// (the pitch: how fast you wade, stepping up the pentatonic scale, four notes from its octave;
+			// and everyone else wading with you lifts it further, up to four notes more, all together)
+			const own = Math.round(clamp(q.shimV / 1.2, 0, 1) * 3), team = Math.round(clamp((total - q.shimV) / 2.4, 0, 1) * 4);
+			const wf = freqOf(CLEARINGS[here].root, 5 + own + team);
 			if (inPond && !q.shim && audioOn()) q.shim = shimmerVoice(wf, 1);
 			if (q.shim) {
 				q.shim.glide(wf);
@@ -3291,9 +3301,9 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const mat = new THREE.MeshPhysicalMaterial({ color: colour(i), emissive: colour(i), emissiveIntensity: 0.35, roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.15 });
 		const head = mesh(GEO.sph, mat, g, 0, 0, 0, 0.15, 0.105, 0.12);
 		head.rotation.z = -0.45;   // (the tilted oval note head)
-		mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.58, 12), mat, g, -0.12, 0.29, 0);
+		mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.42, 12), mat, g, -0.12, 0.21, 0);   // (a shortish stem)
 		// (the flag: thick where it leaves the stem, sweeping out and down to a smooth point)
-		const flag = new THREE.CatmullRomCurve3([[-0.12, 0.57, 0], [-0.17, 0.51, 0], [-0.25, 0.41, 0], [-0.28, 0.3, 0], [-0.24, 0.17, 0]].map((v) => new THREE.Vector3(...v)));
+		const flag = new THREE.CatmullRomCurve3([[-0.12, 0.41, 0], [-0.17, 0.36, 0], [-0.24, 0.28, 0], [-0.27, 0.19, 0], [-0.23, 0.09, 0]].map((v) => new THREE.Vector3(...v)));
 		const fg = new THREE.TubeGeometry(flag, 32, 0.045, 12), fa = fg.attributes.position, fc = new THREE.Vector3(), fv = new THREE.Vector3();
 		for (let i = 0; i <= 32; i++) {
 			const t = i / 32, k = Math.pow(1 - t, 0.7);   // (tapering to nothing)
