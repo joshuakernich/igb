@@ -409,12 +409,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 					if (still.length) { s.prog += dt / CRYO.need; for (const i of still) credit(s, i); }
 					else s.prog = Math.max(0, s.prog - dt * CRYO.thaw);
 					if (s.prog >= 1) finish(s);
-				} else if (s.kind === 'warp' && s.t >= WARP_TIME) {
-					s.item.steps.push('warp');
-					spawnPortal(s.item, s);
-					s.item = null;
-					s.state = 'idle';
-				}
+				} else if (s.kind === 'warp' && s.t >= WARP_TIME) finish(s);   // (back from elsewhere: take it from the warper)
 			} else if (s.state === 'done') {
 				s.doneT += dt;
 				if (s.kind === 'fry' && s.doneT > FRY.burn) burn(s);
@@ -2202,7 +2197,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 				if (on) every('cryo', 22, dt, () => puff(w, cx + 0.55 + rnd1() * 0.2 * MS, ISLAND.y + MS * 1.25, cz - 0.1, { color: 0xd8f4ff, size: 0.12, grow: 0.5, life: 0.7, vx: -1.0 + rnd1() * 0.4 * MS, vy: -1.1, vz: 0.3, alpha: 0.55, glow: 1.3 }));
 			}
 			// the food in it
-			const item = s.kind === 'warp' ? null : s.item;
+			const item = s.kind === 'warp' && s.state === 'work' ? null : s.item;   // (warping food is elsewhere until it's back)
 			const v = syncItem(s, item, p.g, 0, ITEM_AT[k] + (s.state === 'done' ? 0.06 + Math.sin(rt * 5) * 0.05 : 0), 0, 1.3);
 			if (v && k === 'fry' && s.state === 'work') v.position.y -= 0.12;
 			if (v && k === 'press') v.scale.y = 1.3 * (1 - (s.state === 'work' ? s.prog : 1) * 0.35);
@@ -2539,13 +2534,14 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	let voiceCtx = null;
 	function murmur(c, n, mood) {
 		if (!c) return;
+		if (c.say) n = Math.max(n, Math.round(c.say.replace(/[^A-Z]/gi, '').length / 2.5));   // (as long as what it says)
 		try {
 			if (!voiceCtx) voiceCtx = new (window.AudioContext || window.webkitAudioContext)();
 			if (voiceCtx.state === 'suspended') voiceCtx.resume();
 		} catch { return; }
 		const ac = voiceCtx;
 		const out = ac.createGain();
-		out.gain.value = 0.12;
+		out.gain.value = 0.45;
 		out.connect(ac.destination);
 		const base = (c.voice || 160) * (mood === 'happy' ? 1.25 : mood === 'cross' ? 0.8 : 1);
 		let at = ac.currentTime + 0.03;
@@ -2581,15 +2577,15 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			const q = queueAt(k, n);
 			const x = W + HATCH + cw * k + cw / 2;
 			if (c.state === 'wait') drawOrder(ctx, c, x + 36, q.ticket, Math.min(300, cw - 30));
-			if (c.sayT > 0 && c.say && c.state !== 'wait') drawSpeech(ctx, c.say, x, q.ticket - 50, Math.min(300, cw - 10), c.state === 'angry' ? '#ff4a32' : '#7aff3a');
-			else if (c.sayT > 0 && c.say && c.age > 2.4) drawSpeech(ctx, c.say, x - 90, q.say, 220, '#ffd8f0');
+			if (c.sayT > 0 && c.say && c.state !== 'wait') drawSpeech(ctx, c.say, x, Math.max(ORDER_TOP + 60, q.ticket - 50), Math.min(400, cw - 10), c.state === 'angry' ? '#ff4a32' : '#7aff3a');
+			else if (c.sayT > 0 && c.say && c.age > 2.4) drawSpeech(ctx, c.say, x - 90, q.say, 300, '#ffd8f0');
 		}
 	}
 
 	/* ---------- 2D: tickets, speech ---------- */
 
 	function drawSpeech(ctx, text, x, y, w, fill) {
-		ctx.font = `800 22px ${FONT}`;
+		ctx.font = `800 34px ${FONT}`;
 		const words = text.split(' ');
 		const lines = [];
 		let line = '';
@@ -2598,11 +2594,11 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			if (ctx.measureText(test).width > w - 30 && line) { lines.push(line); line = word; } else line = test;
 		}
 		lines.push(line);
-		const h = lines.length * 26 + 18;
+		const h = lines.length * 40 + 24;
 		art.roundRect(ctx, x - w / 2, y - h / 2, w, h, 14, { fill, stroke: INK, lineWidth: 4 });
 		art.poly(ctx, [[x - 14, y + h / 2 - 2], [x + 14, y + h / 2 - 2], [x, y + h / 2 + 18]], { fill, stroke: INK, lineWidth: 4 });
 		art.rect(ctx, x - 13, y + h / 2 - 6, 26, 6, { fill });
-		art.text(ctx, lines.join('\n'), x, y, { size: 22, weight: 800, font: FONT, fill: INK, lineHeight: 26 });
+		art.text(ctx, lines.join('\n'), x, y, { size: 34, weight: 800, font: FONT, fill: INK, lineHeight: 40 });
 	}
 
 	// The icons: line work in the thing's own colour of the rainbow (no black, no white),
