@@ -361,8 +361,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		lfo.connect(lg).connect(trem.gain); lfo.start(t0); lfo.stop(t0 + 600);
 		// a vibrato (in cents, on every partial), and a slower wavering of it: the water rippling
 		const vib = ac.createOscillator(), vg = ac.createGain(), wob = ac.createOscillator(), wg = ac.createGain();
-		vib.frequency.value = 5.5; vg.gain.value = 18;
-		wob.frequency.value = 0.7; wg.gain.value = 1.5;
+		vib.frequency.value = 6; vg.gain.value = 45;
+		wob.frequency.value = 0.7; wg.gain.value = 2.5;
 		wob.connect(wg).connect(vib.frequency);
 		vib.connect(vg);
 		for (const pt of parts) for (const o of pt.oscs) vg.connect(o.detune);
@@ -375,7 +375,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				for (const pt of parts) if (pt.m > 1) pt.pg.gain.setTargetAtTime(pt.a * clamp(e * 1.6 - pt.m * 0.08, 0, 1), t, 0.15);
 				lfo.frequency.setTargetAtTime(2.5 + e * 7, t, 0.2);
 				lg.gain.setTargetAtTime(0.1 + e * 0.25, t, 0.2);
-				vg.gain.setTargetAtTime(14 + e * 26, t, 0.2);   // (deeper vibrato as you go faster)
+				vg.gain.setTargetAtTime(40 + e * 60, t, 0.2);   // (a deep vibrato, deeper still as you go faster)
+				vib.frequency.setTargetAtTime(5.5 + e * 2.5, t, 0.3);
 				if (pan) pan.pan.setTargetAtTime(clamp(p, -1, 1) * 0.6, t, 0.1);
 			},
 			glide(nf) { const t = ac.currentTime; for (const pt of parts) for (const o of pt.oscs) o.frequency.setTargetAtTime(nf * pt.m, t, 0.06); },   // (a quick slide to each new note)
