@@ -3283,9 +3283,9 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 
 	/* the players: fuzzy puffballs in their colours, with faces */
 
-	// A player: a glossy 3D eighth note in their colour. Built to read as ♪ from behind (from
-	// the camera of the wall it's facing: its +z points away, toward that wall), so its stem
-	// is on the viewer's right (local −x) and its flag curls further right and down.
+	// A player: a glossy 3D eighth note in their colour. Its face is the tip of its head (local
+	// +x, away from the stem); the stem and flag (local −x) are its back. It faces into its wall's
+	// view, so from that wall's camera you see it from behind, the stem and flag toward you.
 	function buildPuff(i) {
 		const g = new THREE.Group();
 		const mat = new THREE.MeshPhysicalMaterial({ color: colour(i), emissive: colour(i), emissiveIntensity: 0.35, roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.15 });
@@ -3688,7 +3688,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			q.wallAt = wallNow;
 			// (turned toward the centre of that wall's distance: a point well out along its middle)
 			const tx = wallNow === 0 ? -9 : wallNow === 2 ? 9 : 0, tz = wallNow === 1 ? -9 : 0;
-			const want = Math.atan2(tx - ax, tz - az) + walls.rig.rotation.y;
+			// (its face is the tip of its head, away from the stem (local +x); its back, the stem and flag: so turn +x toward the target)
+			const want = Math.atan2(-(tz - az), tx - ax) + walls.rig.rotation.y;
 			q.yaw = q.yaw === undefined ? want : q.yaw + Math.atan2(Math.sin(want - q.yaw), Math.cos(want - q.yaw)) * (1 - Math.exp(-dt * 8));
 			m.rotation.set(0, q.yaw, Math.sin(rt * 3 + i) * 0.06);
 			m.scale.setScalar(1 + pulse * 0.1);
