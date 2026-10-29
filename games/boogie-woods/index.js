@@ -1692,6 +1692,9 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			foot.rotation.x = 0.1;
 			const head = mesh(GEO.sph, body, c.bouncer, 0, 0.32, 0.4, 0.2, 0.24, 0.2);
 			c.face = makeFace(c.bouncer, 0.4, 0, 0.33, 0.57, { gap: 0.2 });
+			// (just a mouth on its face: its eyes are the ones on its stalks)
+			for (const e of c.face.eyes) e.eye.visible = false;
+			c.face.g.traverse((o) => { if (o.material === MAT.cheek) o.visible = false; });
 			const shell = new THREE.Group(); shell.position.set(0, 0.48, -0.12); c.bouncer.add(shell);
 			const shellMat = new THREE.MeshPhysicalMaterial({ color: c.tint, roughness: 0.2, clearcoat: 1, iridescence: 1, iridescenceIOR: 1.6, bumpMap: TEX.scales, bumpScale: 0.6, emissive: c.tint, emissiveIntensity: 0.1 });
 			// (one fat tube coiled two and a half turns, growing as it goes, in the snail's side plane: seen side-on, a spiral)
