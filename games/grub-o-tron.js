@@ -1851,134 +1851,331 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	/* ---------- 3D: the mutants ---------- */
 
-	function eyeBall(g, x, y, z, r, mats) {
-		const w = std(0xf4f2ea, 0.3, 0);
-		mesh(SPH(r, 16), w, g, x, y, z);
-		const pupil = mesh(SPH(r * 0.5, 12), MAT.black, g, x, y, z);
-		pupil.position.addScaledVector(TOWARD, r * 0.62);
-		if (mats) mats.push(w);
+	// Moulded shapes, not balls: bodies turned on a lathe from a smooth profile,
+	// surfaces pushed and pulled into lumps, limbs as tapering tubes, eyes under
+	// lids, mouths cut out as bevelled slabs.
+
+	// (vertices that share a place share a normal: no creases at seams and poles)
+	function smoothSeams(geo) {
+		const pos = geo.attributes.position, nor = geo.attributes.normal;
+		const at = new Map();
+		for (let i = 0; i < pos.count; i++) {
+			const key = Math.round(pos.getX(i) * 1e4) + ',' + Math.round(pos.getY(i) * 1e4) + ',' + Math.round(pos.getZ(i) * 1e4);
+			if (!at.has(key)) at.set(key, []);
+			at.get(key).push(i);
+		}
+		const n = new THREE.Vector3(), s = new THREE.Vector3();
+		for (const list of at.values()) {
+			if (list.length < 2) continue;
+			s.set(0, 0, 0);
+			for (const i of list) s.add(n.fromBufferAttribute(nor, i));
+			s.normalize();
+			for (const i of list) nor.setXYZ(i, s.x, s.y, s.z);
+		}
+		nor.needsUpdate = true;
+		return geo;
+	}
+	// a body turned on a lathe: a smooth curve through [radius, height] points, bottom to top
+	function lathe(prof, seg = 44, n = 48) {
+		const pts = new THREE.SplineCurve(prof.map(([r, y]) => new THREE.Vector2(r, y))).getPoints(n);
+		for (const p of pts) p.x = Math.max(0, p.x);
+		pts[0].x = Math.max(0, prof[0][0]);
+		pts[pts.length - 1].x = Math.max(0, prof[prof.length - 1][0]);
+		const geo = new THREE.LatheGeometry(pts, seg);
+		geo.pts = pts;
+		return smoothSeams(geo);
+	}
+	// a point on a lathed body's surface (profile point i, turned to angle a), and its outward normal
+	function onLathe(geo, i, a) {
+		const p = geo.pts, q = p[i], t0 = p[Math.max(0, i - 1)], t1 = p[Math.min(p.length - 1, i + 1)];
+		const dr = t1.x - t0.x, dy = t1.y - t0.y, l = Math.hypot(dr, dy) || 1;
+		return {
+			pos: new THREE.Vector3(Math.sin(a) * q.x, q.y, Math.cos(a) * q.x),
+			normal: new THREE.Vector3(Math.sin(a) * dy / l, -dr / l, Math.cos(a) * dy / l).normalize(),
+		};
+	}
+	// push a surface in and out along its normals: fn(position, normal) → distance
+	function sculpt(geo, fn) {
+		const pos = geo.attributes.position, nor = geo.attributes.normal;
+		const v = new THREE.Vector3(), n = new THREE.Vector3();
+		for (let i = 0; i < pos.count; i++) {
+			v.fromBufferAttribute(pos, i);
+			n.fromBufferAttribute(nor, i);
+			v.addScaledVector(n, fn(v, n));
+			pos.setXYZ(i, v.x, v.y, v.z);
+		}
+		geo.computeVertexNormals();
+		return smoothSeams(geo);
+	}
+	// a tapering tube through points: tentacles, arms, beaks
+	function tube(parent, pts, r0, r1, mat, rs = 12, ts = 28) {
+		const curve = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(p[0], p[1], p[2])));
+		const geo = new THREE.TubeGeometry(curve, ts, 1, rs, false);
+		const pos = geo.attributes.position, c = new THREE.Vector3(), v = new THREE.Vector3();
+		for (let i = 0; i <= ts; i++) {
+			curve.getPointAt(i / ts, c);
+			const u = i / ts, r = lerp(r0, r1, u) * (u < 0.08 ? 0.75 + u / 0.08 * 0.25 : 1);
+			for (let j = 0; j <= rs; j++) {
+				const k = i * (rs + 1) + j;
+				v.fromBufferAttribute(pos, k).sub(c).multiplyScalar(r).add(c);
+				pos.setXYZ(k, v.x, v.y, v.z);
+			}
+		}
+		geo.computeVertexNormals();
+		const m = mesh(smoothSeams(geo), mat, parent);
+		const end = curve.getPointAt(1);
+		mesh(SPH(r1, 12), mat, parent, end.x, end.y, end.z);   // (its rounded tip)
+		return m;
+	}
+	// a low moulded dome sitting on a surface: pustules, spots, studs
+	function blister(parent, pos, normal, r, mat, tall = 0.5) {
+		const m = mesh(lathe([[0, -r * 0.2], [r, -r * 0.1], [r * 0.85, r * tall * 0.6], [0, r * tall]], 20, 16), mat, parent, pos.x, pos.y, pos.z);
+		m.quaternion.setFromUnitVectors(_up, normal);
+		return m;
+	}
+	// a flat shape, bevelled into a moulded slab
+	function slab(shape, depth, bevel, mat, parent) {
+		const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel * 0.8, bevelSegments: 3, curveSegments: 20 });
+		geo.translate(0, 0, -depth / 2);
+		return mesh(geo, mat, parent);
+	}
+	// a mouth: a crescent, smiling (or frowning), set into the face
+	function grin(parent, x, y, z, w, h, frown, mat) {
+		const s = new THREE.Shape();
+		s.moveTo(-w / 2, 0);
+		s.quadraticCurveTo(0, -h * 2, w / 2, 0);
+		s.quadraticCurveTo(0, -h * 0.5, -w / 2, 0);
+		const m = slab(s, 0.02, Math.min(0.03, w * 0.08), mat || MAT.black, parent);
+		m.position.set(x, y, z);
+		if (frown) m.rotation.z = Math.PI;
+		return m;
+	}
+	// an eye: a white ball, a pupil, and moulded lids in the skin (droop: how heavy the upper lid hangs)
+	function eyeBall(g, x, y, z, r, lid, droop = 0.25) {
+		const w = std(0xf4f2ea, 0.25, 0);
+		mesh(SPH(r, 18), w, g, x, y, z);
+		const pupil = mesh(SPH(r * 0.5, 14), MAT.black, g, x, y, z);
+		pupil.scale.set(1, 1.15, 0.6);
+		pupil.position.addScaledVector(TOWARD, r * 0.72);
+		mesh(SPH(r * 0.16, 8), MAT.white, g, x + r * 0.18, y + r * 0.22, z).position.addScaledVector(TOWARD, r * 0.98);
+		if (lid) {
+			const up = mesh(new THREE.SphereGeometry(r * 1.14, 24, 12, 0, Math.PI * 2, 0, Math.PI * (0.32 + droop * 0.3)), lid, g, x, y, z);
+			up.rotation.x = 0.5;
+			const low = mesh(new THREE.SphereGeometry(r * 1.1, 24, 8, 0, Math.PI * 2, Math.PI * 0.74, Math.PI * 0.26), lid, g, x, y, z);
+			low.rotation.x = -0.35;
+		}
 		return pupil;
 	}
+	// a smooth little noise for lumps: sines at odd angles
+	const lumpy = (p, k = 1) => (Math.sin(p.x * 4.1 * k + 1.3) * Math.sin(p.y * 3.7 * k + 0.4) + Math.sin(p.z * 5.3 * k + p.x * 2.1 * k) * 0.6 + Math.sin(p.y * 7.9 * k + p.z * 3.3 * k) * 0.3);
 
 	const MUTANT_3D = {
+		// two heads on one slumped, lumpy body, its arms stubby, its pustules glowing
 		blob(g, skin, m) {
-			const body = mesh(SPH(0.95, 28), skin, g, 0, 0.75, 0);
-			body.scale.set(1.25, 0.85, 1);
+			const bodyGeo = sculpt(lathe([[0, 0], [0.95, 0.03], [1.22, 0.32], [1.15, 0.8], [0.86, 1.18], [0.5, 1.4], [0, 1.45]]), (p) => lumpy(p) * 0.05);
+			const body = mesh(bodyGeo, skin, g);
+			body.scale.set(1, 1, 0.82);
+			for (const s of [-1, 1]) tube(g, [[s * 1.0, 0.75, 0.15], [s * 1.32, 0.62, 0.32], [s * 1.42, 0.38, 0.5], [s * 1.3, 0.25, 0.62]], 0.2, 0.11, skin);
 			m.heads = [];
 			for (const x of [-0.5, 0.5]) {
 				const h = new THREE.Group();
 				h.position.set(x, 1.75, 0);
 				g.add(h);
-				mesh(SPH(0.46, 24), skin, h);
-				eyeBall(h, -0.16, 0.08, 0.36, 0.11);
-				eyeBall(h, 0.16, 0.08, 0.36, 0.11);
-				mesh(new THREE.TorusGeometry(0.12, 0.03, 6, 16, Math.PI), MAT.black, h, 0, -0.14, 0.42).rotation.z = Math.PI;
+				const head = mesh(sculpt(lathe([[0, -0.62], [0.3, -0.5], [0.46, -0.12], [0.44, 0.22], [0.3, 0.44], [0, 0.52]]), (p, n) => Math.max(0, n.z) * Math.exp(-Math.pow(p.y - 0.2, 2) / 0.01) * 0.05), skin, h);
+				head.scale.z = 0.92;
+				eyeBall(h, -0.15, 0.1, 0.34, 0.11, skin, x < 0 ? 0.55 : 0.15);
+				eyeBall(h, 0.15, 0.1, 0.34, 0.11, skin, x < 0 ? 0.55 : 0.15);
+				grin(h, 0, -0.13, 0.39, 0.26, 0.07, false);
 				m.heads.push(h);
 			}
-			for (const [x, y] of [[-0.4, 0.8], [0.3, 0.5], [0.6, 1.0]]) mesh(SPH(0.09, 10), glowMat(0xb8ff6a, 1.5), g, x, y, 0.85);
+			const glow = glowMat(0xb8ff6a, 1.5);
+			for (const [i, a, r] of [[16, -0.5, 0.11], [9, 0.35, 0.09], [22, 0.6, 0.08], [12, -0.15, 0.07], [26, -0.75, 0.06]]) {
+				const s = onLathe(bodyGeo, i, a);
+				s.pos.z *= 0.82;
+				blister(g, s.pos, s.normal, r, glow, 0.7);
+			}
 		},
+		// a gentleman in a frock coat: an egg of a head with one great heavy-lidded eye, a top hat, a monocle
 		cyclops(g, skin) {
-			mesh(CYL(0.5, 0.62, 1.15, 24), std(0x6a4ad0, 0.4, 0.1), g, 0, 0.58, 0);
-			mesh(BOX(0.12, 0.6, 0.05), std(0xe0d8c8, 0.6, 0), g, 0, 0.85, 0.55);
-			mesh(SPH(0.58, 28), skin, g, 0, 1.65, 0);
-			eyeBall(g, 0, 1.72, 0.42, 0.28);
-			const mono = mesh(new THREE.TorusGeometry(0.32, 0.03, 8, 28), std(0xe9c04a, 0.2, 1), g, 0, 1.72, 0.45);
+			const coat = std(0x6a4ad0, 0.4, 0.1);
+			mesh(lathe([[0, 0], [0.64, 0], [0.68, 0.28], [0.56, 0.75], [0.62, 1.02], [0.46, 1.2], [0.22, 1.3], [0, 1.31]]), coat, g);
+			for (const s of [-1, 1]) tube(g, [[s * 0.55, 1.05, 0], [s * 0.72, 0.7, 0.1], [s * 0.68, 0.4, 0.28]], 0.12, 0.09, coat);
+			mesh(BOX(0.12, 0.6, 0.05), std(0xe0d8c8, 0.6, 0), g, 0, 0.85, 0.58);
+			const head = new THREE.Group();
+			head.position.set(0, 1.78, 0);
+			g.add(head);
+			mesh(sculpt(lathe([[0, -0.55], [0.32, -0.5], [0.55, -0.22], [0.6, 0.1], [0.52, 0.42], [0, 0.6]]),
+				(p, n) => Math.max(0, n.z) * (Math.exp(-Math.pow(p.y - 0.3, 2) / 0.006) * 0.08 + Math.exp(-(Math.pow(p.y + 0.22, 2) + Math.pow(Math.abs(p.x) - 0.3, 2)) / 0.01) * 0.05)), skin, head);
+			eyeBall(head, 0, 0.06, 0.36, 0.27, skin, 0.5);
+			const mono = mesh(new THREE.TorusGeometry(0.33, 0.03, 10, 32), std(0xe9c04a, 0.2, 1), head, 0, 0.06, 0.62);
 			faceCam(mono);
-			mesh(CYL(0.3, 0.3, 0.55, 24), std(0x111111, 0.4, 0.2), g, 0, 2.42, -0.05);
-			mesh(CYL(0.5, 0.5, 0.05, 24), std(0x111111, 0.4, 0.2), g, 0, 2.15, -0.05);
-			mesh(CYL(0.31, 0.31, 0.08, 24), std(0x8a1a2a, 0.5, 0), g, 0, 2.2, -0.05);
+			grin(head, 0, -0.3, 0.5, 0.24, 0.05, true);
+			const hat = new THREE.Group();
+			hat.position.set(0.04, 0.5, -0.05);
+			hat.rotation.z = -0.12;
+			head.add(hat);
+			const felt = std(0x16141e, 0.45, 0.2);
+			mesh(lathe([[0, -0.02], [0.52, -0.02], [0.56, 0.03], [0.32, 0.05], [0.3, 0.25], [0.32, 0.55], [0.3, 0.6], [0, 0.6]]), felt, hat);
+			mesh(CYL(0.315, 0.31, 0.09, 32), std(0x8a1a2a, 0.5, 0), hat, 0, 0.11, 0);
 		},
+		// Gary: one heaving lump of mould, eyes all over, spores glowing
 		mold(g, skin) {
 			const rnd = seeded(7);
+			const bumps = [];
+			for (let n = 0; n < 10; n++) bumps.push({ c: new THREE.Vector3(rnd() - 0.5, rnd() - 0.4, rnd() * 0.6).normalize(), a: 0.12 + rnd() * 0.14, k: 4 + rnd() * 5 });
+			const R = (d) => 0.8 + bumps.reduce((s, b) => s + b.a * Math.exp(-(1 - d.dot(b.c)) * b.k), 0) + lumpy(d, 1.6) * 0.025;
+			const geo = new THREE.SphereGeometry(1, 72, 52);
+			const pos = geo.attributes.position, v = new THREE.Vector3();
+			for (let i = 0; i < pos.count; i++) {
+				v.fromBufferAttribute(pos, i);
+				v.multiplyScalar(R(v.clone().normalize()));
+				pos.setXYZ(i, v.x, v.y, v.z);
+			}
+			geo.computeVertexNormals();
+			smoothSeams(geo);
+			const SC = new THREE.Vector3(0.82, 1.0, 0.62), at = new THREE.Vector3(0, 1.15, 0);
+			const lump = mesh(geo, skin, g, at.x, at.y, at.z);
+			lump.scale.copy(SC);
 			const dark = skin.clone();
-			dark.color.multiplyScalar(0.7);
-			for (let n = 0; n < 11; n++) mesh(SPH(0.38 + rnd() * 0.18, 18), n % 2 ? skin : dark, g, (rnd() - 0.5) * 1.4, 0.5 + rnd() * 1.6, (rnd() - 0.5) * 0.5);
-			for (const [x, y, r] of [[-0.4, 1.6, 0.1], [0.05, 1.9, 0.14], [0.4, 1.5, 0.09], [0.55, 1.95, 0.08], [-0.1, 1.2, 0.08], [-0.55, 1.05, 0.07]]) eyeBall(g, x, y, 0.55, r);
-			for (let n = 0; n < 8; n++) mesh(SPH(0.04, 6), glowMat(0xe9ff4a, 1.3), g, (rnd() - 0.5) * 1.4, 0.6 + rnd() * 1.5, 0.6);
+			dark.color.multiplyScalar(0.62);
+			const onLump = (x, y) => { const d = new THREE.Vector3(x, y, 1).normalize(); return d.multiplyScalar(R(d)).multiply(SC).add(at); };
+			for (const [x, y, r] of [[-0.45, 0.42, 0.11], [0.05, 0.75, 0.15], [0.45, 0.32, 0.1], [0.6, 0.9, 0.08], [-0.1, 0.05, 0.09], [-0.6, -0.15, 0.07]]) {
+				const p = onLump(x, y);
+				eyeBall(g, p.x, p.y, p.z - r * 0.35, r, dark, rnd());
+			}
+			grin(g, 0.1, 0.85, onLump(0.1, -0.3).z - 0.02, 0.4, 0.09, false);
+			const spore = glowMat(0xe9ff4a, 1.3);
+			for (let n = 0; n < 9; n++) {
+				const d = new THREE.Vector3((rnd() - 0.5) * 1.6, (rnd() - 0.5) * 1.8, 0.7 + rnd() * 0.3).normalize();
+				const p = d.clone().multiplyScalar(R(d)).multiply(SC).add(at);
+				blister(g, p, d, 0.05 + rnd() * 0.03, spore, 0.8);
+			}
 		},
+		// a pigeon in a suit: a pear of a body, a domed head that bobs, a hooked beak, a top hat
 		pigeon(g, skin, m) {
 			const suit = std(0x3a5ad0, 0.45, 0.05);
-			const body = mesh(SPH(0.7, 24), suit, g, 0, 0.75, 0);
-			body.scale.set(0.9, 1.05, 0.8);
-			mesh(BOX(0.12, 0.55, 0.05), std(0xc02a2a, 0.5, 0), g, 0, 0.95, 0.56).rotation.x = -0.1;
+			const body = mesh(lathe([[0, 0], [0.44, 0], [0.5, 0.2], [0.64, 0.55], [0.7, 0.9], [0.58, 1.22], [0.34, 1.4], [0.18, 1.46], [0, 1.47]]), suit, g);
+			body.scale.z = 0.82;
+			const shirt = new THREE.Shape();
+			shirt.moveTo(-0.2, 0.32); shirt.lineTo(0.2, 0.32); shirt.lineTo(0, -0.25); shirt.lineTo(-0.2, 0.32);
+			const s1 = slab(shirt, 0.02, 0.02, std(0xf0ece4, 0.5, 0), g);
+			s1.position.set(0, 1.08, 0.5);
+			s1.rotation.x = -0.25;
+			const tie = new THREE.Shape();
+			tie.moveTo(-0.05, 0.3); tie.lineTo(0.05, 0.3); tie.lineTo(0.08, -0.2); tie.lineTo(0, -0.3); tie.lineTo(-0.08, -0.2); tie.lineTo(-0.05, 0.3);
+			const t1 = slab(tie, 0.02, 0.015, std(0xc02a2a, 0.4, 0), g);
+			t1.position.set(0, 1.05, 0.54);
+			t1.rotation.x = -0.25;
+			for (const s of [-1, 1]) tube(g, [[s * 0.6, 1.0, 0], [s * 0.78, 0.7, 0.05], [s * 0.7, 0.42, 0.2]], 0.13, 0.08, suit);
 			const head = new THREE.Group();
 			head.position.set(0, 1.75, 0.05);
 			g.add(head);
-			mesh(SPH(0.4, 22), skin, head);
-			const neck = mesh(CYL(0.3, 0.36, 0.3, 18), std(0x4ab09a, 0.25, 0.6), head, 0, -0.38, 0);
-			neck.castShadow = false;
-			eyeBall(head, -0.2, 0.08, 0.3, 0.1);
-			eyeBall(head, 0.2, 0.08, 0.3, 0.1);
-			const beak = mesh(new THREE.ConeGeometry(0.1, 0.3, 12), std(0xe8a83c, 0.4, 0), head, 0, -0.04, 0.48);
-			beak.rotation.x = Math.PI / 2;
-			mesh(CYL(0.22, 0.22, 0.04, 20), std(0x111111, 0.5, 0), head, 0, 0.42, 0);
-			mesh(CYL(0.14, 0.14, 0.3, 20), std(0x111111, 0.5, 0), head, 0, 0.58, 0);
+			mesh(sculpt(lathe([[0, -0.44], [0.28, -0.4], [0.38, -0.12], [0.37, 0.16], [0.25, 0.37], [0, 0.42]]), (p, n) => Math.max(0, n.z) * Math.exp(-Math.pow(p.y - 0.05, 2) / 0.03) * 0.06), skin, head);
+			mesh(lathe([[0.3, -0.5], [0.38, -0.42], [0.36, -0.3], [0.3, -0.24]], 40, 16), std(0x4ab09a, 0.2, 0.6, { side: THREE.DoubleSide }), head);
+			eyeBall(head, -0.19, 0.08, 0.27, 0.1, skin, 0.4);
+			eyeBall(head, 0.19, 0.08, 0.27, 0.1, skin, 0.4);
+			tube(head, [[0, 0.0, 0.3], [0, -0.02, 0.48], [0, -0.1, 0.62]], 0.1, 0.018, std(0xe8a83c, 0.35, 0));
+			const felt = std(0x16141e, 0.45, 0.2);
+			const hat = mesh(lathe([[0, -0.01], [0.24, -0.01], [0.26, 0.03], [0.15, 0.04], [0.14, 0.2], [0.15, 0.32], [0, 0.33]]), felt, head, 0, 0.36, -0.02);
+			hat.rotation.x = -0.1;
 			m.head = head;
 		},
+		// a little doomskull: a moulded skull in a glass dome on a rounded robot body
 		skull(g, skin) {
-			mesh(BOX(1.15, 1.0, 0.75), std(0xff9a3a, 0.3, 0.2), g, 0, 0.55, 0);
-			for (const x of [-0.35, 0, 0.35]) mesh(SPH(0.07, 10), glowMat(x ? 0xff4a32 : 0x9dff3a, 2), g, x, 0.75, 0.39);
-			for (const x of [-0.72, 0.72]) limb(g, [x, 0.9, 0], [x * 1.2, 0.3, 0.3], 0.08, MAT.steel);
-			mesh(SPH(0.58, 28), MAT.glass, g, 0, 1.55, 0);
-			mesh(SPH(0.38, 24), skin, g, 0, 1.5, 0);
+			const shell = std(0xff9a3a, 0.3, 0.2);
+			mesh(lathe([[0, 0.05], [0.52, 0.05], [0.6, 0.2], [0.6, 0.85], [0.52, 1.05], [0, 1.07]], 6, 24), shell, g).rotation.y = Math.PI / 6;
+			for (const x of [-0.3, 0, 0.3]) blister(g, new THREE.Vector3(x, 0.72, 0.53), new THREE.Vector3(0, 0, 1), 0.07, glowMat(x ? 0xff4a32 : 0x9dff3a, 2), 0.7);
+			for (const s of [-1, 1]) tube(g, [[s * 0.55, 0.85, 0], [s * 0.82, 0.62, 0.05], [s * 0.78, 0.32, 0.3]], 0.07, 0.05, MAT.steel, 10);
+			mesh(lathe([[0.42, -0.02], [0.6, 0.1], [0.62, 0.45], [0.42, 0.85], [0, 0.95]], 40, 32), MAT.glass, g, 0, 1.05, 0);
+			const sk = new THREE.Group();
+			sk.position.set(0, 1.45, 0);
+			g.add(sk);
+			const bone = skin;   // (the skin: it flushes red when they're cross)
+			mesh(sculpt(lathe([[0, -0.34], [0.2, -0.36], [0.27, -0.2], [0.36, 0.02], [0.36, 0.24], [0.22, 0.4], [0, 0.43]]),
+				(p, n) => Math.max(0, n.z) * (Math.exp(-(Math.pow(p.y + 0.08, 2) + Math.pow(Math.abs(p.x) - 0.24, 2)) / 0.006) * 0.05)), bone, sk);
+			const socket = new THREE.Shape();
+			socket.absellipse(0, 0, 0.09, 0.075, 0, Math.PI * 2);
 			for (const x of [-0.13, 0.13]) {
-				const s = mesh(SPH(0.1, 12), MAT.black, g, x, 1.55, 0);
-				s.position.addScaledVector(TOWARD, 0.31);
-				const glint = mesh(SPH(0.035, 8), glowMat(0x9dff3a, 2.2), g, x, 1.55, 0);
-				glint.position.addScaledVector(TOWARD, 0.4);
+				const s = slab(socket, 0.02, 0.02, MAT.black, sk);
+				s.position.set(x, 0.06, 0.3);
+				s.rotation.y = x * 1.6;
+				blister(sk, new THREE.Vector3(x, 0.06, 0.335), new THREE.Vector3(0, 0, 1), 0.03, glowMat(0x9dff3a, 2.2), 0.9);
 			}
-			for (let n = -2; n <= 2; n++) mesh(BOX(0.05, 0.07, 0.03), MAT.white, g, n * 0.06, 1.3, 0.33);
+			const nose = new THREE.Shape();
+			nose.moveTo(0, 0.04); nose.lineTo(0.035, -0.035); nose.lineTo(-0.035, -0.035); nose.lineTo(0, 0.04);
+			slab(nose, 0.01, 0.012, MAT.black, sk).position.set(0, -0.08, 0.33);
+			for (let n = -2; n <= 2; n++) mesh(BOX(0.05, 0.07, 0.03), MAT.white, sk, n * 0.055, -0.2, 0.27 - Math.abs(n) * 0.012);
 		},
+		// a squid in curlers: a tall moulded mantle, droopy eyes, tentacles curling under
 		squid(g, skin, m) {
 			m.arms = [];
 			for (let n = -3; n <= 3; n++) {
 				const arm = new THREE.Group();
-				arm.position.set(n * 0.16, 0.95, 0.1);
+				arm.position.set(n * 0.15, 1.0, 0.12);
 				g.add(arm);
-				limb(arm, [0, 0, 0], [n * 0.08, -0.5, 0.2], 0.1, skin);
-				limb(arm, [n * 0.08, -0.5, 0.2], [n * 0.18, -0.95, 0.35], 0.07, skin);
+				const s = Math.sign(n) || (n === 0 ? 0.3 : 1);
+				tube(arm, [[0, 0.05, 0], [n * 0.05, -0.35, 0.12], [n * 0.12, -0.72, 0.25], [n * 0.2 + s * 0.06, -0.9, 0.45], [n * 0.2 + s * 0.12, -0.78, 0.6]], 0.11, 0.03, skin, 10, 32);
 				m.arms.push(arm);
 			}
-			const head = mesh(SPH(0.7, 28), skin, g, 0, 1.6, 0);
-			head.scale.set(0.95, 1.2, 0.9);
-			eyeBall(g, -0.24, 1.6, 0.52, 0.13);
-			eyeBall(g, 0.24, 1.6, 0.52, 0.13);
-			for (const [x, z] of [[-0.3, 0], [0, -0.1], [0.3, 0]]) {
-				const c = mesh(CYL(0.1, 0.1, 0.24, 14), std(0x7ad8ff, 0.4, 0.1), g, x, 2.42, z);
+			mesh(sculpt(lathe([[0.3, 0], [0.55, 0.06], [0.7, 0.35], [0.68, 0.8], [0.52, 1.22], [0.26, 1.52], [0, 1.6]]), (p) => lumpy(p, 1.4) * 0.02), skin, g, 0, 0.95, 0).scale.z = 0.9;
+			eyeBall(g, -0.24, 1.58, 0.5, 0.14, skin, 0.5);
+			eyeBall(g, 0.24, 1.58, 0.5, 0.14, skin, 0.5);
+			grin(g, 0, 1.24, 0.6, 0.26, 0.06, false, std(0xc02a6a, 0.4, 0));
+			for (const [x, z] of [[-0.24, 0.02], [0, -0.08], [0.24, 0.02]]) {
+				const c = mesh(CYL(0.09, 0.09, 0.24, 20), std(0x7ad8ff, 0.4, 0.1), g, x, 2.48, z);
 				c.rotation.z = Math.PI / 2;
 			}
-			mesh(new THREE.TorusGeometry(0.12, 0.03, 6, 16, Math.PI), std(0xc02a6a, 0.4, 0), g, 0, 1.25, 0.58).rotation.z = Math.PI;
 		},
+		// a cool mushroom: a curled, wobbly cap with domed spots, a skirted stem, shades
 		fungus(g, skin) {
-			mesh(CYL(0.34, 0.42, 1.3, 22), MAT.cream, g, 0, 0.65, 0);
-			const cap = mesh(new THREE.SphereGeometry(0.95, 30, 14, 0, Math.PI * 2, 0, Math.PI / 2), skin, g, 0, 1.3, 0);
-			cap.scale.set(1, 0.7, 1);
-			mesh(new THREE.CircleGeometry(0.95, 30), std(0xd8c8a8, 0.8, 0, { side: THREE.DoubleSide }), g, 0, 1.3, 0).rotation.x = Math.PI / 2;
-			for (const [x, y, z] of [[-0.45, 1.6, 0.45], [0.2, 1.88, 0.3], [0.6, 1.55, 0.3], [-0.1, 1.75, -0.4]]) mesh(SPH(0.13, 12), MAT.white, g, x, y, z);
-			const shades = mesh(BOX(0.62, 0.13, 0.06), std(0x080808, 0.05, 0.9), g, 0, 1.0, 0.36);
-			shades.rotation.x = -0.2;
-			mesh(new THREE.TorusGeometry(0.1, 0.025, 6, 14, Math.PI), MAT.black, g, 0, 0.75, 0.38).rotation.z = Math.PI;
-		},
-		overlord(g, skin, m) {
-			mesh(CYL(0.75, 0.95, 1.4, 28), std(0x7a3ad0, 0.35, 0.2), g, 0, 0.7, 0);
-			for (const x of [-0.8, 0.8]) mesh(SPH(0.35, 16), std(0xe9c04a, 0.25, 1), g, x, 1.35, 0);
-			const brain = mesh(SPH(0.85, 32), std(0xe88aa8, 0.35, 0, { emissive: 0x501030, emissiveIntensity: 0.3 }), g, 0, 2.05, 0);
-			brain.scale.set(1.1, 0.85, 0.95);
-			for (let n = 0; n < 6; n++) {
-				const fold = mesh(new THREE.TorusGeometry(0.75 - Math.abs(n - 2.5) * 0.08, 0.035, 6, 30, Math.PI), std(0xb05a78, 0.4, 0), g, (n - 2.5) * 0.15, 2.05, 0);
-				fold.rotation.y = Math.PI / 2;
+			const stem = std(0xfff4dc, 0.5, 0);
+			mesh(lathe([[0, 0], [0.46, 0], [0.4, 0.14], [0.33, 0.5], [0.34, 0.9], [0.4, 1.2], [0.36, 1.3], [0, 1.31]]), stem, g);
+			mesh(lathe([[0.35, 1.0], [0.48, 0.9], [0.56, 0.8], [0.58, 0.76]], 40, 12), std(0xf0e4c8, 0.6, 0, { side: THREE.DoubleSide }), g);
+			const capGeo = sculpt(lathe([[0.3, 1.16], [0.7, 1.15], [0.98, 1.2], [1.06, 1.3], [0.96, 1.55], [0.62, 1.85], [0, 1.96]]),
+				(p) => { const r = Math.hypot(p.x, p.z); return Math.sin(Math.atan2(p.z, p.x) * 6) * 0.04 * clamp((r - 0.6) / 0.4, 0, 1) + lumpy(p, 1.2) * 0.012; });
+			mesh(capGeo, skin, g);
+			const gills = new THREE.RingGeometry(0.3, 0.96, 40, 1);
+			mesh(gills, std(0xd8c8a8, 0.8, 0, { side: THREE.DoubleSide }), g, 0, 1.165, 0).rotation.x = Math.PI / 2;
+			for (const [i, a, r] of [[30, -0.7, 0.13], [38, 0.3, 0.12], [27, 0.9, 0.11], [34, 2.4, 0.13], [44, -2.0, 0.1], [24, -1.6, 0.1]]) {
+				const s = onLathe(capGeo, i, a);
+				blister(g, s.pos, s.normal, r, MAT.white, 0.35);
 			}
-			eyeBall(g, -0.3, 1.75, 0.62, 0.16);
-			eyeBall(g, 0.3, 1.75, 0.62, 0.16);
+			const lens = new THREE.Shape();
+			lens.absellipse(0, 0, 0.13, 0.08, 0, Math.PI * 2);
+			for (const x of [-0.15, 0.15]) {
+				const l = slab(lens, 0.02, 0.02, std(0x080808, 0.05, 0.9), g);
+				l.position.set(x, 1.0, 0.37);
+				l.rotation.y = x * 1.3;
+			}
+			mesh(BOX(0.12, 0.03, 0.03), std(0x080808, 0.05, 0.9), g, 0, 1.02, 0.4);
+			grin(g, 0, 0.76, 0.35, 0.2, 0.04, false);
+		},
+		// the Overlord: a robed bulk under a great ridged brain, a crown turning above it
+		overlord(g, skin, m) {
+			const robe = std(0x7a3ad0, 0.35, 0.2);
+			mesh(lathe([[0, 0], [0.96, 0], [0.92, 0.3], [0.76, 0.9], [0.6, 1.3], [0.38, 1.46], [0, 1.5]]), robe, g);
+			const gold = std(0xe9c04a, 0.25, 1);
+			for (const s of [-1, 1]) {
+				const pad = mesh(lathe([[0, -0.05], [0.36, -0.05], [0.32, 0.12], [0.16, 0.22], [0, 0.24]], 32, 16), gold, g, s * 0.62, 1.32, 0);
+				pad.rotation.z = -s * 0.5;
+			}
+			const geo = new THREE.SphereGeometry(0.85, 80, 60);
+			smoothSeams(geo);
+			const brain = mesh(sculpt(geo, (p) => 0.05 * Math.abs(Math.sin(p.x * 11 + Math.sin(p.y * 7) * 2) * Math.sin(p.y * 10 + Math.sin(p.z * 8) * 2)) - 0.14 * Math.exp(-p.x * p.x / 0.003) * Math.max(0, p.y / 0.85)),
+				std(0xe88aa8, 0.35, 0, { emissive: 0x501030, emissiveIntensity: 0.3 }), g, 0, 2.05, 0);
+			brain.scale.set(1.1, 0.85, 0.95);
+			eyeBall(g, -0.3, 1.75, 0.62, 0.16, skin, 0.45);
+			eyeBall(g, 0.3, 1.75, 0.62, 0.16, skin, 0.45);
 			const crown = new THREE.Group();
 			crown.position.set(0, 2.7, 0);
 			g.add(crown);
-			mesh(CYL(0.55, 0.6, 0.2, 28, true), std(0xe9c04a, 0.2, 1, { side: THREE.DoubleSide }), crown);
+			mesh(lathe([[0.55, -0.1], [0.6, -0.08], [0.62, 0.05], [0.58, 0.12], [0.54, 0.1]], 40, 16), gold, crown);
 			for (let n = 0; n < 7; n++) {
 				const a = n / 7 * Math.PI * 2;
-				mesh(new THREE.ConeGeometry(0.08, 0.3, 8), std(0xe9c04a, 0.2, 1), crown, Math.sin(a) * 0.55, 0.22, Math.cos(a) * 0.55);
+				const spike = mesh(lathe([[0.07, 0], [0.06, 0.12], [0.02, 0.28], [0, 0.32]], 14, 10), gold, crown, Math.sin(a) * 0.58, 0.08, Math.cos(a) * 0.58);
+				spike.rotation.set(Math.cos(a) * 0.15, 0, -Math.sin(a) * 0.15);
 			}
-			mesh(SPH(0.09, 10), glowMat(0xff2d8f, 2), crown, 0, 0.1, 0.6);
+			blister(crown, new THREE.Vector3(0, 0.02, 0.62), new THREE.Vector3(0, 0, 1), 0.09, glowMat(0xff2d8f, 2), 0.8);
 			m.crown = crown;
 		},
 	};
