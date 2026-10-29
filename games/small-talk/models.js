@@ -1230,8 +1230,12 @@ function bannerTex(text, burnt) {
 		c.fillRect(0, 0, w, h);
 		c.fillStyle = 'rgba(0,0,0,0.06)';
 		for (let x = 0; x < w; x += 6) c.fillRect(x, 0, 2, h);
-		const size = Math.min(170, 3600 / Math.max(10, text.length));
-		c.font = `900 ${size}px "Arial Black", Impact, sans-serif`;
+		// the biggest lettering that fits, measured (with room for the bunting's ends)
+		const font = (px) => `900 ${px}px "Arial Black", Impact, sans-serif`;
+		c.font = font(100);
+		const at100 = [...text].reduce((a, ch) => a + c.measureText(ch).width, 0);
+		const size = Math.min(170, Math.floor(100 * w * 0.9 / at100));
+		c.font = font(size);
 		c.textAlign = 'left';
 		c.textBaseline = 'middle';
 		const total = [...text].reduce((a, ch) => a + c.measureText(ch).width, 0);
