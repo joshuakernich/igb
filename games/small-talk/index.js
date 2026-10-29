@@ -1366,21 +1366,20 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 			const fadeIn = Math.min(1, callout.age / 0.3);
 			const fadeOut = Math.min(1, (callout.dur - callout.age) / 0.4);
 			const a = fadeIn * fadeOut;
-			band(ctx, W, 260, W, 230, 0.55 * a);
-			vhsText(ctx, callout.text, W * 1.5, 250, 150, { alpha: a });
-			for (const wall of [0, 2]) {
-				band(ctx, wall * W, 240, W, 150, 0.45 * a);
-				vhsText(ctx, callout.text, wall * W + W / 2, 235, 92, { alpha: a * 0.85 });
+			// (the same size on every wall)
+			for (let wall = 0; wall < 3; wall++) {
+				band(ctx, wall * W, 260, W, 230, 0.55 * a);
+				vhsText(ctx, callout.text, wall * W + W / 2, 250, 150, { alpha: a });
 			}
 			if (phase === 'look') {
 				const left = Math.max(0, phaseDur - phaseT);
-				vhsText(ctx, `00:${String(Math.ceil(left)).padStart(2, '0')}`, W * 1.5, 360, 80, { alpha: a, fill: left < 4 ? RED : '#f6f1dc' });
+				for (let wall = 0; wall < 3; wall++) vhsText(ctx, `00:${String(Math.ceil(left)).padStart(2, '0')}`, wall * W + W / 2, 360, 80, { alpha: a, fill: left < 4 ? RED : '#f6f1dc' });
 			}
 		}
 		drawCaptions(ctx);
 		if (glitch > 0 && (phase === 'tap' || phase === 'reveal')) {
 			art.rect(ctx, 0, 0, WIDTH, H, { fill: `rgba(0,0,0,${0.5 * Math.sin(glitch / LOOP_GAP * Math.PI)})` });
-			vhsText(ctx, '◀◀', W * 1.5, H / 2, 120, { alpha: Math.sin(glitch / LOOP_GAP * Math.PI) });
+			for (let wall = 0; wall < 3; wall++) vhsText(ctx, '◀◀', wall * W + W / 2, H / 2, 120, { alpha: Math.sin(glitch / LOOP_GAP * Math.PI) });
 		}
 		if (phase === 'tap' && (!callout || callout.age > 2.6)) {
 			band(ctx, W * 1.2, 215, W * 0.6, 150, 0.4);
@@ -1390,8 +1389,7 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		if (phase === 'descend' || phase === 'rewind') {
 			const a = Math.sin(phaseT / phaseDur * Math.PI);
 			const text = phase === 'rewind' ? '◀◀ REWIND' : '*BLINK*';
-			vhsText(ctx, text, W * 1.5, H / 2, 96, { alpha: phase === 'rewind' ? a : Math.max(0, a * 2 - 1) });
-			if (phase === 'rewind') for (const wall of [0, 2]) vhsText(ctx, text, wall * W + W / 2, H / 2, 80, { alpha: a * 0.8 });
+			for (let wall = 0; wall < 3; wall++) vhsText(ctx, text, wall * W + W / 2, H / 2, 96, { alpha: phase === 'rewind' ? a : Math.max(0, a * 2 - 1) });
 		}
 		// the round's start: how many things are about to go wrong (the time of night is already in the corner)
 		if (phase === 'ready') {
@@ -1401,10 +1399,9 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 			art.rect(ctx, 0, 0, WIDTH, H, { fill: `rgba(8,2,6,${0.55 * a})` });
 			for (let wall = 0; wall < 3; wall++) {
 				const x = wall * W + W / 2;
-				const k = wall === 1 ? 1 : 0.7;
-				vhsText(ctx, V.clock, x, 330, 170 * k, { alpha: a, fill: YELLOW });
-				vhsText(ctx, V.title, x, 500, 110 * k, { alpha: a });
-				vhsText(ctx, text, x, 640, 64 * k, { alpha: a * between(phaseT, 0.8, 1.2), fill: PINK });
+				vhsText(ctx, V.clock, x, 330, 170, { alpha: a, fill: YELLOW });
+				vhsText(ctx, V.title, x, 500, 110, { alpha: a });
+				vhsText(ctx, text, x, 640, 64, { alpha: a * between(phaseT, 0.8, 1.2), fill: PINK });
 			}
 		}
 		show.onWalls(ctx, function (c) {
