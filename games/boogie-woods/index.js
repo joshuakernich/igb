@@ -1,5 +1,5 @@
 /*
- * Boogie Woods
+ * Treble in the Woods (id boogie-woods; it was Boogie Woods)
  *
  * A glistening, enchanted forest that plays music. The walls look out from
  * the middle of a clearing, and every creature in it bounces to the beat:
@@ -270,8 +270,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			update(dt) { tick(dt); },
 			draw(ctx, bt) {
 				show.onWalls(ctx, function (c) {
-					show.slam(c, 'THE WOODS', W / 2, 250, 110, bt - 0.2, { font: 'Shrikhand', exact: true, fill: '#a8ff3e' });
-					show.slam(c, 'WANT TO BOOGIE!', W / 2, 370, 96, bt - 0.8, { font: 'Shrikhand', exact: true, fill: '#ff5fb0' });
+					show.slam(c, 'THERE\'S TREBLE', W / 2, 250, 110, bt - 0.2, { font: 'Shrikhand', exact: true, fill: '#a8ff3e' });
+					show.slam(c, 'IN THE WOODS!', W / 2, 370, 96, bt - 0.8, { font: 'Shrikhand', exact: true, fill: '#ff5fb0' });
 					show.slam(c, 'EVERY CREATURE IS AN INSTRUMENT', W / 2, 480, 50, bt - 1.6, { fill: 'white' });
 				});
 			},
@@ -922,7 +922,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				const ax = avCap(q.x), az = avCap(q.z);
 				const depth = w === 0 ? -ax : w === 2 ? ax : -az, lat = w === 0 ? -az : w === 2 ? az : ax;
 				const sF = depth > 0.1 ? lat / depth / (2 / 3) : 9;
-				const key = depth > PIANO.from && Math.abs(sF) < 1.02 ? clamp(Math.floor((sF * 0.5 + 0.5) * PIANO.per), 0, PIANO.per - 1) : -1;
+				const key = depth > PIANO.from && Math.abs(sF) < 1.02 ? pianoKeyAt(sF * 0.5 + 0.5) : -1;
 				if (key >= 0) pn.held[key] = i;
 				if (key !== q.key) {
 					q.key = key;
@@ -2323,11 +2323,37 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			sparkles(g, cx, cz, 500, '#ffd8ff', 12, 0.4, 5, 0.1);
 		},
 		bridge(g, ci, cx, cz, C) {
-			const BZ = cz - BRIDGE_Z;
-			const stone = new THREE.MeshStandardMaterial({ color: '#8a8a7a', roughness: 0.9, bumpMap: TEX.moss, bumpScale: 4 });
-			const arch = mesh(new THREE.TorusGeometry(5, 0.8, 16, 40, Math.PI), stone, g, cx, 0, BZ, 1, 0.8, 1.4);
-			arch.receiveShadow = true;
-			for (let k = 0; k < 12; k++) { const u = k / 11; mesh(GEO.sph, leafMats[1], g, cx + Math.cos(u * Math.PI) * 5, Math.sin(u * Math.PI) * 4.2 + 0.5, BZ, rr(0.4, 0.8), 0.35, 0.6); }
+			// a big, wonky old tree arching over the river: its trunk twisting up out of the bank
+			// on one side and down into the other, a vine spiralling round it, roots clawing into
+			// the ground at both ends and a crown of leaves on top; the chimes hang under it
+			const bark = new THREE.MeshStandardMaterial({ color: '#7a5a3a', map: TEX.bark, bumpMap: TEX.bark, bumpScale: 3, roughness: 0.85 });
+			const curve = new THREE.CatmullRomCurve3(Array.from({ length: 13 }, (_, k) => { const u = k / 12; return new THREE.Vector3(cx + treeX(u), treeY(u), cz - treeZ(u)); }));
+			// (the trunk thickest at the roots, thinning over the top: a tube a section at a time)
+			for (let k = 0; k < 8; k++) {
+				const u0 = k / 8, u1 = (k + 1) / 8, mid = (u0 + u1) / 2;
+				const pts = [0, 0.25, 0.5, 0.75, 1].map((t) => curve.getPoint(lerp(u0, u1, t) * 0.999));
+				const tb = mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 10, treeR(mid), 14), bark, g);
+				tb.receiveShadow = true;
+			}
+			// (a vine winding round it)
+			const vine = [];
+			for (let k = 0; k <= 120; k++) {
+				const u = k / 120, p0 = curve.getPoint(u), t = curve.getTangent(u), n = new THREE.Vector3(0, 1, 0).cross(t).normalize(), b = t.clone().cross(n);
+				const a = u * Math.PI * 14, r = treeR(u) * 1.05;
+				vine.push(p0.add(n.multiplyScalar(Math.cos(a) * r)).add(b.multiplyScalar(Math.sin(a) * r)));
+			}
+			mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(vine), 240, 0.06, 6), leafMats[0], g);
+			// (roots, clawing out into the ground at both ends)
+			for (const end of [0, 1]) for (let k = 0; k < 6; k++) {
+				const base = curve.getPoint(end ? 0.999 : 0), a = rnd() * Math.PI * 2, L = rr(0.9, 1.8);
+				const pts = [base.clone().setY(0.6), base.clone().add(new THREE.Vector3(Math.cos(a) * L * 0.5, 0.25, Math.sin(a) * L * 0.5)).setY(0.3), base.clone().add(new THREE.Vector3(Math.cos(a) * L, 0, Math.sin(a) * L)).setY(-0.05)];
+				mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 10, rr(0.08, 0.16), 8), bark, g);
+			}
+			// (a crown of leaves on top, and tufts along it)
+			for (let k = 0; k < 26; k++) {
+				const u = k < 16 ? rr(0.3, 0.7) : rr(0.1, 0.9), p0 = curve.getPoint(u);
+				mesh(CANOPY[k % 3], leafMats[k % 4], g, p0.x + rr(-0.8, 0.8), p0.y + treeR(u) + rr(0.1, 0.9), p0.z + rr(-0.8, 0.8), rr(0.5, 1.1), rr(0.35, 0.6), rr(0.5, 1));
+			}
 			const stream = mesh(new THREE.PlaneGeometry(3.5, 30), new THREE.MeshPhysicalMaterial({ color: '#1a5a6a', roughness: 0.05, clearcoat: 1 }), g, cx, 0.012, cz - 14);
 			stream.rotation.x = -Math.PI / 2; stream.castShadow = false;
 			for (let k = 0; k < 6; k++) { const a = -Math.PI / 2 + rr(-2, 2); giantMushroom(g, cx + Math.cos(a) * 9, cz + Math.sin(a) * 9, rr(1.5, 3), ['#a8ff6a', '#ff8a4a'][k % 2]); }
@@ -2681,7 +2707,10 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	// foot of the three walls, pale and dark like keys, 6 a wall. Whoever walks
 	// along near a wall plays the stone in front of them the moment they step on
 	// it: low on the left wall, rising across the front and up the right.
-	const PIANO = { per: 12, from: 1.15 };   // (an avatar further out than this, on the fan, is on a panel)   // (12 stones, all along one wall)
+	const PIANO = { per: 12, from: 1.15, endW: 1.35 };   // (12 stones along one wall; an avatar further out than `from`, on the fan, is on a panel; the two end ones endW as wide)
+	// where key boundary b falls across the fan, 0..1 (the end keys a little wider), and which key a share f is on
+	const PIANO_B = (function () { const w = Array.from({ length: PIANO.per }, (_, k) => (k === 0 || k === PIANO.per - 1 ? PIANO.endW : 1)), tot = w.reduce((a, b) => a + b, 0); let acc = 0; return [0, ...w.map((x) => (acc += x) / tot)]; })();
+	const pianoKeyAt = (f) => { for (let k = 0; k < PIANO.per; k++) if (f < PIANO_B[k + 1]) return k; return PIANO.per - 1; };
 	const pianos = [];
 	function glowInstanced(geo, n, extra = {}) {
 		const mat = new THREE.MeshStandardMaterial(Object.assign({ color: '#ffffff', map: TEX.moss, bumpMap: TEX.moss, bumpScale: 4, roughness: 0.55 }, extra));
@@ -2722,8 +2751,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		// the middle 2/3 of the screen; far off they run parallel to the crystals.)
 		const dJ = R / SPAN, NS = 10;
 		const DS = Array.from({ length: NS + 1 }, (_, j) => dIn + (dOut - dIn) * j / NS);
-		const edge = (b, d) => ((b / n - 0.5) * 2 * SPAN) * Math.min(d, dJ);
-		const keyW = (d) => 2 * SPAN * Math.min(d, dJ) / n;
+		const edge = (b, d) => ((PIANO_B[b] - 0.5) * 2 * SPAN) * Math.min(d, dJ);
+		const keyW = (d) => 2 * SPAN * Math.min(d, dJ) / n;   // (a typical key's width, for the wobble)
 		const BL = [];   // BL[b][j]: boundary b at sample depth j
 		for (let b = 0; b <= n; b++) BL[b] = DS.map((d, j) => new THREE.Vector2(edge(b, d) + (b > 0 && b < n ? rr(-0.36, 0.36) * keyW(d) : 0), d + (j > 0 && j < NS ? rr(-0.16, 0.16) : 0)));
 		const keyStone = (poly, mat, parent) => {
@@ -2737,7 +2766,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		for (let k = 0; k < n; k++) {
 			// (far off, the panels run parallel, as wide as the clearing; nearer than dJoin they
 			// taper into the middle 2/3 of the screen. The two meet exactly at dJoin, for every edge.)
-			const sL = ((k + 0.03) / n - 0.5) * 2 * SPAN, sR = ((k + 0.97) / n - 0.5) * 2 * SPAN, dJoin = R / SPAN;
+			const kw = PIANO_B[k + 1] - PIANO_B[k], sL = (PIANO_B[k] + 0.03 * kw - 0.5) * 2 * SPAN, sR = (PIANO_B[k] + 0.97 * kw - 0.5) * 2 * SPAN, dJoin = R / SPAN;
 			const LL = sL * dJoin, LR = sR * dJoin;
 			const lat = (LL + LR) / 2;
 			// the panel: a long tapering slab, pale and dark by turns, like keys
@@ -3127,15 +3156,21 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	// the left, highest on the right. Touch one to strike it, swipe across to run them.
 	// The bridge stands close in front of the front wall, the chimes filling its arch.
 	const BRIDGE_Z = 5.0;   // (metres out from the clearing's middle)
+	// the tree's arch, u from 0 (one bank) to 1 (the other): across, up, and out (from the middle; it wanders in depth)
+	const treeX = (u) => -5.4 + u * 10.8;
+	const treeY = (u) => 4.0 * Math.pow(Math.sin(Math.PI * u), 0.75) + 0.3 * Math.sin(3 * Math.PI * u + 0.6) * Math.sin(Math.PI * u);
+	const treeZ = (u) => BRIDGE_Z + 0.5 * Math.sin(2 * Math.PI * u + 0.4);
+	const treeR = (u) => lerp(0.75, 0.42, Math.sin(Math.PI * u));   // (thick at the banks, thinner over the top)
 	const chimeSets = [];
 	function buildChimes(g, ci, cx, cz) {
-		const N = 25, zc = cz - BRIDGE_Z + 0.3, list = [];
+		const N = 25, list = [];
 		const brass = new THREE.MeshPhysicalMaterial({ color: '#e8c66a', metalness: 1, roughness: 0.18, clearcoat: 1, emissive: '#ffb030', emissiveIntensity: 0 });
 		const cord = new THREE.MeshBasicMaterial({ color: '#3a2a1a' });
 		for (let k = 0; k < N; k++) {
-			const x = (k / (N - 1) - 0.5) * 7.6;
-			const top = Math.sqrt(Math.max(0, 4.25 * 4.25 - x * x)) * 0.8 - 0.05;   // (the arch's underside, there)
-			const len = lerp(1.7, 0.45, k / (N - 1)) * rr(0.95, 1.05), drop = Math.max(0.1, top - 0.6 - len);   // (their feet near 0.6 m, so they fill the arch and stay in reach)
+			const u = lerp(0.17, 0.83, k / (N - 1)), x = treeX(u), zc = cz - treeZ(u);
+			const top = treeY(u) - treeR(u) * 0.9;   // (the trunk's underside, there)
+			// (long: from just under the trunk nearly to the ground, the low notes longest; feet in reach of a touch)
+			const len = Math.max(0.6, (top - 0.35) * lerp(0.92, 0.72, k / (N - 1)) * rr(0.96, 1.02)), drop = Math.max(0.1, top - 0.35 - len);
 			const piv = new THREE.Group(); piv.position.set(cx + x, top, zc); g.add(piv);
 			mesh(GEO.cyl, cord, piv, 0, -drop / 2, 0, 0.012, drop, 0.012).castShadow = false;
 			const mat = brass.clone();
@@ -3143,7 +3178,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			mesh(GEO.cyl, mat, piv, 0, -drop, (k % 2) * 0.12, 0.085, 0.025, 0.085);
 			list.push({ piv, mat, x: cx + x, y: top - drop - len / 2, z: zc + (k % 2) * 0.12, len, deg: k - 7, swing: 0, v: 0, glow: 0 });   // (two rows, staggered; low on the left to high on the right)
 		}
-		labels.push({ ci, wall: 1, at: new THREE.Vector3(cx, 0.5, zc), text: 'SWIPE THE CHIMES' });
+		labels.push({ ci, wall: 1, at: new THREE.Vector3(cx, 0.2, cz - BRIDGE_Z), text: 'SWIPE THE CHIMES' });
 		chimeSets[ci] = { list, last: -1, lastT: -9 };
 	}
 	function chimeAt(at, wall, who, strum) {
@@ -3244,9 +3279,17 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const mat = new THREE.MeshPhysicalMaterial({ color: colour(i), emissive: colour(i), emissiveIntensity: 0.35, roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.15 });
 		const head = mesh(GEO.sph, mat, g, 0, 0, 0, 0.15, 0.105, 0.12);
 		head.rotation.z = -0.45;   // (the tilted oval note head)
-		mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.56, 10), mat, g, -0.125, 0.29, 0);
-		const flag = new THREE.CatmullRomCurve3([[-0.125, 0.56, 0], [-0.17, 0.5, 0], [-0.25, 0.4, 0], [-0.27, 0.29, 0], [-0.23, 0.18, 0]].map((v) => new THREE.Vector3(...v)));
-		mesh(new THREE.TubeGeometry(flag, 24, 0.022, 8), mat, g, 0, 0, 0, 1, 1, 0.55);
+		mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.58, 12), mat, g, -0.12, 0.29, 0);
+		// (the flag: thick where it leaves the stem, sweeping out and down to a smooth point)
+		const flag = new THREE.CatmullRomCurve3([[-0.12, 0.57, 0], [-0.17, 0.51, 0], [-0.25, 0.41, 0], [-0.28, 0.3, 0], [-0.24, 0.17, 0]].map((v) => new THREE.Vector3(...v)));
+		const fg = new THREE.TubeGeometry(flag, 32, 0.045, 12), fa = fg.attributes.position, fc = new THREE.Vector3(), fv = new THREE.Vector3();
+		for (let i = 0; i <= 32; i++) {
+			const t = i / 32, k = Math.pow(1 - t, 0.7);   // (tapering to nothing)
+			flag.getPointAt(t, fc);
+			for (let j = 0; j <= 12; j++) { const n = i * 13 + j; fv.fromBufferAttribute(fa, n).sub(fc).multiplyScalar(k).add(fc); fa.setXYZ(n, fv.x, fv.y, fv.z); }
+		}
+		fg.computeVertexNormals();
+		mesh(fg, mat, g, 0, 0, 0, 1, 1, 0.6);
 		const face = null;
 		const halo = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.9), new THREE.MeshBasicMaterial({ map: TEX.soft, color: new THREE.Color(colour(i)).multiplyScalar(1.5), transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending }));
 		g.add(halo);
@@ -3628,10 +3671,12 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			const ax = lerp(avCap(q.x), q.x * 0.28, sq), az = lerp(avCap(q.z), -1.5 + q.z * 0.2, sq);
 			_p0.set(ax, 0, az - 1.6 * (walls.pull || 0)).applyAxisAngle(_yAx, walls.rig.rotation.y);
 			m.position.set(walls.rig.position.x + _p0.x, 0.14 + pulse * 0.08 + (q.jumpT > 0.3 ? 0.25 : 0), walls.rig.position.z + _p0.z);
-			// (facing away from whichever wall's camera it's in: toward that wall; turning round as it crosses over)
+			// (facing away from whichever wall's camera it's in, into that wall's view; turning round as it crosses over)
 			const wallNow = Math.abs(ax) > -az + 0.15 ? (ax < 0 ? 0 : 2) : Math.abs(ax) < -az - 0.15 ? 1 : (q.wallAt ?? 1);
 			q.wallAt = wallNow;
-			const want = (wallNow === 0 ? Math.PI / 2 : wallNow === 2 ? -Math.PI / 2 : 0) + walls.rig.rotation.y + Math.PI;
+			// (turned toward the centre of that wall's distance: a point well out along its middle)
+			const tx = wallNow === 0 ? -9 : wallNow === 2 ? 9 : 0, tz = wallNow === 1 ? -9 : 0;
+			const want = Math.atan2(tx - ax, tz - az) + walls.rig.rotation.y;
 			q.yaw = q.yaw === undefined ? want : q.yaw + Math.atan2(Math.sin(want - q.yaw), Math.cos(want - q.yaw)) * (1 - Math.exp(-dt * 8));
 			m.rotation.set(0, q.yaw, Math.sin(rt * 3 + i) * 0.06);
 			m.scale.setScalar(1 + pulse * 0.1);
