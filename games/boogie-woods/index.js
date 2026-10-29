@@ -1698,7 +1698,9 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			const shell = new THREE.Group(); shell.position.set(0, 0.48, -0.12); c.bouncer.add(shell);
 			const shellMat = new THREE.MeshPhysicalMaterial({ color: c.tint, roughness: 0.2, clearcoat: 1, iridescence: 1, iridescenceIOR: 1.6, bumpMap: TEX.scales, bumpScale: 0.6, emissive: c.tint, emissiveIntensity: 0.1 });
 			// (one fat tube coiled two and a half turns, growing as it goes, in the snail's side plane: seen side-on, a spiral)
-			mesh(spiralShellGeo(), shellMat, shell, 0, 0, 0);
+			// (turned so its mouth, the coil's outer end, sits low at the front, over the body, and the coil winds up and back)
+			const coil = mesh(spiralShellGeo(), shellMat, shell, 0, 0, 0);
+			coil.rotation.x = -Math.PI * 0.75;
 			c.parts.shell = shell; c.parts.shellMat = shellMat;
 			limb(c, [-0.08, 0.5, 0.42], [-0.16, 0.85, 0.5], 0.02, 'eye', -1);
 			limb(c, [0.08, 0.5, 0.42], [0.16, 0.85, 0.5], 0.02, 'eye', 1);
