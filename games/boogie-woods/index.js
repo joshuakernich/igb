@@ -1643,7 +1643,9 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			// (its face: the eyes on the bulges, a grin right across)
 			c.face = makeFace(c.bouncer, 0.9, 0, 0.93, 0.36, { gap: 0.4 });
 			for (const e of c.face.eyes) e.pupil.scale.multiplyScalar(0.5);   // (small black eyes on its big eye bulges)
-			// (the standard mouth, like every animal's)
+			// (the standard mouth, like every animal's, smaller)
+			c.face.mouth.open.parent.scale.setScalar(0.6);
+			c.face.mouth.open.parent.position.y += 0.03;
 			for (const sx of [-1, 1]) mesh(GEO.sph, MAT.pupil, c.bouncer, sx * 0.05, 0.86, 0.39, 0.012).castShadow = false;   // (nostrils)
 			c.parts.sac = mesh(GEO.sph, new THREE.MeshPhysicalMaterial({ color: '#ffd8b0', roughness: 0.15, clearcoat: 1, sheen: 0.6, sheenColor: new THREE.Color('#ffffff') }), c.bouncer, 0, 0.55, 0.12, 0.2, 0.08, 0.2);   // (a flat pouch tucked up under its chin)
 			c.parts.tongue = mesh(GEO.cyl, MAT.tongue, c.bouncer, 0, 0.72, 0.38, 0.03, 0.001, 0.03);
