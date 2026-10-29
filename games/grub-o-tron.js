@@ -941,6 +941,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		if (w === 1) return { x: (along - 0.5) * 2 * d, z: -d };
 		return { x: d, z: (along - 0.5) * 2 * d };
 	}
+	const HOP_TIME = 0.5;   // (seconds to swing round to another wall)
 	const faceEye = (x, z) => Math.atan2(-x, -z);   // (the yaw that turns a thing's front, +z, to the middle)
 	const ISLAND = { y: CT.y };    // (the devices stand on the counters)
 	// the front counter: a food hatch for each ingredient, then the binner
@@ -2282,31 +2283,39 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			// when they're nearer another wall, they jump straight there
 			const wp = wallsOf(p);
 			let wallNow = m.wallAt ?? 1;
-			for (let w = 0; w < 3; w++) if (wp.dist[w] < wp.dist[wallNow] - 0.04) wallNow = w;
+			for (let w = 0; w < 3; w++) if (wp.dist[w] < wp.dist[wallNow] - 0.08) wallNow = w;
 			const jumped = wallNow !== m.wallAt;
 			m.wallAt = wallNow;
 			const tq = wallPoint(wallNow, clamp(wp.along[wallNow], 0.02, 0.98), AV_MAX);
 			// (tracking arrives about 20 times a second; glide between its updates along the wall)
 			const k = 1 - Math.exp(-dt * 20);
 			if (m.x === undefined) { m.x = tq.x; m.z = tq.z; m.vx = m.vz = 0; }
-			if (jumped && m.yaw !== undefined) m.hop = 0;   // (changing walls: a quick hop across, a quarter of a second)
+			// facing that wall, back to us
+			const fx = wallNow === 0 ? -9 : wallNow === 2 ? 9 : 0, fz = wallNow === 1 ? -9 : 0;
+			// changing walls: a smooth swing round the room, eased in and out, from where they were
+			if (jumped && m.yaw !== undefined) m.hop = { u: 0, a: Math.atan2(m.z, m.x), r: Math.hypot(m.x, m.z), yaw: m.yaw };
 			const ox = m.x, oz = m.z;
-			if (m.hop !== undefined && m.hop < 1) {
-				m.hop = Math.min(1, m.hop + dt / 0.25);
-				const e = 1 - Math.pow(1 - m.hop, 3);
-				m.x = lerp(m.x, tq.x, Math.max(k, e));
-				m.z = lerp(m.z, tq.z, Math.max(k, e));
+			let lift = 0;
+			if (m.hop && m.hop.u < 1) {
+				const h = m.hop;
+				h.u = Math.min(1, h.u + dt / HOP_TIME);
+				const e = h.u * h.u * h.u * (h.u * (h.u * 6 - 15) + 10);   // (smootherstep)
+				const ta = Math.atan2(tq.z, tq.x), a = h.a + Math.atan2(Math.sin(ta - h.a), Math.cos(ta - h.a)) * e;
+				const r = lerp(h.r, Math.hypot(tq.x, tq.z), e);
+				m.x = Math.cos(a) * r;
+				m.z = Math.sin(a) * r;
+				lift = Math.sin(e * Math.PI) * 0.2;
+				const want = Math.atan2(fx - m.x, fz - m.z);
+				m.yaw = h.yaw + Math.atan2(Math.sin(want - h.yaw), Math.cos(want - h.yaw)) * e;
 			} else {
 				m.x = lerp(m.x, tq.x, k);
 				m.z = lerp(m.z, tq.z, k);
+				const want = Math.atan2(fx - m.x, fz - m.z);
+				m.yaw = m.yaw === undefined ? want : m.yaw + Math.atan2(Math.sin(want - m.yaw), Math.cos(want - m.yaw)) * (1 - Math.exp(-dt * 8));
 			}
 			m.vx = lerp(m.vx || 0, (m.x - ox) / Math.max(dt, 0.001), 1 - Math.exp(-dt * 6));
 			m.vz = lerp(m.vz || 0, (m.z - oz) / Math.max(dt, 0.001), 1 - Math.exp(-dt * 6));
-			m.g.position.set(m.x, m.hop !== undefined && m.hop < 1 ? Math.sin(m.hop * Math.PI) * 0.45 : 0, m.z);
-			// facing that wall, back to us (spinning round quickly when they change walls)
-			const fx = wallNow === 0 ? -9 : wallNow === 2 ? 9 : 0, fz = wallNow === 1 ? -9 : 0;
-			const want = Math.atan2(fx - m.x, fz - m.z);
-			m.yaw = m.yaw === undefined ? want : m.yaw + Math.atan2(Math.sin(want - m.yaw), Math.cos(want - m.yaw)) * (1 - Math.exp(-dt * (m.hop < 1 ? 22 : 8)));
+			m.g.position.set(m.x, lift, m.z);
 			m.g.rotation.y = m.yaw;
 			// hovering, bobbing, the tray leaning into the way it's going
 			m.body.position.y = 0.62 + Math.sin(time * 2.4) * 0.025;
