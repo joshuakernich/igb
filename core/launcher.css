@@ -403,8 +403,11 @@ gamebox-pips button {
 	border-radius: 0;
 	background: color-mix(in srgb, var(--c) 45%, transparent);   /* (faded, but its number stays solid) */
 	color: white;
-	font: 400 8px/13px Rubik, sans-serif;
-	text-align: center;
+	font: 400 8px/1 Rubik, sans-serif;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	text-box: trim-both cap alphabetic;
 	cursor: pointer;
 	transition: background 0.15s;
 }
@@ -437,14 +440,19 @@ gamebox-hint > span:nth-child(odd) {
 }
 
 gamebox-hint kbd {
-	display: inline-block;
+	display: inline-flex;
+	align-items: center;   /* (the capitals centred top to bottom: trimmed to their cap height) */
+	justify-content: center;
+	height: 12px;
+	box-sizing: border-box;
+	text-box: trim-both cap alphabetic;
 	min-width: 9px;
 	padding: 0 3px;
 	border-radius: 0;
 	background: rgba(255, 255, 255, 0.16);
 	box-shadow: none;
 	color: white;
-	font: 400 7px/12px Rubik, sans-serif;
+	font: 400 7px/1 Rubik, sans-serif;
 	letter-spacing: 0.06em;
 	text-align: center;
 	transition: background 0.08s, color 0.08s, box-shadow 0.08s;
