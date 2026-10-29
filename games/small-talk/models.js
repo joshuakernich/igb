@@ -1079,6 +1079,7 @@ export function figure() {
 /* ---------- the party ---------- */
 
 const CLOTH = 0xf1ece0;
+const glassMat = () => cached('glass', () => new THREE.MeshLambertMaterial({ color: 0xd8eef0, transparent: true, opacity: 0.58 }));
 
 // A round table in a long white cloth, set for dinner nobody is eating.
 export function roundTable(p) {
@@ -1102,7 +1103,7 @@ export function roundTable(p) {
 	for (let i = 0; i < places; i++) {
 		const a = i / places * Math.PI * 2;
 		part(g, C(0.11, 0.1, 0.012, 16), lam(0xfdfdfb), Math.sin(a) * 0.58, 0.766, Math.cos(a) * 0.58);
-		const glass = part(g, C(0.03, 0.025, 0.12, 8), new THREE.MeshLambertMaterial({ color: 0xd8eef0, transparent: true, opacity: 0.6 }), Math.sin(a + 0.35) * 0.62, 0.82, Math.cos(a + 0.35) * 0.62);
+		const glass = part(g, C(0.03, 0.025, 0.12, 8), glassMat(), Math.sin(a + 0.35) * 0.62, 0.82, Math.cos(a + 0.35) * 0.62);
 		if (p.messy && i % 2) { glass.rotation.z = Math.PI / 2; glass.position.y = 0.79; }
 	}
 	if (p.messy) {
@@ -1151,7 +1152,7 @@ export function buffet(p) {
 export function drinks(p) {
 	const g = new THREE.Group();
 	part(g, B(1.6, 0.76, 0.7), lam(CLOTH), 0, 0.38, 0);
-	const glass = new THREE.MeshLambertMaterial({ color: 0xd8eef0, transparent: true, opacity: 0.55 });
+	const glass = glassMat();
 	for (let i = 0; i < 12; i++) part(g, C(0.03, 0.025, 0.11, 8), glass, 0.25 + (i % 4) * 0.12, 0.82, -0.18 + Math.floor(i / 4) * 0.13);
 	// the bowl
 	part(g, C(0.26, 0.12, 0.2, 24), glass, -0.35, 0.86, 0);
@@ -1317,7 +1318,7 @@ export function balloons(p) {
 		const s = part(g, C(0.003, 0.003, len, 3), string, x / 2, (y + 0.08) / 2, z / 2);
 		s.lookAt(new THREE.Vector3(x, y, z));
 		s.rotateX(Math.PI / 2);
-		const mat = new THREE.MeshLambertMaterial({ color: col, emissive: col, emissiveIntensity: 0.2 });
+		const mat = cached(`balloon${col}`, () => new THREE.MeshLambertMaterial({ color: col, emissive: col, emissiveIntensity: 0.2 }));
 		const b = part(g, S(), mat, x, y + 0.17, z);
 		b.scale.set(0.15, 0.18, 0.15);
 		part(g, C(0.0, 0.025, 0.04, 6), mat, x, y, z);

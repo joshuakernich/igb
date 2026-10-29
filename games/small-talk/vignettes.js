@@ -7,7 +7,8 @@
  * lines and fills in VOICES at the bottom).
  *
  * Positions are [u, d] on the front wall: u metres across (left -, right +),
- * d metres out from the eye. The corridor in from the front wall is always
+ * d metres out from the eye (layout.js brings anything short of the far
+ * wall a metre nearer: NEAR). The corridor in from the front wall is always
  * at u -3.9. A track is a list of keys:
  *   [t, u, d, act, look, opts]
  * Hold at a key until the next; when the next key is somewhere else, walk
@@ -79,7 +80,7 @@ export const PHASES = [
 			dave: [[0, 0.2, 4.6, 'talk', 'priya'], [3.4, 0.2, 4.6, 'laugh', 'priya']],
 			priya: [[0, -0.6, 5.3, 'drink', 'dave'], [3.2, -0.6, 5.3, 'laugh', 'dave'], [5.5, -0.6, 5.3, 'drink', 'dave']],
 			gary: [[0, 0.7, 5.5, 'idle', 'dave'], [5.2, 0.7, 5.5, 'idle', 'linda'], [8.2, 0.7, 5.5, 'drink', 'linda']],
-			linda: [[0, -1.6, 6.0, 'drink', 'gary'], [1.6, -1.6, 6.0, 'drink', 'gary'], [5.0, 0.9, 6.3, 'shake', 'gary'], [7.6, 0.9, 6.3, 'talk', 'gary']],
+			linda: [[0, -2.5, 6.0, 'drink', 'gary'], [1.6, -2.5, 6.0, 'drink', 'gary'], [5.0, 0.9, 6.3, 'shake', 'gary'], [7.6, 0.9, 6.3, 'talk', 'gary']],
 		},
 		lines: [
 			[0.5, 'dave', "So I said, that's not a stapler, that's my lunch!"],
@@ -92,10 +93,10 @@ export const PHASES = [
 	{
 		id: 'buffet', clock: '8:30 PM', title: 'THE BUFFET', length: 12,
 		cast: {
-			priya: [[0, -0.6, 5.2, 'eat', 'caterer']],
-			caterer: [[0, 0.4, 6.0, 'idle', 'priya'], [2.4, 0.4, 6.0, 'talk', 'priya'], [4.4, 0.4, 6.0, 'idle', 'eye']],
-			gary: [[0, 1.6, 5.2, 'idle', [1.3, 6.4]], [2.8, 1.6, 5.2, 'reach', [1.3, 6.4]], [4.4, 1.6, 5.2, 'eat', 'dave']],
-			dave: [[0, 2.8, 4.6, 'eat', 'gary'], [9.4, 2.8, 4.6, 'talk', 'gary']],
+			priya: [[0, -1.0, 5.0, 'eat', 'caterer']],
+			caterer: [[0, 0.6, 6.4, 'idle', 'priya'], [2.4, 0.6, 6.4, 'talk', 'priya'], [4.4, 0.6, 6.4, 'idle', 'eye']],
+			gary: [[0, 1.4, 4.9, 'idle', [1.3, 5.6]], [2.8, 1.4, 4.9, 'reach', [1.3, 5.6]], [4.4, 1.4, 4.9, 'eat', 'dave']],
+			dave: [[0, 2.9, 4.5, 'eat', 'gary'], [9.4, 2.9, 4.5, 'talk', 'gary']],
 		},
 		lines: [
 			[0.8, 'priya', 'These are lovely. Who made them?'],
@@ -140,7 +141,7 @@ export const PHASES = [
 		cast: {
 			dave: [[0, 1.2, 5.0, 'dance', 'eye', { y: 0.77 }]],
 			gary: [[0, -0.4, 4.6, 'sit-eat', 'dave']],
-			linda: [[0, -1.5, 5.15, 'sit-sway', 'eye']],
+			linda: [[0, -0.9, 5.3, 'sit-sway', 'eye']],
 			priya: [[0, 2.8, 4.4, 'sway', 'dave'], [7.4, 2.8, 4.4, 'sway', [2.0, 3.6]]],
 		},
 		lines: [

@@ -28,6 +28,11 @@ import { CAST, PHASES } from './vignettes.js';
 
 export const R = 7.2;            // the room's half-width: 12 ceiling tiles
 export const DOOR_U = -3.9;      // the corridor in from the front wall
+// The front wall's scene and set pieces are written as if the stage ran up
+// to the wall; this brings them a metre nearer the eye (all but what's at
+// the wall itself, or in the corridor).
+const PULL = 1.1;
+export const near = (d) => (d >= 6.5 ? d : Math.max(2.5, d - PULL));
 
 const SASHES = [0xc23a5a, 0x3a5a8a, 0xd0a020, 0x3a8a5a];
 const BALLOONS = [0xe8445a, 0xf2c22e, 0x3a8ad8, 0x3aa86a, 0x8a5ad0, 0xf29ab8, 0xf0f0f0];
@@ -42,7 +47,7 @@ const facing = (from, to) => Math.atan2(to.x - from.x, to.z - from.z);
 function onStage(x, z, pad = 0) {
 	if (z > -2.6) return false;
 	const d = -z, u = x;
-	return d > 2.9 - pad && u > -5.0 - pad && u < 3.5 + pad && Math.abs(u) < d + 1;
+	return d > 2.3 - pad && u > -5.0 - pad && u < 3.5 + pad && Math.abs(u) < d + 1;
 }
 
 // What everyone else is doing, at each phase: the acts groups pick from, how
@@ -69,7 +74,7 @@ export function generate(seed, phase = 0) {
 	const openings = [[], [], []];
 	const faces = phase >= 6 ? CALM.concat(ODD.slice(0, 4)) : CALM;
 	const sash = pick(SASHES);
-	const lectern = wallPoint(1, 2.6, 6.3);
+	const lectern = wallPoint(1, 2.6, near(6.3));
 	const burnt = phase >= 8, burning = phase === 7, messy = phase >= 6;
 
 	function add(type, x, z, rot, props = {}, opts = {}) {
@@ -85,7 +90,7 @@ export function generate(seed, phase = 0) {
 	const free = (x, z, rad) => !onStage(x, z, rad) && items.every((it) => !it.r || Math.hypot(it.x - x, it.z - z) > it.r + rad);
 	const guest = (act, extra = {}) => makePerson(r, Object.assign({ act, faces }, extra));
 	// somewhere clear out in the room, facing the eye's way: { x, z, wall } or null
-	function spot(wall, rad, dMin = 2.7, dMax = 5.9) {
+	function spot(wall, rad, dMin = 2.5, dMax = 5.0) {
 		for (let tries = 0; tries < 40; tries++) {
 			const d = dMin + r() * (dMax - dMin);
 			const u = (r() * 2 - 1) * (0.72 * d - 0.5);
@@ -98,23 +103,23 @@ export function generate(seed, phase = 0) {
 	/* ---------- the front wall: the banner, the cake, the photo, the lectern ---------- */
 	openings[1].push({ u: DOOR_U, w: 1.8 });
 	addW('banner', 1, 0, R, phase === 0 ? 0.05 : 0, { text: BANNER, sag: phase === 0, burning, burnt }, { y: 2.22 });
-	addW('cake', 1, -1.5, 5.7, 0, { fire: burning, wrecked: burnt }, { r: 0.5 });
-	addW('portrait', 1, 4.4, 6.4, -0.3, { expr: burnt ? EXPR.dead : EXPR.smile }, { r: 0.45, tip: burnt ? -0.25 : 0 });
-	addW('lectern', 1, 2.6, 6.3, 0.1, {}, { r: 0.4, lean: burnt ? 1.45 : 0 });
+	addW('cake', 1, -1.5, near(5.7), 0, { fire: burning, wrecked: burnt }, { r: 0.5 });
+	addW('portrait', 1, 4.4, near(6.4), -0.3, { expr: burnt ? EXPR.dead : EXPR.smile }, { r: 0.45, tip: burnt ? -0.25 : 0 });
+	addW('lectern', 1, 2.6, near(6.3), 0.1, {}, { r: 0.4, lean: burnt ? 1.45 : 0 });
 	addW('radio', 1, -5.7, 6.4, 0.35, {}, { r: 0.35 });
 	if (phase === 0) {
 		addW('ladder', 1, 2.4, 6.85, 0, {}, {});
 		addW('boxes', 1, -0.6, 6.5, 0.3, { seed: 7 }, {});
 	}
-	if (phase === 3) addW('buffet', 1, 0.9, 6.55, 0, { seed: Math.floor(r() * 1e6), skirt: sash }, {});
-	if (phase === 6) addW('roundTable', 1, 1.2, 5.0, 0, { seed: 3, bare: true }, {});
+	if (phase === 3) addW('buffet', 1, 0.6, near(5.6), 0, { seed: Math.floor(r() * 1e6), skirt: sash }, {});
+	if (phase === 6) addW('roundTable', 1, 1.2, near(5.0), 0, { seed: 3, bare: true }, {});
 	if (phase === 5) add('discoBall', 0, -3.2, 0, {}, { y: CEIL - 0.05, wall: 1 });
 
 	/* ---------- the scene's cast, on their tracks ---------- */
 	const tracks = {};
 	for (const [name, keys] of Object.entries(P.cast)) {
 		tracks[name] = keys.map(function ([t, u, d, act, look, opts = {}]) {
-			const p = wallPoint(1, u, d);
+			const p = wallPoint(1, u, near(d));
 			return { t, x: p.x, z: p.z, y: opts.y || 0, act, look, fire: !!opts.fire };
 		});
 	}
@@ -122,7 +127,7 @@ export function generate(seed, phase = 0) {
 		for (const k of track) {
 			const target = k.look === 'eye' ? { x: 0, z: 0 }
 				: k.look === 'wall' ? { x: k.x, z: k.z - 5 }
-				: Array.isArray(k.look) ? wallPoint(1, k.look[0], k.look[1])
+				: Array.isArray(k.look) ? wallPoint(1, k.look[0], near(k.look[1]))
 				: tracks[k.look] ? trackAt(tracks[k.look], k.t) : { x: 0, z: 0 };
 			k.yaw = facing(k, target);
 		}
@@ -130,6 +135,8 @@ export function generate(seed, phase = 0) {
 		const props = Object.assign({ seed: name.length * 977 + phase * 31, act: track[0].act, star: name, track, fire: track.some((k) => k.fire) },
 			JSON.parse(JSON.stringify(looks)));
 		add('person', track[0].x, track[0].z, track[0].yaw, props, { wall: 1 });
+		// a chair for anyone in the scene who sits
+		if (track[0].act.startsWith('sit-')) add('banquetChair', track[0].x, track[0].z, track[0].yaw, { color: sash, taken: true }, { wall: 1 });
 	}
 
 	/* ---------- the walls ---------- */
@@ -180,7 +187,7 @@ export function generate(seed, phase = 0) {
 		if (wall === 1) continue;
 
 		/* a round table in the middle distance, some of its chairs taken */
-		const tp = spot(wall, 1.4, 3.7, 4.6);
+		const tp = spot(wall, 1.4, 3.3, 4.0);
 		if (tp) {
 			const tipped = burnt && r() < 0.7;
 			add('roundTable', tp.x, tp.z, r() * 6, { seed: Math.floor(r() * 1e6), flowers: pick([0xd04a6a, 0xe88a3a, 0x8a5ad0]), bare: phase === 0 || tipped, messy }, { wall, r: 1.25, tip: tipped ? 1.45 : 0, y: tipped ? 0.8 : 0 });
@@ -229,7 +236,7 @@ export function generate(seed, phase = 0) {
 
 		/* people lying about: asleep, or worse */
 		for (let i = 0; i < (C.lying || 0); i++) {
-			const p = spot(wall, 0.9, 2.6, 5.8);
+			const p = spot(wall, 0.9, 2.5, 5.0);
 			if (!p) continue;
 			add('person', p.x, p.z, r() * 6, guest(phase >= 8 ? 'dead' : 'sleep', { pose: 'lie', expr: phase >= 7 ? EXPR.dead : EXPR.sleepy }), { wall, r: 0.6 });
 		}
@@ -258,8 +265,8 @@ export function generate(seed, phase = 0) {
 		// smoke under the ceiling, and on the front wall's banner
 		for (let i = 0; i < 7; i++) add('smoke', -6 + r() * 12, -6.5 + r() * 6, 0, { seed: i, size: 2 + r() * 2, dark: burnt }, { y: CEIL - 0.35 - r() * 0.4 });
 		if (burnt) {
-			addW('stain', 1, -1.5, 5.4, 0, { seed: 5, size: 2.6, aspect: 0.8, scorch: true });
-			addW('fire', 1, -1.6, 5.9, 0, { size: 0.5, seed: 9 }, { y: 0.3 });
+			addW('stain', 1, -1.5, near(5.4), 0, { seed: 5, size: 2.6, aspect: 0.8, scorch: true });
+			addW('fire', 1, -1.6, near(5.9), 0, { size: 0.5, seed: 9 }, { y: 0.3 });
 		}
 	}
 

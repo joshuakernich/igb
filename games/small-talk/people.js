@@ -458,6 +458,8 @@ export const peopleReady = load().then(function (gltf) {
 	for (const fn of waiting.splice(0)) fn();
 }).catch((e) => console.warn('No mannequin: the guests stay invisible', e));
 
+const BODY_SPHERE = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.5);
+
 // A mannequin of one's own: its own bones, sharing the shapes.
 function rig() {
 	const root = kit.scene.clone(true);
@@ -468,7 +470,9 @@ function rig() {
 	for (const m of meshes) {
 		const sk = m.skeleton;
 		m.bind(new THREE.Skeleton(sk.bones.map((b) => bones.get(b.name)), sk.boneInverses), m.bindMatrix);
-		m.frustumCulled = false;
+		// (a sphere round anything the body could do, so each wall's camera skips the people it can't see)
+		m.boundingSphere = BODY_SPHERE;
+		m.frustumCulled = true;
 	}
 	const rest = [...bones.values()].map((b) => [b, b.quaternion.clone(), b.position.clone()]);
 	const bone = (n) => bones.get(n) || bones.get(THREE.PropertyBinding.sanitizeNodeName(n));

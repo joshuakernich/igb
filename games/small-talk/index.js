@@ -37,6 +37,7 @@
  * standing nearest the tapped point. An ES module (manifest: module: true).
  */
 import * as THREE from '../../lib/three/three.module.min.js';
+import { mergeGeometries } from '../../lib/three/addons/utils/BufferGeometryUtils.js';
 import { BUILDERS, buildShell, panelMats, CEIL, wallPoint, wallYaw } from './models.js';
 import { generate, mutate, R } from './layout.js';
 import { createSound } from './sound.js';
@@ -255,7 +256,46 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		if (!f) return;
 		scene.remove(f.group);
 		for (const fl of f.flickers) { fl.face.dispose(); if (fl.glow) fl.glow.dispose(); }
+		for (const b of f.batches || []) b.geometry.dispose();
 		floors.delete(n);
+	}
+
+	// Once a floor is settled, bake everything on it that never moves into a
+	// few big meshes, one per material: a few dozen draws a wall instead of
+	// hundreds. The pieces stay, hidden, for raycasting; the guests (and
+	// anything with a mind of its own: flames, smoke, the mirror ball) stay
+	// as they are.
+	const noop = THREE.Object3D.prototype.onBeforeRender;
+	function batch(f) {
+		if (f.batches) return;
+		f.group.updateMatrixWorld(true);
+		const inv = new THREE.Matrix4().copy(f.group.matrixWorld).invert();
+		const m = new THREE.Matrix4();
+		const sets = new Map();
+		const lively = (o) => { for (let p = o; p && p !== f.group; p = p.parent) if (p.userData.actor || p.onBeforeRender !== noop) return true; return false; };
+		f.group.traverse(function (o) {
+			if (!o.isMesh || o.isSkinnedMesh || Array.isArray(o.material) || !o.material.visible || !o.visible || lively(o)) return;
+			const g = o.geometry;
+			const key = o.material.uuid + '|' + Object.keys(g.attributes).sort().join(',');
+			if (!sets.has(key)) sets.set(key, { material: o.material, parts: [], meshes: [] });
+			const e = sets.get(key);
+			const part = g.index ? g.toNonIndexed() : g.clone();
+			part.applyMatrix4(m.multiplyMatrices(inv, o.matrixWorld));
+			e.parts.push(part);
+			e.meshes.push(o);
+		});
+		f.batches = [];
+		for (const e of sets.values()) {
+			const merged = e.parts.length > 1 ? mergeGeometries(e.parts) : e.parts[0];
+			for (const p of e.parts) if (p !== merged) p.dispose();
+			if (!merged) continue;
+			const mesh = new THREE.Mesh(merged, e.material);
+			mesh.userData.noOcclude = true;
+			mesh.matrixAutoUpdate = false;
+			f.group.add(mesh);
+			f.batches.push(mesh);
+			for (const o of e.meshes) o.visible = false;
+		}
 	}
 
 	function showFloors(...ns) {
@@ -370,6 +410,8 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 			}
 			dropFloor(2 * L + 1);
 		}
+		batch(up);
+		batch(floors.get(2 * L + 1));
 		eyeOn(Math.round(-camY / FLOOR_H));
 	}
 
@@ -699,8 +741,8 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		const f = floors.get(0);
 		eyeOn(0);
 		const low = f.layout.items.filter((it) => it.y < 1 && it.type !== 'stain');
-		for (const d of [4.6, 5.2, 4.2, 5.8]) {
-			for (const u of [3.9, 4.3, 3.6, 4.7]) {
+		for (const d of [3.9, 4.4, 3.6, 4.9]) {
+			for (const u of [3.7, 4.1, 3.5]) {
 				const p = wallPoint(1, u, d);
 				if (!low.every((it) => Math.hypot(it.x - p.x, it.z - p.z) > (it.r || 0.3) + 0.55)) continue;
 				const g = practiceChair(p, false);
@@ -716,7 +758,7 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 			}
 		}
 		// nowhere clear: put it right in front anyway
-		practice.spot = wallPoint(1, 4.0, 4.8);
+		practice.spot = wallPoint(1, 3.8, 4.0);
 		practice.chair = practiceChair(practice.spot, false);
 		f.group.add(practice.chair);
 	}
@@ -1098,10 +1140,11 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		discoLights.forEach(function (l, i) {
 			const a = clock * 0.9 + i * 2.1;
 			l.intensity = 9 * disco * light;
+			l.visible = disco > 0;   // (off altogether, not just dark: every light costs every pixel)
 			l.position.set(Math.sin(a) * 4, 2.1, -2.5 - Math.cos(a) * 3);
 		});
 		const burn = clamp(1 - Math.abs(mood - 7) / 0.9, 0, 1) + 0.4 * clamp(mood - 7.4, 0, 1);
-		fireLights.forEach(function (l, i) { l.intensity = burn * (5 + 2.5 * Math.sin(clock * (11 + i * 3.7)) + Math.random() * 1.5); });
+		fireLights.forEach(function (l, i) { l.intensity = burn * (5 + 2.5 * Math.sin(clock * (11 + i * 3.7)) + Math.random() * 1.5); l.visible = burn > 0; });
 		hemi.color.copy(mix('sky', mood));
 		hemi.groundColor.copy(mix('ground', mood));
 		hemi.intensity = mix('hemi', mood) * (0.35 + 0.65 * light);
@@ -1143,11 +1186,15 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 
 		renderer.setScissorTest(true);
 		const r0 = performance.now();
+		renderer.info.autoReset = false;
+		renderer.info.reset();
 		cams.forEach(function (cam, i) {
 			viewport(i * W, 0, W, H);
 			renderer.render(scene, cam);
 		});
 		perf.render = performance.now() - r0;
+		perf.calls = renderer.info.render.calls;
+		perf.tris = renderer.info.render.triangles;
 	}
 
 	/* ---------- the camcorder layer ---------- */
@@ -1212,16 +1259,6 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		g.addColorStop(1, 'rgba(10,8,2,0)');
 		ctx.fillStyle = g;
 		ctx.fillRect(x, y - h / 2, w, h);
-	}
-
-	function stamp() {
-		const [hm, ampm] = sceneOf().clock.split(' ');
-		const [h0, m0] = hm.split(':').map(Number);
-		const t = ((h0 % 12) + (ampm === 'PM' ? 12 : 0)) * 3600 + m0 * 60 + sceneT();
-		const hh = Math.floor(t / 3600) % 12 || 12;
-		const mm = String(Math.floor(t / 60) % 60).padStart(2, '0');
-		const ss = String(Math.floor(t) % 60).padStart(2, '0');
-		return `OCT 11 1996  ${hh}:${mm}:${ss} ${Math.floor(t / 3600) % 24 >= 12 ? 'PM' : 'AM'}`;
 	}
 
 	// The time of night, in the corner: later every round.
@@ -1366,20 +1403,17 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 			const fadeIn = Math.min(1, callout.age / 0.3);
 			const fadeOut = Math.min(1, (callout.dur - callout.age) / 0.4);
 			const a = fadeIn * fadeOut;
-			// (the same size on every wall)
-			for (let wall = 0; wall < 3; wall++) {
-				band(ctx, wall * W, 260, W, 230, 0.55 * a);
-				vhsText(ctx, callout.text, wall * W + W / 2, 250, 150, { alpha: a });
-			}
+			// (just under the show's clock, the same size on every wall, nothing behind it)
+			for (let wall = 0; wall < 3; wall++) vhsText(ctx, callout.text, wall * W + W / 2, 165, 100, { alpha: a });
 			if (phase === 'look') {
 				const left = Math.max(0, phaseDur - phaseT);
-				for (let wall = 0; wall < 3; wall++) vhsText(ctx, `00:${String(Math.ceil(left)).padStart(2, '0')}`, wall * W + W / 2, 360, 80, { alpha: a, fill: left < 4 ? RED : '#f6f1dc' });
+				for (let wall = 0; wall < 3; wall++) vhsText(ctx, `00:${String(Math.ceil(left)).padStart(2, '0')}`, wall * W + W / 2, 255, 64, { alpha: a, fill: left < 4 ? RED : '#f6f1dc' });
 			}
 		}
 		drawCaptions(ctx);
 		if (glitch > 0 && (phase === 'tap' || phase === 'reveal')) {
 			art.rect(ctx, 0, 0, WIDTH, H, { fill: `rgba(0,0,0,${0.5 * Math.sin(glitch / LOOP_GAP * Math.PI)})` });
-			for (let wall = 0; wall < 3; wall++) vhsText(ctx, '◀◀', wall * W + W / 2, H / 2, 120, { alpha: Math.sin(glitch / LOOP_GAP * Math.PI) });
+			for (let wall = 0; wall < 3; wall++) vhsText(ctx, '◀◀', wall * W + W / 2, H / 2, 90, { alpha: Math.sin(glitch / LOOP_GAP * Math.PI) });
 		}
 		if (phase === 'tap' && (!callout || callout.age > 2.6)) {
 			band(ctx, W * 1.2, 215, W * 0.6, 150, 0.4);
@@ -1389,7 +1423,7 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		if (phase === 'descend' || phase === 'rewind') {
 			const a = Math.sin(phaseT / phaseDur * Math.PI);
 			const text = phase === 'rewind' ? '◀◀ REWIND' : '*BLINK*';
-			for (let wall = 0; wall < 3; wall++) vhsText(ctx, text, wall * W + W / 2, H / 2, 96, { alpha: phase === 'rewind' ? a : Math.max(0, a * 2 - 1) });
+			for (let wall = 0; wall < 3; wall++) vhsText(ctx, text, wall * W + W / 2, H / 2, 76, { alpha: phase === 'rewind' ? a : Math.max(0, a * 2 - 1) });
 		}
 		// the round's start: how many things are about to go wrong (the time of night is already in the corner)
 		if (phase === 'ready') {
@@ -1399,9 +1433,9 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 			art.rect(ctx, 0, 0, WIDTH, H, { fill: `rgba(8,2,6,${0.55 * a})` });
 			for (let wall = 0; wall < 3; wall++) {
 				const x = wall * W + W / 2;
-				vhsText(ctx, V.clock, x, 330, 170, { alpha: a, fill: YELLOW });
-				vhsText(ctx, V.title, x, 500, 110, { alpha: a });
-				vhsText(ctx, text, x, 640, 64, { alpha: a * between(phaseT, 0.8, 1.2), fill: PINK });
+				vhsText(ctx, V.clock, x, 360, 120, { alpha: a, fill: YELLOW });
+				vhsText(ctx, V.title, x, 480, 80, { alpha: a });
+				vhsText(ctx, text, x, 580, 50, { alpha: a * between(phaseT, 0.8, 1.2), fill: PINK });
 			}
 		}
 		show.onWalls(ctx, function (c) {
@@ -1419,7 +1453,7 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 	}
 
 	// The camcorder's own layer, over everything in the world beats:
-	// scanlines, grain, tracking, the REC light and the date.
+	// scanlines, grain, tracking, the REC light and the time of night.
 	function camcorder(ctx, opts = {}) {
 		const dt = frameDt;
 		if (!scanlines) {
@@ -1470,7 +1504,6 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 			if (Math.floor(clock * 1.2) % 2 === 0) art.circle(ctx, x + 70, 64, 17, { fill: '#ff2a2a' });
 			vhsText(ctx, 'REC', x + 100, 64, 54, { align: 'left', flicker: false, split: 2 });
 			vhsText(ctx, `CAM 0${i + 1}`, x + W - 70, 64, 48, { align: 'right', flicker: false, split: 2 });
-			vhsText(ctx, stamp(), x + 70, H - 60, 44, { align: 'left', flicker: false, split: 2 });
 		}
 		vhsText(ctx, partyTime(), W + W - 70, 118, 44, { align: 'right', flicker: false, split: 2 });
 
@@ -1712,7 +1745,7 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 	self.state = function () {
 		const tg = practice.target;
 		return Object.assign(show.state(), {
-			perf: { tick: +perf.tick.toFixed(1), render: +perf.render.toFixed(1), actors: perf.actors, calls: renderer.info.render.calls },
+			perf: { tick: +perf.tick.toFixed(1), render: +perf.render.toFixed(1), actors: perf.actors, calls: perf.calls, tris: perf.tris, programs: renderer.info.programs.length, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures, lights: rig.children.filter((o) => o.isLight && o.visible).length + 1, canvas: renderer.domElement.width + 'x' + renderer.domElement.height },
 			phase, level, partyPhase, scene: sceneOf().id, sceneT: sceneT(), floor: floorN, camY, timeLeft, clockLeft: show.timeLeft(), misses, players, retry, levelsDone,
 			scores: scores.slice(),
 			step: CONTROLS.steps[practice.i] ? CONTROLS.steps[practice.i].id : null, stepAge: practice.age, stepDone: practice.done,
