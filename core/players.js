@@ -484,10 +484,13 @@ IGB.players = (function () {
 			const tMat = new THREE.MeshBasicMaterial({ color: col, transparent: true, depthWrite: false, side: THREE.DoubleSide });
 			tgt.add(new THREE.Mesh(new THREE.RingGeometry(0.036, 0.05, 32), tMat));
 			for (const r of [0, Math.PI / 2]) { const bar = new THREE.Mesh(new THREE.PlaneGeometry(0.06, 0.008), tMat); bar.rotation.z = r; tgt.add(bar); }
-			const lineMat = new THREE.LineDashedMaterial({ color: col, dashSize: 0.03, gapSize: 0.035, transparent: true, depthWrite: false });
-			const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 1, 0)]), lineMat);
+			const glowMat = new THREE.MeshBasicMaterial({ color: col, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+			const glow = new THREE.Mesh(new THREE.CircleGeometry(0.075, 32), glowMat); glow.position.z = -0.001; tgt.add(glow);   // (a soft disc behind it while the gaze moves)
+			// the dots from the head to it: little balls, so they read at any size
+			const lineMat = new THREE.MeshBasicMaterial({ color: col, transparent: true, depthWrite: false });
+			const ln = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), lineMat, 40);
 			ln.frustumCulled = false; scene.add(ln);
-			return { g, body, head, ball, dot, nose, tag, tagMe: null, mat, ring, tgt, tMat, ln, lineMat, at: null, seen: { p: null, t: -9 } };
+			return { g, body, head, ball, dot, nose, tag, tagMe: null, mat, ring, tgt, tMat, glowMat, ln, lineMat, at: null, seen: { p: null, t: -9 } };
 		});
 		// where you're walking to
 		const goal = new THREE.Mesh(new THREE.RingGeometry(0.075, 0.095, 32, 1, 0, Math.PI * 1.6), new THREE.MeshBasicMaterial({ color: 'white', transparent: true, depthWrite: false, side: THREE.DoubleSide }));
@@ -497,7 +500,7 @@ IGB.players = (function () {
 		const wallPt = (wall, X, y, Z) => P(wall === 0 ? -1 : wall === 2 ? 1 : X, y, wall === 1 ? 1 : Z).addScaledVector(NORMALS[wall], 0.004);
 		const onWall = (m, wall, at) => { m.position.copy(at); m.lookAt(at.clone().add(NORMALS[wall])); };
 
-		const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), tmp = new THREE.Vector3();
+		const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), tmp = new THREE.Vector3(), _m = new THREE.Matrix4(), _v = new THREE.Vector3();
 		let last = performance.now();
 		function frame() {
 			requestAnimationFrame(frame);
@@ -540,12 +543,22 @@ IGB.players = (function () {
 				tk.seen.p = T.clone();
 				const base = me ? 0.95 : 0.5, fade = Math.max(0, Math.min(1, 1 - (ts - tk.seen.t - 1) / 0.5));
 				onWall(tk.tgt, g.wall, T);
-				tk.tMat.opacity = base * (0.3 + 0.7 * fade);
-				tk.lineMat.opacity = base * fade;
+				// (moving, it stands out: a bigger, brighter target on a soft disc, and a bold dotted line; still, just a faint target)
+				tk.tgt.scale.setScalar(1 + fade * 0.7);
+				tk.tMat.opacity = Math.min(1, base * (0.3 + 0.7 * fade) + fade * 0.3);
+				tk.glowMat.opacity = fade * (me ? 0.35 : 0.2);
+				tk.lineMat.opacity = Math.min(1, base * fade * 1.1);
 				tk.ln.visible = fade > 0;
-				const a = tk.ln.geometry.attributes.position;
-				a.setXYZ(0, headW.x, headW.y, headW.z); a.setXYZ(1, T.x, T.y, T.z); a.needsUpdate = true;
-				tk.ln.computeLineDistances();
+				if (tk.ln.visible) {
+					const len = headW.distanceTo(T), n = Math.min(40, Math.floor(len / 0.055));
+					for (let k = 0; k < 40; k++) {
+						if (k >= n) { _m.makeScale(0, 0, 0); tk.ln.setMatrixAt(k, _m); continue; }
+						_v.copy(headW).lerp(T, (k + 0.6) / n);
+						_m.makeScale(0.011, 0.011, 0.011).setPosition(_v);
+						tk.ln.setMatrixAt(k, _m);
+					}
+					tk.ln.instanceMatrix.needsUpdate = true;
+				}
 			});
 			goal.visible = !!(you.goal && selected >= 0);
 			if (goal.visible) { goal.position.x = you.goal.X; goal.position.z = -you.goal.Z; goal.rotation.z += dt * 3; goal.material.color.set(COLS[selected]); }
@@ -680,7 +693,7 @@ IGB.players = (function () {
 				<gamebox-view><canvas></canvas></gamebox-view>
 				<gamebox-panel>
 					<gamebox-player></gamebox-player>
-					<gamebox-focus>CLICK SCREEN TO ENABLE KEYBOARD CONTROLS</gamebox-focus>
+					<gamebox-focus>CLICK SCREEN TO ENABLE KEYBOARD</gamebox-focus>
 					<gamebox-hint>
 						<span><gamebox-pips>${COLS.map((c, i) => `<button pip=${i} style="--c:${c}" title="Drive player ${i + 1}">${i + 1}</button>`).join('')}</gamebox-pips><kbd k=tab>TAB</kbd></span><span>PLAYER</span>
 						<span><kbd k=w>W</kbd><kbd k=a>A</kbd><kbd k=s>S</kbd><kbd k=d>D</kbd></span><span>WALK</span>
