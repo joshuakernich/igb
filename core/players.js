@@ -334,7 +334,7 @@ IGB.players = (function () {
 
 	const COLS = ['#ff3b3b', '#3b7bff', '#2fd25a', '#d23bff', '#ff7a1a', '#ffc21a'];
 	const HR = 1.25;   // (the walls' height, in room half-widths: they're 16:10)
-	const SIM = { w: 300, h: 210, eye: [0, 5.4, -4.6], at: [0, 0.15, 0.25], hover: -1 };
+	const SIM = { w: 300, h: 210, eye: [0, 2.5, -3.1], at: [0, 0.38, 0.3], hover: -1 };   // (low enough to see into the side walls)
 	const v3 = { sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], norm: (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; }, cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]] };
 	const cam = (function () {
 		const fwd = v3.norm(v3.sub(SIM.at, SIM.eye)), right = v3.norm(v3.cross([0, 1, 0], fwd)), up = v3.cross(fwd, right);
@@ -435,7 +435,7 @@ IGB.players = (function () {
 		scene.add(grid);
 		// the three walls (facing in), and their edges
 		const walls = [0, 1, 2].map((n) => {
-			const m = new THREE.Mesh(new THREE.PlaneGeometry(2, HR), new THREE.MeshStandardMaterial({ color: n === 1 ? '#34458a' : '#3d4f95', roughness: 0.6, emissive: '#141c44', transparent: true, opacity: n === 1 ? 0.95 : 0.5, depthWrite: n === 1, side: THREE.DoubleSide }));
+			const m = new THREE.Mesh(new THREE.PlaneGeometry(2, HR), new THREE.MeshStandardMaterial({ color: n === 1 ? '#34458a' : '#3d4f95', roughness: 0.6, emissive: '#141c44', side: THREE.DoubleSide }));
 			if (n === 0) { m.rotation.y = Math.PI / 2; m.position.set(-1, HR / 2, 0); }
 			if (n === 1) m.position.set(0, HR / 2, -1);
 			if (n === 2) { m.rotation.y = -Math.PI / 2; m.position.set(1, HR / 2, 0); }
