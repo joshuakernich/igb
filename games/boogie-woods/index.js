@@ -2755,7 +2755,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	const near = (p, spot, r = STAND) => Math.hypot(p.px - spot.px, p.pz - spot.pz) < r;
 	const labels = [];   // little hints, drawn on the walls: { ci, wall, at, text }
 
-	// PUMPKIN BASS: plump ribbed pumpkins with little faces, a hotspot each; squat on one and it
+	// PUMPKIN BASS: stacks of plump ribbed pumpkins with little faces, a hotspot each; squat on one and it
 	// squashes (eyes screwed shut, mouth an O) with a burst of seeds and plays its own bass
 	// note straight away, held while you hold it; and springs back up, wobbling, when you stand
 	const puffs = [];
@@ -2786,9 +2786,19 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			root.lookAt(cx, 0, cz);   // (its face to the room)
 			const sz = [0.62, 0.54, 0.66][k % 3];
 			const body = new THREE.Group(); root.add(body);   // (the squash: scaled from the ground up)
-			mesh(pumpkinGeo(), skin, body, 0, 0, 0, sz, sz * 0.82, sz);
-			// a stubby curved stem, a leaf, and a curly tendril
-			const stem = new THREE.Group(); stem.position.set(0, sz * 0.82 * 1.38, 0); body.add(stem);
+			// a stack: each pumpkin smaller, sat in the dimple of the one below, a little askew, each with its face
+			const faces = [];
+			let y = 0, s2 = sz, top = 0;
+			for (let j = 0, n = [3, 2, 3][k % 3]; j < n; j++) {
+				const pk = new THREE.Group(); pk.position.set(j ? rr(-0.04, 0.04) : 0, y, j ? rr(-0.03, 0.03) : 0); pk.rotation.set(rr(-0.06, 0.06), rr(-0.4, 0.4), rr(-0.08, 0.08)); body.add(pk);
+				mesh(pumpkinGeo(), skin, pk, 0, 0, 0, s2, s2 * 0.82, s2);
+				faces.push(makeFace(pk, s2 * 1.25, 0, s2 * 0.82 * 0.8, s2 * 1.01, { gap: 0.3 }));
+				top = y + s2 * 0.82 * 1.38;
+				y += s2 * 0.82 * 1.3;
+				s2 *= 0.74;
+			}
+			// a stubby curved stem on top, a leaf, and a curly tendril
+			const stem = new THREE.Group(); stem.position.set(0, top, 0); body.add(stem);
 			const st = mesh(new THREE.CylinderGeometry(0.035, 0.06, 0.2, 8), stemM, stem, 0, 0.08, 0);
 			st.rotation.z = 0.35; st.position.x = 0.03;
 			const leaf = mesh(GEO.sph, leafM, stem, -0.1, 0.02, 0.04, 0.14, 0.012, 0.08);
@@ -2796,8 +2806,6 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			const curl = [];
 			for (let t = 0; t <= 1; t += 0.05) curl.push(new THREE.Vector3(0.05 + Math.cos(t * 12) * 0.06 * (1 - t * 0.5), 0.04 + t * 0.12, Math.sin(t * 12) * 0.06 * (1 - t * 0.5)));
 			mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(curl), 40, 0.008, 5), leafM, stem);
-			// its little face, on the front
-			const face = makeFace(body, sz * 1.25, 0, sz * 0.82 * 0.8, sz * 1.01, { gap: 0.3 });
 			// its hotspot: a pad where your avatar stands, its tail reaching under the pumpkin
 			// (placed as the creatures' are: pulled in toward the middle of its wall)
 			const pullA = 0.5 + (along - 0.5) * 0.8, sp2 = 0.12;
@@ -2811,7 +2819,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			hot.rotation.y = Math.atan2(-tdx, -tdz);
 			labels.push({ ci, wall: w, at: pos.clone().setY(0.1), text: 'SQUAT HERE' });
 			// its own bass note: the root, the fifth, the fourth below
-			return { root, body, stem, face, sz, pos, w, spot, av, hotMat, deg: [0, 3, -2][k % 3], sq: 0, v: 0, pressed: false, fresh: false, who: -1, stand: -1, glow: 0, voice: null, blinkT: rr(1, 4), ph: rnd() * 6 };
+			return { root, body, stem, faces, sz, pos, w, spot, av, hotMat, deg: [0, 3, -2][k % 3], sq: 0, v: 0, pressed: false, fresh: false, who: -1, stand: -1, glow: 0, voice: null, blinkT: rr(1, 4), ph: rnd() * 6 };
 		});
 	}
 
@@ -3430,10 +3438,11 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			pb.stem.rotation.z = -pb.v * 0.05;
 			pb.stem.rotation.x = Math.sin(rt * 9 + pb.ph) * Math.min(0.3, Math.abs(pb.v) * 0.03);
 			// its face: screwed shut and an O when squashed; wide-eyed as it bounces back; a blink now and then
-			const f = pb.face, sqz = clamp(q, 0, 1), boing = clamp(-q * 3, 0, 1);
+			const sqz = clamp(q, 0, 1), boing = clamp(-q * 3, 0, 1);
 			pb.blinkT -= dt;
 			const blink = pb.blinkT < 0.12 && pb.blinkT > 0 ? 0.1 : 1;
 			if (pb.blinkT < 0) pb.blinkT = rr(2, 5);
+			for (const f of pb.faces) {
 			for (const e of f.eyes) {
 				e.eye.scale.set(1 + sqz * 0.3 + boing * 0.3, Math.max(0.1, lerp(1, 0.12, sqz) * blink) * (1 + boing * 0.4), 1);
 				e.brow.position.y = 0.36 * f.s + boing * 0.06 * f.s - sqz * 0.04 * f.s;
@@ -3443,6 +3452,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			f.mouth.smile.visible = sqz < 0.3 && boing < 0.3;
 			for (const t of f.mouth.teeth) t.visible = sqz < 0.3;
 			f.mouth.tongue.visible = sqz > 0.5;
+			}
 		}
 		// the web: each pluck sends a ripple out through the strands round it, and the spider runs to see
 		for (const [ci, wb] of webs.entries()) if (wb && clearingGroups[ci].visible) {
