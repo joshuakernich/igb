@@ -1374,32 +1374,51 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 	// The time left (the look, or the tape), top left of every wall under the
 	// deck's PLAY: a ring of white segments going out one by one, the seconds
 	// in the middle; red at the end.
-	const RING = { x: 92, y: 190, r: 56, segments: 24 };
+	const RING = { x: 92, y: 190, r: 56, segments: 12 };
 	function timerRing(ctx, left, max, alpha = 1) {
 		const k = clamp(left / max, 0, 1);
 		const lit = Math.ceil(k * RING.segments);
 		const urgent = left < 5;
-		const colour = urgent ? RED : '#f6f1dc';
+		const colour = urgent ? RED : '#ffffff';
 		const step = Math.PI * 2 / RING.segments;
 		for (let wall = 0; wall < 3; wall++) {
 			const cx = wall * W + RING.x, cy = RING.y;
 			ctx.save();
 			ctx.globalAlpha = alpha;
 			ctx.lineCap = 'butt';
+			// a drop shadow, a black outline, then solid white (gone: just a dark socket)
+			for (const [dx, dy, width, ink] of [[4, 5, 22, 'rgba(0,0,0,0.5)'], [0, 0, 22, '#000']]) {
+				ctx.strokeStyle = ink;
+				ctx.lineWidth = width;
+				for (let i = 0; i < RING.segments; i++) {
+					const a0 = -Math.PI / 2 + i * step + step * 0.09;
+					ctx.beginPath();
+					ctx.arc(cx + dx, cy + dy, RING.r, a0, a0 + step * 0.82);
+					ctx.stroke();
+				}
+			}
+			ctx.lineWidth = 13;
 			for (let i = 0; i < RING.segments; i++) {
-				const a0 = -Math.PI / 2 + i * step + step * 0.14;
-				const a1 = a0 + step * 0.72;
+				const a0 = -Math.PI / 2 + i * step + step * 0.09 + 0.035;
 				ctx.beginPath();
-				ctx.arc(cx, cy, RING.r, a0, a1);
-				ctx.strokeStyle = 'rgba(0,0,0,0.55)';
-				ctx.lineWidth = 17;
-				ctx.stroke();
-				ctx.strokeStyle = i < lit ? colour : 'rgba(246,241,220,0.18)';
-				ctx.lineWidth = 11;
+				ctx.arc(cx, cy, RING.r, a0, a0 + step * 0.82 - 0.07);
+				ctx.strokeStyle = i < lit ? colour : 'rgba(255,255,255,0.14)';
 				ctx.stroke();
 			}
+			// the seconds: solid white, outlined and shadowed in black
+			ctx.font = `60px ${FONT}, "Courier New", monospace`;
+			ctx.textAlign = 'center';
+			ctx.textBaseline = 'middle';
+			ctx.lineJoin = 'round';
+			const n = String(Math.ceil(left));
+			ctx.fillStyle = 'rgba(0,0,0,0.5)';
+			ctx.fillText(n, cx + 4, cy + 7);
+			ctx.strokeStyle = '#000';
+			ctx.lineWidth = 9;
+			ctx.strokeText(n, cx, cy + 3);
+			ctx.fillStyle = colour;
+			ctx.fillText(n, cx, cy + 3);
 			ctx.restore();
-			vhsText(ctx, String(Math.ceil(left)), cx, cy + 3, 56, { fill: colour, alpha, flicker: urgent, split: 2 });
 		}
 	}
 
