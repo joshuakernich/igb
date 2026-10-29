@@ -464,7 +464,7 @@ gamebox-hint kbd.mouse {
 	font-style: italic;
 	background: none;
 	box-shadow: none;
-	color: rgba(255, 255, 255, 0.85);
+	color: rgba(234, 242, 255, 0.35);   /* (greyed out until it's happening) */
 }
 
 gamebox-hint kbd.mouse.lit {
