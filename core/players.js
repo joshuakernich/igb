@@ -396,7 +396,7 @@ IGB.players = (function () {
 	let sim3 = null;
 	function make3D(THREE, host) {
 		const W = SIM.w, H = SIM.h;
-		const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+		const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
 		renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
 		renderer.setSize(W, H);
 		renderer.shadowMap.enabled = true;
@@ -418,7 +418,11 @@ IGB.players = (function () {
 			x0 = 9; x1 = -9; y0 = 9; y1 = -9;
 			for (const X of [-1, 1]) for (const Z of [-1, 1]) for (const y of [0, HR]) { const v = P(X, y, Z).project(camera); x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y); }
 			camera.setViewOffset(W, H, (x0 + x1) / 2 * W / 2, -(y0 + y1) / 2 * H / 2, W, H);
+			camera.updateMatrixWorld();
 		}
+		// (where the box's foot is on the canvas, so the controls card can line up with it)
+		let foot = 0;
+		for (const X of [-1, 1]) for (const Z of [-1, 1]) { const v = P(X, 0, Z).project(camera); foot = Math.max(foot, (1 - v.y) / 2 * H); }
 		scene.add(new THREE.HemisphereLight('#c8d4ff', '#1a1a34', 1.1));
 		const sun = new THREE.DirectionalLight('#ffffff', 1.8);
 		sun.position.copy(P(-1.2, 4, -2.2)); sun.castShadow = true;
@@ -553,6 +557,7 @@ IGB.players = (function () {
 		requestAnimationFrame(frame);
 		return {
 			el: renderer.domElement,
+			foot,
 			// what's under the mouse: { wall (0 left, 1 front, 2 right, 3 floor), X, y, Z } in room units
 			pick(e) {
 				const r = renderer.domElement.getBoundingClientRect();
@@ -698,7 +703,10 @@ IGB.players = (function () {
 		const under = (e) => { if (sim3) return sim3.pick(e); const r = canvas.getBoundingClientRect(); return cam.pick((e.clientX - r.left) / r.width * SIM.w, (e.clientY - r.top) / r.height * SIM.h); };
 		const view = $simulator.find('gamebox-view')[0];
 		import(new URL('../lib/three/three.module.min.js', SCRIPT_URL).href).then((THREE) => {
-			try { sim3 = make3D(THREE, view); canvas.style.display = 'none'; } catch (err) { console.warn('simulator: no 3D', err); sim3 = null; }
+			try {
+				sim3 = make3D(THREE, view); canvas.style.display = 'none';
+				$simulator.find('gamebox-panel').css({ top: 'auto', bottom: SIM.h - sim3.foot + 'px' });   // (its foot level with the box's)
+			} catch (err) { console.warn('simulator: no 3D', err); sim3 = null; }
 		}, (err) => console.warn('simulator: no three.js', err));
 		$(view).on('mousemove', function (e) {
 			const h = under(e);
