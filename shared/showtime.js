@@ -2035,10 +2035,13 @@ window.Showtime = function (stage, opts) {
 	// alternately), each easing gently into place; a soft boom as the last
 	// settles (no flash), then the START button fading in (or a hold, and
 	// out). lines: [{ text, fill, glow }]. Never a byline under it.
-	// The sting: the In Gamebox logo animation (assets/shared/sting.mp4, made
-	// for a four-walled box: its first three walls on ours), its black keyed out
-	// over the game's dimmed scene, with its sound; then on.
-	const STING = { src: 'assets/shared/sting.mp4', walls: 4, aspect: 6, most: 6, lead: 1.0 };   // the video, made for four walls, its width to its height; on regardless after this long (if it can't play); how long before its end the title starts under it (it plays on to its end, no fade)
+	// The sting: the In Gamebox logo animation (made for a four-walled box: its
+	// first three walls on ours), with its sound; then on. sting.webm carries its
+	// own transparency: solid black to begin with (the opening swooshes over
+	// black, covering the game), and from the logo's last moment on, the black is
+	// see-through, so the game shows as it ends. Where VP9 with alpha can't play,
+	// the plain sting.mp4, its black keyed out all through by a screen blend.
+	const STING = { src: 'assets/shared/sting.webm', fallback: 'assets/shared/sting.mp4', walls: 4, aspect: 6, most: 6, lead: 1.0 };   // the video, made for four walls, its width to its height; on regardless after this long (if it can't play); how long before its end the title starts under it (it plays on to its end, no fade)
 	beatsLib.sting = function (extra) {
 		let $video = null, ended = false;
 		// (the title starts under it for its last second: it's let go of, plays
@@ -2063,12 +2066,14 @@ window.Showtime = function (stage, opts) {
 				if ($video) { $video.find('video')[0].pause(); $video.remove(); }
 				// (it's made for a four-walled box: shown so its first three walls fill
 				// ours, wall for wall, and its fourth runs off past our right wall)
+				// (Chrome plays VP9 with its alpha; Safari would play the WebM but drop the alpha)
+				const alpha = !!document.createElement('video').canPlayType('video/webm; codecs="vp9"') && !/^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 				$video = $('<div>').css({
 					position: 'absolute', left: 0, top: 0, width: 3 * W + 'px', height: H + 'px', overflow: 'hidden', zIndex: 25, pointerEvents: 'none', opacity: 1,
-					mixBlendMode: 'screen',   // (its black keyed out: the game's scene, dimmed, shows through it)
+					mixBlendMode: alpha ? 'normal' : 'screen',   // (the mp4: its black keyed out all through, the game's scene, dimmed, showing through)
 				}).appendTo(stage.$ui);
 				const vh = STING.walls * W / STING.aspect;
-				const $v = $('<video playsinline preload="auto">').attr('src', STING.src).css({
+				const $v = $('<video playsinline preload="auto">').attr('src', alpha ? STING.src : STING.fallback).css({
 					position: 'absolute', left: 0, top: (H - vh) / 2 + 'px', width: STING.walls * W + 'px', height: vh + 'px',
 				}).appendTo($video).on('ended error', () => { ended = true; });
 				$v[0].play().catch(() => { ended = true; });

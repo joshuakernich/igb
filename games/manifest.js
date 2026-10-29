@@ -149,7 +149,7 @@ IGB.manifest = [
 		{ id: 'plummet-panic', name: 'Plummet Panic', icon: 'assets/icons/plummet-panic.png',
 			box: { color: 'white', bg: 'url(assets/box-party/icon-drum.png) center / cover' } },
 		{ id: 'cookie-cutter', name: 'Cookie Cutter', icon: 'assets/icons/cookie-cutter.jpg',
-			box: { color: 'orange', bg: 'url(assets/box-party/icon-cookie-cutter.jpg) center / cover' } },
+			box: { color: 'orange', bg: 'url(assets/icons/cookie-cutter.jpg) center / cover' } },   // (the same picture as its icon)
 	] },
 
 	{ folder: 'Disruption 2', games: [
