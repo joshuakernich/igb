@@ -333,6 +333,10 @@ IGB.players = (function () {
 
 	const COLS = ['#ff3b3b', '#3b7bff', '#2fd25a', '#d23bff', '#ff7a1a', '#ffc21a'];
 	const HR = 1.25;   // (the walls' height, in room half-widths: they're 16:10)
+	// People to scale in a 3.6 m x 3.6 m room (a half-width is 1.8 m): Ht their height, hr their
+	// head's radius, both in half-widths; the lathed body reaches up to the head
+	const M = 1 / 1.8;
+	const person = (cm, sq) => { const Ht = cm / 100 * M * (1 - sq * 0.38), hr = 0.105 * M * Math.min(1.1, cm / 170); return { Ht, hr, Hb: Ht - hr * 1.85 }; };
 	const SIM = { w: 300, h: 210, eye: [0, 2.5, -3.1], at: [0, 0.38, 0.3], hover: -1 };   // (low enough to see into the side walls)
 	const v3 = { sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], norm: (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; }, cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]] };
 	const cam = (function () {
@@ -517,19 +521,18 @@ IGB.players = (function () {
 				const me = i === selected;
 				const tall = me ? you.cm / 170 : Math.max(0.75, Math.min(1.2, 1 + p.Y * 0.4));
 				const sq = me ? you.sq : p.Y < -0.25 ? 1 : 0;
-				const Ht = 0.42 * tall * (1 - sq * 0.38), lift = me ? youJump() * 0.5 : 0;
+				const { Ht, hr, Hb } = person(170 * tall, sq), lift = me ? youJump() * 1.125 * M : 0;   // (a jump: tracking Y is 1.125 m a unit)
 				tmp.copy(P(p.X, 0, p.Z));
 				if (!tk.at) tk.at = tmp.clone(); else tk.at.lerp(tmp, 1 - Math.exp(-dt * 18));
 				tk.g.position.set(tk.at.x, 0, tk.at.z);
-				tk.body.position.y = lift; tk.body.scale.set(1, Ht, 1);
-				const hr = 0.06 * Math.min(1.1, tall);
-				tk.head.position.y = lift + Ht * 0.88;
+				tk.body.position.y = lift; tk.body.scale.set(1.25, Hb / 0.78, 1.25);
+				tk.head.position.y = lift + Ht - hr;
 				tk.ball.scale.setScalar(hr);
 				tk.dot.scale.setScalar(hr * 0.16); tk.dot.position.set(0, hr * 0.93, 0);
 				tk.nose.scale.set(hr * 0.12, hr * 0.08, hr * 0.95); tk.nose.position.set(0, hr * 0.9, hr * 0.5);
 				tk.nose.rotation.x = 0.35;
 				tk.ring.visible = me;
-				tk.tag.position.y = lift + Ht * 0.88 + hr + 0.1;
+				tk.tag.position.y = lift + Ht + 0.1;
 				if (tk.tagMe !== me) { tk.tag.material.map.dispose(); tk.tag.material.map = tagFor(me ? 'YOU' : 'P' + (i + 1), COLS[i]); tk.tagMe = me; }
 				tk.tag.material.opacity = me ? 1 : 0.8;
 				// the gaze: head turned to it, a target on the wall, dots while it moves
@@ -617,7 +620,7 @@ IGB.players = (function () {
 			const me = i === selected, col = COLS[i];
 			const tall = me ? you.cm / 170 : Math.max(0.75, Math.min(1.2, 1 + p.Y * 0.4));
 			const sq = me ? you.sq : p.Y < -0.25 ? 1 : 0;
-			const H = 0.42 * tall * (1 - sq * 0.38), lift = me ? youJump() * 0.5 : 0, X = p.X, Z = p.Z;
+			const { Ht, hr, Hb } = person(170 * tall, sq), H = Hb / 0.78, lift = me ? youJump() * 1.125 * M : 0, X = p.X, Z = p.Z;
 			// its shadow, and your ring
 			const sh = (r) => { ctx.beginPath(); for (let k = 0; k <= 20; k++) { const a = k / 20 * Math.PI * 2, [x, y] = cam.p(X + Math.cos(a) * r, 0, Z + Math.sin(a) * r); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } };
 			sh(0.11 + lift * 0.1); ctx.fillStyle = `rgba(0, 0, 10, ${0.45 - lift * 0.4})`; ctx.fill();
@@ -628,11 +631,11 @@ IGB.players = (function () {
 			grad.addColorStop(0, shade(col, -0.45)); grad.addColorStop(0.62, shade(col, 0.25)); grad.addColorStop(1, shade(col, -0.2));
 			ctx.fillStyle = grad;
 			for (let f = 0; f <= 0.78; f += 0.025) {
-				const y = lift + f * H, r = lathe(f), [cx, cy] = cam.p(X, y, Z), [rx] = cam.p(X + r, y, Z), [, ny] = cam.p(X, y, Z - r), [, fy] = cam.p(X, y, Z + r);
+				const y = lift + f * H, r = lathe(f) * 1.25, [cx, cy] = cam.p(X, y, Z), [rx] = cam.p(X + r, y, Z), [, ny] = cam.p(X, y, Z - r), [, fy] = cam.p(X, y, Z + r);
 				ctx.beginPath(); ctx.ellipse(cx, cy, Math.max(0.5, rx - cx), Math.max(0.3, Math.abs(ny - fy) / 2), 0, 0, Math.PI * 2); ctx.fill();
 			}
 			// the head: a ball, with its centre marked
-			const hy = lift + H * 0.88, hr = 0.06 * Math.min(1.1, tall), [hx, hyS] = cam.p(X, hy, Z), [hrx] = cam.p(X + hr, hy, Z), R = hrx - hx;
+			const hy = lift + Ht - hr, [hx, hyS] = cam.p(X, hy, Z), [hrx] = cam.p(X + hr, hy, Z), R = hrx - hx;
 			const hg = ctx.createRadialGradient(hx - R * 0.3, hyS - R * 0.35, R * 0.1, hx, hyS, R);
 			hg.addColorStop(0, shade(col, 0.55)); hg.addColorStop(0.6, col); hg.addColorStop(1, shade(col, -0.4));
 			ctx.beginPath(); ctx.arc(hx, hyS, R, 0, Math.PI * 2); ctx.fillStyle = hg; ctx.fill();
