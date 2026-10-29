@@ -572,6 +572,18 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			const g3 = vca(time, 0.001, v * 0.3, 0.03, w);
 			noise(time, 0.04, filt('bandpass', f * 6, 2, g3));
 		},
+		// glass: a struck wine-glass ring. Pure, slightly inharmonic sine partials (the overtones of a
+		// glass bar), each with a detuned twin so it beats and shimmers, the highs dying fast and
+		// the fundamental singing on; and a tiny bright tick of noise where it's struck
+		glass(time, f, v, w) {
+			for (const [m, a, d] of [[1, 1, 3.2], [2.76, 0.45, 1.6], [5.4, 0.22, 0.8], [8.93, 0.1, 0.4]]) {
+				const g = vca(time, 0.003, v * a, d, w);
+				osc('sine', f * m, time, d + 0.1, g);
+				osc('sine', f * m * 1.0025, time, d + 0.1, g);
+			}
+			const tk = vca(time, 0.001, v * 0.25, 0.03, w);
+			noise(time, 0.05, filt('highpass', 6000, 1, tk));
+		},
 		shimmer(time, f, v, w) {
 			for (const [m, a, d, det] of [[1, 1, 1.6, 0], [2, 0.5, 1.2, 3], [3.01, 0.3, 0.9, -4], [4.2, 0.2, 0.7, 6], [6.3, 0.12, 0.5, -7]]) {
 				const g = ac.createGain();
@@ -3196,7 +3208,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const ch = cs.list[best];
 		ch.v += (strum ? 2.2 : 1.6) * (at.x < proj(1, _v.set(ch.x, ch.y, ch.z)).x ? 1 : -1);
 		ch.glow = 1;
-		if (audioOn()) { const f = freqOf(CLEARINGS[here].root, 3 + ch.deg); SND.bell(clock() + 0.005, f, 0.32, 1); SND.bell(clock() + 0.005, f * 2.01, 0.08, 1); }
+		if (audioOn()) SND.glass(clock() + 0.005, freqOf(CLEARINGS[here].root, 3 + ch.deg), 0.22, 1);   // (glassy)
 		spray(_v.set(ch.x, ch.y - ch.len / 2, ch.z).clone(), '#ffe8a0', 8, 1.1, 0.6);
 		scores[who] += 1;
 		tut.touched[who] = true;
