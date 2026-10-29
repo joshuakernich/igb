@@ -1622,8 +1622,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			}
 			c.parts.cap = cap;
 			c.face = makeFace(c.bouncer, 0.42, 0, 0.9, 0.165, { gap: 0.3 });
-			limb(c, [-0.09, 0.08, 0.04], [-0.14, -0.08, 0.12], 0.035, 'shoe', -1, true);
-			limb(c, [0.09, 0.08, 0.04], [0.14, -0.08, 0.12], 0.035, 'shoe', 1, true);
+			// (no feet: the stalk stands straight on the ground)
 			// a frilly skirt round the stalk, under the cap
 			const skirt = mesh(new THREE.CylinderGeometry(0.17, 0.27, 0.12, 24, 1, true), new THREE.MeshPhysicalMaterial({ color: '#fff6e6', roughness: 0.6, sheen: 1, sheenColor: new THREE.Color('#ffffff'), side: THREE.DoubleSide }), c.bouncer, 0, 1.32, 0);
 			skirt.castShadow = false;
@@ -1886,6 +1885,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			c.face = makeFace(head, 0.5, 0, 0.02, 0.27, { gap: 0.2 });            // (the standard face, eyes close together)
 			c.face.mouth.open.parent.position.y -= 0.02;
 			c.face.mouth.open.parent.scale.setScalar(0.65);   // (a small mouth)
+			c.face.mouth.open.parent.position.z = 0.06;        // (out on the front of the white muzzle, not buried in it)
 			for (const e of c.face.eyes) e.pupil.scale.multiplyScalar(0.8);   // (eyes a touch smaller than standard)
 			// whiskers: three a side, fanning out from the muzzle
 			const wMat = new THREE.MeshBasicMaterial({ color: '#4a3a3a' });
