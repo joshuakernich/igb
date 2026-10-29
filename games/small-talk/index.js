@@ -1315,14 +1315,6 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		ctx.fillRect(x, y - h / 2, w, h);
 	}
 
-	// The time of night, in the corner: later every round.
-	function partyTime() {
-		const [hm, ampm] = sceneOf().clock.split(' ');
-		const [h, m] = hm.split(':').map(Number);
-		const mm = m + Math.floor(sceneT() / 10);
-		return `${h + Math.floor(mm / 60)}:${String(mm % 60).padStart(2, '0')} ${ampm}`;
-	}
-
 	// A hand-drawn ring round something found.
 	function ring(ctx, x, y, r, colour, width, wobble) {
 		ctx.save();
@@ -1370,56 +1362,12 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		}
 	}
 
-	// The tape left this round: a bar across the top of the front wall.
-	// The time left (the look, or the tape), top left of every wall under the
-	// deck's PLAY: a ring of white segments going out one by one, the seconds
-	// in the middle; red at the end.
-	const RING = { x: 92, y: 190, r: 56, segments: 12 };
-	function timerRing(ctx, left, max, alpha = 1) {
-		const k = clamp(left / max, 0, 1);
-		const lit = Math.ceil(k * RING.segments);
-		const urgent = left < 5;
-		const colour = urgent ? RED : '#ffffff';
-		const step = Math.PI * 2 / RING.segments;
-		for (let wall = 0; wall < 3; wall++) {
-			const cx = wall * W + RING.x, cy = RING.y;
-			ctx.save();
-			ctx.globalAlpha = alpha;
-			ctx.lineCap = 'butt';
-			// a drop shadow, a black outline, then solid white (gone: just a dark socket)
-			for (const [dx, dy, width, ink] of [[4, 5, 22, 'rgba(0,0,0,0.5)'], [0, 0, 22, '#000']]) {
-				ctx.strokeStyle = ink;
-				ctx.lineWidth = width;
-				for (let i = 0; i < RING.segments; i++) {
-					const a0 = -Math.PI / 2 + i * step + step * 0.09;
-					ctx.beginPath();
-					ctx.arc(cx + dx, cy + dy, RING.r, a0, a0 + step * 0.82);
-					ctx.stroke();
-				}
-			}
-			ctx.lineWidth = 13;
-			for (let i = 0; i < RING.segments; i++) {
-				const a0 = -Math.PI / 2 + i * step + step * 0.09 + 0.035;
-				ctx.beginPath();
-				ctx.arc(cx, cy, RING.r, a0, a0 + step * 0.82 - 0.07);
-				ctx.strokeStyle = i < lit ? colour : 'rgba(255,255,255,0.14)';
-				ctx.stroke();
-			}
-			// the seconds: solid white, outlined and shadowed in black
-			ctx.font = `60px ${FONT}, "Courier New", monospace`;
-			ctx.textAlign = 'center';
-			ctx.textBaseline = 'middle';
-			ctx.lineJoin = 'round';
-			const n = String(Math.ceil(left));
-			ctx.fillStyle = 'rgba(0,0,0,0.5)';
-			ctx.fillText(n, cx + 4, cy + 7);
-			ctx.strokeStyle = '#000';
-			ctx.lineWidth = 9;
-			ctx.strokeText(n, cx, cy + 3);
-			ctx.fillStyle = colour;
-			ctx.fillText(n, cx, cy + 3);
-			ctx.restore();
-		}
+	// The time left (the look, or the tape): a line under the prompt, the
+	// prompt's size, on every wall; red at the end.
+	function timerText(ctx, left, y = 210, alpha = 1) {
+		const secs = Math.ceil(left);
+		const text = `0:${String(secs).padStart(2, '0')}`;
+		for (let wall = 0; wall < 3; wall++) vhsText(ctx, text, wall * W + W / 2, y, 64, { alpha, fill: left < 5 ? RED : '#f6f1dc', flicker: left < 5 });
 	}
 
 	// How shut the eyes are through the blink (0 open, 1 shut): a couple of
@@ -1501,13 +1449,13 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 			// (just under the show's clock, the same size on every wall, nothing behind it)
 			for (let wall = 0; wall < 3; wall++) vhsText(ctx, callout.text, wall * W + W / 2, 140, 64, { alpha: a });   // (the clock's size)
 		}
-		if (phase === 'look') timerRing(ctx, Math.max(0, phaseDur - phaseT), phaseDur);
+		if (phase === 'look') timerText(ctx, Math.max(0, phaseDur - phaseT));
 		drawCaptions(ctx);
 		if (glitch > 0 && (phase === 'tap' || phase === 'reveal')) {
 			art.rect(ctx, 0, 0, WIDTH, H, { fill: `rgba(0,0,0,${0.5 * Math.sin(glitch / LOOP_GAP * Math.PI)})` });
 			for (let wall = 0; wall < 3; wall++) vhsText(ctx, '◀◀', wall * W + W / 2, H / 2, 90, { alpha: Math.sin(glitch / LOOP_GAP * Math.PI) });
 		}
-		if (phase === 'tap') timerRing(ctx, timeLeft, levelCfg(level).tap);
+		if (phase === 'tap') timerText(ctx, timeLeft);
 		if (phase === 'tap' && (!callout || callout.age > 2.6)) {
 			// (like the prompts: under the clock, the same size, every wall, nothing behind)
 			const a = Math.min(1, callout ? (callout.age - 2.6) / 0.3 : 1);
@@ -1546,7 +1494,7 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 	}
 
 	// The camcorder's own layer, over everything in the world beats:
-	// scanlines, grain, tracking, the REC light and the time of night.
+	// scanlines, grain, tracking, the REC light (or PLAY, or REWIND).
 	function camcorder(ctx, opts = {}) {
 		const dt = frameDt;
 		if (!scanlines) {
@@ -1604,7 +1552,6 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 			vhsText(ctx, deck === 'play' ? 'PLAY' : deck === 'rewind' ? 'REWIND' : 'REC', x + (deck === 'rewind' ? 112 : 100), 64, 54, { align: 'left', flicker: false, split: 2 });
 			vhsText(ctx, `CAM 0${i + 1}`, x + W - 70, 64, 48, { align: 'right', flicker: false, split: 2 });
 		}
-		vhsText(ctx, partyTime(), W + W - 70, 118, 44, { align: 'right', flicker: false, split: 2 });
 
 	}
 
@@ -1659,7 +1606,7 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 				}
 			}
 		}
-		if (step.id === 'wrong') timerRing(ctx, practice.tape, CONTROLS.tape);
+		if (step.id === 'wrong') timerText(ctx, practice.tape, 370);
 		show.onWalls(ctx, function (c) {
 			show.slam(c, step.caption, W / 2, 210, step.caption.length > 30 ? 84 : 104, practice.age, { fill: '#ffd23f' });   // (tutorial captions: yellow)
 			show.pips(c, CONTROLS.steps.length, practice.i, practice.done, W / 2, 290);   // (the standard step pips)
