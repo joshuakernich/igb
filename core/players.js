@@ -323,9 +323,8 @@ IGB.players = (function () {
 
 	function hud() {
 		if (!$simulator) return;
-		const state = you.sq > 0.5 ? ' · squatting' : you.jumpT >= 0 ? ' · jumping' : '';
 		$simulator.find('gamebox-player').attr('n', selected < 0 ? null : selected).html(selected < 0 ? 'Watching <span>pick a player</span>'
-			: `<b>You are P${selected + 1}</b> <span>${you.cm} cm${state}</span>`);
+			: `<b>You are P${selected + 1}</b> <span>${you.cm} cm</span>`);
 		$simulator.find('gamebox-hint').toggle(you.help);
 		$simulator.find('[pip]').each(function (k) { $(this).toggleClass('on', k === selected); });
 	}
@@ -676,7 +675,6 @@ IGB.players = (function () {
 				<gamebox-view><canvas></canvas></gamebox-view>
 				<gamebox-panel>
 					<gamebox-player></gamebox-player>
-					<button btn=move>Shuffle the others</button>
 					<gamebox-hint>
 						<span><gamebox-pips>${COLS.map((c, i) => `<button pip=${i} style="--c:${c}" title="Drive player ${i + 1}">${i + 1}</button>`).join('')}</gamebox-pips><kbd k=tab>TAB</kbd></span><span>PICK A PLAYER</span>
 						<span><kbd k=w>W</kbd><kbd k=a>A</kbd><kbd k=s>S</kbd><kbd k=d>D</kbd></span><span>WALK</span>
@@ -686,6 +684,7 @@ IGB.players = (function () {
 						<span><kbd k=q>Q</kbd><kbd k=e>E</kbd></span><span>SHORTER / TALLER</span>
 						<span><kbd k=wall class=mouse>POINT AT WALL</kbd></span><span>LOOK</span>
 						<span><kbd k=click class=mouse>CLICK WALL</kbd></span><span>TOUCH IT</span>
+						<span><kbd k=r>R</kbd></span><span>SHUFFLE THE OTHERS</span>
 					</gamebox-hint>
 				</gamebox-panel>
 			</gamebox-simulator>
@@ -729,7 +728,6 @@ IGB.players = (function () {
 			touch({ wall: h.wall, u: h.wall === 1 ? (h.X + 1) / 2 : h.wall === 0 ? (h.Z + 1) / 2 : (1 - h.Z) / 2, v: 1 - h.y / HR });
 		});
 
-		$simulator.find('[btn=move]').on('click', randomMove);
 		$simulator.on('click', '[pip]', function (e) { e.stopPropagation(); const n = +this.getAttribute('pip'); select(n === selected ? -1 : n); });
 
 		$(document).on('keydown', function (e) {
@@ -746,8 +744,8 @@ IGB.players = (function () {
 				you.cm = HEIGHTS[n]; flash(you.cm + ' CM'); hud(); return;
 			}
 			if (k === 'h') { you.help = !you.help; hud(); return; }
+			if (k === 'r') { randomMove(); return; }
 			keys.add(k);
-			if (k === 'shift' || k === 'c') hud();
 			if (k.startsWith('arrow')) e.preventDefault();
 		});
 		$(document).on('keyup', function (e) {
@@ -755,7 +753,6 @@ IGB.players = (function () {
 			const lk = KEY_OF[k] || k;
 			if (['w', 'a', 's', 'd', 'shift', 'space'].includes(lk) && !(lk === 'shift' && keys.has('c')) && !Object.keys(KEY_OF).some((o) => KEY_OF[o] === lk && o !== k && keys.has(o))) lightKey(lk, false);
 			keys.delete(k);
-			if (k === 'shift' || k === 'c') hud();
 		});
 		$(window).on('blur', () => { keys.clear(); if ($simulator) $simulator.find('kbd.lit').removeClass('lit'); });
 

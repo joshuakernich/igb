@@ -389,24 +389,6 @@ gamebox-player {
 gamebox-player b { font-weight: 400; }
 gamebox-player span { opacity: 0.55; font-weight: 400; font-size: 11px; }
 
-gamebox-panel button[btn=move] {
-	position: absolute;
-	top: 9px;
-	right: 10px;
-	padding: 2px 8px;
-	border: 1px solid rgba(255, 255, 255, 0.25);
-	border-radius: 20px;
-	background: rgba(255, 255, 255, 0.06);
-	color: rgba(255, 255, 255, 0.8);
-	font: 400 10px Rubik, sans-serif;
-	cursor: pointer;
-}
-
-gamebox-panel button[btn=move]:hover {
-	background: rgba(255, 255, 255, 0.16);
-	color: white;
-}
-
 /* a numbered square per player: click one to drive them (again to let go) */
 gamebox-pips {
 	display: flex;
