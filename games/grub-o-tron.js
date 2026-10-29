@@ -1991,9 +1991,10 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		return m;
 	}
 	// an eye: a white ball, a pupil, and moulded lids in the skin (droop: how heavy the upper lid hangs)
+	// (the whites glow a little, so they read white even in the dim kitchen)
+	const EYE_WHITE = std(0xffffff, 0.2, 0, { emissive: 0xffffff, emissiveIntensity: 0.55 });
 	function eyeBall(g, x, y, z, r, lid, droop = 0.25) {
-		const w = std(0xf4f2ea, 0.25, 0);
-		mesh(SPH(r, 18), w, g, x, y, z);
+		mesh(SPH(r, 18), EYE_WHITE, g, x, y, z);
 		const pupil = mesh(SPH(r * 0.5, 14), MAT.black, g, x, y, z);
 		pupil.scale.set(1, 1.15, 0.6);
 		pupil.position.addScaledVector(TOWARD, r * 0.72);
