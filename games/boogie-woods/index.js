@@ -822,7 +822,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			pb.stand = -1;
 			if (on) for (let i = 0; i < count; i++) {
 				const p = latest[i], q = pl[i];
-				if (!p || !q.seen || !near(p, pb.spot)) continue;
+				// (on its pad: where your avatar is, within about the pad's own size)
+				if (!p || !q.seen || Math.hypot(avCap(q.x) - pb.av.x, avCap(q.z) - pb.av.z) > PAD_REACH) continue;
 				pb.stand = i;
 				if (q.base !== null && p.py > q.base + SQUAT * 0.7) who = i;
 			}
@@ -2758,6 +2759,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	// squashes (eyes screwed shut, mouth an O) with a burst of seeds and plays its own bass
 	// note straight away, held while you hold it; and springs back up, wobbling, when you stand
 	const puffs = [];
+	const PAD_REACH = 0.32;   // (metres from a pumpkin's pad, avatar to pad: the pad's radius and a little)
 	let _pumpkinGeo = null;
 	function pumpkinGeo() {   // (a squat sphere, eight deep ribs, dimpled top and bottom; its base on the ground)
 		if (_pumpkinGeo) return _pumpkinGeo;
@@ -2809,7 +2811,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			hot.rotation.y = Math.atan2(-tdx, -tdz);
 			labels.push({ ci, wall: w, at: pos.clone().setY(0.1), text: 'SQUAT HERE' });
 			// its own bass note: the root, the fifth, the fourth below
-			return { root, body, stem, face, sz, pos, w, spot, hotMat, deg: [0, 3, -2][k % 3], sq: 0, v: 0, pressed: false, fresh: false, who: -1, stand: -1, glow: 0, voice: null, blinkT: rr(1, 4), ph: rnd() * 6 };
+			return { root, body, stem, face, sz, pos, w, spot, av, hotMat, deg: [0, 3, -2][k % 3], sq: 0, v: 0, pressed: false, fresh: false, who: -1, stand: -1, glow: 0, voice: null, blinkT: rr(1, 4), ph: rnd() * 6 };
 		});
 	}
 
