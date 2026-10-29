@@ -1074,18 +1074,26 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		}
 		return rows;
 	}
-	// Each line in a little chat bubble over its speaker's head: it pops up
-	// (a quick overshoot) as they start, and fades as they finish. Their
-	// name rides on a tab in their colour.
-	const BUBBLE = { font: 34, line: 40, chars: 22, pad: 18, tail: 26, lift: 0.3 };
+	// Each line in a little pixel-art chat bubble over its speaker's head, in
+	// the tape's own lettering: it pops up as they start and fades as they
+	// finish. Everything snaps to a grid of fat pixels: notched corners, a
+	// stepped tail, a heavy black edge. Their name rides on a tab in their colour.
+	const BUBBLE = { font: 34, line: 40, chars: 22, pad: 18, px: 6, lift: 0.3, font2: 'VCRFONT' };
 	const NAME_COLOURS = { gary: '#a82a2a', linda: '#2f7a78', dave: '#d0701a', priya: '#7a5ad0', caterer: '#2a2a2a' };
+	// a pixel box: a rectangle with one fat pixel bitten out of each corner
+	function pixelBox(ctx, x, y, w, h, P, fill) {
+		ctx.fillStyle = fill;
+		ctx.fillRect(x + P, y, w - 2 * P, h);
+		ctx.fillRect(x, y + P, w, h - 2 * P);
+	}
 	function drawCaptions(ctx) {
 		if (!voicesLive()) return;
 		const V = sceneOf();
 		const T = sceneT();
 		const f = floors.get(floorN);
 		if (!f) return;
-		const B = BUBBLE;
+		const B = BUBBLE, P = B.px;
+		const snap = (v) => Math.round(v / P) * P;
 		V.lines.forEach(function ([t, who, text], i) {
 			const d = lineDur(V, i);
 			if (T < t || T > t + d + 0.3) return;
@@ -1094,49 +1102,48 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 			const p = toWalls(headAt.copy(st.actor.head).add(v3.set(0, B.lift, 0)));
 			if (!p) return;
 			const age = T - t;
-			const pop = age < 0.2 ? 1 + 2.2 * Math.pow(age / 0.2 - 1, 3) + 1.2 * Math.pow(age / 0.2 - 1, 2) : 1;   // (a back ease)
+			// popping up in steps, as pixel things do: 60%, 115%, 100%
+			const pop = age < 0.06 ? 0.6 : age < 0.13 ? 1.15 : 1;
 			const alpha = clamp((t + d + 0.3 - T) / 0.25, 0, 1);
 			const rows = wrapText(text, B.chars);
 			ctx.save();
-			ctx.font = `500 ${B.font}px Lexend, sans-serif`;
-			const w = Math.max(...rows.map((r) => ctx.measureText(r).width)) + B.pad * 2;
-			const h = rows.length * B.line + B.pad * 1.4;
-			// the tip at the head; the bubble above it, kept on its wall and clear of the clock
-			const tipX = p.x, tipY = Math.max(260 + h + B.tail, p.y);
-			const bx = clamp(tipX - w / 2, p.wall * W + 20, p.wall * W + W - 20 - w);
-			const by = tipY - B.tail - h;
+			ctx.font = `${B.font}px ${B.font2}, monospace`;
+			const w = snap(Math.max(...rows.map((r) => ctx.measureText(r).width)) + B.pad * 2);
+			const h = snap(rows.length * B.line + B.pad * 1.4);
+			const tail = 4 * P;
+			const tipX = snap(p.x), tipY = snap(Math.max(260 + h + tail, p.y));
+			const bx = snap(clamp(tipX - w / 2, p.wall * W + 20, p.wall * W + W - 20 - w));
+			const by = tipY - tail - h;
 			ctx.globalAlpha = alpha;
 			ctx.translate(tipX, tipY);
 			ctx.scale(pop, pop);
 			ctx.translate(-tipX, -tipY);
-			const body = () => {
-				ctx.beginPath();
-				ctx.roundRect(bx, by, w, h, 22);
-				const tx = clamp(tipX, bx + 30, bx + w - 30);
-				ctx.moveTo(tx - 16, by + h - 1);
-				ctx.lineTo(tipX, tipY);
-				ctx.lineTo(tx + 14, by + h - 1);
+			// the tail: a staircase of fat pixels down to the head
+			const tx = snap(clamp(tipX, bx + 4 * P, bx + w - 6 * P));
+			const stairs = (grow, fill) => {
+				ctx.fillStyle = fill;
+				for (let k = 0; k < 4; k++) {
+					const sx = tx + (tipX - tx) * (k + 1) / 4;
+					ctx.fillRect(snap(sx) - grow, by + h + k * P - grow, (4 - k) * P + 2 * grow, P + 2 * grow);
+				}
 			};
-			body();
-			ctx.lineWidth = 8;
-			ctx.strokeStyle = 'rgba(0,0,0,0.55)';
-			ctx.stroke();
-			ctx.fillStyle = '#fffdf6';
-			ctx.fill();
+			// a heavy black edge, then the white
+			pixelBox(ctx, bx - P, by - P, w + 2 * P, h + 2 * P, P, '#0c0a0c');
+			stairs(P, '#0c0a0c');
+			pixelBox(ctx, bx, by, w, h, P, '#fffdf6');
+			stairs(0, '#fffdf6');
 			// their name on a tab
-			ctx.font = `500 ${Math.round(B.font * 0.62)}px Lexend, sans-serif`;
+			ctx.font = `${Math.round(B.font * 0.7)}px ${B.font2}, monospace`;
 			const name = CAST[who].name;
-			const nw = ctx.measureText(name).width + 22;
-			ctx.beginPath();
-			ctx.roundRect(bx + 14, by - 16, nw, 30, 10);
-			ctx.fillStyle = NAME_COLOURS[who] || '#333';
-			ctx.fill();
+			const nw = snap(ctx.measureText(name).width + 4 * P);
+			pixelBox(ctx, bx + 2 * P - P, by - 4 * P, nw + 2 * P, 6 * P, P, '#0c0a0c');
+			pixelBox(ctx, bx + 2 * P, by - 3 * P, nw, 4 * P, P, NAME_COLOURS[who] || '#333');
 			ctx.fillStyle = 'white';
 			ctx.textAlign = 'left';
 			ctx.textBaseline = 'middle';
-			ctx.fillText(name, bx + 25, by - 1);
+			ctx.fillText(name, bx + 4 * P, by - P);
 			// the words
-			ctx.font = `500 ${B.font}px Lexend, sans-serif`;
+			ctx.font = `${B.font}px ${B.font2}, monospace`;
 			ctx.fillStyle = '#1a1416';
 			ctx.textAlign = 'center';
 			rows.forEach((row, k) => ctx.fillText(row, bx + w / 2, by + B.pad * 0.7 + B.line * (k + 0.5) + 4));
