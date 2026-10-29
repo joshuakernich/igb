@@ -392,8 +392,8 @@ gamebox-player span { opacity: 0.6; }
 /* a numbered square per player: click one to drive them (again to let go) */
 gamebox-pips {
 	display: flex;
-	gap: 3px;
-	margin-right: 4px;
+	gap: 1px;
+	margin-right: 1px;
 }
 
 gamebox-pips button {
@@ -435,7 +435,7 @@ gamebox-hint {
 
 gamebox-hint > span:nth-child(odd) {
 	display: flex;
-	gap: 2px;
+	gap: 1px;   /* (hairline gaps between keys) */
 	justify-self: end;
 }
 
