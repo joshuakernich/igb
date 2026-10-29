@@ -453,10 +453,8 @@ gamebox-hint kbd {
 
 /* (a mouse control: just words, no key round it) */
 gamebox-hint kbd.mouse {
-	display: inline-flex;
-	align-items: center;
-	gap: 4px;
 	padding: 0;
+	font-style: italic;
 	background: none;
 	box-shadow: none;
 	color: rgba(255, 255, 255, 0.85);
