@@ -723,10 +723,11 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			if (on) for (const st2 of CHOIR[cho.idx].chord) SND.vox(time, c.root / 2 * Math.pow(2, st2 / 12), 0.1, 1, 'u', 60 / bpm * 4 * 0.95);
 			visuals.push({ time, fn: () => { cho.hum = 1; } });
 		}
-		// every player's acorn lands on the beat: on a plank, a note; on the frame, nothing
+		// each player's acorn lands once every three beats, each on its own eighth (so they take
+		// turns): on a plank, a note; on the frame, nothing
 		const xy = xylos[here];
-		if (xy && !glide && s16 % 4 === 0 && phase !== 'intro') for (let i = 0; i < count; i++) {
-			if (!pl[i].seen) continue;
+		if (xy && !glide && phase !== 'intro') for (let i = 0; i < count; i++) {
+			if (!pl[i].seen || xy.conkers[i].on < 0.5 || (((st - i * XY.step) % XY.period) + XY.period) % XY.period !== 0) continue;
 			const lg = plankAt(xy, xy.conkers[i].x);
 			if (!lg) continue;
 			if (on) SND.woodlog(time, freqOf(c.root, lg.deg), 0.5, 1);
@@ -3028,11 +3029,11 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	}
 
 	// ACORN XYLOPHONE: wooden planks on a rickety frame by the front wall, set back past
-	// where the avatars can go. Each player has an acorn (capped in their colour) bouncing
-	// endlessly over it, landing on every beat, lined up left and right with them: land on
-	// a plank and it plays and lights up; land between them and it just knocks the frame
+	// where the avatars can go. Each player up the front has an acorn (capped in their colour)
+	// bouncing over it, a long hop every three beats, each landing on its own eighth, lined up
+	// left and right with them: land on a plank and it plays and lights up; between, just the frame
 	const xylos = [];
-	const XY = { out: 0.85, y: 0.58, top: 0.74, hop: 1.1 };   // (planks R + out from the middle; acorns land at top, hop up to top + hop)
+	const XY = { out: 0.85, y: 0.58, top: 0.74, hop: 1.5, period: 12, step: 2 };   // (planks R + out from the middle; acorns land at top, hop up to top + hop, once every `period` sixteenths, each player `step` sixteenths after the last)
 	function buildXylo(g, ci, cx, cz) {
 		const N = 7, logs = [];
 		const wood = new THREE.MeshStandardMaterial({ color: '#d8a868', map: TEX.bark, bumpMap: TEX.bark, bumpScale: 1.5, roughness: 0.55 });
@@ -3080,7 +3081,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			mesh(new THREE.SphereGeometry(1, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), cupM, m, 0, 0.03, 0, 0.09, 0.065, 0.09);
 			mesh(GEO.cyl, cupM, m, 0, 0.11, 0, 0.012, 0.05, 0.012);
 			m.visible = false;
-			conkers.push({ m, x: cx });
+			conkers.push({ m, x: cx, on: 0 });
 		}
 		labels.push({ ci, wall: 1, at: new THREE.Vector3(cx, 0.05, cz - R), text: 'LINE YOUR ACORN UP' });
 		xylos[ci] = { logs, conkers, cx, cz, z: cz - R - XY.out };
@@ -3535,18 +3536,21 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 				pad.budMat.color.copy(pad.base).multiplyScalar(1 + pad.bounce * 2.2);
 			}
 		}
-		// the acorns bounce, a hop a beat, each following its player left and right; planks flash when hit
+		// the acorns bounce, a long hop every three beats, each in its turn, following its player left
+		// and right; only while that player is up the front, using the wall. Planks flash when hit
 		for (const [ci, xy] of xylos.entries()) if (xy && clearingGroups[ci].visible) {
-			const b = beatAt(clock()), f = b - Math.floor(b);
+			const sx = beatAt(clock()) * 4;
 			xy.conkers.forEach((cn, i) => {
-				const q = pl[i], show = ci === here && !glide && q && q.seen;
-				cn.m.visible = !!show;
-				if (!show) return;
+				const q = pl[i], using = ci === here && !glide && q && q.seen && q.z < 0;   // (in the front half: at the xylophone's wall)
+				cn.on = lerp(cn.on, using ? 1 : 0, 1 - Math.exp(-dt * 6));
+				cn.m.visible = cn.on > 0.02;
+				if (!cn.m.visible) return;
 				cn.x = lerp(cn.x, xy.cx + q.x * AV_K, 1 - Math.exp(-dt * 10));
+				const f = ((((sx - i * XY.step) % XY.period) + XY.period) % XY.period) / XY.period;
 				const y = XY.top + (plankAt(xy, cn.x) ? 0 : -0.06) + XY.hop * 4 * f * (1 - f);
-				const sq = Math.max(0, 1 - Math.min(f, 1 - f) / 0.07);   // (squashed for a moment as it lands)
+				const sq = Math.max(0, 1 - Math.min(f, 1 - f) / 0.04);   // (squashed for a moment as it lands)
 				cn.m.position.set(cn.x, y, xy.z);
-				cn.m.scale.set(1 + sq * 0.25, 1 - sq * 0.3, 1 + sq * 0.25);
+				cn.m.scale.set((1 + sq * 0.25) * cn.on, (1 - sq * 0.3) * cn.on, (1 + sq * 0.25) * cn.on);
 				cn.m.rotation.z = (f - 0.5) * 0.5;
 			});
 			for (const lg of xy.logs) {
