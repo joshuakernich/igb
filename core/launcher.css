@@ -402,21 +402,20 @@ gamebox-pips button {
 	padding: 0;
 	border: none;
 	border-radius: 0;
-	background: var(--c);
+	background: color-mix(in srgb, var(--c) 45%, transparent);   /* (faded, but its number stays solid) */
 	color: white;
 	font: 400 8px/13px Rubik, sans-serif;
 	text-align: center;
-	opacity: 0.45;
 	cursor: pointer;
-	transition: opacity 0.15s, transform 0.15s;
+	transition: background 0.15s;
 }
 
 gamebox-pips button:hover {
-	opacity: 0.8;
+	background: color-mix(in srgb, var(--c) 80%, transparent);
 }
 
 gamebox-pips button.on {
-	opacity: 1;
+	background: var(--c);
 }
 
 /* the controls: a key (or two) and what it does, one list; keys light up as they're used */
