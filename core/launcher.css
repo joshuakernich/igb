@@ -410,8 +410,8 @@ gamebox-panel button[btn=move]:hover {
 /* a numbered square per player: click one to drive them (again to let go) */
 gamebox-pips {
 	display: flex;
-	gap: 4px;
-	margin-top: 8px;
+	gap: 3px;
+	margin-right: 4px;
 }
 
 gamebox-pips button {

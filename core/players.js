@@ -324,7 +324,7 @@ IGB.players = (function () {
 	function hud() {
 		if (!$simulator) return;
 		const state = you.sq > 0.5 ? ' · squatting' : you.jumpT >= 0 ? ' · jumping' : '';
-		$simulator.find('gamebox-player').attr('n', selected < 0 ? null : selected).html(selected < 0 ? 'Watching <span>pick a player below</span>'
+		$simulator.find('gamebox-player').attr('n', selected < 0 ? null : selected).html(selected < 0 ? 'Watching <span>pick a player</span>'
 			: `<b>You are P${selected + 1}</b> <span>${you.cm} cm${state}</span>`);
 		$simulator.find('gamebox-hint').toggle(you.help);
 		$simulator.find('[pip]').each(function (k) { $(this).toggleClass('on', k === selected); });
@@ -677,8 +677,8 @@ IGB.players = (function () {
 				<gamebox-panel>
 					<gamebox-player></gamebox-player>
 					<button btn=move>Shuffle the others</button>
-					<gamebox-pips>${COLS.map((c, i) => `<button pip=${i} style="--c:${c}" title="Drive player ${i + 1}">${i + 1}</button>`).join('')}</gamebox-pips>
 					<gamebox-hint>
+						<span><gamebox-pips>${COLS.map((c, i) => `<button pip=${i} style="--c:${c}" title="Drive player ${i + 1}">${i + 1}</button>`).join('')}</gamebox-pips><kbd k=tab>TAB</kbd></span><span>PICK A PLAYER</span>
 						<span><kbd k=w>W</kbd><kbd k=a>A</kbd><kbd k=s>S</kbd><kbd k=d>D</kbd></span><span>WALK</span>
 						<span><kbd k=floor class=mouse>MOUSE ON FLOOR</kbd></span><span>MOVE THERE</span>
 						<span><kbd k=shift>SHIFT</kbd></span><span>SQUAT</span>
@@ -686,7 +686,6 @@ IGB.players = (function () {
 						<span><kbd k=q>Q</kbd><kbd k=e>E</kbd></span><span>SHORTER / TALLER</span>
 						<span><kbd k=wall class=mouse>POINT AT WALL</kbd></span><span>LOOK</span>
 						<span><kbd k=click class=mouse>CLICK WALL</kbd></span><span>TOUCH IT</span>
-						<span><kbd k=tab>TAB</kbd><kbd k=num>1–6</kbd></span><span>PICK A PLAYER</span>
 					</gamebox-hint>
 				</gamebox-panel>
 			</gamebox-simulator>
