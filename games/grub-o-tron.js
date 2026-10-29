@@ -917,10 +917,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// same spot on screen at every depth (wallPoint). The outer eighth of every
 	// wall is left empty (lockers and crates), and so is the back quarter of
 	// each side wall; the devices share what's left.
-	const R = 2.6;                 // the room's half-width, in kitchen metres
 	const EYE = 1.25;              // the walls look out from this high
-	const AV_MAX = 2.45, AV_K = AV_MAX / (0.7 * R);   // (the cooks go further than you do, out to AV_MAX at 70% of the way to a wall)
-	const avCap = (v) => Math.sign(v) * Math.min(Math.abs(v) * AV_K, AV_MAX);
+	const AV_MAX = 2.45;           // the trays stand this far out, in front of the wall their player is nearest
 	const CT = { y: 0.92, d: 3.1, deep: 0.7 };   // the counters: their top, how far out their front edge is, how deep they are
 	const DEV_D = CT.d + 0.32;     // the devices stand this far out, on the counter
 	const BACK = 4.3;              // the walls behind the counters (the front one's further, behind the window)
@@ -2184,21 +2182,28 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			if (!m.g.visible) continue;
 			const time = t + (c.bob || 0);
 			// (tracking arrives about 20 times a second; glide between its updates rather than jump)
-			const tx = avCap((p.px - 0.5) * 2 * R), tz = avCap((0.5 - p.pz) * 2 * R);
+			// Binary: shown only on the wall their player is nearest (a little sticky),
+			// always at the full standard distance out (AV_MAX), at their place along it;
+			// when they're nearer another wall, they jump straight there
+			const wp = wallsOf(p);
+			let wallNow = m.wallAt ?? 1;
+			for (let w = 0; w < 3; w++) if (wp.dist[w] < wp.dist[wallNow] - 0.04) wallNow = w;
+			const jumped = wallNow !== m.wallAt;
+			m.wallAt = wallNow;
+			const tq = wallPoint(wallNow, clamp(wp.along[wallNow], 0.02, 0.98), AV_MAX);
+			// (tracking arrives about 20 times a second; glide between its updates along the wall)
 			const k = 1 - Math.exp(-dt * 20);
-			if (m.x === undefined) { m.x = tx; m.z = tz; }
+			if (m.x === undefined || jumped) { m.x = tq.x; m.z = tq.z; m.vx = m.vz = 0; }
 			const ox = m.x, oz = m.z;
-			m.x = lerp(m.x, tx, k);
-			m.z = lerp(m.z, tz, k);
+			m.x = lerp(m.x, tq.x, k);
+			m.z = lerp(m.z, tq.z, k);
 			m.vx = lerp(m.vx || 0, (m.x - ox) / Math.max(dt, 0.001), 1 - Math.exp(-dt * 6));
 			m.vz = lerp(m.vz || 0, (m.z - oz) / Math.max(dt, 0.001), 1 - Math.exp(-dt * 6));
 			m.g.position.set(m.x, 0, m.z);
-			// facing the wall they're in front of, back to us (turning round as they cross a corner)
-			const wallNow = Math.abs(m.x) > -m.z + 0.15 ? (m.x < 0 ? 0 : 2) : Math.abs(m.x) < -m.z - 0.15 ? 1 : (m.wallAt ?? 1);
-			m.wallAt = wallNow;
+			// facing that wall, back to us
 			const fx = wallNow === 0 ? -9 : wallNow === 2 ? 9 : 0, fz = wallNow === 1 ? -9 : 0;
 			const want = Math.atan2(fx - m.x, fz - m.z);
-			m.yaw = m.yaw === undefined ? want : m.yaw + Math.atan2(Math.sin(want - m.yaw), Math.cos(want - m.yaw)) * (1 - Math.exp(-dt * 8));
+			m.yaw = m.yaw === undefined || jumped ? want : m.yaw + Math.atan2(Math.sin(want - m.yaw), Math.cos(want - m.yaw)) * (1 - Math.exp(-dt * 8));
 			m.g.rotation.y = m.yaw;
 			// hovering, bobbing, the tray leaning into the way it's going
 			m.body.position.y = 0.62 + Math.sin(time * 2.4) * 0.025;
