@@ -1644,12 +1644,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			// (its face: the eyes on the bulges, a grin right across)
 			c.face = makeFace(c.bouncer, 0.9, 0, 0.93, 0.36, { gap: 0.4 });
 			for (const e of c.face.eyes) e.pupil.scale.multiplyScalar(0.5);   // (small black eyes on its big eye bulges)
-			// (a one-line smirk: just the smile, a little lopsided; no teeth or tongue)
-			c.face.mouth.smile.scale.multiplyScalar(0.6);
-			c.face.mouth.smile.position.x += 0.04;
-			c.face.mouth.smile.rotation.z += 0.35;
-			c.face.smirk = true;
-			for (const t of c.face.mouth.teeth) t.scale.set(0.0001, 0.0001, 0.0001);
+			// (the standard mouth, like every animal's)
 			for (const sx of [-1, 1]) mesh(GEO.sph, MAT.pupil, c.bouncer, sx * 0.05, 0.86, 0.39, 0.012).castShadow = false;   // (nostrils)
 			c.parts.sac = mesh(GEO.sph, new THREE.MeshPhysicalMaterial({ color: '#ffd8b0', roughness: 0.15, clearcoat: 1, sheen: 0.6, sheenColor: new THREE.Color('#ffffff') }), c.bouncer, 0, 0.55, 0.12, 0.2, 0.08, 0.2);   // (a flat pouch tucked up under its chin)
 			c.parts.tongue = mesh(GEO.cyl, MAT.tongue, c.bouncer, 0, 0.72, 0.38, 0.03, 0.001, 0.03);
@@ -1890,6 +1885,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			mesh(GEO.cone, skinMat('#ff7a7a'), head, 0, -0.02, 0.3, 0.035, 0.03, 0.02).rotation.x = Math.PI;   // (a pink nose, pointing down)
 			c.face = makeFace(head, 0.5, 0, 0.02, 0.27, { gap: 0.42 });           // (the standard face, eyes set wide)
 			c.face.mouth.open.parent.position.y -= 0.02;
+			for (const e of c.face.eyes) e.pupil.scale.multiplyScalar(0.65);   // (smaller eyes)
 			// whiskers: three a side, fanning out from the muzzle
 			const wMat = new THREE.MeshBasicMaterial({ color: '#4a3a3a' });
 			for (const sx of [-1, 1]) for (const k of [-1, 0, 1]) {
