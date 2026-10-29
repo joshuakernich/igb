@@ -74,12 +74,13 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	const REACH = { out: 0.25, along: 0.2 };   // a touch counts for a player this near the wall (room widths) and this near the spot along it
 	const FRONT_L = ACTIVE[1][0] * W, FRONT_R = ACTIVE[1][1] * W;   // the front wall's active stretch (world px across it):
 	const HATCH = FRONT_L, CHUTE = FRONT_R;   // (the mutants' windows span it)
-	// along the front counter, a food hatch for each ingredient (each its own place to grab
-	// it from), then the BINNER at the right-hand end
-	const DISPENSERS = ['roach', 'eel', 'shroom', 'ooze', 'eye', 'tentacle'];
-	const BIN_L = FRONT_R - 150;
-	const DISP_W = (BIN_L - FRONT_L) / DISPENSERS.length;
+	// the food hatches (each ingredient its own place to grab it from) and the BINNER, in
+	// among the tools on the side walls; the front wall is the three delivery windows
+	const DISPENSERS = [{ ing: 'spud', wall: 0, slot: 0 }, { ing: 'mutato', wall: 0, slot: 2 }, { ing: 'slime', wall: 2, slot: 1 }];
+	const BIN = { wall: 2, slot: 3 };
+	const WINDOWS = 3;
 	const CHOP_TAPS = 6;
+	const SALT_TAPS = 4;          // (shakes of the salter)
 	const JAM_TAPS = 6;
 	const ACT_TIME = 0.6;         // how long a cook takes to act out a tap
 	const FRY = { cook: 5, burn: 6 };              // seconds to golden, then golden this long
@@ -90,67 +91,60 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	const WARP_TIME = 4;
 	const CRYO = { need: 3, still: 0.12, thaw: 0.15 };   // seconds held still; slower than this (room widths a second) is still
 	const FIRE = { hp: 5, after: 6, spread: 12 };       // taps to put out; seconds burnt food sits before it lights; and before a fire spreads
-	const PATIENCE = { 0: 999, 1: 58, 2: 78, 3: 105, 4: 140 };
+	const PATIENCE = { 0: 999, 1: 66, 2: 78, 3: 105, 4: 140 };
 	const PRICE = { 0: 20, 1: 20, 2: 40, 3: 75, 4: 150 };
 	const STREAK = { every: 5, bonus: 50 };
 	const MAX_PORTALS = 6;
 
 	// the shifts, by the clock (seconds left when each starts)
 	const SHIFTS = [
-		{ from: 600, name: 'BREAKFAST OF SURVIVORS', windows: 2, tiers: [1], gap: 6, patience: 1.0 },
-		{ from: 450, name: 'LUNCH OF THE LIVING', windows: 3, tiers: [1, 1, 2], gap: 4.5, patience: 0.95, every: 75 },
-		{ from: 300, name: 'HAPPY HOUR OF THE DAMNED', windows: 3, tiers: [1, 2, 2, 3], gap: 3.5, patience: 0.9, every: 55 },
-		{ from: 150, name: 'MIDNIGHT MUTANT RUSH', windows: 4, tiers: [2, 2, 3, 3], gap: 2.5, patience: 0.85, every: 40, vip: true },
+		{ from: 600, name: 'BREAKFAST SPUDS', windows: 2, tiers: [1], gap: 6, patience: 1.0 },
+		{ from: 450, name: 'LUNCHTIME MELTDOWN', windows: 3, tiers: [1, 1, 2], gap: 4.5, patience: 0.95, every: 75 },
+		{ from: 300, name: 'HAPPY HOUR HALF-LIFE', windows: 3, tiers: [1, 2, 2, 3], gap: 3.5, patience: 0.9, every: 55 },
+		{ from: 150, name: 'MIDNIGHT FALLOUT FRY-UP', windows: 4, tiers: [2, 2, 3, 3], gap: 2.5, patience: 0.85, every: 40, vip: true },
 	];
 
 	/* ---------- the menu ---------- */
 
 	const INGS = {
-		roach: { name: 'RAD-ROACH', short: 'ROACH', colour: '#7a4a22', glow: '#9dff3a' },
+		spud: { name: 'GLOW SPUD', short: 'SPUD', colour: '#ffe12a', glow: '#fff27a' },
+		mutato: { name: 'MUTATO', short: 'MUTATO', colour: '#a44aff', glow: '#d08aff' },
+		slime: { name: 'SLIME DIP', short: 'SLIME', colour: '#7aff3a', glow: '#c8ff8a' },
+		roach: { name: 'RAD-ROACH', short: 'ROACH', colour: '#b07a3a', glow: '#9dff3a' },
 		eel: { name: 'SEWER EEL', short: 'EEL', colour: '#6a46a0', glow: '#c48aff' },
 		shroom: { name: 'GLOWSHROOM', short: 'SHROOM', colour: '#2ad8c9', glow: '#3af2ff' },
-		ooze: { name: 'OOZE CUBE', short: 'OOZE', colour: '#8fd13a', glow: '#e9ff4a' },
-		eye: { name: 'LAB EYEBALL', short: 'EYEBALL', colour: '#f0eee0', glow: '#ff2d8f' },
+		ooze: { name: 'OOZE CUBE', short: 'OOZE', colour: '#8ae04a', glow: '#e9ff4a' },
+		eye: { name: 'LAB EYEBALL', short: 'EYEBALL', colour: '#f2f0e6', glow: '#ff2d8f' },
 		tentacle: { name: 'TENTACLE', short: 'TENTACLE', colour: '#e8708f', glow: '#ff9ac0' },
 	};
 
 	const STATIONS = [
-		// (each device is named for what it does, and the hint over a cook says that in two words: FRY IT, the FRYER)
-		{ kind: 'chop', wall: 0, slot: 0, name: 'CHOPPER', verb: 'CHOP IT', adj: 'CHOPPED', colour: '#ff8a2a' },
-		{ kind: 'fry', wall: 0, slot: 1, name: 'FRYER', verb: 'FRY IT', adj: 'FRIED', colour: '#ffc21a' },
-		{ kind: 'grill', wall: 0, slot: 2, name: 'GRILLER', verb: 'GRILL IT', adj: 'GRILLED', colour: '#ff4a32' },
-		{ kind: 'stir', wall: 0, slot: 3, name: 'SOAKER', verb: 'SOAK IT', adj: 'SOAKED', colour: '#9dff3a' },
-		{ kind: 'press', wall: 2, slot: 0, name: 'CRUSHER', verb: 'CRUSH IT', adj: 'CRUSHED', colour: '#e9ff4a' },
-		{ kind: 'inject', wall: 2, slot: 1, name: 'MUTATOR', verb: 'MUTATE IT', adj: 'MUTATED', colour: '#d04dff' },
-		{ kind: 'warp', wall: 2, slot: 2, name: 'WARPER', verb: 'WARP IT', adj: 'WARPED', colour: '#3af2ff' },
-		{ kind: 'cryo', wall: 2, slot: 3, name: 'FREEZER', verb: 'FREEZE IT', adj: 'FROZEN', colour: '#8fdcff' },
+		// (four tools, each named for what it does, mixed in with the food hatches along both side walls)
+		{ kind: 'chop', wall: 0, slot: 1, name: 'CHOPPER', adj: 'CHIPPED', colour: '#ff3b3b' },
+		{ kind: 'fry', wall: 0, slot: 3, name: 'FRYER', adj: 'FRIED', colour: '#ff9a1a' },
+		{ kind: 'salt', wall: 2, slot: 0, name: 'SALTER', adj: 'SALTED', colour: '#2ae8ff' },
+		{ kind: 'warp', wall: 2, slot: 2, name: 'WARPER', adj: 'WARPED', colour: '#4a6aff' },
 	];
 	const KIND = {};
 	for (const d of STATIONS) KIND[d.kind] = d;
 
-	// tier, name, parts: [ingredient, ...stations in order]
+	// tier, name, parts: [ingredient, ...stations in order]. All of it fancy, radioactive chips:
+	// spuds and mutatos chopped and fried, salted, warped; a pot of slime dip on the side
 	const RECIPES = [
-		{ tier: 1, name: 'CRUNCHY ROACH CLUSTERS', parts: [['roach', 'fry']] },
-		{ tier: 1, name: 'EYEBALL ON A STICK', parts: [['eye', 'grill']] },
-		{ tier: 1, name: 'GLOWSHROOM CONFETTI', parts: [['shroom', 'chop']] },
-		{ tier: 1, name: 'OOZE-SICLE', parts: [['ooze', 'cryo']] },
-		{ tier: 1, name: 'TENTACLE FROM ELSEWHERE', parts: [['tentacle', 'warp']] },
-		{ tier: 1, name: 'ONE DENSE EEL', parts: [['eel', 'press']] },
-		{ tier: 2, name: 'EEL NOODLES OF ANOTHER DIMENSION', parts: [['eel', 'chop', 'warp']] },
-		{ tier: 2, name: 'BLACK HOLE NUGGET', parts: [['roach', 'press', 'fry']] },
-		{ tier: 2, name: 'THREE-EYED TACO', parts: [['tentacle', 'inject', 'grill']] },
-		{ tier: 2, name: 'SLUDGE CHOWDER', parts: [['shroom', 'chop', 'stir']] },
-		{ tier: 2, name: 'BRAIN FREEZE', parts: [['eye', 'inject', 'cryo']] },
-		{ tier: 2, name: 'OOZE FONDUE', parts: [['ooze', 'grill', 'stir']] },
-		{ tier: 2, name: 'TENTACLE FRIES', parts: [['tentacle', 'chop', 'fry']] },
-		{ tier: 3, name: 'THE APOCALYPSE PLATTER', parts: [['roach', 'fry'], ['ooze', 'stir']] },
-		{ tier: 3, name: 'QUANTUM SURF & TURF', parts: [['eel', 'warp'], ['roach', 'grill']] },
-		{ tier: 3, name: 'SINGULARITY SLIDER', parts: [['ooze', 'press', 'fry'], ['shroom', 'chop']] },
-		{ tier: 3, name: 'MUTANT HAPPY MEAL', parts: [['eye', 'inject'], ['tentacle', 'chop', 'fry']] },
-		{ tier: 3, name: 'COLD FUSION CURRY', parts: [['shroom', 'stir', 'cryo'], ['eel', 'chop']] },
+		{ tier: 1, name: 'GLOW CHIPS', parts: [['spud', 'chop', 'fry']] },
+		{ tier: 1, name: 'PURPLE MUTATO CHIPS', parts: [['mutato', 'chop', 'fry']] },
+		{ tier: 1, name: 'A NUKED SPUD', parts: [['spud', 'fry']] },
+		{ tier: 1, name: 'MUTATO FROM ELSEWHERE', parts: [['mutato', 'warp']] },
+		{ tier: 2, name: 'SALT & SCREAMER CHIPS', parts: [['spud', 'chop', 'fry', 'salt']] },
+		{ tier: 2, name: 'QUANTUM CHIPS', parts: [['spud', 'chop', 'fry', 'warp']] },
+		{ tier: 2, name: 'FANCY MUTATO FRIES', parts: [['mutato', 'chop', 'fry', 'salt']] },
+		{ tier: 2, name: 'INTERDIMENSIONAL WEDGES', parts: [['mutato', 'chop', 'warp', 'fry']] },
+		{ tier: 3, name: 'CHIPS \'N\' SLIME DIP', parts: [['spud', 'chop', 'fry'], ['slime']] },
+		{ tier: 3, name: 'DOUBLE MUTANT FRIES', parts: [['spud', 'chop', 'fry'], ['mutato', 'chop', 'fry']] },
+		{ tier: 3, name: 'LOADED FALLOUT FRIES', parts: [['mutato', 'chop', 'fry', 'salt'], ['slime', 'warp']] },
 	];
-	const FEAST = { tier: 4, name: 'THE OVERLORD\'S FEAST', parts: [['eye', 'inject', 'grill'], ['eel', 'chop', 'warp'], ['ooze', 'cryo']] };
-	const PRACTICE = { tier: 0, name: 'ANYTHING, ANY WAY YOU LIKE', parts: [['*', '*']] };
+	const FEAST = { tier: 4, name: 'THE OVERLORD\'S MEGA BUCKET', parts: [['spud', 'chop', 'fry', 'salt'], ['mutato', 'chop', 'warp', 'fry'], ['slime']] };
+	const PRACTICE = { tier: 0, name: 'CHIPS, ANY WAY YOU LIKE', parts: [['*', '*']] };
 
 	const TYPES = [
 		{ id: 'blob', name: 'BLOBBO & BLOBBA', skin: '#7cd957' },
@@ -162,9 +156,9 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		{ id: 'fungus', name: 'DUDE SHROOM', skin: '#e0573a' },
 	];
 	const HELLO = [
-		'I HAVE FOUR STOMACHS AND THEY\'RE ALL ANGRY', 'MAKE IT GLOW', 'EXTRA RADIATION, PLEASE', 'IS THIS PLACE HAUNTED? GOOD',
-		'MY OTHER HEAD WANTS FRIES', 'I WALKED HERE FROM THE CRATER', 'NO SOUL, NO SERVICE?', 'DO YOU TAKE BOTTLE TEETH?',
-		'I\'LL KNOW IF IT\'S FRESH', 'HURRY, I\'M STILL MUTATING', 'I SMELL FEAR. AND GREASE.', 'FEED ME, CHROME-PEOPLE',
+		'I HAVE FOUR STOMACHS AND THEY ALL WANT CHIPS', 'MAKE THEM GLOW', 'EXTRA RADIATION ON MINE', 'CRISPY. CRUNCHY. CONTAMINATED.',
+		'MY OTHER HEAD WANTS FRIES TOO', 'I WALKED HERE FROM THE CRATER FOR THESE', 'IS THE SALT RADIOACTIVE? GOOD', 'DO YOU TAKE BOTTLE TEETH?',
+		'I\'LL KNOW IF THEY\'RE FRESH', 'HURRY, I\'M STILL MUTATING', 'I SMELL FEAR. AND FRYER OIL.', 'CHIPS, CHROME-PEOPLE. NOW.',
 	];
 	const YUM = [
 		'MY THIRD STOMACH SINGS', 'TASTES LIKE THE OLD WORLD', 'I CAN SEE SOUNDS NOW', 'FIVE STARS. FIVE EYES.',
@@ -266,12 +260,11 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			enter() { clearKitchen(); phase = 'intro'; scores = scores.map(() => 0); },
 			update(dt, bt) { tick(dt); introT = bt; },
 			draw(ctx, bt) {
-				show.onWalls(ctx, function (c, wall) {
+				show.onWalls(ctx, function (c) {
 					// (the name in the title's own lettering: neon tubes, then a drip)
 					show.slam(c, 'FISSION CHIPS', W / 2, 250, 84, bt - 0.3, { font: 'Monoton', exact: true, fill: '#c8ff5a' });
 					show.slam(c, 'IS OPEN!', W / 2, 360, 96, bt - 0.8, { font: 'Rubik Wet Paint', exact: true, fill: '#FC1992' });
-					show.slam(c, 'FEED THE MUTANTS. DON\'T GET EATEN.', W / 2, 470, 58, bt - 1.5, { fill: 'white' });
-					if (wall !== 1) show.slam(c, wall === 0 ? '◀ THE OLD WAYS' : 'THE NEW WAYS ▶', W / 2, 570, 54, bt - 2.3, { fill: wall === 0 ? '#ff8a2a' : '#3af2ff' });
+					show.slam(c, 'FANCY RADIOACTIVE CHIPS. MADE TO ORDER.', W / 2, 470, 58, bt - 1.5, { fill: 'white' });
 				});
 			},
 		},
@@ -320,7 +313,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			fire: 0, fireT: 0, douse: 0, chopT: 0, flipped: false, lock: 0, hit: 0, glow: 0, shake: 0, paddle: 0,
 		}));
 		for (let k = 0; k < 4; k++) { customers[k] = null; slotWait[k] = 1 + k; }
-		disp = DISPENSERS.map((ing) => ({ ing, jam: 0, shake: 0, flash: 0 }));
+		disp = DISPENSERS.map((d) => ({ ing: d.ing, jam: 0, shake: 0, flash: 0 }));
 		portals = [];
 		floaters = [];
 		banner = null;
@@ -556,6 +549,14 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 				say('FLIPPED!', '#ffc21a', 46);
 				show.fx('whoosh', 0.5);
 			} else say(s.flipped ? 'SIZZLING...' : 'NOT YET!');
+		} else if (s.kind === 'salt') {
+			s.prog += 1 / SALT_TAPS;
+			s.hit = 1;
+			credit(s, i);
+			doing(i, 'jab');
+			show.fx('pop', 0.4, 1.4 + Math.random() * 0.3);
+			show.fx('skip', 0.25, 2);
+			if (s.prog >= 0.999) finish(s);
 		} else if (s.kind === 'press') {
 			s.prog += PRESS.tap;
 			s.hit = 0.6;
@@ -581,7 +582,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	function chooseIng() {
 		const need = [];
 		for (const c of customers) if (c && c.state === 'wait') for (const part of c.parts) if (!part.filled && part.ing !== '*') need.push(part.ing);
-		return need.length && Math.random() < 0.8 ? pick(need) : pick(DISPENSERS);
+		return need.length && Math.random() < 0.8 ? pick(need) : pick(DISPENSERS).ing;
 	}
 
 	// A food hatch: tap with empty hands and you've got its ingredient
@@ -603,7 +604,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		d.flash = 1;
 		doing(i, 'grab');
 		show.fx('pop', 0.7);
-		say(INGS[d.ing].short, '#9dff3a', 30);
+		say(INGS[d.ing].short, INGS[d.ing].colour, 30);
 	}
 
 	function tapBinner(hit) {
@@ -621,7 +622,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		let wall, along, tries = 0;
 		do {
 			wall = Math.floor(Math.random() * 3);
-			along = ACTIVE[wall][0] + 0.05 + Math.random() * (ACTIVE[wall][1] - ACTIVE[wall][0] - 0.1);
+			// (between two devices, or two delivery windows)
+			along = wall === 1 ? (HATCH + colW(WINDOWS) * (1 + Math.floor(Math.random() * (WINDOWS - 1)))) / W : ACTIVE[wall][0] + SLOT_W * (1 + Math.floor(Math.random() * 3));
 			tries++;
 		} while (tries < 30 && ((wall === from.wall && Math.abs(along - slotAlong(from.wall, from.slot)) < 0.15) || portals.some((p) => p.wall === wall && Math.abs(p.along - along) < 0.12)));
 		const q = wallPoint(wall, along, PORTAL_D);
@@ -654,7 +656,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	/* ---------- the customers ---------- */
 
-	const windowsNow = () => (phase === 'tutorial' ? 3 : phase === 'play' && shiftNo >= 0 ? SHIFTS[shiftNo].windows : 2);
+	const windowsNow = () => WINDOWS;   // (always the three delivery windows)
 	const colW = (n) => (CHUTE - HATCH) / n;
 	const colX = (k, n) => W + HATCH + colW(n) * (k + 0.5);
 
@@ -665,7 +667,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			if (!c) {
 				if (k < n && (phase === 'tutorial' || phase === 'play')) {
 					slotWait[k] -= dt;
-					if (slotWait[k] <= 0) customers[k] = newCustomer(k, n);
+					if (slotWait[k] <= 0) { customers[k] = newCustomer(k, n); murmur(customers[k], 6 + customers[k].parts.reduce((a, p) => a + p.steps.length + 1, 0)); }
 				}
 				continue;
 			}
@@ -704,7 +706,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		return {
 			k, type, recipe, patience, left: patience, age: 0, x: colX(k, n), state: 'wait', stateT: 0,
 			parts: recipe.parts.map((p) => ({ ing: p[0], steps: p.slice(1), filled: false, item: null })),
-			by: [], say: recipe === FEAST ? 'I HUNGER. BRING THE FEAST.' : pick(HELLO), sayT: 3.2, seed: Math.random() * 100,
+			by: [], say: recipe === FEAST ? 'I HUNGER. BRING THE FEAST.' : pick(HELLO), sayT: 2.4, seed: Math.random() * 100,
+			voice: recipe === FEAST ? 70 : 110 + Math.random() * 170,   // (each mutant's murmur its own pitch)
 		};
 	}
 
@@ -728,16 +731,18 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			doing(i, 'serve');
 			show.fx('lockIn', 0.7);
 			if (cu.parts.every((pt) => pt.filled)) complete(cu);
-			else { cu.say = 'AND THE REST?'; cu.sayT = 1.6; }
+			else { cu.say = 'AND THE REST?'; cu.sayT = 1.6; murmur(cu, 4); }
 			return;
 		}
 		const holder = hit.find((i) => chefs[i].held);
 		if (holder !== undefined) {
 			cu.say = chefs[holder].held.burnt ? 'IS THAT... CHARCOAL?' : pick(NOPE);
+			murmur(cu, 5, 'cross');
 			cu.sayT = 1.8;
 			show.fx('buzz', 0.5);
 		} else if (cu.sayT <= 0) {
 			cu.say = 'WELL? I\'M WAITING.';
+			murmur(cu, 4);
 			cu.sayT = 1.4;
 		}
 	}
@@ -746,6 +751,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		c.state = 'eat';
 		c.stateT = 0;
 		c.say = pick(YUM);
+		murmur(c, 5, 'happy');
 		c.sayT = 2.6;
 		show.fx('kaching', 0.8);
 		if (phase === 'tutorial') { tut.served++; return; }
@@ -771,6 +777,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		c.state = 'angry';
 		c.stateT = 0;
 		c.say = pick(GRR);
+		murmur(c, 6, 'cross');
 		c.sayT = 2.4;
 		streak = 0;
 		walkouts++;
@@ -864,14 +871,16 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		if (portal) { tapPortal(portal, hit); return; }
 		if (wall === 1) {
 			if (lx < FRONT_L || lx >= FRONT_R) return;   // (the empty ends)
-			// (high up: a mutant behind the counter; low down: a food hatch, or the binner, on it)
-			if (at.y < SERVE_SPLIT) tapCustomer(clamp(Math.floor((lx - HATCH) / colW(windowsNow())), 0, windowsNow() - 1), hit);
-			else if (lx >= BIN_L) tapBinner(hit);
-			else tapDispenser(clamp(Math.floor((lx - FRONT_L) / DISP_W), 0, DISPENSERS.length - 1), hit);
+			tapCustomer(clamp(Math.floor((lx - HATCH) / colW(windowsNow())), 0, windowsNow() - 1), hit);
 			return;
 		}
-		const s = stations.find((o) => o.wall === wall && Math.abs(lx / W - slotAlong(wall, o.slot)) < SLOT_W / 2);
+		const slot = [0, 1, 2, 3].find((k) => Math.abs(lx / W - slotAlong(wall, k)) < SLOT_W / 2);
+		if (slot === undefined) return;
+		const s = stations.find((o) => o.wall === wall && o.slot === slot);
+		const k = DISPENSERS.findIndex((d) => d.wall === wall && d.slot === slot);
 		if (s) tapStation(s, hit);
+		else if (k >= 0) tapDispenser(k, hit);
+		else if (BIN.wall === wall && BIN.slot === slot) tapBinner(hit);
 	}
 
 	stage.$el.on('click.grub-o-tron', (e) => tap(IGB.toWorld(e)));
@@ -935,10 +944,10 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	const faceEye = (x, z) => Math.atan2(-x, -z);   // (the yaw that turns a thing's front, +z, to the middle)
 	const ISLAND = { y: CT.y };    // (the devices stand on the counters)
 	// the front counter: a food hatch for each ingredient, then the binner
-	const DISP_ALONG = DISPENSERS.map((ing, k) => (FRONT_L + (k + 0.5) * DISP_W) / W);
-	const BIN_ALONG = (BIN_L + FRONT_R) / 2 / W;
-	const ITEM_AT = { chop: 0.78, fry: 0.92, grill: 0.72, stir: 1.02, press: 0.5, inject: 0.62, warp: 0.7, cryo: 0.5 };   // an item's height on each device (its own units)
-	const PORTAL_Y = 1.35, PORTAL_D = CT.d - 0.35;   // a portal hangs just in front of a counter
+	const DISP_ALONG = DISPENSERS.map((d) => slotAlong(d.wall, d.slot));
+	const BIN_ALONG = slotAlong(BIN.wall, BIN.slot);
+	const ITEM_AT = { salt: 0.38, chop: 0.78, fry: 0.92, grill: 0.72, stir: 1.02, press: 0.5, inject: 0.62, warp: 0.7, cryo: 0.5 };   // an item's height on each device (its own units)
+	const PORTAL_Y = CT.y + 0.15, PORTAL_D = CT.d + 0.32;   // warped food lands on a counter, in a ring of light
 
 	const renderer = new THREE.WebGLRenderer({ antialias: false });   // (the composer multisamples)
 	renderer.toneMapping = THREE.NeutralToneMapping;   // (keeps the colours bright)
@@ -997,10 +1006,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		d.sz = p.z;
 		d.ui = uiAt(d.wall, a, DEV_D);
 	}
-	const DISP_UI = DISP_ALONG.map((a) => uiAt(1, a, DEV_D));
-	const BIN_UI = uiAt(1, BIN_ALONG, DEV_D);
-	// a front-wall tap above this is for a mutant behind the counter; below, the food hatches and binner on it
-	const SERVE_SPLIT = proj(1, 0, CT.y + 0.62, -DEV_D).y;
+	const DISP_UI = DISPENSERS.map((d, k) => uiAt(d.wall, DISP_ALONG[k], DEV_D));
+	const BIN_UI = uiAt(BIN.wall, BIN_ALONG, DEV_D);
 	// the mutants' windows: where the k-th of n stands, and where their words go
 	function queueAt(k, n) {
 		const a = (HATCH + colW(n) * (k + 0.5)) / W;
@@ -1053,6 +1060,17 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		parent.add(m);
 		return m;
 	}
+	// a machine in its colour: its plain parts (not its lights, glass or pictures) tinted toward it
+	function tint(obj, colour, k = 0.6) {
+		const c = new THREE.Color(colour);
+		obj.traverse((o) => {
+			if (!o.isMesh || !o.material.isMeshStandardMaterial || o.material.map || o.material.transparent) return;
+			o.material = o.material.clone();
+			o.material.color.lerp(c, k);
+		});
+		return obj;
+	}
+
 	function shadows(obj, cast = true) {
 		obj.traverse((o) => {
 			if (!o.isMesh) return;
@@ -1298,9 +1316,6 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		}
 		// the side walls' signs, the jars and a fan
 		for (const [w, x] of [[0, -BACK + 0.04], [2, BACK - 0.04]]) {
-			const sign = mesh(new THREE.PlaneGeometry(1.7, 0.32), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), g, x, 2.45, 2.2);
-			sign.rotation.y = w === 0 ? Math.PI / 2 : -Math.PI / 2;
-			signs.push({ m: sign, text: w === 0 ? 'THE OLD WAYS' : 'THE NEW WAYS', colour: '#9dff3a', k: 1.15, seed: w });
 			const fan = new THREE.Group();
 			fan.position.set(x, 2.4, -0.4);
 			fan.rotation.y = w === 0 ? Math.PI / 2 : -Math.PI / 2;
@@ -1458,6 +1473,21 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			p.light.position.set(-0.3, 0.8, 1.0);
 			g.add(p.light);
 		},
+		// the salter: a giant shaker on an arm over a pad, glowing salt when it's shaken
+		salt(g, p) {
+			mesh(BOX(1.7, 0.2, 1.1), MAT.black, g, 0, 0.1, 0);
+			mesh(CYL(0.55, 0.55, 0.06, 32), MAT.steel, g, 0, 0.23, 0);
+			mesh(BOX(0.16, 2.1, 0.16), MAT.darkSteel, g, 0.95, 1.05, -0.4);
+			mesh(BOX(1.0, 0.12, 0.12), MAT.darkSteel, g, 0.45, 2.05, -0.4);
+			const shaker = new THREE.Group();
+			shaker.position.set(0, 1.5, 0);
+			g.add(shaker);
+			mesh(CYL(0.34, 0.34, 0.85, 28), std(0xe8f4ff, 0.3, 0.1), shaker, 0, 0.25, 0);
+			mesh(new THREE.SphereGeometry(0.34, 28, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), MAT.steel, shaker, 0, -0.18, 0);
+			for (let n = 0; n < 7; n++) { const a = n / 7 * Math.PI * 2; mesh(SPH(0.03, 6), glowMat(0xd8ffd0, 1.6), shaker, Math.cos(a) * 0.16, -0.47, Math.sin(a) * 0.16); }
+			mesh(CYL(0.38, 0.38, 0.08, 28), MAT.steel, shaker, 0, 0.7, 0);
+			p.shaker = shaker;
+		},
 		cryo(g, p) {
 			mesh(CYL(0.85, 0.95, 0.12, 32), std(0x8aa8b8, 0.2, 0.8), g, 0, 0.06, 0);
 			const ring = mesh(new THREE.TorusGeometry(0.8, 0.04, 8, 40), glowMat(0x8fdcff, 1.8), g, 0, 0.13, 0);
@@ -1488,6 +1518,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			sets[s.wall].add(g);
 			const p = { g };
 			STATION_3D[s.kind](g, p);
+			tint(g, s.colour);
 			p.fire = new THREE.Group();
 			g.add(p.fire);
 			p.flames = [];
@@ -1506,22 +1537,20 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// An icon (the same picture the order tickets use) and a name, painted
 	// straight onto a wall or a machine: on a clear texture, the paint a little
 	// worn, a few runs under the letters
-	function labelTex(text, colour, icon, rnd) {
-		return canvasTexture(512, 160, function (c, cw, ch) {
+	function labelTex(text, colour, key, rnd) {
+		return canvasTexture(512, 384, function (c, cw, ch) {
 			c.clearRect(0, 0, cw, ch);
-			c.save();
-			icon(c, 80, ch / 2);
-			c.restore();
-			c.font = `800 ${text.length > 7 ? 56 : 66}px ${FONT}, sans-serif`;
+			simpleIcon(c, key, cw / 2, 136, 118);
+			c.font = `800 ${text.length > 7 ? 68 : 80}px ${FONT}, sans-serif`;
 			c.textAlign = 'center';
 			c.textBaseline = 'middle';
-			c.fillStyle = colour;
-			c.fillText(text, 156 + (cw - 166) / 2, ch / 2 + 3, cw - 176);
+			c.fillStyle = ICON_COLOUR[key] || colour;
+			c.fillText(text, cw / 2, 326, cw - 24);
 			// (runs of paint from the bottoms of the letters)
-			for (let n = 0; n < 5; n++) { const x = 175 + rnd() * (cw - 210), y = ch / 2 + 22; c.fillRect(x, y, 3 + rnd() * 2, 6 + rnd() * 26); }
+			for (let n = 0; n < 5; n++) c.fillRect(70 + rnd() * (cw - 140), 356, 3 + rnd() * 3, 6 + rnd() * 22);
 			// (worn: specks of the wall showing through)
 			c.globalCompositeOperation = 'destination-out';
-			for (let n = 0; n < 140; n++) { c.fillStyle = `rgba(0,0,0,${0.3 + rnd() * 0.7})`; c.beginPath(); c.arc(rnd() * cw, rnd() * ch, 0.6 + rnd() * 3.2, 0, Math.PI * 2); c.fill(); }
+			for (let n = 0; n < 160; n++) { c.fillStyle = `rgba(0,0,0,${0.3 + rnd() * 0.7})`; c.beginPath(); c.arc(rnd() * cw, rnd() * ch, 0.6 + rnd() * 3.2, 0, Math.PI * 2); c.fill(); }
 		});
 	}
 	// (painted once everything's defined, the food pictures included, and again once the lettering's loaded)
@@ -1536,42 +1565,54 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		});
 		return m;
 	}
-	const stepIcon = (kind) => (c, x, y) => drawStepIcon(c, kind, x, y, 52);
-	const ingIcon = (ing) => (c, x, y) => drawItem(c, { ing, steps: [], burnt: false }, x, y, 0.95);
-	const binIcon = (c, x, y) => {
-		art.roundRect(c, x - 34, y - 30, 68, 66, 8, { fill: '#2a1a3a', stroke: '#d04dff', lineWidth: 6 });
-		art.rect(c, x - 42, y - 42, 84, 12, { fill: '#d04dff' });
-		for (const dx of [-14, 0, 14]) art.rect(c, x + dx - 3, y - 18, 6, 44, { fill: '#d04dff' });
-	};
 
-	const disp3d = DISPENSERS.map(function (ing, k) {
+	// Each ingredient is a pile of it, heaped on the counter, with a shelf of
+	// more on the wall above (built on the first frame: the food's models are
+	// defined further down)
+	const disp3d = DISPENSERS.map(function ({ ing, wall }, k) {
 		const a = DISP_ALONG[k];
-		const p = wallPoint(1, a, DEV_D);
+		const p = wallPoint(wall, a, DEV_D);
 		const g = new THREE.Group();
 		g.position.set(p.x, CT.y + 0.01, p.z);
 		g.rotation.y = faceEye(p.x, p.z);
 		room.add(g);
-		const glow = new THREE.Color(INGS[ing].glow);
-		// a squat hopper with a glass dome on top, its ingredient inside on a lit pad
-		mesh(BOX(0.56, 0.36, 0.46), std(0x3a3644, 0.4, 0.4), g, 0, 0.18, 0);
-		mesh(BOX(0.6, 0.05, 0.5), MAT.steel, g, 0, 0.37, 0);
-		const pad = mesh(CYL(0.17, 0.19, 0.03, 32), glowMat(glow, 1.2), g, 0, 0.41, 0);
-		mesh(new THREE.SphereGeometry(0.21, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2), MAT.glass, g, 0, 0.41, 0);
-		mesh(new THREE.TorusGeometry(0.21, 0.018, 8, 32), MAT.steel, g, 0, 0.41, 0).rotation.x = Math.PI / 2;
-		mesh(BOX(0.18, 0.08, 0.1), MAT.darkSteel, g, 0, 0.06, 0.26);   // (its spout)
-		// its label on the front: the ingredient's picture and its name
-		mesh(new THREE.PlaneGeometry(0.52, 0.163), paintMat(() => labelTex(INGS[ing].short, INGS[ing].glow, ingIcon(ing), seeded(k * 31 + 5))), g, 0, 0.2, 0.232);
-		const hold = new THREE.Group();
-		hold.position.y = 0.44;
-		g.add(hold);
-		const l = new THREE.PointLight(glow, 0.8, 1.2, 2);
-		l.position.set(0, 0.7, 0.25);
-		g.add(l);
-		shadows(g);
-		return { g, pad, hold, holder: {} };
+		const sp = wallPoint(wall, a, BACK - 0.16);
+		const shelf = new THREE.Group();
+		shelf.position.set(sp.x, 1.5, sp.z);
+		shelf.rotation.y = [Math.PI / 2, 0, -Math.PI / 2][wall];
+		room.add(shelf);
+		mesh(BOX(0.9, 0.04, 0.28), MAT.rust, shelf, 0, 0, 0).castShadow = true;
+		for (const x of [-0.36, 0.36]) mesh(BOX(0.03, 0.14, 0.2), MAT.darkSteel, shelf, x, -0.08, -0.03);
+		return { g, shelf, ing, built: false };
 	});
+	function buildPiles() {
+		disp3d.forEach(function (d3, k) {
+			if (d3.built) return;
+			d3.built = true;
+			const rnd = seeded(k * 53 + 11);
+			const raw = { ing: d3.ing, steps: [], burnt: false };
+			const piece = (s) => { const v = itemView(raw); v.userData = {}; v.scale.setScalar(s); return v; };   // (not a held item: never swept)
+			// the heap: a wide bottom layer, fewer on top, one at the peak
+			for (let n = 0; n < 12; n++) {
+				const layer = n < 7 ? 0 : n < 11 ? 1 : 2;
+				const ang = rnd() * Math.PI * 2, rad = [0.3, 0.16, 0][layer] * (0.6 + rnd() * 0.4);
+				const v = piece(0.42);
+				v.position.set(Math.cos(ang) * rad, layer * 0.1, Math.sin(ang) * rad * 0.7);
+				v.rotation.set((rnd() - 0.5) * 0.4, rnd() * 6, (rnd() - 0.5) * 0.4);
+				d3.g.add(v);
+			}
+			// and a row on the shelf
+			for (let n = 0; n < 4; n++) {
+				const v = piece(0.34);
+				v.position.set(-0.3 + n * 0.2, 0.02, 0.02);
+				v.rotation.y = rnd() * 6;
+				d3.shelf.add(v);
+			}
+			shadows(d3.g);
+		});
+	}
 	const bin3d = (function () {
-		const p = wallPoint(1, BIN_ALONG, DEV_D);
+		const p = wallPoint(BIN.wall, BIN_ALONG, DEV_D);
 		const g = new THREE.Group();
 		g.position.set(p.x, CT.y + 0.01, p.z);
 		g.rotation.y = faceEye(p.x, p.z);
@@ -1581,7 +1622,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		mesh(new THREE.CircleGeometry(0.16, 40), new THREE.MeshBasicMaterial({ color: 0x0a0418 }), g, 0, 0.42, 0.232);
 		const swirl = mesh(new THREE.CircleGeometry(0.15, 40), glowMat(0xffffff, 1.1, { map: TEX.swirl, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), g, 0, 0.42, 0.234);
 		mesh(new THREE.TorusGeometry(0.165, 0.018, 10, 40), glowMat(0xd04dff, 1.4), g, 0, 0.42, 0.236);
-		mesh(new THREE.PlaneGeometry(0.48, 0.15), paintMat(() => labelTex('BINNER', '#d04dff', binIcon, seeded(77))), g, 0, 0.13, 0.232);
+		tint(g, '#d04dff', 0.5);
 		const l = new THREE.PointLight(0xd04dff, 0.8, 1.2, 2);
 		l.position.set(0, 0.5, 0.35);
 		g.add(l);
@@ -1589,21 +1630,60 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		return { g, swirl };
 	})();
 
-	/* ---------- 3D: the stations' names, painted on the wall ---------- */
+	/* ---------- 3D: the names, painted on the walls; the delivery plates ---------- */
 
-	// Each station's icon (the same one as on the tickets) and its name,
-	// painted straight onto the tiles behind it
-	for (const st of STATIONS) {
-		const rnd = seeded(st.wall * 4 + st.slot + 7);
-		const p = wallPoint(st.wall, slotAlong(st.wall, st.slot), BACK - 0.01);
-		const m = mesh(new THREE.PlaneGeometry(1.0, 0.31), paintMat(() => labelTex(st.name, st.colour, stepIcon(st.kind), seeded(st.wall * 4 + st.slot + 7))), room, p.x, 2.15, p.z);
-		m.rotation.set(0, [Math.PI / 2, 0, -Math.PI / 2][st.wall], (rnd() - 0.5) * 0.05);
+	// Over every slot on the side walls (tool, food hatch or binner), its icon
+	// (the same as on the tickets) big, and its name under it, painted straight
+	// onto the tiles behind it
+	const slotPaint = STATIONS.map((st) => [st.wall, st.slot, st.name, st.colour, st.kind])
+		.concat(DISPENSERS.map((d) => [d.wall, d.slot, INGS[d.ing].short, INGS[d.ing].glow, d.ing]))
+		.concat([[BIN.wall, BIN.slot, 'BINNER', '#d04dff', 'bin']]);
+	for (const [w, slot, name, colour, key] of slotPaint) {
+		const rnd = seeded(w * 4 + slot + 7);
+		const p = wallPoint(w, slotAlong(w, slot), BACK - 0.01);
+		const m = mesh(new THREE.PlaneGeometry(0.92, 0.69), paintMat(() => labelTex(name, colour, key, seeded(w * 4 + slot + 7))), room, p.x, 2.15, p.z);
+		m.rotation.set(0, [Math.PI / 2, 0, -Math.PI / 2][w], (rnd() - 0.5) * 0.05);
+	}
+	// the three delivery windows: a serving plate and a bell on the counter in front of
+	// each, and SERVE painted on the counter's front under it
+	for (let k = 0; k < WINDOWS; k++) {
+		const a = (HATCH + colW(WINDOWS) * (k + 0.5)) / W;
+		const p = wallPoint(1, a, CT.d + 0.3);
+		mesh(CYL(0.22, 0.2, 0.025, 40), MAT.steel, room, p.x, CT.y + 0.015, p.z).receiveShadow = true;
+		const b = wallPoint(1, a + 0.05, CT.d + 0.45);
+		mesh(new THREE.SphereGeometry(0.06, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), std(0xe9c04a, 0.2, 1), room, b.x, CT.y + 0.01, b.z);
+		mesh(SPH(0.012, 8), std(0xe9c04a, 0.2, 1), room, b.x, CT.y + 0.075, b.z);
+		const f = wallPoint(1, a, CT.d - 0.006);
+		mesh(new THREE.PlaneGeometry(0.62, 0.465), paintMat(() => labelTex('SERVE', '#e9ff4a', 'serve', seeded(90 + k))), room, f.x, 0.5, f.z);
 	}
 
 	/* ---------- 3D: food ---------- */
 
 	// each ingredient, about 0.6 across, sitting on y = 0
 	const ING_3D = {
+		spud(g, mat, glow) {
+			const body = mesh(SPH(0.22, 24), mat, g, 0, 0.17, 0);
+			body.scale.set(1.35, 0.8, 1);
+			for (const [x, y, z, r] of [[0.16, 0.2, 0.08, 0.1], [-0.15, 0.22, -0.06, 0.09], [0.02, 0.27, 0.1, 0.08]]) mesh(SPH(r, 14), mat, g, x, y, z);
+			for (const [x, y, z] of [[-0.1, 0.3, 0.12], [0.18, 0.22, -0.12], [0.05, 0.13, 0.22], [-0.22, 0.14, 0.05]]) mesh(SPH(0.03, 8), glow, g, x, y, z);
+		},
+		mutato(g, mat) {
+			const body = mesh(SPH(0.22, 24), mat, g, 0, 0.17, 0);
+			body.scale.set(1.3, 0.85, 1);
+			for (const [x, y, z, r] of [[0.15, 0.22, 0.05, 0.1], [-0.16, 0.2, -0.05, 0.09]]) mesh(SPH(r, 14), mat, g, x, y, z);
+			for (const x of [-0.11, 0, 0.11]) {
+				mesh(SPH(0.055, 12), MAT.white, g, x, 0.25, 0.16);
+				const pu = mesh(SPH(0.028, 10), MAT.black, g, x, 0.25, 0.16);
+				pu.position.addScaledVector(TOWARD, 0.04);
+			}
+		},
+		slime(g, mat, glow) {
+			mesh(CYL(0.2, 0.16, 0.2, 24, true), std(0x5a6360, 0.35, 0.7, { side: THREE.DoubleSide }), g, 0, 0.1, 0);
+			mesh(CYL(0.16, 0.16, 0.02, 24), std(0x5a6360, 0.35, 0.7), g, 0, 0.01, 0);
+			const blob = mesh(new THREE.SphereGeometry(0.19, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), mat, g, 0, 0.17, 0);
+			blob.scale.y = 0.7;
+			for (const [x, z] of [[0.06, 0.05], [-0.07, -0.02]]) mesh(SPH(0.03, 8), glow, g, x, 0.26, z);
+		},
 		roach(g, mat, glow) {
 			const leg = MAT.black;
 			for (let n = 0; n < 3; n++) for (const side of [-1, 1]) {
@@ -1700,15 +1780,25 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		const root = new THREE.Group();
 		const inner = new THREE.Group();
 		root.add(inner);
-		const pieces = has('chop') ? [[-0.2, 0, 0.08, 0.6, -0.4], [0.2, 0, 0.1, 0.6, 0.7], [0, 0.02, -0.16, 0.6, 2]] : [[0, 0, 0, 1, 0]];
-		for (const [x, y, z, s, r] of pieces) {
+		if (has('chop')) {
+			// chips: a heap of sticks, or once they're fried, a bundle stood up in a paper cone
+			const rnd = seeded(item.ing.length * 13 + item.steps.length);
+			const fried = has('fry');
+			if (fried) {
+				mesh(CYL(0.2, 0.13, 0.3, 24, true), std(0xd8263a, 0.5, 0, { side: THREE.DoubleSide }), inner, 0, 0.15, 0);
+				mesh(new THREE.TorusGeometry(0.2, 0.012, 6, 24), std(0xf4f0e6, 0.5, 0), inner, 0, 0.3, 0).rotation.x = Math.PI / 2;
+			}
+			for (let n = 0; n < 11; n++) {
+				const stick = mesh(BOX(0.055, 0.055, 0.36), mat, inner, 0, 0, 0);
+				if (fried) { stick.position.set((rnd() - 0.5) * 0.2, 0.32 + rnd() * 0.08, (rnd() - 0.5) * 0.16); stick.rotation.set(Math.PI / 2 + (rnd() - 0.5) * 0.5, 0, (rnd() - 0.5) * 0.5); }
+				else { stick.position.set((rnd() - 0.5) * 0.3, 0.04 + (n % 3) * 0.05, (rnd() - 0.5) * 0.25); stick.rotation.set(0, rnd() * Math.PI, 0); }
+			}
+		} else {
 			const g = new THREE.Group();
-			g.position.set(x, y, z);
-			g.scale.setScalar(s);
-			g.rotation.y = r;
 			ING_3D[item.ing](g, mat, glow);
 			inner.add(g);
 		}
+		if (has('salt') && !item.burnt) for (let n = 0; n < 16; n++) mesh(SPH(0.014, 6), glowMat(0xeaffd8, 1.8), root, (Math.random() - 0.5) * 0.3, 0.3 + Math.random() * 0.2, (Math.random() - 0.5) * 0.25);
 		if (has('grill') && !item.burnt) for (let n = -1; n <= 1; n++) {
 			const st = mesh(BOX(0.5, 0.015, 0.035), MAT.black, inner, 0, item.ing === 'eye' ? 0.47 : 0.27, n * 0.12);
 			st.rotation.y = 0.5;
@@ -2100,6 +2190,10 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 				p.window.color.setScalar(on ? 2.4 : 0.55);
 				p.light.intensity = on ? 7 : 0;
 				p.dial.rotation.z = -rt * (on ? 8 : 0.3);
+			} else if (k === 'salt') {
+				p.shaker.rotation.z = Math.sin(rt * 34) * 0.3 * s.hit;
+				p.shaker.position.y = 1.5 + s.hit * 0.12;
+				if (s.hit > 0.4) every('salt', 40, dt, () => puff(w, cx + rnd1() * 0.3 * MS, ISLAND.y + MS * 1.0, cz + rnd1() * 0.3 * MS, { color: 0xd8ffd0, size: 0.025, grow: 0.015, life: 0.6, vy: -0.9, glow: 2, add: true, alpha: 1 }));
 			} else if (k === 'cryo') {
 				const on = s.state === 'work';
 				p.light.intensity = on ? 5 : 0.5;
@@ -2125,15 +2219,16 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			}
 		}
 
-		// the food hatches: their ingredient turning under the dome; and the binner
+		// the food piles: one jumps when it's grabbed from; a jammed one rattles; and the binner
+		buildPiles();
 		disp3d.forEach((d3, k) => {
 			const d = disp[k];
 			if (!d) return;
 			d.flash = Math.max(0, d.flash - dt * 2.5);
 			d.shake = Math.max(0, d.shake - dt * 3);
-			const v = syncItem(d3.holder, { ing: d.ing, steps: [], burnt: false }, d3.hold, d.shake ? rnd1() * 0.05 : 0, 0.02 + d.flash * 0.1, 0, 0.42);
-			if (v) v.rotation.y = rt * 0.8 + k;
-			d3.pad.material.color.set(d.jam > 0 ? 0xffc21a : INGS[d.ing].glow).multiplyScalar(d.jam > 0 && Math.sin(rt * 12) > 0 ? 0.3 : 1.2 + d.flash * 1.5);
+			const jam = d.jam > 0 ? 0.015 * Math.sin(rt * 50) : 0;
+			d3.g.scale.set(1 + d.flash * 0.12, 1 - d.flash * 0.1 + d.flash * 0.2 * Math.sin(d.flash * 9), 1 + d.flash * 0.12);
+			d3.g.children.forEach((c, j) => { c.rotation.z = jam * (j % 2 ? 1 : -1) * 8 + (d.shake ? rnd1() * 0.2 * d.shake : 0); });
 		});
 		binFlash = Math.max(0, binFlash - dt * 2);
 		bin3d.swirl.rotation.z = -rt * (2.5 + binFlash * 10);
@@ -2193,17 +2288,25 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			const tq = wallPoint(wallNow, clamp(wp.along[wallNow], 0.02, 0.98), AV_MAX);
 			// (tracking arrives about 20 times a second; glide between its updates along the wall)
 			const k = 1 - Math.exp(-dt * 20);
-			if (m.x === undefined || jumped) { m.x = tq.x; m.z = tq.z; m.vx = m.vz = 0; }
+			if (m.x === undefined) { m.x = tq.x; m.z = tq.z; m.vx = m.vz = 0; }
+			if (jumped && m.yaw !== undefined) m.hop = 0;   // (changing walls: a quick hop across, a quarter of a second)
 			const ox = m.x, oz = m.z;
-			m.x = lerp(m.x, tq.x, k);
-			m.z = lerp(m.z, tq.z, k);
+			if (m.hop !== undefined && m.hop < 1) {
+				m.hop = Math.min(1, m.hop + dt / 0.25);
+				const e = 1 - Math.pow(1 - m.hop, 3);
+				m.x = lerp(m.x, tq.x, Math.max(k, e));
+				m.z = lerp(m.z, tq.z, Math.max(k, e));
+			} else {
+				m.x = lerp(m.x, tq.x, k);
+				m.z = lerp(m.z, tq.z, k);
+			}
 			m.vx = lerp(m.vx || 0, (m.x - ox) / Math.max(dt, 0.001), 1 - Math.exp(-dt * 6));
 			m.vz = lerp(m.vz || 0, (m.z - oz) / Math.max(dt, 0.001), 1 - Math.exp(-dt * 6));
-			m.g.position.set(m.x, 0, m.z);
-			// facing that wall, back to us
+			m.g.position.set(m.x, m.hop !== undefined && m.hop < 1 ? Math.sin(m.hop * Math.PI) * 0.45 : 0, m.z);
+			// facing that wall, back to us (spinning round quickly when they change walls)
 			const fx = wallNow === 0 ? -9 : wallNow === 2 ? 9 : 0, fz = wallNow === 1 ? -9 : 0;
 			const want = Math.atan2(fx - m.x, fz - m.z);
-			m.yaw = m.yaw === undefined || jumped ? want : m.yaw + Math.atan2(Math.sin(want - m.yaw), Math.cos(want - m.yaw)) * (1 - Math.exp(-dt * 8));
+			m.yaw = m.yaw === undefined ? want : m.yaw + Math.atan2(Math.sin(want - m.yaw), Math.cos(want - m.yaw)) * (1 - Math.exp(-dt * (m.hop < 1 ? 22 : 8)));
 			m.g.rotation.y = m.yaw;
 			// hovering, bobbing, the tray leaning into the way it's going
 			m.body.position.y = 0.62 + Math.sin(time * 2.4) * 0.025;
@@ -2246,15 +2349,18 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			if (!p.ring) { p.ring = buildPortal(); sets[p.wall].add(p.ring.g); }
 			const v = p.ring;
 			const grow = Math.min(1, p.t * 3) * (1 + Math.sin(p.t * 5) * 0.05);
-			v.g.position.set(p.x3, PORTAL_Y + Math.sin(p.t * 2) * 0.06, p.z3);
+			// (the ring lies flat on the counter; the food sits in it)
+			v.g.position.set(p.x3, CT.y + 0.01, p.z3);
 			v.g.scale.setScalar(grow * 0.45);
 			v.g.rotation.y = faceEye(p.x3, p.z3);
+			v.disc.parent.rotation.x = -Math.PI / 2;
+			v.disc.parent.position.y = 0.02;
 			v.disc.rotation.z = -p.t * 3;
 			v.r1.rotation.z = p.t * 1.5;
 			v.r2.rotation.z = -p.t * 2.2;
-			const iv = syncItem(p, p.item, v.hold, 0, -0.3, 0, 0.9);
-			if (iv) iv.rotation.y = p.t * 1.5;
-			every('portal-' + p.item.id, 6, dt, () => puff(p.wall, p.x3 + rnd1() * 0.5, PORTAL_Y + rnd1() * 0.5, p.z3, { color: Math.random() < 0.5 ? 0x3af2ff : 0xff2d8f, size: 0.06, grow: 0.02, life: 0.8, vy: 0, vx: rnd1() * 0.5, glow: 2, add: true, alpha: 1 }));
+			const iv = syncItem(p, p.item, v.hold, 0, 0.03, 0, 0.9);
+			if (iv) iv.rotation.y = 0.4;
+			every('portal-' + p.item.id, 4, dt, () => puff(p.wall, p.x3 + rnd1() * 0.4, CT.y + 0.1, p.z3 + rnd1() * 0.2, { color: Math.random() < 0.5 ? 0x3af2ff : 0xff2d8f, size: 0.06, grow: 0.02, life: 0.8, vy: 0, vx: rnd1() * 0.5, glow: 2, add: true, alpha: 1 }));
 		}
 		for (const g of sets) for (const o of g.children.slice()) if (o.userData.portal && !portals.some((p) => p.ring && p.ring.g === o)) o.removeFromParent();
 		for (const p of portals) p.ring.g.userData.portal = true;
@@ -2310,8 +2416,9 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			if (!at) continue;
 			const y = at.y;
 			if (c.held) {
-				const label = (c.held.burnt ? 'BURNT ' : '') + c.held.steps.map((s) => KIND[s].adj).reverse().join(' ') + (c.held.steps.length ? ' ' : '') + INGS[c.held.ing].short;
-				art.text(ctx, label, at.x, y, { size: 22, weight: 800, font: FONT, fill: 'white', outline: INK, outlineWidth: 5 });
+				const h = c.held, chips = h.steps.includes('chop');
+				const label = [h.burnt ? 'BURNT' : ''].concat(h.steps.filter((st) => st !== 'chop').map((st) => KIND[st].adj).reverse(), [INGS[h.ing].short + (chips ? ' CHIPS' : '')]).filter(Boolean).join(' ');
+				art.text(ctx, label, at.x, y, { size: 22, weight: 800, font: FONT, fill: h.burnt ? '#ff4a32' : INGS[h.ing].colour, outline: INK, outlineWidth: 5 });
 			}
 		}
 		for (const r of ripples) art.circle(ctx, r.x, r.y, 20 + r.t * 160, { stroke: 'white', lineWidth: 6, alpha: 1 - r.t / 0.5 });
@@ -2356,9 +2463,10 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 				inject: ['TAP IN THE GREEN', -1],
 				warp: ['WARPING...', s.t / WARP_TIME],
 				cryo: ['STAY STILL', s.prog],
+				salt: ['SHAKE: TAP TAP!', s.prog],
 			}[s.kind];
 			const urgent = s.kind === 'grill' && !s.flipped && s.t >= GRILL.flipAt;
-			prompt(ctx, cx, py, hint[0], urgent ? '#ff4a32' : '#e9ff4a', urgent || ['chop', 'stir', 'press', 'cryo', 'inject'].includes(s.kind));
+			prompt(ctx, cx, py, hint[0], urgent ? '#ff4a32' : s.colour, urgent || ['chop', 'salt', 'stir', 'press', 'cryo', 'inject'].includes(s.kind));
 			if (hint[1] >= 0) bar(ctx, cx, by, 160, hint[1], s.colour);
 			if (s.kind === 'inject') {   // the dial: a needle that sweeps, a green band to hit
 				const y = by + 4;
@@ -2371,7 +2479,88 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		}
 	}
 
-	const ticketH = (c) => 62 + c.parts.length * 58 + 24;
+	// A mutant's order, in a speech bubble by its head: each part a row of icons
+	// (the food, then each tool in turn), ticked off as it's handed over; how
+	// patient it still is along the bottom
+	const BROW = 66;
+	function drawOrder(ctx, c, x, headY, w) {
+		const rows = c.parts.length;
+		const h = 46 + rows * BROW + 18;
+		const y = headY - h - 26;
+		const bob = Math.sin(rt * 2 + c.seed) * 3;
+		ctx.save();
+		ctx.translate(x, y + bob);
+		const panic = c.state === 'wait' && c.left / c.patience < 0.25;
+		if (panic) ctx.translate(Math.sin(rt * 40) * 2, 0);
+		const edge = c.recipe === FEAST ? '#ffd23a' : panic ? '#ff4a32' : '#a44aff';
+		art.roundRect(ctx, -w / 2 + 4, 6, w, h, 22, { fill: 'rgba(0,0,0,0.4)' });
+		art.roundRect(ctx, -w / 2, 0, w, h, 22, { fill: '#1c1628', stroke: edge, lineWidth: 4 });
+		// (its tail, down to the mutant's head)
+		art.poly(ctx, [[-18, h - 3], [10, h - 3], [-14, h + 26]], { fill: '#1c1628' });
+		art.line(ctx, [[-18, h], [-14, h + 26], [10, h]], { stroke: edge, lineWidth: 4 });
+		art.text(ctx, c.recipe.name, 0, 25, { size: c.recipe.name.length > 20 ? 18 : 21, weight: 800, font: FONT, fill: '#ffd8f0' });
+		for (let r = 0; r < rows; r++) {
+			const part = c.parts[r];
+			const ry = 46 + r * BROW + BROW / 2;
+			const steps = part.steps[0] === '*' ? ['*'] : part.steps;
+			const gap = 66;
+			let px = -(steps.length * gap) / 2;
+			if (part.filled) art.roundRect(ctx, -w / 2 + 8, ry - BROW / 2 + 4, w - 16, BROW - 8, 12, { fill: 'rgba(122,255,58,0.18)' });
+			if (part.ing === '*') art.text(ctx, 'ANY', px, ry, { size: 20, weight: 800, font: FONT, fill: '#ffd8f0' });
+			else simpleIcon(ctx, part.ing, px, ry, 26);
+			for (const st of steps) {
+				px += gap;
+				art.text(ctx, '›', px - gap / 2, ry, { size: 30, weight: 800, font: FONT, fill: '#6a5a8a' });
+				if (st === '*') art.text(ctx, 'ANY', px, ry, { size: 20, weight: 800, font: FONT, fill: '#ffd8f0' });
+				else simpleIcon(ctx, st, px, ry, 26);
+			}
+			if (part.filled) art.text(ctx, '✓', w / 2 - 24, ry, { size: 32, weight: 800, font: FONT, fill: '#7aff3a' });
+		}
+		const k = clamp(c.left / c.patience, 0, 1);
+		if (c.patience < 900) {
+			art.roundRect(ctx, -w / 2 + 16, h - 14, w - 32, 6, 3, { fill: '#3a3048' });
+			art.roundRect(ctx, -w / 2 + 16, h - 14, (w - 32) * k, 6, 3, { fill: k > 0.5 ? '#7aff3a' : k > 0.25 ? '#ffc21a' : '#ff4a32' });
+		}
+		ctx.restore();
+	}
+
+	// A mutant's murmur: a run of gibberish syllables in its own voice (a buzzy
+	// tone through a shifting vowel filter), as it says its order or answers back
+	let voiceCtx = null;
+	function murmur(c, n, mood) {
+		if (!c) return;
+		try {
+			if (!voiceCtx) voiceCtx = new (window.AudioContext || window.webkitAudioContext)();
+			if (voiceCtx.state === 'suspended') voiceCtx.resume();
+		} catch { return; }
+		const ac = voiceCtx;
+		const out = ac.createGain();
+		out.gain.value = 0.12;
+		out.connect(ac.destination);
+		const base = (c.voice || 160) * (mood === 'happy' ? 1.25 : mood === 'cross' ? 0.8 : 1);
+		let at = ac.currentTime + 0.03;
+		for (let k = 0; k < n; k++) {
+			const len = 0.055 + Math.random() * 0.07;
+			const f = base * (0.85 + Math.random() * 0.4) * (k === n - 1 && mood !== 'cross' ? 1.15 : 1);
+			const o = ac.createOscillator();
+			o.type = 'sawtooth';
+			o.frequency.setValueAtTime(f, at);
+			o.frequency.linearRampToValueAtTime(f * (0.9 + Math.random() * 0.25), at + len);
+			const vowel = ac.createBiquadFilter();
+			vowel.type = 'bandpass';
+			vowel.frequency.setValueAtTime(450 + Math.random() * 1300, at);
+			vowel.Q.value = 3.5;
+			const g = ac.createGain();
+			g.gain.setValueAtTime(0.0001, at);
+			g.gain.exponentialRampToValueAtTime(1, at + 0.012);
+			g.gain.exponentialRampToValueAtTime(0.0001, at + len);
+			o.connect(vowel).connect(g).connect(out);
+			o.start(at);
+			o.stop(at + len + 0.02);
+			at += len + 0.02 + (Math.random() < 0.18 ? 0.09 : 0);
+		}
+	}
+
 	function drawFrontUI(ctx) {
 		disp.forEach((d, k) => { if (d.jam > 0) prompt(ctx, DISP_UI[k].x, DISP_UI[k].prompt, 'JAMMED! TAP ×' + d.jam, '#ffc21a', true); });
 		const n = windowsNow();
@@ -2381,8 +2570,9 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			if (!c) continue;
 			const q = queueAt(k, n);
 			const x = W + HATCH + cw * k + cw / 2;
-			if (c.state !== 'leave') drawTicket(ctx, c, x, q.ticket - ticketH(c), Math.min(260, cw - 20));
-			if (c.sayT > 0 && c.say) drawSpeech(ctx, c.say, x, q.say, Math.min(300, cw - 10), c.state === 'angry' ? '#ff4a32' : c.state === 'eat' ? '#9dff3a' : 'white');
+			if (c.state === 'wait') drawOrder(ctx, c, x + 36, q.ticket, Math.min(300, cw - 30));
+			if (c.sayT > 0 && c.say && c.state !== 'wait') drawSpeech(ctx, c.say, x, q.ticket - 50, Math.min(300, cw - 10), c.state === 'angry' ? '#ff4a32' : '#7aff3a');
+			else if (c.sayT > 0 && c.say && c.age > 2.4) drawSpeech(ctx, c.say, x - 90, q.say, 220, '#ffd8f0');
 		}
 	}
 
@@ -2405,193 +2595,29 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		art.text(ctx, lines.join('\n'), x, y, { size: 22, weight: 800, font: FONT, fill: INK, lineHeight: 26 });
 	}
 
-	function drawTicket(ctx, c, x, y, w) {
-		const rows = c.parts.length;
-		const h = 62 + rows * 58 + 24;
-		const vip = c.recipe === FEAST;
+	// The icons: line work in the thing's own colour of the rainbow (no black, no white),
+	// the same on the walls and on the tickets
+	// (a tool's colour, a food's colour: its machine, its icon and its name are all that colour)
+	const ICON_COLOUR = { bin: '#ff3ad8', serve: '#ff7aa8' };
+	for (const k of Object.keys(INGS)) ICON_COLOUR[k] = INGS[k].colour;
+	for (const st of STATIONS) ICON_COLOUR[st.kind] = st.colour;
+	function simpleIcon(ctx, key, x, y, r) {
+		const col = ICON_COLOUR[key] || '#ffe12a';
 		ctx.save();
 		ctx.translate(x, y);
-		ctx.rotate(Math.sin(c.seed) * 0.02);
-		art.rect(ctx, -w / 2 + 4, 6, w - 8, h, { fill: 'rgba(0,0,0,0.5)' });
-		art.rect(ctx, -w / 2, 0, w, h, { fill: vip ? '#f4e08a' : '#e8e2cc', stroke: INK, lineWidth: 3 });
-		// the name, in two lines at most
-		ctx.font = `800 20px ${FONT}`;
-		const words = c.recipe.name.split(' ');
-		const lines = [''];
-		for (const word of words) {
-			const test = lines[lines.length - 1] ? lines[lines.length - 1] + ' ' + word : word;
-			if (ctx.measureText(test).width > w - 20 && lines[lines.length - 1]) lines.push(word); else lines[lines.length - 1] = test;
-		}
-		art.text(ctx, lines.slice(0, 2).join('\n'), 0, 31, { size: lines.length > 1 ? 18 : 20, weight: 800, font: FONT, fill: '#1a1408', lineHeight: 21 });
-		for (let r = 0; r < rows; r++) {
-			const part = c.parts[r];
-			const ry = 62 + r * 58 + 29;
-			const steps = part.steps[0] === '*' ? ['*'] : part.steps;
-			const span = 56 + steps.length * 50;
-			let px = -span / 2 + 28;
-			if (part.filled) art.roundRect(ctx, -w / 2 + 6, ry - 27, w - 12, 54, 8, { fill: 'rgba(60,220,122,0.45)' });
-			if (part.ing === '*') art.text(ctx, 'ANY', px, ry, { size: 18, weight: 800, font: FONT, fill: '#1a1408' });
-			else drawItem(ctx, { ing: part.ing, steps: [], burnt: false }, px, ry, 0.42);
-			for (const st of steps) {
-				px += 50;
-				art.text(ctx, '›', px - 26, ry, { size: 30, weight: 800, font: FONT, fill: '#6a604a' });
-				if (st === '*') art.text(ctx, 'ANY', px, ry, { size: 18, weight: 800, font: FONT, fill: '#1a1408' });
-				else drawStepIcon(ctx, st, px, ry, 21);
-			}
-			if (part.filled) art.text(ctx, '✓', w / 2 - 22, ry, { size: 34, weight: 800, font: FONT, fill: '#1a8a3a' });
-		}
-		// patience
-		const k = clamp(c.left / c.patience, 0, 1);
-		if (c.patience < 900) {
-			art.rect(ctx, -w / 2 + 8, h - 18, w - 16, 10, { fill: '#5a5440' });
-			art.rect(ctx, -w / 2 + 8, h - 18, (w - 16) * k, 10, { fill: k > 0.5 ? '#3cdc7a' : k > 0.25 ? '#ffc21a' : '#ff4a32' });
-		}
-		ctx.restore();
-	}
-
-	function drawSmoke(ctx, x, y, k) {
-		for (let n = 0; n < 4; n++) {
-			const ph = (t * 0.5 + n / 4) % 1;
-			art.circle(ctx, x + Math.sin(ph * 6 + n) * 30, y - ph * 160, (20 + ph * 50) * k, { fill: 'rgba(60,60,55,0.5)', alpha: 1 - ph });
-		}
-	}
-
-	/* ---------- 2D: food, for the tickets ---------- */
-	
-
-	// an item, centred at (x, y), about 110 * s across: its ingredient, changed by every station it's been through
-	function drawItem(ctx, item, x, y, s) {
-		const ing = INGS[item.ing];
-		const has = (k) => item.steps.includes(k);
-		let fill = ing.colour;
-		if (has('fry')) fill = mix(fill, '#c8892b', 0.65);
-		if (has('cryo')) fill = mix(fill, '#bfe8ff', 0.5);
-		if (item.burnt) fill = '#1a1412';
-		ctx.save();
-		ctx.translate(x, y);
-		ctx.scale(s, s);
-		if (has('warp')) ctx.rotate(Math.sin(t * 3 + (item.id || 0)) * 0.25);
-		if (has('stir')) {   // (in a bowl of sludge)
-			art.ellipse(ctx, 0, 30, 66, 30, { fill: '#5a5f5c', stroke: INK, lineWidth: 4 });
-			art.ellipse(ctx, 0, 14, 62, 14, { fill: '#6abf2a' });
-		}
-		if (has('press')) ctx.scale(0.6, 0.6);
-		if (has('inject')) art.circle(ctx, 0, 0, 62, { fill: 'rgba(208,77,255,0.35)' });
-		if (has('warp')) {
-			for (const [dx, col] of [[-6, 'rgba(58,242,255,0.6)'], [6, 'rgba(255,45,143,0.6)']]) {
-				ctx.save();
-				ctx.translate(dx, 0);
-				ctx.globalAlpha *= 0.6;
-				INGREDIENT[item.ing](ctx, col, ing.glow, item);
-				ctx.restore();
-			}
-		}
-		const chopped = has('chop');
-		const pieces = chopped ? [[-26, 8, 0.55, -0.4], [24, 12, 0.55, 0.5], [0, -18, 0.55, 0.1]] : [[0, 0, 1, 0]];
-		for (const [px, py, ps, pr] of pieces) {
-			ctx.save();
-			ctx.translate(px, py);
-			ctx.rotate(pr);
-			ctx.scale(ps, ps);
-			INGREDIENT[item.ing](ctx, fill, item.burnt ? '#3a2a20' : ing.glow, item);
-			if (has('grill') && !item.burnt) for (let n = -1; n <= 1; n++) art.line(ctx, [[-30, n * 18 - 10], [30, n * 18 + 10]], { stroke: 'rgba(30,10,0,0.75)', lineWidth: 6 });
-			ctx.restore();
-		}
-		if (has('press')) art.rect(ctx, -46, -46, 92, 92, { stroke: '#e9ff4a', lineWidth: 6, alpha: 0.7 });
-		if (has('inject') && !item.burnt) {   // (an extra eye, of course)
-			art.circle(ctx, 22, -26, 14, { fill: 'white', stroke: INK, lineWidth: 3 });
-			art.circle(ctx, 24, -26, 6, { fill: '#d04dff' });
-		}
-		if (has('cryo')) {
-			art.roundRect(ctx, -54, -50, 108, 100, 14, { fill: 'rgba(190,235,255,0.3)', stroke: 'rgba(230,250,255,0.9)', lineWidth: 4 });
-			art.line(ctx, [[-36, -34], [-18, -40]], { stroke: 'white', lineWidth: 5 });
-		}
-		if (item.burnt) drawSmoke(ctx, 0, -40, 0.5);
-		if (has('fry') && !item.burnt) for (let n = 0; n < 6; n++) art.circle(ctx, Math.cos(n * 2.1) * 40, Math.sin(n * 2.7) * 34, 4, { fill: '#e8b04a' });
-		ctx.restore();
-	}
-
-	const INGREDIENT = {
-		roach(ctx, fill, glow) {
-			for (let n = 0; n < 3; n++) for (const side of [-1, 1]) art.line(ctx, [[side * 18, -14 + n * 16], [side * 44, -22 + n * 20], [side * 50, -8 + n * 22]], { stroke: INK, lineWidth: 5 });
-			art.line(ctx, [[-6, -38], [-20, -62]], { stroke: INK, lineWidth: 4 });
-			art.line(ctx, [[6, -38], [20, -62]], { stroke: INK, lineWidth: 4 });
-			art.ellipse(ctx, 0, 4, 28, 40, { fill, stroke: INK, lineWidth: 4 });
-			art.circle(ctx, 0, -34, 14, { fill, stroke: INK, lineWidth: 4 });
-			art.line(ctx, [[0, -22], [0, 40]], { stroke: INK, lineWidth: 3 });
-			art.circle(ctx, -12, 0, 6, { fill: glow });
-			art.circle(ctx, 12, 14, 5, { fill: glow });
-		},
-		eel(ctx, fill, glow) {
-			const pts = [];
-			for (let n = 0; n <= 16; n++) pts.push([-52 + n * 6.5, Math.sin(n * 0.7 + t * 2) * 16]);
-			art.line(ctx, pts, { stroke: INK, lineWidth: 28 });
-			art.line(ctx, pts, { stroke: fill, lineWidth: 20 });
-			const [hx, hy] = pts[pts.length - 1];
-			art.circle(ctx, hx, hy, 15, { fill, stroke: INK, lineWidth: 4 });
-			art.circle(ctx, hx + 3, hy - 4, 5, { fill: glow });
-			art.line(ctx, [[hx + 6, hy + 6], [hx + 14, hy + 4]], { stroke: INK, lineWidth: 3 });
-		},
-		shroom(ctx, fill, glow) {
-			art.roundRect(ctx, -14, -4, 28, 46, 10, { fill: '#e8e0c8', stroke: INK, lineWidth: 4 });
-			ctx.beginPath();
-			ctx.ellipse(0, -4, 50, 40, 0, Math.PI, 0);
-			ctx.closePath();
-			ctx.fillStyle = fill;
-			ctx.fill();
-			ctx.strokeStyle = INK;
-			ctx.lineWidth = 4;
-			ctx.stroke();
-			for (const [sx, sy, r] of [[-22, -20, 8], [10, -30, 7], [26, -12, 6]]) art.circle(ctx, sx, sy, r, { fill: glow });
-			art.circle(ctx, -6, 14, 3, { fill: INK });
-			art.circle(ctx, 6, 14, 3, { fill: INK });
-		},
-		ooze(ctx, fill, glow) {
-			const wob = Math.sin(t * 4) * 3;
-			art.roundRect(ctx, -40 - wob, -38 + wob, 80 + wob * 2, 76 - wob, 18, { fill, stroke: INK, lineWidth: 4, alpha: 0.92 });
-			art.roundRect(ctx, -30, -30, 26, 12, 6, { fill: 'rgba(255,255,255,0.5)' });
-			art.circle(ctx, 14, 10, 7, { fill: glow });
-			art.circle(ctx, -10, 18, 4, { fill: glow });
-			art.circle(ctx, -12, -4, 5, { fill: INK });
-			art.circle(ctx, 12, -6, 5, { fill: INK });
-		},
-		eye(ctx, fill) {
-			art.circle(ctx, 0, 0, 42, { fill, stroke: INK, lineWidth: 4 });
-			for (const a of [0.4, 1.9, 3.3, 4.6]) art.line(ctx, [[Math.cos(a) * 40, Math.sin(a) * 40], [Math.cos(a + 0.2) * 26, Math.sin(a + 0.2) * 26], [Math.cos(a) * 20, Math.sin(a) * 20]], { stroke: '#d02a2a', lineWidth: 3 });
-			const lx = Math.sin(t * 1.3) * 8;
-			art.circle(ctx, lx, 0, 18, { fill: '#ff2d8f', stroke: INK, lineWidth: 3 });
-			art.circle(ctx, lx, 0, 8, { fill: INK });
-			art.circle(ctx, lx - 6, -6, 4, { fill: 'white' });
-		},
-		tentacle(ctx, fill) {
-			const pts = [];
-			for (let n = 0; n <= 20; n++) {
-				const a = n * 0.32 + Math.sin(t * 2) * 0.2;
-				const r = 46 - n * 2;
-				pts.push([Math.cos(a) * r - 4, Math.sin(a) * r * 0.9]);
-			}
-			art.line(ctx, pts, { stroke: INK, lineWidth: 30 });
-			art.line(ctx, pts, { stroke: fill, lineWidth: 22 });
-			for (let n = 2; n < 18; n += 3) art.circle(ctx, pts[n][0] * 0.82, pts[n][1] * 0.82, 4, { fill: '#fff0f4' });
-		},
-	};
-
-	function drawStepIcon(ctx, kind, x, y, r) {
-		const col = KIND[kind].colour;
-		art.circle(ctx, x, y, r, { fill: '#1a1c1b', stroke: col, lineWidth: 3 });
-		ctx.save();
-		ctx.translate(x, y);
-		const k = r / 20;
-		ctx.scale(k, k);
-		const st = { stroke: col, lineWidth: 3.5 };
-		if (kind === 'chop') { art.rect(ctx, -10, -11, 16, 13, { fill: col }); art.rect(ctx, 3, 2, 4, 10, { fill: col }); }
-		else if (kind === 'fry') { for (const [bx, by, br] of [[-6, 4, 5], [5, -1, 4], [0, -9, 3]]) art.circle(ctx, bx, by, br, st); }
-		else if (kind === 'grill') { for (let n = -1; n <= 1; n++) art.line(ctx, [[-11, n * 7], [11, n * 7]], st); }
-		else if (kind === 'stir') { const pts = []; for (let n = 0; n < 24; n++) { const a = n * 0.5; pts.push([Math.cos(a) * n * 0.5, Math.sin(a) * n * 0.5]); } art.line(ctx, pts, st); }
-		else if (kind === 'press') { art.line(ctx, [[0, -12], [0, -2]], st); art.line(ctx, [[-5, -7], [0, -2], [5, -7]], st); art.line(ctx, [[0, 12], [0, 2]], st); art.line(ctx, [[-5, 7], [0, 2], [5, 7]], st); }
-		else if (kind === 'inject') { art.rect(ctx, -4, -10, 8, 15, { fill: col }); art.line(ctx, [[0, 5], [0, 13]], st); art.line(ctx, [[-7, -11], [7, -11]], st); }
-		else if (kind === 'warp') { for (const rr of [4, 9]) art.circle(ctx, 0, 0, rr, st); art.line(ctx, [[9, 0], [13, -6]], st); }
-		else if (kind === 'cryo') { for (let n = 0; n < 3; n++) { const a = n * Math.PI / 3; art.line(ctx, [[Math.cos(a) * -12, Math.sin(a) * -12], [Math.cos(a) * 12, Math.sin(a) * 12]], st); } }
+		ctx.scale(r / 20, r / 20);
+		const st = { stroke: col, lineWidth: 2.6, lineCap: 'round', lineJoin: 'round' };
+		art.circle(ctx, 0, 0, 19, st);
+		const blob = () => art.ellipse(ctx, 0, 1, 11, 8, st);
+		if (key === 'spud') { blob(); art.circle(ctx, -4, -1, 1.6, st); art.circle(ctx, 4, 3, 1.4, st); }
+		else if (key === 'mutato') { blob(); for (const ex of [-5, 0, 5]) art.circle(ctx, ex, ex ? 1 : -2, 2, st); }
+		else if (key === 'slime') { ctx.beginPath(); ctx.moveTo(0, -12); ctx.bezierCurveTo(8, -2, 10, 5, 0, 10); ctx.bezierCurveTo(-10, 5, -8, -2, 0, -12); ctx.strokeStyle = col; ctx.lineWidth = 2.6; ctx.stroke(); }
+		else if (key === 'chop') { art.poly(ctx, [[-11, -8], [3, -8], [3, 4], [-11, 4]], st); art.line(ctx, [[3, -2], [12, -2]], st); }
+		else if (key === 'fry') for (const dx of [-7, 0, 7]) art.line(ctx, [[dx, 10], [dx - 3, 4], [dx + 3, -3], [dx, -10]], st);
+		else if (key === 'salt') { art.poly(ctx, [[-6, -2], [6, -2], [6, 10], [-6, 10]], st); art.ellipse(ctx, 0, -4, 6, 3, st); for (const [dx, dy] of [[-4, -11], [0, -13], [4, -11]]) art.circle(ctx, dx, dy, 1.1, st); }
+		else if (key === 'warp') { art.circle(ctx, 0, 0, 10, st); art.line(ctx, [[0, 0], [4, -2], [5, 3], [0, 6], [-5, 2], [-4, -5], [3, -8]], st); }
+		else if (key === 'bin') { art.poly(ctx, [[-7, -4], [7, -4], [5, 10], [-5, 10]], st); art.line(ctx, [[-10, -7], [10, -7]], st); art.line(ctx, [[-2, -1], [-2, 7]], st); art.line(ctx, [[2, -1], [2, 7]], st); }
+		else if (key === 'serve') { ctx.beginPath(); ctx.arc(0, 4, 10, Math.PI, 0); ctx.strokeStyle = col; ctx.lineWidth = 2.6; ctx.stroke(); art.line(ctx, [[-13, 5], [13, 5]], st); art.circle(ctx, 0, -8, 2, st); }
 		ctx.restore();
 	}
 
@@ -2675,6 +2701,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		envTex.dispose();
 		renderer.dispose();
 		renderer.forceContextLoss();
+		if (voiceCtx && voiceCtx.state !== 'closed') voiceCtx.close();
 	};
 
 	// the painted names and pictures, now that the food's drawing is defined (and again once the lettering's loaded)
