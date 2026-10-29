@@ -691,7 +691,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			const deg = PAT[cr.pat][s16];
 			if (deg === null || deg === undefined) continue;
 			sing(cr, st, time, deg);
-			visuals.push({ time, fn: () => { cr.singT = 1; cr.notes++; } });
+			visuals.push({ time, fn: () => { cr.singT = 1; cr.notes++; if (cr.kind === 'frog') cr.croakHop = 1; } });   // (frogs hop as they croak)
 			if (cr.singer < count) scores[cr.singer] += 1;
 		}
 		// the festoon: the playhead moves a light along on every eighth, and a lit one chimes
@@ -856,7 +856,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		for (const th of theremins) {
 			if (th.ci !== here) { if (th.voice) { th.voice.stop(); th.voice = null; th.who = -1; } continue; }
 			let who = -1;
-			if (on) for (let i = 0; i < count; i++) { const p = latest[i]; if (p && pl[i].seen && Math.hypot(avCap(pl[i].x) - (th.pos.x - walls.rig.position.x), avCap(pl[i].z) - (th.pos.z - walls.rig.position.z)) < 0.42) { who = i; break; } }   // (your avatar in the beam)
+			if (on) for (let i = 0; i < count; i++) { const p = latest[i]; if (p && pl[i].seen && Math.hypot(avCap(pl[i].x) - (th.pos.x - walls.rig.position.x), avCap(pl[i].z) - (th.pos.z - walls.rig.position.z)) < 0.3) { who = i; break; } }   // (your avatar in the beam: as narrow as it is)
 			if (who >= 0) {
 				const p = latest[who], q = pl[who];
 				const k = clamp(0.5 + (q.base - p.py) / 0.24, 0, 1);   // (up a little is higher, down lower)
@@ -3100,10 +3100,10 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 		const pos = new THREE.Vector3(cx + av.x, 0, cz + av.z);   // (exactly where an avatar stands in it)
 		const tint = BEAM_TINT[k % 3];
 		const beamMat = new THREE.MeshBasicMaterial({ map: TEX.ray, color: new THREE.Color(...tint), transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
-		const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 9, 24, 1, true), beamMat);
+		const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.26, 9, 24, 1, true), beamMat);   // (a focused shaft)
 		beam.position.set(pos.x, 4.5, pos.z); beam.renderOrder = 2;
 		g.add(beam);
-		const pool = mesh(GEO.shadow, new THREE.MeshBasicMaterial({ map: TEX.soft, color: new THREE.Color(...tint), transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending }), g, pos.x, 0.02, pos.z, 1.4, 1.4);
+		const pool = mesh(GEO.shadow, new THREE.MeshBasicMaterial({ map: TEX.soft, color: new THREE.Color(...tint), transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending }), g, pos.x, 0.02, pos.z, 0.8, 0.8);
 		pool.rotation.x = -Math.PI / 2; pool.castShadow = false;
 		const orbMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(...tint).multiplyScalar(1.6) });
 		const orb = mesh(GEO.sph, orbMat, g, pos.x, 1, pos.z, 0.09);
@@ -3357,7 +3357,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			const duck = Math.sin(Math.min(1, (1 - c.duckT) * 1.2) * Math.PI) * (c.duckT > 0 ? 1 : 0);
 			const base = c.size;
 			c.bouncer.scale.set(base * (1 + sq * 0.6 + duck * 0.25), base * (1 - sq + c.singT * 0.12 - duck * 0.4), base * (1 + sq * 0.6 + duck * 0.25));
-			c.bouncer.position.y = Math.sin((1 - c.hopT) * Math.PI) * (c.hopT > 0 ? 0.45 : 0) + myPulse * 0.04;
+			c.croakHop = Math.max(0, (c.croakHop || 0) - dt * 3.2);
+			c.bouncer.position.y = Math.sin((1 - c.hopT) * Math.PI) * (c.hopT > 0 ? 0.45 : 0) + Math.sin((1 - c.croakHop) * Math.PI) * (c.croakHop > 0 ? 0.28 : 0) + myPulse * 0.04;
 			c.bouncer.rotation.z = Math.sin(beat * Math.PI + c.phase) * 0.02;
 			c.bouncer.rotation.y = Math.sin(beat * Math.PI * 0.5 + c.phase) * 0.12;
 			// the ring at its feet lights when someone stands in front
