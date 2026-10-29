@@ -883,8 +883,13 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			// jumps and squats, against your own usual height
 			if (q.base === null) q.base = p.py;
 			if (Math.abs(p.py - q.base) < 0.05) q.base = lerp(q.base, p.py, 1 - Math.exp(-dt * 0.8));
+			// (a new usual height: up there longer than any jump, or down longer than any squat, it's just you now)
+			q.offT = Math.abs(p.py - q.base) >= 0.05 ? (q.offT || 0) + dt : 0;
+			if (q.offT > (p.py < q.base ? 1.2 : 8)) { q.base = p.py; q.offT = 0; }
 			q.jumpT = Math.max(0, q.jumpT - dt);
-			if (live && p.py < q.base - JUMP && q.jumpT <= 0) {
+			if (p.py > q.base - JUMP * 0.5) q.up = false;   // (back down: the next rise is a new jump)
+			if (live && p.py < q.base - JUMP && q.jumpT <= 0 && !q.up) {
+				q.up = true;
 				q.jumpT = 0.7;
 				tut.jumped[i] = true;
 				scores[i] += 3;

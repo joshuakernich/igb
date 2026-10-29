@@ -207,8 +207,7 @@ IGB.players = (function () {
 			$(p).stop(true).animate({
 				X: -0.9 + Math.random() * 1.8,
 				Z: -0.9 + Math.random() * 1.8,
-				Y: -0.3 + Math.random() * 0.6,
-				wall: 1,
+				wall: 1,   // (their heights stay: games read a sudden change as a jump or a squat)
 			});
 		}
 	}
