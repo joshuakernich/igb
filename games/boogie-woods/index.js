@@ -1,5 +1,5 @@
 /*
- * Treble in the Woods (id boogie-woods; it was Boogie Woods)
+ * GrooveWood (id boogie-woods; it was Boogie Woods, then Treble in the Woods)
  *
  * A glistening, enchanted forest that plays music. The walls look out from
  * the middle of a clearing, and every creature in it bounces to the beat:
@@ -270,8 +270,8 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			update(dt) { tick(dt); },
 			draw(ctx, bt) {
 				show.onWalls(ctx, function (c) {
-					show.slam(c, 'THERE\'S TREBLE', W / 2, 250, 110, bt - 0.2, { font: 'Shrikhand', exact: true, fill: '#a8ff3e' });
-					show.slam(c, 'IN THE WOODS!', W / 2, 370, 96, bt - 0.8, { font: 'Shrikhand', exact: true, fill: '#ff5fb0' });
+					show.slam(c, 'WELCOME TO', W / 2, 250, 80, bt - 0.2, { font: 'Shrikhand', exact: true, fill: '#a8ff3e' });
+					show.slam(c, 'GROOVEWOOD!', W / 2, 370, 110, bt - 0.8, { font: 'Shrikhand', exact: true, fill: '#ff5fb0' });
 					show.slam(c, 'EVERY CREATURE IS AN INSTRUMENT', W / 2, 480, 50, bt - 1.6, { fill: 'white' });
 				});
 			},

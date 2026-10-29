@@ -2292,7 +2292,17 @@ window.Showtime = function (stage, opts) {
 						c.translate(W / 2, y);
 						c.scale(flyScale(bt), flyScale(bt));
 						const look = { fill: line.fill || 'white', glow: line.glow || theme.accent, alpha: fade * flyAlpha(bt), exact: true, font: line.font };
-						if (!line.rainbow) self.text(c, line.text, 0, 0, size, look);
+						if (line.parts) {
+							// (line.parts: one line in a few pieces, each its own fill and glow, set
+							// tight together as a single word: [{ text, fill, glow }], their texts
+							// making up line.text)
+							const widths = line.parts.map((pt) => measure(c, pt.text, size, line.font));
+							let x = -widths.reduce((a, b) => a + b, 0) / 2;
+							line.parts.forEach(function (pt, k) {
+								self.text(c, pt.text, x + widths[k] / 2, 0, size, Object.assign({}, look, { fill: pt.fill || look.fill, glow: pt.glow || look.glow }));
+								x += widths[k];
+							});
+						} else if (!line.rainbow) self.text(c, line.text, 0, 0, size, look);
 						else {
 							// (line.rainbow: a letter at a time, each in the next player's colour, glowing in it)
 							const chars = Array.from(line.text);
@@ -3780,11 +3790,14 @@ window.Showtime = function (stage, opts) {
 				fontFamily: `"${(g.title && g.title.font) || FONT}", "${FONT}", sans-serif`, lineHeight: 0.95, whiteSpace: 'nowrap', textAlign: 'right',
 			}).appendTo($shot);
 			lines.forEach(function (line) {
-				$('<div>').text(line.text).css({
-					fontSize: size + 'px', color: line.fill || 'white',
+				const look = (pt) => ({
+					fontSize: size + 'px', color: pt.fill || line.fill || 'white',
 					WebkitTextStroke: `${Math.round(size * 0.14)}px ${theme.ink}`, paintOrder: 'stroke fill',
-					textShadow: `0 ${Math.round(size * 0.09)}px 0 rgba(0,0,0,0.55), 0 0 ${Math.round(size * 0.5)}px ${line.glow || 'transparent'}`,
-				}).appendTo($title);
+					textShadow: `0 ${Math.round(size * 0.09)}px 0 rgba(0,0,0,0.55), 0 0 ${Math.round(size * 0.5)}px ${pt.glow || line.glow || 'transparent'}`,
+				});
+				const $line = $('<div>').appendTo($title);
+				if (line.parts) for (const pt of line.parts) $('<span>').text(pt.text).css(look(pt)).appendTo($line);   // (one word in coloured pieces)
+				else $line.text(line.text).css(look({}));
 			});
 			return $slide;
 		}
