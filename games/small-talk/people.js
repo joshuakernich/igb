@@ -1,21 +1,23 @@
 /*
- * The coworkers: Quaternius's Mannequin (assets/shared/mannequin.glb, CC0,
- * the same rig the virtual gamebox's ghosts use), posed once per pose and
- * baked into plain meshes, so a room full of them costs no skinning. Their
- * clothes, skin and hair are painted on in the shader from where each vertex
- * sits on the mannequin at rest (its bind pose: T-pose, facing +z, 1.83 m),
- * and their faces are cartoon line drawings on the front of the head, picked
- * from a sheet of sixteen expressions drawn here on a canvas.
+ * The guests: Quaternius's Mannequin (assets/shared/mannequin.glb, CC0,
+ * the same rig the virtual gamebox's ghosts use), one each, alive: a clip
+ * under them (standing about, walking) and bones swung by hand on top for
+ * what they're doing: talking, drinking, eating, shaking hands, dancing,
+ * panicking, lying very still. Everything they do is a function of the
+ * scene's time, so a scene loops exactly. Their clothes, skin and hair are
+ * painted on in the shader from where each vertex sits on the mannequin at
+ * rest (T-pose, facing +z, 1.83 m), and their faces are cartoon line
+ * drawings on the front of the head, picked from a sheet of expressions
+ * drawn here on a canvas, with a mouth that opens while they talk.
  *
- *   person(props)     a Group: { seed, pose, expr, head, h, glasses, outfit }
+ *   person(props)     a Group, with userData.actor.tick(T, dt, talking)
  *   drawFace(ctx, expr, x, y, size, opts)   one face on a 2D canvas
  *   EXPR, FAMILY      the expressions by name, and which go together
+ *   flame(size)       a flickering flame
  *   peopleReady       resolves once the mannequin has loaded
  *
- * Poses: 'stand', 'sit' (hands at a keyboard), 'slump' (sat, hands in lap),
- * 'wave', 'reach', 'push', 'crouch'. `head` turns the head (radians, + to
- * the person's left), as far as right round. Until the mannequin loads, a
- * person is just its invisible hit boxes; the body arrives when it does.
+ * Until the mannequin loads, a person is just its invisible hit boxes; the
+ * body arrives when it does.
  */
 import * as THREE from '../../lib/three/three.module.min.js';
 import { GLTFLoader } from '../../lib/three/addons/loaders/GLTFLoader.js';
@@ -30,6 +32,7 @@ export const EXPR = {
 	smile: 0, grin: 1, smug: 2, bored: 3, sideEye: 4, worried: 5, surprised: 6, scared: 7,
 	angry: 8, wink: 9, sad: 10, sleepy: 11, stare: 12, beam: 13, blank: 14, suspicious: 15,
 	cyclops: 16, threeEyes: 17, hypnotised: 18, upsideDown: 19,
+	dead: 20, drunk: 21, sing: 22, yell: 23,
 };
 // Faces nobody should have: only ever a difference.
 export const WEIRD = [EXPR.cyclops, EXPR.threeEyes, EXPR.hypnotised, EXPR.upsideDown];
@@ -89,6 +92,14 @@ const FACES = [
 	{ eyes: [E({ shape: 'spiral', w: 0.09 }), E({ shape: 'spiral', w: 0.09 })], brows: [BROW({ y: 0.22 }), BROW({ y: 0.22 })], mouth: { type: 'curve', w: 0.16, bend: 0.06, y: 0.72 } },
 	// upside down: a smile, the wrong way up
 	{ flip: 0 },
+	// dead: crosses for eyes, the tongue out
+	{ eyes: [E({ shape: 'cross' }), E({ shape: 'cross' })], brows: null, mouth: { type: 'curve', w: 0.1, bend: -0.02, y: 0.74, tongue: true } },
+	// drunk: heavy lids, a lopsided grin, flushed
+	{ eyes: [E({ lid: 0.6, look: [0.3, 0.4] }), E({ lid: 0.45, look: [-0.2, 0.3] })], brows: [BROW({ y: 0.25, tilt: 0.2 }), BROW({ y: 0.21, tilt: -0.1 })], mouth: { type: 'curve', w: 0.13, bend: 0.06, y: 0.73, x: 0.03, tilt: 0.15, dimples: true }, blush: true },
+	// singing: eyes shut happy, mouth an O
+	{ eyes: [E({ shape: 'happy' }), E({ shape: 'happy' })], brows: [BROW({ y: 0.2 }), BROW({ y: 0.2 })], mouth: { type: 'o', w: 0.05, h: 0.065, y: 0.73 } },
+	// yelling
+	{ eyes: [E({ w: 0.09, h: 0.12, pupil: 0.018 }), E({ w: 0.09, h: 0.12, pupil: 0.018 })], brows: [BROW({ y: 0.2, tilt: 0.45 }), BROW({ y: 0.2, tilt: 0.45 })], mouth: { type: 'open', w: 0.12, top: -0.02, depth: 0.15, y: 0.69 }, sweat: true },
 ];
 
 /*
@@ -118,6 +129,14 @@ export function drawFace(ctx, expr, x, y, size, opts = {}) {
 		const s = i ? 1 : -1;
 		const cx = e.x ?? s * 0.19;
 		const cy = e.y ?? 0.42;
+		if (e.shape === 'cross') {
+			if (!doInk) return;
+			ctx.beginPath();
+			ctx.moveTo(cx - e.w, cy - e.w); ctx.lineTo(cx + e.w, cy + e.w);
+			ctx.moveTo(cx + e.w, cy - e.w); ctx.lineTo(cx - e.w, cy + e.w);
+			ctx.lineWidth = lw * 1.3; ctx.strokeStyle = ink; ctx.stroke();
+			return;
+		}
 		if (e.shape === 'spiral') {
 			if (!doInk) return;
 			ctx.beginPath();
@@ -258,6 +277,12 @@ export function drawFace(ctx, expr, x, y, size, opts = {}) {
 		ctx.beginPath(); ctx.moveTo(0.36, 0.2); ctx.quadraticCurveTo(0.41, 0.3, 0.37, 0.32); ctx.quadraticCurveTo(0.32, 0.3, 0.36, 0.2);
 		ctx.lineWidth = lw * 0.8; ctx.strokeStyle = ink; ctx.stroke();
 	}
+	if (doInk && f.blush) {
+		ctx.lineWidth = lw * 0.6; ctx.strokeStyle = ink;
+		for (const s of [-1, 1]) for (let k = 0; k < 3; k++) {
+			ctx.beginPath(); ctx.moveTo(s * 0.25 + k * 0.025 - 0.02, 0.6); ctx.lineTo(s * 0.25 + k * 0.025 - 0.035, 0.635); ctx.stroke();
+		}
+	}
 	if (doInk && f.tear) {
 		ctx.beginPath(); ctx.moveTo(-0.2, 0.55); ctx.quadraticCurveTo(-0.17, 0.63, -0.2, 0.65); ctx.quadraticCurveTo(-0.23, 0.63, -0.2, 0.55);
 		ctx.lineWidth = lw * 0.8; ctx.strokeStyle = ink; ctx.stroke();
@@ -267,7 +292,7 @@ export function drawFace(ctx, expr, x, y, size, opts = {}) {
 
 // The sheet: 4 x 5 faces, the ink in red and the whites in green.
 const CELL = 256;
-const ROWS = 5;
+const ROWS = 6;
 let faceSheet = null;
 function sheet() {
 	if (faceSheet) return faceSheet;
@@ -298,139 +323,6 @@ function sheet() {
 	return faceSheet;
 }
 
-/* ---------- the mannequin ---------- */
-
-let kit = null;               // { scene, clips, meshes, dominant, rest }
-const waiting = [];
-async function load() {
-	const loader = new GLTFLoader();
-	const url = new URL('../../assets/shared/mannequin.glb', import.meta.url).href;
-	try { return await loader.loadAsync(url); } catch (e) {
-		// (where a host won't serve .glb: the same bytes from a module)
-		const m = await import('../../assets/shared/mannequin.glb.js');
-		const bin = Uint8Array.from(atob(m.default), (c) => c.charCodeAt(0));
-		return await loader.parseAsync(bin.buffer, '');
-	}
-}
-export const peopleReady = load().then(function (gltf) {
-	const scene = gltf.scene;
-	const meshes = [];
-	scene.traverse((o) => { if (o.isSkinnedMesh) meshes.push(o); });
-	const clips = {};
-	for (const c of gltf.animations) clips[c.name] = c;
-	// each vertex's main bone, for knowing which part of the body it's on
-	const dominant = meshes.map(function (m) {
-		const ji = m.geometry.attributes.skinIndex;
-		const jw = m.geometry.attributes.skinWeight;
-		const out = new Uint8Array(ji.count);
-		for (let i = 0; i < ji.count; i++) {
-			let best = 0, bw = -1;
-			for (let k = 0; k < 4; k++) { const w = jw.getComponent(i, k); if (w > bw) { bw = w; best = ji.getComponent(i, k); } }
-			out[i] = best;
-		}
-		return out;
-	});
-	const bones = [];
-	scene.traverse((o) => { if (o.isBone) bones.push(o); });
-	const rest = bones.map((b) => ({ b, q: b.quaternion.clone(), p: b.position.clone(), s: b.scale.clone() }));
-	kit = { scene, clips, meshes, dominant, rest, mixer: new THREE.AnimationMixer(scene) };
-	for (const fn of waiting.splice(0)) fn();
-}).catch((e) => console.warn('No mannequin: the coworkers stay invisible', e));
-
-const bone = (name) => kit.scene.getObjectByName(name) || kit.scene.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(name));
-const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
-const q1 = new THREE.Quaternion(), q2 = new THREE.Quaternion();
-// Turn a bone about an axis in model space (as if grabbed and swung).
-function swing(name, axis, angle) {
-	const b = bone(name);
-	if (!b) return;
-	b.parent.updateMatrixWorld(true);
-	b.parent.getWorldQuaternion(q1);
-	q2.setFromAxisAngle(axis, angle);
-	b.quaternion.premultiply(q1.clone().invert().multiply(q2).multiply(q1));
-	b.updateMatrixWorld(true);
-}
-
-// The poses: a clip and a moment in it, then bones swung by hand.
-const POSES = {
-	stand: { clip: 'Idle_Loop', t: 0 },
-	wave: { clip: 'Idle_Loop', t: 0, fix() {
-		swing('DEF-upper_arm.R', Z, -2.5);
-		swing('DEF-forearm.R', Z, -0.55);
-	} },
-	reach: { clip: 'Interact', t: 0.75 },
-	push: { clip: 'Push_Loop', t: 0.4 },
-	crouch: { clip: 'Crouch_Idle_Loop', t: 0 },
-	sit: { clip: 'Idle_Loop', t: 0, sit: true, fix() {
-		for (const s of ['L', 'R']) { swing(`DEF-upper_arm.${s}`, X, -0.75); swing(`DEF-forearm.${s}`, X, -0.75); }
-	} },
-	slump: { clip: 'Idle_Loop', t: 0, sit: true, fix() {
-		swing('DEF-spine.003', X, 0.12);
-		for (const s of ['L', 'R']) { swing(`DEF-upper_arm.${s}`, X, -0.3); swing(`DEF-forearm.${s}`, X, -1.0); }
-	} },
-};
-
-const baked = new Map();      // pose|head -> { parts: [geometry], seat, head: Vector3 }
-function bake(pose, head) {
-	const key = pose + '|' + head;
-	if (baked.has(key)) return baked.get(key);
-	const P = POSES[pose] || POSES.stand;
-	// back to rest, then the clip's moment
-	for (const r of kit.rest) { r.b.quaternion.copy(r.q); r.b.position.copy(r.p); r.b.scale.copy(r.s); }
-	kit.mixer.stopAllAction();
-	const clip = kit.clips[P.clip];
-	if (clip) { const a = kit.mixer.clipAction(clip); a.reset().play(); kit.mixer.setTime(Math.min(P.t, clip.duration)); a.stop(); }
-	kit.scene.updateMatrixWorld(true);
-	if (P.sit) {
-		for (const s of ['L', 'R']) { swing(`DEF-thigh.${s}`, X, -Math.PI / 2 + 0.05); swing(`DEF-shin.${s}`, X, Math.PI / 2 - 0.05); }
-	}
-	if (P.fix) P.fix();
-	if (head) { swing('DEF-neck', Y, head * 0.3); swing('DEF-head', Y, head * 0.7); }
-	kit.scene.updateMatrixWorld(true);
-
-	let seat = Infinity;
-	const parts = kit.meshes.map(function (m, mi) {
-		const g = m.geometry;
-		const sk = m.skeleton;
-		const mats = sk.bones.map((b, i) => new THREE.Matrix4().multiplyMatrices(b.matrixWorld, sk.boneInverses[i]));
-		const thighs = sk.bones.map((b) => /thigh/.test(b.name));
-		const pos = g.attributes.position, nrm = g.attributes.normal, ji = g.attributes.skinIndex, jw = g.attributes.skinWeight;
-		const outP = new Float32Array(pos.count * 3), outN = new Float32Array(pos.count * 3);
-		const v = new THREE.Vector3(), n = new THREE.Vector3(), t = new THREE.Vector3(), accP = new THREE.Vector3(), accN = new THREE.Vector3();
-		for (let i = 0; i < pos.count; i++) {
-			v.fromBufferAttribute(pos, i);
-			n.fromBufferAttribute(nrm, i);
-			accP.set(0, 0, 0); accN.set(0, 0, 0);
-			for (let k = 0; k < 4; k++) {
-				const w = jw.getComponent(i, k);
-				if (!w) continue;
-				const M = mats[ji.getComponent(i, k)];
-				accP.addScaledVector(t.copy(v).applyMatrix4(M), w);
-				accN.addScaledVector(t.copy(n).transformDirection(M), w);
-			}
-			accN.normalize();
-			outP[i * 3] = accP.x; outP[i * 3 + 1] = accP.y; outP[i * 3 + 2] = accP.z;
-			outN[i * 3] = accN.x; outN[i * 3 + 1] = accN.y; outN[i * 3 + 2] = accN.z;
-			if (P.sit && mi === 0 && thighs[kit.dominant[mi][i]]) seat = Math.min(seat, accP.y);
-		}
-		const out = new THREE.BufferGeometry();
-		out.setAttribute('position', new THREE.BufferAttribute(outP, 3));
-		out.setAttribute('normal', new THREE.BufferAttribute(outN, 3));
-		out.setAttribute('bind', pos);
-		if (g.index) out.setIndex(g.index);
-		out.computeBoundingBox();
-		out.computeBoundingSphere();
-		return out;
-	});
-	const hb = bone('DEF-head');
-	const headAt = hb.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 0.12, 0));
-	const box = new THREE.Box3();
-	for (const p of parts) box.union(p.boundingBox);
-	const out = { parts, seat: P.sit ? seat : 0, head: headAt, box };
-	baked.set(key, out);
-	return out;
-}
-
 /* ---------- the clothes, painted on ---------- */
 
 const SHADER_V = {
@@ -445,7 +337,7 @@ const SHADER_F = /* glsl */`
 	uniform vec3 uShirt, uLegs, uSkin, uHair, uShoes, uTie, uJacket, uInk;
 	uniform vec4 uStyle;      // hair style, sleeve end (|x|), tie, jacket
 	uniform vec4 uFace;       // sheet column, row, glasses, skirt
-	uniform vec4 uOdd;        // face on the back of the head, no head (a balloon instead)
+	uniform vec4 uOdd;        // face on the back of the head, no head (a balloon instead), the mouth open (talking)
 	uniform sampler2D uSheet;
 
 	vec3 personColour() {
@@ -468,7 +360,7 @@ const SHADER_F = /* glsl */`
 				vec2 uv = vec2(p.x / 0.18 + 0.5, (p.y - 1.58) / 0.22);
 				float edge = smoothstep(0.015, 0.05, p.z);
 				if (uv.x > 0.0 && uv.x < 1.0 && uv.y > 0.0 && uv.y < 1.0) {
-					vec4 s = texture2D(uSheet, (uFace.xy + uv) / vec2(4.0, 5.0));
+					vec4 s = texture2D(uSheet, (uFace.xy + uv) / vec2(4.0, 6.0));
 					c = mix(c, vec3(1.0), s.g * edge);
 					// glasses: two rings round the eyes and a bridge
 					if (uFace.z > 0.5) {
@@ -479,6 +371,11 @@ const SHADER_F = /* glsl */`
 						c = mix(c, uInk, g * edge);
 					}
 					c = mix(c, uInk, s.r * edge);
+					// talking: the mouth opening and shutting over whatever face it is
+					if (uOdd.z > 0.0) {
+						float m = length((uv - vec2(0.5, 0.285)) / vec2(0.07, 0.01 + 0.055 * uOdd.z));
+						c = mix(c, vec3(0.16, 0.03, 0.05), (1.0 - smoothstep(0.9, 1.0, m)) * edge);
+					}
 				}
 			}
 			return c;
@@ -511,7 +408,7 @@ function personMaterial(p) {
 		uJacket: { value: col(o.jacket ?? 0x2c3038) },
 		uInk: { value: col(0x141414) },
 		uStyle: { value: new THREE.Vector4(o.style ?? 1, o.sleeve ?? 0.74, o.tie != null ? 1 : 0, o.jacket != null ? 1 : 0) },
-		uFace: { value: new THREE.Vector4((p.expr || 0) % 4, 4 - Math.floor((p.expr || 0) / 4), p.glasses ? 1 : 0, o.skirt ? 1 : 0) },
+		uFace: { value: new THREE.Vector4((p.expr || 0) % 4, 5 - Math.floor((p.expr || 0) / 4), p.glasses ? 1 : 0, o.skirt ? 1 : 0) },
 		uOdd: { value: new THREE.Vector4(p.backwards ? 1 : 0, p.balloon != null ? 1 : 0, 0, 0) },
 		uSheet: { value: sheet() },
 	};
@@ -525,8 +422,323 @@ function personMaterial(p) {
 			.replace('#include <common>', '#include <common>' + SHADER_F)
 			.replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( diffuse * personColour(), opacity );');
 	};
-	m.customProgramCacheKey = () => 'coworker';
+	m.customProgramCacheKey = () => 'guest';
+	m.userData.u = u;
 	return m;
+}
+
+/* ---------- the mannequin ---------- */
+
+let kit = null;               // { scene, clips, hipsY }
+const waiting = [];
+async function load() {
+	const loader = new GLTFLoader();
+	const url = new URL('../../assets/shared/mannequin.glb', import.meta.url).href;
+	try { return await loader.loadAsync(url); } catch (e) {
+		// (where a host won't serve .glb: the same bytes from a module)
+		const m = await import('../../assets/shared/mannequin.glb.js');
+		const bin = Uint8Array.from(atob(m.default), (c) => c.charCodeAt(0));
+		return await loader.parseAsync(bin.buffer, '');
+	}
+}
+export const peopleReady = load().then(function (gltf) {
+	const scene = gltf.scene;
+	const clips = {};
+	for (const c of gltf.animations) clips[c.name] = c;
+	// (the clothes are painted by where each vertex sits at rest: its bind position)
+	scene.traverse((o) => { if (o.isSkinnedMesh) o.geometry.setAttribute('bind', o.geometry.attributes.position); });
+	kit = { scene, clips, hipsY: 0.92 };
+	// how high the hips are, standing: for sitting people down
+	const r = rig();
+	const m = new THREE.AnimationMixer(r.root);
+	m.clipAction(clips.Idle_Loop).play();
+	m.setTime(0);
+	r.root.updateMatrixWorld(true);
+	kit.hipsY = r.bone('DEF-hips').getWorldPosition(new THREE.Vector3()).y;
+	for (const fn of waiting.splice(0)) fn();
+}).catch((e) => console.warn('No mannequin: the guests stay invisible', e));
+
+// A mannequin of one's own: its own bones, sharing the shapes.
+function rig() {
+	const root = kit.scene.clone(true);
+	const bones = new Map();
+	root.traverse((o) => { if (o.isBone) bones.set(o.name, o); });
+	const meshes = [];
+	root.traverse((o) => { if (o.isSkinnedMesh) meshes.push(o); });
+	for (const m of meshes) {
+		const sk = m.skeleton;
+		m.bind(new THREE.Skeleton(sk.bones.map((b) => bones.get(b.name)), sk.boneInverses), m.bindMatrix);
+		m.frustumCulled = false;
+	}
+	const rest = [...bones.values()].map((b) => [b, b.quaternion.clone(), b.position.clone()]);
+	const bone = (n) => bones.get(n) || bones.get(THREE.PropertyBinding.sanitizeNodeName(n));
+	return { root, meshes, bone, rest };
+}
+
+// Turn a bone about an axis in the mannequin's own space (x across, y up,
+// z forward), as if grabbed and swung, keeping what its parents already did.
+const qa = new THREE.Quaternion(), qb = new THREE.Quaternion(), qc = new THREE.Quaternion();
+const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
+function swing(r, b, axis, angle) {
+	if (!b || !angle) return;
+	qa.identity();
+	for (let o = b.parent; o && o !== r.root; o = o.parent) qa.premultiply(o.quaternion);
+	qb.setFromAxisAngle(axis, angle);
+	b.quaternion.premultiply(qc.copy(qa).invert().multiply(qb).multiply(qa));
+}
+
+/* ---------- what people do ---------- */
+
+/*
+ * Every act is a function of time alone, so a scene plays out exactly the
+ * same each time it loops. a: { r (the rig), b (its bones), fig (the body's
+ * group, for bouncing and swaying), t (seconds, offset per person), T (the
+ * scene's own seconds, for things on the beat) }. A swing's axis is in the
+ * mannequin's space: about X with a negative angle brings an arm forward and
+ * up; about Z raises an arm out to the side (negative for the right arm).
+ */
+const S = Math.sin;
+const up = (x) => Math.max(0, x);
+const window01 = (t, period, a, b) => { const c = ((t % period) + period) % period / period; return c < a || c > b ? 0 : Math.sin((c - a) / (b - a) * Math.PI); };
+const arms = (a, ux, fx, side = 'both') => {
+	if (side !== 'L') { swing(a.r, a.b.uaR, X, ux); swing(a.r, a.b.faR, X, fx); }
+	if (side !== 'R') { swing(a.r, a.b.uaL, X, ux); swing(a.r, a.b.faL, X, fx); }
+};
+// talking with the right hand
+function gesture(a, t, k = 1) {
+	swing(a.r, a.b.uaR, X, -k * (0.35 + 0.22 * S(t * 2.3)));
+	swing(a.r, a.b.faR, X, -k * (0.9 + 0.45 * S(t * 3.1 + 1)));
+	swing(a.r, a.b.faR, Y, k * 0.3 * S(t * 1.7));
+	swing(a.r, a.b.head, X, 0.06 * S(t * 4.2));
+}
+const ACTS = {
+	idle(a, t) { swing(a.r, a.b.head, Y, 0.12 * S(t * 0.37)); },
+	talk(a, t) {
+		if (S(t * 0.9) > -0.2) gesture(a, t, 0.9);
+		else swing(a.r, a.b.head, X, 0.1 * up(S(t * 2.6)));
+	},
+	listen(a, t) {
+		arms(a, -0.25, -1.1);
+		swing(a.r, a.b.faR, Y, 0.35); swing(a.r, a.b.faL, Y, -0.35);
+		swing(a.r, a.b.head, X, 0.1 * up(S(t * 2.2)) * up(S(t * 0.5)));
+	},
+	drink(a, t) {
+		const sip = window01(t, 5.2, 0.62, 0.86);
+		swing(a.r, a.b.uaR, X, -0.2 - 0.75 * sip);
+		swing(a.r, a.b.faR, X, -1.35 - 0.55 * sip);
+		swing(a.r, a.b.faR, Y, 0.25);
+		swing(a.r, a.b.head, X, -0.25 * sip);
+		if (sip < 0.1 && S(t * 0.8) > 0) gesture(a, t, 0.4);
+	},
+	eat(a, t) {
+		arms(a, -0.25, -1.45, 'L');
+		swing(a.r, a.b.faL, Y, -0.35);
+		const bite = window01(t, 3.4, 0.5, 0.8);
+		swing(a.r, a.b.uaR, X, -0.3 - 0.5 * bite);
+		swing(a.r, a.b.faR, X, -1.0 - 0.9 * bite);
+		swing(a.r, a.b.faR, Y, 0.3);
+		swing(a.r, a.b.head, X, 0.15 - 0.15 * bite);
+	},
+	laugh(a, t) {
+		arms(a, -0.2, -1.2);
+		swing(a.r, a.b.faR, Y, 0.4); swing(a.r, a.b.faL, Y, -0.4);
+		swing(a.r, a.b.spine, X, -0.12 - 0.05 * S(t * 15));
+		swing(a.r, a.b.head, X, -0.22 - 0.08 * S(t * 15));
+	},
+	clap(a, t) {
+		arms(a, -0.55, -1.0);
+		const c = 0.6 + 0.2 * S(t * 22);
+		swing(a.r, a.b.faR, Y, c); swing(a.r, a.b.faL, Y, -c);
+		swing(a.r, a.b.head, X, -0.05);
+	},
+	shake(a, t) {
+		swing(a.r, a.b.uaR, X, -0.75 + 0.12 * S(t * 13));
+		swing(a.r, a.b.faR, X, -0.3);
+		swing(a.r, a.b.faR, Y, 0.15);
+	},
+	wave(a, t) {
+		swing(a.r, a.b.uaR, Z, -2.45);
+		swing(a.r, a.b.faR, Z, -0.4 + 0.45 * S(t * 9));
+	},
+	point(a, t) {
+		swing(a.r, a.b.uaR, X, -1.45 + 0.08 * S(t * 2.2));
+		arms(a, -0.3, -1.3, 'L');
+		swing(a.r, a.b.faL, Y, -0.3);
+	},
+	speech(a, t) {
+		gesture(a, t, 1.1);
+		swing(a.r, a.b.uaL, X, -0.3 - 0.2 * up(S(t * 1.3)));
+		swing(a.r, a.b.faL, X, -0.9 - 0.4 * S(t * 2.4));
+	},
+	carry(a) { arms(a, -0.35, -1.3); swing(a.r, a.b.faR, Y, 0.25); swing(a.r, a.b.faL, Y, -0.25); },
+	hang(a, t) {
+		swing(a.r, a.b.uaR, Z, -2.6 - 0.12 * S(t * 2.1)); swing(a.r, a.b.uaL, Z, 2.6 + 0.12 * S(t * 1.7));
+		swing(a.r, a.b.faR, Z, -0.4); swing(a.r, a.b.faL, Z, 0.4);
+		swing(a.r, a.b.head, X, -0.35);
+	},
+	dance(a, t, T) {
+		a.fig.position.y += 0.06 * Math.abs(S(T * Math.PI * 2));
+		swing(a.r, a.b.spine, Y, 0.3 * S(T * Math.PI + a.k));
+		swing(a.r, a.b.uaR, Z, -(1.0 + 1.3 * up(S(t * Math.PI))));
+		swing(a.r, a.b.uaL, Z, 1.0 + 1.3 * up(-S(t * Math.PI)));
+		swing(a.r, a.b.faR, Z, -0.6); swing(a.r, a.b.faL, Z, 0.6);
+		swing(a.r, a.b.head, X, 0.15 * S(T * Math.PI * 4));
+		swing(a.r, a.b.thighL, X, -0.35 * up(S(T * Math.PI * 2)));
+		swing(a.r, a.b.thighR, X, -0.35 * up(-S(T * Math.PI * 2)));
+	},
+	sway(a, t) {
+		a.fig.rotation.z += 0.12 * S(t * 1.3);
+		swing(a.r, a.b.head, X, 0.3 + 0.12 * S(t * 1.1));
+		swing(a.r, a.b.head, Z, 0.25 * S(t * 0.9));
+		ACTS.drink(a, t * 0.7);
+	},
+	sleep(a) {
+		swing(a.r, a.b.spine, X, 0.3);
+		swing(a.r, a.b.head, X, 0.75);
+		arms(a, -0.1, -0.5);
+	},
+	panic(a, t) {
+		a.fig.position.y += 0.05 * Math.abs(S(t * 8));
+		a.fig.rotation.y += 0.6 * S(t * 1.7);
+		swing(a.r, a.b.uaR, Z, -(2.4 + 0.45 * S(t * 11)));
+		swing(a.r, a.b.uaL, Z, 2.4 + 0.45 * S(t * 9.3));
+		swing(a.r, a.b.head, Y, 0.4 * S(t * 3));
+	},
+	spray(a, t) {
+		arms(a, -1.05, -0.2);
+		swing(a.r, a.b.faR, Y, 0.3); swing(a.r, a.b.faL, Y, -0.3);
+		swing(a.r, a.b.spine, Y, 0.25 * S(t * 2.3));
+	},
+	sweep(a, t) {
+		arms(a, -0.55, -0.4);
+		swing(a.r, a.b.faR, Y, 0.35); swing(a.r, a.b.faL, Y, -0.35);
+		swing(a.r, a.b.spine, Y, 0.35 * S(t * 2.4));
+		swing(a.r, a.b.spine, X, 0.2);
+	},
+	reach() {},
+	dead(a) {
+		swing(a.r, a.b.uaR, Z, -1.3); swing(a.r, a.b.uaL, Z, 1.2);
+		swing(a.r, a.b.faR, Z, -0.5);
+		swing(a.r, a.b.thighL, Z, 0.25); swing(a.r, a.b.thighR, Z, -0.2);
+		swing(a.r, a.b.head, Y, 0.5);
+	},
+	'dead-wave'(a, t) {
+		ACTS.dead(a);
+		swing(a.r, a.b.uaR, Z, 1.3);
+		swing(a.r, a.b.uaR, X, -1.5);
+		swing(a.r, a.b.faR, Z, 0.5 * S(t * 7));
+	},
+};
+// how each act looks, unless something weird has happened to the face
+const ACT_FACE = { laugh: EXPR.grin, dance: EXPR.sing, wave: EXPR.grin, sway: EXPR.drunk, sleep: EXPR.sleepy, panic: EXPR.yell, dead: EXPR.dead, 'dead-wave': EXPR.dead, clap: EXPR.smile, spray: EXPR.yell };
+const LIE = new Set(['dead', 'dead-wave', 'lie']);
+// what they hold, and in which hand
+const HOLD = { drink: 'glass', sway: 'glass', eat: 'plate', carry: 'tray', point: 'clipboard', spray: 'extinguisher', sweep: 'broom' };
+
+/* ---------- things in hand ---------- */
+
+const holdMat = (c, o) => new THREE.MeshLambertMaterial(Object.assign({ color: c }, o));
+const HELD = {
+	glass() {
+		const g = new THREE.Group();
+		const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.028, 0.11, 10), holdMat(0xd8eef0, { transparent: true, opacity: 0.55 }));
+		const drink = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.026, 0.07, 10), holdMat(0xc8304a));
+		drink.position.y = -0.015;
+		g.add(glass, drink);
+		g.userData.at = [0, 0.03, 0.03];
+		return g;
+	},
+	plate() {
+		const g = new THREE.Group();
+		g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.09, 0.012, 16), holdMat(0xfdfdfb)));
+		for (let i = 0; i < 4; i++) {
+			const m = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), holdMat([0xd8a050, 0x7aa04a, 0xc0503a, 0xe8d8b0][i]));
+			m.scale.y = 0.6; m.position.set(Math.cos(i * 1.6) * 0.05, 0.02, Math.sin(i * 1.6) * 0.05);
+			g.add(m);
+		}
+		g.userData.at = [0.04, 0.02, 0.06];
+		return g;
+	},
+	tray() {
+		const g = new THREE.Group();
+		g.add(new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.02, 0.32), holdMat(0xc8c8cc)));
+		for (let i = 0; i < 8; i++) {
+			const m = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.09, 8), holdMat(0xd8a050));
+			m.rotation.z = Math.PI / 2; m.position.set(0, 0.03, -0.12 + i * 0.034);
+			g.add(m);
+		}
+		g.userData.both = true;
+		g.userData.at = [0, 0.04, 0.08];
+		return g;
+	},
+	clipboard() {
+		const g = new THREE.Group();
+		const b = new THREE.Mesh(new THREE.BoxGeometry(0.23, 0.31, 0.015), holdMat(0x8a5a2e));
+		const paper = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.26), holdMat(0xffffff));
+		paper.position.z = 0.009;
+		g.add(b, paper);
+		g.rotation.x = -1.0;
+		g.userData.left = true;
+		g.userData.at = [0, 0.05, 0.08];
+		return g;
+	},
+	extinguisher() {
+		const g = new THREE.Group();
+		const can = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.4, 12), holdMat(0xc8261e));
+		can.rotation.x = Math.PI / 2 * 0.8;
+		const spray = new THREE.Mesh(new THREE.ConeGeometry(0.22, 1.1, 12, 1, true), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide }));
+		spray.rotation.x = -Math.PI / 2;
+		spray.position.z = 0.75;
+		spray.name = 'spray';
+		g.add(can, spray);
+		g.userData.both = true;
+		g.userData.at = [0, 0, 0.12];
+		return g;
+	},
+	broom() {
+		const g = new THREE.Group();
+		const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 1.3, 6), holdMat(0x8a6a3a));
+		const head = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.08, 0.08), holdMat(0x3a3a3a));
+		head.position.y = -0.65;
+		g.add(pole, head);
+		g.rotation.x = 0.5;
+		g.userData.both = true;
+		g.userData.at = [0, -0.3, 0.15];
+		return g;
+	},
+};
+
+// A flame (and its glow), flickering on its own clock. size: metres tall.
+const flameTex = (() => {
+	const c = document.createElement('canvas');
+	c.width = 64; c.height = 128;
+	const x = c.getContext('2d');
+	const g = x.createRadialGradient(32, 92, 2, 32, 80, 60);
+	g.addColorStop(0, 'rgba(255,250,200,1)');
+	g.addColorStop(0.25, 'rgba(255,200,60,0.95)');
+	g.addColorStop(0.6, 'rgba(255,90,20,0.6)');
+	g.addColorStop(1, 'rgba(200,30,0,0)');
+	x.fillStyle = g;
+	x.beginPath();
+	x.moveTo(32, 2); x.quadraticCurveTo(62, 70, 54, 104); x.quadraticCurveTo(32, 132, 10, 104); x.quadraticCurveTo(2, 70, 32, 2);
+	x.fill();
+	return new THREE.CanvasTexture(c);
+})();
+export function flame(size = 0.6, seed = 1) {
+	const g = new THREE.Group();
+	for (let i = 0; i < 3; i++) {
+		const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: flameTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
+		const k = [1, 0.7, 0.55][i];
+		sp.position.set((i - 1) * size * 0.25, size * 0.5 * k, (i - 1) * 0.05);
+		sp.userData.noOcclude = true;
+		sp.onBeforeRender = function () {
+			const t = performance.now() / 1000 + seed * 3.1 + i * 1.7;
+			const f = 1 + 0.18 * Math.sin(t * 13) + 0.12 * Math.sin(t * 29);
+			sp.scale.set(size * 0.55 * k * (2 - f), size * k * f, 1);
+		};
+		g.add(sp);
+	}
+	return g;
 }
 
 /* ---------- a person ---------- */
@@ -544,29 +756,55 @@ const shadowMat = (() => {
 })();
 const hitMat = new THREE.MeshBasicMaterial({ visible: false });
 const unitBox = new THREE.BoxGeometry(1, 1, 1);
+const v1 = new THREE.Vector3(), m4 = new THREE.Matrix4();
+const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+const posture = (act, p) => (LIE.has(act) || p.pose === 'lie' ? 'lie' : act.startsWith('sit-') || p.pose === 'sit' ? 'sit' : 'stand');
 
-const SIZES = {   // the hit box before the body loads: [w, h, d, y, z]
-	stand: [0.55, 1, 0.35, 0.5, 0], wave: [0.6, 1.05, 0.35, 0.52, 0], reach: [0.55, 1, 0.55, 0.5, 0.1], push: [0.55, 0.95, 0.7, 0.48, 0.15],
-	crouch: [0.6, 0.6, 0.6, 0.3, 0], sit: [0.55, 0.75, 0.75, 0.37, 0.12], slump: [0.55, 0.72, 0.75, 0.36, 0.12],
-};
+// Where someone on a track is at time T: { x, z, y, yaw, act, walking, fire }.
+export function trackAt(track, T) {
+	let k = track[0];
+	if (T <= k.t) return Object.assign({}, k, { walking: false });
+	for (let i = 0; i < track.length - 1; i++) {
+		const a = track[i], b = track[i + 1];
+		if (T >= b.t) continue;
+		const moving = Math.hypot(b.x - a.x, b.z - a.z) > 0.01;
+		if (!moving) return Object.assign({}, a, { walking: false });
+		const f = (T - a.t) / (b.t - a.t);
+		return Object.assign({}, b, {
+			x: a.x + (b.x - a.x) * f, z: a.z + (b.z - a.z) * f, y: a.y + (b.y - a.y) * f,
+			yaw: Math.atan2(b.x - a.x, b.z - a.z), act: 'walk', walking: true,
+		});
+	}
+	k = track[track.length - 1];
+	return Object.assign({}, k, { walking: false });
+}
 
+/*
+ * A guest: a Group with userData.actor = { tick(T, dt, talking), head }.
+ * Call tick every frame with the scene's time: it plays their act (or, for
+ * someone on a track, walks them through it), and flaps their mouth while
+ * `talking`. head is where their head is, in the world.
+ * props: { seed, pose ('stand', 'sit', 'lie'), act, expr, exprLock, head,
+ *   h, glasses, outfit, backwards, balloon, fire, track }
+ */
 export function person(p) {
 	const g = new THREE.Group();
-	const pose = POSES[p.pose] ? p.pose : 'stand';
 	const h = p.h || 1.75;
 	const s = h / TALL;
-	const sitting = !!POSES[pose].sit;
+	const first = p.track ? p.track[0] : null;
+	const lie = posture(first ? first.act : p.act || 'idle', p) === 'lie';
+	const sit = !lie && posture(first ? first.act : p.act || 'idle', p) === 'sit';
 	// the hit boxes, there from the start: the body, and the head (for rings round faces)
-	const [w, bh, d, y, z] = SIZES[pose];
 	const body = new THREE.Mesh(unitBox, hitMat);
-	body.scale.set(w, sitting ? bh * 1.75 : bh * h, d);
-	body.position.set(0, sitting ? SEAT * 0.5 + 0.35 : y * h, z);
+	if (lie) { body.scale.set(0.6, 0.35, h); body.position.set(0, 0.17, -h / 2); }
+	else if (sit) { body.scale.set(0.55, h * 0.75, 0.75); body.position.set(0, h * 0.38, 0.12); }
+	else { body.scale.set(0.55, h, 0.4); body.position.set(0, h / 2, 0); }
 	body.userData.noOcclude = true;
 	g.add(body);
 	const headBox = new THREE.Mesh(unitBox, hitMat);
 	headBox.name = 'headBox';
-	headBox.scale.setScalar(0.3);
-	headBox.position.set(0, sitting ? 1.3 : h - 0.12, 0);
+	headBox.scale.setScalar(0.32);
+	headBox.position.set(0, lie ? 0.15 : sit ? SEAT + 0.75 * s : h - 0.12, lie ? -h + 0.12 : 0);
 	headBox.userData.noOcclude = true;
 	g.add(headBox);
 	const shadow = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.8), shadowMat);
@@ -574,33 +812,110 @@ export function person(p) {
 	shadow.position.y = 0.012;
 	shadow.userData.noOcclude = true;
 	g.add(shadow);
+	if (p.fire) {
+		const f = flame(0.7, p.seed || 1);
+		f.position.set(0, (sit ? 0.8 : 1.15) * s, -0.15);
+		g.add(f);
+	}
+
+	const actor = { tick() {}, head: new THREE.Vector3(), ready: false };
+	g.userData.actor = actor;
 
 	const dress = function () {
-		const head = Math.round((p.head || 0) / (Math.PI / 12)) * (Math.PI / 12);
-		const b = bake(pose, head);
+		const r = rig();
 		const mat = personMaterial(p);
+		const u = mat.userData.u;
+		for (const m of r.meshes) m.material = mat;
 		const fig = new THREE.Group();
-		fig.scale.setScalar(s);
-		if (sitting) fig.position.y = SEAT - b.seat * s + 0.01;
-		for (const part of b.parts) fig.add(new THREE.Mesh(part, mat));
+		const inner = new THREE.Group();
+		inner.scale.setScalar(s);
+		inner.add(r.root);
+		fig.add(inner);
+		g.add(fig);
+		const b = {
+			uaR: r.bone('DEF-upper_arm.R'), faR: r.bone('DEF-forearm.R'), uaL: r.bone('DEF-upper_arm.L'), faL: r.bone('DEF-forearm.L'),
+			handR: r.bone('DEF-hand.R'), handL: r.bone('DEF-hand.L'),
+			head: r.bone('DEF-head'), neck: r.bone('DEF-neck'), spine: r.bone('DEF-spine.003'),
+			thighL: r.bone('DEF-thigh.L'), thighR: r.bone('DEF-thigh.R'), shinL: r.bone('DEF-shin.L'), shinR: r.bone('DEF-shin.R'),
+		};
 		if (p.balloon != null) {
-			// a balloon where the head was, on its knotted neck
+			// a balloon where the head was
 			const bm = new THREE.MeshLambertMaterial({ color: p.balloon, emissive: p.balloon, emissiveIntensity: 0.25 });
 			const ball = new THREE.Mesh(new THREE.SphereGeometry(0.15, 20, 14), bm);
 			ball.scale.set(1, 1.18, 1);
-			ball.position.copy(b.head).add(new THREE.Vector3(0, 0.04, 0));
-			const knot = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.05, 8), bm);
-			knot.position.copy(b.head).add(new THREE.Vector3(0, -0.15, 0));
-			fig.add(ball, knot);
+			ball.position.set(0, 0.14, 0);
+			b.head.add(ball);
 		}
-		g.add(fig);
-		headBox.position.copy(b.head).multiplyScalar(s).add(fig.position);
-		const bb = b.box.clone();
-		bb.min.multiplyScalar(s); bb.max.multiplyScalar(s);
-		bb.translate(fig.position);
-		bb.getSize(body.scale);
-		bb.getCenter(body.position);
-		g.updateMatrixWorld(true);
+		const mixer = new THREE.AnimationMixer(r.root);
+		const clips = {};
+		for (const name of ['Idle_Loop', 'Walk_Loop', 'Interact']) {
+			const a = mixer.clipAction(kit.clips[name]);
+			a.play();
+			clips[name] = a;
+		}
+		const held = {};
+		const a = { r, b, fig, t: 0, T: 0, k: ((p.seed || 0) % 97) / 97 * 6.28 };
+		const phi = ((p.seed || 0) % 1000) / 1000 * 9;
+
+		actor.ready = true;
+		actor.tick = function (T, dt, talking) {
+			let act = p.act || 'idle';
+			let yawOff = 0;
+			if (p.track) {
+				const st = trackAt(p.track, T);
+				g.position.set(st.x, st.y || 0, st.z);
+				g.rotation.y = st.yaw;
+				act = st.act;
+			}
+			if (p.cue && T >= p.cue.from && T <= p.cue.to) act = p.cue.act;   // (everyone clapping at once)
+			const pos = posture(act, p);
+			const base = act.replace('sit-', '');
+			const t = T + phi;
+			a.t = t; a.T = T;
+			// the clip under it all, from rest
+			for (const [bone, q, ps] of r.rest) { bone.quaternion.copy(q); bone.position.copy(ps); }
+			const clip = act === 'walk' ? 'Walk_Loop' : base === 'reach' ? 'Interact' : 'Idle_Loop';
+			for (const k in clips) clips[k].setEffectiveWeight(k === clip ? 1 : 0);
+			mixer.setTime(clip === 'Interact' ? 0.75 + 0.35 * S(t * 1.3) : t);
+			fig.position.set(0, 0, 0);
+			fig.rotation.set(0, 0, 0);
+			// sitting, lying
+			if (pos === 'sit') {
+				for (const [th, sh] of [[b.thighL, b.shinL], [b.thighR, b.shinR]]) { swing(r, th, X, -Math.PI / 2 + 0.05); swing(r, sh, X, Math.PI / 2 - 0.05); }
+				fig.position.y = SEAT + 0.08 * s - s * kit.hipsY;
+				if (base === 'idle' || base === 'sit') arms(a, -0.3, -1.0);
+			} else if (pos === 'lie') {
+				fig.rotation.x = -Math.PI / 2;
+				fig.position.y = 0.11 * s;
+			}
+			if (act !== 'walk' && ACTS[base]) ACTS[base](a, t, T);
+			if (talking && (base === 'idle' || base === 'point' || base === 'sway')) gesture(a, t, 0.8);
+			// the head turned (for good or ill)
+			if (p.head) { swing(r, b.neck, Y, p.head * 0.3); swing(r, b.head, Y, p.head * 0.7); }
+			// the face: the act's, unless it's been changed; the mouth while talking
+			const expr = p.exprLock ? p.expr : ACT_FACE[base] ?? (p.track && p.expr !== undefined ? p.expr : p.expr || 0);
+			u.uFace.value.x = expr % 4;
+			u.uFace.value.y = 5 - Math.floor(expr / 4);
+			const chatter = base === 'talk' && !p.track && S(t * 0.9) > -0.2;
+			u.uOdd.value.z = talking || chatter ? 0.25 + 0.75 * Math.abs(S(t * 17 + 2 * S(t * 5))) : base === 'dance' || base === 'panic' || base === 'laugh' ? 0.6 : 0;
+			// the bones in place, then whatever's in hand
+			r.root.updateMatrixWorld(true);
+			const want = HOLD[base];
+			for (const k in held) held[k].visible = k === want;
+			if (want) {
+				if (!held[want]) { held[want] = HELD[want](); r.root.add(held[want]); }
+				const item = held[want];
+				m4.copy(r.root.matrixWorld).invert();
+				if (item.userData.both) v1.setFromMatrixPosition(b.handR.matrixWorld).add(new THREE.Vector3().setFromMatrixPosition(b.handL.matrixWorld)).multiplyScalar(0.5);
+				else v1.setFromMatrixPosition((item.userData.left ? b.handL : b.handR).matrixWorld);
+				v1.applyMatrix4(m4);
+				const [ox, oy, oz] = item.userData.at;
+				item.position.set(v1.x + ox, v1.y + oy, v1.z + oz);
+				const spray = item.getObjectByName('spray');
+				if (spray) spray.scale.setScalar(0.8 + 0.25 * S(t * 31));
+			}
+			actor.head.setFromMatrixPosition(b.head.matrixWorld);
+		};
 	};
 	if (kit) dress(); else waiting.push(dress);
 	return g;
@@ -625,6 +940,7 @@ export function makePerson(r, opts = {}) {
 	return {
 		seed: Math.floor(r() * 1e6),
 		pose: opts.pose || 'stand',
+		act: opts.act || 'idle',
 		expr: opts.expr ?? pick(opts.faces || CALM),
 		head: 0,
 		h: 1.62 + r() * 0.24,

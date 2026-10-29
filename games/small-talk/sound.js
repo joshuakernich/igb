@@ -3,7 +3,10 @@
  * through speech synthesis.
  *
  *   const sound = createSound();
- *   sound.hum(level);           // the party: a murmuring crowd and muzak; 0..1 quieter and more out of tune
+ *   sound.hum(level);           // the party: a murmuring crowd; 0..1 quieter
+ *   sound.party(chatter, music, wonky);   // the party at one point in the night, 0..1 each
+ *   sound.radio(buffer, [offset, seconds]);   // the radio, looping that bit of buffer (or off)
+ *   sound.alarm(on);            // the fire alarm
  *   sound.blink(seconds);       // the long blink between rounds
  *   sound.thud(strength);  sound.rumble(seconds);
  *   sound.chime();  sound.buzz() (a record scratch);  sound.crackle();  sound.step(gain);
@@ -95,44 +98,109 @@ export function createSound() {
 	}
 	babble.start();
 
-	// The muzak: a soft electric piano going round four chords, a bass
-	// under it. It goes flat as the night goes wrong.
+	// The radio on the side table: whatever's on for this part of the night,
+	// tinny (no bass, no top), a little distorted, hissing, and wobbling the
+	// way old tape does; more so later on.
 	const music = ctx.createGain();
 	music.gain.value = 0.55;
 	music.connect(room);
-	const CHORDS = [[60, 64, 67, 71], [57, 60, 64, 67], [62, 65, 69, 72], [55, 59, 62, 65]];   // Cmaj7 Am7 Dm7 G7
-	const BEAT = 0.3;
+	const lowCut = ctx.createBiquadFilter();
+	lowCut.type = 'highpass';
+	lowCut.frequency.value = 420;
+	const highCut = ctx.createBiquadFilter();
+	highCut.type = 'lowpass';
+	highCut.frequency.value = 3000;
+	const honk = ctx.createBiquadFilter();
+	honk.type = 'peaking';
+	honk.frequency.value = 1400;
+	honk.gain.value = 7;
+	const crunch = ctx.createWaveShaper();
+	crunch.curve = Float32Array.from({ length: 1024 }, (_, i) => Math.tanh(((i / 1023) * 2 - 1) * 2.2) / Math.tanh(2.2));
+	lowCut.connect(highCut).connect(honk).connect(crunch).connect(music);
+	const hiss = noise(3);
+	hiss.loop = true;
+	const hissBand = ctx.createBiquadFilter();
+	hissBand.type = 'bandpass';
+	hissBand.frequency.value = 3500;
+	const hissGain = ctx.createGain();
+	hissGain.gain.value = 0.012;
+	hiss.connect(hissBand).connect(hissGain).connect(music);
+	hiss.start();
+	// wow and flutter
+	const wow = ctx.createOscillator();
+	wow.frequency.value = 0.55;
+	const wowDepth = ctx.createGain();
+	wowDepth.gain.value = 0.004;
+	wow.connect(wowDepth);
+	wow.start();
 	let detune = 0;
-	let nextNote = ctx.currentTime + 0.2;
-	let step = 0;
-	const hz = (m) => 440 * Math.pow(2, (m - 69) / 12) * (1 - detune);
-	function note(m, at, len, gain, type = 'triangle') {
-		const o = ctx.createOscillator();
-		o.type = type;
-		o.frequency.value = hz(m);
-		const g = envelope(gain, 0.01, len, at);
-		o.connect(g).connect(music);
-		o.start(at);
-		o.stop(at + len + 0.05);
-	}
-	const scheduler = setInterval(function () {
-		if (ctx.state !== 'running') { nextNote = ctx.currentTime + 0.2; return; }
-		while (nextNote < ctx.currentTime + 0.4) {
-			const chord = CHORDS[Math.floor(step / 8) % 4];
-			const i = step % 8;
-			note(chord[[0, 2, 1, 3, 2, 1, 3, 2][i]] + 12, nextNote, 0.5, 0.06);
-			if (i === 0) note(chord[0] - 24, nextNote, 1.6, 0.12, 'sine');
-			if (i === 4) note(chord[0] - 17, nextNote, 0.9, 0.08, 'sine');
-			nextNote += BEAT * (1 + detune * 4);
-			step++;
+	let track = null;
+	// Play [offset, seconds] of `buffer` on the radio, round and round (null: off).
+	sound.radio = function (buffer, part) {
+		const t = ctx.currentTime;
+		if (track) {
+			const old = track;
+			old.fade.gain.setTargetAtTime(0, t, 0.08);
+			setTimeout(() => { try { old.src.stop(); } catch (e) { /* (already stopped) */ } }, 600);
+			track = null;
 		}
-	}, 100);
+		if (!buffer || !part) return;
+		const src = ctx.createBufferSource();
+		src.buffer = buffer;
+		src.loop = true;
+		src.loopStart = part[0];
+		src.loopEnd = part[0] + part[1];
+		src.playbackRate.value = 1 - detune;
+		wowDepth.connect(src.playbackRate);
+		const fade = ctx.createGain();
+		fade.gain.value = 0;
+		fade.gain.setTargetAtTime(1, t, 0.1);
+		src.connect(fade).connect(lowCut);
+		src.start(t, part[0]);
+		track = { src, fade };
+	};
 
 	sound.hum = function (level) {
 		const t = ctx.currentTime;
 		room.gain.setTargetAtTime(0.34 - 0.16 * level, t, 0.6);
 		chatter.gain.setTargetAtTime(0.5 * (1 - 0.8 * level), t, 0.8);
-		detune = 0.035 * level;
+	};
+
+	// The party at one point in the night: how much chatter, how loud the
+	// music, how far out of tune (0..1 each).
+	let musicLevel = 0.55;
+	sound.party = function (talk, tune, wonky) {
+		const t = ctx.currentTime;
+		room.gain.setTargetAtTime(0.34, t, 0.6);
+		chatter.gain.setTargetAtTime(0.5 * talk, t, 0.8);
+		musicLevel = 0.9 * tune;
+		music.gain.setTargetAtTime(musicLevel, t, 0.8);
+		detune = 0.03 * wonky;
+		wowDepth.gain.setTargetAtTime(0.004 + 0.02 * wonky, t, 0.5);
+		if (track) track.src.playbackRate.setTargetAtTime(1 - detune, t, 0.5);
+	};
+
+	// The fire alarm: a shrill, pulsing beep, on or off.
+	const alarmGain = ctx.createGain();
+	alarmGain.gain.value = 0;
+	alarmGain.connect(master);
+	const siren = ctx.createOscillator();
+	siren.type = 'square';
+	siren.frequency.value = 2900;
+	const sirenBand = ctx.createBiquadFilter();
+	sirenBand.type = 'bandpass';
+	sirenBand.frequency.value = 2900;
+	const pulse = ctx.createGain();
+	pulse.gain.value = 0;
+	const pulser = ctx.createOscillator();
+	pulser.type = 'square';
+	pulser.frequency.value = 2.2;
+	pulser.connect(pulse.gain);
+	siren.connect(sirenBand).connect(pulse).connect(alarmGain);
+	siren.start();
+	pulser.start();
+	sound.alarm = function (on) {
+		alarmGain.gain.setTargetAtTime(on ? 0.035 : 0, ctx.currentTime, 0.1);
 	};
 
 	// The room drops out for a moment (a wrong tap, the lights dying).
@@ -322,7 +390,6 @@ export function createSound() {
 	};
 
 	sound.close = function () {
-		clearInterval(scheduler);
 		if (window.speechSynthesis) speechSynthesis.cancel();
 		ctx.close().catch(() => {});
 	};

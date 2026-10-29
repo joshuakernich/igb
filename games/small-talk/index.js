@@ -41,6 +41,7 @@ import { BUILDERS, buildShell, panelMats, CEIL, wallPoint, wallYaw } from './mod
 import { generate, mutate, R } from './layout.js';
 import { createSound } from './sound.js';
 import { drawFace, EXPR, makePerson } from './people.js';
+import { CAST, PHASES, VOICES, RADIO } from './vignettes.js';
 
 IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 
@@ -53,11 +54,14 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 	const GAME_SECONDS = 600;     // the show's clock: rounds until it runs out
 	// Each round: seconds to look, differences to find, seconds of tape to find them.
 	// Harder each round; past the fourth it keeps going, a little harder still.
+	// (the look is the round's scene, played once through: vignettes.js)
 	function levelCfg(L) {
-		return { look: Math.max(7, 15 - 2 * L), diffs: Math.min(9, 5 + L), tap: Math.max(30, 40 - 2 * Math.floor(L / 2)) };
+		return { diffs: Math.min(9, 5 + L), tap: Math.max(25, 34 - 2 * L) };
 	}
-	const READY = 2.6;            // seconds of ROUND n before the look
-	const DESCENT = 1.9;          // seconds of the blink between the room and its changed copy
+	const READY = 3.4;            // seconds of the round's title card (the time, the phase of the party) before the look
+	const LOOP_GAP = 0.7;         // seconds of the tape jumping back between loops of the scene
+	const ROUND_SECONDS = 55;     // about how long a round takes, for making sure the night reaches its end
+	const DESCENT = 1.0;          // seconds of the blink (a flutter, shut, a flutter) between the room and its changed copy
 	const REWIND = 2.4;           // seconds to rewind back up, when a round goes again
 	const REVEAL = 5;             // seconds showing what was missed
 	const PENALTY = 3;            // seconds of tape lost for a wrong tap
@@ -102,14 +106,22 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		length: 11,
 	};
 
-	// The mood of each round: the function room's flat warm light, then lower,
-	// then the party lights come on, then something red.
+	// The light at each phase of the night: the work lights while setting up,
+	// the function room's flat warm light, lower for the speeches, the party
+	// lights for the dancing, then fire, then the grey of the morning after.
 	const MOODS = [
+		{ sky: 0xf4f6ff, ground: 0x5a5050, hemi: 2.3, lamp: 7.5, fog: 0x80706a, near: 9, far: 38, panel: 0xffffff },
 		{ sky: 0xfff3e2, ground: 0x6a4038, hemi: 2.2, lamp: 7, fog: 0x7a5a50, near: 8, far: 36, panel: 0xfff6e6 },
-		{ sky: 0xffe2c4, ground: 0x5a3028, hemi: 1.75, lamp: 5.5, fog: 0x5e4038, near: 7, far: 30, panel: 0xffe6c8 },
-		{ sky: 0xd8b8ff, ground: 0x3a2050, hemi: 1.3, lamp: 4.2, fog: 0x3a2a50, near: 5, far: 24, panel: 0xe6b4ff },
-		{ sky: 0xffa4a4, ground: 0x401818, hemi: 0.95, lamp: 3, fog: 0x3a1414, near: 3.5, far: 19, panel: 0xff7a7a },
+		{ sky: 0xffecd6, ground: 0x64382f, hemi: 2.1, lamp: 6.6, fog: 0x705048, near: 8, far: 34, panel: 0xfff0dc },
+		{ sky: 0xffe6c8, ground: 0x60342a, hemi: 2.0, lamp: 6.2, fog: 0x6a4a40, near: 7.5, far: 33, panel: 0xffeacc },
+		{ sky: 0xffdcb8, ground: 0x502a22, hemi: 1.6, lamp: 5, fog: 0x5a3a34, near: 7, far: 30, panel: 0xffd8b0 },
+		{ sky: 0xc8a8ff, ground: 0x3a2050, hemi: 1.0, lamp: 2.8, fog: 0x2a1a40, near: 5, far: 24, panel: 0xc090ff },
+		{ sky: 0xffa8d8, ground: 0x401830, hemi: 0.9, lamp: 2.6, fog: 0x30142a, near: 4.5, far: 22, panel: 0xff90c8 },
+		{ sky: 0xffb070, ground: 0x401808, hemi: 1.1, lamp: 3, fog: 0x3a1a0a, near: 3.5, far: 18, panel: 0xffa060 },
+		{ sky: 0x8a96a8, ground: 0x1a1a20, hemi: 0.7, lamp: 1.8, fog: 0x1c1c22, near: 3, far: 17, panel: 0x9aa4b0 },
 	];
+	// The room's sound at each phase: [chatter, music, out of tune], and the fire alarm.
+	const PARTY_SOUND = [[0, 0.75, 0], [0.75, 0.6, 0], [0.9, 0.6, 0], [0.8, 0.55, 0], [0.25, 0.45, 0], [0.6, 1, 0], [0.8, 1, 0.7], [0.3, 0.85, 0.25], [0, 0.75, 1]];
 
 	// The show's colours: party-balloon gold and pink on near-black.
 	const YELLOW = '#ffd166';
@@ -171,6 +183,20 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		return l;
 	});
 
+	// The party lights, turning, for the dancing; the fire's flicker. (Always
+	// there, at nothing when not wanted, so the shaders never recompile.)
+	const discoLights = [0xff3ad0, 0x3ad8ff, 0xffe03a].map(function (c) {
+		const l = new THREE.PointLight(c, 0, 0, 1.4);
+		rig.add(l);
+		return l;
+	});
+	const fireLights = [[-2, -4], [2.5, -3]].map(function ([x, z]) {
+		const l = new THREE.PointLight(0xff7a2a, 0, 0, 1.5);
+		l.position.set(x, 0.6, z);
+		rig.add(l);
+		return l;
+	});
+
 	/* ---------- floors ---------- */
 
 	const floors = new Map();     // n (0 at the top, counting down) -> floor
@@ -183,6 +209,7 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		g.rotation.y = item.rot;
 		if (item.flip) g.rotation.z = Math.PI;      // hanging from the ceiling
 		else if (item.lean) g.rotation.z = item.lean;
+		if (item.tip) g.rotation.x = item.tip;      // knocked over
 		g.userData.itemId = item.id;
 		return g;
 	}
@@ -193,6 +220,13 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		f.byId.set(item.id, g);
 		g.updateMatrixWorld(true);
 		if (g.userData.flicker) f.flickers.push(Object.assign({ id: item.id, on: true, until: 0 }, g.userData.flicker));
+		// everyone in it who moves (a guest, or someone in the cake), and the scene's cast by name
+		g.traverse(function (o) {
+			if (!o.userData.actor) return;
+			const star = o === g && item.props.star ? item.props.star : null;
+			f.actors.push({ actor: o.userData.actor, group: g, star });
+			if (star) f.stars[star] = { actor: o.userData.actor, group: g };
+		});
 	}
 
 	function removeItem(f, id) {
@@ -200,6 +234,7 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		if (!g) return;
 		f.group.remove(g);
 		f.byId.delete(id);
+		f.actors = f.actors.filter((a) => a.group !== g);
 		f.flickers = f.flickers.filter((fl) => fl.id !== id);
 	}
 
@@ -209,7 +244,7 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		scene.add(group);
 		group.add(buildShell({ R, openings: layout.openings }));
 		group.updateMatrixWorld(true);
-		const f = { n, group, layout, byId: new Map(), flickers: [] };
+		const f = { n, group, layout, byId: new Map(), flickers: [], actors: [], stars: {} };
 		for (const it of layout.items) placeItem(f, it);
 		floors.set(n, f);
 		return f;
@@ -230,6 +265,7 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 	/* ---------- the differences ---------- */
 
 	const raycaster = new THREE.Raycaster();
+	raycaster.camera = cams[1];   // (sprites, the flames and smoke, need one to face)
 	const v3 = new THREE.Vector3();
 	let diffs = [];               // this level's: { id, kind, label, wall, x, y, r, hit, found, by, foundAt }
 
@@ -314,7 +350,7 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 	function prepareLevel(L) {
 		const cfg = levelCfg(L);
 		const seed = Math.floor(Math.random() * 1e9);
-		const upLayout = generate(seed, Math.min(L, 3));
+		const upLayout = generate(seed, partyPhase);
 		const up = buildFloor(2 * L, upLayout);
 		const original = new Map(upLayout.items.map((it) => [it.id, it]));
 		// A few goes, in case too many candidates hide behind things.
@@ -345,6 +381,7 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 	let people = [];              // { px, pz } per player (pz 0 at the front wall, 1 at the back)
 	let scores = [];
 	let level = 0;
+	let partyPhase = 0;           // how far into the night (vignettes.js PHASES): the set-up, the arrivals... the morning after
 	let begun = false;            // the rounds have started
 	let retry = false;            // this round is going again (nobody found anything)
 	let outcome = null;           // how the last round went: { found, total }
@@ -493,16 +530,21 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		for (const n of [...floors.keys()]) if (n < floorN) dropFloor(n);
 		showFloors(floorN);
 		camY = eyeY(floorN);
-		sound.hum(Math.min(level, 3) / 3);
+		const ph = sceneOf().index;
+		sound.party(...PARTY_SOUND[ph]);
+		radioOn(ph);
+		sound.alarm(ph === 7);
 		callout = null;
 		show.fx('thud', 0.8);
 		setPhase('ready', READY);
 	}
 
-	// REMEMBER EVERYTHING: the floor upstairs, for a few seconds.
+	// REMEMBER EVERYONE: the scene, played once through.
 	function startLook() {
-		say('REMEMBER EVERYONE', levelCfg(level).look);
-		setPhase('look', levelCfg(level).look);
+		const len = sceneOf().length;
+		say('REMEMBER EVERYONE', len, false);
+		lastSceneT = -1;
+		setPhase('look', len + 0.2);
 	}
 
 	// Blink, and cut to the changed copy of the room (or rewind back to the first).
@@ -520,7 +562,9 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		showFloors(floorN);
 		timeLeft = levelCfg(level).tap;
 		lastTick = Math.ceil(timeLeft);
-		say('WHAT\'S WEIRD?', 3);
+		loopT = 0;
+		lastSceneT = -1;
+		say('WHAT\'S WEIRD?', 3, false);
 		setPhase('tap');
 	}
 
@@ -553,6 +597,9 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		retry = false;
 		levelsDone++;
 		level++;
+		// on through the night: a phase a round, faster if time's short, so the last round is the morning after
+		const roundsLeft = Math.max(1, Math.floor(show.timeLeft() / ROUND_SECONDS));
+		partyPhase = Math.min(PHASES.length - 1, Math.max(partyPhase + 1, PHASES.length - roundsLeft));
 		prepareLevel(level);
 		descend(2 * level);
 	}
@@ -652,8 +699,8 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		const f = floors.get(0);
 		eyeOn(0);
 		const low = f.layout.items.filter((it) => it.y < 1 && it.type !== 'stain');
-		for (const d of [3.2, 3.8, 2.8, 4.4]) {
-			for (const u of [-1.6, 1.6, -0.8, 0.8, -2.4, 2.4, 0]) {
+		for (const d of [4.6, 5.2, 4.2, 5.8]) {
+			for (const u of [3.9, 4.3, 3.6, 4.7]) {
 				const p = wallPoint(1, u, d);
 				if (!low.every((it) => Math.hypot(it.x - p.x, it.z - p.z) > (it.r || 0.3) + 0.55)) continue;
 				const g = practiceChair(p, false);
@@ -669,14 +716,14 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 			}
 		}
 		// nowhere clear: put it right in front anyway
-		practice.spot = wallPoint(1, -1.2, 2.6);
+		practice.spot = wallPoint(1, 4.0, 4.8);
 		practice.chair = practiceChair(practice.spot, false);
 		f.group.add(practice.chair);
 	}
 
-	const practiceGuest = makePerson(() => 0.37, { pose: 'stand', expr: EXPR.bored });
+	const practiceGuest = makePerson(() => 0.37, { act: 'drink', expr: EXPR.bored });
 	function practiceChair(p, changed) {
-		const props = Object.assign({}, practiceGuest, changed ? { pose: 'wave', head: -1.1, expr: EXPR.grin } : {});
+		const props = Object.assign({}, practiceGuest, changed ? { act: 'wave', head: -1.1, expr: EXPR.grin, exprLock: true } : {});
 		const g = BUILDERS.person(props);
 		g.position.set(p.x, changed ? 0.45 : 0, p.z);
 		g.rotation.y = wallYaw(1) + 1.1;
@@ -779,8 +826,7 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 	// Gary with his back to us, or turned right round to see us.
 	function garyAt(turned) {
 		const f = floors.get(0);
-		const gary = f.layout.items.find((it) => it.props && it.props.gary);
-		const props = Object.assign({}, gary ? gary.props : makePerson(() => 0.5), turned ? { head: Math.PI, expr: EXPR.beam } : { head: 0, expr: EXPR.smile });
+		const props = Object.assign({}, CAST.gary.looks, { act: 'idle' }, turned ? { head: Math.PI, expr: EXPR.beam, exprLock: true } : { head: 0, expr: EXPR.smile });
 		const g = BUILDERS.person(props);
 		g.position.set(figureAt.x, 0, figureAt.z);
 		g.rotation.y = wallYaw(1) + Math.PI;
@@ -794,9 +840,14 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 	}
 
 	// Everything the intros set up, put away (on the way into the rounds).
+	function castShown(on) {
+		for (const f of floors.values()) for (const k in f.stars) f.stars[k].group.visible = on;
+	}
+
 	function cleanIntros() {
 		removePractice();
 		removeFigure();
+		castShown(true);
 		push.x = push.z = 0;
 		darkSides = 0;
 		zoom3d = 1;
@@ -835,6 +886,7 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		}
 
 		case 'tap':
+			loopScene(dt);
 			timeLeft -= dt;
 			if (timeLeft <= 5 && Math.ceil(timeLeft) < lastTick && timeLeft > 0) sound.tick();
 			lastTick = Math.ceil(timeLeft);
@@ -845,6 +897,7 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 			break;
 
 		case 'reveal':
+			loopScene(dt);
 			if (phaseT >= phaseDur) afterReveal();
 			break;
 		}
@@ -862,10 +915,151 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		}
 	}
 
+	// The scene going round again: to the end, a moment of the tape jumping, from the top.
+	function loopScene(dt) {
+		const len = sceneOf().length;
+		loopT += dt;
+		if (loopT > len && loopT - dt <= len) glitch = LOOP_GAP;
+		if (loopT > len + LOOP_GAP) loopT = 0;
+	}
+
+	/* ---------- the scene: its clock, its voices, its captions ---------- */
+
+	let loopT = 0;                // the scene's clock while it loops (tap, reveal)
+	let lastSceneT = -1;          // where the voices got up to
+	let glitch = 0;               // seconds of the tape jumping back to the start
+	const voices = { buffer: null, playing: [] };
+	const voiceOut = sound.ctx.createGain();
+	voiceOut.gain.value = 1.2;
+	voiceOut.connect(sound.master);
+	const voiceRoom = sound.ctx.createGain();
+	voiceRoom.gain.value = 0.12;
+	voiceOut.connect(voiceRoom).connect(sound.reverb);
+	// The radio: one track a phase, from assets/small-talk/radio.mp3.
+	let radioBuffer = null;
+	let radioWants = -1;
+	let radioPlaying = -1;
+	function radioOn(ph) {
+		radioWants = ph;
+		if (!radioBuffer || ph === radioPlaying) return;
+		radioPlaying = ph;
+		sound.radio(ph < 0 ? null : radioBuffer, RADIO[ph]);
+	}
+	fetch(new URL('../../assets/small-talk/radio.mp3', import.meta.url))
+		.then((r) => r.arrayBuffer())
+		.then((b) => sound.ctx.decodeAudioData(b))
+		.then((buf) => { radioBuffer = buf; if (radioWants >= 0) radioOn(radioWants); })
+		.catch((e) => console.warn('Small Talk: no radio', e));
+	fetch(new URL('../../assets/small-talk/voices.mp3', import.meta.url))
+		.then((r) => r.arrayBuffer())
+		.then((b) => sound.ctx.decodeAudioData(b))
+		.then((buf) => { voices.buffer = buf; })
+		.catch((e) => console.warn('Small Talk: no voices', e));
+
+	// The phase of the night on floor n (the one on show by default), with its scene.
+	function sceneOf(n = floorN) {
+		const f = floors.get(n);
+		const i = f ? f.layout.phase || 0 : 0;
+		return Object.assign({ index: i }, PHASES[i]);
+	}
+	// Where the scene's up to. Before the rounds it just plays (silently).
+	function sceneT() {
+		const V = sceneOf();
+		if (show.beat !== 'play') return clock % (V.length + LOOP_GAP);
+		if (phase === 'look') return Math.min(phaseT, V.length);
+		if (phase === 'tap' || phase === 'reveal') return Math.min(loopT, V.length);
+		if (phase === 'descend') return phaseT < phaseDur / 2 ? V.length : 0;
+		return 0;
+	}
+	const lineDur = (V, i) => (VOICES[V.index + '-' + i] || [0, 2])[1];
+	// Who's talking at time T.
+	function talkers(V, T) {
+		const out = new Set();
+		V.lines.forEach(function ([t, who], i) { if (T >= t && T < t + lineDur(V, i)) out.add(who); });
+		return out;
+	}
+	function stopVoices() {
+		for (const s of voices.playing) { try { s.stop(); } catch (e) { /* (already stopped) */ } }
+		voices.playing.length = 0;
+	}
+	// Start any lines the scene has just reached; cut them off when it jumps back.
+	function voicesAt(V, T, live) {
+		if (!live || T < lastSceneT - 0.01) stopVoices();
+		if (live && voices.buffer) {
+			V.lines.forEach(function ([t], i) {
+				if (!(t > lastSceneT && t <= T)) return;
+				const v = VOICES[V.index + '-' + i];
+				if (!v) return;
+				const late = T - t;
+				if (late > v[1] - 0.1) return;
+				const src = sound.ctx.createBufferSource();
+				src.buffer = voices.buffer;
+				src.connect(voiceOut);
+				src.start(0, v[0] + late, v[1] - late);
+				voices.playing.push(src);
+				src.onended = () => { const k = voices.playing.indexOf(src); if (k >= 0) voices.playing.splice(k, 1); };
+			});
+		}
+		lastSceneT = live ? T : -1;
+	}
+	const voicesLive = () => show.beat === 'play' && !paused && !show.paused && (phase === 'look' || phase === 'tap' || phase === 'reveal');
+
+	// Everyone moving: each floor on show, at the scene's time, and the intros' extras.
+	const headAt = new THREE.Vector3();
+	const perf = { tick: 0, render: 0, actors: 0 };   // (for the console: ms per frame)
+	function animate(dt) {
+		const t0 = performance.now();
+		const V = sceneOf();
+		const T = sceneT();
+		const live = voicesLive();
+		voicesAt(V, T, live);
+		const talking = live ? talkers(V, T) : new Set();
+		for (const f of floors.values()) {
+			if (!f.group.visible) continue;
+			for (const a of f.actors) a.actor.tick(T, dt, !!a.star && talking.has(a.star));
+		}
+		for (const g of [figure, practice.chair]) if (g && g.userData.actor) g.userData.actor.tick(clock, dt, false);
+		perf.tick = performance.now() - t0;
+		perf.actors = [...floors.values()].reduce((a, f) => a + (f.group.visible ? f.actors.length : 0), 0);
+	}
+
+	// Each line, over its speaker's head while they say it.
+	function wrapText(text, n) {
+		const rows = [''];
+		for (const word of text.split(' ')) {
+			if ((rows[rows.length - 1] + ' ' + word).trim().length > n) rows.push(word);
+			else rows[rows.length - 1] = (rows[rows.length - 1] + ' ' + word).trim();
+		}
+		return rows;
+	}
+	function drawCaptions(ctx) {
+		if (!voicesLive()) return;
+		const V = sceneOf();
+		const T = sceneT();
+		const f = floors.get(floorN);
+		if (!f) return;
+		V.lines.forEach(function ([t, who, text], i) {
+			const d = lineDur(V, i);
+			if (T < t || T > t + d + 0.4) return;
+			const st = f.stars[who];
+			if (!st || !st.actor.ready) return;
+			const p = toWalls(headAt.copy(st.actor.head).add(v3.set(0, 0.35, 0)));
+			if (!p) return;
+			const a = Math.min(1, (T - t) / 0.12, (t + d + 0.4 - T) / 0.3);
+			const rows = wrapText(text, 28);
+			const x = clamp(p.x, p.wall * W + 300, p.wall * W + W - 300);
+			const y0 = clamp(p.y - 30 - rows.length * 54, 150, H - 200);
+			band(ctx, x - 340, y0 + (rows.length - 1) * 27 - 20, 680, rows.length * 54 + 80, 0.4 * a);
+			vhsText(ctx, CAST[who].name, x, y0 - 50, 38, { fill: YELLOW, alpha: a, flicker: false, split: 1 });
+			rows.forEach((row, k) => vhsText(ctx, row, x, y0 + k * 54, 52, { alpha: a, flicker: false, split: 2 }));
+		});
+	}
+
 	// What runs whatever the beat: the mood, the lights, the floating words.
 	function ambient(dt) {
 		clock += dt;
-		mood += (Math.min(level, 3) - mood) * Math.min(1, dt * 0.6);
+		glitch = Math.max(0, glitch - dt);
+		mood += (sceneOf().index - mood) * Math.min(1, dt * 0.8);
 		stutter = Math.max(0, stutter - dt);
 		if (callout) callout.age += dt;
 		for (let i = pops.length - 1; i >= 0; i--) if ((pops[i].age += dt) > 1.4) pops.splice(i, 1);
@@ -877,7 +1071,7 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 	const cA = new THREE.Color();
 	const cB = new THREE.Color();
 	function mix(key, t) {
-		const i = Math.min(2, Math.floor(t));
+		const i = Math.min(MOODS.length - 2, Math.floor(t));
 		const f = t - i;
 		const a = MOODS[i][key];
 		const b = MOODS[i + 1][key];
@@ -897,8 +1091,17 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 	}
 
 	function render(dt) {
+		animate(dt);
 		// the lights: this floor's mood, and stuttering after a wrong tap
 		const light = stutter > 0 ? (Math.random() < 0.55 ? 0.2 : 1) : 1;
+		const disco = clamp(1 - Math.abs(mood - 5.5) / 1.1, 0, 1);
+		discoLights.forEach(function (l, i) {
+			const a = clock * 0.9 + i * 2.1;
+			l.intensity = 9 * disco * light;
+			l.position.set(Math.sin(a) * 4, 2.1, -2.5 - Math.cos(a) * 3);
+		});
+		const burn = clamp(1 - Math.abs(mood - 7) / 0.9, 0, 1) + 0.4 * clamp(mood - 7.4, 0, 1);
+		fireLights.forEach(function (l, i) { l.intensity = burn * (5 + 2.5 * Math.sin(clock * (11 + i * 3.7)) + Math.random() * 1.5); });
 		hemi.color.copy(mix('sky', mood));
 		hemi.groundColor.copy(mix('ground', mood));
 		hemi.intensity = mix('hemi', mood) * (0.35 + 0.65 * light);
@@ -939,10 +1142,12 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		}
 
 		renderer.setScissorTest(true);
+		const r0 = performance.now();
 		cams.forEach(function (cam, i) {
 			viewport(i * W, 0, W, H);
 			renderer.render(scene, cam);
 		});
+		perf.render = performance.now() - r0;
 	}
 
 	/* ---------- the camcorder layer ---------- */
@@ -1010,17 +1215,21 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 	}
 
 	function stamp() {
-		const t = 7 * 3600 + 30 * 60 + 7 + floorN * 23 * 60 + clock;
+		const [hm, ampm] = sceneOf().clock.split(' ');
+		const [h0, m0] = hm.split(':').map(Number);
+		const t = ((h0 % 12) + (ampm === 'PM' ? 12 : 0)) * 3600 + m0 * 60 + sceneT();
 		const hh = Math.floor(t / 3600) % 12 || 12;
 		const mm = String(Math.floor(t / 60) % 60).padStart(2, '0');
 		const ss = String(Math.floor(t) % 60).padStart(2, '0');
-		return `OCT 11 1996  ${hh}:${mm}:${ss} PM`;
+		return `OCT 11 1996  ${hh}:${mm}:${ss} ${Math.floor(t / 3600) % 24 >= 12 ? 'PM' : 'AM'}`;
 	}
 
 	// The time of night, in the corner: later every round.
 	function partyTime() {
-		const m = 19 * 60 + 30 + floorN * 23;
-		return `${Math.floor(m / 60) % 12 || 12}:${String(m % 60).padStart(2, '0')} PM`;
+		const [hm, ampm] = sceneOf().clock.split(' ');
+		const [h, m] = hm.split(':').map(Number);
+		const mm = m + Math.floor(sceneT() / 10);
+		return `${h + Math.floor(mm / 60)}:${String(mm % 60).padStart(2, '0')} ${ampm}`;
 	}
 
 	// A hand-drawn ring round something found.
@@ -1081,14 +1290,25 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		vhsText(ctx, String(Math.ceil(left)), W * 1.5 + bw / 2 + 30, y, 50, { align: 'left', fill: urgent ? RED : '#f6f1dc', flicker: urgent, split: 2 });
 	}
 
+	// How shut the eyes are through the blink (0 open, 1 shut): a couple of
+	// quick flutters, shut through the cut at the middle, a flutter opening.
+	const BLINK = [[0, 0], [0.07, 0.6], [0.13, 0.12], [0.2, 0.75], [0.27, 0.3], [0.38, 1], [0.62, 1], [0.7, 0.3], [0.76, 0.7], [0.85, 0.05], [0.91, 0.35], [1, 0]];
+	function blinkShut(t) {
+		for (let i = 1; i < BLINK.length; i++) {
+			const [t1, v1] = BLINK[i];
+			const [t0, v0] = BLINK[i - 1];
+			if (t <= t1) { const k = (t - t0) / (t1 - t0); return v0 + (v1 - v0) * k * k * (3 - 2 * k); }
+		}
+		return 0;
+	}
+
 	// Drawn as the world, under the show's overlays: the 3D, then what sits
 	// on it (marks, crosses, the darkness of the slab).
 	function drawWorld(ctx) {
 		render(frameDt);
-		// the blink: lids closing from top and bottom, shut, then open
+		// the blink: the lids flutter, shut (the cut), and flutter open again
 		if (phase === 'descend') {
-			const t = phaseT / phaseDur;
-			const shut = t < 0.4 ? ease(t / 0.4) : t < 0.6 ? 1 : 1 - ease((t - 0.6) / 0.4);
+			const shut = blinkShut(phaseT / phaseDur);
 			const lid = shut * H * 0.52;
 			for (let wall = 0; wall < 3; wall++) {
 				const x = wall * W;
@@ -1157,6 +1377,11 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 				vhsText(ctx, `00:${String(Math.ceil(left)).padStart(2, '0')}`, W * 1.5, 360, 80, { alpha: a, fill: left < 4 ? RED : '#f6f1dc' });
 			}
 		}
+		drawCaptions(ctx);
+		if (glitch > 0 && (phase === 'tap' || phase === 'reveal')) {
+			art.rect(ctx, 0, 0, WIDTH, H, { fill: `rgba(0,0,0,${0.5 * Math.sin(glitch / LOOP_GAP * Math.PI)})` });
+			vhsText(ctx, '◀◀', W * 1.5, H / 2, 120, { alpha: Math.sin(glitch / LOOP_GAP * Math.PI) });
+		}
 		if (phase === 'tap' && (!callout || callout.age > 2.6)) {
 			band(ctx, W * 1.2, 215, W * 0.6, 150, 0.4);
 			vhsText(ctx, `FOUND ${diffs.filter((d) => d.found).length}/${diffs.length}`, W * 1.5, 190, 60, { flicker: false, split: 2 });
@@ -1171,12 +1396,15 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		// the round's start: how many things are about to go wrong (the time of night is already in the corner)
 		if (phase === 'ready') {
 			const a = Math.min(1, phaseT / 0.3) * (1 - between(phaseT, phaseDur - 0.4, phaseDur));
+			const V = sceneOf();
 			const text = retry ? 'AGAIN. REMEMBER HARDER' : diffs.length + ' THINGS WILL GET WEIRD';
-			band(ctx, W, 260, W, 230, 0.55 * a);
-			vhsText(ctx, text, W * 1.5, 250, 110, { alpha: a });
-			for (const wall of [0, 2]) {
-				band(ctx, wall * W, 240, W, 150, 0.45 * a);
-				vhsText(ctx, text, wall * W + W / 2, 235, 72, { alpha: a * 0.85 });
+			art.rect(ctx, 0, 0, WIDTH, H, { fill: `rgba(8,2,6,${0.55 * a})` });
+			for (let wall = 0; wall < 3; wall++) {
+				const x = wall * W + W / 2;
+				const k = wall === 1 ? 1 : 0.7;
+				vhsText(ctx, V.clock, x, 330, 170 * k, { alpha: a, fill: YELLOW });
+				vhsText(ctx, V.title, x, 500, 110 * k, { alpha: a });
+				vhsText(ctx, text, x, 640, 64 * k, { alpha: a * between(phaseT, 0.8, 1.2), fill: PINK });
 			}
 		}
 		show.onWalls(ctx, function (c) {
@@ -1213,7 +1441,7 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 
 		grainAge += dt;
 		if (grainAge > 0.06) { grainAge = 0; refreshGrain(); }
-		const falling = phase === 'rewind' && show.beat === 'play' ? Math.sin(phaseT / phaseDur * Math.PI) * 1.6 : 0;
+		const falling = phase === 'rewind' && show.beat === 'play' ? Math.sin(phaseT / phaseDur * Math.PI) * 1.6 : glitch > 0 ? Math.sin(glitch / LOOP_GAP * Math.PI) * 1.4 : 0;
 		const noisy = 0.05 + 0.18 * falling + (stutter > 0 ? 0.12 : 0) + (opts.noise || 0);
 		ctx.save();
 		ctx.imageSmoothingEnabled = false;
@@ -1316,6 +1544,8 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 				showFloors(0);
 				placePractice();
 				enterStep(0);
+				sound.party(...PARTY_SOUND[0]);
+				radioOn(0);
 			},
 			update(dt) { stepControls(dt); },
 			draw(ctx) {
@@ -1333,6 +1563,7 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 			enter() {
 				removePractice();
 				placeFigure();
+				castShown(false);
 				floorN = 0;
 				camY = eyeY(0);
 				showFloors(0);
@@ -1421,6 +1652,8 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 			enter() {
 				show.camera.wide();   // (the show's zoom would slide the overlays off the 3D; the cameras zoom instead)
 				setPhase('over');
+				radioOn(-1);
+				stopVoices();
 				callout = null;
 				stutter = 1.2;
 				sound.buzz();
@@ -1482,7 +1715,8 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 	self.state = function () {
 		const tg = practice.target;
 		return Object.assign(show.state(), {
-			phase, level, floor: floorN, camY, timeLeft, clockLeft: show.timeLeft(), misses, players, retry, levelsDone,
+			perf: { tick: +perf.tick.toFixed(1), render: +perf.render.toFixed(1), actors: perf.actors, calls: renderer.info.render.calls },
+			phase, level, partyPhase, scene: sceneOf().id, sceneT: sceneT(), floor: floorN, camY, timeLeft, clockLeft: show.timeLeft(), misses, players, retry, levelsDone,
 			scores: scores.slice(),
 			step: CONTROLS.steps[practice.i] ? CONTROLS.steps[practice.i].id : null, stepAge: practice.age, stepDone: practice.done,
 			practice: tg ? { wall: tg.wall, x: Math.round(tg.x), y: Math.round(tg.y), r: Math.round(tg.r), found: tg.found, by: tg.by } : null,
@@ -1508,6 +1742,7 @@ IGB.register('small-talk', function SmallTalkGame(stage, playersMeta) {
 		},
 		timeLeft(s) { show.setTimeLeft(s); },   // the show's clock
 		tapLeft(s) { if (phase === 'tap') timeLeft = s; },   // this round's tape
+		findOne() { const d = diffs.find((x) => !x.found); if (phase === 'tap' && d) found(d, { x: d.x, y: d.y }); },   // as if someone tapped it
 	};
 
 	self.fini = function () {

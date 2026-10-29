@@ -10,7 +10,7 @@
  * model is drawn from a seeded generator.
  */
 import * as THREE from '../../lib/three/three.module.min.js';
-import { person, drawFace } from './people.js';
+import { person, drawFace, flame } from './people.js';
 
 export const CEIL = 2.7;     // floor to ceiling tiles
 export const TILE = 0.6;     // one ceiling tile
@@ -258,10 +258,10 @@ function fabricTex() {
 }
 
 // A damp stain: overlapping blotches with a darker tide mark at the edge.
-function stainTex(seed, ceiling) {
-	return canvasTexture(`stain${seed}${ceiling ? 'c' : ''}`, 256, 256, function (c, w, h) {
+function stainTex(seed, ceiling, scorch) {
+	return canvasTexture(`stain${seed}${ceiling ? 'c' : ''}${scorch ? 's' : ''}`, 256, 256, function (c, w, h) {
 		const r = rng(seed * 977 + 13);
-		const rgb = ceiling ? '120,85,25' : '58,44,14';
+		const rgb = scorch ? '12,8,6' : ceiling ? '120,85,25' : '58,44,14';
 		for (let i = 0; i < 6; i++) {
 			const x = w / 2 + (r() - 0.5) * w * 0.35;
 			const y = h / 2 + (r() - 0.5) * h * 0.35;
@@ -1055,7 +1055,7 @@ export function hole(p) {
 export function stain(p) {
 	const g = new THREE.Group();
 	const ceiling = !!p.ceiling;
-	const m = cached(`stainmat${p.seed}${ceiling}`, () => new THREE.MeshBasicMaterial({ map: stainTex(p.seed, ceiling), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+	const m = cached(`stainmat${p.seed}${ceiling}${!!p.scorch}`, () => new THREE.MeshBasicMaterial({ map: stainTex(p.seed, ceiling, !!p.scorch), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, opacity: p.scorch ? 1.6 : 1 }));
 	const s = part(g, P(1, 1), m, 0, ceiling ? -0.004 : 0.004, 0, ceiling ? Math.PI / 2 : -Math.PI / 2);
 	s.scale.set(p.size, p.size * (p.aspect || 0.8), 1);
 	s.userData.noOcclude = true;
@@ -1087,6 +1087,8 @@ export function roundTable(p) {
 	const cloth = lam(CLOTH);
 	part(g, C(0.8, 0.84, 0.74, 28), cloth, 0, 0.37, 0);
 	part(g, C(0.82, 0.82, 0.02, 28), cloth, 0, 0.75, 0);
+	shadow(g, 2.1, 2.1, 0.55);
+	if (p.bare) return g;
 	// a centrepiece: a little vase of flowers and a candle
 	part(g, C(0.05, 0.07, 0.18, 10), lam(0xbfd6d2), 0, 0.85, 0);
 	const flower = [lam(p.flowers || 0xd04a6a), lam(0xf2d24a), lam(0xffffff)];
@@ -1100,9 +1102,14 @@ export function roundTable(p) {
 	for (let i = 0; i < places; i++) {
 		const a = i / places * Math.PI * 2;
 		part(g, C(0.11, 0.1, 0.012, 16), lam(0xfdfdfb), Math.sin(a) * 0.58, 0.766, Math.cos(a) * 0.58);
-		part(g, C(0.03, 0.025, 0.12, 8), new THREE.MeshLambertMaterial({ color: 0xd8eef0, transparent: true, opacity: 0.6 }), Math.sin(a + 0.35) * 0.62, 0.82, Math.cos(a + 0.35) * 0.62);
+		const glass = part(g, C(0.03, 0.025, 0.12, 8), new THREE.MeshLambertMaterial({ color: 0xd8eef0, transparent: true, opacity: 0.6 }), Math.sin(a + 0.35) * 0.62, 0.82, Math.cos(a + 0.35) * 0.62);
+		if (p.messy && i % 2) { glass.rotation.z = Math.PI / 2; glass.position.y = 0.79; }
 	}
-	shadow(g, 2.1, 2.1, 0.55);
+	if (p.messy) {
+		// spilt wine
+		const spill = part(g, cached('spill', () => new THREE.CircleGeometry(0.2, 12)), lam(0x7a1a2a), 0.2, 0.762, 0.25, -Math.PI / 2);
+		spill.scale.set(1, 0.6, 1);
+	}
 	return g;
 }
 
@@ -1126,7 +1133,7 @@ export function buffet(p) {
 	part(g, B(2.42, 0.25, 0.82), lam(p.skirt || 0x3a5a8a), 0, 0.63, 0);
 	const r = rng(p.seed || 4);
 	const foods = [0xd8a050, 0xe8d8b0, 0x7aa04a, 0xc0503a, 0xf0e6c8, 0x9a6a3a];
-	for (let i = 0; i < 5; i++) {
+	for (let i = 0; i < (p.empty ? 0 : 5); i++) {
 		const x = -0.96 + i * 0.48;
 		part(g, C(0.2, 0.18, 0.02, 18), lam(0xe8e8ea), x, 0.77, 0);
 		const food = lam(foods[Math.floor(r() * foods.length)]);
@@ -1181,16 +1188,28 @@ export function cake(p) {
 			const m = part(g, S(), icing, Math.sin(a) * 0.56, 0.6, Math.cos(a) * 0.56);
 			m.scale.setScalar(0.06);
 		}
-		const who = person(Object.assign({}, p.someone, { pose: 'wave' }));
+		const who = person(Object.assign({}, p.someone, { act: 'wave' }));
 		who.position.y = -0.42;
 		who.children.forEach((ch) => { if (ch.isMesh && ch.geometry.type === 'PlaneGeometry') ch.visible = false; });
 		g.add(who);
 		shadow(g, 1.5, 1.5, 0.6);
 		return g;
 	}
-	part(g, C(0.4, 0.42, 0.74, 24), lam(CLOTH), 0, 0.37, 0);
+	part(g, C(0.4, 0.42, 0.74, 24), lam(p.wrecked ? 0x2a2420 : CLOTH), 0, 0.37, 0);
+	if (p.wrecked) {
+		// a black lump, still smoking
+		const lump = part(g, S(), lam(0x1a1412), 0, 0.82, 0);
+		lump.scale.set(0.2, 0.09, 0.17);
+		shadow(g, 1, 1, 0.5);
+		return g;
+	}
 	part(g, C(0.22, 0.22, 0.14, 24), icing, 0, 0.81, 0);
 	part(g, C(0.15, 0.15, 0.12, 24), pink, 0, 0.94, 0);
+	if (p.fire) {
+		const f = flame(0.9, 2);
+		f.position.y = 1.0;
+		g.add(f);
+	}
 	for (let i = 0; i < 6; i++) {
 		const a = i / 6 * Math.PI * 2;
 		part(g, C(0.006, 0.006, 0.07, 5), lam(0x6aa0e8), Math.sin(a) * 0.09, 1.03, Math.cos(a) * 0.09);
@@ -1204,8 +1223,8 @@ export function cake(p) {
 // The banner across the front wall (origin on the wall), each letter its
 // own party colour.
 const BANNER_COLOURS = ['#e8445a', '#f29a2e', '#e8c22e', '#3aa86a', '#3a8ad8', '#8a5ad0'];
-function bannerTex(text) {
-	return canvasTexture(`banner-${text}`, 2048, 256, function (c, w, h) {
+function bannerTex(text, burnt) {
+	return canvasTexture(`banner-${text}${burnt ? '-burnt' : ''}`, 2048, 256, function (c, w, h) {
 		c.fillStyle = '#fbf6ea';
 		c.fillRect(0, 0, w, h);
 		c.fillStyle = 'rgba(0,0,0,0.06)';
@@ -1229,12 +1248,40 @@ function bannerTex(text) {
 			c.restore();
 			x += c.measureText(ch).width;
 		});
+		if (burnt) {
+			// charred from the left, holes burnt through
+			const r = rng(17);
+			const g = c.createLinearGradient(0, 0, w, 0);
+			g.addColorStop(0, 'rgba(20,10,5,1)');
+			g.addColorStop(0.35, 'rgba(40,20,8,0.85)');
+			g.addColorStop(0.6, 'rgba(90,50,20,0.3)');
+			g.addColorStop(1, 'rgba(90,50,20,0.1)');
+			c.fillStyle = g;
+			c.fillRect(0, 0, w, h);
+			c.globalCompositeOperation = 'destination-out';
+			for (let i = 0; i < 26; i++) {
+				c.beginPath();
+				c.arc(r() * w * 0.7, r() * h, 20 + r() * 70, 0, Math.PI * 2);
+				c.fill();
+			}
+			c.globalCompositeOperation = 'source-over';
+		}
 	});
 }
 export function banner(p) {
 	const g = new THREE.Group();
 	const w = 5.2;
-	part(g, P(w, w / 8), texLam(`banner-${p.text}`, bannerTex(p.text)), 0, 0, 0.03);
+	const key = `banner-${p.text}${p.burnt ? '-burnt' : ''}`;
+	part(g, P(w, w / 8), cached(`TL${key}`, () => new THREE.MeshLambertMaterial({ map: bannerTex(p.text, p.burnt), transparent: true, alphaTest: 0.1, side: THREE.DoubleSide })), 0, 0, 0.03);
+	if (p.burning) for (const x of [-1.6, -0.4, 1.1]) {
+		const f = flame(0.8, x * 5);
+		f.position.set(x, -0.1, 0.12);
+		g.add(f);
+	}
+	if (p.burnt) {
+		g.rotation.z = -0.18;
+		return g;
+	}
 	// bunting along the bottom
 	for (let i = 0; i < 18; i++) {
 		const m = new THREE.Mesh(cached('flag', () => {
@@ -1333,10 +1380,125 @@ export function lectern() {
 	return g;
 }
 
+/* ---------- the night going on ---------- */
+
+// A stepladder, against the front wall (for hanging the banner).
+export function ladder() {
+	const g = new THREE.Group();
+	const al = lam(0xb8bcc2);
+	for (const s of [-1, 1]) part(g, B(0.04, 1.9, 0.04), al, s * 0.24, 0.93, 0.18, -0.18, 0, 0);
+	for (const s of [-1, 1]) part(g, B(0.04, 1.85, 0.04), al, s * 0.24, 0.9, -0.17, 0.18, 0, 0);
+	for (let i = 0; i < 5; i++) part(g, B(0.5, 0.03, 0.1), al, 0, 0.3 + i * 0.32, 0.17 - i * 0.055);
+	shadow(g, 0.8, 0.8, 0.5);
+	return g;
+}
+
+// A mirror ball, turning, scattering spots of light.
+export function discoBall() {
+	const g = new THREE.Group();
+	part(g, C(0.005, 0.005, 0.3, 4), lam(0x333333), 0, -0.15, 0);
+	const ball = new THREE.Mesh(new THREE.IcosahedronGeometry(0.26, 1), new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.9, roughness: 0.15, flatShading: true, emissive: 0x333333 }));
+	ball.position.y = -0.55;
+	ball.onBeforeRender = () => { ball.rotation.y = performance.now() / 1500; };
+	g.add(ball);
+	return g;
+}
+
+// A fire, burning on whatever it's on.
+export function fire(p) {
+	const g = new THREE.Group();
+	const f = flame(p.size || 0.8, p.seed || 1);
+	g.add(f);
+	const glow = new THREE.Mesh(P(1, 1), new THREE.MeshBasicMaterial({ map: glowTex(), color: 0xff7a2a, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.5, fog: false }));
+	glow.rotation.x = -Math.PI / 2;
+	glow.position.y = 0.02;
+	glow.scale.setScalar((p.size || 0.8) * 2.5);
+	glow.userData.noOcclude = true;
+	g.add(glow);
+	return g;
+}
+
+// Smoke, gathering under the ceiling.
+const smokeTex = () => canvasTexture('smoke', 128, 128, function (c, w, h) {
+	const r = rng(23);
+	for (let i = 0; i < 9; i++) {
+		const x = w * (0.3 + r() * 0.4), y = h * (0.3 + r() * 0.4), rad = w * (0.18 + r() * 0.2);
+		const g = c.createRadialGradient(x, y, 0, x, y, rad);
+		g.addColorStop(0, 'rgba(255,255,255,0.5)');
+		g.addColorStop(1, 'rgba(255,255,255,0)');
+		c.fillStyle = g;
+		c.fillRect(0, 0, w, h);
+	}
+});
+export function smoke(p) {
+	const g = new THREE.Group();
+	const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex(), color: p.dark ? 0x2a2624 : 0x5a5450, transparent: true, opacity: 0.55, depthWrite: false }));
+	const size = p.size || 2.5;
+	sp.scale.set(size * 1.6, size * 0.7, 1);
+	sp.userData.noOcclude = true;
+	sp.onBeforeRender = () => { sp.position.x = Math.sin(performance.now() / 4000 + (p.seed || 0)) * 0.4; };
+	g.add(sp);
+	return g;
+}
+
+// Party litter: cups, a bottle, a paper plate, streamers.
+export function litter(p) {
+	const g = new THREE.Group();
+	const r = rng(p.seed || 3);
+	for (let i = 0; i < 4; i++) {
+		const cup = part(g, C(0.04, 0.03, 0.11, 8), lam([0xd8302a, 0xf2f2ee, 0x3a8ad8][i % 3]), (r() - 0.5) * 0.7, 0.04, (r() - 0.5) * 0.7, 0, r() * 6, Math.PI / 2);
+		cup.userData.noOcclude = true;
+	}
+	part(g, C(0.035, 0.04, 0.3, 8), new THREE.MeshLambertMaterial({ color: 0x2a5a2a, transparent: true, opacity: 0.8 }), 0.1, 0.04, -0.1, 0, r() * 6, Math.PI / 2);
+	part(g, C(0.11, 0.1, 0.01, 12), lam(0xfdfdfb), -0.2, 0.006, 0.15).rotation.z = 0.04;
+	return g;
+}
+
+// Rubble after the fire: charred chunks and a broken chair leg or two.
+export function rubble(p) {
+	const g = new THREE.Group();
+	const r = rng(p.seed || 4);
+	const char = lam(0x1e1a18), wood = lam(0x3a2a1e);
+	for (let i = 0; i < 6; i++) {
+		const m = part(g, S(), char, (r() - 0.5) * 0.9, 0.04, (r() - 0.5) * 0.9, r(), r(), r());
+		m.scale.set(0.08 + r() * 0.1, 0.05 + r() * 0.06, 0.08 + r() * 0.1);
+	}
+	for (let i = 0; i < 2; i++) part(g, B(0.05, 0.05, 0.5), wood, (r() - 0.5) * 0.6, 0.03, (r() - 0.5) * 0.6, 0, r() * 6, 0);
+	return g;
+}
+
+// The radio on its side table: a cream 1970s transistor set with a
+// speaker grille, a lit dial and its aerial up.
+const grilleTex = () => canvasTexture('grille', 128, 128, function (c, w, h) {
+	c.fillStyle = '#5a4a3a';
+	c.fillRect(0, 0, w, h);
+	c.fillStyle = '#2a2018';
+	for (let y = 6; y < h; y += 12) for (let x = 6; x < w; x += 12) { c.beginPath(); c.arc(x, y, 3.5, 0, Math.PI * 2); c.fill(); }
+});
+export function radio() {
+	const g = new THREE.Group();
+	const wood = lam(0x6a4a2a);
+	part(g, C(0.3, 0.3, 0.03, 20), wood, 0, 0.7, 0);
+	part(g, C(0.03, 0.04, 0.7, 8), wood, 0, 0.35, 0);
+	part(g, C(0.2, 0.22, 0.03, 16), wood, 0, 0.015, 0);
+	const set = new THREE.Group();
+	set.position.y = 0.715;
+	part(set, B(0.34, 0.2, 0.11), lam(0xe8dcc0), 0, 0.1, 0);
+	part(set, P(0.17, 0.14), texLam('grille', grilleTex()), -0.07, 0.1, 0.056);
+	part(set, P(0.1, 0.05), basic(0xffb84a), 0.1, 0.13, 0.056);
+	part(set, C(0.022, 0.022, 0.02, 12), lam(0x3a3a3a), 0.1, 0.06, 0.06, Math.PI / 2);
+	part(set, C(0.004, 0.004, 0.5, 4), lam(0xc8c8c8), 0.13, 0.42, -0.02, 0, 0, -0.35);
+	part(set, B(0.24, 0.02, 0.02), lam(0x3a3a3a), 0, 0.215, 0);
+	g.add(set);
+	shadow(g, 0.7, 0.7, 0.5);
+	return g;
+}
+
 // Everything by type, for the floor builder.
 export const BUILDERS = {
 	desk, chair, crt, keyboard, mug, papers, phone, partition, cabinet, cooler, plant, printer,
 	pillar, bin, boxes, coatStand, wetSign, door, clock, poster, vent, exitSign, extinguisher,
 	light: panel, hole, stain, figure, person,
 	roundTable, banquetChair, buffet, drinks, cake, banner, balloons, portrait, lectern,
+	ladder, discoBall, fire, smoke, litter, rubble, radio,
 };
