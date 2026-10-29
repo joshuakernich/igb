@@ -388,6 +388,20 @@ gamebox-player {
 gamebox-player b { font-weight: 400; }
 gamebox-player span { opacity: 0.6; }
 
+/* asking for a click, when the page doesn't have the keyboard */
+gamebox-focus {
+	display: none;
+	margin-bottom: 8px;
+	color: white;
+	font: italic 400 8px/1 Rubik, sans-serif;
+	letter-spacing: 0.06em;
+	white-space: nowrap;
+	animation: gamebox-focus 1.6s ease-in-out infinite;
+}
+gamebox-panel.nofocus gamebox-focus { display: block; }
+gamebox-panel.nofocus gamebox-hint kbd:not(.mouse) { opacity: 0.4; }
+@keyframes gamebox-focus { 50% { opacity: 0.45; } }
+
 /* a numbered square per player: click one to drive them (again to let go) */
 gamebox-pips {
 	display: flex;

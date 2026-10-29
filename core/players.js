@@ -680,6 +680,7 @@ IGB.players = (function () {
 				<gamebox-view><canvas></canvas></gamebox-view>
 				<gamebox-panel>
 					<gamebox-player></gamebox-player>
+					<gamebox-focus>CLICK SCREEN TO ENABLE KEYBOARD CONTROLS</gamebox-focus>
 					<gamebox-hint>
 						<span><gamebox-pips>${COLS.map((c, i) => `<button pip=${i} style="--c:${c}" title="Drive player ${i + 1}">${i + 1}</button>`).join('')}</gamebox-pips><kbd k=tab>TAB</kbd></span><span>PLAYER</span>
 						<span><kbd k=w>W</kbd><kbd k=a>A</kbd><kbd k=s>S</kbd><kbd k=d>D</kbd></span><span>WALK</span>
@@ -763,6 +764,11 @@ IGB.players = (function () {
 			keys.delete(k);
 		});
 		$(window).on('blur', () => { keys.clear(); if ($simulator) $simulator.find('kbd.lit').removeClass('lit'); });
+		// (keys only arrive while the page has focus: embedded, say, it may not until it's clicked)
+		const focusCheck = () => $simulator.find('gamebox-panel').toggleClass('nofocus', !document.hasFocus());
+		$(window).on('focus blur', () => setTimeout(focusCheck, 0));
+		setInterval(focusCheck, 500);
+		focusCheck();
 
 		select(selected);
 	}
