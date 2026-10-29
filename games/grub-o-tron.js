@@ -51,6 +51,7 @@
  */
 import * as THREE from '../lib/three/three.module.min.js';
 import { createWallComposer, createWallRig, canvasTexture, environmentFromShader, toScreen } from '../lib/three/walls.js';
+import { mergeGeometries } from '../lib/three/addons/utils/BufferGeometryUtils.js';
 
 IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
@@ -1067,6 +1068,40 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		return obj;
 	}
 
+	// Fold everything under a group that never moves into one mesh per material: far fewer draws
+	function bake(group) {
+		group.updateMatrixWorld(true);
+		const inv = group.matrixWorld.clone().invert();
+		const byMat = new Map();
+		group.traverse((o) => {
+			if (!o.isMesh || Array.isArray(o.material)) return;   // (a mesh of many materials stays as it is)
+			const geo = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
+			for (const name of Object.keys(geo.attributes)) if (!['position', 'normal', 'uv'].includes(name)) geo.deleteAttribute(name);
+			if (!geo.attributes.normal) geo.computeVertexNormals();
+			if (!geo.attributes.uv) geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count * 2), 2));
+			geo.morphAttributes = {};
+			geo.clearGroups();
+			geo.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld));
+			if (!byMat.has(o.material)) byMat.set(o.material, { geos: [], meshes: [], cast: false, receive: false });
+			const b = byMat.get(o.material);
+			b.cast ||= o.castShadow;
+			b.receive ||= o.receiveShadow;
+			b.geos.push(geo);
+			b.meshes.push(o);
+		});
+		for (const [mat, b] of byMat) {
+			if (b.meshes.length < 2) continue;
+			const merged = mergeGeometries(b.geos, false);
+			if (!merged) continue;   // (couldn't: left as they were)
+			for (const o of b.meshes) o.removeFromParent();
+			const m = new THREE.Mesh(merged, mat);
+			m.castShadow = b.cast;
+			m.receiveShadow = b.receive;
+			group.add(m);
+		}
+		return group;
+	}
+
 	function shadows(obj, cast = true) {
 		obj.traverse((o) => {
 			if (!o.isMesh) return;
@@ -1254,7 +1289,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	function buildRoom() {
 		const look = KITCHEN;
-		const g = room;
+		const g = new THREE.Group();   // (what never moves: baked into a few meshes at the end)
+		room.add(g);
 		// the floor, the ceiling
 		const floor = mesh(new THREE.PlaneGeometry(14, 14), std(look.edge, 0.45, 0.05), g, 0, 0, -0.5);
 		floor.rotation.x = -Math.PI / 2;
@@ -1315,7 +1351,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			const fan = new THREE.Group();
 			fan.position.set(x, 2.4, -0.4);
 			fan.rotation.y = w === 0 ? Math.PI / 2 : -Math.PI / 2;
-			g.add(fan);
+			room.add(fan);
 			mesh(new THREE.TorusGeometry(0.24, 0.03, 8, 24), MAT.darkSteel, fan);
 			mesh(new THREE.CircleGeometry(0.24, 24), MAT.black, fan, 0, 0, -0.01);
 			const blades = new THREE.Group();
@@ -1335,15 +1371,16 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		for (const x of [wl.x - 0.06, wr.x + 0.06]) mesh(BOX(0.14, 2.6, 0.16), MAT.darkSteel, g, x, 1.55, -FRONT_BACK + 0.08);
 		mesh(BOX(wr.x - wl.x + 0.3, 0.14, 0.16), MAT.darkSteel, g, 0, 2.85, -FRONT_BACK + 0.08);
 		for (const [x, text, colour] of [[-1.2, 'FISSION CHIPS', '#9dff3a'], [1.2, 'OPEN 25/8', '#FC1992']]) {
-			const sign = mesh(new THREE.PlaneGeometry(2.0, 0.37), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), g, x, 3.1, -FRONT_BACK + 0.06);
+			const sign = mesh(new THREE.PlaneGeometry(2.0, 0.37), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), room, x, 3.1, -FRONT_BACK + 0.06);
 			signs.push({ m: sign, text, colour, k: 1.3, seed: x, font: x < 0 ? 'Monoton' : null });   // (the name in the title's neon-tube lettering)
 		}
 		// light: a warm wash from overhead, a glow over each wall's counter
 		for (const [x, z] of [[-2.2, 0], [0, -2.6], [2.2, 0]]) {
 			const l = new THREE.PointLight(look.light, 9, 7, 1.4);
 			l.position.set(x, 2.9, z);
-			g.add(l);
+			room.add(l);
 		}
+		bake(g);
 	}
 	buildRoom();
 	function paintSigns() {
@@ -1589,22 +1626,28 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			const raw = { ing: d3.ing, steps: [], burnt: false };
 			const piece = (s) => { const v = itemView(raw); v.userData = {}; v.scale.setScalar(s); return v; };   // (not a held item: never swept)
 			// the heap: a wide bottom layer, fewer on top, one at the peak
+			const heap = new THREE.Group(), row = new THREE.Group();
+			d3.g.add(heap);
+			d3.shelf.add(row);
 			for (let n = 0; n < 12; n++) {
 				const layer = n < 7 ? 0 : n < 11 ? 1 : 2;
 				const ang = rnd() * Math.PI * 2, rad = [0.3, 0.16, 0][layer] * (0.6 + rnd() * 0.4);
 				const v = piece(0.42);
 				v.position.set(Math.cos(ang) * rad, layer * 0.1, Math.sin(ang) * rad * 0.7);
 				v.rotation.set((rnd() - 0.5) * 0.4, rnd() * 6, (rnd() - 0.5) * 0.4);
-				d3.g.add(v);
+				heap.add(v);
 			}
 			// and a row on the shelf
 			for (let n = 0; n < 4; n++) {
 				const v = piece(0.34);
 				v.position.set(-0.3 + n * 0.2, 0.02, 0.02);
 				v.rotation.y = rnd() * 6;
-				d3.shelf.add(v);
+				row.add(v);
 			}
-			shadows(d3.g);
+			shadows(heap);
+			shadows(row);
+			bake(heap);
+			bake(row);
 		});
 	}
 	const bin3d = (function () {
@@ -1619,9 +1662,6 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		const swirl = mesh(new THREE.CircleGeometry(0.15, 40), glowMat(0xffffff, 1.1, { map: TEX.swirl, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), g, 0, 0.42, 0.234);
 		mesh(new THREE.TorusGeometry(0.165, 0.018, 10, 40), glowMat(0xd04dff, 1.4), g, 0, 0.42, 0.236);
 		tint(g, '#d04dff', 0.5);
-		const l = new THREE.PointLight(0xd04dff, 0.8, 1.2, 2);
-		l.position.set(0, 0.5, 0.35);
-		g.add(l);
 		shadows(g);
 		return { g, swirl };
 	})();
@@ -1836,18 +1876,18 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	}
 	// keep a holder's item on show: holder.view follows holder's item; views not touched this frame go
 	const itemsLive = new Set();
+	const itemsShown = new Set();   // (every held item's view on show: swept each frame)
 	function syncItem(holder, item, parent, x, y, z, s) {
 		const key = item ? keyOf(item) : '';
-		if (holder.view && (holder.viewKey !== key || holder.view.parent !== parent)) { holder.view.removeFromParent(); holder.view = null; }
+		if (holder.view && (holder.viewKey !== key || holder.view.parent !== parent)) { holder.view.removeFromParent(); itemsShown.delete(holder.view); holder.view = null; }
 		holder.viewKey = key;
 		if (!item) return null;
-		if (!holder.view) { holder.view = itemView(item); parent.add(holder.view); }
+		if (!holder.view) { holder.view = itemView(item); parent.add(holder.view); itemsShown.add(holder.view); }
 		holder.view.position.set(x, y, z);
 		holder.view.scale.setScalar(s || 1);
 		itemsLive.add(holder.view);
 		return holder.view;
 	}
-	const itemViews = () => { const all = []; for (const g of sets) g.traverse((o) => { if (o.userData && o.userData.key) all.push(o); }); return all; };
 
 	/* ---------- 3D: the mutants ---------- */
 
@@ -2180,6 +2220,12 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		},
 	};
 
+	const mutantModels = {};
+	function mutantModel(type, c) {
+		const kept = mutantModels[type.id];
+		if (kept && customers.some((o) => o && o !== c && o.model === kept)) return buildMutant(type);   // (two of a kind in at once: the second gets its own)
+		return kept || (mutantModels[type.id] = buildMutant(type));
+	}
 	function buildMutant(type) {
 		const g = new THREE.Group();
 		const skin = std(type.skin, 0.45, 0.05);
@@ -2263,6 +2309,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	/* ---------- 3D: portals, the manager, particles ---------- */
 
+	const ringsLive = new Set(), ringPool = [];
 	function buildPortal() {
 		const g = new THREE.Group();
 		const face = new THREE.Group();
@@ -2294,7 +2341,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	function puff(wall, x, y, z, o) {
 		let p = parts3.find((q) => !q.alive);
 		if (!p) {
-			if (parts3.length >= 260) return;
+			if (parts3.length >= 160) return;
 			p = { s: new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.soft, transparent: true, depthWrite: false })) };
 			parts3.push(p);
 		}
@@ -2386,7 +2433,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			} else if (k === 'salt') {
 				p.shaker.rotation.z = Math.sin(rt * 34) * 0.3 * s.hit;
 				p.shaker.position.y = 1.5 + s.hit * 0.12;
-				if (s.hit > 0.4) every('salt', 40, dt, () => puff(w, cx + rnd1() * 0.3 * MS, ISLAND.y + MS * 1.0, cz + rnd1() * 0.3 * MS, { color: 0xd8ffd0, size: 0.025, grow: 0.015, life: 0.6, vy: -0.9, glow: 2, add: true, alpha: 1 }));
+				if (s.hit > 0.4) every('salt', 24, dt, () => puff(w, cx + rnd1() * 0.3 * MS, ISLAND.y + MS * 1.0, cz + rnd1() * 0.3 * MS, { color: 0xd8ffd0, size: 0.025, grow: 0.015, life: 0.6, vy: -0.9, glow: 2, add: true, alpha: 1 }));
 			} else if (k === 'cryo') {
 				const on = s.state === 'work';
 				p.light.intensity = on ? 5 : 0.5;
@@ -2431,7 +2478,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		for (let k = 0; k < 4; k++) {
 			const c = customers[k];
 			if (!c) continue;
-			if (!c.model) { c.model = buildMutant(c.type); sets[1].add(c.model.g); }
+			if (!c.model) { c.model = mutantModel(c.type, c); sets[1].add(c.model.g); }
 			const m = c.model;
 			const qa = (c.x - W) / W;
 			const qp = wallPoint(1, qa, QUEUE_D);
@@ -2457,8 +2504,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			});
 		}
 		// (mutants gone: their models go too)
-		for (const o of sets[1].children.slice()) if (o.userData.mutant && !customers.some((c) => c && c.model && c.model.g === o)) o.removeFromParent();
-		for (const c of customers) if (c && c.model) c.model.g.userData.mutant = true;
+		for (const m of Object.values(mutantModels)) if (m.g.parent && !customers.some((c) => c && c.model === m)) m.g.removeFromParent();
 
 		// the trays: one each, where their player stands (carried further out near a wall)
 		for (let i = 0; i < count; i++) {
@@ -2547,7 +2593,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 		// the portals
 		for (const p of portals) {
-			if (!p.ring) { p.ring = buildPortal(); sets[p.wall].add(p.ring.g); }
+			if (!p.ring) { p.ring = ringPool.pop() || buildPortal(); sets[p.wall].add(p.ring.g); ringsLive.add(p.ring); }
 			const v = p.ring;
 			const grow = Math.min(1, p.t * 3) * (1 + Math.sin(p.t * 5) * 0.05);
 			// (the ring lies flat on the counter; the food sits in it)
@@ -2563,8 +2609,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			if (iv) iv.rotation.y = 0.4;
 			every('portal-' + p.item.id, 4, dt, () => puff(p.wall, p.x3 + rnd1() * 0.4, CT.y + 0.1, p.z3 + rnd1() * 0.2, { color: Math.random() < 0.5 ? 0x3af2ff : 0xff2d8f, size: 0.06, grow: 0.02, life: 0.8, vy: 0, vx: rnd1() * 0.5, glow: 2, add: true, alpha: 1 }));
 		}
-		for (const g of sets) for (const o of g.children.slice()) if (o.userData.portal && !portals.some((p) => p.ring && p.ring.g === o)) o.removeFromParent();
-		for (const p of portals) p.ring.g.userData.portal = true;
+		for (const r of ringsLive) if (!portals.some((p) => p.ring === r)) { r.g.removeFromParent(); ringsLive.delete(r); ringPool.push(r); }   // (kept for the next portal)
 
 		// the manager comes down on its cable for the intro
 		manager.visible = phase === 'intro';
@@ -2576,8 +2621,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		}
 
 		// spinning, warping, wobbling food; views no one holds any more go
-		for (const v of itemViews()) {
-			if (!itemsLive.has(v)) { v.removeFromParent(); continue; }
+		for (const v of itemsShown) {
+			if (!itemsLive.has(v)) { v.removeFromParent(); itemsShown.delete(v); continue; }
 			if (v.userData.warp) v.children[0].rotation.z = Math.sin(rt * 3 + v.id) * 0.25;
 		}
 		stepPuffs(dt);
