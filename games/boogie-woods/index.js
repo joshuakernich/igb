@@ -1681,16 +1681,26 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 			mesh(GEO.sph, fur, head, 0, 0, 0, 0.32, 0.27, 0.28);
 			mesh(GEO.sph, furMat('#f8ecd4'), head, 0, 0, 0.12, 0.27, 0.2, 0.18);
 			for (const sx of [-1, 1]) { const tuft = mesh(GEO.cone, fur, head, sx * 0.2, 0.24, 0, 0.07, 0.2, 0.07); tuft.rotation.z = -sx * 0.4; }
-			const beak = mesh(GEO.cone, new THREE.MeshPhysicalMaterial({ color: '#ffb02b', roughness: 0.3, clearcoat: 1 }), head, 0, -0.06, 0.32, 0.04, 0.1, 0.04);
-			beak.rotation.x = Math.PI * 0.6;
 			c.face = makeFace(head, 0.6, 0, 0.03, 0.27, { gap: 0.3 });
+			// no mouth: a hooked beak, its lower half opening as it hoots
+			c.face.noMouth = true;
+			for (const m of [c.face.mouth.open, c.face.mouth.tongue, c.face.mouth.smile, ...c.face.mouth.teeth]) m.visible = false;
+			const beakM = new THREE.MeshPhysicalMaterial({ color: '#ffb02b', roughness: 0.3, clearcoat: 1, emissive: '#ff8a00', emissiveIntensity: 0.15 });
+			const upper = mesh(GEO.cone, beakM, head, 0, -0.04, 0.31, 0.055, 0.13, 0.05);
+			upper.rotation.x = Math.PI * 0.62;
+			const lower = new THREE.Group(); lower.position.set(0, -0.07, 0.28); head.add(lower);
+			const lo = mesh(GEO.cone, beakM, lower, 0, -0.01, 0.04, 0.04, 0.08, 0.035); lo.rotation.x = Math.PI * 0.55;
+			c.beak = lower;
 			c.parts.head = head;
-			limb(c, [-0.32, 1.0, 0.0], [-0.5, 0.7, 0.1], 0.05, 'glove', -1);
-			limb(c, [0.32, 1.0, 0.0], [0.5, 0.7, 0.1], 0.05, 'glove', 1);
-			// wings, folded at its sides, in layered feathers; a crest of fluff; a fluffy chest
+			// wings (no arms): long layered feathers folded at its sides, from the shoulder; they lift and flap as it hoots
+			c.wings = [];
 			for (const sx of [-1, 1]) {
-				const wing = new THREE.Group(); wing.position.set(sx * 0.33, 0.95, -0.02); wing.rotation.z = sx * 0.12; c.bouncer.add(wing);
-				for (let k = 0; k < 4; k++) mesh(GEO.sph, furMat(new THREE.Color(c.tint).offsetHSL(0, 0, -0.06 * k).getStyle()), wing, 0, -k * 0.09, -k * 0.015, 0.09, 0.2 - k * 0.025, 0.2 - k * 0.02);
+				const wing = new THREE.Group(); wing.position.set(sx * 0.34, 1.12, -0.02); wing.rotation.z = sx * 0.12; c.bouncer.add(wing);
+				for (let k = 0; k < 5; k++) {
+					const fth = mesh(GEO.sph, furMat(new THREE.Color(c.tint).offsetHSL(0, 0, -0.05 * k).getStyle()), wing, sx * 0.02 * k, -0.12 - k * 0.08, -k * 0.02, 0.08, 0.26 - k * 0.025, 0.2 - k * 0.02);
+					fth.rotation.z = sx * 0.08 * k;
+				}
+				c.wings.push({ g: wing, sx });
 			}
 			fuzz(c.parts.head, [0, 0, 0], [0.32, 0.27, 0.28], c.tint, 220, 0.07);
 			fuzz(c.bouncer, [0, 0.95, 0], [0.36, 0.44, 0.32], c.tint, 260, 0.07);
@@ -3368,10 +3378,14 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 					e.pupil.position.x = Math.sin(rt * 0.7 + c.phase) * 0.02 * f.s;
 					e.brow.position.y = (0.36 + open * 0.06 + myPulse * 0.03) * f.s;
 				}
-				f.mouth.open.scale.y = (0.02 + open * 0.17) * f.s;
-				f.mouth.tongue.visible = open > 0.2;
-				f.mouth.teeth.forEach((m) => { m.visible = open > 0.2; m.position.y = (0.03 + open * 0.1) * f.s; });
-				f.mouth.smile.visible = open < 0.2;
+				if (!f.noMouth) {
+					f.mouth.open.scale.y = (0.02 + open * 0.17) * f.s;
+					f.mouth.tongue.visible = open > 0.2;
+					f.mouth.teeth.forEach((m) => { m.visible = open > 0.2; m.position.y = (0.03 + open * 0.1) * f.s; });
+					f.mouth.smile.visible = open < 0.2;
+				}
+				if (c.beak) c.beak.rotation.x = open * 0.55;   // (the beak drops open)
+				if (c.wings) for (const w of c.wings) w.g.rotation.z = w.sx * (0.12 + open * 0.8 + Math.sin(rt * 13 + c.phase) * open * 0.3 + myPulse * 0.04);
 			}
 			if (c.wob) {
 				const W2 = c.wob;
