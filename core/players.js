@@ -149,8 +149,48 @@ IGB.players = (function () {
 		return { wall: best.wall, x: best.x, y: best.y, px, py, at: { x: (best.wall + px) * IGB.W, y: py * IGB.H }, dist: best.t };
 	}
 
-	// A tracking message (see the top).
+	// Wall touches from the box (Unity sends every phase of each, with its
+	// own id: {"touch":{"id","wall","x","y","phase"}}, wall 0 left, 1 front,
+	// 2 right, x, y -1..1 from the wall's bottom left, phase down / move /
+	// up). Each becomes pointer events at that spot on the page, as a real
+	// touchscreen's would: its own pointerId, so several players can touch
+	// at once; moves and the lift go to whatever it first touched (as a
+	// touch's do); and a click on lifting, unless it was dragged away.
+	const touching = new Map();   // id -> { target, x, y, pointerId }
+	function wallTouch(t) {
+		const world = document.querySelector('igb-world');
+		if (!world) return;
+		const r = world.getBoundingClientRect(), sc = IGB.scale;
+		const cx = r.left + (t.wall + (t.x + 1) / 2) * IGB.W * sc, cy = r.top + (1 - t.y) / 2 * IGB.H * sc;
+		const init = (rec, buttons) => ({ bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, screenX: cx, screenY: cy,
+			button: 0, buttons, pointerId: rec.pointerId, pointerType: 'touch', isPrimary: rec.primary, width: 20, height: 20, pressure: buttons ? 0.5 : 0 });
+		const fire = (el, type, o) => el.dispatchEvent(type.startsWith('pointer') ? new PointerEvent(type, o) : new MouseEvent(type, o));
+		let rec = touching.get(t.id);
+		if (t.phase === 'down') {
+			if (rec) wallTouch({ ...t, phase: 'up' });   // (a touch that never ended: end it first)
+			rec = { target: document.elementFromPoint(cx, cy) || world, x: cx, y: cy, pointerId: 100 + t.id, primary: touching.size === 0 };
+			touching.set(t.id, rec);
+			fire(rec.target, 'pointerdown', init(rec, 1));
+			fire(rec.target, 'mousedown', init(rec, 1));
+		} else if (rec && t.phase === 'move') {
+			if (Math.abs(cx - rec.lastX) < 0.5 && Math.abs(cy - rec.lastY) < 0.5) return;
+			fire(rec.target, 'pointermove', init(rec, 1));
+			fire(rec.target, 'mousemove', init(rec, 1));
+		} else if (rec && t.phase === 'up') {
+			touching.delete(t.id);
+			fire(rec.target, 'pointerup', init(rec, 0));
+			fire(rec.target, 'mouseup', init(rec, 0));
+			if (Math.hypot(cx - rec.x, cy - rec.y) < 60 * sc) fire(rec.target, 'click', init(rec, 0));   // (lifted near where it went down: a tap; dragged off, no click)
+		}
+		if (rec) { rec.lastX = cx; rec.lastY = cy; }
+	}
+
+	// A tracking message (see the top), or a wall touch.
 	function receive(str) {
+		if (typeof str === 'string' && str.charAt(0) === '{') {
+			try { const m = JSON.parse(str); if (m.touch) wallTouch(m.touch); } catch (e) { /* (not one of ours) */ }
+			return;
+		}
 		const parts = String(str).split('|');
 		const data = JSON.parse(parts[0]);
 		const count = GAZE.wandLast && data.length > 1 ? data.length - 1 : data.length;
@@ -845,6 +885,7 @@ IGB.players = (function () {
 		rotate,
 		start,
 		receive,
+		touch: wallTouch,   // (as a touch message would: { id, wall, x, y, phase })
 		onUpdate,
 		randomMove,
 		select,
