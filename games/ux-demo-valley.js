@@ -39,7 +39,7 @@ export function createValley(stage) {
 	$(renderer.domElement).css({ position: 'absolute', left: 0, top: 0, width: WIDTH + 'px', height: H + 'px' }).appendTo(stage.$bg);
 	let k = 1;
 	function resize() {
-		k = Math.min(IGB.scale * IGB.pixelRatio, 1);
+		k = Math.min(IGB.scale * IGB.pixelRatio, IGB.maxK);
 		renderer.setPixelRatio(1);
 		renderer.setSize(Math.round(WIDTH * k), Math.round(H * k), false);
 		renderer.shadowMap.needsUpdate = true;

@@ -83,7 +83,7 @@ IGB.register('knuckles-quest', function KnucklesQuestGame(stage, playersMeta) {
 	let k = 1;
 	let postfx = null;
 	function resize() {
-		k = Math.min(IGB.scale * IGB.pixelRatio, 1);
+		k = Math.min(IGB.scale * IGB.pixelRatio, IGB.maxK);
 		renderer.setPixelRatio(1);
 		renderer.setSize(Math.round(WIDTH * k), Math.round(H * k), false);
 		if (postfx) postfx.setSize();

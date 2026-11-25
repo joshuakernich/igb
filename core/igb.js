@@ -282,6 +282,11 @@ window.IGB = (function () {
 	// host asks for the walls' full resolution, however small its window)
 	const RES = parseInt(new URLSearchParams(window.location.search).get('res'), 10) || 0;
 
+	// The most a game's renderer should draw at, as world-to-pixel scale: one
+	// pixel a world unit (4800 wide), or the ?res= width when one's asked for.
+	IGB.res = RES;
+	IGB.maxK = RES > 0 ? RES / WIDTH : 1;
+
 	IGB.setScale = function (scale) {
 		IGB.scale = scale;
 		IGB.pixelRatio = RES > 0 ? RES / (WIDTH * scale) : window.devicePixelRatio || 1;

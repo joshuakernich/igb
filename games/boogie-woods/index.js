@@ -1128,7 +1128,7 @@ IGB.register('boogie-woods', function BoogieWoods(stage, playersMeta) {
 	let gradePx = null;   // (the grade's pixel size, once it exists)
 	const sparkleU = { uTime: { value: 0 }, uPx: { value: 400 } };
 	function resize() {
-		const k = Math.min(IGB.scale * IGB.pixelRatio, 1);
+		const k = Math.min(IGB.scale * IGB.pixelRatio, IGB.maxK);
 		renderer.setPixelRatio(1);
 		renderer.setSize(Math.round(WIDTH * k), Math.round(H * k), false);
 		if (post) post.setSize();

@@ -112,7 +112,7 @@ IGB.register('twin-tail-tower', function TwinTailTowerGame(stage, playersMeta) {
 
 	let postfx = null;   // bloom and tone mapping over all three walls (made once the scene is)
 	function resize() {
-		const k = Math.min(IGB.scale * IGB.pixelRatio, 1);
+		const k = Math.min(IGB.scale * IGB.pixelRatio, IGB.maxK);
 		renderer.setPixelRatio(1);
 		renderer.setSize(Math.round(WIDTH * k), Math.round(H * k), false);
 		if (postfx) postfx.setSize();

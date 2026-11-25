@@ -111,7 +111,7 @@ IGB.Stage = function (id) {
 	// Size a canvas to the world's current resolution. Returns true if its
 	// pixel size changed (which clears it).
 	function fit(canvas, ctx, w, h) {
-		const k = Math.max(0.25, IGB.scale) * IGB.pixelRatio;
+		const k = IGB.res ? IGB.res / IGB.WIDTH : Math.max(0.25, IGB.scale) * IGB.pixelRatio;   // (?res=: exactly that width)
 		const cw = Math.ceil(w * k);
 		const ch = Math.ceil(h * k);
 		if (canvas.width === cw && canvas.height === ch) return false;

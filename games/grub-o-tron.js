@@ -954,7 +954,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	$(renderer.domElement).css({ position: 'absolute', left: 0, top: 0, width: WIDTH + 'px', height: H + 'px' }).appendTo(stage.$bg);
 	let post = null;
 	function resize() {
-		const k = Math.min(IGB.scale * IGB.pixelRatio, 1);
+		const k = Math.min(IGB.scale * IGB.pixelRatio, IGB.maxK);
 		renderer.setPixelRatio(1);
 		renderer.setSize(Math.round(WIDTH * k), Math.round(H * k), false);
 		if (post) post.setSize();

@@ -77,7 +77,7 @@ IGB.register('loop-island', function LoopIslandGame(stage, playersMeta) {
 	let k = 1;
 	let postfx = null;   // the bloom and tone mapping over all three walls (made once the scene is)
 	function resize() {
-		k = Math.min(IGB.scale * IGB.pixelRatio, 1);
+		k = Math.min(IGB.scale * IGB.pixelRatio, IGB.maxK);
 		renderer.setPixelRatio(1);
 		renderer.setSize(Math.round(WIDTH * k), Math.round(H * k), false);
 		if (postfx) postfx.setSize();
