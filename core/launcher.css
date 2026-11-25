@@ -301,18 +301,44 @@ igb-controls button svg {
 	height: 100%;
 }
 
-igb-log {
-	display: block;
+/* The readouts, under the controls and in their style: the frame rate and
+   resolution, then the log (core/launcher.js). (The controls' column ends
+   174 units below the middle: this starts just under it.) */
+igb-readout {
+	--u: calc(100vw / 4800);
+	--panel: #2fd36b;
+	display: flex;
+	flex-direction: column;
+	gap: calc(8 * var(--u));
 	position: absolute;
 	right: 0;
-	bottom: 0;
-	margin: 2vw;
+	top: calc(690 * var(--u));
+	width: calc(520 * var(--u));
+	max-height: calc(290 * var(--u));
+	overflow: hidden;
+	box-sizing: border-box;
+	padding: calc(16 * var(--u)) calc(28 * var(--u)) calc(16 * var(--u)) calc(26 * var(--u));
+	border-radius: calc(40 * var(--u)) 0 0 calc(40 * var(--u));
+	background: rgba(0, 0, 0, 0.6);
+	box-shadow: inset calc(-7 * var(--u)) 0 0 0 var(--panel);
 	color: white;
-	font-family: sans-serif;
-	font-weight: normal;
-	font-size: 0.7vw;
+	font: 400 calc(22 * var(--u)) / 1.3 'Share Tech Mono', monospace;
 	pointer-events: none;
 	z-index: 1000;
+}
+
+igb-readout igb-stats {
+	display: block;
+	color: var(--panel);
+	white-space: pre;
+}
+
+igb-readout igb-log {
+	display: block;
+	color: rgba(255, 255, 255, 0.8);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 igb-ripple {

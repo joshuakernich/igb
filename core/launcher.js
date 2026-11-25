@@ -177,11 +177,13 @@ $(function () {
 	window.addEventListener('vuplexready', inBox);
 
 
-	// Frame rate and resolution, in a corner over everything: the page's size in
-	// device pixels, and the biggest canvas a game is drawing into.
-	(function stats() {
-		const $s = $('<igb-stats>').css({ position: 'fixed', left: '6px', bottom: '4px', zIndex: 2147483647, pointerEvents: 'none',
-			font: '600 12px/1.3 "Share Tech Mono", monospace', color: '#9f9', background: 'rgba(0,0,0,0.55)', padding: '2px 6px', borderRadius: '4px', whiteSpace: 'pre' }).appendTo('body');
+	// The readouts panel, under the controls on the right: the frame rate and
+	// resolution (the page's size in device pixels, and the biggest canvas a
+	// game is drawing into), then the log.
+	(function readouts() {
+		const $panel = $('<igb-readout>').appendTo($igb);
+		const $s = $('<igb-stats>').text('-- fps').appendTo($panel);
+		$log.appendTo($panel);
 		let frames = 0, since = performance.now();
 		(function tick(now) {
 			frames++;
@@ -191,7 +193,7 @@ $(function () {
 				const dpr = window.devicePixelRatio || 1;
 				let big = null;
 				for (const c of document.getElementsByTagName('canvas')) if (c.getClientRects().length && (!big || c.width * c.height > big.width * big.height)) big = c;
-				$s.text(fps + ' fps  ' + Math.round(innerWidth * dpr) + '\u00d7' + Math.round(innerHeight * dpr) + (big ? '  render ' + big.width + '\u00d7' + big.height : ''));
+				$s.text(fps + ' fps\npage   ' + Math.round(innerWidth * dpr) + '\u00d7' + Math.round(innerHeight * dpr) + (big ? '\nrender ' + big.width + '\u00d7' + big.height : ''));
 			}
 			requestAnimationFrame(tick);
 		})(performance.now());
