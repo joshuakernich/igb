@@ -278,9 +278,13 @@ window.IGB = (function () {
 
 	/* ---------- scale and coordinates ---------- */
 
+	// ?res=5760: render at that width whatever the window's size (the web
+	// host asks for the walls' full resolution, however small its window)
+	const RES = parseInt(new URLSearchParams(window.location.search).get('res'), 10) || 0;
+
 	IGB.setScale = function (scale) {
 		IGB.scale = scale;
-		IGB.pixelRatio = window.devicePixelRatio || 1;
+		IGB.pixelRatio = RES > 0 ? RES / (WIDTH * scale) : window.devicePixelRatio || 1;
 		for (const fn of resizeListeners) fn(scale);
 	};
 

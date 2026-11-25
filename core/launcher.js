@@ -169,7 +169,10 @@ $(function () {
 
 	// The seams between the walls, over every game; gone in the real gamebox.
 	for (const x of [IGB.W, 2 * IGB.W]) $('<igb-seam>').css({ left: x + 'px' }).appendTo($world);
-	const inBox = () => $igb.toggleClass('vuplex', !!window.vuplex);
+	const inBox = () => {
+		$igb.toggleClass('vuplex', !!window.vuplex);
+		$('igb-simulator').css('display', window.vuplex ? 'none' : '');   // (in the box, the desk simulator's empty frame would catch taps over the walls)
+	};
 	inBox();
 	window.addEventListener('vuplexready', inBox);
 
