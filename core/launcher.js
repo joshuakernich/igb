@@ -173,6 +173,27 @@ $(function () {
 	inBox();
 	window.addEventListener('vuplexready', inBox);
 
+
+	// Frame rate and resolution, in a corner over everything: the page's size in
+	// device pixels, and the biggest canvas a game is drawing into.
+	(function stats() {
+		const $s = $('<igb-stats>').css({ position: 'fixed', left: '6px', bottom: '4px', zIndex: 2147483647, pointerEvents: 'none',
+			font: '600 12px/1.3 "Share Tech Mono", monospace', color: '#9f9', background: 'rgba(0,0,0,0.55)', padding: '2px 6px', borderRadius: '4px', whiteSpace: 'pre' }).appendTo('body');
+		let frames = 0, since = performance.now();
+		(function tick(now) {
+			frames++;
+			if (now - since >= 500) {
+				const fps = Math.round(frames * 1000 / (now - since));
+				frames = 0; since = now;
+				const dpr = window.devicePixelRatio || 1;
+				let big = null;
+				for (const c of document.getElementsByTagName('canvas')) if (c.getClientRects().length && (!big || c.width * c.height > big.width * big.height)) big = c;
+				$s.text(fps + ' fps  ' + Math.round(innerWidth * dpr) + '\u00d7' + Math.round(innerHeight * dpr) + (big ? '  render ' + big.width + '\u00d7' + big.height : ''));
+			}
+			requestAnimationFrame(tick);
+		})(performance.now());
+	})();
+
 	buildMenu();
 
 	const first = decodeURIComponent(window.location.hash.slice(1))
