@@ -313,7 +313,7 @@ igb-readout {
 	position: absolute;
 	right: 0;
 	top: calc(690 * var(--u));
-	width: calc(520 * var(--u));
+	width: calc(312 * var(--u));
 	max-height: calc(290 * var(--u));
 	overflow: hidden;
 	box-sizing: border-box;
