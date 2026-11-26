@@ -1264,15 +1264,16 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// each room's colours: its floor's checks, its wall's tiles, the floor round the grid
 	// (one look for the whole kitchen, every wall the same: muted, dark slate-green
 	// tiles, so the devices, the food and the neon carry the colour)
-	const KITCHEN = { wall: ['#2a3834', '#2f3e38'], edge: 0x161c1a, counter: 0x2a2230, light: 0xffd8b0 };
-	// glossy wall tiles in two colours, banded, the odd crack and drip
+	const KITCHEN = { wall: ['#0f7a4e', '#12895a'],   // (emerald green wall tiles, the user asked)
+		edge: 0x161c1a, counter: 0x2a2230, light: 0xffd8b0 };
+	// glossy wall tiles in two colours, the odd crack and drip
 	function wallTex(a, b) {
 		return tex(512, 512, function (c) {
 			const rnd = seeded(b.charCodeAt(3) * 3);
 			c.fillStyle = mix(a, '#000000', 0.3);
 			c.fillRect(0, 0, 512, 512);
 			for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
-				const col = y === 5 ? mix(a, '#ffffff', 0.18) : y % 2 ? a : b;   // (a faint band of paler tiles)
+				const col = y % 2 ? a : b;   // (no pale band any more: the user asked)
 				c.fillStyle = mix(col, '#ffffff', rnd() * 0.05);
 				c.beginPath();
 				c.roundRect(x * 64 + 3, y * 64 + 3, 58, 58, 8);
@@ -1351,24 +1352,6 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		for (const x of [-BACK + 0.12, BACK - 0.12]) for (const [y, r] of [[3.0, 0.07], [3.18, 0.045]]) {
 			const p = mesh(CYL(r, r, BACK + FRONT_BACK, 12), MAT.pipe, g, x, y, (BACK - FRONT_BACK) / 2);
 			p.rotation.x = Math.PI / 2;
-		}
-		// the side walls' signs, the jars and a fan
-		for (const [w, x] of [[0, -BACK + 0.04], [2, BACK - 0.04]]) {
-			const fan = new THREE.Group();
-			fan.position.set(x, 2.4, -0.4);
-			fan.rotation.y = w === 0 ? Math.PI / 2 : -Math.PI / 2;
-			room.add(fan);
-			mesh(new THREE.TorusGeometry(0.24, 0.03, 8, 24), MAT.darkSteel, fan);
-			mesh(new THREE.CircleGeometry(0.24, 24), MAT.black, fan, 0, 0, -0.01);
-			const blades = new THREE.Group();
-			fan.add(blades);
-			for (let b = 0; b < 4; b++) {
-				const pivot = new THREE.Group();
-				pivot.rotation.z = b * Math.PI / 2;
-				mesh(BOX(0.07, 0.2, 0.01), MAT.steel, pivot, 0, 0.11, 0.01);
-				blades.add(pivot);
-			}
-			fans.push(blades);
 		}
 		// the front: the window onto the wasteland behind the mutants, and the neon over it
 		const wa = HATCH / W, wb = CHUTE / W;
