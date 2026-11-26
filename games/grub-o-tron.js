@@ -2632,19 +2632,17 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		mesh(new THREE.CircleGeometry(0.004, 10), MAT.white, eye, -0.012, -0.01, 0.043);
 		p.eyes = [eye];
 
-		// the plate: clamped flat on top of the head on a little servo mount
+		// the plate: a white china plate resting right on top of the head, a band of their
+		// colour round its rim to say whose robot it is
 		const plate = new THREE.Group();
-		plate.position.set(0, 0.29, 0);
+		plate.position.set(0, 0.258, 0);   // (its foot on the crown of the head, 0.27 up)
 		plate.scale.setScalar(RB.plate);
 		head.add(plate);
 		p.plate = plate;
-		B(0.07, 0.03, 0.07, servo, plate, 0, -0.012, 0, 0.3);
-		mesh(CYL(0.018, 0.018, 0.025, 16), horn, plate, 0, 0.005, 0);
-		mesh(lathe([[0, 0.004], [0.1, 0.004], [0.11, 0], [0.12, 0.004], [0.2, 0.012], [0.26, 0.036], [0.285, 0.05], [0.28, 0.056], [0.255, 0.046], [0.19, 0.024], [0, 0.02]], 56, 30), shell, plate, 0, 0.012, 0);
-		mesh(new THREE.TorusGeometry(0.281, 0.008, 8, 64), trim, plate, 0, 0.062, 0).rotation.x = Math.PI / 2;
-		for (const s of [-1, 1]) {   // (two clamp arms gripping the rim)
-			tube(plate, [[s * 0.03, 0.0, 0], [s * 0.2, 0.02, 0], [s * 0.272, 0.05, 0], [s * 0.286, 0.066, 0]], 0.007, 0.006, horn, 8, 16);
-		}
+		const china = std(0xfbfaf6, 0.12, 0, { clearcoat: 1, clearcoatRoughness: 0.03 });
+		mesh(lathe([[0, 0.004], [0.1, 0.004], [0.11, 0], [0.12, 0.004], [0.2, 0.012], [0.26, 0.036], [0.285, 0.05], [0.28, 0.056], [0.255, 0.046], [0.19, 0.024], [0, 0.02]], 56, 30), china, plate, 0, 0.012, 0);
+		const band = std(col, 0.18, 0.05, { clearcoat: 1, clearcoatRoughness: 0.03, emissive: col, emissiveIntensity: 0.12 });
+		mesh(lathe([[0.212, 0.039], [0.24, 0.05], [0.268, 0.062], [0.284, 0.068], [0.279, 0.0695], [0.262, 0.0625], [0.236, 0.0515], [0.21, 0.0405]], 64, 12), band, plate, 0, 0, 0);
 		p.hold = new THREE.Group();
 		p.hold.position.y = 0.04;
 		plate.add(p.hold);
@@ -3384,9 +3382,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		art.circle(ctx, 8, -12, 3.5, { fill: '#0c0c12' });
 		art.circle(ctx, 9.2, -13.2, 1.1, { fill: '#ffffff' });
 		// the plate on top
-		art.rect(ctx, -3, -26, 6, 4, { fill: '#1c1b22' });
-		art.ellipse(ctx, 0, -28, 22, 4.5, { fill: col, ...line });
-		art.ellipse(ctx, 0, -28, 22, 4.5, { stroke: col, lineWidth: 2.5 });
+		art.ellipse(ctx, 0, -25, 22, 4.5, { fill: '#fbfaf6', ...line });
+		art.ellipse(ctx, 0, -25, 22, 4.5, { stroke: col, lineWidth: 3 });
 		ctx.restore();
 		ctx.restore();
 	}
