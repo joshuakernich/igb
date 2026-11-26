@@ -1349,15 +1349,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			mesh(BOX(len + 0.08, 0.05, CT.deep + 0.06), MAT.steel, cg, 0, CT.y, 0).receiveShadow = true;
 			mesh(BOX(len, 0.05, 0.01), MAT.hazard, cg, 0, CT.y - 0.06, CT.deep / 2 + 0.006);
 			mesh(BOX(len, 0.08, 0.02), MAT.black, cg, 0, 0.04, CT.deep / 2 + 0.012);
-			// (the empty ends: a locker in the narrow ones; the wide ones in the corners are left
-			// clear: their brown crates went, the user asked)
-			for (const [ea, eb] of [[0, a0], [a1, 1]]) {
-				if (eb - ea >= 0.2) continue;
-				const e = wallPoint(w, (ea + eb) / 2, CT.d + 0.4);
-				const locker = mesh(BOX(0.6, 1.9, 0.5), std(0x3a4440, 0.5, 0.4), g, e.x, 0.95, e.z);
-				locker.rotation.y = faceEye(e.x, e.z);
-				locker.castShadow = true;
-			}
+			// (the empty ends of each wall are left clear: their crates and lockers went, the user asked)
 		}
 		// the front: the window onto the wasteland behind the mutants, and the neon over it
 		const wa = HATCH / W, wb = CHUTE / W;
