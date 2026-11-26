@@ -150,6 +150,12 @@ $(function () {
 	$('[btn=refresh]').on('click', function () {
 		if (gameKey) launch(gameKey);
 	});
+	// IGB Studio: edit this game's 3D scenes (the hub artifact has no room for it: there, the GitHub Pages copy)
+	$('[btn=studio]').on('click', function (e) {
+		e.stopPropagation();
+		const here = /^(localhost|127\.0\.0\.1|joshuakernich\.github\.io)(:|$)/.test(location.host);
+		window.open((here ? 'studio.html' : 'https://joshuakernich.github.io/igb/studio.html') + (gameKey ? '?game=' + encodeURIComponent(gameKey) : ''), 'igb-studio');
+	});
 	// (the game's debug options, where it has them: a Showtime game opens them on its right wall)
 	$('[btn=debug]').on('click', function (e) {
 		e.stopPropagation();

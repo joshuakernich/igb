@@ -58,8 +58,18 @@ assets/
   icons/              menu icons
 lib/                  jQuery, jQuery UI, three.js (lib/three/), and optional Matter / Quaternion
 docs/porting.md       how an old-platform game was brought across
+docs/studio.md        IGB Studio: the 3D scene editor (studio.html, core/studio/, lib/three/igb-scene.js)
 tools/                headless checks (see below)
 ```
+
+## 3D scenes: IGB Studio
+
+`studio.html` is a Unity-style editor for the three.js games. With it, artists:
+- build, light and grade scenes;
+- import models (.glb, .gltf, .fbx, .obj);
+- frame the three walls, seeing exactly what the game will show.
+
+Games load a scene with `loadScene()` from `lib/three/igb-scene.js`, and edits show live in a running game. See [docs/studio.md](docs/studio.md), and `games/scene-demo` for an example.
 
 ## Writing a prototype
 

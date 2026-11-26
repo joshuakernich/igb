@@ -76,6 +76,9 @@ IGB.manifest = [
 		{ id: 'echo', name: 'Echo',
 			box: { color: '#3ad1ff', bg: '#0b1630', note: 'DODGE' } },
 		{ id: 'template', name: 'Template', file: 'games/_template.js' },
+		// (the example of a game built on a scene made in the Studio, studio.html)
+		{ id: 'scene-demo', name: 'Studio Scene', file: 'games/scene-demo/index.js', module: true,
+			box: { color: '#5ad1ff', bg: '#141826', note: 'STUDIO' } },
 	] },
 
 	// (the UX Demo, on a row of its own)

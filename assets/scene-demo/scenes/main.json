@@ -1,0 +1,812 @@
+{
+	"igbScene": 1,
+	"name": "Scene Demo",
+	"render": {
+		"toneMapping": "ACES",
+		"exposure": 1.05,
+		"background": {
+			"type": "color",
+			"color": "#141826"
+		},
+		"environment": {
+			"preset": "studio",
+			"intensity": 0.8
+		},
+		"fog": {
+			"enabled": true,
+			"color": "#141826",
+			"near": 14,
+			"far": 42
+		},
+		"bloom": {
+			"strength": 0.6,
+			"radius": 0.5,
+			"threshold": 0.9,
+			"cap": 2.5
+		},
+		"shadows": {
+			"enabled": true,
+			"soft": true
+		}
+	},
+	"rig": {
+		"position": [
+			0,
+			1.35,
+			0
+		],
+		"pitch": -6,
+		"yaw": 0,
+		"fov": 64
+	},
+	"objects": [
+		{
+			"id": "d001",
+			"type": "light",
+			"name": "Sun",
+			"position": [
+				0,
+				0,
+				-3
+			],
+			"rotation": [
+				-55,
+				-30,
+				0
+			],
+			"light": {
+				"kind": "directional",
+				"color": "#fff0dc",
+				"intensity": 2.4,
+				"castShadow": true,
+				"shadowArea": 26,
+				"shadowSize": 2048
+			}
+		},
+		{
+			"id": "d002",
+			"type": "light",
+			"name": "Sky Light",
+			"light": {
+				"kind": "hemisphere",
+				"color": "#dfe8ff",
+				"groundColor": "#2a2430",
+				"intensity": 0.55
+			}
+		},
+		{
+			"id": "d003",
+			"type": "mesh",
+			"name": "Floor",
+			"position": [
+				0,
+				0,
+				0
+			],
+			"scale": [
+				30,
+				1,
+				30
+			],
+			"mesh": {
+				"shape": "disc"
+			},
+			"material": {
+				"color": "#283044",
+				"roughness": 0.55,
+				"metalness": 0.1
+			},
+			"castShadow": false
+		},
+		{
+			"id": "d004",
+			"type": "marker",
+			"name": "Room",
+			"position": [
+				0,
+				0.3,
+				-6.2
+			],
+			"scale": [
+				4.4,
+				1,
+				2.6
+			]
+		},
+		{
+			"id": "d005",
+			"type": "group",
+			"name": "Stage",
+			"position": [
+				0,
+				0,
+				-6.5
+			],
+			"children": [
+				{
+					"id": "d006",
+					"type": "mesh",
+					"name": "Platform",
+					"position": [
+						0,
+						0.15,
+						0
+					],
+					"scale": [
+						6,
+						0.3,
+						6
+					],
+					"mesh": {
+						"shape": "cylinder"
+					},
+					"material": {
+						"color": "#3a4258",
+						"roughness": 0.35,
+						"clearcoat": 1
+					}
+				},
+				{
+					"id": "d007",
+					"type": "mesh",
+					"name": "Rim",
+					"position": [
+						0,
+						0.3,
+						0
+					],
+					"scale": [
+						6.02,
+						6.02,
+						6.02
+					],
+					"mesh": {
+						"shape": "ring"
+					},
+					"material": {
+						"color": "#5ad1ff",
+						"unlit": true,
+						"glow": 2.6
+					},
+					"castShadow": false
+				},
+				{
+					"id": "d008",
+					"type": "prefab",
+					"name": "Speedster",
+					"position": [
+						0,
+						0.3,
+						-2
+					],
+					"prefab": {
+						"kind": "speedster",
+						"params": {
+							"color": "#2f6cf0",
+							"kind": "sonic"
+						},
+						"mode": "idle"
+					}
+				},
+				{
+					"id": "d009",
+					"type": "prefab",
+					"name": "Knuckles",
+					"position": [
+						-1.6,
+						0.3,
+						-1.6
+					],
+					"rotation": [
+						0,
+						25,
+						0
+					],
+					"prefab": {
+						"kind": "knuckles",
+						"params": {},
+						"mode": "idle"
+					}
+				},
+				{
+					"id": "d00a",
+					"type": "prefab",
+					"name": "Metal",
+					"position": [
+						1.6,
+						0.3,
+						-1.6
+					],
+					"rotation": [
+						0,
+						-25,
+						0
+					],
+					"prefab": {
+						"kind": "speedster",
+						"params": {
+							"color": "#2a3f9a",
+							"kind": "metal"
+						},
+						"mode": "idle"
+					}
+				},
+				{
+					"id": "d00b",
+					"type": "mesh",
+					"name": "Crystal",
+					"position": [
+						0,
+						3.2,
+						-2.2
+					],
+					"scale": [
+						0.5,
+						0.5,
+						0.5
+					],
+					"mesh": {
+						"shape": "box"
+					},
+					"material": {
+						"color": "#ffd23f",
+						"emissive": "#ffb02e",
+						"emissiveIntensity": 2.2,
+						"roughness": 0.2,
+						"metalness": 0.3
+					},
+					"tag": "spin",
+					"rotation": [
+						45,
+						0,
+						45
+					]
+				},
+				{
+					"id": "d00c",
+					"type": "light",
+					"name": "Stage Light",
+					"position": [
+						0,
+						2.6,
+						1.2
+					],
+					"light": {
+						"kind": "point",
+						"color": "#ffd9a8",
+						"intensity": 18,
+						"distance": 9,
+						"decay": 2
+					}
+				}
+			]
+		},
+		{
+			"id": "d00d",
+			"type": "group",
+			"name": "Pillar",
+			"position": [
+				-6,
+				0,
+				-2.5
+			],
+			"children": [
+				{
+					"id": "d00e",
+					"type": "mesh",
+					"name": "Column",
+					"position": [
+						0,
+						1.6,
+						0
+					],
+					"scale": [
+						0.6,
+						3.2,
+						0.6
+					],
+					"mesh": {
+						"shape": "cylinder"
+					},
+					"material": {
+						"color": "#3a4258",
+						"roughness": 0.35,
+						"clearcoat": 1
+					}
+				},
+				{
+					"id": "d00f",
+					"type": "mesh",
+					"name": "Base",
+					"position": [
+						0,
+						0.1,
+						0
+					],
+					"scale": [
+						0.9,
+						0.2,
+						0.9
+					],
+					"mesh": {
+						"shape": "cylinder"
+					},
+					"material": {
+						"color": "#2b3144",
+						"roughness": 0.5
+					}
+				},
+				{
+					"id": "d00g",
+					"type": "mesh",
+					"name": "Orb",
+					"position": [
+						0,
+						3.75,
+						0
+					],
+					"scale": [
+						0.55,
+						0.55,
+						0.55
+					],
+					"mesh": {
+						"shape": "sphere"
+					},
+					"material": {
+						"color": "#ff5fd0",
+						"unlit": true,
+						"glow": 3
+					},
+					"tag": "bob",
+					"castShadow": false
+				}
+			]
+		},
+		{
+			"id": "d00h",
+			"type": "group",
+			"name": "Pillar",
+			"position": [
+				-6,
+				0,
+				-8.5
+			],
+			"children": [
+				{
+					"id": "d00i",
+					"type": "mesh",
+					"name": "Column",
+					"position": [
+						0,
+						1.6,
+						0
+					],
+					"scale": [
+						0.6,
+						3.2,
+						0.6
+					],
+					"mesh": {
+						"shape": "cylinder"
+					},
+					"material": {
+						"color": "#3a4258",
+						"roughness": 0.35,
+						"clearcoat": 1
+					}
+				},
+				{
+					"id": "d00j",
+					"type": "mesh",
+					"name": "Base",
+					"position": [
+						0,
+						0.1,
+						0
+					],
+					"scale": [
+						0.9,
+						0.2,
+						0.9
+					],
+					"mesh": {
+						"shape": "cylinder"
+					},
+					"material": {
+						"color": "#2b3144",
+						"roughness": 0.5
+					}
+				},
+				{
+					"id": "d00k",
+					"type": "mesh",
+					"name": "Orb",
+					"position": [
+						0,
+						3.75,
+						0
+					],
+					"scale": [
+						0.55,
+						0.55,
+						0.55
+					],
+					"mesh": {
+						"shape": "sphere"
+					},
+					"material": {
+						"color": "#3ad1ff",
+						"unlit": true,
+						"glow": 3
+					},
+					"tag": "bob",
+					"castShadow": false
+				}
+			]
+		},
+		{
+			"id": "d00l",
+			"type": "group",
+			"name": "Pillar",
+			"position": [
+				6,
+				0,
+				-2.5
+			],
+			"children": [
+				{
+					"id": "d00m",
+					"type": "mesh",
+					"name": "Column",
+					"position": [
+						0,
+						1.6,
+						0
+					],
+					"scale": [
+						0.6,
+						3.2,
+						0.6
+					],
+					"mesh": {
+						"shape": "cylinder"
+					},
+					"material": {
+						"color": "#3a4258",
+						"roughness": 0.35,
+						"clearcoat": 1
+					}
+				},
+				{
+					"id": "d00n",
+					"type": "mesh",
+					"name": "Base",
+					"position": [
+						0,
+						0.1,
+						0
+					],
+					"scale": [
+						0.9,
+						0.2,
+						0.9
+					],
+					"mesh": {
+						"shape": "cylinder"
+					},
+					"material": {
+						"color": "#2b3144",
+						"roughness": 0.5
+					}
+				},
+				{
+					"id": "d00o",
+					"type": "mesh",
+					"name": "Orb",
+					"position": [
+						0,
+						3.75,
+						0
+					],
+					"scale": [
+						0.55,
+						0.55,
+						0.55
+					],
+					"mesh": {
+						"shape": "sphere"
+					},
+					"material": {
+						"color": "#3ad1ff",
+						"unlit": true,
+						"glow": 3
+					},
+					"tag": "bob",
+					"castShadow": false
+				}
+			]
+		},
+		{
+			"id": "d00p",
+			"type": "group",
+			"name": "Pillar",
+			"position": [
+				6,
+				0,
+				-8.5
+			],
+			"children": [
+				{
+					"id": "d00q",
+					"type": "mesh",
+					"name": "Column",
+					"position": [
+						0,
+						1.6,
+						0
+					],
+					"scale": [
+						0.6,
+						3.2,
+						0.6
+					],
+					"mesh": {
+						"shape": "cylinder"
+					},
+					"material": {
+						"color": "#3a4258",
+						"roughness": 0.35,
+						"clearcoat": 1
+					}
+				},
+				{
+					"id": "d00r",
+					"type": "mesh",
+					"name": "Base",
+					"position": [
+						0,
+						0.1,
+						0
+					],
+					"scale": [
+						0.9,
+						0.2,
+						0.9
+					],
+					"mesh": {
+						"shape": "cylinder"
+					},
+					"material": {
+						"color": "#2b3144",
+						"roughness": 0.5
+					}
+				},
+				{
+					"id": "d00s",
+					"type": "mesh",
+					"name": "Orb",
+					"position": [
+						0,
+						3.75,
+						0
+					],
+					"scale": [
+						0.55,
+						0.55,
+						0.55
+					],
+					"mesh": {
+						"shape": "sphere"
+					},
+					"material": {
+						"color": "#ff5fd0",
+						"unlit": true,
+						"glow": 3
+					},
+					"tag": "bob",
+					"castShadow": false
+				}
+			]
+		},
+		{
+			"id": "d00t",
+			"type": "group",
+			"name": "Pillar",
+			"position": [
+				-6,
+				0,
+				3.5
+			],
+			"children": [
+				{
+					"id": "d00u",
+					"type": "mesh",
+					"name": "Column",
+					"position": [
+						0,
+						1.6,
+						0
+					],
+					"scale": [
+						0.6,
+						3.2,
+						0.6
+					],
+					"mesh": {
+						"shape": "cylinder"
+					},
+					"material": {
+						"color": "#3a4258",
+						"roughness": 0.35,
+						"clearcoat": 1
+					}
+				},
+				{
+					"id": "d00v",
+					"type": "mesh",
+					"name": "Base",
+					"position": [
+						0,
+						0.1,
+						0
+					],
+					"scale": [
+						0.9,
+						0.2,
+						0.9
+					],
+					"mesh": {
+						"shape": "cylinder"
+					},
+					"material": {
+						"color": "#2b3144",
+						"roughness": 0.5
+					}
+				},
+				{
+					"id": "d00w",
+					"type": "mesh",
+					"name": "Orb",
+					"position": [
+						0,
+						3.75,
+						0
+					],
+					"scale": [
+						0.55,
+						0.55,
+						0.55
+					],
+					"mesh": {
+						"shape": "sphere"
+					},
+					"material": {
+						"color": "#ffd23f",
+						"unlit": true,
+						"glow": 3
+					},
+					"tag": "bob",
+					"castShadow": false
+				}
+			]
+		},
+		{
+			"id": "d00x",
+			"type": "group",
+			"name": "Pillar",
+			"position": [
+				6,
+				0,
+				3.5
+			],
+			"children": [
+				{
+					"id": "d00y",
+					"type": "mesh",
+					"name": "Column",
+					"position": [
+						0,
+						1.6,
+						0
+					],
+					"scale": [
+						0.6,
+						3.2,
+						0.6
+					],
+					"mesh": {
+						"shape": "cylinder"
+					},
+					"material": {
+						"color": "#3a4258",
+						"roughness": 0.35,
+						"clearcoat": 1
+					}
+				},
+				{
+					"id": "d00z",
+					"type": "mesh",
+					"name": "Base",
+					"position": [
+						0,
+						0.1,
+						0
+					],
+					"scale": [
+						0.9,
+						0.2,
+						0.9
+					],
+					"mesh": {
+						"shape": "cylinder"
+					},
+					"material": {
+						"color": "#2b3144",
+						"roughness": 0.5
+					}
+				},
+				{
+					"id": "d010",
+					"type": "mesh",
+					"name": "Orb",
+					"position": [
+						0,
+						3.75,
+						0
+					],
+					"scale": [
+						0.55,
+						0.55,
+						0.55
+					],
+					"mesh": {
+						"shape": "sphere"
+					},
+					"material": {
+						"color": "#ffd23f",
+						"unlit": true,
+						"glow": 3
+					},
+					"tag": "bob",
+					"castShadow": false
+				}
+			]
+		},
+		{
+			"id": "d011",
+			"type": "marker",
+			"name": "Spawn",
+			"position": [
+				0,
+				0.3,
+				-6.2
+			]
+		},
+		{
+			"id": "d012",
+			"type": "model",
+			"name": "Player",
+			"template": true,
+			"position": [
+				0,
+				0,
+				0
+			],
+			"scale": [
+				0.96,
+				0.96,
+				0.96
+			],
+			"model": {
+				"src": "assets/shared/mannequin.glb",
+				"tint": "#ffffff",
+				"anim": {
+					"clip": "Idle_Loop",
+					"speed": 1,
+					"loop": true
+				}
+			}
+		}
+	]
+}

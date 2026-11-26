@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>IGB Studio</title>
+	<link rel="stylesheet" href="core/studio/studio.css">
+</head>
+<body>
+	<div id="app">
+		<header id="bar">
+			<b class="logo">IGB <span>STUDIO</span></b>
+			<label class="pick">Game <select id="project"></select></label>
+			<label class="pick">Scene <select id="sceneSel"></select></label>
+			<button id="newScene" title="A new scene for this game">New</button>
+			<button id="save" class="primary" title="Save (Ctrl+S)">Save</button>
+			<span id="dirty" title="Unsaved changes"></span>
+			<span class="sep"></span>
+			<div class="seg" id="tools">
+				<button data-tool="translate" class="on" title="Move (W)">Move</button>
+				<button data-tool="rotate" title="Rotate (E)">Rotate</button>
+				<button data-tool="scale" title="Scale (R)">Scale</button>
+			</div>
+			<button id="space" title="Gizmo in local or world space (X)">Local</button>
+			<button id="snap" title="Snap: 0.25 m, 15°, 0.1 (hold Ctrl while dragging to toggle)">Snap</button>
+			<button id="animate" class="on" title="Play animations (P)">▶ Animate</button>
+			<span class="sep"></span>
+			<div class="seg" id="views">
+				<button data-view="scene" title="Scene view only">Scene</button>
+				<button data-view="split" class="on" title="Scene view with the game's three walls under it">Split</button>
+				<button data-view="game" title="The game's three walls only">Game</button>
+			</div>
+			<span class="grow"></span>
+			<button id="folder" title="Connect your igb-proto folder so Save and Import write into the project">Connect folder</button>
+			<button id="playHub" title="Open the game in the hub in a new tab; edits here show there live">Play in hub ↗</button>
+			<button id="help" title="Shortcuts and workflow">?</button>
+		</header>
+
+		<aside id="hier" class="panel">
+			<div class="phead">Hierarchy <span class="grow"></span>
+				<button id="addBtn" title="Add an object">+ Add</button>
+			</div>
+			<div id="tree" class="pbody"></div>
+		</aside>
+
+		<main id="view">
+			<canvas id="gl"></canvas>
+			<div id="sceneHit"></div>
+			<div id="gameHit"></div>
+			<div id="gameLabels"><span>LEFT WALL</span><span>FRONT WALL</span><span>RIGHT WALL</span></div>
+			<div id="viewInfo"></div>
+		</main>
+
+		<aside id="insp" class="panel">
+			<div class="phead">Inspector</div>
+			<div id="inspector" class="pbody"></div>
+		</aside>
+
+		<section id="bottom" class="panel">
+			<div class="phead tabs">
+				<button data-tab="assets" class="on">Assets</button>
+				<button data-tab="console">Console <span id="errCount"></span></button>
+				<span class="grow"></span>
+				<button id="importBtn" title="Import models (.glb .gltf .fbx .obj) or textures (.png .jpg .webp)">Import…</button>
+				<input type="file" id="importFile" multiple hidden accept=".glb,.gltf,.bin,.fbx,.obj,.png,.jpg,.jpeg,.webp">
+			</div>
+			<div id="assets" class="pbody tab on"></div>
+			<div id="console" class="pbody tab"></div>
+		</section>
+	</div>
+
+	<div id="menu" class="menu" hidden></div>
+	<div id="drop" hidden><div>Drop to import into <b id="dropTo"></b></div></div>
+	<div id="modal" hidden></div>
+
+	<script type="module" src="core/studio/studio.js"></script>
+</body>
+</html>
