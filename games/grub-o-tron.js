@@ -2038,213 +2038,272 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// a smooth little noise for lumps: sines at odd angles
 	const lumpy = (p, k = 1) => (Math.sin(p.x * 4.1 * k + 1.3) * Math.sin(p.y * 3.7 * k + 0.4) + Math.sin(p.z * 5.3 * k + p.x * 2.1 * k) * 0.6 + Math.sin(p.y * 7.9 * k + p.z * 3.3 * k) * 0.3);
 
+	// Mutant humans. They share a body: a torso in their clothes, shoulders and arms with
+	// hands resting forward, a neck, and a head sculpted with a brow, cheekbones, sockets
+	// and a chin, a nose and ears. Then each kind mutates it.
+	const CLOTH = (hex, rough = 0.75) => std(hex, rough, 0);
+	// a human head: o = { w (width), long (taller), lumps, sockets (false: no eye sockets), nose, ears }
+	function humanHead(parent, skin, o = {}) {
+		const w = o.w || 1, long = o.long || 1;
+		const gauss = (a, s) => Math.exp(-(a * a) / (s * s));
+		const geo = sculpt(lathe([[0, -0.32], [0.13, -0.3], [0.2, -0.22], [0.24, -0.08], [0.26, 0.08], [0.24, 0.22], [0.16, 0.32], [0, 0.35]], 48, 40), (p, n) => {
+			const front = Math.pow(Math.max(0, n.z), 1.5), ax = Math.abs(p.x);
+			let d = 0.026 * gauss(p.y - 0.085, 0.03) * gauss(p.x, 0.16) * front;   // (the brow)
+			d += 0.022 * gauss(ax - 0.13, 0.05) * gauss(p.y + 0.05, 0.05) * front;   // (cheekbones)
+			if (o.sockets !== false) d -= 0.03 * gauss(ax - 0.085, 0.045) * gauss(p.y - 0.02, 0.04) * front;   // (eye sockets)
+			d += 0.02 * gauss(p.y + 0.27, 0.05) * gauss(p.x, 0.07) * front;   // (the chin)
+			d -= 0.015 * gauss(ax - 0.2, 0.06) * gauss(p.y + 0.18, 0.08);   // (the jaw's hollow)
+			if (o.lumps) d += lumpy(p, 3) * 0.012 * o.lumps;
+			return d;
+		});
+		const h = mesh(geo, skin, parent);
+		h.scale.set(0.9 * w, long, 1);
+		if (o.nose !== false) {
+			const nose = mesh(superBox(0.055, 0.11, 0.075, 0.55, 0.35, 0.5, 24), skin, parent, 0, -0.06, 0.245);
+			nose.rotation.x = -0.28;
+		}
+		if (o.ears !== false) for (const s of [-1, 1]) {
+			const ear = mesh(superBox(0.035, 0.11, 0.075, 0.6, 0.5, 0.5, 20), skin, parent, s * 0.235 * w, 0, -0.01);
+			ear.rotation.y = s * 0.35;
+		}
+		return h;
+	}
+	// a body: the torso in its clothes (shoulder width, belly), a neck, two arms with hands
+	// resting forward (sleeves in the cloth unless bare). Returns the shoulder points.
+	function humanBody(g, skin, cloth, o = {}) {
+		const sh = o.shoulders || 0.4, belly = o.belly || 0;
+		const torso = mesh(sculpt(lathe([[0, 0.35], [0.34, 0.37], [0.37 + belly * 0.5, 0.7], [0.35 + belly * 0.3, 0.98], [sh + 0.02, 1.3], [sh - 0.04, 1.45], [0.15, 1.55], [0, 1.56]], 40, 36),
+			(p, n) => belly * 0.12 * Math.exp(-Math.pow(p.y - 0.8, 2) / 0.04) * Math.max(0, n.z)), cloth, g);
+		torso.scale.z = 0.66;
+		mesh(CYL(0.095, 0.115, 0.24, 20), skin, g, 0, 1.62, 0.01);
+		if (o.arms !== false) for (const s of [-1, 1]) {
+			const sleeve = o.bare ? skin : cloth;
+			tube(g, [[s * (sh - 0.02), 1.4, 0], [s * (sh + 0.1), 1.12, 0.06], [s * (sh + 0.1), 1.0, 0.16]], 0.088, 0.072, sleeve, 14, 20);
+			tube(g, [[s * (sh + 0.1), 1.0, 0.16], [s * (sh - 0.02), 0.95, 0.32], [s * (sh - 0.1), 0.94, 0.44]], 0.068, 0.055, o.bareForearm || o.bare ? skin : sleeve, 14, 18);
+			const hand = mesh(superBox(0.1, 0.055, 0.13, 0.5, 0.4, 0.5, 20), skin, g, s * (sh - 0.12), 0.93, 0.5);
+			hand.rotation.y = -s * 0.3;
+			const thumb = mesh(superBox(0.03, 0.03, 0.06, 0.6, 0.6, 0.6, 12), skin, g, s * (sh - 0.17), 0.95, 0.47);
+			thumb.rotation.y = -s * 0.8;
+		}
+		return torso;
+	}
+	// a shirt collar and tie down the chest
+	function shirtAndTie(g, tieHex, y = 1.3) {
+		const shirt = new THREE.Shape();
+		shirt.moveTo(-0.13, 0.22); shirt.lineTo(0.13, 0.22); shirt.lineTo(0, -0.2); shirt.lineTo(-0.13, 0.22);
+		const s1 = slab(shirt, 0.02, 0.015, CLOTH(0xf0ece4, 0.6), g);
+		s1.position.set(0, y, 0.235);
+		s1.rotation.x = -0.18;
+		if (!tieHex) return;
+		const tie = new THREE.Shape();
+		tie.moveTo(-0.03, 0.2); tie.lineTo(0.03, 0.2); tie.lineTo(0.055, -0.12); tie.lineTo(0, -0.2); tie.lineTo(-0.055, -0.12); tie.lineTo(-0.03, 0.2);
+		const t1 = slab(tie, 0.02, 0.012, std(tieHex, 0.45, 0), g);
+		t1.position.set(0, y - 0.02, 0.255);
+		t1.rotation.x = -0.18;
+	}
+	const topHat = (parent, felt, band, x, y, z, k = 1) => {
+		const hat = new THREE.Group();
+		hat.position.set(x, y, z);
+		hat.scale.setScalar(k);
+		parent.add(hat);
+		mesh(lathe([[0, -0.01], [0.32, -0.01], [0.34, 0.02], [0.2, 0.035], [0.19, 0.18], [0.2, 0.36], [0.19, 0.4], [0, 0.4]]), felt, hat);
+		mesh(CYL(0.197, 0.192, 0.06, 32), band, hat, 0, 0.07, 0);
+		return hat;
+	};
+
 	const MUTANT_3D = {
-		// two heads on one slumped, lumpy body, its arms stubby, its pustules glowing
+		// Blobbo & Blobba: conjoined twins, one great lumpy body, a bald head each, glowing boils
 		blob(g, skin, m) {
-			const bodyGeo = sculpt(lathe([[0, 0], [0.95, 0.03], [1.22, 0.32], [1.15, 0.8], [0.86, 1.18], [0.5, 1.4], [0, 1.45]]), (p) => lumpy(p) * 0.05);
-			const body = mesh(bodyGeo, skin, g);
-			body.scale.set(1, 1, 0.82);
-			for (const s of [-1, 1]) tube(g, [[s * 1.0, 0.75, 0.15], [s * 1.32, 0.62, 0.32], [s * 1.42, 0.38, 0.5], [s * 1.3, 0.25, 0.62]], 0.2, 0.11, skin);
+			const body = humanBody(g, skin, skin, { shoulders: 0.5, belly: 0.9, bare: true });
+			body.material = skin;
+			const vestMat = CLOTH(0x4a3a6a);
+			for (const s of [-1, 1]) {   // (a tiny vest that can't close: a panel each side)
+				const vest = new THREE.Shape();
+				vest.moveTo(s * 0.1, 0.3); vest.lineTo(s * 0.34, 0.3); vest.lineTo(s * 0.36, -0.25); vest.lineTo(s * 0.12, -0.3); vest.lineTo(s * 0.1, 0.3);
+				const v = slab(vest, 0.03, 0.015, vestMat, g);
+				v.position.set(0, 1.08, 0.3);
+				v.rotation.x = -0.2;
+			}
 			m.heads = [];
-			for (const x of [-0.5, 0.5]) {
+			for (const x of [-0.27, 0.27]) {
 				const h = new THREE.Group();
 				h.position.set(x, 1.75, 0);
+				h.rotation.z = x * 0.6;
 				g.add(h);
-				const head = mesh(sculpt(lathe([[0, -0.62], [0.3, -0.5], [0.46, -0.12], [0.44, 0.22], [0.3, 0.44], [0, 0.52]]), (p, n) => Math.max(0, n.z) * Math.exp(-Math.pow(p.y - 0.2, 2) / 0.01) * 0.05), skin, h);
-				head.scale.z = 0.92;
-				eyeBall(h, -0.15, 0.1, 0.34, 0.11, skin, x < 0 ? 0.55 : 0.15);
-				eyeBall(h, 0.15, 0.1, 0.34, 0.11, skin, x < 0 ? 0.55 : 0.15);
-				grin(h, 0, -0.13, 0.39, 0.26, 0.07, false);
+				humanHead(h, skin, { lumps: 1.5, w: 1.05 });
+				eyeBall(h, -0.085, 0.02, 0.2, 0.052, skin, x < 0 ? 0.6 : 0.15);
+				eyeBall(h, 0.085, 0.02, 0.2, 0.052, skin, x < 0 ? 0.6 : 0.15);
+				grin(h, 0, -0.16, 0.235, 0.13, 0.035, x < 0);
 				m.heads.push(h);
 			}
 			const glow = glowMat(0xb8ff6a, 1.5);
-			for (const [i, a, r] of [[16, -0.5, 0.11], [9, 0.35, 0.09], [22, 0.6, 0.08], [12, -0.15, 0.07], [26, -0.75, 0.06]]) {
-				const s = onLathe(bodyGeo, i, a);
-				s.pos.z *= 0.82;
-				blister(g, s.pos, s.normal, r, glow, 0.7);
-			}
+			for (const [x, y, r] of [[-0.25, 0.9, 0.05], [0.18, 0.7, 0.04], [0.32, 1.05, 0.035], [-0.05, 1.2, 0.03], [0.05, 0.55, 0.04]]) blister(g, new THREE.Vector3(x, y, 0.36), new THREE.Vector3(x * 0.6, 0, 1).normalize(), r, glow, 0.8);
 		},
-		// a gentleman in a frock coat: an egg of a head with one great heavy-lidded eye, a top hat, a monocle
+		// Sir Oculus: a gentleman in a frock coat, one great eye in the middle of his face, a monocle, a moustache, a top hat
 		cyclops(g, skin) {
-			const coat = std(0x6a4ad0, 0.4, 0.1);
-			mesh(lathe([[0, 0], [0.64, 0], [0.68, 0.28], [0.56, 0.75], [0.62, 1.02], [0.46, 1.2], [0.22, 1.3], [0, 1.31]]), coat, g);
-			for (const s of [-1, 1]) tube(g, [[s * 0.55, 1.05, 0], [s * 0.72, 0.7, 0.1], [s * 0.68, 0.4, 0.28]], 0.12, 0.09, coat);
-			mesh(BOX(0.12, 0.6, 0.05), std(0xe0d8c8, 0.6, 0), g, 0, 0.85, 0.58);
+			const coat = CLOTH(0x5a3ab8);
+			humanBody(g, skin, coat, { shoulders: 0.38 });
+			shirtAndTie(g, 0xc02a2a);
 			const head = new THREE.Group();
-			head.position.set(0, 1.78, 0);
+			head.position.set(0, 1.9, 0.02);
 			g.add(head);
-			mesh(sculpt(lathe([[0, -0.55], [0.32, -0.5], [0.55, -0.22], [0.6, 0.1], [0.52, 0.42], [0, 0.6]]),
-				(p, n) => Math.max(0, n.z) * (Math.exp(-Math.pow(p.y - 0.3, 2) / 0.006) * 0.08 + Math.exp(-(Math.pow(p.y + 0.22, 2) + Math.pow(Math.abs(p.x) - 0.3, 2)) / 0.01) * 0.05)), skin, head);
-			eyeBall(head, 0, 0.06, 0.36, 0.27, skin, 0.5);
-			const mono = mesh(new THREE.TorusGeometry(0.33, 0.03, 10, 32), std(0xe9c04a, 0.2, 1), head, 0, 0.06, 0.62);
+			humanHead(head, skin, { sockets: false, long: 1.05 });
+			const socket = mesh(SPH(0.12, 24), std(0x2a1020, 0.6, 0), head, 0, 0.03, 0.17);
+			socket.scale.set(1, 0.85, 0.5);
+			eyeBall(head, 0, 0.03, 0.17, 0.11, skin, 0.45);
+			const mono = mesh(new THREE.TorusGeometry(0.135, 0.012, 10, 36), std(0xe9c04a, 0.2, 1), head, 0, 0.03, 0.29);
 			faceCam(mono);
-			grin(head, 0, -0.3, 0.5, 0.24, 0.05, true);
-			const hat = new THREE.Group();
-			hat.position.set(0.04, 0.5, -0.05);
-			hat.rotation.z = -0.12;
-			head.add(hat);
-			const felt = std(0x16141e, 0.45, 0.2);
-			mesh(lathe([[0, -0.02], [0.52, -0.02], [0.56, 0.03], [0.32, 0.05], [0.3, 0.25], [0.32, 0.55], [0.3, 0.6], [0, 0.6]]), felt, hat);
-			mesh(CYL(0.315, 0.31, 0.09, 32), std(0x8a1a2a, 0.5, 0), hat, 0, 0.11, 0);
+			for (const s of [-1, 1]) tube(head, [[0, -0.12, 0.26], [s * 0.06, -0.13, 0.27], [s * 0.12, -0.1, 0.24], [s * 0.15, -0.05, 0.22]], 0.02, 0.006, std(0x2a1a14, 0.6, 0), 8, 14);
+			grin(head, 0, -0.19, 0.235, 0.1, 0.025, true);
+			topHat(head, std(0x16141e, 0.45, 0.2), std(0x8a1a2a, 0.5, 0), 0.02, 0.3, -0.02, 0.85).rotation.z = -0.12;
 		},
-		// Gary: one heaving lump of mould, eyes all over, spores glowing
+		// Gary (a mould): a worker in overalls, half his head lost under a heaving growth of mould, eyes in it
 		mold(g, skin) {
 			const rnd = seeded(7);
+			humanBody(g, skin, CLOTH(0x6a7a3a), { shoulders: 0.4, bareForearm: true });
+			const tag = mesh(BOX(0.14, 0.07, 0.015), std(0xf4f0e0, 0.6, 0), g, -0.15, 1.32, 0.245);
+			tag.rotation.x = -0.15;
+			const head = new THREE.Group();
+			head.position.set(0, 1.88, 0.02);
+			g.add(head);
+			humanHead(head, skin, {});
+			eyeBall(head, -0.085, 0.02, 0.2, 0.05, skin, 0.5);
+			grin(head, -0.04, -0.16, 0.235, 0.1, 0.025, true);
+			// the growth: a lumpy mass over his right side and crown, spreading down onto his shoulder
+			const dark = skin.clone();
+			dark.color.multiplyScalar(0.55);
 			const bumps = [];
-			for (let n = 0; n < 10; n++) bumps.push({ c: new THREE.Vector3(rnd() - 0.5, rnd() - 0.4, rnd() * 0.6).normalize(), a: 0.12 + rnd() * 0.14, k: 4 + rnd() * 5 });
-			const R = (d) => 0.8 + bumps.reduce((s, b) => s + b.a * Math.exp(-(1 - d.dot(b.c)) * b.k), 0) + lumpy(d, 1.6) * 0.025;
-			const geo = new THREE.SphereGeometry(1, 72, 52);
+			for (let k = 0; k < 9; k++) bumps.push({ c: new THREE.Vector3(0.6 + rnd() * 0.5, rnd() * 1.2 - 0.2, rnd() * 0.8 - 0.2).normalize(), a: 0.08 + rnd() * 0.1, k: 5 + rnd() * 5 });
+			const geo = new THREE.SphereGeometry(1, 56, 40);
 			const pos = geo.attributes.position, v = new THREE.Vector3();
-			for (let i = 0; i < pos.count; i++) {
-				v.fromBufferAttribute(pos, i);
-				v.multiplyScalar(R(v.clone().normalize()));
-				pos.setXYZ(i, v.x, v.y, v.z);
-			}
+			for (let i = 0; i < pos.count; i++) { v.fromBufferAttribute(pos, i); const d = v.clone().normalize(); v.multiplyScalar(0.18 + bumps.reduce((acc, b) => acc + b.a * Math.exp(-(1 - d.dot(b.c)) * b.k), 0) + lumpy(d, 2) * 0.01); pos.setXYZ(i, v.x, v.y, v.z); }
 			geo.computeVertexNormals();
 			smoothSeams(geo);
-			const SC = new THREE.Vector3(0.82, 1.0, 0.62), at = new THREE.Vector3(0, 1.15, 0);
-			const lump = mesh(geo, skin, g, at.x, at.y, at.z);
-			lump.scale.copy(SC);
-			const dark = skin.clone();
-			dark.color.multiplyScalar(0.62);
-			const onLump = (x, y) => { const d = new THREE.Vector3(x, y, 1).normalize(); return d.multiplyScalar(R(d)).multiply(SC).add(at); };
-			for (const [x, y, r] of [[-0.45, 0.42, 0.11], [0.05, 0.75, 0.15], [0.45, 0.32, 0.1], [0.6, 0.9, 0.08], [-0.1, 0.05, 0.09], [-0.6, -0.15, 0.07]]) {
-				const p = onLump(x, y);
-				eyeBall(g, p.x, p.y, p.z - r * 0.35, r, dark, rnd());
-			}
-			grin(g, 0.1, 0.85, onLump(0.1, -0.3).z - 0.02, 0.4, 0.09, false);
+			const growth = mesh(geo, dark, head, 0.1, 0.06, 0.0);
+			growth.scale.set(1, 1.1, 1);
+			const lump2 = mesh(SPH(0.16, 24), dark, g, 0.3, 1.45, 0.02);
+			lump2.scale.set(1.2, 0.7, 1);
+			for (const [x, y, z, r] of [[0.14, 0.05, 0.2, 0.045], [0.22, 0.17, 0.12, 0.032], [0.08, 0.2, 0.17, 0.028], [0.3, 1.5 - 1.88, 0.12, 0.03]]) eyeBall(head, x, y, z, r, dark, rnd());
 			const spore = glowMat(0xe9ff4a, 1.3);
-			for (let n = 0; n < 9; n++) {
-				const d = new THREE.Vector3((rnd() - 0.5) * 1.6, (rnd() - 0.5) * 1.8, 0.7 + rnd() * 0.3).normalize();
-				const p = d.clone().multiplyScalar(R(d)).multiply(SC).add(at);
-				blister(g, p, d, 0.05 + rnd() * 0.03, spore, 0.8);
-			}
+			for (let k = 0; k < 8; k++) { const d = new THREE.Vector3(0.5 + rnd() * 0.6, rnd() - 0.3, 0.4 + rnd() * 0.5).normalize(); blister(head, d.clone().multiplyScalar(0.27).add(new THREE.Vector3(0.1, 0.06, 0)), d, 0.018 + rnd() * 0.015, spore, 0.8); }
 		},
-		// a pigeon in a suit: a pear of a body, a domed head that bobs, a hooked beak, a top hat
+		// Executive Pigeon: a businessman whose face has gone bird: a hooked beak, round eyes set wide, feather tufts, an iridescent neck
 		pigeon(g, skin, m) {
-			const suit = std(0x3a5ad0, 0.45, 0.05);
-			const body = mesh(lathe([[0, 0], [0.44, 0], [0.5, 0.2], [0.64, 0.55], [0.7, 0.9], [0.58, 1.22], [0.34, 1.4], [0.18, 1.46], [0, 1.47]]), suit, g);
-			body.scale.z = 0.82;
-			const shirt = new THREE.Shape();
-			shirt.moveTo(-0.2, 0.32); shirt.lineTo(0.2, 0.32); shirt.lineTo(0, -0.25); shirt.lineTo(-0.2, 0.32);
-			const s1 = slab(shirt, 0.02, 0.02, std(0xf0ece4, 0.5, 0), g);
-			s1.position.set(0, 1.08, 0.5);
-			s1.rotation.x = -0.25;
-			const tie = new THREE.Shape();
-			tie.moveTo(-0.05, 0.3); tie.lineTo(0.05, 0.3); tie.lineTo(0.08, -0.2); tie.lineTo(0, -0.3); tie.lineTo(-0.08, -0.2); tie.lineTo(-0.05, 0.3);
-			const t1 = slab(tie, 0.02, 0.015, std(0xc02a2a, 0.4, 0), g);
-			t1.position.set(0, 1.05, 0.54);
-			t1.rotation.x = -0.25;
-			for (const s of [-1, 1]) tube(g, [[s * 0.6, 1.0, 0], [s * 0.78, 0.7, 0.05], [s * 0.7, 0.42, 0.2]], 0.13, 0.08, suit);
+			const suit = CLOTH(0x2a4ab0);
+			humanBody(g, skin, suit, { shoulders: 0.4 });
+			shirtAndTie(g, 0xc02a2a);
+			mesh(lathe([[0.1, -0.02], [0.15, 0.06], [0.13, 0.16], [0.1, 0.2]], 32, 14), std(0x4ab09a, 0.2, 0.6, { side: THREE.DoubleSide }), g, 0, 1.55, 0.01);
 			const head = new THREE.Group();
-			head.position.set(0, 1.75, 0.05);
+			head.position.set(0, 1.88, 0.05);
 			g.add(head);
-			mesh(sculpt(lathe([[0, -0.44], [0.28, -0.4], [0.38, -0.12], [0.37, 0.16], [0.25, 0.37], [0, 0.42]]), (p, n) => Math.max(0, n.z) * Math.exp(-Math.pow(p.y - 0.05, 2) / 0.03) * 0.06), skin, head);
-			mesh(lathe([[0.3, -0.5], [0.38, -0.42], [0.36, -0.3], [0.3, -0.24]], 40, 16), std(0x4ab09a, 0.2, 0.6, { side: THREE.DoubleSide }), head);
-			eyeBall(head, -0.19, 0.08, 0.27, 0.1, skin, 0.4);
-			eyeBall(head, 0.19, 0.08, 0.27, 0.1, skin, 0.4);
-			tube(head, [[0, 0.0, 0.3], [0, -0.02, 0.48], [0, -0.1, 0.62]], 0.1, 0.018, std(0xe8a83c, 0.35, 0));
-			const felt = std(0x16141e, 0.45, 0.2);
-			const hat = mesh(lathe([[0, -0.01], [0.24, -0.01], [0.26, 0.03], [0.15, 0.04], [0.14, 0.2], [0.15, 0.32], [0, 0.33]]), felt, head, 0, 0.36, -0.02);
-			hat.rotation.x = -0.1;
+			humanHead(head, skin, { nose: false, sockets: false, ears: false, w: 1.05 });
+			eyeBall(head, -0.13, 0.04, 0.17, 0.05, skin, 0.35);
+			eyeBall(head, 0.13, 0.04, 0.17, 0.05, skin, 0.35);
+			tube(head, [[0, -0.02, 0.22], [0, -0.05, 0.33], [0, -0.12, 0.41]], 0.07, 0.012, std(0xe8a83c, 0.35, 0), 14, 18);
+			mesh(superBox(0.09, 0.03, 0.09, 0.5, 0.5, 0.5, 16), std(0xd8933a, 0.4, 0), head, 0, -0.1, 0.27);
+			for (let k = 0; k < 5; k++) { const f = mesh(new THREE.ConeGeometry(0.025, 0.12, 8), skin, head, (k - 2) * 0.04, 0.34, -0.02 - Math.abs(k - 2) * 0.02); f.rotation.set(-0.3, 0, (k - 2) * 0.3); }
 			m.head = head;
 		},
-		// a little doomskull: a moulded skull in a glass dome on a rounded robot body
+		// Lil' Doomskull: a kid in a hazmat suit, a skull for a face with green fire in the sockets, under a glass dome
 		skull(g, skin) {
-			const shell = std(0xff9a3a, 0.3, 0.2);
-			mesh(lathe([[0, 0.05], [0.52, 0.05], [0.6, 0.2], [0.6, 0.85], [0.52, 1.05], [0, 1.07]], 6, 24), shell, g).rotation.y = Math.PI / 6;
-			for (const x of [-0.3, 0, 0.3]) blister(g, new THREE.Vector3(x, 0.72, 0.53), new THREE.Vector3(0, 0, 1), 0.07, glowMat(x ? 0xff4a32 : 0x9dff3a, 2), 0.7);
-			for (const s of [-1, 1]) tube(g, [[s * 0.55, 0.85, 0], [s * 0.82, 0.62, 0.05], [s * 0.78, 0.32, 0.3]], 0.07, 0.05, MAT.steel, 10);
-			mesh(lathe([[0.42, -0.02], [0.6, 0.1], [0.62, 0.45], [0.42, 0.85], [0, 0.95]], 40, 32), MAT.glass, g, 0, 1.05, 0);
-			const sk = new THREE.Group();
-			sk.position.set(0, 1.45, 0);
-			g.add(sk);
-			const bone = skin;   // (the skin: it flushes red when they're cross)
-			mesh(sculpt(lathe([[0, -0.34], [0.2, -0.36], [0.27, -0.2], [0.36, 0.02], [0.36, 0.24], [0.22, 0.4], [0, 0.43]]),
-				(p, n) => Math.max(0, n.z) * (Math.exp(-(Math.pow(p.y + 0.08, 2) + Math.pow(Math.abs(p.x) - 0.24, 2)) / 0.006) * 0.05)), bone, sk);
+			const suit = CLOTH(0xff8a1a, 0.55);
+			const kid = new THREE.Group();
+			kid.scale.setScalar(0.85);
+			kid.position.y = 0.15;
+			g.add(kid);
+			humanBody(kid, skin, suit, { shoulders: 0.34 });
+			mesh(BOX(0.18, 0.06, 0.02), std(0x1a1a1a, 0.4, 0), kid, 0, 1.2, 0.235).rotation.x = -0.1;
+			for (const x of [-0.06, 0.06]) mesh(SPH(0.018, 8), glowMat(x < 0 ? 0xff4a32 : 0x9dff3a, 2), kid, x, 1.2, 0.25);
+			const head = new THREE.Group();
+			head.position.set(0, 1.93, 0.02);
+			head.scale.setScalar(1.18);
+			kid.add(head);
+			humanHead(head, skin, { nose: false, ears: false });
 			const socket = new THREE.Shape();
-			socket.absellipse(0, 0, 0.09, 0.075, 0, Math.PI * 2);
-			for (const x of [-0.13, 0.13]) {
-				const s = slab(socket, 0.02, 0.02, MAT.black, sk);
-				s.position.set(x, 0.06, 0.3);
-				s.rotation.y = x * 1.6;
-				blister(sk, new THREE.Vector3(x, 0.06, 0.335), new THREE.Vector3(0, 0, 1), 0.03, glowMat(0x9dff3a, 2.2), 0.9);
+			socket.absellipse(0, 0, 0.05, 0.042, 0, Math.PI * 2);
+			for (const x of [-0.085, 0.085]) {
+				const s = slab(socket, 0.02, 0.012, std(0x0a0608, 0.6, 0), head);
+				s.position.set(x, 0.02, 0.215);
+				s.rotation.y = x * 2.2;
+				blister(head, new THREE.Vector3(x, 0.02, 0.235), new THREE.Vector3(0, 0, 1), 0.018, glowMat(0x9dff3a, 2.4), 0.9);
 			}
 			const nose = new THREE.Shape();
-			nose.moveTo(0, 0.04); nose.lineTo(0.035, -0.035); nose.lineTo(-0.035, -0.035); nose.lineTo(0, 0.04);
-			slab(nose, 0.01, 0.012, MAT.black, sk).position.set(0, -0.08, 0.33);
-			for (let n = -2; n <= 2; n++) mesh(BOX(0.05, 0.07, 0.03), MAT.white, sk, n * 0.055, -0.2, 0.27 - Math.abs(n) * 0.012);
+			nose.moveTo(0, 0.025); nose.lineTo(0.022, -0.022); nose.lineTo(-0.022, -0.022); nose.lineTo(0, 0.025);
+			slab(nose, 0.01, 0.008, std(0x0a0608, 0.6, 0), head).position.set(0, -0.07, 0.245);
+			for (let n = -3; n <= 3; n++) mesh(BOX(0.026, 0.04, 0.02), MAT.white, head, n * 0.028, -0.16, 0.23 - Math.abs(n) * 0.008);
+			mesh(lathe([[0.3, -0.05], [0.36, 0.1], [0.36, 0.3], [0.24, 0.5], [0, 0.56]], 40, 32), MAT.glass, head, 0, -0.06, 0);
+			mesh(CYL(0.31, 0.32, 0.05, 32), MAT.steel, head, 0, -0.33, 0);
 		},
-		// a squid in curlers: a tall moulded mantle, droopy eyes, tentacles curling under
+		// Mrs. Tentacles: a lady in a frock and pearls, her hair in curlers, tentacles for arms and a beard of them at her chin
 		squid(g, skin, m) {
+			const dress = CLOTH(0xd04a8a, 0.7);
+			humanBody(g, skin, dress, { shoulders: 0.36, arms: false });
+			for (let k = 0; k < 9; k++) { const a = (k - 4) * 0.22; mesh(SPH(0.022, 10), std(0xfff8f0, 0.15, 0.1, { clearcoat: 1 }), g, Math.sin(a) * 0.14, 1.5 - Math.cos(a) * 0.07 + 0.07, 0.12 + Math.cos(a) * 0.03); }
 			m.arms = [];
-			for (let n = -3; n <= 3; n++) {
+			for (const s of [-1, 1]) for (let j = 0; j < 2; j++) {
 				const arm = new THREE.Group();
-				arm.position.set(n * 0.15, 1.0, 0.12);
+				arm.position.set(s * 0.36, 1.36 - j * 0.12, 0.02);
 				g.add(arm);
-				const s = Math.sign(n) || (n === 0 ? 0.3 : 1);
-				tube(arm, [[0, 0.05, 0], [n * 0.05, -0.35, 0.12], [n * 0.12, -0.72, 0.25], [n * 0.2 + s * 0.06, -0.9, 0.45], [n * 0.2 + s * 0.12, -0.78, 0.6]], 0.11, 0.03, skin, 10, 32);
+				tube(arm, [[0, 0, 0], [s * 0.12, -0.15, 0.08], [s * 0.1, -0.38, 0.22], [s * 0.0, -0.45, 0.4], [-s * 0.06, -0.38, 0.5]], 0.075 - j * 0.015, 0.016, skin, 12, 32);
 				m.arms.push(arm);
 			}
-			mesh(sculpt(lathe([[0.3, 0], [0.55, 0.06], [0.7, 0.35], [0.68, 0.8], [0.52, 1.22], [0.26, 1.52], [0, 1.6]]), (p) => lumpy(p, 1.4) * 0.02), skin, g, 0, 0.95, 0).scale.z = 0.9;
-			eyeBall(g, -0.24, 1.58, 0.5, 0.14, skin, 0.5);
-			eyeBall(g, 0.24, 1.58, 0.5, 0.14, skin, 0.5);
-			grin(g, 0, 1.24, 0.6, 0.26, 0.06, false, std(0xc02a6a, 0.4, 0));
-			for (const [x, z] of [[-0.24, 0.02], [0, -0.08], [0.24, 0.02]]) {
-				const c = mesh(CYL(0.09, 0.09, 0.24, 20), std(0x7ad8ff, 0.4, 0.1), g, x, 2.48, z);
-				c.rotation.z = Math.PI / 2;
-			}
+			const head = new THREE.Group();
+			head.position.set(0, 1.88, 0.02);
+			g.add(head);
+			humanHead(head, skin, {});
+			eyeBall(head, -0.085, 0.02, 0.2, 0.055, skin, 0.55);
+			eyeBall(head, 0.085, 0.02, 0.2, 0.055, skin, 0.55);
+			grin(head, 0, -0.14, 0.24, 0.11, 0.03, false, std(0xc02a6a, 0.35, 0, { clearcoat: 1 }));
+			for (let k = -2; k <= 2; k++) tube(head, [[k * 0.035, -0.2, 0.2], [k * 0.04, -0.3, 0.22], [k * 0.05, -0.4, 0.2], [k * 0.07, -0.44, 0.24]], 0.022, 0.006, skin, 8, 16);
+			const curler = std(0x7ad8ff, 0.4, 0.1);
+			for (const [x, y, z] of [[-0.14, 0.3, 0.02], [0, 0.35, -0.02], [0.14, 0.3, 0.02], [-0.08, 0.28, -0.16], [0.08, 0.28, -0.16]]) { const c = mesh(CYL(0.045, 0.045, 0.12, 18), curler, head, x, y, z); c.rotation.z = Math.PI / 2; }
 		},
-		// a cool mushroom: a curled, wobbly cap with domed spots, a skirted stem, shades
+		// Dude Shroom: a surfer in a loud shirt, a great mushroom cap growing out of his head, shades, a lazy grin
 		fungus(g, skin) {
-			const stem = std(0xfff4dc, 0.5, 0);
-			mesh(lathe([[0, 0], [0.46, 0], [0.4, 0.14], [0.33, 0.5], [0.34, 0.9], [0.4, 1.2], [0.36, 1.3], [0, 1.31]]), stem, g);
-			mesh(lathe([[0.35, 1.0], [0.48, 0.9], [0.56, 0.8], [0.58, 0.76]], 40, 12), std(0xf0e4c8, 0.6, 0, { side: THREE.DoubleSide }), g);
-			const capGeo = sculpt(lathe([[0.3, 1.16], [0.7, 1.15], [0.98, 1.2], [1.06, 1.3], [0.96, 1.55], [0.62, 1.85], [0, 1.96]]),
-				(p) => { const r = Math.hypot(p.x, p.z); return Math.sin(Math.atan2(p.z, p.x) * 6) * 0.04 * clamp((r - 0.6) / 0.4, 0, 1) + lumpy(p, 1.2) * 0.012; });
-			mesh(capGeo, skin, g);
-			const gills = new THREE.RingGeometry(0.3, 0.96, 40, 1);
-			mesh(gills, std(0xd8c8a8, 0.8, 0, { side: THREE.DoubleSide }), g, 0, 1.165, 0).rotation.x = Math.PI / 2;
-			for (const [i, a, r] of [[30, -0.7, 0.13], [38, 0.3, 0.12], [27, 0.9, 0.11], [34, 2.4, 0.13], [44, -2.0, 0.1], [24, -1.6, 0.1]]) {
-				const s = onLathe(capGeo, i, a);
-				blister(g, s.pos, s.normal, r, MAT.white, 0.35);
-			}
+			humanBody(g, skin, CLOTH(0xff7a1a, 0.7), { shoulders: 0.4, bareForearm: true });
+			for (const [x, y] of [[-0.2, 1.2], [0.15, 1.0], [0.25, 1.35], [-0.1, 0.8], [0.05, 1.3]]) { const f = mesh(superBox(0.08, 0.08, 0.02, 0.5, 0.5, 0.5, 12), std(0x2ae8ff, 0.6, 0), g, x, y, 0.3); f.rotation.z = x * 3; }
+			const head = new THREE.Group();
+			head.position.set(0, 1.86, 0.02);
+			g.add(head);
+			humanHead(head, skin, {});
+			const capGeo = sculpt(lathe([[0.18, 0.18], [0.4, 0.17], [0.6, 0.22], [0.66, 0.3], [0.58, 0.45], [0.36, 0.62], [0, 0.68]]), (p) => { const r = Math.hypot(p.x, p.z); return Math.sin(Math.atan2(p.z, p.x) * 6) * 0.025 * clamp((r - 0.4) / 0.25, 0, 1); });
+			const capMat = std(0xe0573a, 0.45, 0, { clearcoat: 0.6 });
+			mesh(capGeo, capMat, head);
+			mesh(new THREE.RingGeometry(0.18, 0.6, 40, 1), std(0xd8c8a8, 0.8, 0, { side: THREE.DoubleSide }), head, 0, 0.175, 0).rotation.x = Math.PI / 2;
+			for (const [i, a, r] of [[30, -0.7, 0.08], [38, 0.3, 0.07], [27, 0.9, 0.07], [34, 2.4, 0.08], [44, -2.0, 0.06], [24, -1.6, 0.06]]) { const sp = onLathe(capGeo, i, a); blister(head, sp.pos, sp.normal, r, MAT.white, 0.35); }
 			const lens = new THREE.Shape();
-			lens.absellipse(0, 0, 0.13, 0.08, 0, Math.PI * 2);
-			for (const x of [-0.15, 0.15]) {
-				const l = slab(lens, 0.02, 0.02, std(0x080808, 0.05, 0.9), g);
-				l.position.set(x, 1.0, 0.37);
-				l.rotation.y = x * 1.3;
-			}
-			mesh(BOX(0.12, 0.03, 0.03), std(0x080808, 0.05, 0.9), g, 0, 1.02, 0.4);
-			grin(g, 0, 0.76, 0.35, 0.2, 0.04, false);
+			lens.absellipse(0, 0, 0.06, 0.035, 0, Math.PI * 2);
+			for (const x of [-0.085, 0.085]) { const l = slab(lens, 0.01, 0.01, std(0x080808, 0.05, 0.9), head); l.position.set(x, 0.03, 0.245); l.rotation.y = x * 1.6; }
+			mesh(BOX(0.06, 0.012, 0.012), std(0x080808, 0.05, 0.9), head, 0, 0.035, 0.255);
+			grin(head, 0.02, -0.16, 0.235, 0.12, 0.03, false);
+			const mini = mesh(lathe([[0, 0], [0.06, 0.01], [0.07, 0.05], [0.03, 0.08], [0, 0.085]], 20, 12), capMat, g, -0.33, 1.47, 0);
+			mini.scale.setScalar(1.2);
 		},
-		// the Overlord: a robed bulk under a great ridged brain, a crown turning above it
+		// The Overlord: a robed bulk with gold shoulders, his skull gone, a vast ridged brain throbbing where it was, a crown turning above
 		overlord(g, skin, m) {
-			const robe = std(0x7a3ad0, 0.35, 0.2);
-			mesh(lathe([[0, 0], [0.96, 0], [0.92, 0.3], [0.76, 0.9], [0.6, 1.3], [0.38, 1.46], [0, 1.5]]), robe, g);
+			const robe = CLOTH(0x7a3ad0, 0.6);
+			humanBody(g, skin, robe, { shoulders: 0.5, belly: 0.4 });
 			const gold = std(0xe9c04a, 0.25, 1);
-			for (const s of [-1, 1]) {
-				const pad = mesh(lathe([[0, -0.05], [0.36, -0.05], [0.32, 0.12], [0.16, 0.22], [0, 0.24]], 32, 16), gold, g, s * 0.62, 1.32, 0);
-				pad.rotation.z = -s * 0.5;
-			}
-			const geo = new THREE.SphereGeometry(0.85, 80, 60);
-			smoothSeams(geo);
-			const brain = mesh(sculpt(geo, (p) => 0.05 * Math.abs(Math.sin(p.x * 11 + Math.sin(p.y * 7) * 2) * Math.sin(p.y * 10 + Math.sin(p.z * 8) * 2)) - 0.14 * Math.exp(-p.x * p.x / 0.003) * Math.max(0, p.y / 0.85)),
-				std(0xe88aa8, 0.35, 0, { emissive: 0x501030, emissiveIntensity: 0.3 }), g, 0, 2.05, 0);
-			brain.scale.set(1.1, 0.85, 0.95);
-			eyeBall(g, -0.3, 1.75, 0.62, 0.16, skin, 0.45);
-			eyeBall(g, 0.3, 1.75, 0.62, 0.16, skin, 0.45);
+			for (const s of [-1, 1]) { const pad = mesh(lathe([[0, -0.05], [0.22, -0.05], [0.2, 0.08], [0.1, 0.14], [0, 0.15]], 32, 16), gold, g, s * 0.45, 1.42, 0); pad.rotation.z = -s * 0.5; }
+			const head = new THREE.Group();
+			head.position.set(0, 1.85, 0.02);
+			g.add(head);
+			humanHead(head, skin, { long: 0.9 });
+			eyeBall(head, -0.085, 0.02, 0.2, 0.055, skin, 0.5);
+			eyeBall(head, 0.085, 0.02, 0.2, 0.055, skin, 0.5);
+			grin(head, 0, -0.17, 0.23, 0.13, 0.03, true);
+			const bgeo = new THREE.SphereGeometry(0.55, 72, 54);
+			smoothSeams(bgeo);
+			const brain = mesh(sculpt(bgeo, (p) => 0.035 * Math.abs(Math.sin(p.x * 16 + Math.sin(p.y * 10) * 2) * Math.sin(p.y * 15 + Math.sin(p.z * 12) * 2)) - 0.09 * Math.exp(-p.x * p.x / 0.002) * Math.max(0, p.y / 0.55)),
+				std(0xe88aa8, 0.3, 0, { emissive: 0x501030, emissiveIntensity: 0.4, clearcoat: 0.8 }), head, 0, 0.42, -0.04);
+			brain.scale.set(1, 0.75, 0.95);
+			m.brain = brain;
 			const crown = new THREE.Group();
-			crown.position.set(0, 2.7, 0);
-			g.add(crown);
-			mesh(lathe([[0.55, -0.1], [0.6, -0.08], [0.62, 0.05], [0.58, 0.12], [0.54, 0.1]], 40, 16), gold, crown);
-			for (let n = 0; n < 7; n++) {
-				const a = n / 7 * Math.PI * 2;
-				const spike = mesh(lathe([[0.07, 0], [0.06, 0.12], [0.02, 0.28], [0, 0.32]], 14, 10), gold, crown, Math.sin(a) * 0.58, 0.08, Math.cos(a) * 0.58);
-				spike.rotation.set(Math.cos(a) * 0.15, 0, -Math.sin(a) * 0.15);
-			}
-			blister(crown, new THREE.Vector3(0, 0.02, 0.62), new THREE.Vector3(0, 0, 1), 0.09, glowMat(0xff2d8f, 2), 0.8);
+			crown.position.set(0, 0.95, -0.04);
+			head.add(crown);
+			mesh(lathe([[0.36, -0.07], [0.4, -0.05], [0.41, 0.04], [0.38, 0.09], [0.35, 0.07]], 40, 16), gold, crown);
+			for (let n = 0; n < 7; n++) { const a = n / 7 * Math.PI * 2; const sp = mesh(lathe([[0.05, 0], [0.04, 0.08], [0.015, 0.2], [0, 0.22]], 14, 10), gold, crown, Math.sin(a) * 0.38, 0.06, Math.cos(a) * 0.38); sp.rotation.set(Math.cos(a) * 0.15, 0, -Math.sin(a) * 0.15); }
+			blister(crown, new THREE.Vector3(0, 0.01, 0.41), new THREE.Vector3(0, 0, 1), 0.06, glowMat(0xff2d8f, 2), 0.8);
 			m.crown = crown;
 		},
 	};
@@ -2875,8 +2934,9 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			// the mouth: working while they talk
 			const talking = c.sayT > 0 && c.state !== 'leave';
 			for (const mo of m.mouths) mo.scale.y = lerp(mo.scale.y, talking ? 0.6 + Math.abs(Math.sin(rt * 15 + c.seed)) * 1.4 : angry ? 0.7 : 1, Math.min(1, dt * 18));
-			if (m.heads) m.heads.forEach((h, j) => { h.rotation.z = Math.sin(rt * 3 + j * 2) * 0.15; h.position.y = 1.75 + Math.sin(rt * 4 + j * 2) * 0.05; });
-			if (m.head) { m.head.position.z = 0.05 + Math.max(0, Math.sin(rt * 6)) * 0.12; }
+			if (m.heads) m.heads.forEach((h, j) => { h.rotation.z = (j ? 0.16 : -0.16) + Math.sin(rt * 2.2 + j * 2) * 0.08; h.position.y = 1.75 + Math.sin(rt * 3 + j * 2) * 0.03; });
+			if (m.head) { m.head.position.z = 0.05 + Math.max(0, Math.sin(rt * 6)) * 0.06; }   // (the pigeon's head, bobbing)
+			if (m.brain) m.brain.scale.set(1 + Math.sin(rt * 3) * 0.02, 0.75 + Math.sin(rt * 3) * 0.02, 0.95);
 			if (m.arms) m.arms.forEach((a, j) => { a.rotation.z = Math.sin(rt * 3 + j) * 0.25; a.rotation.x = Math.cos(rt * 2.4 + j) * 0.2; });
 			if (m.crown) m.crown.rotation.y = rt * 0.6;
 			// what's been handed over so far, on the counter in front of them
