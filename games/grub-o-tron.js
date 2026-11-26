@@ -2297,112 +2297,187 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		return new THREE.MeshPhysicalMaterial({ color: 0xffffff, map, roughness: 1, roughnessMap: rough, metalness: 0.35, clearcoat: 1, clearcoatMap: coat, clearcoatRoughness: 0.05, envMapIntensity: 1.6 });
 	}
 
+	// A moulded block: a superellipsoid, boxy round the sides and as round on top (eTop) or
+	// flat underneath (eBot) as you like; small e is boxy, 1 is a ball. Smooth, seamless normals.
+	const sgnpow = (v, e) => Math.sign(v) * Math.pow(Math.abs(v), e);
+	function superBox(w, h, d, eTop = 0.3, eBot = 0.3, eSide = 0.3, seg = 40) {
+		const geo = new THREE.SphereGeometry(1, seg, Math.round(seg * 0.75));
+		const pos = geo.attributes.position;
+		for (let i = 0; i < pos.count; i++) {
+			const vx = pos.getX(i), vy = clamp(pos.getY(i), -1, 1), vz = pos.getZ(i);
+			const lat = Math.asin(vy), lon = Math.atan2(vz, vx), e1 = vy >= 0 ? eTop : eBot;
+			const cl = sgnpow(Math.cos(lat), e1);
+			pos.setXYZ(i, cl * sgnpow(Math.cos(lon), eSide) * w / 2, sgnpow(Math.sin(lat), e1) * h / 2, cl * sgnpow(Math.sin(lon), eSide) * d / 2);
+		}
+		geo.computeVertexNormals();
+		return smoothSeams(geo);
+	}
+
 	function buildTray(n) {
 		const col = new THREE.Color(colourOf(n));
 		const g = new THREE.Group();
 		const p = { g };
 		const shell = rustyPaint(col, 17 + n * 31);   // (once white plastic: now their colour, glossy and rusting)
-		const servo = std(0x1c1b22, 0.5, 0.25);
-		const horn = std(0x9aa0aa, 0.3, 0.8);
-		const paint = std(col.clone().multiplyScalar(0.62), 0.2, 0.3, { clearcoat: 1, clearcoatRoughness: 0.05 });   // (the trim: a deeper shade of it)
-		const sole = std(col.clone().lerp(new THREE.Color(0xffe066), 0.55), 0.5, 0);
-		// a soft glow on the floor in their colour, so you can tell whose is whose
-		p.glow = mesh(new THREE.CircleGeometry(0.34, 40), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.22, depthWrite: false }), g, 0, 0.01, 0);
+		const trim = std(col.clone().multiplyScalar(0.55), 0.18, 0.35, { clearcoat: 1, clearcoatRoughness: 0.04 });   // (a deeper shade of it)
+		const servo = std(0x17161c, 0.32, 0.35, { clearcoat: 0.4, clearcoatRoughness: 0.25 });   // (black servo cases, a little sheen)
+		const servoCap = std(0x2a2932, 0.45, 0.2);
+		const horn = std(0xb4bac4, 0.22, 0.9);
+		const screw = std(0xd8dde4, 0.15, 1);
+		const rubber = std(0x1e1c22, 0.85, 0);
+		const label = std(0xeceae4, 0.6, 0);
+		const wire = std(0x101014, 0.4, 0.1);
+		const glowCol = glowMat(col, 2.2);
+		const B = (w, h, d, mat, parent, x, y, z, e = 0.22) => mesh(superBox(w, h, d, e, e, e, 24), mat, parent, x, y, z);
+		// a servo: a rounded black case, a darker cap, a silver output horn with four screws, a white label
+		function servoBlock(parent, w, h, d, x, y, z, side = 1) {
+			const s = new THREE.Group();
+			s.position.set(x, y, z);
+			parent.add(s);
+			B(w, h, d, servo, s, 0, 0, 0);
+			B(w * 1.02, h * 0.18, d * 1.02, servoCap, s, 0, h * 0.42, 0, 0.3);
+			const hornAt = new THREE.Group();
+			hornAt.position.set(side * (w / 2 + 0.004), h * 0.25, 0);
+			hornAt.rotation.z = Math.PI / 2;
+			s.add(hornAt);
+			mesh(CYL(Math.min(d, h) * 0.34, Math.min(d, h) * 0.34, 0.012, 24), horn, hornAt);
+			for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + 0.6; mesh(CYL(0.0045, 0.0045, 0.016, 8), screw, hornAt, Math.cos(a) * Math.min(d, h) * 0.22, 0, Math.sin(a) * Math.min(d, h) * 0.22); }
+			const l = mesh(new THREE.PlaneGeometry(w * 0.5, h * 0.3), label, s, 0, -h * 0.1, d / 2 + 0.002);
+			l.castShadow = false;
+			return s;
+		}
+		// screw heads round a panel's corners
+		const screws = (parent, w, h, x, y, z) => { for (const sx of [-1, 1]) for (const sy of [-1, 1]) mesh(CYL(0.006, 0.006, 0.006, 10), screw, parent, x + sx * w / 2, y + sy * h / 2, z).rotation.x = Math.PI / 2; };
+
+		// a soft glow on the floor in their colour, so you can tell whose is whose, and a contact shadow
+		p.glow = mesh(new THREE.CircleGeometry(0.3, 40), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.2, depthWrite: false }), g, 0, 0.01, 0);
 		p.glow.rotation.x = -Math.PI / 2;
-		// the hips (p.hips rises and falls with the gait; the legs hang from it)
+		const dark = mesh(new THREE.CircleGeometry(0.17, 32), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false }), g, 0, 0.012, 0.02);
+		dark.rotation.x = -Math.PI / 2;
+		dark.scale.set(1, 1.3, 1);
+
+		// the hips: a servo chassis (p.hips rises and falls with the gait; the legs hang from it)
 		const hips = new THREE.Group();
 		hips.position.y = HIP_Y;
 		g.add(hips);
 		p.hips = hips;
-		mesh(BOX(0.3, 0.1, 0.16), servo, hips, 0, 0.02, 0);
-		for (const s of [-1, 1]) {
-			const h = mesh(CYL(0.045, 0.045, 0.03, 20), horn, hips, s * 0.16, 0.0, 0.02);
-			h.rotation.z = Math.PI / 2;
-		}
-		// the legs: hip, knee and ankle servos, a white cap on each knee, a chunky foot
+		B(0.26, 0.085, 0.15, servo, hips, 0, 0.025, 0);
+		B(0.2, 0.03, 0.12, servoCap, hips, 0, 0.07, 0, 0.3);
+
+		// the legs: a hip servo, a moulded knee cap over the knee servo, a shin servo, a chunky foot
 		p.legs = [-1, 1].map(function (s) {
 			const hip = new THREE.Group();
-			hip.position.set(s * 0.1, -0.02, 0);
+			hip.position.set(s * 0.085, -0.01, 0);
 			hips.add(hip);
-			mesh(BOX(0.085, LEG + 0.02, 0.1), servo, hip, 0, -LEG / 2, 0);
-			mesh(CYL(0.03, 0.03, 0.095, 16), horn, hip, 0, -0.03, 0).rotation.z = Math.PI / 2;
+			servoBlock(hip, 0.07, LEG + 0.03, 0.085, 0, -LEG / 2 + 0.005, 0, s);
 			const knee = new THREE.Group();
 			knee.position.y = -LEG;
 			hip.add(knee);
-			mesh(BOX(0.11, 0.1, 0.1), shell, knee, 0, 0.0, 0.03);
-			mesh(BOX(0.075, LEG, 0.085), servo, knee, 0, -LEG / 2, -0.005);
+			const cap = mesh(superBox(0.1, 0.11, 0.07, 0.5, 0.35, 0.35, 28), shell, knee, s * 0.008, 0.012, 0.045);
+			cap.rotation.x = -0.15;
+			mesh(CYL(0.007, 0.007, 0.01, 10), screw, knee, s * 0.008, 0.02, 0.083).rotation.x = Math.PI / 2;
+			servoBlock(knee, 0.062, LEG, 0.075, 0, -LEG / 2, -0.005, -s);
 			const ankle = new THREE.Group();
 			ankle.position.y = -LEG;
 			knee.add(ankle);
-			mesh(CYL(0.035, 0.035, 0.09, 16), horn, ankle, 0, 0, 0).rotation.z = Math.PI / 2;
-			mesh(BOX(0.12, 0.07, 0.2), paint, ankle, 0, -0.065, 0.035);
-			mesh(BOX(0.125, 0.035, 0.205), sole, ankle, 0, -0.1, 0.035);
+			const ah = mesh(CYL(0.028, 0.028, 0.08, 20), horn, ankle);
+			ah.rotation.z = Math.PI / 2;
+			// the foot: a moulded shoe in the paint, a rubber sole with a lip of trim, a toe bumper
+			mesh(superBox(0.11, 0.065, 0.19, 0.45, 0.15, 0.32, 28), shell, ankle, 0, -0.058, 0.03);
+			mesh(superBox(0.118, 0.022, 0.198, 0.2, 0.2, 0.3, 24), trim, ankle, 0, -0.088, 0.03);
+			mesh(superBox(0.114, 0.018, 0.194, 0.2, 0.2, 0.3, 24), rubber, ankle, 0, -0.106, 0.03);
+			mesh(superBox(0.1, 0.035, 0.03, 0.5, 0.5, 0.5, 20), rubber, ankle, 0, -0.075, 0.125);
 			return { hip, knee, ankle };
 		});
+
 		// everything above the hips leans as one (p.upper)
 		const upper = new THREE.Group();
-		upper.position.y = 0.06;
+		upper.position.y = 0.07;
 		hips.add(upper);
 		p.upper = upper;
-		mesh(BOX(0.3, 0.2, 0.24), shell, upper, 0, 0.12, 0);
-		mesh(BOX(0.09, 0.12, 0.1), servo, upper, 0.07, 0.21, -0.03);
-		mesh(CYL(0.03, 0.03, 0.03, 16), horn, upper, -0.155, 0.13, 0.02).rotation.z = Math.PI / 2;
-		// the neck: two servo blocks with a cable loop, leaning forward
+		// the torso: a moulded shell, a grille and a status light on its chest, screws, side vents
+		mesh(superBox(0.28, 0.2, 0.22, 0.38, 0.25, 0.3, 36), shell, upper, 0, 0.11, 0);
+		const chest = new THREE.Group();
+		chest.position.set(0, 0.11, 0.108);
+		upper.add(chest);
+		B(0.15, 0.1, 0.02, servo, chest, -0.02, 0, 0, 0.3);
+		for (let k = 0; k < 3; k++) B(0.1, 0.012, 0.012, servoCap, chest, -0.035, 0.03 - k * 0.028, 0.011, 0.5);
+		p.led = mesh(SPH(0.013, 12), glowCol.clone(), chest, 0.045, 0.025, 0.012);
+		screws(chest, 0.2, 0.15, 0, 0, 0.004);
+		for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) B(0.012, 0.012, 0.11, servo, upper, sx * 0.14, 0.15 - k * 0.03, -0.01, 0.5);
+		servoBlock(upper, 0.08, 0.1, 0.09, 0.07, 0.2, -0.04, 1);
+		// a loom of wires round the back, from the neck down into the hips
+		tube(upper, [[-0.05, 0.25, -0.06], [-0.11, 0.18, -0.12], [-0.12, 0.05, -0.1], [-0.08, -0.04, -0.06]], 0.007, 0.007, wire, 6, 18);
+		tube(upper, [[-0.04, 0.25, -0.05], [-0.09, 0.17, -0.13], [-0.1, 0.06, -0.12], [-0.06, -0.04, -0.07]], 0.006, 0.006, trim, 6, 18);
+
+		// the neck: two servo blocks with a cable loop, leaning forward a touch
 		const neck = new THREE.Group();
-		neck.position.set(0, 0.22, 0.03);
+		neck.position.set(0, 0.215, 0.03);
 		neck.rotation.x = NECK_TILT;
 		upper.add(neck);
-		mesh(BOX(0.07, 0.17, 0.08), servo, neck, 0, 0.09, 0);
-		mesh(CYL(0.026, 0.026, 0.085, 14), horn, neck, 0, 0.15, 0).rotation.z = Math.PI / 2;
-		tube(neck, [[-0.04, 0.16, -0.02], [-0.08, 0.08, -0.04], [-0.05, 0.02, -0.02]], 0.008, 0.008, servo, 6, 12);
-		// the head (p.head nods): a moulded loaf, open at the front, an orange-ish band round its base
+		servoBlock(neck, 0.065, 0.1, 0.075, 0, 0.05, 0, 1);
+		servoBlock(neck, 0.06, 0.08, 0.07, 0, 0.13, 0.005, -1);
+		tube(neck, [[-0.035, 0.17, -0.02], [-0.075, 0.1, -0.05], [-0.06, 0.02, -0.03], [-0.03, -0.01, -0.02]], 0.006, 0.006, wire, 6, 14);
+
+		// the head (p.head): a moulded loaf, round on top and flat beneath, its brow overhanging a
+		// recessed dark face; a band of trim round its base; a camera eye off to one side
 		const head = new THREE.Group();
-		head.position.set(0, 0.19, 0.02);
+		head.position.set(0, 0.185, 0.02);
 		neck.add(head);
 		p.head = head;
-		const arch = (w, h, r) => {
-			const s = new THREE.Shape();
-			s.moveTo(-w / 2, 0); s.lineTo(w / 2, 0); s.lineTo(w / 2, h - r);
-			s.quadraticCurveTo(w / 2, h, w / 2 - r, h); s.lineTo(-w / 2 + r, h);
-			s.quadraticCurveTo(-w / 2, h, -w / 2, h - r); s.lineTo(-w / 2, 0);
-			return s;
-		};
-		const loaf = slab(arch(0.4, 0.24, 0.13), 0.42, 0.03, shell, head);
-		loaf.position.set(0, 0.03, 0);
-		const face = slab(arch(0.34, 0.19, 0.1), 0.02, 0.01, std(0x8a8c94, 0.5, 0.1), head);
-		face.position.set(0, 0.05, 0.225);
-		mesh(BOX(0.44, 0.045, 0.46), paint, head, 0, 0.02, 0);
+		mesh(superBox(0.42, 0.26, 0.44, 0.62, 0.18, 0.32, 48), shell, head, 0, 0.14, 0);
+		mesh(superBox(0.44, 0.04, 0.46, 0.2, 0.2, 0.32, 40), trim, head, 0, 0.02, 0);
+		const face = mesh(superBox(0.34, 0.17, 0.06, 0.45, 0.3, 0.3, 32), std(0x2a2c34, 0.25, 0.4, { clearcoat: 0.8, clearcoatRoughness: 0.1 }), head, 0, 0.115, 0.205);
+		face.scale.z = 0.8;
+		mesh(superBox(0.36, 0.035, 0.07, 0.5, 0.5, 0.4, 28), shell, head, 0, 0.215, 0.205);   // (the brow, over the face)
+		// panel seams and screws on the shell
+		for (const sx of [-1, 1]) {
+			B(0.004, 0.17, 0.3, servo, head, sx * 0.212, 0.13, -0.02, 0.5);
+			mesh(CYL(0.008, 0.008, 0.01, 10), screw, head, sx * 0.214, 0.06, 0.15).rotation.z = Math.PI / 2;
+			mesh(CYL(0.008, 0.008, 0.01, 10), screw, head, sx * 0.214, 0.06, -0.17).rotation.z = Math.PI / 2;
+		}
+		// the side fins, in trim
 		const ear = new THREE.Shape();
 		ear.moveTo(0, 0); ear.quadraticCurveTo(0.09, 0.02, 0.1, 0.1); ear.lineTo(0.07, 0.11); ear.quadraticCurveTo(0.06, 0.04, 0, 0.03); ear.lineTo(0, 0);
 		for (const s of [-1, 1]) {
-			const e = slab(ear, 0.015, 0.008, paint, head);
-			e.position.set(s * 0.225, 0.0, -0.08);
+			const e = slab(ear, 0.014, 0.008, trim, head);
+			e.position.set(s * 0.222, 0.0, -0.08);
 			e.rotation.y = -s * Math.PI / 2;
 		}
-		// the eye: a big ringed camera lens, off to one side like a monocle
+		// the eye: a lens barrel standing out of the face, a ring of trim, a chrome bezel,
+		// dark glass with a glowing iris deep inside and a glint across it
 		const eye = new THREE.Group();
-		eye.position.set(0.07, 0.11, 0.245);
+		eye.position.set(0.07, 0.115, 0.232);
 		head.add(eye);
-		mesh(CYL(0.068, 0.068, 0.03, 32), paint, eye, 0, 0, 0).rotation.x = Math.PI / 2;
-		mesh(new THREE.TorusGeometry(0.056, 0.012, 10, 32), std(col.clone().multiplyScalar(0.7), 0.3, 0.1), eye, 0, 0, 0.017);
-		mesh(CYL(0.04, 0.04, 0.02, 28), std(0x0c0c12, 0.1, 0.4), eye, 0, 0, 0.02).rotation.x = Math.PI / 2;
-		const iris = mesh(CYL(0.022, 0.022, 0.01, 24), glowMat(0x6ab8ff, 1.4), eye, 0, 0, 0.031);
-		iris.rotation.x = Math.PI / 2;
-		mesh(SPH(0.008, 8), MAT.white, eye, 0.014, 0.014, 0.036);
+		const barrel = mesh(CYL(0.062, 0.066, 0.045, 36), servo, eye, 0, 0, 0.01);
+		barrel.rotation.x = Math.PI / 2;
+		mesh(new THREE.TorusGeometry(0.06, 0.016, 14, 40), trim, eye, 0, 0, 0.034);
+		mesh(new THREE.TorusGeometry(0.043, 0.006, 10, 36), horn, eye, 0, 0, 0.04);
+		const glass = mesh(lathe([[0, 0.012], [0.03, 0.009], [0.042, 0]], 32, 10), std(0x05060a, 0.02, 0.6, { clearcoat: 1, clearcoatRoughness: 0, envMapIntensity: 2 }), eye, 0, 0, 0.03);
+		glass.rotation.x = Math.PI / 2;
+		p.iris = mesh(new THREE.RingGeometry(0.008, 0.02, 24), glowMat(0x7ad8ff, 1.8, { side: THREE.DoubleSide }), eye, 0, 0, 0.037);
+		mesh(new THREE.CircleGeometry(0.007, 12), MAT.white, eye, 0.016, 0.016, 0.044);
+		mesh(new THREE.CircleGeometry(0.004, 10), MAT.white, eye, -0.012, -0.01, 0.043);
 		p.eyes = [eye];
-		// the plate: flat on top of the head, a rim in their colour; what they carry sits on it
+
+		// the plate: clamped flat on top of the head on a little servo mount
 		const plate = new THREE.Group();
 		plate.position.set(0, 0.29, 0);
 		head.add(plate);
 		p.plate = plate;
-		mesh(CYL(0.05, 0.06, 0.03, 20), servo, plate, 0, -0.012, 0);
-		mesh(lathe([[0, 0], [0.18, 0.005], [0.26, 0.035], [0.28, 0.045], [0.27, 0.05], [0.18, 0.02], [0, 0.018]], 48, 24), shell, plate, 0, 0, 0);
-		mesh(new THREE.TorusGeometry(0.272, 0.012, 8, 56), paint, plate, 0, 0.046, 0).rotation.x = Math.PI / 2;
+		B(0.07, 0.03, 0.07, servo, plate, 0, -0.012, 0, 0.3);
+		mesh(CYL(0.018, 0.018, 0.025, 16), horn, plate, 0, 0.005, 0);
+		mesh(lathe([[0, 0.004], [0.1, 0.004], [0.11, 0], [0.12, 0.004], [0.2, 0.012], [0.26, 0.036], [0.285, 0.05], [0.28, 0.056], [0.255, 0.046], [0.19, 0.024], [0, 0.02]], 56, 30), shell, plate, 0, 0.012, 0);
+		mesh(new THREE.TorusGeometry(0.281, 0.008, 8, 64), trim, plate, 0, 0.062, 0).rotation.x = Math.PI / 2;
+		for (const s of [-1, 1]) {   // (two clamp arms gripping the rim)
+			tube(plate, [[s * 0.03, 0.0, 0], [s * 0.2, 0.02, 0], [s * 0.272, 0.05, 0], [s * 0.286, 0.066, 0]], 0.007, 0.006, horn, 8, 16);
+		}
 		p.hold = new THREE.Group();
-		p.hold.position.y = 0.03;
+		p.hold.position.y = 0.04;
 		plate.add(p.hold);
+
 		shadows(g);
 		p.glow.castShadow = false;
+		dark.castShadow = false;
 		g.scale.setScalar(BOT_SCALE);
 		p.phase = Math.random() * 6;
 		p.stride = 0;
@@ -2710,7 +2785,16 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			// back the neck's forward set, the lean, and the hips' and body's sway
 			m.head.rotation.x = lerp(m.head.rotation.x, nod - m.upper.rotation.x - NECK_TILT, ease);
 			m.head.rotation.z = -(m.upper.rotation.z + m.hips.rotation.z);
-			m.head.rotation.y = lerp(m.head.rotation.y, st > 0.2 ? 0 : Math.sin(time * 0.7 + i) * 0.25, Math.min(1, dt * 3));
+			// (turning, the head lags a beat behind the body, then catches up)
+			const yawRate = m.prevYaw === undefined ? 0 : Math.atan2(Math.sin(m.yaw - m.prevYaw), Math.cos(m.yaw - m.prevYaw)) / Math.max(dt, 0.001);
+			m.prevYaw = m.yaw;
+			m.headLag = lerp(m.headLag || 0, clamp(-yawRate * 0.07, -0.5, 0.5), Math.min(1, dt * 8));
+			m.headLook = lerp(m.headLook || 0, st > 0.2 ? 0 : Math.sin(time * 0.7 + i) * 0.25, Math.min(1, dt * 3));
+			m.head.rotation.y = m.headLook + m.headLag;
+			// the chest light breathes; the iris opens wide while they're busy
+			m.led.scale.setScalar(0.75 + 0.35 * (0.5 + 0.5 * Math.sin(rt * 3 + i * 1.7)));
+			const wide = a || (c.station && c.station.state === 'work') ? 1.35 : c.held ? 1.1 : 1;
+			m.iris.scale.setScalar(lerp(m.iris.scale.x, wide, Math.min(1, dt * 8)));
 			m.eyes.forEach((e) => { e.scale.y = (rt + i * 0.7) % 3.5 < 0.12 ? 0.2 : 1; });
 			// what they're carrying, riding on the plate, turned to face the middle
 			const hv = syncItem(m.holder, c.held, m.hold, 0, 0, 0, 0.46);
