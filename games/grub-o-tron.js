@@ -1704,9 +1704,9 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		return m;
 	}
 
-	// Each ingredient is a pile of it, heaped on the counter, with a shelf of
-	// more on the wall above (built on the first frame: the food's models are
-	// defined further down)
+	// Each ingredient is a pile of it, heaped on the counter (no shelf of it on the wall
+	// above any more: the user asked). Built on the first frame: the food's models are
+	// defined further down.
 	const disp3d = DISPENSERS.map(function ({ ing, wall }, k) {
 		const a = DISP_ALONG[k];
 		const p = wallPoint(wall, a, DEV_D);
@@ -1714,14 +1714,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		g.position.set(p.x, CT.y + 0.01, p.z);
 		g.rotation.y = faceEye(p.x, p.z);
 		room.add(g);
-		const sp = wallPoint(wall, a, BACK - 0.16);
-		const shelf = new THREE.Group();
-		shelf.position.set(sp.x, 1.5, sp.z);
-		shelf.rotation.y = [Math.PI / 2, 0, -Math.PI / 2][wall];
-		room.add(shelf);
-		mesh(BOX(0.9, 0.04, 0.28), MAT.rust, shelf, 0, 0, 0).castShadow = true;
-		for (const x of [-0.36, 0.36]) mesh(BOX(0.03, 0.14, 0.2), MAT.darkSteel, shelf, x, -0.08, -0.03);
-		return { g, shelf, ing, built: false };
+		return { g, ing, built: false };
 	});
 	function buildPiles() {
 		disp3d.forEach(function (d3, k) {
@@ -1731,9 +1724,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			const raw = { ing: d3.ing, steps: [], burnt: false };
 			const piece = (s) => { const v = itemView(raw); v.userData = {}; v.scale.setScalar(s); return v; };   // (not a held item: never swept)
 			// the heap: a wide bottom layer, fewer on top, one at the peak
-			const heap = new THREE.Group(), row = new THREE.Group();
+			const heap = new THREE.Group();
 			d3.g.add(heap);
-			d3.shelf.add(row);
 			for (let n = 0; n < 12; n++) {
 				const layer = n < 7 ? 0 : n < 11 ? 1 : 2;
 				const ang = rnd() * Math.PI * 2, rad = [0.3, 0.16, 0][layer] * (0.6 + rnd() * 0.4);
@@ -1742,17 +1734,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 				v.rotation.set((rnd() - 0.5) * 0.4, rnd() * 6, (rnd() - 0.5) * 0.4);
 				heap.add(v);
 			}
-			// and a row on the shelf
-			for (let n = 0; n < 4; n++) {
-				const v = piece(0.34);
-				v.position.set(-0.3 + n * 0.2, 0.02, 0.02);
-				v.rotation.y = rnd() * 6;
-				row.add(v);
-			}
 			shadows(heap);
-			shadows(row);
 			bake(heap);
-			bake(row);
 		});
 	}
 	const bin3d = (function () {
