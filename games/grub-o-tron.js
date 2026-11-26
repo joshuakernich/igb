@@ -1385,6 +1385,10 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			l.position.set(x, 2.9, z);
 			room.add(l);
 		}
+		// a rim of neon light on the mutants, from the window behind them
+		const rim = new THREE.PointLight(0xc06bff, 5, 4.5, 1.6);
+		rim.position.set(0, 2.3, -(QUEUE_D + 0.7));
+		room.add(rim);
 		bake(g);
 	}
 	buildRoom();
@@ -1990,27 +1994,46 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		s.moveTo(-w / 2, 0);
 		s.quadraticCurveTo(0, -h * 2, w / 2, 0);
 		s.quadraticCurveTo(0, -h * 0.5, -w / 2, 0);
-		const m = slab(s, 0.02, Math.min(0.03, w * 0.08), mat || MAT.black, parent);
+		const m = slab(s, 0.02, Math.min(0.03, w * 0.08), mat || MOUTH, parent);
 		m.position.set(x, y, z);
 		if (frown) m.rotation.z = Math.PI;
+		if (partSink) partSink.mouths.push(m);   // (building a mutant: it talks with this)
 		return m;
 	}
-	// an eye: a white ball, a pupil, and moulded lids in the skin (droop: how heavy the upper lid hangs)
-	// (the whites glow a little, so they read white even in the dim kitchen)
-	const EYE_WHITE = std(0xffffff, 0.2, 0, { emissive: 0xffffff, emissiveIntensity: 0.55 });
+	// a mouth's inside: dark, wet, a little red
+	const MOUTH = std(0x2a0a14, 0.25, 0, { clearcoat: 1, clearcoatRoughness: 0.1 });
+	let partSink = null;   // (while a mutant is built: where its eyes and mouths are listed)
+	// An eye: a wet white ball, a coloured iris and a pupil that turn together to look at
+	// things (eye.look), a glint, and lids in the skin (droop: how heavy the upper lid hangs),
+	// the upper one blinking (eye.lid). The whites glow a little, to read white in the dim kitchen.
+	const EYE_WHITE = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.3, emissive: 0xfff4ee, emissiveIntensity: 0.45, clearcoat: 1, clearcoatRoughness: 0.02 });
+	const irisMats = {};
+	const irisMat = (hex) => irisMats[hex] || (irisMats[hex] = new THREE.MeshPhysicalMaterial({ color: hex, roughness: 0.35, emissive: hex, emissiveIntensity: 0.35, clearcoat: 1, clearcoatRoughness: 0.02 }));
+	const PUPIL = new THREE.MeshPhysicalMaterial({ color: 0x050308, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0 });
+	const cap = (r, ang) => { const gm = new THREE.SphereGeometry(r, 28, 10, 0, Math.PI * 2, 0, ang); gm.rotateX(Math.PI / 2); return gm; };   // (a cap of a sphere, facing +z)
 	function eyeBall(g, x, y, z, r, lid, droop = 0.25) {
-		mesh(SPH(r, 18), EYE_WHITE, g, x, y, z);
-		const pupil = mesh(SPH(r * 0.5, 14), MAT.black, g, x, y, z);
-		pupil.scale.set(1, 1.15, 0.6);
-		pupil.position.addScaledVector(TOWARD, r * 0.72);
-		mesh(SPH(r * 0.16, 8), MAT.white, g, x + r * 0.18, y + r * 0.22, z).position.addScaledVector(TOWARD, r * 0.98);
+		const eg = new THREE.Group();
+		eg.position.set(x, y, z);
+		g.add(eg);
+		mesh(SPH(r, 24), EYE_WHITE, eg);
+		const look = new THREE.Group();
+		eg.add(look);
+		mesh(cap(r * 1.004, 0.62), irisMat(partSink ? partSink.iris : '#ffb21f'), look);
+		mesh(cap(r * 1.008, 0.27), PUPIL, look);
+		mesh(SPH(r * 0.13, 8), MAT.white, look, r * 0.3, r * 0.32, r * 0.93);   // (the glint)
+		const eye = { look, lid: null, open: 0, droop };
 		if (lid) {
-			const up = mesh(new THREE.SphereGeometry(r * 1.14, 24, 12, 0, Math.PI * 2, 0, Math.PI * (0.32 + droop * 0.3)), lid, g, x, y, z);
-			up.rotation.x = 0.5;
-			const low = mesh(new THREE.SphereGeometry(r * 1.1, 24, 8, 0, Math.PI * 2, Math.PI * 0.74, Math.PI * 0.26), lid, g, x, y, z);
+			const up = new THREE.Group();
+			eg.add(up);
+			mesh(new THREE.SphereGeometry(r * 1.12, 28, 12, 0, Math.PI * 2, 0, Math.PI * 0.5), lid, up);
+			eye.lid = up;
+			eye.open = -0.55 + droop * 0.7;   // (the lid's angle, open: tipped back, showing the eye)
+			up.rotation.x = eye.open;
+			const low = mesh(new THREE.SphereGeometry(r * 1.1, 28, 8, 0, Math.PI * 2, Math.PI * 0.74, Math.PI * 0.26), lid, eg);
 			low.rotation.x = -0.35;
 		}
-		return pupil;
+		if (partSink) partSink.eyes.push(eye);
+		return look;
 	}
 	// a smooth little noise for lumps: sines at odd angles
 	const lumpy = (p, k = 1) => (Math.sin(p.x * 4.1 * k + 1.3) * Math.sin(p.y * 3.7 * k + 0.4) + Math.sin(p.z * 5.3 * k + p.x * 2.1 * k) * 0.6 + Math.sin(p.y * 7.9 * k + p.z * 3.3 * k) * 0.3);
@@ -2232,11 +2255,81 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		if (kept && customers.some((o) => o && o !== c && o.model === kept)) return buildMutant(type);   // (two of a kind in at once: the second gets its own)
 		return kept || (mutantModels[type.id] = buildMutant(type));
 	}
+	// Each kind's skin: how wet it is, the colour its veins glow and its irises.
+	const SKIN = {
+		blob: { wet: 1, glow: '#b8ff6a', iris: '#ffd23a' },
+		cyclops: { wet: 0.25, glow: '#b07aff', iris: '#3af2ff' },
+		mold: { wet: 0.7, glow: '#e9ff4a', iris: '#ff3ad8' },
+		pigeon: { wet: 0, glow: '#6ab8ff', iris: '#ff7a1a' },
+		skull: { wet: 0.3, glow: '#9dff3a', iris: '#9dff3a' },
+		squid: { wet: 1, glow: '#ff6ac8', iris: '#7aff3a' },
+		fungus: { wet: 0.15, glow: '#ffb03a', iris: '#ffb03a' },
+		overlord: { wet: 0.5, glow: '#ff2d8f', iris: '#ff2d8f' },
+	};
+	// Mutant skin, painted: the colour mottled in big soft patches, freckled and pored, with
+	// veins branching across it; the veins glow (the emissive map) in the kind's colour.
+	function skinMat(type) {
+		const k = SKIN[type.id] || { wet: 0.4, glow: '#9dff3a' };
+		const rnd = seeded(type.id.length * 97 + type.id.charCodeAt(0));
+		const S = 512, base = new THREE.Color(type.skin);
+		const hex = (c) => '#' + c.getHexString();
+		const veins = [];
+		for (let v = 0; v < 7; v++) {   // (each vein a wandering line that forks)
+			const pts = [[rnd() * S, rnd() * S]];
+			let a = rnd() * Math.PI * 2;
+			for (let j = 0; j < 26; j++) { a += (rnd() - 0.5) * 0.9; const [px, py] = pts[pts.length - 1]; pts.push([px + Math.cos(a) * 12, py + Math.sin(a) * 12]); }
+			veins.push({ pts, w: 1.5 + rnd() * 2.5, fork: Math.floor(6 + rnd() * 14) });
+		}
+		const drawVeins = (c, style, wk) => {
+			c.strokeStyle = style; c.lineCap = 'round'; c.lineJoin = 'round';
+			for (const v of veins) {
+				c.lineWidth = v.w * wk;
+				c.beginPath(); v.pts.forEach(([px, py], j) => (j ? c.lineTo(px, py) : c.moveTo(px, py))); c.stroke();
+				c.lineWidth = v.w * wk * 0.55;
+				c.beginPath(); v.pts.slice(v.fork).forEach(([px, py], j) => (j ? c.lineTo(px + j * 3, py - j * 4) : c.moveTo(px, py))); c.stroke();
+			}
+		};
+		const blots = Array.from({ length: 26 }, () => [rnd() * S, rnd() * S, 30 + rnd() * 110, rnd() < 0.5 ? 1 : -1]);
+		const specks = Array.from({ length: 900 }, () => [rnd() * S, rnd() * S, 0.6 + rnd() * 2.2, rnd()]);
+		const map = canvasTexture(S, S, (c) => {
+			c.fillStyle = hex(base); c.fillRect(0, 0, S, S);
+			for (const [bx, by, br, sgn] of blots) {
+				const gr = c.createRadialGradient(bx, by, 0, bx, by, br);
+				const tone = sgn > 0 ? base.clone().lerp(new THREE.Color('#ffffff'), 0.18) : base.clone().multiplyScalar(0.72);
+				gr.addColorStop(0, hex(tone)); gr.addColorStop(1, 'rgba(0,0,0,0)');
+				c.fillStyle = gr; c.globalAlpha = 0.55; c.fillRect(bx - br, by - br, br * 2, br * 2); c.globalAlpha = 1;
+			}
+			drawVeins(c, hex(base.clone().multiplyScalar(0.6)), 1.6);
+			for (const [px, py, pr, t] of specks) { c.fillStyle = t < 0.8 ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.16)'; c.beginPath(); c.arc(px, py, pr, 0, Math.PI * 2); c.fill(); }
+		});
+		const glow = canvasTexture(S, S, (c) => {
+			c.fillStyle = '#000'; c.fillRect(0, 0, S, S);
+			c.shadowColor = '#fff'; c.shadowBlur = 6;
+			drawVeins(c, '#ffffff', 0.8);
+		});
+		for (const t of [map, glow]) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 2); t.anisotropy = 4; }
+		const mat = new THREE.MeshPhysicalMaterial({
+			color: 0xffffff, map, roughness: 0.62 - k.wet * 0.45, metalness: 0,
+			emissive: k.glow, emissiveMap: glow, emissiveIntensity: 0.4,
+			sheen: 0.8, sheenColor: base.clone().lerp(new THREE.Color('#ffffff'), 0.5), sheenRoughness: 0.5,
+			clearcoat: k.wet, clearcoatRoughness: 0.08,
+		});
+		mat.userData = { glow: k.glow };
+		return mat;
+	}
 	function buildMutant(type) {
 		const g = new THREE.Group();
-		const skin = std(type.skin, 0.45, 0.05);
-		const m = { g, skin };
-		MUTANT_3D[type.id](g, skin, m);
+		const skin = skinMat(type);
+		const m = { g, skin, eyes: [], mouths: [], iris: (SKIN[type.id] || {}).iris || '#ffb21f', blink: 1 + Math.random() * 3 };
+		partSink = m;
+		try { MUTANT_3D[type.id](g, skin, m); } finally { partSink = null; }
+		// cloth and the like: a soft sheen on the matte things they wear (their own materials only)
+		const shared = new Set(Object.values(MAT).concat([EYE_WHITE, PUPIL, MOUTH, skin]));
+		g.traverse((o) => {
+			const mt = o.material;
+			if (!o.isMesh || !mt || shared.has(mt) || !mt.isMeshPhysicalMaterial || mt.emissiveMap || mt.metalness > 0.4 || mt.transparent) return;
+			if (mt.roughness >= 0.35) { mt.sheen = 0.6; mt.sheenRoughness = 0.6; mt.sheenColor = mt.color.clone().lerp(new THREE.Color('#ffffff'), 0.4); }
+		});
 		shadows(g);
 		return m;
 	}
@@ -2759,8 +2852,29 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			const sc = Math.min(0.85, colW(n) / W * 2 * QUEUE_D / 1.7) * (c.recipe === FEAST ? 1.1 : 1);   // (as wide as its window)
 			m.g.scale.set(sc * (1 + sq), sc * (1 - sq), sc);
 			const angry = c.state === 'angry' || panic;
-			m.skin.emissive.set(angry ? 0xff1a00 : c.state === 'eat' ? 0x40ff40 : 0x000000);
-			m.skin.emissiveIntensity = angry ? 0.25 + Math.sin(rt * 10) * 0.15 : c.state === 'eat' ? 0.2 : 0;
+			// breathing; the veins glowing in a slow pulse, red and fast when cross, bright when eating
+			const breathe = 1 + Math.sin(rt * 1.7 + c.seed) * 0.012;
+			m.g.scale.y *= breathe;
+			m.skin.emissive.set(angry ? 0xff2a10 : c.state === 'eat' ? 0x7aff4a : m.skin.userData.glow);
+			m.skin.emissiveIntensity = angry ? 1.4 + Math.sin(rt * 10) * 0.6 : c.state === 'eat' ? 1.8 : 0.35 + Math.sin(rt * 2 + c.seed) * 0.15;
+			// the eyes: on the nearest robot at the front, else on us; blinking now and then;
+			// narrowed when cross, wide when panicking
+			let tx = 0, ty = EYE, tz = 0, best = Infinity;
+			for (const r of chefs3) if (r && r.g.visible && r.wallAt === 1 && r.x !== undefined) { const dd = Math.abs(r.x - qp.x); if (dd < best) { best = dd; tx = r.x; ty = 0.8; tz = r.z; } }
+			const my = 1.6 * sc, dx = tx - qp.x, dz = tz - qp.z;
+			const yawOff = clamp(Math.atan2(Math.sin(Math.atan2(dx, dz) - m.g.rotation.y), Math.cos(Math.atan2(dx, dz) - m.g.rotation.y)), -0.6, 0.6);
+			const pitchOff = clamp(Math.atan2(ty - my, Math.hypot(dx, dz)), -0.5, 0.4);
+			m.blink -= dt;
+			if (m.blink < -0.14) m.blink = 1.8 + Math.random() * 3.5;
+			const shut = m.blink < 0 ? 1 : 0;
+			for (const e of m.eyes) {
+				e.look.rotation.y = lerp(e.look.rotation.y, yawOff, Math.min(1, dt * 6));
+				e.look.rotation.x = lerp(e.look.rotation.x, -pitchOff, Math.min(1, dt * 6));
+				if (e.lid) e.lid.rotation.x = lerp(e.lid.rotation.x, shut ? 1.5 : angry ? e.open + 0.55 : panic ? e.open - 0.25 : e.open, Math.min(1, dt * (shut ? 40 : 12)));
+			}
+			// the mouth: working while they talk
+			const talking = c.sayT > 0 && c.state !== 'leave';
+			for (const mo of m.mouths) mo.scale.y = lerp(mo.scale.y, talking ? 0.6 + Math.abs(Math.sin(rt * 15 + c.seed)) * 1.4 : angry ? 0.7 : 1, Math.min(1, dt * 18));
 			if (m.heads) m.heads.forEach((h, j) => { h.rotation.z = Math.sin(rt * 3 + j * 2) * 0.15; h.position.y = 1.75 + Math.sin(rt * 4 + j * 2) * 0.05; });
 			if (m.head) { m.head.position.z = 0.05 + Math.max(0, Math.sin(rt * 6)) * 0.12; }
 			if (m.arms) m.arms.forEach((a, j) => { a.rotation.z = Math.sin(rt * 3 + j) * 0.25; a.rotation.x = Math.cos(rt * 2.4 + j) * 0.2; });
