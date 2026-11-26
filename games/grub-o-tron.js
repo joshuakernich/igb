@@ -2743,6 +2743,10 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			m.stride = lerp(m.stride, clamp(speed / 0.8, 0, 1), 1 - Math.exp(-dt * 12));
 			m.phase += Math.min(Math.PI * speed * dt / (STEP * BOT_SCALE), 32 * dt);
 			if (m.stride < 0.05) m.phase = Math.round(m.phase / Math.PI) * Math.PI;   // (stopped: feet together)
+			// a footstep each time a foot comes down (its phase passing a quarter turn), once moving
+			const plant = Math.floor((m.phase - Math.PI / 2) / Math.PI);
+			if (m.plant !== undefined && plant !== m.plant && m.stride > 0.15 && phase !== 'off') footstep(i, wallNow, m.stride);
+			m.plant = plant;
 			const st = m.stride, ph = m.phase;
 			// a pose for what they're doing: lean in, dip the head, squat, shake
 			let lean = 0.04 + st * 0.12, nod = 0, squat = 0, shake = 0;
@@ -2985,14 +2989,18 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// A mutant's murmur: a run of gibberish syllables in its own voice (a buzzy
 	// tone through a shifting vowel filter), as it says its order or answers back
 	let voiceCtx = null;
-	function murmur(c, n, mood) {
-		if (!c) return;
-		if (c.say) n = Math.max(n, Math.round(c.say.replace(/[^A-Z]/gi, '').length / 2.5));   // (as long as what it says)
+	function voice() {
 		try {
 			if (!voiceCtx) voiceCtx = new (window.AudioContext || window.webkitAudioContext)();
 			if (voiceCtx.state === 'suspended') voiceCtx.resume();
-		} catch { return; }
-		const ac = voiceCtx;
+			return voiceCtx;
+		} catch { return null; }
+	}
+	function murmur(c, n, mood) {
+		if (!c) return;
+		if (c.say) n = Math.max(n, Math.round(c.say.replace(/[^A-Z]/gi, '').length / 2.5));   // (as long as what it says)
+		const ac = voice();
+		if (!ac) return;
 		const out = ac.createGain();
 		out.gain.value = 0.45;
 		out.connect(ac.destination);
@@ -3018,6 +3026,52 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			o.stop(at + len + 0.02);
 			at += len + 0.02 + (Math.random() < 0.18 ? 0.09 : 0);
 		}
+	}
+
+	// A robot's footstep: the whirr of a servo swinging the leg, then a metal foot coming down
+	// (a clank of filtered noise on a low thump). Each robot a little different in pitch, panned
+	// toward the wall it's on; lighter at a stroll, heavier at a run.
+	let noiseBuf = null;
+	function footstep(i, wall, k) {
+		const ac = voice();
+		if (!ac || show.paused) return;
+		if (!noiseBuf) {
+			noiseBuf = ac.createBuffer(1, ac.sampleRate * 0.3, ac.sampleRate);
+			const d = noiseBuf.getChannelData(0);
+			for (let j = 0; j < d.length; j++) d[j] = Math.random() * 2 - 1;
+		}
+		const t0 = ac.currentTime + 0.005, pitch = 1 + ((i * 0.137) % 0.3) - 0.15 + (Math.random() - 0.5) * 0.08;
+		const out = ac.createGain();
+		out.gain.value = 0.18 + 0.22 * k;
+		let dest = ac.destination;
+		if (ac.createStereoPanner) { const pan = ac.createStereoPanner(); pan.pan.value = [-0.7, 0, 0.7][wall] || 0; pan.connect(dest); dest = pan; }
+		out.connect(dest);
+		const env = (node, a, len, peak) => { const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t0 + a); g.gain.exponentialRampToValueAtTime(peak, t0 + a + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t0 + a + len); node.connect(g).connect(out); return g; };
+		// the servo: a short rising whine
+		const whir = ac.createOscillator();
+		whir.type = 'square';
+		whir.frequency.setValueAtTime(520 * pitch, t0);
+		whir.frequency.exponentialRampToValueAtTime(860 * pitch, t0 + 0.07);
+		const wf = ac.createBiquadFilter();
+		wf.type = 'bandpass'; wf.frequency.value = 1400 * pitch; wf.Q.value = 2;
+		whir.connect(wf);
+		env(wf, 0, 0.08, 0.12);
+		whir.start(t0); whir.stop(t0 + 0.1);
+		// the foot down: a clank (noise through a ringing band) and a thump
+		const n = ac.createBufferSource();
+		n.buffer = noiseBuf;
+		n.playbackRate.value = pitch;
+		const nf = ac.createBiquadFilter();
+		nf.type = 'bandpass'; nf.frequency.value = 2600 * pitch; nf.Q.value = 9;
+		n.connect(nf);
+		env(nf, 0.07, 0.09, 1.4);
+		n.start(t0 + 0.07); n.stop(t0 + 0.2);
+		const thump = ac.createOscillator();
+		thump.type = 'sine';
+		thump.frequency.setValueAtTime(150 * pitch, t0 + 0.07);
+		thump.frequency.exponentialRampToValueAtTime(55, t0 + 0.16);
+		env(thump, 0.07, 0.1, 0.9);
+		thump.start(t0 + 0.07); thump.stop(t0 + 0.2);
 	}
 
 	function drawFrontUI(ctx) {
