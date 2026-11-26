@@ -1294,6 +1294,28 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	const signs = [];
 	const sunbeams = { mats: [], motes: null, box: null };   // (the light streaming in at the window: see buildRoom)
 
+	// Brushed stainless steel: fine grain running along it, the odd scuff, a soft sheen
+	// (the grain in the colour and in how rough it is, so the light streaks along it)
+	let brushed = null;
+	function stainless() {
+		if (!brushed) {
+			const rnd = seeded(77);
+			const lines = Array.from({ length: 700 }, () => [rnd() * 256, rnd(), rnd()]);
+			const scuffs = Array.from({ length: 14 }, () => [rnd() * 512, rnd() * 256, 20 + rnd() * 60, (rnd() - 0.5) * 0.6]);
+			const paint = (base, lo, hi) => (c) => {
+				c.fillStyle = base; c.fillRect(0, 0, 512, 256);
+				for (const [y, t, a] of lines) { c.fillStyle = t < 0.5 ? `rgba(${lo},${a * 0.22})` : `rgba(${hi},${a * 0.18})`; c.fillRect(0, y, 512, 0.6 + a); }
+				c.strokeStyle = `rgba(${lo},0.25)`; c.lineWidth = 1;
+				for (const [x, y, l, ang] of scuffs) { c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(ang) * l, y + Math.sin(ang) * l); c.stroke(); }
+			};
+			const map = canvasTexture(512, 256, paint('#c9ced4', '40,44,50', '255,255,255'));
+			const rough = canvasTexture(512, 256, paint('#5a5a5a', '150,150,150', '40,40,40'), false);
+			for (const t of [map, rough]) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 4); t.anisotropy = 8; }
+			brushed = { map, rough };
+		}
+		return new THREE.MeshPhysicalMaterial({ color: 0xffffff, map: brushed.map, metalness: 0.92, roughness: 0.55, roughnessMap: brushed.rough, envMapIntensity: 1.4, clearcoat: 0.15, clearcoatRoughness: 0.3 });
+	}
+
 	function buildRoom() {
 		const look = KITCHEN;
 		const g = new THREE.Group();   // (what never moves: baked into a few meshes at the end)
@@ -1312,13 +1334,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		Rw.rotation.y = -Math.PI / 2;
 		mesh(new THREE.PlaneGeometry(2 * BACK, 3.4), wallMat(2 * BACK, 3.4), g, 0, 1.7, -FRONT_BACK);
 		for (const m of [L, Rw]) m.receiveShadow = true;
-		// strip lights along the ceiling, flickering
-		for (const [x, z, ry] of [[-2.6, 0, 0], [2.6, 0, 0], [0, -3.2, Math.PI / 2]]) {
-			const strip = mesh(BOX(0.12, 0.05, 3.2), glowMat(0xeaf6ff, 1.6), g, x, 3.35, z);
-			strip.rotation.y = ry;
-		}
 		// the counters: one along each wall's active stretch, and the empty ends
-		const counterMat = std(look.counter, 0.35, 0.1);
+		const counterMat = stainless();   // (stainless steel, the user asked)
 		for (let w = 0; w < 3; w++) {
 			const [a0, a1] = ACTIVE[w];
 			const p0 = wallPoint(w, a0, CT.d + CT.deep / 2), p1 = wallPoint(w, a1, CT.d + CT.deep / 2);
@@ -1347,11 +1364,6 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 					}
 				}
 			}
-		}
-		// pipes high along the side walls, dripping rust
-		for (const x of [-BACK + 0.12, BACK - 0.12]) for (const [y, r] of [[3.0, 0.07], [3.18, 0.045]]) {
-			const p = mesh(CYL(r, r, BACK + FRONT_BACK, 12), MAT.pipe, g, x, y, (BACK - FRONT_BACK) / 2);
-			p.rotation.x = Math.PI / 2;
 		}
 		// the front: the window onto the wasteland behind the mutants, and the neon over it
 		const wa = HATCH / W, wb = CHUTE / W;
@@ -3572,7 +3584,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		grid.position.y = 0.002;
 		ls.add(grid);
 		const CZ = -(CT.d - AV_MAX) - CT.deep / 2;   // (the counter, as far behind as in the kitchen)
-		const counter = mesh(BOX(3.2, CT.y, CT.deep), std(KITCHEN.counter, 0.35, 0.1), ls, 0, CT.y / 2, CZ);
+		const counter = mesh(BOX(3.2, CT.y, CT.deep), stainless(), ls, 0, CT.y / 2, CZ);
 		counter.castShadow = counter.receiveShadow = true;
 		mesh(BOX(3.28, 0.05, CT.deep + 0.06), MAT.steel, ls, 0, CT.y, CZ).receiveShadow = true;
 		const cam = new THREE.PerspectiveCamera(40, 1, 0.02, 40);
