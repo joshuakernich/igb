@@ -1291,6 +1291,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	const sets = [room, room, room];   // (one kitchen: every wall's things in it)
 	const fans = [];
 	const signs = [];
+	const sunbeams = { mats: [], motes: null, box: null };   // (the light streaming in at the window: see buildRoom)
 
 	function buildRoom() {
 		const look = KITCHEN;
@@ -1375,6 +1376,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		mesh(new THREE.PlaneGeometry(wr.x - wl.x, 2.4), new THREE.MeshBasicMaterial({ map: TEX.sky, color: new THREE.Color(0.42, 0.42, 0.42) }), g, 0, 1.6, -FRONT_BACK + 0.02);
 		for (const x of [wl.x - 0.06, wr.x + 0.06]) mesh(BOX(0.14, 2.6, 0.16), MAT.darkSteel, g, x, 1.55, -FRONT_BACK + 0.08);
 		mesh(BOX(wr.x - wl.x + 0.3, 0.14, 0.16), MAT.darkSteel, g, 0, 2.85, -FRONT_BACK + 0.08);
+		buildSunbeams(wl.x, wr.x);
 		for (const [x, text, colour] of [[-1.2, 'FISSION CHIPS', '#9dff3a'], [1.2, 'OPEN 25/8', '#FC1992']]) {
 			const sign = mesh(new THREE.PlaneGeometry(2.0, 0.37), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), room, x, 3.1, -FRONT_BACK + 0.06);
 			signs.push({ m: sign, text, colour, k: 1.3, seed: x, font: x < 0 ? 'Monoton' : null });   // (the name in the title's neon-tube lettering)
@@ -1392,6 +1394,117 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		bake(g);
 	}
 	buildRoom();
+
+	// Light streaming in at the window: the low sun outside, falling down and in across the
+	// kitchen. A warm spotlight from out there, its light shaped to the window by an unseen
+	// wall around the opening (so the floor gets a window of light, the mutants' shadows in
+	// it); soft shafts of light through the air, brighter in streaks, slowly shifting; and
+	// dust turning over in them.
+	function buildSunbeams(x0, x1) {
+		const zW = -FRONT_BACK + 0.05, y0 = 0.45, y1 = 2.75;
+		// the unseen wall round the window: it only casts shadows
+		const mask = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
+		const wallW = 2 * BACK;
+		for (const [cx, cy, w, h] of [[(x0 - BACK) / 2 - 0.05, 1.7, x0 + BACK, 3.4], [(x1 + BACK) / 2 + 0.05, 1.7, BACK - x1, 3.4], [0, (y1 + 3.4) / 2, wallW, 3.4 - y1], [0, y0 / 2, wallW, y0]]) {
+			const b = mesh(new THREE.BoxGeometry(Math.max(0.01, w), Math.max(0.01, h), 0.04), mask, room, cx, cy, zW - 0.12);
+			b.castShadow = true;
+			b.renderOrder = -1;
+		}
+		const sunCol = new THREE.Color(0xffc98a);
+		const sun = new THREE.SpotLight(sunCol, 60, 16, 0.62, 0.55, 1.2);
+		sun.position.set(0.6, 4.6, zW - 3.2);
+		sun.target.position.set(-0.2, 0, 1.2);
+		sun.castShadow = true;
+		sun.shadow.mapSize.set(1024, 1024);
+		sun.shadow.bias = -0.0006;
+		sun.shadow.normalBias = 0.03;
+		room.add(sun, sun.target);
+		// the shafts: frustums from the window opening, out along the sun's way, each its own
+		// slice of the window; drawn added on, fading with distance, soft at their edges
+		const dir = new THREE.Vector3().subVectors(sun.target.position, sun.position).normalize();
+		const shaftMat = () => new THREE.ShaderMaterial({
+			uniforms: { uColor: { value: sunCol.clone() }, uAmount: { value: 0.5 }, uTime: { value: 0 }, uSeed: { value: Math.random() * 10 } },
+			vertexShader: `
+				attribute float aLen; attribute float aCross;
+				varying float vLen; varying float vCross; varying vec3 vN; varying vec3 vV;
+				void main() {
+					vLen = aLen; vCross = aCross;
+					vec4 mv = modelViewMatrix * vec4(position, 1.0);
+					vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz);
+					gl_Position = projectionMatrix * mv;
+				}`,
+			fragmentShader: `
+				uniform vec3 uColor; uniform float uAmount; uniform float uTime; uniform float uSeed;
+				varying float vLen; varying float vCross; varying vec3 vN; varying vec3 vV;
+				void main() {
+					float face = pow(abs(dot(vN, vV)), 1.6);                     // (soft at the edges, seen side-on)
+					float along = smoothstep(0.0, 0.06, vLen) * pow(1.0 - vLen, 1.7);   // (from the window, fading out)
+					float streak = 0.55 + 0.45 * sin(vCross * 37.0 + uSeed + uTime * 0.23) * sin(vCross * 13.0 - uTime * 0.17 + uSeed);
+					float a = uAmount * face * along * streak;
+					gl_FragColor = vec4(uColor * a, a);
+				}`,
+			transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+		});
+		function shaft(ax, bx, ay, by, len, spread, amount) {
+			const near = [[ax, ay], [bx, ay], [bx, by], [ax, by]].map(([x, y]) => new THREE.Vector3(x, y, zW));
+			const mid = near.reduce((v, q) => v.add(q), new THREE.Vector3()).multiplyScalar(0.25);
+			const far = near.map((q) => q.clone().sub(mid).multiplyScalar(spread).add(mid).addScaledVector(dir, len));
+			const pos = [], lenA = [], crossA = [];
+			for (let k = 0; k < 4; k++) {
+				const a = near[k], b = near[(k + 1) % 4], c = far[(k + 1) % 4], d = far[k];
+				for (const [v, l, cr] of [[a, 0, k], [b, 0, k + 1], [c, 1, k + 1], [a, 0, k], [c, 1, k + 1], [d, 1, k]]) { pos.push(v.x, v.y, v.z); lenA.push(l); crossA.push(cr / 4); }
+			}
+			const geo = new THREE.BufferGeometry();
+			geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+			geo.setAttribute('aLen', new THREE.Float32BufferAttribute(lenA, 1));
+			geo.setAttribute('aCross', new THREE.Float32BufferAttribute(crossA, 1));
+			geo.computeVertexNormals();
+			const mat = shaftMat();
+			mat.uniforms.uAmount.value = amount;
+			const m = new THREE.Mesh(geo, mat);
+			m.renderOrder = 5;
+			m.frustumCulled = false;
+			room.add(m);
+			sunbeams.mats.push({ mat, base: amount, seed: Math.random() * 6 });
+		}
+		const span = x1 - x0;
+		shaft(x0, x1, y0, y1, 7.5, 1.35, 0.16);   // (the whole window's glow)
+		const rnd = seeded(41);
+		for (let k = 0; k < 6; k++) {   // (and brighter shafts within it)
+			const c = x0 + span * (0.08 + rnd() * 0.84), w = span * (0.03 + rnd() * 0.07);
+			const t = y0 + (y1 - y0) * (0.3 + rnd() * 0.6), h = (y1 - y0) * (0.12 + rnd() * 0.3);
+			shaft(c - w / 2, c + w / 2, t - h, t, 6 + rnd() * 2, 1.2 + rnd() * 0.3, 0.22 + rnd() * 0.18);
+		}
+		// dust in the light: motes drifting through the shafts, catching it
+		const N = 260, mp = new Float32Array(N * 3), seeds = [];
+		for (let i = 0; i < N; i++) {
+			const u = Math.random(), base = new THREE.Vector3(x0 + Math.random() * span, y0 + Math.random() * (y1 - y0), zW).addScaledVector(dir, 0.3 + u * 5.5);
+			seeds.push({ base, ph: Math.random() * 6, sp: 0.2 + Math.random() * 0.5 });
+			mp.set([base.x, base.y, base.z], i * 3);
+		}
+		const mg = new THREE.BufferGeometry();
+		mg.setAttribute('position', new THREE.BufferAttribute(mp, 3));
+		const motes = new THREE.Points(mg, new THREE.PointsMaterial({ map: TEX.soft, color: 0xffe2b8, size: 0.035, sizeAttenuation: true, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending }));
+		motes.frustumCulled = false;
+		room.add(motes);
+		sunbeams.motes = { motes, seeds, pos: mp };
+	}
+	// (every frame: the shafts breathe and shift; the dust turns over)
+	function stepSunbeams(t) {
+		for (const s of sunbeams.mats) {
+			s.mat.uniforms.uTime.value = t;
+			s.mat.uniforms.uAmount.value = s.base * (0.82 + 0.18 * Math.sin(t * 0.35 + s.seed) * Math.sin(t * 0.21 + s.seed * 2));
+		}
+		const d = sunbeams.motes;
+		if (!d) return;
+		d.seeds.forEach((q, i) => {
+			const a = t * q.sp + q.ph;
+			d.pos[i * 3] = q.base.x + Math.sin(a) * 0.12;
+			d.pos[i * 3 + 1] = q.base.y + Math.sin(a * 0.7 + 1) * 0.1;
+			d.pos[i * 3 + 2] = q.base.z + Math.cos(a * 0.8) * 0.12;
+		});
+		d.motes.geometry.attributes.position.needsUpdate = true;
+	}
 	function paintSigns() {
 		for (const s of signs) {
 			if (s.m.material.map) s.m.material.map.dispose();
@@ -2796,6 +2909,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	function update3D(dt) {
 		itemsLive.clear();
 		for (const f of fans) f.rotation.z -= dt * 7;
+		stepSunbeams(rt);
 		for (const s of signs) {
 			const flick = Math.sin(rt * 23 + s.seed * 5) > -0.94 && Math.sin(rt * 2.7 + s.seed) > -0.97;
 			s.m.material.color.setScalar(flick ? s.k : 0.25);
