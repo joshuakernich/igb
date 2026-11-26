@@ -298,6 +298,10 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	/* ---------- flow ---------- */
 
+	// For testing: ?play in the URL skips the picker, title, clock intro and tutorial and goes
+	// straight into play (?play=4 for four players; three by default), e.g. index.html?play#grub-o-tron
+	const PLAY_NOW = new URLSearchParams(window.location.search).get('play');
+
 	function initGame(n) {
 		count = n;
 		scores = new Array(n).fill(0);
@@ -305,7 +309,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			chefs.push({ wall: 1, along: (i + 1) / (n + 1), dist: 0.5, x: W + (i + 1) / (n + 1) * W, drawWall: 1, held: null, speed: 0, moved: 0, prev: null, down: false, station: null, work: 0, bob: Math.random() * 6 });
 		}
 		clearKitchen();   // (the kitchen's there from the start, whichever beat the show goes to)
-		show.go('title');
+		show.go(PLAY_NOW === null ? 'title' : 'play');
 	}
 
 	function clearKitchen() {
@@ -3043,5 +3047,6 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	show.go('squad');
 	if (playersMeta) stage.timeout(() => initGame(playersMeta.length));
+	else if (PLAY_NOW !== null) stage.timeout(() => initGame(clamp(+PLAY_NOW || 3, 1, 6)));   // (no picker either)
 	else show.pickPlayers(initGame);
 });
