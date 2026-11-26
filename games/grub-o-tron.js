@@ -1377,6 +1377,10 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		return new THREE.MeshPhysicalMaterial({ color: 0xffffff, map: tile(plates.map), metalness: 0.72, roughness: 0.75, roughnessMap: tile(plates.rough), bumpMap: tile(plates.bump), bumpScale: 3, envMapIntensity: 1.2 });
 	}
 
+	// the kitchen's height: tall enough that the tiles reach the top of the screen on every wall
+	// (the side walls, nearest, show up to about 3.9 m; the user asked)
+	const ROOM_H = 5;
+
 	function buildRoom() {
 		const look = KITCHEN;
 		const g = new THREE.Group();   // (what never moves: baked into a few meshes at the end)
@@ -1385,15 +1389,15 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		const floor = mesh(new THREE.PlaneGeometry(14, 14), std(look.edge, 0.45, 0.05), g, 0, 0, -0.5);
 		floor.rotation.x = -Math.PI / 2;
 		floor.receiveShadow = true;
-		const ceil = mesh(new THREE.PlaneGeometry(14, 14), std(0x14181a, 0.8, 0), g, 0, 3.4, -0.5);
+		const ceil = mesh(new THREE.PlaneGeometry(14, 14), std(0x14181a, 0.8, 0), g, 0, ROOM_H, -0.5);
 		ceil.rotation.x = Math.PI / 2;
 		// the walls: tiled, behind the counters (the front one further back, behind the window)
 		const wallMat = (w, h) => { const t = wallTex(look.wall[0], look.wall[1]); t.repeat.set(w / 2, h / 2); return std(0xffffff, 0.35, 0, { map: t }); };
-		const L = mesh(new THREE.PlaneGeometry(BACK + FRONT_BACK, 3.4), wallMat(BACK + FRONT_BACK, 3.4), g, -BACK, 1.7, (BACK - FRONT_BACK) / 2);
+		const L = mesh(new THREE.PlaneGeometry(BACK + FRONT_BACK, ROOM_H), wallMat(BACK + FRONT_BACK, ROOM_H), g, -BACK, ROOM_H / 2, (BACK - FRONT_BACK) / 2);
 		L.rotation.y = Math.PI / 2;
-		const Rw = mesh(new THREE.PlaneGeometry(BACK + FRONT_BACK, 3.4), wallMat(BACK + FRONT_BACK, 3.4), g, BACK, 1.7, (BACK - FRONT_BACK) / 2);
+		const Rw = mesh(new THREE.PlaneGeometry(BACK + FRONT_BACK, ROOM_H), wallMat(BACK + FRONT_BACK, ROOM_H), g, BACK, ROOM_H / 2, (BACK - FRONT_BACK) / 2);
 		Rw.rotation.y = -Math.PI / 2;
-		mesh(new THREE.PlaneGeometry(2 * BACK, 3.4), wallMat(2 * BACK, 3.4), g, 0, 1.7, -FRONT_BACK);
+		mesh(new THREE.PlaneGeometry(2 * BACK, ROOM_H), wallMat(2 * BACK, ROOM_H), g, 0, ROOM_H / 2, -FRONT_BACK);
 		for (const m of [L, Rw]) m.receiveShadow = true;
 		// the counters: one along each wall's active stretch, and the empty ends
 		for (let w = 0; w < 3; w++) {
@@ -1439,9 +1443,9 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	buildRoom();
 
 	// A sign in real neon: each letter bent from glass tube, glowing (bright enough to bloom),
-	// FISSION in green over CHIPS in pink like the title, on a dark backing board held off the
-	// wall on standoffs, the tubes' ends sleeved in black where they go into the board, and a
-	// soft halo of their light on the wall behind. Steady: no flicker.
+	// its words side by side on one line, straight on the wall (no backing board), the tubes'
+	// ends sleeved in black where they go into it, and a soft halo of their light on the wall
+	// behind. Steady: no flicker.
 	// (The letters: strokes in a box a unit tall, x from 0 to the letter's width.)
 	function neonLetter(ch) {
 		const L = (...pts) => ({ pts });   // (a polyline)
@@ -1500,11 +1504,9 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			}
 			cx += (WORD - GAP) * H;
 		}
-		// the backing board, standoffs into the wall
+		// (no backing board: the tubes go straight into the wall, the user asked; this is just the halo's size)
 		const bw = widest + 0.3, bh = 0.5;
-		mesh(BOX(bw, bh, 0.03), std(0x121016, 0.5, 0.3), sign, 0, -0.03, 0.0);
-		for (const sx of [-1, 1]) for (const sy of [-1, 1]) { const so = mesh(CYL(0.018, 0.018, 0.05, 10), MAT.steel, sign, sx * (bw / 2 - 0.08), -0.03 + sy * (bh / 2 - 0.08), -0.03); so.rotation.x = Math.PI / 2; }
-		// the halo: the tubes' light, blurred, on the board and the wall round it
+		// the halo: the tubes' light, blurred, on the wall round them
 		const PX = 200, cw = Math.ceil((bw + 0.8) * PX), ch = Math.ceil((bh + 0.8) * PX);
 		const haloTex = canvasTexture(cw, ch, (c) => {
 			c.lineCap = c.lineJoin = 'round';
@@ -1534,7 +1536,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		// the unseen wall round the window: it only casts shadows
 		const mask = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
 		const wallW = 2 * BACK;
-		for (const [cx, cy, w, h] of [[(x0 - BACK) / 2 - 0.05, 1.7, x0 + BACK, 3.4], [(x1 + BACK) / 2 + 0.05, 1.7, BACK - x1, 3.4], [0, (y1 + 3.4) / 2, wallW, 3.4 - y1], [0, y0 / 2, wallW, y0]]) {
+		for (const [cx, cy, w, h] of [[(x0 - BACK) / 2 - 0.05, ROOM_H / 2, x0 + BACK, ROOM_H], [(x1 + BACK) / 2 + 0.05, ROOM_H / 2, BACK - x1, ROOM_H], [0, (y1 + ROOM_H) / 2, wallW, ROOM_H - y1], [0, y0 / 2, wallW, y0]]) {
 			const b = mesh(new THREE.BoxGeometry(Math.max(0.01, w), Math.max(0.01, h), 0.04), mask, room, cx, cy, zW - 0.12);
 			b.castShadow = true;
 			b.renderOrder = -1;
