@@ -947,6 +947,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// the front counter: a food hatch for each ingredient, then the binner
 	const DISP_ALONG = DISPENSERS.map((d) => slotAlong(d.wall, d.slot));
 	const BIN_ALONG = slotAlong(BIN.wall, BIN.slot);
+	const SALT_Y = 1.0;   // (the SALTER's shaker hangs this high: low, the user asked)
 	const ITEM_AT = { salt: 0.38, chop: 1.42, fry: 0.92, grill: 0.72, stir: 1.02, press: 0.5, inject: 0.62, warp: 0.7, cryo: 0.5 };   // an item's height on each device (its own units)
 	const PORTAL_Y = CT.y + 0.15, PORTAL_D = CT.d + 0.32;   // warped food lands on a counter, in a ring of light
 
@@ -1821,10 +1822,12 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		salt(g, p) {
 			mesh(BOX(1.7, 0.2, 1.1), MAT.black, g, 0, 0.1, 0);
 			mesh(CYL(0.55, 0.55, 0.06, 32), MAT.steel, g, 0, 0.23, 0);
-			mesh(BOX(0.16, 2.1, 0.16), MAT.darkSteel, g, 0.95, 1.05, -0.4);
-			mesh(BOX(1.0, 0.12, 0.12), MAT.darkSteel, g, 0.45, 2.05, -0.4);
+			// (a low stand and a smaller shaker: it was too tall, the user said)
+			mesh(BOX(0.16, 1.35, 0.16), MAT.darkSteel, g, 0.95, 0.675, -0.4);
+			mesh(BOX(1.0, 0.12, 0.12), MAT.darkSteel, g, 0.45, 1.3, -0.4);
 			const shaker = new THREE.Group();
-			shaker.position.set(0, 1.5, 0);
+			shaker.position.set(0, SALT_Y, 0);
+			shaker.scale.setScalar(0.72);
 			g.add(shaker);
 			mesh(CYL(0.34, 0.34, 0.85, 28), std(0xe8f4ff, 0.3, 0.1), shaker, 0, 0.25, 0);
 			mesh(new THREE.SphereGeometry(0.34, 28, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), MAT.steel, shaker, 0, -0.18, 0);
@@ -3219,7 +3222,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 				p.dial.rotation.z = -rt * (on ? 8 : 0.3);
 			} else if (k === 'salt') {
 				p.shaker.rotation.z = Math.sin(rt * 34) * 0.3 * s.hit;
-				p.shaker.position.y = 1.5 + s.hit * 0.12;
+				p.shaker.position.y = SALT_Y + s.hit * 0.1;
 				if (s.hit > 0.4) every('salt', 24, dt, () => puff(w, cx + rnd1() * 0.3 * MS, ISLAND.y + MS * 1.0, cz + rnd1() * 0.3 * MS, { color: 0xd8ffd0, size: 0.025, grow: 0.015, life: 0.6, vy: -0.9, glow: 2, add: true, alpha: 1 }));
 			} else if (k === 'cryo') {
 				const on = s.state === 'work';
