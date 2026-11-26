@@ -1294,26 +1294,42 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	const signs = [];
 	const sunbeams = { mats: [], motes: null, box: null };   // (the light streaming in at the window: see buildRoom)
 
-	// Brushed stainless steel: fine grain running along it, the odd scuff, a soft sheen
-	// (the grain in the colour and in how rough it is, so the light streaks along it)
-	let brushed = null;
-	function stainless() {
-		if (!brushed) {
-			const rnd = seeded(77);
-			const lines = Array.from({ length: 700 }, () => [rnd() * 256, rnd(), rnd()]);
-			const scuffs = Array.from({ length: 14 }, () => [rnd() * 512, rnd() * 256, 20 + rnd() * 60, (rnd() - 0.5) * 0.6]);
-			const paint = (base, lo, hi) => (c) => {
-				c.fillStyle = base; c.fillRect(0, 0, 512, 256);
-				for (const [y, t, a] of lines) { c.fillStyle = t < 0.5 ? `rgba(${lo},${a * 0.22})` : `rgba(${hi},${a * 0.18})`; c.fillRect(0, y, 512, 0.6 + a); }
-				c.strokeStyle = `rgba(${lo},0.25)`; c.lineWidth = 1;
+	// Riveted metal plates (the counters: the user asked): one steel plate per tile of the
+	// texture, a dark seam round it, a row of domed rivets just inside its edges, brushed grain,
+	// scuffs and a little grime; the seams sunk and the rivets raised (a bump map), the grime
+	// dull. w, h: the face it covers (metres), so every plate comes out about the same size.
+	const PLATE = { w: 0.6, h: 0.46 };
+	let plates = null;
+	function stainless(w = 1, h = 1) {
+		if (!plates) {
+			const S = 512, rnd = seeded(77);
+			const grain = Array.from({ length: 500 }, () => [rnd() * S, rnd(), rnd()]);
+			const scuffs = Array.from({ length: 10 }, () => [rnd() * S, rnd() * S, 20 + rnd() * 70, (rnd() - 0.5) * 0.7]);
+			const grime = Array.from({ length: 9 }, () => [rnd() * S, S * (0.6 + rnd() * 0.4), 40 + rnd() * 90]);
+			const rivets = [];
+			const IN = 26, N = 7;
+			for (let k = 0; k < N; k++) { const t = IN + (S - 2 * IN) * k / (N - 1); rivets.push([t, IN], [t, S - IN]); if (k && k < N - 1) rivets.push([IN, t], [S - IN, t]); }
+			// one painter for all three maps: base, the grain's two tones, seam, rivet, grime
+			const paint = (o) => (c) => {
+				c.fillStyle = o.base; c.fillRect(0, 0, S, S);
+				for (const [y, t, a] of grain) { c.fillStyle = t < 0.5 ? `rgba(${o.lo},${a * 0.2})` : `rgba(${o.hi},${a * 0.16})`; c.fillRect(0, y, S, 0.6 + a); }
+				c.strokeStyle = `rgba(${o.lo},0.3)`; c.lineWidth = 1;
 				for (const [x, y, l, ang] of scuffs) { c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(ang) * l, y + Math.sin(ang) * l); c.stroke(); }
+				for (const [x, y, r] of grime) { const gr = c.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, o.grime); gr.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gr; c.fillRect(x - r, y - r, r * 2, r * 2); }
+				c.strokeStyle = o.seam; c.lineWidth = 7; c.strokeRect(0, 0, S, S);   // (the seam: half of it on each edge, so plates meet in a groove)
+				for (const [x, y] of rivets) {
+					const gr = c.createRadialGradient(x - 3, y - 3, 1, x, y, 11);
+					gr.addColorStop(0, o.rivetHi); gr.addColorStop(0.6, o.rivet); gr.addColorStop(1, o.rivetLo);
+					c.fillStyle = gr; c.beginPath(); c.arc(x, y, 10, 0, Math.PI * 2); c.fill();
+				}
 			};
-			const map = canvasTexture(512, 256, paint('#c9ced4', '40,44,50', '255,255,255'));
-			const rough = canvasTexture(512, 256, paint('#5a5a5a', '150,150,150', '40,40,40'), false);
-			for (const t of [map, rough]) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 4); t.anisotropy = 8; }
-			brushed = { map, rough };
+			const map = canvasTexture(S, S, paint({ base: '#aab1b7', lo: '40,44,50', hi: '255,255,255', grime: 'rgba(40,34,26,0.35)', seam: '#2a2c30', rivet: '#c4cad0', rivetHi: '#f4f7fa', rivetLo: '#5a6066' }));
+			const rough = canvasTexture(S, S, paint({ base: '#6a6a6a', lo: '150,150,150', hi: '40,40,40', grime: 'rgba(230,230,230,0.6)', seam: '#e0e0e0', rivet: '#505050', rivetHi: '#303030', rivetLo: '#606060' }), false);
+			const bump = canvasTexture(S, S, paint({ base: '#808080', lo: '110,110,110', hi: '150,150,150', grime: 'rgba(0,0,0,0)', seam: '#000000', rivet: '#e0e0e0', rivetHi: '#ffffff', rivetLo: '#909090' }), false);
+			plates = { map, rough, bump };
 		}
-		return new THREE.MeshPhysicalMaterial({ color: 0xffffff, map: brushed.map, metalness: 0.92, roughness: 0.55, roughnessMap: brushed.rough, envMapIntensity: 1.4, clearcoat: 0.15, clearcoatRoughness: 0.3 });
+		const tile = (t) => { const c = t.clone(); c.wrapS = c.wrapT = THREE.RepeatWrapping; c.repeat.set(Math.max(1, Math.round(w / PLATE.w)), Math.max(1, Math.round(h / PLATE.h))); c.anisotropy = 8; c.needsUpdate = true; return c; };
+		return new THREE.MeshPhysicalMaterial({ color: 0xffffff, map: tile(plates.map), metalness: 0.85, roughness: 0.6, roughnessMap: tile(plates.rough), bumpMap: tile(plates.bump), bumpScale: 2.5, envMapIntensity: 1.3, clearcoat: 0.1, clearcoatRoughness: 0.35 });
 	}
 
 	function buildRoom() {
@@ -1335,7 +1351,6 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		mesh(new THREE.PlaneGeometry(2 * BACK, 3.4), wallMat(2 * BACK, 3.4), g, 0, 1.7, -FRONT_BACK);
 		for (const m of [L, Rw]) m.receiveShadow = true;
 		// the counters: one along each wall's active stretch, and the empty ends
-		const counterMat = stainless();   // (stainless steel, the user asked)
 		for (let w = 0; w < 3; w++) {
 			const [a0, a1] = ACTIVE[w];
 			const p0 = wallPoint(w, a0, CT.d + CT.deep / 2), p1 = wallPoint(w, a1, CT.d + CT.deep / 2);
@@ -1344,7 +1359,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			cg.position.set((p0.x + p1.x) / 2, 0, (p0.z + p1.z) / 2);
 			cg.rotation.y = [Math.PI / 2, 0, -Math.PI / 2][w];   // (its front, +z, toward the room)
 			g.add(cg);
-			const body = mesh(BOX(len, CT.y, CT.deep), counterMat, cg, 0, CT.y / 2, 0);
+			const body = mesh(BOX(len, CT.y, CT.deep), stainless(len, CT.y), cg, 0, CT.y / 2, 0);   // (riveted metal plates, the user asked)
 			body.castShadow = body.receiveShadow = true;
 			mesh(BOX(len + 0.08, 0.05, CT.deep + 0.06), MAT.steel, cg, 0, CT.y, 0).receiveShadow = true;
 			mesh(BOX(len, 0.05, 0.01), MAT.hazard, cg, 0, CT.y - 0.06, CT.deep / 2 + 0.006);
@@ -1365,9 +1380,11 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			signs.push({ m: sign, text, colour, k: 1.3, seed: x, font: x < 0 ? 'Monoton' : null });   // (the name in the title's neon-tube lettering)
 		}
 		// light: a warm wash from overhead, a glow over each wall's counter
-		for (const [x, z] of [[-2.2, 0], [0, -2.6], [2.2, 0]]) {
-			const l = new THREE.PointLight(look.light, 9, 7, 1.4);
-			l.position.set(x, 2.9, z);
+		// (the side ones hung in toward the middle, so they light the counters without a hot
+		// spot of glow on the middle of the side walls: the user asked)
+		for (const [x, z, k] of [[-1.0, 0.2, 8], [0, -2.6, 9], [1.0, 0.2, 8]]) {
+			const l = new THREE.PointLight(look.light, k, 7, 1.4);
+			l.position.set(x, 3.0, z);
 			room.add(l);
 		}
 		// a rim of neon light on the mutants, from the window behind them
@@ -3637,7 +3654,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		grid.position.y = 0.002;
 		ls.add(grid);
 		const CZ = -(CT.d - AV_MAX) - CT.deep / 2;   // (the counter, as far behind as in the kitchen)
-		const counter = mesh(BOX(3.2, CT.y, CT.deep), stainless(), ls, 0, CT.y / 2, CZ);
+		const counter = mesh(BOX(3.2, CT.y, CT.deep), stainless(3.2, CT.y), ls, 0, CT.y / 2, CZ);
 		counter.castShadow = counter.receiveShadow = true;
 		mesh(BOX(3.28, 0.05, CT.deep + 0.06), MAT.steel, ls, 0, CT.y, CZ).receiveShadow = true;
 		const cam = new THREE.PerspectiveCamera(40, 1, 0.02, 40);
