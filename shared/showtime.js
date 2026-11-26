@@ -1489,11 +1489,45 @@ window.Showtime = function (stage, opts) {
 	const $debugWall = wallPanel(2).css({ paddingRight: '240px' }).hide();   // (well clear of the right-hand panel on the wall's edge)
 	menu($debugWall, true);
 
-	// paused: the menu on every wall; or (mode 'debug') the debug options on the right wall
+	// Off the box, on a desk, the debug options go below the walls instead, in the page's
+	// empty strip between the walls and the gamebox simulator, so nothing of the game is
+	// covered (the walls keep the pause menu). Only when there's room; else on the right wall.
+	const $debugPage = $('<showtime-debug>').css({
+		display: 'none', position: 'fixed', left: 0, right: 0, margin: '0 auto', width: 'fit-content', maxWidth: 'calc(100vw - 32px)',
+		boxSizing: 'border-box', padding: '10px 14px', overflowY: 'auto', zIndex: 1001, zoom: 0.72,
+		background: 'rgba(8, 6, 18, 0.94)', border: '2px solid rgba(159, 182, 216, 0.35)', borderRadius: '22px', boxShadow: '0 8px 0 rgba(0,0,0,0.4)',
+	}).on('click', (e) => e.stopPropagation()).appendTo('body');
+	stage.own(() => $debugPage.remove());
+	// (where it would go: under the walls, over the simulator; null if it doesn't fit)
+	function debugRoom() {
+		if (live) return null;
+		const igb = document.querySelector('igb');
+		if (!igb) return null;
+		const z = 0.72, top = igb.getBoundingClientRect().bottom + 12;
+		const sim = document.querySelector('igb-simulator');
+		const sr = sim && getComputedStyle(sim).display !== 'none' ? sim.getBoundingClientRect() : null;
+		const bottom = (sr && sr.height ? sr.top : window.innerHeight) - 12;
+		return bottom - top >= 120 ? { top: top / z, max: (bottom - top) / z } : null;
+	}
+	function placeDebug() {
+		const r = debugRoom();
+		if (!r) return false;
+		$debugPage.css({ top: r.top + 'px', maxHeight: r.max + 'px' });
+		return true;
+	}
+	$(window).on('resize.showtime-debug', () => { if ($debugPage.is(':visible') && !placeDebug()) setPaused(true, 'debug'); });
+	stage.own(() => $(window).off('resize.showtime-debug'));
+
+	// paused: the menu on every wall; or (mode 'debug') the debug options below the walls
+	// (or, with no room there, on the right wall in place of its menu)
 	function setPaused(on, mode) {
 		const debugging = on && mode === 'debug';
-		$right.toggle(!debugging);
-		$debugWall.toggle(debugging);
+		const below = debugging && placeDebug();
+		if (below) $debug.css({ maxHeight: 'none' }).appendTo($debugPage);
+		else $debug.css({ maxHeight: '62%' }).appendTo($debugWall);
+		$debugPage.toggle(!!below);
+		$right.toggle(!(debugging && !below));
+		$debugWall.toggle(debugging && !below);
 		if (on === paused) return;
 		paused = on;
 		IGB.pauseAudio(on);
@@ -1502,7 +1536,7 @@ window.Showtime = function (stage, opts) {
 		if (on) { showVolume(); tickPause(); showRows(); }
 	}
 	// (the right-hand panel's debug button: open the debug options, or close them)
-	const debugButton = () => (paused && $debugWall.is(':visible') ? setPaused(false) : setPaused(true, 'debug'));
+	const debugButton = () => (paused && ($debugWall.is(':visible') || $debugPage.is(':visible')) ? setPaused(false) : setPaused(true, 'debug'));
 	IGB.debug = debugButton;
 	stage.own(() => { if (IGB.debug === debugButton) IGB.debug = null; });
 	// the button: only once the clock has started counting down (in the box
