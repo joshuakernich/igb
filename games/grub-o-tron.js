@@ -1374,7 +1374,9 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		mesh(BOX(wr.x - wl.x + 0.3, 0.14, 0.16), MAT.darkSteel, g, 0, 2.85, -FRONT_BACK + 0.08);
 		buildSunbeams(wl.x, wr.x);
 		// the neon signs: high on the side walls, facing into the kitchen (the user asked)
-		for (const [x, text, colour] of [[-1.2, 'FISSION CHIPS', '#9dff3a'], [1.2, 'OPEN 25/8', '#FC1992']]) {
+		// (FISSION CHIPS in real bent neon tubes, steady, no flicker: the user asked; OPEN 25/8 painted)
+		buildNeonSign(-(BACK - 0.05), 2.88, 0);
+		for (const [x, text, colour] of [[1.2, 'OPEN 25/8', '#FC1992']]) {
 			const sign = mesh(new THREE.PlaneGeometry(2.6, 0.48), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), room, Math.sign(x) * (BACK - 0.06), 2.95, 0);
 			sign.rotation.y = -Math.sign(x) * Math.PI / 2;
 			signs.push({ m: sign, text, colour, k: 1.3, seed: x, font: x < 0 ? 'Monoton' : null });   // (the name in the title's neon-tube lettering)
@@ -1394,6 +1396,85 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		bake(g);
 	}
 	buildRoom();
+
+	// A sign in real neon: each letter bent from glass tube, glowing (bright enough to bloom),
+	// FISSION in green over CHIPS in pink like the title, on a dark backing board held off the
+	// wall on standoffs, the tubes' ends sleeved in black where they go into the board, and a
+	// soft halo of their light on the wall behind. Steady: no flicker.
+	// (The letters: strokes in a box a unit tall, x from 0 to the letter's width.)
+	function neonLetter(ch) {
+		const L = (...pts) => ({ pts });   // (a polyline)
+		const arc = (cx, cy, rx, ry, a0, a1, n = 18) => ({ pts: Array.from({ length: n + 1 }, (_, i) => { const a = a0 + (a1 - a0) * i / n; return [cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]; }) });
+		const D = Math.PI / 180;
+		switch (ch) {
+			case 'F': return { w: 0.55, strokes: [L([0, 0], [0, 1], [0.55, 1]), L([0, 0.53], [0.42, 0.53])] };
+			case 'I': return { w: 0.06, strokes: [L([0.03, 0], [0.03, 1])] };
+			case 'S': return { w: 0.58, strokes: [{ pts: [...arc(0.29, 0.75, 0.27, 0.25, 15 * D, 270 * D, 16).pts, ...arc(0.29, 0.25, 0.29, 0.25, 90 * D, -165 * D, 16).pts.slice(1)] }] };
+			case 'O': return { w: 0.62, strokes: [arc(0.31, 0.5, 0.31, 0.5, 0, Math.PI * 2, 28)] };
+			case 'N': return { w: 0.6, strokes: [L([0, 0], [0, 1], [0.6, 0], [0.6, 1])] };
+			case 'C': return { w: 0.58, strokes: [arc(0.32, 0.5, 0.32, 0.5, 40 * D, 320 * D, 24)] };
+			case 'H': return { w: 0.58, strokes: [L([0, 0], [0, 1]), L([0.58, 0], [0.58, 1]), L([0, 0.5], [0.58, 0.5])] };
+			case 'P': return { w: 0.55, strokes: [{ pts: [[0, 0], [0, 1], [0.3, 1], ...arc(0.3, 0.74, 0.25, 0.26, 90 * D, -90 * D, 14).pts.slice(1), [0, 0.48]] }] };
+			default: return { w: 0.4, strokes: [] };
+		}
+	}
+	function buildNeonSign(x, y, z) {
+		const sign = new THREE.Group();
+		sign.position.set(x, y, z);
+		sign.rotation.y = Math.PI / 2;   // (on the left wall, facing into the kitchen)
+		room.add(sign);
+		const lines = [{ text: 'FISSION', colour: '#9dff3a', h: 0.34, y: 0.2 }, { text: 'CHIPS', colour: '#ff2d9a', h: 0.27, y: -0.25 }];
+		const R = 0.013, GAP = 0.2;
+		let widest = 0;
+		const halo = [];
+		for (const ln of lines) {
+			const glass = glowMat(new THREE.Color(ln.colour), 2.6);
+			const core = glowMat(new THREE.Color(ln.colour).lerp(new THREE.Color('#ffffff'), 0.55), 3.2);   // (the hot white-ish heart of the tube)
+			const letters = [...ln.text].map(neonLetter);
+			const width = letters.reduce((a, l) => a + l.w * ln.h, 0) + GAP * ln.h * (letters.length - 1);
+			widest = Math.max(widest, width);
+			let cx = -width / 2;
+			for (const l of letters) {
+				for (const st of l.strokes) {
+					const pts = st.pts.map(([px, py]) => new THREE.Vector3(cx + px * ln.h, ln.y + (py - 0.5) * ln.h, 0.06));
+					halo.push({ pts, colour: ln.colour });
+					const path = new THREE.CurvePath();
+					for (let i = 1; i < pts.length; i++) path.add(new THREE.LineCurve3(pts[i - 1], pts[i]));
+					const segs = Math.max(8, pts.length * 3);
+					mesh(new THREE.TubeGeometry(path, segs, R, 8, false), glass, sign);
+					mesh(new THREE.TubeGeometry(path, segs, R * 0.45, 6, false), core, sign);
+					for (let i = 1; i < pts.length - 1; i++) mesh(SPH(R, 8), glass, sign, pts[i].x, pts[i].y, pts[i].z);   // (round the bends)
+					for (const e of [pts[0], pts[pts.length - 1]]) {   // (black sleeves where the tube goes into the board)
+						const sl = mesh(CYL(R * 1.35, R * 1.35, 0.06, 10), MAT.black, sign, e.x, e.y, 0.03);
+						sl.rotation.x = Math.PI / 2;
+					}
+				}
+				cx += (l.w + GAP) * ln.h;
+			}
+		}
+		// the backing board, standoffs into the wall
+		const bw = widest + 0.3, bh = 0.95;
+		mesh(BOX(bw, bh, 0.03), std(0x121016, 0.5, 0.3), sign, 0, -0.03, 0.0);
+		for (const sx of [-1, 1]) for (const sy of [-1, 1]) { const so = mesh(CYL(0.018, 0.018, 0.05, 10), MAT.steel, sign, sx * (bw / 2 - 0.08), -0.03 + sy * (bh / 2 - 0.08), -0.03); so.rotation.x = Math.PI / 2; }
+		// the halo: the tubes' light, blurred, on the board and the wall round it
+		const PX = 200, cw = Math.ceil((bw + 0.8) * PX), ch = Math.ceil((bh + 0.8) * PX);
+		const haloTex = canvasTexture(cw, ch, (c) => {
+			c.lineCap = c.lineJoin = 'round';
+			for (const pass of [[34, 0.35], [12, 0.6]]) for (const hs of halo) {
+				c.strokeStyle = hs.colour; c.globalAlpha = pass[1]; c.lineWidth = 10; c.shadowColor = hs.colour; c.shadowBlur = pass[0];
+				c.beginPath();
+				hs.pts.forEach((v, i) => { const px = cw / 2 + v.x * PX, py = ch / 2 - (v.y + 0.03) * PX; if (i) c.lineTo(px, py); else c.moveTo(px, py); });
+				c.stroke();
+			}
+		});
+		const glow = mesh(new THREE.PlaneGeometry(bw + 0.8, bh + 0.8), new THREE.MeshBasicMaterial({ map: haloTex, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }), sign, 0, -0.03 + 0.03, 0.017);
+		glow.renderOrder = 3;
+		// and real light from it, falling on the counters below
+		const spill = new THREE.PointLight(0xb8ff7a, 1.6, 3.2, 1.6);
+		spill.position.set(0, -0.2, 0.5);
+		sign.add(spill);
+		return sign;
+	}
 
 	// Light streaming in at the window: the low sun outside, falling down and in across the
 	// kitchen. A warm spotlight from out there, its light shaped to the window by an unseen
