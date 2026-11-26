@@ -1264,7 +1264,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// each room's colours: its floor's checks, its wall's tiles, the floor round the grid
 	// (one look for the whole kitchen, every wall the same: muted, dark slate-green
 	// tiles, so the devices, the food and the neon carry the colour)
-	const KITCHEN = { wall: ['#0f7a4e', '#12895a'],   // (emerald green wall tiles, the user asked)
+	const KITCHEN = { wall: ['#084a30', '#0a5638'],   // (deep emerald wall tiles: the user asked for emerald, then darker)
 		edge: 0x161c1a, counter: 0x2a2230, light: 0xffd8b0 };
 	// glossy wall tiles in two colours, the odd crack and drip
 	function wallTex(a, b) {
