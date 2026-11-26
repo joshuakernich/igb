@@ -147,14 +147,14 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	const FEAST = { tier: 4, name: 'THE OVERLORD\'S MEGA BUCKET', parts: [['spud', 'chop', 'fry', 'salt'], ['mutato', 'chop', 'warp', 'fry'], ['slime']] };
 	const PRACTICE = { tier: 0, name: 'CHIPS, ANY WAY YOU LIKE', parts: [['*', '*']] };
 
-	const TYPES = [
-		{ id: 'blob', name: 'BLOBBO & BLOBBA', skin: '#7cd957' },
-		{ id: 'cyclops', name: 'SIR OCULUS', skin: '#9a6fd1' },
-		{ id: 'mold', name: 'GARY (A MOULD)', skin: '#c8e85a' },
-		{ id: 'pigeon', name: 'EXECUTIVE PIGEON', skin: '#9fb0ff' },
+	const TYPES = [   // (skins: sickly human flesh, each its own way off)
+		{ id: 'blob', name: 'BLOBBO & BLOBBA', skin: '#b4c98a' },
+		{ id: 'cyclops', name: 'SIR OCULUS', skin: '#cfb4d6' },
+		{ id: 'mold', name: 'GARY (A MOULD)', skin: '#c9bc8c' },
+		{ id: 'pigeon', name: 'EXECUTIVE PIGEON', skin: '#bdbccd' },
 		{ id: 'skull', name: 'LIL\' DOOMSKULL', skin: '#e9e2c8' },
-		{ id: 'squid', name: 'MRS. TENTACLES', skin: '#e86fa8' },
-		{ id: 'fungus', name: 'DUDE SHROOM', skin: '#e0573a' },
+		{ id: 'squid', name: 'MRS. TENTACLES', skin: '#e6a6bc' },
+		{ id: 'fungus', name: 'DUDE SHROOM', skin: '#d9ae88' },
 	];
 	const HELLO = [
 		'I HAVE FOUR STOMACHS AND THEY ALL WANT CHIPS', 'MAKE THEM GLOW', 'EXTRA RADIATION ON MINE', 'CRISPY. CRUNCHY. CONTAMINATED.',
@@ -699,7 +699,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			recipe = pick(open.length ? open : RECIPES.filter((r) => r.tier === tier));
 		}
 		const types = TYPES.filter((ty) => !customers.some((c) => c && c.type === ty));
-		const type = recipe === FEAST ? { id: 'overlord', name: 'THE OVERLORD', skin: '#5a6b2e' } : pick(types.length ? types : TYPES);
+		const type = recipe === FEAST ? { id: 'overlord', name: 'THE OVERLORD', skin: '#a8b08a' } : pick(types.length ? types : TYPES);
 		const patience = PATIENCE[recipe.tier] * (phase === 'tutorial' ? 1 : shift.patience);
 		show.fx('joinWall', 0.5);
 		if (recipe === FEAST) show.fx('villainReveal', 0.6);
