@@ -3031,6 +3031,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// A robot's footstep: the whirr of a servo swinging the leg, then a metal foot coming down
 	// (a clank of filtered noise on a low thump). Each robot a little different in pitch, panned
 	// toward the wall it's on; lighter at a stroll, heavier at a run.
+	const STEP_VOLUME = 0.35;   // (kept quiet: under everything else)
 	let noiseBuf = null;
 	function footstep(i, wall, k) {
 		const ac = voice();
@@ -3042,7 +3043,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		}
 		const t0 = ac.currentTime + 0.005, pitch = 1 + ((i * 0.137) % 0.3) - 0.15 + (Math.random() - 0.5) * 0.08;
 		const out = ac.createGain();
-		out.gain.value = 0.18 + 0.22 * k;
+		out.gain.value = (0.18 + 0.22 * k) * STEP_VOLUME;
 		let dest = ac.destination;
 		if (ac.createStereoPanner) { const pan = ac.createStereoPanner(); pan.pan.value = [-0.7, 0, 0.7][wall] || 0; pan.connect(dest); dest = pan; }
 		out.connect(dest);
