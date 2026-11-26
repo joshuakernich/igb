@@ -2704,7 +2704,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		neck.add(head);
 		head.scale.setScalar(RB.head);
 		p.head = head;
-		mesh(superBox(0.42, 0.26, 0.44, 0.62, 0.18, 0.32, 48), shell, head, 0, 0.14, 0);
+		mesh(superBox(0.42, 0.26, 0.44, 0.34, 0.18, 0.32, 48), shell, head, 0, 0.14, 0);   // (its top flat enough for the plate to sit on)
 		mesh(superBox(0.44, 0.04, 0.46, 0.2, 0.2, 0.32, 40), trim, head, 0, 0.02, 0);
 		const face = mesh(superBox(0.34, 0.17, 0.06, 0.45, 0.3, 0.3, 32), std(0x2a2c34, 0.25, 0.4, { clearcoat: 0.8, clearcoatRoughness: 0.1 }), head, 0, 0.115, 0.205);
 		face.scale.z = 0.8;
@@ -2742,8 +2742,9 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 		// the plate: a white china plate resting right on top of the head, a band of their
 		// colour round its rim to say whose robot it is
+		const HEAD_TOP = 0.27;   // (the head block's top: 0.14 + 0.26 / 2)
 		const plate = new THREE.Group();
-		plate.position.set(0, 0.258, 0);   // (its foot on the crown of the head, 0.27 up)
+		plate.position.set(0, HEAD_TOP - 0.012 * RB.plate - 0.003, 0);   // (its foot right down on the top of the head, a touch sunk in, whatever the plate's size)
 		plate.scale.setScalar(RB.plate);
 		head.add(plate);
 		p.plate = plate;
