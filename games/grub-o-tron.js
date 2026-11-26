@@ -1803,7 +1803,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		m.rotation.set(0, [Math.PI / 2, 0, -Math.PI / 2][w], (rnd() - 0.5) * 0.05);
 	}
 	// the three delivery windows: a serving plate and a bell on the counter in front of
-	// each, and SERVE painted on the counter's front under it
+	// each (no SERVE painted under them any more: the user asked)
 	for (let k = 0; k < WINDOWS; k++) {
 		const a = (HATCH + colW(WINDOWS) * (k + 0.5)) / W;
 		const p = wallPoint(1, a, CT.d + 0.3);
@@ -1811,8 +1811,6 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		const b = wallPoint(1, a + 0.05, CT.d + 0.45);
 		mesh(new THREE.SphereGeometry(0.06, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), std(0xe9c04a, 0.2, 1), room, b.x, CT.y + 0.01, b.z);
 		mesh(SPH(0.012, 8), std(0xe9c04a, 0.2, 1), room, b.x, CT.y + 0.075, b.z);
-		const f = wallPoint(1, a, CT.d - 0.006);
-		mesh(new THREE.PlaneGeometry(0.62, 0.465), paintMat(() => labelTex('SERVE', '#e9ff4a', 'serve', seeded(90 + k))), room, f.x, 0.5, f.z);
 	}
 
 	/* ---------- 3D: food ---------- */
