@@ -2236,75 +2236,122 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		return m;
 	}
 
-	/* ---------- 3D: the players: robotic dinner trays with a claw ---------- */
+	/* ---------- 3D: the players: little walking robots with a plate on their heads ---------- */
 
-	// A hovering tray in the player's colour: a chrome platter on a stalk over a
-	// little jet puck, a two-eyed screen on its rim, and a jointed arm with a
-	// three-fingered claw that does the work. What they're carrying rides on the tray.
+	// A small biped in moulded white plastic over black servo blocks: a loaf of a
+	// head with one big ringed camera eye, a boxy torso, servo hips and knees,
+	// chunky feet. The accents are the player's colour. A plate rides flat on top
+	// of the head; what they're carrying sits on it. They walk where their player walks.
+	const LEG = 0.2;   // thigh and shin length
+	const HIP_Y = 0.12 + LEG * 2;   // hip height standing (feet 0.12 tall at the ankle)
 	function buildTray(n) {
 		const col = new THREE.Color(colourOf(n));
 		const g = new THREE.Group();
 		const p = { g };
-		const chrome = std(0xdfe6ee, 0.18, 0.9);
-		const dark = std(0x2a2836, 0.45, 0.3);
-		const paint = std(col, 0.35, 0.15, { clearcoat: 0.8 });
-		// the puck it hovers on, its jet glow, its shadow-glow on the floor
-		mesh(CYL(0.2, 0.24, 0.1, 32), dark, g, 0, 0.12, 0);
-		p.jet = mesh(new THREE.CircleGeometry(0.17, 32), glowMat(col, 1.6, { transparent: true, opacity: 0.9, depthWrite: false }), g, 0, 0.065, 0);
-		p.jet.rotation.x = Math.PI / 2;
-		p.glow = mesh(new THREE.CircleGeometry(0.42, 40), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.28, depthWrite: false }), g, 0, 0.01, 0);
+		const shell = std(0xf2f0ec, 0.38, 0.02, { clearcoat: 0.5, clearcoatRoughness: 0.4 });
+		const servo = std(0x1c1b22, 0.5, 0.25);
+		const horn = std(0x9aa0aa, 0.3, 0.8);
+		const paint = std(col, 0.35, 0.05, { clearcoat: 0.6 });
+		const sole = std(col.clone().lerp(new THREE.Color(0xffe066), 0.55), 0.5, 0);
+		// a soft glow on the floor in their colour, so you can tell whose is whose
+		p.glow = mesh(new THREE.CircleGeometry(0.34, 40), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.22, depthWrite: false }), g, 0, 0.01, 0);
 		p.glow.rotation.x = -Math.PI / 2;
-		// the tray, up on its stalk (p.body bobs)
-		const body = new THREE.Group();
-		body.position.y = 0.62;
-		g.add(body);
-		p.body = body;
-		mesh(CYL(0.04, 0.05, 0.5, 16), chrome, body, 0, -0.27, 0);
-		mesh(CYL(0.46, 0.4, 0.07, 48), chrome, body, 0, 0, 0);
-		mesh(CYL(0.4, 0.4, 0.012, 48), std(0x9aa4b0, 0.25, 0.8), body, 0, 0.04, 0);
-		mesh(new THREE.TorusGeometry(0.455, 0.035, 10, 56), paint, body, 0, 0.035, 0).rotation.x = Math.PI / 2;
-		// its face: a little screen on the rim at the front, two eyes in its colour
-		const face = new THREE.Group();
-		face.position.set(0, 0.05, 0.44);
-		body.add(face);
-		mesh(BOX(0.24, 0.11, 0.04), dark, face, 0, 0, 0);
-		p.eyes = [-0.05, 0.05].map((x) => mesh(new THREE.CircleGeometry(0.022, 16), glowMat(col, 2.2), face, x, 0, 0.022));
-		// the arm: shoulder at the back of the tray, elbow, wrist, a claw of three fingers
-		const shoulder = new THREE.Group();
-		shoulder.position.set(0, 0.06, -0.3);
-		body.add(shoulder);
-		mesh(SPH(0.065, 16), paint, shoulder);
-		mesh(CYL(0.032, 0.036, 0.5, 12), chrome, shoulder, 0, 0.25, 0);
-		const elbow = new THREE.Group();
-		elbow.position.y = 0.5;
-		shoulder.add(elbow);
-		mesh(SPH(0.05, 14), paint, elbow);
-		mesh(CYL(0.026, 0.03, 0.42, 12), chrome, elbow, 0, 0.21, 0);
-		const wrist = new THREE.Group();
-		wrist.position.y = 0.42;
-		elbow.add(wrist);
-		mesh(CYL(0.05, 0.04, 0.06, 16), dark, wrist, 0, 0.02, 0);
-		p.fingers = [0, 1, 2].map(function (k) {
-			const turn = new THREE.Group();
-			turn.rotation.y = k * Math.PI * 2 / 3;
-			wrist.add(turn);
-			const hinge = new THREE.Group();
-			hinge.position.set(0, 0.05, 0.035);
-			turn.add(hinge);
-			mesh(BOX(0.022, 0.1, 0.018), chrome, hinge, 0, 0.05, 0);
-			const tip = new THREE.Group();
-			tip.position.y = 0.1;
-			hinge.add(tip);
-			mesh(BOX(0.02, 0.06, 0.016), paint, tip, 0, 0.03, 0).rotation.x = -0.6;
-			return hinge;
+		// the hips (p.hips rises and falls with the gait; the legs hang from it)
+		const hips = new THREE.Group();
+		hips.position.y = HIP_Y;
+		g.add(hips);
+		p.hips = hips;
+		mesh(BOX(0.3, 0.1, 0.16), servo, hips, 0, 0.02, 0);
+		for (const s of [-1, 1]) {
+			const h = mesh(CYL(0.045, 0.045, 0.03, 20), horn, hips, s * 0.16, 0.0, 0.02);
+			h.rotation.z = Math.PI / 2;
+		}
+		// the legs: hip, knee and ankle servos, a white cap on each knee, a chunky foot
+		p.legs = [-1, 1].map(function (s) {
+			const hip = new THREE.Group();
+			hip.position.set(s * 0.1, -0.02, 0);
+			hips.add(hip);
+			mesh(BOX(0.085, LEG + 0.02, 0.1), servo, hip, 0, -LEG / 2, 0);
+			mesh(CYL(0.03, 0.03, 0.095, 16), horn, hip, 0, -0.03, 0).rotation.z = Math.PI / 2;
+			const knee = new THREE.Group();
+			knee.position.y = -LEG;
+			hip.add(knee);
+			mesh(BOX(0.11, 0.1, 0.1), shell, knee, 0, 0.0, 0.03);
+			mesh(BOX(0.075, LEG, 0.085), servo, knee, 0, -LEG / 2, -0.005);
+			const ankle = new THREE.Group();
+			ankle.position.y = -LEG;
+			knee.add(ankle);
+			mesh(CYL(0.035, 0.035, 0.09, 16), horn, ankle, 0, 0, 0).rotation.z = Math.PI / 2;
+			mesh(BOX(0.12, 0.07, 0.2), paint, ankle, 0, -0.065, 0.035);
+			mesh(BOX(0.125, 0.035, 0.205), sole, ankle, 0, -0.1, 0.035);
+			return { hip, knee, ankle };
 		});
-		Object.assign(p, { shoulder, elbow, wrist });
-		// where what it carries sits: on the tray
+		// everything above the hips leans as one (p.upper)
+		const upper = new THREE.Group();
+		upper.position.y = 0.06;
+		hips.add(upper);
+		p.upper = upper;
+		mesh(BOX(0.3, 0.2, 0.24), shell, upper, 0, 0.12, 0);
+		mesh(BOX(0.09, 0.12, 0.1), servo, upper, 0.07, 0.21, -0.03);
+		mesh(CYL(0.03, 0.03, 0.03, 16), horn, upper, -0.155, 0.13, 0.02).rotation.z = Math.PI / 2;
+		// the neck: two servo blocks with a cable loop, leaning forward
+		const neck = new THREE.Group();
+		neck.position.set(0, 0.22, 0.03);
+		neck.rotation.x = 0.18;
+		upper.add(neck);
+		mesh(BOX(0.07, 0.17, 0.08), servo, neck, 0, 0.09, 0);
+		mesh(CYL(0.026, 0.026, 0.085, 14), horn, neck, 0, 0.15, 0).rotation.z = Math.PI / 2;
+		tube(neck, [[-0.04, 0.16, -0.02], [-0.08, 0.08, -0.04], [-0.05, 0.02, -0.02]], 0.008, 0.008, servo, 6, 12);
+		// the head (p.head nods): a moulded loaf, open at the front, an orange-ish band round its base
+		const head = new THREE.Group();
+		head.position.set(0, 0.19, 0.02);
+		neck.add(head);
+		p.head = head;
+		const arch = (w, h, r) => {
+			const s = new THREE.Shape();
+			s.moveTo(-w / 2, 0); s.lineTo(w / 2, 0); s.lineTo(w / 2, h - r);
+			s.quadraticCurveTo(w / 2, h, w / 2 - r, h); s.lineTo(-w / 2 + r, h);
+			s.quadraticCurveTo(-w / 2, h, -w / 2, h - r); s.lineTo(-w / 2, 0);
+			return s;
+		};
+		const loaf = slab(arch(0.4, 0.24, 0.13), 0.42, 0.03, shell, head);
+		loaf.position.set(0, 0.03, 0);
+		const face = slab(arch(0.34, 0.19, 0.1), 0.02, 0.01, std(0x8a8c94, 0.5, 0.1), head);
+		face.position.set(0, 0.05, 0.225);
+		mesh(BOX(0.44, 0.045, 0.46), paint, head, 0, 0.02, 0);
+		const ear = new THREE.Shape();
+		ear.moveTo(0, 0); ear.quadraticCurveTo(0.09, 0.02, 0.1, 0.1); ear.lineTo(0.07, 0.11); ear.quadraticCurveTo(0.06, 0.04, 0, 0.03); ear.lineTo(0, 0);
+		for (const s of [-1, 1]) {
+			const e = slab(ear, 0.015, 0.008, paint, head);
+			e.position.set(s * 0.225, 0.0, -0.08);
+			e.rotation.y = -s * Math.PI / 2;
+		}
+		// the eye: a big ringed camera lens, off to one side like a monocle
+		const eye = new THREE.Group();
+		eye.position.set(0.07, 0.11, 0.245);
+		head.add(eye);
+		mesh(CYL(0.068, 0.068, 0.03, 32), paint, eye, 0, 0, 0).rotation.x = Math.PI / 2;
+		mesh(new THREE.TorusGeometry(0.056, 0.012, 10, 32), std(col.clone().multiplyScalar(0.7), 0.3, 0.1), eye, 0, 0, 0.017);
+		mesh(CYL(0.04, 0.04, 0.02, 28), std(0x0c0c12, 0.1, 0.4), eye, 0, 0, 0.02).rotation.x = Math.PI / 2;
+		const iris = mesh(CYL(0.022, 0.022, 0.01, 24), glowMat(0x6ab8ff, 1.4), eye, 0, 0, 0.031);
+		iris.rotation.x = Math.PI / 2;
+		mesh(SPH(0.008, 8), MAT.white, eye, 0.014, 0.014, 0.036);
+		p.eyes = [eye];
+		// the plate: flat on top of the head, a rim in their colour; what they carry sits on it
+		const plate = new THREE.Group();
+		plate.position.set(0, 0.29, 0);
+		head.add(plate);
+		p.plate = plate;
+		mesh(CYL(0.05, 0.06, 0.03, 20), servo, plate, 0, -0.012, 0);
+		mesh(lathe([[0, 0], [0.18, 0.005], [0.26, 0.035], [0.28, 0.045], [0.27, 0.05], [0.18, 0.02], [0, 0.018]], 48, 24), std(0xfbfaf6, 0.25, 0.02, { clearcoat: 0.8 }), plate, 0, 0, 0);
+		mesh(new THREE.TorusGeometry(0.272, 0.012, 8, 56), paint, plate, 0, 0.046, 0).rotation.x = Math.PI / 2;
 		p.hold = new THREE.Group();
-		p.hold.position.y = 0.05;
-		body.add(p.hold);
+		p.hold.position.y = 0.03;
+		plate.add(p.hold);
 		shadows(g);
 		p.glow.castShadow = false;
+		p.phase = Math.random() * 6;
+		p.stride = 0;
 		return p;
 	}
 
@@ -2543,51 +2590,62 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 				const r = lerp(h.r, Math.hypot(tq.x, tq.z), e);
 				m.x = Math.cos(a) * r;
 				m.z = Math.sin(a) * r;
-				lift = Math.sin(e * Math.PI) * 0.2;
-				const want = Math.atan2(fx - m.x, fz - m.z);
-				m.yaw = h.yaw + Math.atan2(Math.sin(want - h.yaw), Math.cos(want - h.yaw)) * e;
+				lift = Math.sin(e * Math.PI) * 0.04;
 			} else {
 				m.x = lerp(m.x, tq.x, k);
 				m.z = lerp(m.z, tq.z, k);
-				const want = Math.atan2(fx - m.x, fz - m.z);
-				m.yaw = m.yaw === undefined ? want : m.yaw + Math.atan2(Math.sin(want - m.yaw), Math.cos(want - m.yaw)) * (1 - Math.exp(-dt * 8));
 			}
 			m.vx = lerp(m.vx || 0, (m.x - ox) / Math.max(dt, 0.001), 1 - Math.exp(-dt * 6));
 			m.vz = lerp(m.vz || 0, (m.z - oz) / Math.max(dt, 0.001), 1 - Math.exp(-dt * 6));
 			m.g.position.set(m.x, lift, m.z);
+			// facing: the way they're walking; standing, the wall, turned a little
+			// toward where they last came from, so their eye shows in profile
+			const speed = Math.hypot(m.vx, m.vz);
+			const wallYaw = Math.atan2(fx - m.x, fz - m.z);
+			if (speed > 0.35) {
+				const across = Math.cos(wallYaw) * m.vx - Math.sin(wallYaw) * m.vz;   // (+: turning more would face the way they went)
+				if (Math.abs(across) > 0.2) m.side = Math.sign(across);
+			}
+			const want = speed > 0.35 ? Math.atan2(m.vx, m.vz) : wallYaw + (m.side || 1) * 0.75;
+			m.yaw = m.yaw === undefined ? want : m.yaw + Math.atan2(Math.sin(want - m.yaw), Math.cos(want - m.yaw)) * (1 - Math.exp(-dt * (m.hop && m.hop.u < 1 ? 14 : 7)));
 			m.g.rotation.y = m.yaw;
-			// hovering, bobbing, the tray leaning into the way it's going
-			m.body.position.y = 0.62 + Math.sin(time * 2.4) * 0.025;
-			const fwd = Math.sin(m.yaw) * m.vx + Math.cos(m.yaw) * m.vz, side = Math.cos(m.yaw) * m.vx - Math.sin(m.yaw) * m.vz;
-			m.body.rotation.x = lerp(m.body.rotation.x, clamp(fwd * 0.12, -0.25, 0.25), Math.min(1, dt * 8));
-			m.body.rotation.z = lerp(m.body.rotation.z, clamp(-side * 0.12, -0.25, 0.25), Math.min(1, dt * 8));
-			m.jet.material.opacity = 0.6 + Math.sin(rt * 30 + i) * 0.3;
-			m.eyes.forEach((e) => { e.scale.y = (rt + i * 0.7) % 3.5 < 0.12 ? 0.15 : 1; });
-			// the arm and claw: curled over the tray at rest, acting out the last tap
-			let S = 0.35, E = 1.25, Wr = 0.6, open = 0.35;
-			if (c.held) { S = 0.15; E = 1.45; Wr = 0.9; open = 0.15; }
+			// walking: a stride as fast as they're moving, the hips bobbing twice a step
+			m.stride = lerp(m.stride, clamp(speed / 1.4, 0, 1), 1 - Math.exp(-dt * 10));
+			m.phase += dt * (5 + 9 * m.stride);
+			const st = m.stride, ph = m.phase;
+			// a pose for what they're doing: lean in, dip the head, squat, shake
+			let lean = 0.04 + st * 0.12, nod = 0, squat = 0, shake = 0;
+			if (c.held) nod -= 0.04;   // (head up, carefully: there's food on it)
 			const s = c.station && c.station.state === 'work' ? c.station : null;
-			if (s && s.kind === 'stir') { S = 0.85 + Math.sin(time * 8) * 0.25; E = 0.6 + Math.cos(time * 8) * 0.3; open = 0.05; }
-			else if (s && s.kind === 'cryo') { S = 1.0; E = 0.35; Wr = 0.2; open = 0.05; }
+			if (s && s.kind === 'stir') { lean = 0.25; shake = Math.sin(time * 8) * 0.12; }
 			const a = c.act;
 			if (a) {
 				const u = clamp(a.t / ACT_TIME, 0, 1), pulse = Math.sin(u * Math.PI);
-				if (a.kind === 'chop') { S = 0.7; E = u < 0.35 ? lerp(E, -0.5, u / 0.35) : lerp(-0.5, 1.7, clamp((u - 0.35) / 0.18, 0, 1)); Wr = 0.2; open = 0; }
-				else if (a.kind === 'grab' || a.kind === 'take') { S = lerp(S, 1.15, pulse); E = lerp(E, 0.3, pulse); Wr = lerp(Wr, 0.3, pulse); open = u < 0.45 ? 0.8 : 0.02; }
-				else if (a.kind === 'put' || a.kind === 'serve') { S = lerp(S, 1.2, pulse); E = lerp(E, 0.25, pulse); Wr = lerp(Wr, 0.35, pulse); open = u < 0.5 ? 0.02 : 0.8; }
-				else if (a.kind === 'bin') { S = lerp(S, -0.3, pulse); E = lerp(E, 0.2, pulse); open = u > 0.4 ? 0.9 : 0.02; }
-				else if (a.kind === 'flip') { S = 0.9; E = 0.5; Wr = lerp(0.3, -1.4, pulse); open = 0.02; }
-				else if (a.kind === 'jab') { S = lerp(S, 1.25, pulse); E = lerp(E, 0.15, pulse); Wr = 0.1; open = 0; }
-				else if (a.kind === 'pump') { S = 0.6; E = 0.9; m.body.position.y -= 0.18 * pulse; open = 0; }
-				else if (a.kind === 'douse') { S = 1.0 + Math.sin(a.t * 40) * 0.15; E = 0.4; Wr = Math.sin(a.t * 30) * 0.5; open = 0.9; }
+				if (a.kind === 'chop') { lean = 0.3; nod = Math.abs(Math.sin(u * Math.PI * 3)) * 0.45; }
+				else if (a.kind === 'grab' || a.kind === 'take' || a.kind === 'put' || a.kind === 'serve') { lean = lerp(lean, 0.38, pulse); nod = 0.35 * pulse; squat = 0.06 * pulse; }
+				else if (a.kind === 'bin') { lean = lerp(lean, 0.5, pulse); nod = 0.5 * pulse; }
+				else if (a.kind === 'flip' || a.kind === 'jab') { lean = 0.25; nod = 0.4 * pulse; }
+				else if (a.kind === 'pump') { squat = 0.12 * pulse; }
+				else if (a.kind === 'douse') { lean = 0.2; shake = Math.sin(a.t * 40) * 0.2; }
 			}
-			const ease = Math.min(1, dt * 16);
-			m.shoulder.rotation.x = lerp(m.shoulder.rotation.x, S, ease);
-			m.elbow.rotation.x = lerp(m.elbow.rotation.x, E, ease);
-			m.wrist.rotation.x = lerp(m.wrist.rotation.x, Wr, ease);
-			for (const f of m.fingers) f.rotation.x = lerp(f.rotation.x, open, ease);
-			// what they're carrying, riding on the tray, turned to face the middle
-			const hv = syncItem(m.holder, c.held, m.hold, 0, 0, 0, 0.62);
+			const bob = Math.abs(Math.sin(ph)) * 0.035 * st + Math.sin(time * 2.4) * 0.006 * (1 - st);
+			const th = Math.acos(clamp(1 - squat / (2 * LEG), -1, 1));   // (knees bent for a squat)
+			m.hips.position.y = HIP_Y - squat + bob - 0.012 * st;
+			m.hips.rotation.z = Math.sin(ph) * 0.06 * st + shake * 0.3;
+			m.legs.forEach((L, j) => {
+				const q = ph + j * Math.PI, swing = Math.sin(q) * 0.55 * st, lift = Math.max(0, Math.cos(q)) * 0.75 * st;
+				L.hip.rotation.x = lerp(L.hip.rotation.x, -th - swing - lift * 0.35, Math.min(1, dt * 20));
+				L.knee.rotation.x = lerp(L.knee.rotation.x, 2 * th + lift, Math.min(1, dt * 20));
+				L.ankle.rotation.x = lerp(L.ankle.rotation.x, -th + swing * 0.6 - lift * 0.5, Math.min(1, dt * 20));
+			});
+			const ease = Math.min(1, dt * 14);
+			m.upper.rotation.x = lerp(m.upper.rotation.x, lean, ease);
+			m.upper.rotation.z = lerp(m.upper.rotation.z, -Math.sin(ph) * 0.05 * st + shake, ease);
+			m.head.rotation.x = lerp(m.head.rotation.x, nod - lean * 0.6, ease);   // (the head stays level-ish: the plate's full)
+			m.head.rotation.y = lerp(m.head.rotation.y, st > 0.2 ? 0 : Math.sin(time * 0.7 + i) * 0.25, Math.min(1, dt * 3));
+			m.eyes.forEach((e) => { e.scale.y = (rt + i * 0.7) % 3.5 < 0.12 ? 0.2 : 1; });
+			// what they're carrying, riding on the plate, turned to face the middle
+			const hv = syncItem(m.holder, c.held, m.hold, 0, 0, 0, 0.46);
 			if (hv) hv.rotation.y = faceEye(m.x, m.z) - m.yaw + Math.sin(rt * 1.5) * 0.3;
 			if (c.held && c.held.burnt) every('held-smoke-' + i, 2, dt, () => smoke(0, m.x, 1.0, m.z, 0.35));
 		}
@@ -2659,7 +2717,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		for (let i = 0; i < count; i++) {
 			const c = chefs[i], m = chefs3[i];
 			if (!latest[i] || !m || !m.g.visible || m.x === undefined) continue;
-			const at = onWall(m.x, 1.3, m.z);
+			const at = onWall(m.x, 1.65, m.z);
 			if (!at) continue;
 			const y = at.y;
 			if (c.held) {
@@ -2678,7 +2736,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// where a cook's floating words go: over their head
 	function overChef(i) {
 		const c = chefs[i], m = chefs3[i];
-		return (m && m.x !== undefined && onWall(m.x, 1.5, m.z)) || { x: c.x, y: 500 };
+		return (m && m.x !== undefined && onWall(m.x, 1.8, m.z)) || { x: c.x, y: 500 };
 	}
 
 	function bar(ctx, x, y, w, k, colour, back) {
@@ -2873,38 +2931,47 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	/* ---------- 2D: the trays, for the results screens ---------- */
 
 	// A player's tray robot, feet (its puck) at (x, y), h tall. o: { pose: 'stand' | 'cheer' | 'win' }
+	// The robot in 2D, for Showtime's results: walking on the spot, waving its head when it cheers
 	function drawChef(ctx, n, x, y, h, o) {
 		o = o || {};
 		const col = colourOf(n);
 		const k = h / 100;
 		const time = performance.now() / 1000 + n;
 		const cheer = o.pose === 'cheer' || o.pose === 'win';
-		const bob = cheer ? Math.abs(Math.sin(time * 6)) * 6 : Math.sin(time * 2.4) * 1.5;
+		const ph = time * (cheer ? 9 : 4);
+		const bob = cheer ? Math.abs(Math.sin(ph)) * 5 : Math.abs(Math.sin(ph)) * 1.5;
 		ctx.save();
 		ctx.translate(x, y);
 		ctx.scale(k, k);
 		const line = { stroke: INK, lineWidth: 2.5 };
-		// the puck and its jet
-		art.ellipse(ctx, 0, -4, 16, 5, { fill: col, alpha: 0.5 });
-		art.roundRect(ctx, -14, -14, 28, 9, 4, { fill: '#2a2836', ...line });
+		art.ellipse(ctx, 0, -2, 22, 5, { fill: col, alpha: 0.4 });
+		// legs: black servo blocks, white knees, chunky feet in their colour
+		for (const j of [0, 1]) {
+			const sx = j ? 7 : -7, sw = Math.sin(ph + j * Math.PI) * (cheer ? 4 : 2), up = Math.max(0, Math.cos(ph + j * Math.PI)) * (cheer ? 5 : 2);
+			art.roundRect(ctx, sx - 4 + sw * 0.5, -40 - bob, 8, 20, 2, { fill: '#1c1b22', ...line });
+			art.roundRect(ctx, sx - 4 + sw, -22 - up, 8, 16, 2, { fill: '#1c1b22', ...line });
+			art.roundRect(ctx, sx - 5 + sw * 0.7, -26 - up * 0.6, 10, 8, 3, { fill: '#f2f0ec', ...line });
+			art.roundRect(ctx, sx - 6 + sw, -8 - up, 14, 7, 3, { fill: col, ...line });
+		}
 		ctx.translate(0, -bob);
-		// the stalk, the tray
-		art.rect(ctx, -3, -48, 6, 34, { fill: '#c8d0da', ...line });
-		art.ellipse(ctx, 0, -50, 34, 8, { fill: '#dfe6ee', ...line });
-		art.ellipse(ctx, 0, -52, 30, 6, { fill: '#9aa4b0' });
-		art.ellipse(ctx, 0, -50, 34, 8, { stroke: col, lineWidth: 4 });
-		art.roundRect(ctx, -9, -50, 18, 8, 2, { fill: '#2a2836', ...line });
-		for (const ex of [-4, 4]) art.circle(ctx, ex, -46, 1.8, { fill: col });
-		// the arm and its claw, up and waving when cheering
-		const a = cheer ? -0.6 + Math.sin(time * 8) * 0.3 : -0.2;
-		const sx = 18, sy = -54;
-		const ex = sx + Math.sin(a) * 26, ey = sy - Math.cos(a) * 26;
-		const wx = ex + Math.sin(a + (cheer ? 0.2 : 1.2)) * 22, wy = ey - Math.cos(a + (cheer ? 0.2 : 1.2)) * 22;
-		art.line(ctx, [[sx, sy], [ex, ey], [wx, wy]], { stroke: INK, lineWidth: 6 });
-		art.line(ctx, [[sx, sy], [ex, ey], [wx, wy]], { stroke: '#dfe6ee', lineWidth: 3.5 });
-		for (const j of [[sx, sy], [ex, ey]]) art.circle(ctx, j[0], j[1], 3.5, { fill: col, ...line });
-		const open = cheer ? 0.6 + Math.sin(time * 10) * 0.3 : 0.4;
-		for (const f of [-1, 1]) art.line(ctx, [[wx, wy], [wx + f * 6 * open + 1, wy - 6], [wx + f * 3 * open, wy - 11]], { stroke: INK, lineWidth: 2.5 });
+		// hips, torso, neck
+		art.roundRect(ctx, -13, -46, 26, 8, 2, { fill: '#1c1b22', ...line });
+		art.roundRect(ctx, -13, -64, 26, 19, 5, { fill: '#f2f0ec', ...line });
+		art.rect(ctx, 1, -72, 7, 10, { fill: '#1c1b22', ...line });
+		// the head: a loaf with a coloured band, one ringed eye; tilting about when cheering
+		ctx.save();
+		ctx.translate(2, -74);
+		ctx.rotate(cheer ? Math.sin(time * 7) * 0.2 : Math.sin(time * 1.3) * 0.05);
+		art.roundRect(ctx, -18, -22, 36, 22, 10, { fill: '#f2f0ec', ...line });
+		art.roundRect(ctx, -19, -4, 38, 5, 2, { fill: col, ...line });
+		art.circle(ctx, 8, -12, 6.5, { fill: col, ...line });
+		art.circle(ctx, 8, -12, 3.5, { fill: '#0c0c12' });
+		art.circle(ctx, 9.2, -13.2, 1.1, { fill: '#ffffff' });
+		// the plate on top
+		art.rect(ctx, -3, -26, 6, 4, { fill: '#1c1b22' });
+		art.ellipse(ctx, 0, -28, 22, 4.5, { fill: '#fbfaf6', ...line });
+		art.ellipse(ctx, 0, -28, 22, 4.5, { stroke: col, lineWidth: 2.5 });
+		ctx.restore();
 		ctx.restore();
 	}
 
