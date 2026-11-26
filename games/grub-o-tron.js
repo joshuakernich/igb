@@ -1300,7 +1300,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// just inside its edges. One texture covers a 1.5 m square and tiles; the seams sink and the
 	// rivets stand proud (a bump map); the rivets shine more than the plates. w, h: the face it
 	// covers (metres), so the plates come out the same size everywhere.
-	const PLATE_TILE = 1.5;
+	const PLATE_TILE = 0.5;   // (the plates and rivets much smaller: the user asked)
 	const PLATES = [[0, 0, 780, 250], [780, 0, 244, 500], [0, 250, 520, 540], [520, 250, 260, 540], [780, 500, 244, 290], [0, 790, 250, 234], [250, 790, 774, 234]];
 	let plates = null;
 	function stainless(w = 1, h = 1) {
@@ -1403,13 +1403,9 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		mesh(BOX(wr.x - wl.x + 0.3, 0.14, 0.16), MAT.darkSteel, g, 0, 2.85, -FRONT_BACK + 0.08);
 		buildSunbeams(wl.x, wr.x);
 		// the neon signs: high on the side walls, facing into the kitchen (the user asked)
-		// (FISSION CHIPS in real bent neon tubes, steady, no flicker: the user asked; OPEN 25/8 painted)
-		buildNeonSign(-(BACK - 0.05), 2.88, 0);
-		for (const [x, text, colour] of [[1.2, 'OPEN 25/8', '#FC1992']]) {
-			const sign = mesh(new THREE.PlaneGeometry(2.6, 0.48), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), room, Math.sign(x) * (BACK - 0.06), 2.95, 0);
-			sign.rotation.y = -Math.sign(x) * Math.PI / 2;
-			signs.push({ m: sign, text, colour, k: 1.3, seed: x, font: x < 0 ? 'Monoton' : null });   // (the name in the title's neon-tube lettering)
-		}
+		// (both in real bent neon tubes, steady, no flicker: the user asked)
+		buildNeonSign(-(BACK - 0.05), 2.88, 0, Math.PI / 2, [{ text: 'FISSION', colour: '#9dff3a' }, { text: 'CHIPS', colour: '#ff2d9a' }], 0xb8ff7a);
+		buildNeonSign(BACK - 0.05, 2.88, 0, -Math.PI / 2, [{ text: 'OPEN', colour: '#ff2d9a' }, { text: '25/8', colour: '#ffd23a' }], 0xff8ac8);
 		// light: a warm wash from overhead, a glow over each wall's counter
 		// (the side ones hung in toward the middle, so they light the counters without a hot
 		// spot of glow on the middle of the side walls: the user asked)
@@ -1443,18 +1439,25 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			case 'N': return { w: 0.6, strokes: [L([0, 0], [0, 1], [0.6, 0], [0.6, 1])] };
 			case 'C': return { w: 0.58, strokes: [arc(0.32, 0.5, 0.32, 0.5, 40 * D, 320 * D, 24)] };
 			case 'H': return { w: 0.58, strokes: [L([0, 0], [0, 1]), L([0.58, 0], [0.58, 1]), L([0, 0.5], [0.58, 0.5])] };
+			case 'E': return { w: 0.52, strokes: [L([0.52, 1], [0, 1], [0, 0], [0.52, 0]), L([0, 0.52], [0.42, 0.52])] };
+			case '2': return { w: 0.58, strokes: [{ pts: [...arc(0.29, 0.72, 0.27, 0.27, 160 * D, -35 * D, 16).pts, [0.02, 0], [0.58, 0]] }] };
+			case '5': return { w: 0.58, strokes: [{ pts: [[0.55, 1], [0.07, 1], [0.04, 0.56], ...arc(0.3, 0.33, 0.28, 0.33, 120 * D, -150 * D, 18).pts] }] };
+			case '/': return { w: 0.4, strokes: [L([0, 0], [0.4, 1])] };
+			case '8': return { w: 0.58, strokes: [arc(0.29, 0.76, 0.23, 0.24, 0, Math.PI * 2, 22), arc(0.29, 0.26, 0.29, 0.26, 0, Math.PI * 2, 24)] };
 			case 'P': return { w: 0.55, strokes: [{ pts: [[0, 0], [0, 1], [0.3, 1], ...arc(0.3, 0.74, 0.25, 0.26, 90 * D, -90 * D, 14).pts.slice(1), [0, 0.48]] }] };
 			default: return { w: 0.4, strokes: [] };
 		}
 	}
-	function buildNeonSign(x, y, z) {
+	// x, y, z: where on its wall; turn: to face into the kitchen; wordList: [{ text, colour }]
+	// on one line; spillColour: the light it throws on the counter below
+	function buildNeonSign(x, y, z, turn, wordList, spillColour) {
 		const sign = new THREE.Group();
 		sign.position.set(x, y, z);
-		sign.rotation.y = Math.PI / 2;   // (on the left wall, facing into the kitchen)
+		sign.rotation.y = turn;
 		room.add(sign);
-		// (one line: FISSION in green, CHIPS in pink, side by side, the user asked)
+		// (one line, the words side by side, the user asked)
 		const H = 0.3, R = 0.013, GAP = 0.2, WORD = 0.7;
-		const words = [{ text: 'FISSION', colour: '#9dff3a' }, { text: 'CHIPS', colour: '#ff2d9a' }];
+		const words = wordList.map((wd) => Object.assign({}, wd));
 		for (const wd of words) { wd.letters = [...wd.text].map(neonLetter); wd.width = wd.letters.reduce((a, l) => a + l.w * H, 0) + GAP * H * (wd.letters.length - 1); }
 		const widest = words.reduce((a, wd) => a + wd.width, 0) + WORD * H;
 		const halo = [];
@@ -1499,7 +1502,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		const glow = mesh(new THREE.PlaneGeometry(bw + 0.8, bh + 0.8), new THREE.MeshBasicMaterial({ map: haloTex, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }), sign, 0, -0.03 + 0.03, 0.017);
 		glow.renderOrder = 3;
 		// and real light from it, falling on the counters below
-		const spill = new THREE.PointLight(0xb8ff7a, 1.6, 3.2, 1.6);
+		const spill = new THREE.PointLight(spillColour, 1.6, 3.2, 1.6);
 		spill.position.set(0, -0.2, 0.5);
 		sign.add(spill);
 		return sign;
