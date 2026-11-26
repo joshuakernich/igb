@@ -77,7 +77,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	const HATCH = FRONT_L, CHUTE = FRONT_R;   // (the mutants' windows span it)
 	// the food hatches (each ingredient its own place to grab it from) and the BINNER, in
 	// among the tools on the side walls; the front wall is the three delivery windows
-	const DISPENSERS = [{ ing: 'spud', wall: 0, slot: 0 }, { ing: 'mutato', wall: 0, slot: 2 }, { ing: 'slime', wall: 2, slot: 1 }];
+	const DISPENSERS = [{ ing: 'spud', wall: 0, slot: 0 }, { ing: 'mutato', wall: 0, slot: 2 }, { ing: 'slop', wall: 2, slot: 1 }];
 	const BIN = { wall: 2, slot: 3 };
 	const WINDOWS = 3;
 	const CHOP_TAPS = 6;
@@ -110,7 +110,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	const INGS = {
 		spud: { name: 'GLOW SPUD', short: 'SPUD', colour: '#ffe12a', glow: '#fff27a' },
 		mutato: { name: 'MUTATO', short: 'MUTATO', colour: '#a44aff', glow: '#d08aff' },
-		slime: { name: 'SLIME DIP', short: 'SLIME', colour: '#7aff3a', glow: '#c8ff8a' },
+		slop: { name: 'SLOP', short: 'SLOP', colour: '#7aff3a', glow: '#c8ff8a' },   // (was slime dip: the user asked for slop)
 		roach: { name: 'RAD-ROACH', short: 'ROACH', colour: '#b07a3a', glow: '#9dff3a' },
 		eel: { name: 'SEWER EEL', short: 'EEL', colour: '#6a46a0', glow: '#c48aff' },
 		shroom: { name: 'GLOWSHROOM', short: 'SHROOM', colour: '#2ad8c9', glow: '#3af2ff' },
@@ -130,7 +130,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	for (const d of STATIONS) KIND[d.kind] = d;
 
 	// tier, name, parts: [ingredient, ...stations in order]. All of it fancy, radioactive chips:
-	// spuds and mutatos chopped and fried, salted, warped; a pot of slime dip on the side
+	// spuds and mutatos chopped and fried, salted, warped; a bowl of slop on the side
 	const RECIPES = [
 		{ tier: 1, name: 'GLOW CHIPS', parts: [['spud', 'chop', 'fry']] },
 		{ tier: 1, name: 'PURPLE MUTATO CHIPS', parts: [['mutato', 'chop', 'fry']] },
@@ -140,11 +140,11 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		{ tier: 2, name: 'QUANTUM CHIPS', parts: [['spud', 'chop', 'fry', 'warp']] },
 		{ tier: 2, name: 'FANCY MUTATO FRIES', parts: [['mutato', 'chop', 'fry', 'salt']] },
 		{ tier: 2, name: 'INTERDIMENSIONAL WEDGES', parts: [['mutato', 'chop', 'warp', 'fry']] },
-		{ tier: 3, name: 'CHIPS \'N\' SLIME DIP', parts: [['spud', 'chop', 'fry'], ['slime']] },
+		{ tier: 3, name: 'CHIPS \'N\' SLOP', parts: [['spud', 'chop', 'fry'], ['slop']] },
 		{ tier: 3, name: 'DOUBLE MUTANT FRIES', parts: [['spud', 'chop', 'fry'], ['mutato', 'chop', 'fry']] },
-		{ tier: 3, name: 'LOADED FALLOUT FRIES', parts: [['mutato', 'chop', 'fry', 'salt'], ['slime', 'warp']] },
+		{ tier: 3, name: 'LOADED FALLOUT FRIES', parts: [['mutato', 'chop', 'fry', 'salt'], ['slop', 'warp']] },
 	];
-	const FEAST = { tier: 4, name: 'THE OVERLORD\'S MEGA BUCKET', parts: [['spud', 'chop', 'fry', 'salt'], ['mutato', 'chop', 'warp', 'fry'], ['slime']] };
+	const FEAST = { tier: 4, name: 'THE OVERLORD\'S MEGA BUCKET', parts: [['spud', 'chop', 'fry', 'salt'], ['mutato', 'chop', 'warp', 'fry'], ['slop']] };
 	const PRACTICE = { tier: 0, name: 'CHIPS, ANY WAY YOU LIKE', parts: [['*', '*']] };
 
 	const TYPES = [   // (skins: sickly human flesh, each its own way off)
@@ -1797,12 +1797,21 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 				pu.position.addScaledVector(TOWARD, 0.04);
 			}
 		},
-		slime(g, mat, glow) {
-			mesh(CYL(0.2, 0.16, 0.2, 24, true), std(0x5a6360, 0.35, 0.7, { side: THREE.DoubleSide }), g, 0, 0.1, 0);
-			mesh(CYL(0.16, 0.16, 0.02, 24), std(0x5a6360, 0.35, 0.7), g, 0, 0.01, 0);
-			const blob = mesh(new THREE.SphereGeometry(0.19, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), mat, g, 0, 0.17, 0);
-			blob.scale.y = 0.7;
-			for (const [x, z] of [[0.06, 0.05], [-0.07, -0.02]]) mesh(SPH(0.03, 8), glow, g, x, 0.26, z);
+		// slop: a dented tin bowl heaped with lumpy, glistening goop, chunks in it, a bubble
+		// or two glowing, a dribble over the rim and a ladle stuck in
+		slop(g, mat, glow) {
+			const tin = std(0x8a9290, 0.35, 0.85);
+			const bowl = mesh(sculpt(lathe([[0.12, 0], [0.16, 0.01], [0.2, 0.08], [0.23, 0.17], [0.235, 0.19], [0.22, 0.19], [0.19, 0.1], [0.14, 0.03], [0, 0.03]], 40, 24), (p) => -0.012 * Math.max(0, Math.sin(p.x * 18 + 1) * Math.sin(p.z * 15)) ), tin, g);
+			bowl.material.side = THREE.DoubleSide;
+			const goop = mesh(sculpt(new THREE.SphereGeometry(0.21, 40, 20, 0, Math.PI * 2, 0, Math.PI / 2), (p) => lumpy(p, 6) * 0.018 + Math.sin(p.x * 30) * Math.sin(p.z * 27) * 0.006), mat, g, 0, 0.15, 0);
+			goop.scale.y = 0.55;
+			const chunk = std(0x4a6a2a, 0.6, 0);
+			for (const [x, z, r] of [[0.07, 0.04, 0.035], [-0.08, -0.03, 0.03], [0.0, -0.09, 0.025], [-0.03, 0.08, 0.028]]) { const c = mesh(superBox(r * 2, r * 1.4, r * 1.8, 0.5, 0.5, 0.5, 12), chunk, g, x, 0.25 - Math.hypot(x, z) * 0.35, z); c.rotation.set(x * 9, z * 7, x * 5); }
+			for (const [x, z, r] of [[0.05, -0.05, 0.022], [-0.06, 0.06, 0.016], [0.1, 0.07, 0.012]]) mesh(SPH(r, 10), glow, g, x, 0.255 - Math.hypot(x, z) * 0.4, z);
+			tube(g, [[0.2, 0.2, 0.05], [0.235, 0.17, 0.07], [0.245, 0.1, 0.08], [0.24, 0.05, 0.08]], 0.02, 0.012, mat, 8, 14);
+			tube(g, [[-0.04, 0.2, 0.0], [-0.12, 0.32, -0.04], [-0.2, 0.42, -0.07]], 0.012, 0.012, tin, 8, 12);
+			const scoop = mesh(SPH(0.045, 14), tin, g, -0.03, 0.2, 0.01);
+			scoop.scale.y = 0.5;
 		},
 		roach(g, mat, glow) {
 			const leg = MAT.black;
@@ -3402,7 +3411,12 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		const blob = () => art.ellipse(ctx, 0, 1, 11, 8, st);
 		if (key === 'spud') { blob(); art.circle(ctx, -4, -1, 1.6, st); art.circle(ctx, 4, 3, 1.4, st); }
 		else if (key === 'mutato') { blob(); for (const ex of [-5, 0, 5]) art.circle(ctx, ex, ex ? 1 : -2, 2, st); }
-		else if (key === 'slime') { ctx.beginPath(); ctx.moveTo(0, -12); ctx.bezierCurveTo(8, -2, 10, 5, 0, 10); ctx.bezierCurveTo(-10, 5, -8, -2, 0, -12); ctx.strokeStyle = col; ctx.lineWidth = 2.6; ctx.stroke(); }
+		else if (key === 'slop') {   // (a bowl heaped with lumpy goop, a drip over its lip)
+			ctx.strokeStyle = col; ctx.lineWidth = 2.6; ctx.lineJoin = ctx.lineCap = 'round';
+			ctx.beginPath(); ctx.moveTo(-12, 0); ctx.quadraticCurveTo(-11, 11, 0, 11); ctx.quadraticCurveTo(11, 11, 12, 0); ctx.closePath(); ctx.stroke();
+			ctx.beginPath(); ctx.moveTo(-10, 0); ctx.quadraticCurveTo(-9, -7, -4, -6); ctx.quadraticCurveTo(-1, -12, 4, -8); ctx.quadraticCurveTo(10, -8, 10, 0); ctx.stroke();
+			ctx.beginPath(); ctx.moveTo(11, 1); ctx.quadraticCurveTo(13, 4, 12.5, 7); ctx.stroke();
+		}
 		else if (key === 'chop') { art.poly(ctx, [[-11, -8], [3, -8], [3, 4], [-11, 4]], st); art.line(ctx, [[3, -2], [12, -2]], st); }
 		else if (key === 'fry') for (const dx of [-7, 0, 7]) art.line(ctx, [[dx, 10], [dx - 3, 4], [dx + 3, -3], [dx, -10]], st);
 		else if (key === 'salt') { art.poly(ctx, [[-6, -2], [6, -2], [6, 10], [-6, 10]], st); art.ellipse(ctx, 0, -4, 6, 3, st); for (const [dx, dy] of [[-4, -11], [0, -13], [4, -11]]) art.circle(ctx, dx, dy, 1.1, st); }
