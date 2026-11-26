@@ -1294,42 +1294,71 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	const signs = [];
 	const sunbeams = { mats: [], motes: null, box: null };   // (the light streaming in at the window: see buildRoom)
 
-	// Riveted metal plates (the counters: the user asked): one steel plate per tile of the
-	// texture, a dark seam round it, a row of domed rivets just inside its edges, brushed grain,
-	// scuffs and a little grime; the seams sunk and the rivets raised (a bump map), the grime
-	// dull. w, h: the face it covers (metres), so every plate comes out about the same size.
-	const PLATE = { w: 0.6, h: 0.46 };
+	// Riveted metal plates (the counters: the user asked, after a reference): a staggered
+	// layout of big and small plates, each a mottled, hammered grey with a warm tint here and
+	// there, a thin dark seam round it with a bevelled highlight, and close rows of domed rivets
+	// just inside its edges. One texture covers a 1.5 m square and tiles; the seams sink and the
+	// rivets stand proud (a bump map); the rivets shine more than the plates. w, h: the face it
+	// covers (metres), so the plates come out the same size everywhere.
+	const PLATE_TILE = 1.5;
+	const PLATES = [[0, 0, 780, 250], [780, 0, 244, 500], [0, 250, 520, 540], [520, 250, 260, 540], [780, 500, 244, 290], [0, 790, 250, 234], [250, 790, 774, 234]];
 	let plates = null;
 	function stainless(w = 1, h = 1) {
 		if (!plates) {
-			const S = 512, rnd = seeded(77);
-			const grain = Array.from({ length: 500 }, () => [rnd() * S, rnd(), rnd()]);
-			const scuffs = Array.from({ length: 10 }, () => [rnd() * S, rnd() * S, 20 + rnd() * 70, (rnd() - 0.5) * 0.7]);
-			const grime = Array.from({ length: 9 }, () => [rnd() * S, S * (0.6 + rnd() * 0.4), 40 + rnd() * 90]);
-			const rivets = [];
-			const IN = 26, N = 7;
-			for (let k = 0; k < N; k++) { const t = IN + (S - 2 * IN) * k / (N - 1); rivets.push([t, IN], [t, S - IN]); if (k && k < N - 1) rivets.push([IN, t], [S - IN, t]); }
-			// one painter for all three maps: base, the grain's two tones, seam, rivet, grime
-			const paint = (o) => (c) => {
-				c.fillStyle = o.base; c.fillRect(0, 0, S, S);
-				for (const [y, t, a] of grain) { c.fillStyle = t < 0.5 ? `rgba(${o.lo},${a * 0.2})` : `rgba(${o.hi},${a * 0.16})`; c.fillRect(0, y, S, 0.6 + a); }
-				c.strokeStyle = `rgba(${o.lo},0.3)`; c.lineWidth = 1;
-				for (const [x, y, l, ang] of scuffs) { c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(ang) * l, y + Math.sin(ang) * l); c.stroke(); }
-				for (const [x, y, r] of grime) { const gr = c.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, o.grime); gr.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gr; c.fillRect(x - r, y - r, r * 2, r * 2); }
-				c.strokeStyle = o.seam; c.lineWidth = 7; c.strokeRect(0, 0, S, S);   // (the seam: half of it on each edge, so plates meet in a groove)
-				for (const [x, y] of rivets) {
-					const gr = c.createRadialGradient(x - 3, y - 3, 1, x, y, 11);
-					gr.addColorStop(0, o.rivetHi); gr.addColorStop(0.6, o.rivet); gr.addColorStop(1, o.rivetLo);
-					c.fillStyle = gr; c.beginPath(); c.arc(x, y, 10, 0, Math.PI * 2); c.fill();
-				}
+			const S = 1024, rnd = seeded(77);
+			const mottle = Array.from({ length: 260 }, () => [rnd() * S, rnd() * S, 20 + rnd() * 90, rnd(), rnd()]);
+			const dents = Array.from({ length: 1400 }, () => [rnd() * S, rnd() * S, 2 + rnd() * 6, rnd() * Math.PI, rnd()]);
+			const tones = PLATES.map(() => (rnd() - 0.5) * 18);
+			const rivetsOf = ([x, y, pw, ph]) => {
+				const IN = 22, GAPR = 40, out = [];
+				const nx = Math.max(2, Math.round((pw - 2 * IN) / GAPR)), ny = Math.max(2, Math.round((ph - 2 * IN) / GAPR));
+				for (let i = 0; i <= nx; i++) { const rx = x + IN + (pw - 2 * IN) * i / nx; out.push([rx, y + IN], [rx, y + ph - IN]); }
+				for (let j = 1; j < ny; j++) { const ry = y + IN + (ph - 2 * IN) * j / ny; out.push([x + IN, ry], [x + pw - IN, ry]); }
+				return out;
 			};
-			const map = canvasTexture(S, S, paint({ base: '#aab1b7', lo: '40,44,50', hi: '255,255,255', grime: 'rgba(40,34,26,0.35)', seam: '#2a2c30', rivet: '#c4cad0', rivetHi: '#f4f7fa', rivetLo: '#5a6066' }));
-			const rough = canvasTexture(S, S, paint({ base: '#6a6a6a', lo: '150,150,150', hi: '40,40,40', grime: 'rgba(230,230,230,0.6)', seam: '#e0e0e0', rivet: '#505050', rivetHi: '#303030', rivetLo: '#606060' }), false);
-			const bump = canvasTexture(S, S, paint({ base: '#808080', lo: '110,110,110', hi: '150,150,150', grime: 'rgba(0,0,0,0)', seam: '#000000', rivet: '#e0e0e0', rivetHi: '#ffffff', rivetLo: '#909090' }), false);
+			// one painter for the three maps
+			const paint = (o) => (c) => {
+				PLATES.forEach((pl, k) => {
+					const [x, y, pw, ph] = pl;
+					c.save();
+					c.beginPath(); c.rect(x, y, pw, ph); c.clip();
+					const t = o.base + (o.tone ? tones[k] : 0);
+					c.fillStyle = `rgb(${t + o.tint[0]},${t + o.tint[1]},${t + o.tint[2]})`;
+					c.fillRect(x, y, pw, ph);
+					for (const [mx, my, mr, a, warm] of mottle) {   // (cloudy light and dark patches, some warm)
+						const g2 = c.createRadialGradient(mx, my, 0, mx, my, mr);
+						const col = a < 0.5 ? o.dark : warm < 0.3 ? o.warm : o.light;
+						g2.addColorStop(0, col); g2.addColorStop(1, 'rgba(0,0,0,0)');
+						c.fillStyle = g2; c.fillRect(mx - mr, my - mr, mr * 2, mr * 2);
+					}
+					for (const [dx, dy, dr, ang, lt] of dents) {   // (hammer dents: a light lip and a dark hollow)
+						c.save(); c.translate(dx, dy); c.rotate(ang); c.scale(1.6, 1);
+						c.fillStyle = lt < 0.5 ? o.dentLo : o.dentHi;
+						c.beginPath(); c.arc(0, 0, dr, 0, Math.PI * 2); c.fill();
+						c.restore();
+					}
+					c.restore();
+					// the bevel: light along the top and left inside edges, dark along the bottom and right
+					c.fillStyle = o.bevelHi; c.fillRect(x + 3, y + 3, pw - 6, 3); c.fillRect(x + 3, y + 3, 3, ph - 6);
+					c.fillStyle = o.bevelLo; c.fillRect(x + 3, y + ph - 6, pw - 6, 3); c.fillRect(x + pw - 6, y + 3, 3, ph - 6);
+					// the seam
+					c.strokeStyle = o.seam; c.lineWidth = 5; c.strokeRect(x, y, pw, ph);
+					// the rivets: domes, lit from the top left, a shadow to the bottom right
+					for (const [rx, ry] of rivetsOf(pl)) {
+						c.fillStyle = o.rivetShadow; c.beginPath(); c.arc(rx + 2, ry + 2.5, 10, 0, Math.PI * 2); c.fill();
+						const g3 = c.createRadialGradient(rx - 3, ry - 3, 1, rx, ry, 10);
+						g3.addColorStop(0, o.rivetHi); g3.addColorStop(0.55, o.rivet); g3.addColorStop(1, o.rivetLo);
+						c.fillStyle = g3; c.beginPath(); c.arc(rx, ry, 9, 0, Math.PI * 2); c.fill();
+					}
+				});
+			};
+			const map = canvasTexture(S, S, paint({ base: 142, tone: true, tint: [2, 2, 8], dark: 'rgba(60,58,66,0.16)', light: 'rgba(220,226,236,0.14)', warm: 'rgba(150,110,90,0.12)', dentLo: 'rgba(40,40,48,0.1)', dentHi: 'rgba(235,240,248,0.1)', bevelHi: 'rgba(235,238,242,0.55)', bevelLo: 'rgba(30,30,34,0.5)', seam: '#1a1a1e', rivet: '#b4b8be', rivetHi: '#f6f8fa', rivetLo: '#55595f', rivetShadow: 'rgba(20,20,24,0.5)' }));
+			const rough = canvasTexture(S, S, paint({ base: 150, tone: false, tint: [0, 0, 0], dark: 'rgba(200,200,200,0.15)', light: 'rgba(60,60,60,0.15)', warm: 'rgba(230,230,230,0.2)', dentLo: 'rgba(0,0,0,0)', dentHi: 'rgba(0,0,0,0)', bevelHi: 'rgba(80,80,80,0.6)', bevelLo: 'rgba(80,80,80,0.6)', seam: '#e0e0e0', rivet: '#555555', rivetHi: '#3a3a3a', rivetLo: '#606060', rivetShadow: 'rgba(0,0,0,0)' }), false);
+			const bump = canvasTexture(S, S, paint({ base: 128, tone: false, tint: [0, 0, 0], dark: 'rgba(90,90,90,0.25)', light: 'rgba(170,170,170,0.25)', warm: 'rgba(128,128,128,0)', dentLo: 'rgba(60,60,60,0.5)', dentHi: 'rgba(190,190,190,0.4)', bevelHi: 'rgba(200,200,200,0.9)', bevelLo: 'rgba(60,60,60,0.9)', seam: '#000000', rivet: '#e0e0e0', rivetHi: '#ffffff', rivetLo: '#a0a0a0', rivetShadow: 'rgba(0,0,0,0)' }), false);
 			plates = { map, rough, bump };
 		}
-		const tile = (t) => { const c = t.clone(); c.wrapS = c.wrapT = THREE.RepeatWrapping; c.repeat.set(Math.max(1, Math.round(w / PLATE.w)), Math.max(1, Math.round(h / PLATE.h))); c.anisotropy = 8; c.needsUpdate = true; return c; };
-		return new THREE.MeshPhysicalMaterial({ color: 0xffffff, map: tile(plates.map), metalness: 0.85, roughness: 0.6, roughnessMap: tile(plates.rough), bumpMap: tile(plates.bump), bumpScale: 2.5, envMapIntensity: 1.3, clearcoat: 0.1, clearcoatRoughness: 0.35 });
+		const tile = (t) => { const c = t.clone(); c.wrapS = c.wrapT = THREE.RepeatWrapping; c.repeat.set(w / PLATE_TILE, h / PLATE_TILE); c.anisotropy = 8; c.needsUpdate = true; return c; };
+		return new THREE.MeshPhysicalMaterial({ color: 0xffffff, map: tile(plates.map), metalness: 0.72, roughness: 0.75, roughnessMap: tile(plates.rough), bumpMap: tile(plates.bump), bumpScale: 3, envMapIntensity: 1.2 });
 	}
 
 	function buildRoom() {
@@ -1423,21 +1452,20 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		sign.position.set(x, y, z);
 		sign.rotation.y = Math.PI / 2;   // (on the left wall, facing into the kitchen)
 		room.add(sign);
-		const lines = [{ text: 'FISSION', colour: '#9dff3a', h: 0.34, y: 0.2 }, { text: 'CHIPS', colour: '#ff2d9a', h: 0.27, y: -0.25 }];
-		const R = 0.013, GAP = 0.2;
-		let widest = 0;
+		// (one line: FISSION in green, CHIPS in pink, side by side, the user asked)
+		const H = 0.3, R = 0.013, GAP = 0.2, WORD = 0.7;
+		const words = [{ text: 'FISSION', colour: '#9dff3a' }, { text: 'CHIPS', colour: '#ff2d9a' }];
+		for (const wd of words) { wd.letters = [...wd.text].map(neonLetter); wd.width = wd.letters.reduce((a, l) => a + l.w * H, 0) + GAP * H * (wd.letters.length - 1); }
+		const widest = words.reduce((a, wd) => a + wd.width, 0) + WORD * H;
 		const halo = [];
-		for (const ln of lines) {
-			const glass = glowMat(new THREE.Color(ln.colour), 2.6);
-			const core = glowMat(new THREE.Color(ln.colour).lerp(new THREE.Color('#ffffff'), 0.55), 3.2);   // (the hot white-ish heart of the tube)
-			const letters = [...ln.text].map(neonLetter);
-			const width = letters.reduce((a, l) => a + l.w * ln.h, 0) + GAP * ln.h * (letters.length - 1);
-			widest = Math.max(widest, width);
-			let cx = -width / 2;
-			for (const l of letters) {
+		let cx = -widest / 2;
+		for (const wd of words) {
+			const glass = glowMat(new THREE.Color(wd.colour), 2.6);
+			const core = glowMat(new THREE.Color(wd.colour).lerp(new THREE.Color('#ffffff'), 0.55), 3.2);   // (the hot white-ish heart of the tube)
+			for (const l of wd.letters) {
 				for (const st of l.strokes) {
-					const pts = st.pts.map(([px, py]) => new THREE.Vector3(cx + px * ln.h, ln.y + (py - 0.5) * ln.h, 0.06));
-					halo.push({ pts, colour: ln.colour });
+					const pts = st.pts.map(([px, py]) => new THREE.Vector3(cx + px * H, (py - 0.5) * H + 0.03, 0.06));
+					halo.push({ pts, colour: wd.colour });
 					const path = new THREE.CurvePath();
 					for (let i = 1; i < pts.length; i++) path.add(new THREE.LineCurve3(pts[i - 1], pts[i]));
 					const segs = Math.max(8, pts.length * 3);
@@ -1449,11 +1477,12 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 						sl.rotation.x = Math.PI / 2;
 					}
 				}
-				cx += (l.w + GAP) * ln.h;
+				cx += (l.w + GAP) * H;
 			}
+			cx += (WORD - GAP) * H;
 		}
 		// the backing board, standoffs into the wall
-		const bw = widest + 0.3, bh = 0.95;
+		const bw = widest + 0.3, bh = 0.5;
 		mesh(BOX(bw, bh, 0.03), std(0x121016, 0.5, 0.3), sign, 0, -0.03, 0.0);
 		for (const sx of [-1, 1]) for (const sy of [-1, 1]) { const so = mesh(CYL(0.018, 0.018, 0.05, 10), MAT.steel, sign, sx * (bw / 2 - 0.08), -0.03 + sy * (bh / 2 - 0.08), -0.03); so.rotation.x = Math.PI / 2; }
 		// the halo: the tubes' light, blurred, on the board and the wall round it
@@ -2211,17 +2240,30 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		return mesh(geo, mat, parent);
 	}
 	// a mouth: a crescent, smiling (or frowning), set into the face
+	// A mouth: the dark inside, a hint of teeth along the top, and lips round it (fuller
+	// below) in the skin, flushed; the whole of it works when they talk.
 	function grin(parent, x, y, z, w, h, frown, mat) {
+		const mouth = new THREE.Group();
+		mouth.position.set(x, y, z);
+		if (frown) mouth.rotation.z = Math.PI;
+		parent.add(mouth);
 		const s = new THREE.Shape();
 		s.moveTo(-w / 2, 0);
 		s.quadraticCurveTo(0, -h * 2, w / 2, 0);
 		s.quadraticCurveTo(0, -h * 0.5, -w / 2, 0);
-		const m = slab(s, 0.02, Math.min(0.03, w * 0.08), mat || MOUTH, parent);
-		m.position.set(x, y, z);
-		if (frown) m.rotation.z = Math.PI;
-		if (partSink) partSink.mouths.push(m);   // (building a mutant: it talks with this)
-		return m;
+		slab(s, 0.02, Math.min(0.03, w * 0.08), mat || MOUTH, mouth);
+		const q = (y0, cy, n = 14) => Array.from({ length: n + 1 }, (_, i) => { const t = i / n, x0 = -w / 2 + w * t; return [x0 * 1.04, (1 - t) * (1 - t) * 0 + 2 * (1 - t) * t * cy + t * t * 0 + y0, 0.012 - Math.abs(t - 0.5) * 0.02]; });
+		const lipMat = partSink ? partSink.lip : MOUTH;
+		if (partSink) {
+			tube(mouth, q(0.004, -h * 0.5), Math.max(0.007, h * 0.28), Math.max(0.005, h * 0.2), lipMat, 8, 18);   // (the upper lip)
+			tube(mouth, q(-0.004, -h * 2.15), Math.max(0.009, h * 0.36), Math.max(0.005, h * 0.22), lipMat, 8, 18);   // (the lower, fuller)
+			for (let k = -2; k <= 2; k++) mesh(BOX(w * 0.1, h * 0.35, 0.01), TEETH, mouth, k * w * 0.11, -h * 0.55 - Math.abs(k) * h * 0.12, 0.006);
+		}
+		if (partSink) partSink.mouths.push(mouth);   // (building a mutant: it talks with this)
+		return mouth;
 	}
+	const TEETH = std(0xf2ead2, 0.3, 0, { clearcoat: 0.6 });
+	const NOSTRIL = std(0x2a0e12, 0.7, 0);
 	// a mouth's inside: dark, wet, a little red
 	const MOUTH = std(0x2a0a14, 0.25, 0, { clearcoat: 1, clearcoatRoughness: 0.1 });
 	let partSink = null;   // (while a mutant is built: where its eyes and mouths are listed)
@@ -2264,6 +2306,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// hands resting forward, a neck, and a head sculpted with a brow, cheekbones, sockets
 	// and a chin, a nose and ears. Then each kind mutates it.
 	const CLOTH = (hex, rough = 0.75) => std(hex, rough, 0);
+	const BUTTON = std(0xe8dcc0, 0.3, 0.1, { clearcoat: 0.8 });
 	// a human head: o = { w (width), long (taller), lumps, sockets (false: no eye sockets), nose, ears }
 	function humanHead(parent, skin, o = {}) {
 		const w = o.w || 1, long = o.long || 1;
@@ -2275,6 +2318,9 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			if (o.sockets !== false) d -= 0.03 * gauss(ax - 0.085, 0.045) * gauss(p.y - 0.02, 0.04) * front;   // (eye sockets)
 			d += 0.02 * gauss(p.y + 0.27, 0.05) * gauss(p.x, 0.07) * front;   // (the chin)
 			d -= 0.015 * gauss(ax - 0.2, 0.06) * gauss(p.y + 0.18, 0.08);   // (the jaw's hollow)
+			d -= 0.008 * gauss(ax - 0.06 - (p.y + 0.1) * -0.35, 0.012) * gauss(p.y + 0.12, 0.06) * front;   // (the folds from nose to mouth)
+			d += 0.01 * gauss(p.y + 0.215, 0.025) * gauss(p.x, 0.05) * front;   // (the dip and swell under the lip)
+			d -= 0.008 * gauss(ax - 0.215, 0.03) * gauss(p.y - 0.1, 0.06);   // (the temples)
 			if (o.lumps) d += lumpy(p, 3) * 0.012 * o.lumps;
 			return d;
 		});
@@ -2283,10 +2329,28 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		if (o.nose !== false) {
 			const nose = mesh(superBox(0.055, 0.11, 0.075, 0.55, 0.35, 0.5, 24), skin, parent, 0, -0.06, 0.245);
 			nose.rotation.x = -0.28;
+			for (const s of [-1, 1]) mesh(SPH(0.0095, 8), NOSTRIL, parent, s * 0.016, -0.108, 0.268).scale.set(1.3, 0.7, 1);   // (nostrils)
+			for (const s of [-1, 1]) mesh(SPH(0.02, 12), skin, parent, s * 0.03, -0.098, 0.252);   // (the wings of the nose)
 		}
 		if (o.ears !== false) for (const s of [-1, 1]) {
 			const ear = mesh(superBox(0.035, 0.11, 0.075, 0.6, 0.5, 0.5, 20), skin, parent, s * 0.235 * w, 0, -0.01);
 			ear.rotation.y = s * 0.35;
+			const inner = mesh(superBox(0.012, 0.07, 0.04, 0.6, 0.5, 0.5, 14), NOSTRIL, parent, s * (0.235 * w + 0.016), 0.005, 0.0);
+			inner.rotation.y = s * 0.35;
+		}
+		// the eyebrows: arched strokes of hair over the eyes (one across for a single eye)
+		if (o.brows !== false && partSink) {
+			const hair = partSink.hairMat;
+			const sides = o.unibrow ? [0] : [-1, 1];
+			for (const s of sides) {
+				const b = new THREE.Group();
+				b.position.set(s * 0.088, 0.105, 0.232);
+				parent.add(b);
+				const span = o.unibrow ? 0.14 : 0.06;
+				tube(b, [[-span, -0.008, -0.01], [-span * 0.3, 0.006, 0.004], [span * 0.4, 0.006, 0.004], [span, -0.01, -0.012]], 0.012, 0.007, hair, 8, 14);
+				b.userData.side = s || 1;
+				partSink.brows.push({ g: b, side: s, y: b.position.y });
+			}
 		}
 		return h;
 	}
@@ -2294,18 +2358,49 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// resting forward (sleeves in the cloth unless bare). Returns the shoulder points.
 	function humanBody(g, skin, cloth, o = {}) {
 		const sh = o.shoulders || 0.4, belly = o.belly || 0;
-		const torso = mesh(sculpt(lathe([[0, 0.35], [0.34, 0.37], [0.37 + belly * 0.5, 0.7], [0.35 + belly * 0.3, 0.98], [sh + 0.02, 1.3], [sh - 0.04, 1.45], [0.15, 1.55], [0, 1.56]], 40, 36),
-			(p, n) => belly * 0.12 * Math.exp(-Math.pow(p.y - 0.8, 2) / 0.04) * Math.max(0, n.z)), cloth, g);
+		const gauss = (a, sd) => Math.exp(-(a * a) / (sd * sd));
+		const torso = mesh(sculpt(lathe([[0, 0.35], [0.34, 0.37], [0.36 + belly * 0.5, 0.7], [0.33 + belly * 0.3, 0.92], [0.36 + belly * 0.2, 1.1], [sh + 0.02, 1.3], [sh - 0.04, 1.45], [0.15, 1.55], [0, 1.56]], 44, 40),
+			(p, n) => {
+				const front = Math.max(0, n.z), back = Math.max(0, -n.z), ax = Math.abs(p.x);
+				let d = belly * 0.12 * gauss(p.y - 0.8, 0.2) * front;
+				if (!o.bare || belly < 0.5) d += 0.03 * gauss(ax - 0.14, 0.08) * gauss(p.y - 1.24, 0.08) * front;   // (the chest)
+				d += 0.02 * gauss(ax - 0.15, 0.08) * gauss(p.y - 1.28, 0.1) * back;   // (shoulder blades)
+				d -= 0.012 * gauss(p.x, 0.02) * gauss(p.y - 1.25, 0.12) * back;   // (the spine)
+				if (!o.bare) d += lumpy(p, 5) * 0.004;   // (the cloth's creases)
+				return d;
+			}), cloth, g);
 		torso.scale.z = 0.66;
-		mesh(CYL(0.095, 0.115, 0.24, 20), skin, g, 0, 1.62, 0.01);
+		// the neck, set into the shoulders; a collar round it in the cloth
+		mesh(lathe([[0.125, 0], [0.11, 0.08], [0.098, 0.18], [0.1, 0.25]], 24, 10), skin, g, 0, 1.5, 0.01);
+		if (!o.bare) {
+			const collar = mesh(new THREE.TorusGeometry(0.125, 0.026, 10, 28), cloth, g, 0, 1.54, 0.01);
+			collar.rotation.x = Math.PI / 2 - 0.15;
+			collar.scale.set(1, 0.85, 1);
+		}
+		// buttons down the front (on the slimmer ones)
+		if (!o.bare && belly < 0.3 && o.buttons !== false) for (let k = 0; k < 4; k++) {
+			const b = mesh(CYL(0.016, 0.016, 0.012, 12), BUTTON, g, 0, 1.18 - k * 0.15, 0.238 + (k > 1 ? -0.008 : 0));
+			b.rotation.x = Math.PI / 2;
+		}
 		if (o.arms !== false) for (const s of [-1, 1]) {
 			const sleeve = o.bare ? skin : cloth;
+			// a round shoulder, the upper arm, the forearm out toward the counter, a cuff
+			mesh(SPH(0.11, 20), sleeve, g, s * (sh - 0.04), 1.38, 0).scale.set(1, 0.85, 0.95);
 			tube(g, [[s * (sh - 0.02), 1.4, 0], [s * (sh + 0.1), 1.12, 0.06], [s * (sh + 0.1), 1.0, 0.16]], 0.088, 0.072, sleeve, 14, 20);
-			tube(g, [[s * (sh + 0.1), 1.0, 0.16], [s * (sh - 0.02), 0.95, 0.32], [s * (sh - 0.1), 0.94, 0.44]], 0.068, 0.055, o.bareForearm || o.bare ? skin : sleeve, 14, 18);
-			const hand = mesh(superBox(0.1, 0.055, 0.13, 0.5, 0.4, 0.5, 20), skin, g, s * (sh - 0.12), 0.93, 0.5);
+			const fore = o.bareForearm || o.bare ? skin : sleeve;
+			tube(g, [[s * (sh + 0.1), 1.0, 0.16], [s * (sh - 0.02), 0.95, 0.32], [s * (sh - 0.1), 0.94, 0.44]], 0.068, 0.055, fore, 14, 18);
+			if (!o.bare && !o.bareForearm) { const cuff = mesh(new THREE.TorusGeometry(0.056, 0.012, 8, 20), sleeve, g, s * (sh - 0.1), 0.94, 0.44); cuff.lookAt(g.localToWorld(new THREE.Vector3(s * (sh - 0.2), 0.94, 0.56))); }
+			// the hand: a palm resting on the counter's edge, four fingers curled over it, a thumb
+			const hand = new THREE.Group();
+			hand.position.set(s * (sh - 0.12), 0.925, 0.49);
 			hand.rotation.y = -s * 0.3;
-			const thumb = mesh(superBox(0.03, 0.03, 0.06, 0.6, 0.6, 0.6, 12), skin, g, s * (sh - 0.17), 0.95, 0.47);
-			thumb.rotation.y = -s * 0.8;
+			g.add(hand);
+			mesh(superBox(0.09, 0.034, 0.09, 0.5, 0.4, 0.5, 18), skin, hand, 0, 0, 0);
+			for (let f = 0; f < 4; f++) {
+				const fx = (f - 1.5) * 0.022, lenK = [0.85, 1, 0.95, 0.75][f];
+				tube(hand, [[fx, 0.004, 0.035], [fx, 0.004, 0.035 + 0.04 * lenK], [fx, -0.012, 0.035 + 0.062 * lenK], [fx, -0.034, 0.035 + 0.07 * lenK]], 0.0115, 0.0085, skin, 8, 12);
+			}
+			tube(hand, [[-s * 0.04, 0, 0.0], [-s * 0.065, 0.004, 0.03], [-s * 0.072, -0.004, 0.06]], 0.013, 0.009, skin, 8, 10);
 		}
 		return torso;
 	}
@@ -2369,7 +2464,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			const head = new THREE.Group();
 			head.position.set(0, 1.9, 0.02);
 			g.add(head);
-			humanHead(head, skin, { sockets: false, long: 1.05 });
+			humanHead(head, skin, { sockets: false, long: 1.05, unibrow: true });
 			const socket = mesh(SPH(0.12, 24), std(0x2a1020, 0.6, 0), head, 0, 0.03, 0.17);
 			socket.scale.set(1, 0.85, 0.5);
 			eyeBall(head, 0, 0.03, 0.17, 0.11, skin, 0.45);
@@ -2418,7 +2513,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			const head = new THREE.Group();
 			head.position.set(0, 1.88, 0.05);
 			g.add(head);
-			humanHead(head, skin, { nose: false, sockets: false, ears: false, w: 1.05 });
+			humanHead(head, skin, { nose: false, sockets: false, ears: false, w: 1.05, brows: false });
 			eyeBall(head, -0.13, 0.04, 0.17, 0.05, skin, 0.35);
 			eyeBall(head, 0.13, 0.04, 0.17, 0.05, skin, 0.35);
 			tube(head, [[0, -0.02, 0.22], [0, -0.05, 0.33], [0, -0.12, 0.41]], 0.07, 0.012, std(0xe8a83c, 0.35, 0), 14, 18);
@@ -2440,7 +2535,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			head.position.set(0, 1.93, 0.02);
 			head.scale.setScalar(1.18);
 			kid.add(head);
-			humanHead(head, skin, { nose: false, ears: false });
+			humanHead(head, skin, { nose: false, ears: false, brows: false });
 			const socket = new THREE.Shape();
 			socket.absellipse(0, 0, 0.05, 0.042, 0, Math.PI * 2);
 			for (const x of [-0.085, 0.085]) {
@@ -2538,14 +2633,14 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	}
 	// Each kind's skin: how wet it is, the colour its veins glow and its irises.
 	const SKIN = {
-		blob: { wet: 1, glow: '#b8ff6a', iris: '#ffd23a' },
-		cyclops: { wet: 0.25, glow: '#b07aff', iris: '#3af2ff' },
-		mold: { wet: 0.7, glow: '#e9ff4a', iris: '#ff3ad8' },
-		pigeon: { wet: 0, glow: '#6ab8ff', iris: '#ff7a1a' },
+		blob: { wet: 1, glow: '#b8ff6a', iris: '#ffd23a', hair: '#3a3020' },
+		cyclops: { wet: 0.25, glow: '#b07aff', iris: '#3af2ff', hair: '#d8d0c0' },
+		mold: { wet: 0.7, glow: '#e9ff4a', iris: '#ff3ad8', hair: '#5a4a2a' },
+		pigeon: { wet: 0, glow: '#6ab8ff', iris: '#ff7a1a', hair: '#5a6070' },
 		skull: { wet: 0.3, glow: '#9dff3a', iris: '#9dff3a' },
-		squid: { wet: 1, glow: '#ff6ac8', iris: '#7aff3a' },
-		fungus: { wet: 0.15, glow: '#ffb03a', iris: '#ffb03a' },
-		overlord: { wet: 0.5, glow: '#ff2d8f', iris: '#ff2d8f' },
+		squid: { wet: 1, glow: '#ff6ac8', iris: '#7aff3a', hair: '#8a3a5a' },
+		fungus: { wet: 0.15, glow: '#ffb03a', iris: '#ffb03a', hair: '#e8c070' },
+		overlord: { wet: 0.5, glow: '#ff2d8f', iris: '#ff2d8f', hair: '#3a2a1a' },
 	};
 	// Mutant skin, painted: the colour mottled in big soft patches, freckled and pored, with
 	// veins branching across it; the veins glow (the emissive map) in the kind's colour.
@@ -2601,11 +2696,14 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	function buildMutant(type) {
 		const g = new THREE.Group();
 		const skin = skinMat(type);
-		const m = { g, skin, eyes: [], mouths: [], iris: (SKIN[type.id] || {}).iris || '#ffb21f', blink: 1 + Math.random() * 3 };
+		const lip = skin.clone();
+		lip.color.set(0xd48a8a);
+		lip.emissiveIntensity = 0;
+		const m = { g, skin, lip, hairMat: std((SKIN[type.id] || {}).hair || '#2a1a14', 0.8, 0), eyes: [], mouths: [], brows: [], iris: (SKIN[type.id] || {}).iris || '#ffb21f', blink: 1 + Math.random() * 3 };
 		partSink = m;
 		try { MUTANT_3D[type.id](g, skin, m); } finally { partSink = null; }
 		// cloth and the like: a soft sheen on the matte things they wear (their own materials only)
-		const shared = new Set(Object.values(MAT).concat([EYE_WHITE, PUPIL, MOUTH, skin]));
+		const shared = new Set(Object.values(MAT).concat([EYE_WHITE, PUPIL, MOUTH, TEETH, NOSTRIL, BUTTON, skin, lip]));
 		g.traverse((o) => {
 			const mt = o.material;
 			if (!o.isMesh || !mt || shared.has(mt) || !mt.isMeshPhysicalMaterial || mt.emissiveMap || mt.metalness > 0.4 || mt.transparent) return;
@@ -3159,8 +3257,14 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 				e.look.rotation.x = lerp(e.look.rotation.x, -pitchOff, Math.min(1, dt * 6));
 				if (e.lid) e.lid.rotation.x = lerp(e.lid.rotation.x, shut ? 1.5 : angry ? e.open + 0.55 : panic ? e.open - 0.25 : e.open, Math.min(1, dt * (shut ? 40 : 12)));
 			}
-			// the mouth: working while they talk
 			const talking = c.sayT > 0 && c.state !== 'leave';
+			// the eyebrows: knitted down and in when cross, shot up in a panic, lifting as they talk
+			for (const b of m.brows) {
+				const s2 = b.side || 1;
+				b.g.rotation.z = lerp(b.g.rotation.z, angry ? -s2 * 0.4 : panic ? s2 * 0.25 : 0, Math.min(1, dt * 10));
+				b.g.position.y = lerp(b.g.position.y, b.y + (angry ? -0.014 : panic ? 0.02 : talking ? Math.abs(Math.sin(rt * 7 + c.seed)) * 0.008 : 0), Math.min(1, dt * 10));
+			}
+			// the mouth: working while they talk
 			for (const mo of m.mouths) mo.scale.y = lerp(mo.scale.y, talking ? 0.6 + Math.abs(Math.sin(rt * 15 + c.seed)) * 1.4 : angry ? 0.7 : 1, Math.min(1, dt * 18));
 			if (m.heads) m.heads.forEach((h, j) => { h.rotation.z = (j ? 0.16 : -0.16) + Math.sin(rt * 2.2 + j * 2) * 0.08; h.position.y = 1.75 + Math.sin(rt * 3 + j * 2) * 0.03; });
 			if (m.head) { m.head.position.z = 0.05 + Math.max(0, Math.sin(rt * 6)) * 0.06; }   // (the pigeon's head, bobbing)
