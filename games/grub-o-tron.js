@@ -970,7 +970,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	scene.background = new THREE.Color(0x07040e);
 	post = createWallComposer(renderer, scene, { strength: 0.32, radius: 0.4, threshold: 1.0, cap: 1.6, fxaa: true });   // (a little glow on the neon, no more; FXAA, not multisampling: far quicker)
 	// what the shiny plastic reflects: a bright candy-coloured room, a strip light overhead
-	const envTex = environmentFromShader(renderer, `
+	const ENV_SHADER = `
 		vec3 envColor(vec3 d) {
 			float up = d.y * 0.5 + 0.5;
 			vec3 c = mix(vec3(0.55, 0.42, 0.62), vec3(0.72, 0.84, 1.0), up);
@@ -979,7 +979,8 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			c += vec3(1.0, 0.98, 0.95) * pow(max(0.0, d.y), 16.0) * 2.0;
 			return c * 0.8;
 		}
-	`);
+	`;
+	const envTex = environmentFromShader(renderer, ENV_SHADER);
 	scene.environment = envTex;
 	scene.environmentIntensity = 0.35;
 
@@ -2246,20 +2247,35 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// head with one big ringed camera eye, a boxy torso, servo hips and knees,
 	// chunky feet. The accents are the player's colour. A plate rides flat on top
 	// of the head; what they're carrying sits on it. They walk where their player walks.
-	const LEG = 0.12;   // thigh and shin length (stubby)
-	// their size: small (the user asked twice); the head sits a little under the counter top on screen
-	const BOT_SCALE = 0.8;
-	const STEP = 0.2;   // one step's length (before scaling)
-	const NECK_TILT = 0.18;   // the neck leans forward a touch; the head is set back upright on it
-	const HIP_Y = 0.12 + LEG * 2;   // hip height standing (feet 0.12 tall at the ankle)
+	// The robot's tuning: its proportions, its walk and its finish. The ROBOT LAB (debug panel,
+	// or ?lab in the URL) edits these, keeps them in this browser (and the game uses them
+	// here too) and copies them as JSON: paste that in here to bake them in.
+	const ROBOT_TUNED = {
+		scale: 0.8,       // the whole robot (small: the user asked twice; the head a little under the counter top on screen)
+		leg: 0.12,        // thigh and shin length (stubby)
+		head: 1, torso: 1, eye: 1, plate: 1,   // sizes of the parts
+		neckTilt: 0.18,   // the neck leans forward a touch; the head is set back upright on it
+		step: 0.2,        // one step's length (before scaling)
+		knee: 1.15,       // how far a knee folds through a swing
+		lift: 0.15,       // how far a thigh lifts through a swing
+		reach: 1,         // how far the legs swing (1: a step's worth)
+		sway: 1, twist: 1, lean: 1,   // the hips' side to side and turn with each step; leaning into a walk
+		rust: 1,          // how much rust (0: none, 2: lots)
+		gloss: 1,         // the clear coat (0: none, 1: mirror)
+		metal: 0.35,      // how metallic the paint is
+		trim: 0.55,       // the trim's shade of the colour (1: the same, lower: deeper)
+	};
+	const LAB_KEY = 'fission-robot-lab';
+	const RB = Object.assign({}, ROBOT_TUNED, (function () { try { return JSON.parse(localStorage.getItem(LAB_KEY)) || {}; } catch { return {}; } })());
+	const hipY = () => 0.12 + RB.leg * 2;   // hip height standing (feet 0.12 tall at the ankle)
 	// Shiny paint in the player's colour, rusting through: blotches of rust with drips running
 	// down from them, and pitting. Three maps share the one pattern: the colour, how rough
 	// it is (the paint glossy, the rust dull) and where the clear coat is (none on the rust).
 	function rustyPaint(col, seed) {
 		const rnd = seeded(seed);
 		const spots = [];
-		for (let k = 0; k < 9; k++) spots.push({ x: rnd(), y: rnd(), r: 0.04 + rnd() * 0.1, bits: Array.from({ length: 14 }, () => [rnd() - 0.5, rnd() - 0.5, 0.25 + rnd() * 0.6]), drip: rnd() < 0.7 ? 0.1 + rnd() * 0.35 : 0 });
-		const pits = Array.from({ length: 220 }, () => [rnd(), rnd(), 0.5 + rnd() * 1.6]);
+		for (let k = 0; k < Math.round(9 * RB.rust); k++) spots.push({ x: rnd(), y: rnd(), r: 0.04 + rnd() * 0.1, bits: Array.from({ length: 14 }, () => [rnd() - 0.5, rnd() - 0.5, 0.25 + rnd() * 0.6]), drip: rnd() < 0.7 ? 0.1 + rnd() * 0.35 : 0 });
+		const pits = Array.from({ length: Math.round(220 * RB.rust) }, () => [rnd(), rnd(), 0.5 + rnd() * 1.6]);
 		const S = 256;
 		const pattern = (c, base, rust, edge) => {
 			c.fillStyle = base;
@@ -2294,7 +2310,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		const rough = canvasTexture(S, S, (c) => pattern(c, '#262626', '#f0f0f0', '#b8b8b8'), false);
 		const coat = canvasTexture(S, S, (c) => pattern(c, '#ffffff', '#000000', '#303030'), false);
 		for (const t of [map, rough, coat]) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; }
-		return new THREE.MeshPhysicalMaterial({ color: 0xffffff, map, roughness: 1, roughnessMap: rough, metalness: 0.35, clearcoat: 1, clearcoatMap: coat, clearcoatRoughness: 0.05, envMapIntensity: 1.6 });
+		return new THREE.MeshPhysicalMaterial({ color: 0xffffff, map, roughness: 1, roughnessMap: rough, metalness: RB.metal, clearcoat: RB.gloss, clearcoatMap: coat, clearcoatRoughness: 0.05 + (1 - RB.gloss) * 0.3, envMapIntensity: 1.6 });
 	}
 
 	// A moulded block: a superellipsoid, boxy round the sides and as round on top (eTop) or
@@ -2318,7 +2334,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		const g = new THREE.Group();
 		const p = { g };
 		const shell = rustyPaint(col, 17 + n * 31);   // (once white plastic: now their colour, glossy and rusting)
-		const trim = std(col.clone().multiplyScalar(0.55), 0.18, 0.35, { clearcoat: 1, clearcoatRoughness: 0.04 });   // (a deeper shade of it)
+		const trim = std(col.clone().multiplyScalar(RB.trim), 0.18, 0.35, { clearcoat: 1, clearcoatRoughness: 0.04 });   // (a deeper shade of it)
 		const servo = std(0x17161c, 0.32, 0.35, { clearcoat: 0.4, clearcoatRoughness: 0.25 });   // (black servo cases, a little sheen)
 		const servoCap = std(0x2a2932, 0.45, 0.2);
 		const horn = std(0xb4bac4, 0.22, 0.9);
@@ -2357,7 +2373,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 		// the hips: a servo chassis (p.hips rises and falls with the gait; the legs hang from it)
 		const hips = new THREE.Group();
-		hips.position.y = HIP_Y;
+		hips.position.y = hipY();
 		g.add(hips);
 		p.hips = hips;
 		B(0.26, 0.085, 0.15, servo, hips, 0, 0.025, 0);
@@ -2368,16 +2384,16 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			const hip = new THREE.Group();
 			hip.position.set(s * 0.085, -0.01, 0);
 			hips.add(hip);
-			servoBlock(hip, 0.07, LEG + 0.03, 0.085, 0, -LEG / 2 + 0.005, 0, s);
+			servoBlock(hip, 0.07, RB.leg + 0.03, 0.085, 0, -RB.leg / 2 + 0.005, 0, s);
 			const knee = new THREE.Group();
-			knee.position.y = -LEG;
+			knee.position.y = -RB.leg;
 			hip.add(knee);
 			const cap = mesh(superBox(0.1, 0.11, 0.07, 0.5, 0.35, 0.35, 28), shell, knee, s * 0.008, 0.012, 0.045);
 			cap.rotation.x = -0.15;
 			mesh(CYL(0.007, 0.007, 0.01, 10), screw, knee, s * 0.008, 0.02, 0.083).rotation.x = Math.PI / 2;
-			servoBlock(knee, 0.062, LEG, 0.075, 0, -LEG / 2, -0.005, -s);
+			servoBlock(knee, 0.062, RB.leg, 0.075, 0, -RB.leg / 2, -0.005, -s);
 			const ankle = new THREE.Group();
-			ankle.position.y = -LEG;
+			ankle.position.y = -RB.leg;
 			knee.add(ankle);
 			const ah = mesh(CYL(0.028, 0.028, 0.08, 20), horn, ankle);
 			ah.rotation.z = Math.PI / 2;
@@ -2395,24 +2411,27 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		hips.add(upper);
 		p.upper = upper;
 		// the torso: a moulded shell, a grille and a status light on its chest, screws, side vents
-		mesh(superBox(0.28, 0.2, 0.22, 0.38, 0.25, 0.3, 36), shell, upper, 0, 0.11, 0);
+		const body = new THREE.Group();
+		body.scale.setScalar(RB.torso);
+		upper.add(body);
+		mesh(superBox(0.28, 0.2, 0.22, 0.38, 0.25, 0.3, 36), shell, body, 0, 0.11, 0);
 		const chest = new THREE.Group();
 		chest.position.set(0, 0.11, 0.108);
-		upper.add(chest);
+		body.add(chest);
 		B(0.15, 0.1, 0.02, servo, chest, -0.02, 0, 0, 0.3);
 		for (let k = 0; k < 3; k++) B(0.1, 0.012, 0.012, servoCap, chest, -0.035, 0.03 - k * 0.028, 0.011, 0.5);
 		p.led = mesh(SPH(0.013, 12), glowCol.clone(), chest, 0.045, 0.025, 0.012);
 		screws(chest, 0.2, 0.15, 0, 0, 0.004);
-		for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) B(0.012, 0.012, 0.11, servo, upper, sx * 0.14, 0.15 - k * 0.03, -0.01, 0.5);
-		servoBlock(upper, 0.08, 0.1, 0.09, 0.07, 0.2, -0.04, 1);
+		for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) B(0.012, 0.012, 0.11, servo, body, sx * 0.14, 0.15 - k * 0.03, -0.01, 0.5);
+		servoBlock(body, 0.08, 0.1, 0.09, 0.07, 0.2, -0.04, 1);
 		// a loom of wires round the back, from the neck down into the hips
-		tube(upper, [[-0.05, 0.25, -0.06], [-0.11, 0.18, -0.12], [-0.12, 0.05, -0.1], [-0.08, -0.04, -0.06]], 0.007, 0.007, wire, 6, 18);
-		tube(upper, [[-0.04, 0.25, -0.05], [-0.09, 0.17, -0.13], [-0.1, 0.06, -0.12], [-0.06, -0.04, -0.07]], 0.006, 0.006, trim, 6, 18);
+		tube(body, [[-0.05, 0.25, -0.06], [-0.11, 0.18, -0.12], [-0.12, 0.05, -0.1], [-0.08, -0.04, -0.06]], 0.007, 0.007, wire, 6, 18);
+		tube(body, [[-0.04, 0.25, -0.05], [-0.09, 0.17, -0.13], [-0.1, 0.06, -0.12], [-0.06, -0.04, -0.07]], 0.006, 0.006, trim, 6, 18);
 
 		// the neck: two servo blocks with a cable loop, leaning forward a touch
 		const neck = new THREE.Group();
-		neck.position.set(0, 0.215, 0.03);
-		neck.rotation.x = NECK_TILT;
+		neck.position.set(0, 0.215 * RB.torso, 0.03);
+		neck.rotation.x = RB.neckTilt;
 		upper.add(neck);
 		servoBlock(neck, 0.065, 0.1, 0.075, 0, 0.05, 0, 1);
 		servoBlock(neck, 0.06, 0.08, 0.07, 0, 0.13, 0.005, -1);
@@ -2423,6 +2442,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		const head = new THREE.Group();
 		head.position.set(0, 0.185, 0.02);
 		neck.add(head);
+		head.scale.setScalar(RB.head);
 		p.head = head;
 		mesh(superBox(0.42, 0.26, 0.44, 0.62, 0.18, 0.32, 48), shell, head, 0, 0.14, 0);
 		mesh(superBox(0.44, 0.04, 0.46, 0.2, 0.2, 0.32, 40), trim, head, 0, 0.02, 0);
@@ -2447,6 +2467,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		// dark glass with a glowing iris deep inside and a glint across it
 		const eye = new THREE.Group();
 		eye.position.set(0.07, 0.115, 0.232);
+		eye.scale.setScalar(RB.eye);
 		head.add(eye);
 		const barrel = mesh(CYL(0.062, 0.066, 0.045, 36), servo, eye, 0, 0, 0.01);
 		barrel.rotation.x = Math.PI / 2;
@@ -2462,6 +2483,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		// the plate: clamped flat on top of the head on a little servo mount
 		const plate = new THREE.Group();
 		plate.position.set(0, 0.29, 0);
+		plate.scale.setScalar(RB.plate);
 		head.add(plate);
 		p.plate = plate;
 		B(0.07, 0.03, 0.07, servo, plate, 0, -0.012, 0, 0.3);
@@ -2478,10 +2500,80 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		shadows(g);
 		p.glow.castShadow = false;
 		dark.castShadow = false;
-		g.scale.setScalar(BOT_SCALE);
+		g.scale.setScalar(RB.scale);
 		p.phase = Math.random() * 6;
 		p.stride = 0;
 		return p;
+	}
+
+	// A robot's body for a moment: its walk (the legs turning over with the ground covered),
+	// a pose for what it's doing, its head held upright, its eye and chest light. The game
+	// and the ROBOT LAB both drive it. o: { dt, time, clock (real seconds), i, speed (m/s),
+	// held, act ({ kind, t }), working (a station's kind, or null), onStep(k) }.
+	function animateBot(m, o) {
+		const { dt, time, i, speed } = o;
+		// walking: the legs turn over with the ground covered (half a cycle a step), so the
+		// feet plant instead of sliding; the stride opens up as they get going
+		m.stride = lerp(m.stride, clamp(speed / 0.8, 0, 1), 1 - Math.exp(-dt * 12));
+		m.phase += Math.min(Math.PI * speed * dt / (RB.step * RB.scale), 32 * dt);
+		if (m.stride < 0.05) m.phase = Math.round(m.phase / Math.PI) * Math.PI;   // (stopped: feet together)
+		// a footstep each time a foot comes down (its phase passing a quarter turn), once moving
+		const plant = Math.floor((m.phase - Math.PI / 2) / Math.PI);
+		if (m.plant !== undefined && plant !== m.plant && m.stride > 0.15 && o.onStep) o.onStep(m.stride);
+		m.plant = plant;
+		const st = m.stride, ph = m.phase;
+		// a pose for what they're doing: lean in, dip the head, squat, shake
+		let lean = (0.04 + st * 0.12) * RB.lean, nod = 0, squat = 0, shake = 0;
+		if (o.held) nod -= 0.04;   // (head up, carefully: there's food on it)
+		if (o.working === 'stir') { lean = 0.25; shake = Math.sin(time * 8) * 0.12; }
+		const a = o.act;
+		if (a) {
+			const u = clamp(a.t / ACT_TIME, 0, 1), pulse = Math.sin(u * Math.PI);
+			if (a.kind === 'chop') { lean = 0.3; nod = Math.abs(Math.sin(u * Math.PI * 3)) * 0.45; }
+			else if (a.kind === 'grab' || a.kind === 'take' || a.kind === 'put' || a.kind === 'serve') { lean = lerp(lean, 0.38, pulse); nod = 0.35 * pulse; squat = 0.06 * pulse; }
+			else if (a.kind === 'bin') { lean = lerp(lean, 0.5, pulse); nod = 0.5 * pulse; }
+			else if (a.kind === 'flip' || a.kind === 'jab') { lean = 0.25; nod = 0.4 * pulse; }
+			else if (a.kind === 'pump') { squat = 0.12 * pulse; }
+			else if (a.kind === 'douse') { lean = 0.2; shake = Math.sin(a.t * 40) * 0.2; }
+		}
+		// each leg: sin(q) is where its foot is (back -1 .. forward +1); while cos(q) > 0 it's
+		// swinging forward through the air, knee folding up to clear the floor, then reaching
+		// out nearly straight to plant; on the ground it stays straight and pushes back
+		const LEG = RB.leg;
+		const th = Math.acos(clamp(1 - squat / (2 * LEG), -1, 1));   // (knees bent for a squat)
+		const reach = Math.asin(clamp(RB.step / (4 * LEG), 0, 0.9)) * st * RB.reach;   // (the hip's swing either way)
+		let lowest = 0;
+		for (let j = 0; j < 2; j++) {
+			const L = m.legs[j], q = ph + j * Math.PI, air = Math.max(0, Math.cos(q));
+			const hf = th + reach * Math.sin(q) + air * RB.lift * st;                // (thigh, forward of straight down)
+			const kf = 2 * th + 0.08 * st + Math.pow(air, 1.5) * RB.knee * st;      // (knee, folded back)
+			L.hip.rotation.x = -hf;
+			L.knee.rotation.x = kf;
+			L.ankle.rotation.x = hf - kf - air * 0.25 * st * Math.sin(q);           // (foot level; toes down as it lifts)
+			lowest = Math.max(lowest, LEG * Math.cos(hf) + LEG * Math.cos(hf - kf));
+		}
+		// the hips ride on whichever leg is down, so they bob as it straightens under them
+		m.hips.position.y = 0.12 + lowest + Math.sin(time * 2.4) * 0.004 * (1 - st);
+		m.hips.rotation.z = Math.sin(ph) * 0.07 * st * RB.sway + shake * 0.3;
+		m.hips.rotation.y = Math.sin(ph) * 0.12 * st * RB.twist;   // (a little twist with each step)
+		const ease = Math.min(1, dt * 14);
+		m.upper.rotation.x = lerp(m.upper.rotation.x, lean, ease);
+		m.upper.rotation.z = lerp(m.upper.rotation.z, -Math.sin(ph) * 0.05 * st * RB.sway + shake, ease);
+		// the head sits upright whatever the body's doing (it only tips for a nod): it takes
+		// back the neck's forward set, the lean, and the hips' and body's sway
+		m.head.rotation.x = lerp(m.head.rotation.x, nod - m.upper.rotation.x - RB.neckTilt, ease);
+		m.head.rotation.z = -(m.upper.rotation.z + m.hips.rotation.z);
+		// (turning, the head lags a beat behind the body, then catches up)
+		const yawRate = m.prevYaw === undefined ? 0 : Math.atan2(Math.sin(m.yaw - m.prevYaw), Math.cos(m.yaw - m.prevYaw)) / Math.max(dt, 0.001);
+		m.prevYaw = m.yaw;
+		m.headLag = lerp(m.headLag || 0, clamp(-yawRate * 0.07, -0.5, 0.5), Math.min(1, dt * 8));
+		m.headLook = lerp(m.headLook || 0, st > 0.2 ? 0 : Math.sin(time * 0.7 + i) * 0.25, Math.min(1, dt * 3));
+		m.head.rotation.y = m.headLook + m.headLag;
+		// the chest light breathes; the iris opens wide while they're busy
+		m.led.scale.setScalar(0.75 + 0.35 * (0.5 + 0.5 * Math.sin(o.clock * 3 + i * 1.7)));
+		const wide = a || o.working ? 1.35 : o.held ? 1.1 : 1;
+		m.iris.scale.setScalar(lerp(m.iris.scale.x, wide, Math.min(1, dt * 8)));
+		m.eyes.forEach((e) => { e.scale.y = (o.clock + i * 0.7) % 3.5 < 0.12 ? 0.2 : 1; });
 	}
 
 	/* ---------- 3D: portals, the manager, particles ---------- */
@@ -2738,68 +2830,11 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			const want = speed > 0.35 ? Math.atan2(m.vx, m.vz) : wallYaw + (m.side || 1) * 0.75;
 			m.yaw = m.yaw === undefined ? want : m.yaw + Math.atan2(Math.sin(want - m.yaw), Math.cos(want - m.yaw)) * (1 - Math.exp(-dt * (m.hop && m.hop.u < 1 ? 14 : 7)));
 			m.g.rotation.y = m.yaw;
-			// walking: the legs turn over with the ground covered (half a cycle a step), so the
-			// feet plant instead of sliding; the stride opens up as they get going
-			m.stride = lerp(m.stride, clamp(speed / 0.8, 0, 1), 1 - Math.exp(-dt * 12));
-			m.phase += Math.min(Math.PI * speed * dt / (STEP * BOT_SCALE), 32 * dt);
-			if (m.stride < 0.05) m.phase = Math.round(m.phase / Math.PI) * Math.PI;   // (stopped: feet together)
-			// a footstep each time a foot comes down (its phase passing a quarter turn), once moving
-			const plant = Math.floor((m.phase - Math.PI / 2) / Math.PI);
-			if (m.plant !== undefined && plant !== m.plant && m.stride > 0.15 && phase !== 'off') footstep(i, wallNow, m.stride);
-			m.plant = plant;
-			const st = m.stride, ph = m.phase;
-			// a pose for what they're doing: lean in, dip the head, squat, shake
-			let lean = 0.04 + st * 0.12, nod = 0, squat = 0, shake = 0;
-			if (c.held) nod -= 0.04;   // (head up, carefully: there's food on it)
-			const s = c.station && c.station.state === 'work' ? c.station : null;
-			if (s && s.kind === 'stir') { lean = 0.25; shake = Math.sin(time * 8) * 0.12; }
-			const a = c.act;
-			if (a) {
-				const u = clamp(a.t / ACT_TIME, 0, 1), pulse = Math.sin(u * Math.PI);
-				if (a.kind === 'chop') { lean = 0.3; nod = Math.abs(Math.sin(u * Math.PI * 3)) * 0.45; }
-				else if (a.kind === 'grab' || a.kind === 'take' || a.kind === 'put' || a.kind === 'serve') { lean = lerp(lean, 0.38, pulse); nod = 0.35 * pulse; squat = 0.06 * pulse; }
-				else if (a.kind === 'bin') { lean = lerp(lean, 0.5, pulse); nod = 0.5 * pulse; }
-				else if (a.kind === 'flip' || a.kind === 'jab') { lean = 0.25; nod = 0.4 * pulse; }
-				else if (a.kind === 'pump') { squat = 0.12 * pulse; }
-				else if (a.kind === 'douse') { lean = 0.2; shake = Math.sin(a.t * 40) * 0.2; }
-			}
-			// each leg: sin(q) is where its foot is (back -1 .. forward +1); while cos(q) > 0 it's
-			// swinging forward through the air, knee folding up to clear the floor, then reaching
-			// out nearly straight to plant; on the ground it stays straight and pushes back
-			const th = Math.acos(clamp(1 - squat / (2 * LEG), -1, 1));   // (knees bent for a squat)
-			const reach = Math.asin(clamp(STEP / (4 * LEG), 0, 0.9)) * st;   // (the hip's swing either way)
-			let lowest = 0;
-			for (let j = 0; j < 2; j++) {
-				const L = m.legs[j], q = ph + j * Math.PI, air = Math.max(0, Math.cos(q));
-				const hf = th + reach * Math.sin(q) + air * 0.15 * st;                  // (thigh, forward of straight down)
-				const kf = 2 * th + 0.08 * st + Math.pow(air, 1.5) * 1.15 * st;        // (knee, folded back)
-				L.hip.rotation.x = -hf;
-				L.knee.rotation.x = kf;
-				L.ankle.rotation.x = hf - kf - air * 0.25 * st * Math.sin(q);           // (foot level; toes down as it lifts)
-				lowest = Math.max(lowest, LEG * Math.cos(hf) + LEG * Math.cos(hf - kf));
-			}
-			// the hips ride on whichever leg is down, so they bob as it straightens under them
-			m.hips.position.y = 0.12 + lowest + Math.sin(time * 2.4) * 0.004 * (1 - st);
-			m.hips.rotation.z = Math.sin(ph) * 0.07 * st + shake * 0.3;
-			m.hips.rotation.y = Math.sin(ph) * 0.12 * st;   // (a little twist with each step)
-			const ease = Math.min(1, dt * 14);
-			m.upper.rotation.x = lerp(m.upper.rotation.x, lean, ease);
-			m.upper.rotation.z = lerp(m.upper.rotation.z, -Math.sin(ph) * 0.05 * st + shake, ease);
-			// the head sits upright whatever the body's doing (it only tips for a nod): it takes
-			// back the neck's forward set, the lean, and the hips' and body's sway
-			m.head.rotation.x = lerp(m.head.rotation.x, nod - m.upper.rotation.x - NECK_TILT, ease);
-			m.head.rotation.z = -(m.upper.rotation.z + m.hips.rotation.z);
-			// (turning, the head lags a beat behind the body, then catches up)
-			const yawRate = m.prevYaw === undefined ? 0 : Math.atan2(Math.sin(m.yaw - m.prevYaw), Math.cos(m.yaw - m.prevYaw)) / Math.max(dt, 0.001);
-			m.prevYaw = m.yaw;
-			m.headLag = lerp(m.headLag || 0, clamp(-yawRate * 0.07, -0.5, 0.5), Math.min(1, dt * 8));
-			m.headLook = lerp(m.headLook || 0, st > 0.2 ? 0 : Math.sin(time * 0.7 + i) * 0.25, Math.min(1, dt * 3));
-			m.head.rotation.y = m.headLook + m.headLag;
-			// the chest light breathes; the iris opens wide while they're busy
-			m.led.scale.setScalar(0.75 + 0.35 * (0.5 + 0.5 * Math.sin(rt * 3 + i * 1.7)));
-			const wide = a || (c.station && c.station.state === 'work') ? 1.35 : c.held ? 1.1 : 1;
-			m.iris.scale.setScalar(lerp(m.iris.scale.x, wide, Math.min(1, dt * 8)));
-			m.eyes.forEach((e) => { e.scale.y = (rt + i * 0.7) % 3.5 < 0.12 ? 0.2 : 1; });
+			animateBot(m, {
+				dt, time, clock: rt, i, speed, held: !!c.held, act: c.act,
+				working: c.station && c.station.state === 'work' ? c.station.kind : null,
+				onStep: (k) => { if (phase !== 'off') footstep(i, wallNow, k); },
+			});
 			// what they're carrying, riding on the plate, turned to face the middle
 			const hv = syncItem(m.holder, c.held, m.hold, 0, 0, 0, 0.46);
 			if (hv) hv.rotation.y = faceEye(m.x, m.z) - m.yaw + Math.sin(rt * 1.5) * 0.3;
@@ -3033,9 +3068,9 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// toward the wall it's on; lighter at a stroll, heavier at a run.
 	const STEP_VOLUME = 0.35;   // (kept quiet: under everything else)
 	let noiseBuf = null;
-	function footstep(i, wall, k) {
+	function footstep(i, wall, k, force) {
 		const ac = voice();
-		if (!ac || show.paused) return;
+		if (!ac || (show.paused && !force)) return;
 		if (!noiseBuf) {
 			noiseBuf = ac.createBuffer(1, ac.sampleRate * 0.3, ac.sampleRate);
 			const d = noiseBuf.getChannelData(0);
@@ -3182,6 +3217,228 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		ctx.restore();
 	}
 
+	/* ---------- the ROBOT LAB ---------- */
+
+	// A workbench for the players' robot: the robot on its own, full window, under the
+	// kitchen's light, with a counter behind it for scale. Sliders for its shape, its walk and
+	// its finish; buttons to make it act; walk it about, hold food, change its colour, look
+	// from any side. What you change is kept in this browser (localStorage, LAB_KEY) and the
+	// game uses it too; COPY gives it as JSON to bake into ROBOT_TUNED. Open it from the debug
+	// panel (ROBOT ▸ ROBOT LAB) or with ?lab in the URL.
+	const LAB_SLIDERS = [
+		['SHAPE', [['scale', 'size', 0.4, 1.6, 0.01], ['leg', 'leg length', 0.06, 0.24, 0.005], ['head', 'head', 0.6, 1.6, 0.01], ['torso', 'torso', 0.6, 1.6, 0.01], ['eye', 'eye', 0.5, 2, 0.01], ['plate', 'plate', 0.5, 1.6, 0.01], ['neckTilt', 'neck lean', -0.4, 0.6, 0.01]]],
+		['WALK', [['step', 'step length', 0.08, 0.4, 0.005], ['reach', 'leg swing', 0, 2, 0.01], ['knee', 'knee fold', 0, 2.2, 0.01], ['lift', 'thigh lift', 0, 0.6, 0.01], ['sway', 'hip sway', 0, 3, 0.01], ['twist', 'hip twist', 0, 3, 0.01], ['lean', 'lean', 0, 3, 0.01]]],
+		['FINISH', [['rust', 'rust', 0, 2.5, 0.05], ['gloss', 'gloss', 0, 1, 0.01], ['metal', 'metal', 0, 1, 0.01], ['trim', 'trim shade', 0.2, 1.2, 0.01]]],
+	];
+	const LAB_LIVE = new Set(['step', 'reach', 'knee', 'lift', 'sway', 'twist', 'lean']);   // (the rest rebuild the robot)
+	let labOpen = false;
+	function openLab() {
+		if (labOpen) return;
+		labOpen = true;
+		const pausedHere = !show.paused;
+		if (pausedHere) show.pause(true);
+		const ui = { speed: 0.6, mode: 'along', colour: 0, hold: false, stir: false, sound: true, view: 'game' };
+		let act = null;
+		const font = 'Rubik, sans-serif';
+		const $lab = $('<fission-lab>').css({ position: 'fixed', inset: 0, zIndex: 5000, display: 'flex', background: '#0b0812', fontFamily: font, color: '#e8e2f2', userSelect: 'none' })
+			.on('click mousedown pointerdown keydown', (e) => e.stopPropagation()).appendTo('body');
+		const $view = $('<div>').css({ position: 'relative', flex: 1, minWidth: 0, cursor: 'grab' }).appendTo($lab);
+		const $panel = $('<div>').css({ width: '340px', flex: 'none', overflowY: 'auto', padding: '16px 18px 24px', boxSizing: 'border-box', background: '#15101f', borderLeft: '2px solid #2c2140', fontSize: '13px' }).appendTo($lab);
+		$('<div>').text('ROBOT LAB').css({ fontSize: '22px', fontWeight: 800, letterSpacing: '3px', color: '#FC1992', margin: '0 0 2px' }).appendTo($panel);
+		$('<div>').text('Changes save in this browser and show in the game. COPY to bake them in.').css({ color: '#9a8fb0', margin: '0 0 12px', lineHeight: 1.35 }).appendTo($panel);
+		const head = (t) => $('<div>').text(t).css({ margin: '16px 0 6px', fontWeight: 700, letterSpacing: '2px', color: '#9fb6d8', fontSize: '12px' }).appendTo($panel);
+		const btn = (t, fn, $to, on) => $('<button>').text(t).css({ margin: '0 6px 6px 0', padding: '6px 11px', borderRadius: '16px', border: '2px solid ' + (on ? '#FC1992' : '#4a3d66'), background: on ? '#3a1430' : '#1d1729', color: '#e8e2f2', fontFamily: font, fontSize: '12px', fontWeight: 700, cursor: 'pointer' }).on('click', fn).appendTo($to || $panel);
+		const row = () => $('<div>').css({ display: 'flex', flexWrap: 'wrap' }).appendTo($panel);
+		const toggles = [];
+		const toggle = (t, key, $to) => { const b = btn(t, () => { ui[key] = !ui[key]; paintToggles(); }, $to); toggles.push([b, () => ui[key]]); return b; };
+		const choice = (key, val, t, $to) => { const b = btn(t, () => { ui[key] = val; paintToggles(); }, $to); toggles.push([b, () => ui[key] === val]); return b; };
+		const paintToggles = () => { for (const [b, on] of toggles) b.css({ borderColor: on() ? '#FC1992' : '#4a3d66', background: on() ? '#3a1430' : '#1d1729' }); };
+
+		// moving it about
+		head('MOVE');
+		const mv = row();
+		choice('mode', 'still', 'STAND', mv); choice('mode', 'along', 'ALONG THE COUNTER', mv); choice('mode', 'circle', 'IN A CIRCLE', mv); choice('mode', 'treadmill', 'ON THE SPOT', mv);
+		slider('speed', 'walk speed (m/s)', 0, 3, 0.05, ui);
+		head('ACT');
+		const ac = row();
+		for (const k of ['grab', 'put', 'serve', 'chop', 'bin', 'flip', 'jab', 'pump', 'douse']) btn(k.toUpperCase(), () => { act = { kind: k, t: 0 }; }, ac);
+		const tg = row();
+		toggle('HOLD FOOD', 'hold', tg); toggle('STIR', 'stir', tg); toggle('FOOTSTEPS', 'sound', tg);
+		head('COLOUR');
+		const cr = row();
+		for (let n = 0; n < 6; n++) { const b = choice('colour', n, String(n + 1), cr); b.css({ color: colourOf(n) }); b.on('click', () => rebuild()); }
+		head('LOOK FROM');
+		const vr = row();
+		for (const [v, t] of [['game', 'THE GAME'], ['side', 'SIDE'], ['three', '3/4'], ['front', 'FRONT'], ['back', 'BACK'], ['head', 'HEAD UP CLOSE']]) choice('view', v, t, vr).on('click', () => setView(v));
+		// the tuning
+		for (const [title, list] of LAB_SLIDERS) { head(title); for (const [key, label, lo, hi, stepBy] of list) slider(key, label, lo, hi, stepBy, RB); }
+		head('KEEP');
+		const kr = row();
+		btn('COPY', () => { const txt = JSON.stringify(RB, null, '\t'); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => note('Copied: paste it into ROBOT_TUNED'), () => { $out.text(txt).show(); note('Select and copy the JSON below'); }); }, kr);
+		btn('RESET', () => { Object.assign(RB, ROBOT_TUNED); save(); $panel.find('input[type=range]').each(function () { const k = this.dataset.key; if (k in RB) { this.value = RB[k]; $(this).trigger('input'); } }); rebuild(); note('Back to the baked-in tuning'); }, kr);
+		btn('CLOSE', close, kr).css({ borderColor: '#9dff3a' });
+		const $note = $('<div>').css({ color: '#9dff3a', minHeight: '18px', margin: '6px 0' }).appendTo($panel);
+		const $out = $('<pre>').css({ display: 'none', whiteSpace: 'pre-wrap', userSelect: 'text', fontSize: '11px', background: '#0b0812', padding: '8px', borderRadius: '8px' }).appendTo($panel);
+		let noteT = 0;
+		function note(t) { $note.text(t); clearTimeout(noteT); noteT = setTimeout(() => $note.text(''), 3000); }
+		function save() { try { localStorage.setItem(LAB_KEY, JSON.stringify(RB)); } catch { /* (not kept) */ } }
+		function slider(key, label, lo, hi, stepBy, obj) {
+			const $r = $('<label>').css({ display: 'grid', gridTemplateColumns: '108px 1fr 44px', alignItems: 'center', gap: '8px', margin: '3px 0' }).appendTo($panel);
+			$('<span>').text(label).css({ color: '#c8bedc' }).appendTo($r);
+			const $in = $('<input type=range>').attr({ min: lo, max: hi, step: stepBy }).val(obj[key]).css({ width: '100%', accentColor: '#FC1992' }).appendTo($r);
+			$in[0].dataset.key = obj === RB ? key : '';
+			const $v = $('<span>').text((+obj[key]).toFixed(2)).css({ textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: '#fff' }).appendTo($r);
+			$in.on('input', function () {
+				obj[key] = +this.value;
+				$v.text((+this.value).toFixed(2));
+				if (obj !== RB) return;
+				save();
+				if (!LAB_LIVE.has(key)) rebuildSoon();
+			});
+		}
+		paintToggles();
+
+		// the scene: the kitchen's light and reflections, a floor, a counter behind for scale
+		const lr = new THREE.WebGLRenderer({ antialias: true });
+		lr.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+		lr.toneMapping = THREE.NeutralToneMapping;
+		lr.toneMappingExposure = 0.9;
+		lr.shadowMap.enabled = true;
+		lr.shadowMap.type = THREE.PCFSoftShadowMap;
+		$(lr.domElement).css({ display: 'block', width: '100%', height: '100%' }).appendTo($view);
+		const ls = new THREE.Scene();
+		ls.background = new THREE.Color(0x120d1a);
+		ls.environment = environmentFromShader(lr, ENV_SHADER);
+		ls.environmentIntensity = 0.35;
+		ls.add(new THREE.HemisphereLight(0x8a94c0, 0x3a2418, 0.55));
+		const sun = new THREE.DirectionalLight(0xfff2e0, 2.6);
+		sun.position.set(1.5, 4, 3);
+		sun.castShadow = true;
+		sun.shadow.mapSize.set(2048, 2048);
+		Object.assign(sun.shadow.camera, { left: -2.5, right: 2.5, top: 2.5, bottom: -2.5, near: 0.5, far: 12 });
+		sun.shadow.bias = -0.0004;
+		sun.shadow.normalBias = 0.02;
+		ls.add(sun);
+		const warm = new THREE.PointLight(KITCHEN.light, 3, 6, 1.4);
+		warm.position.set(-1, 2.6, 0.5);
+		ls.add(warm);
+		const floor = mesh(new THREE.PlaneGeometry(12, 12), std(0x1f2725, 0.5, 0.05), ls, 0, 0, 0);
+		floor.rotation.x = -Math.PI / 2;
+		floor.receiveShadow = true;
+		const grid = new THREE.GridHelper(12, 48, 0x3a4a44, 0x26302d);
+		grid.position.y = 0.002;
+		ls.add(grid);
+		const CZ = -(CT.d - AV_MAX) - CT.deep / 2;   // (the counter, as far behind as in the kitchen)
+		const counter = mesh(BOX(3.2, CT.y, CT.deep), std(KITCHEN.counter, 0.35, 0.1), ls, 0, CT.y / 2, CZ);
+		counter.castShadow = counter.receiveShadow = true;
+		mesh(BOX(3.28, 0.05, CT.deep + 0.06), MAT.steel, ls, 0, CT.y, CZ).receiveShadow = true;
+		const cam = new THREE.PerspectiveCamera(40, 1, 0.02, 40);
+
+		// the robot
+		let bot = null, held = null;
+		function rebuild() {
+			if (bot) ls.remove(bot.g);
+			bot = buildTray(ui.colour);
+			bot.holder = {};
+			ls.add(bot.g);
+			held = null;
+		}
+		let soon = 0;
+		function rebuildSoon() { clearTimeout(soon); soon = setTimeout(rebuild, 120); }
+		rebuild();
+
+		// the camera: drag to orbit, wheel to zoom; or a set view
+		const orbit = { yaw: 0.6, pitch: 0.25, dist: 2.2, y: 0.45 };
+		function setView(v) {
+			ui.view = v;
+			paintToggles();
+			if (v === 'side') Object.assign(orbit, { yaw: Math.PI / 2, pitch: 0.08, dist: 2, y: 0.42 });
+			else if (v === 'three') Object.assign(orbit, { yaw: 0.7, pitch: 0.22, dist: 2.1, y: 0.45 });
+			else if (v === 'front') Object.assign(orbit, { yaw: 0, pitch: 0.1, dist: 1.9, y: 0.45 });
+			else if (v === 'back') Object.assign(orbit, { yaw: Math.PI, pitch: 0.18, dist: 1.9, y: 0.45 });
+			else if (v === 'head') Object.assign(orbit, { yaw: 0.45, pitch: 0.12, dist: 0.8, y: 0.85 });
+		}
+		let drag = null;
+		$view.on('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, yaw: orbit.yaw, pitch: orbit.pitch }; $view.css('cursor', 'grabbing'); if (ui.view === 'game') { setView('back'); drag.yaw = orbit.yaw; drag.pitch = orbit.pitch; } ui.view = 'orbit'; paintToggles(); });
+		$(window).on('pointermove.fission-lab', (e) => { if (!drag) return; orbit.yaw = drag.yaw - (e.clientX - drag.x) * 0.008; orbit.pitch = clamp(drag.pitch + (e.clientY - drag.y) * 0.006, -0.3, 1.4); });
+		$(window).on('pointerup.fission-lab', () => { drag = null; $view.css('cursor', 'grab'); });
+		$view.on('wheel', (e) => { e.preventDefault(); orbit.dist = clamp(orbit.dist * Math.exp(e.originalEvent.deltaY * 0.001), 0.4, 6); if (ui.view === 'game') { setView('back'); } ui.view = 'orbit'; paintToggles(); });
+		function placeCamera() {
+			if (ui.view === 'game') {   // (as the game sees it: from the eye in the middle, the counter beyond)
+				cam.fov = 64;
+				cam.position.set(bot.g.position.x * 0.3, EYE, AV_MAX);
+				cam.lookAt(bot.g.position.x * 0.3, EYE, CZ - 3);
+			} else {
+				cam.fov = 40;
+				const c = Math.cos(orbit.pitch), tx = bot.g.position.x, tz = bot.g.position.z;
+				cam.position.set(tx + Math.sin(orbit.yaw) * c * orbit.dist, orbit.y + Math.sin(orbit.pitch) * orbit.dist, tz + Math.cos(orbit.yaw) * c * orbit.dist);
+				cam.lookAt(tx, orbit.y, tz);
+			}
+			cam.updateProjectionMatrix();
+		}
+		function fit() {
+			const w = $view.width(), h = $view.height();
+			if (!w || !h) return;
+			lr.setSize(w, h, false);
+			cam.aspect = w / h;
+		}
+		const ro = new ResizeObserver(fit);
+		ro.observe($view[0]);
+		fit();
+
+		// every frame: move it, pose it, draw it
+		let last = performance.now(), clock = 0, s = 0, raf = 0;
+		const pos = { x: 0, z: 0, dir: 1 };
+		function frame(now) {
+			raf = requestAnimationFrame(frame);
+			const dt = Math.min(0.05, (now - last) / 1000);
+			last = now;
+			clock += dt;
+			const m = bot;
+			const ox = pos.x, oz = pos.z;
+			let face = Math.PI;   // (standing: facing the counter, back to the eye, as in the game)
+			if (ui.mode === 'along') {
+				pos.x += pos.dir * ui.speed * dt;
+				if (Math.abs(pos.x) > 1.1) { pos.x = Math.sign(pos.x) * 1.1; pos.dir = -pos.dir; }
+				pos.z = 0;
+			} else if (ui.mode === 'circle') {
+				s += ui.speed * dt / 0.7;
+				pos.x = Math.sin(s) * 0.7;
+				pos.z = Math.cos(s) * 0.7 - 0.2;
+			} else if (ui.mode === 'still') { pos.x = lerp(pos.x, 0, Math.min(1, dt * 3)); pos.z = lerp(pos.z, 0, Math.min(1, dt * 3)); }
+			const vx = (pos.x - ox) / Math.max(dt, 1e-3), vz = (pos.z - oz) / Math.max(dt, 1e-3);
+			const moving = ui.mode === 'treadmill' ? ui.speed : Math.hypot(vx, vz);
+			if (ui.mode !== 'treadmill' && moving > 0.05) face = Math.atan2(vx, vz);
+			else if (ui.mode === 'treadmill') face = Math.PI / 2;
+			m.yaw = m.yaw === undefined ? face : m.yaw + Math.atan2(Math.sin(face - m.yaw), Math.cos(face - m.yaw)) * (1 - Math.exp(-dt * 7));
+			m.g.position.set(pos.x, 0, pos.z);
+			m.g.rotation.y = m.yaw;
+			if (act) { act.t += dt; if (act.t > ACT_TIME) act = null; }
+			animateBot(m, { dt, time: clock, clock, i: ui.colour, speed: ui.mode === 'still' ? Math.hypot(vx, vz) : moving, held: ui.hold, act, working: ui.stir ? 'stir' : null, onStep: (k) => { if (ui.sound) footstep(ui.colour, 1, k, true); } });
+			// food on the plate
+			if (ui.hold && !held) { held = itemView({ ing: 'spud', steps: ['chop', 'fry'], burnt: false }); held.scale.setScalar(0.46); m.hold.add(held); }
+			if (!ui.hold && held) { held.removeFromParent(); held = null; }
+			if (held) held.rotation.y = Math.sin(clock * 1.5) * 0.3;
+			placeCamera();
+			lr.render(ls, cam);
+		}
+		raf = requestAnimationFrame(frame);
+
+		function close() {
+			cancelAnimationFrame(raf);
+			ro.disconnect();
+			$(window).off('.fission-lab');
+			lr.dispose();
+			lr.forceContextLoss();
+			$lab.remove();
+			labOpen = false;
+			// the game's robots: built again with the new tuning
+			for (let i = 0; i < chefs3.length; i++) if (chefs3[i]) { chefs3[i].g.removeFromParent(); chefs3[i] = null; }
+			if (pausedHere) show.pause(false);
+		}
+		stage.own(() => { if (labOpen) close(); });
+	}
+
 	/* ---------- input ---------- */
 
 	self.setPlayers = function (players) {
@@ -3199,6 +3456,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 				show.setTimeLeft(sh.from - 1);
 			}, '#9dff3a').appendTo($shifts);
 		});
+		show.menu.dbutton('ROBOT LAB', openLab, '#FC1992').appendTo(show.menu.drow('ROBOT'));
 		const $trouble = show.menu.drow('TROUBLE');
 		for (const kind of ['fire', 'jam', 'leak', 'vip']) {
 			show.menu.dbutton(kind.toUpperCase(), function () { if (phase === 'play') trouble(kind); }, '#ff4a32').appendTo($trouble);
@@ -3235,5 +3493,6 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	show.go('squad');
 	if (playersMeta) stage.timeout(() => initGame(playersMeta.length));
 	else if (PLAY_NOW !== null) stage.timeout(() => initGame(clamp(+PLAY_NOW || 3, 1, 6)));   // (no picker either)
+	if (new URLSearchParams(window.location.search).has('lab')) stage.timeout(openLab, 300);   // (?lab: straight into the ROBOT LAB)
 	else show.pickPlayers(initGame);
 });
