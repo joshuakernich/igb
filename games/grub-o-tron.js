@@ -2516,12 +2516,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		// screw heads round a panel's corners
 		const screws = (parent, w, h, x, y, z) => { for (const sx of [-1, 1]) for (const sy of [-1, 1]) mesh(CYL(0.006, 0.006, 0.006, 10), screw, parent, x + sx * w / 2, y + sy * h / 2, z).rotation.x = Math.PI / 2; };
 
-		// a soft glow on the floor in their colour, so you can tell whose is whose, and a contact shadow
-		p.glow = mesh(new THREE.CircleGeometry(0.3, 40), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.2, depthWrite: false }), g, 0, 0.01, 0);
-		p.glow.rotation.x = -Math.PI / 2;
-		const dark = mesh(new THREE.CircleGeometry(0.17, 32), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false }), g, 0, 0.012, 0.02);
-		dark.rotation.x = -Math.PI / 2;
-		dark.scale.set(1, 1.3, 1);
+		// (nothing on the floor under them: the user asked; their own shadow grounds them)
 
 		// the hips: a servo chassis (p.hips rises and falls with the gait; the legs hang from it)
 		const hips = new THREE.Group();
@@ -2648,8 +2643,6 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		plate.add(p.hold);
 
 		shadows(g);
-		p.glow.castShadow = false;
-		dark.castShadow = false;
 		g.scale.setScalar(RB.scale);
 		p.phase = Math.random() * 6;
 		p.stride = 0;
