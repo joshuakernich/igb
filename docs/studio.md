@@ -32,7 +32,7 @@ Use Chrome or Edge: they can save into a folder on your computer.
    - shapes and empties;
    - **markers**: invisible points the code uses for spawns, targets and doors;
    - lights;
-   - the games' own **code-built characters** (speedster family, Robotnik, Knuckles), with colour, kind and animation.
+   - the games' own **code-built characters** (speedster family, Robotnik, Knuckles, Tails, the Strider, Crab Tank, Beetle Bot, Buzz Drone, Hover Bot), with colour, kind and animation.
 
    To place a model, drag it from Assets into the scene or onto an object in the Hierarchy.
 4. **Light and grade** it in **⚙ Scene Settings**:
@@ -114,6 +114,8 @@ post.render(walls.views(renderer.domElement.width, renderer.domElement.height));
 s.onReload(() => { /* re-find, re-instantiate */ });
 ```
 
+`games/sonic-characters` is a real game built this way: its pedestals, lights and cameras are all in `assets/sonic-characters/scenes/main.json`; the code finds everything tagged `character` and adds the turntables and tap-to-feature.
+
 `games/scene-demo` (**Studio Scene**, in the New folder) is a complete example:
 - it loads its scene;
 - it puts every player on the stage as a tinted copy of the Player template,
@@ -126,6 +128,7 @@ Add an entry to `PREFABS` in `lib/three/igb-scene.js`:
 - `load`: the module's dynamic import;
 - `params`: what artists can set, as colours or `{ value, options }`;
 - `modes`: its animations;
+- `game` and `height`: where it's used (for labels) and how tall it stands before scaling;
 - `make(module, params)`: returns `{ root, step(dt, time, mode) }`.
 
 ## The scene file

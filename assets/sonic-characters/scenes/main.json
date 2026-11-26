@@ -1,0 +1,1363 @@
+{
+	"igbScene": 1,
+	"name": "Sonic Characters",
+	"render": {
+		"toneMapping": "ACES",
+		"exposure": 1.05,
+		"background": {
+			"type": "color",
+			"color": "#1a1f2e"
+		},
+		"environment": {
+			"preset": "studio",
+			"intensity": 1
+		},
+		"fog": {
+			"enabled": false,
+			"color": "#1a1f2e",
+			"near": 10,
+			"far": 60
+		},
+		"bloom": {
+			"strength": 0.45,
+			"radius": 0.5,
+			"threshold": 0.95,
+			"cap": 2.5
+		},
+		"shadows": {
+			"enabled": true,
+			"soft": true
+		}
+	},
+	"rig": {
+		"position": [
+			0,
+			1.35,
+			0
+		],
+		"pitch": -6,
+		"yaw": 0,
+		"fov": 64
+	},
+	"objects": [
+		{
+			"id": "sc01l",
+			"type": "light",
+			"name": "Key Light",
+			"position": [
+				0,
+				0,
+				0
+			],
+			"rotation": [
+				-68.2,
+				-29.1,
+				0
+			],
+			"light": {
+				"kind": "directional",
+				"color": "#fff0dc",
+				"intensity": 2.6,
+				"castShadow": true,
+				"shadowArea": 24,
+				"shadowSize": 2048
+			}
+		},
+		{
+			"id": "sc01m",
+			"type": "light",
+			"name": "Sky Light",
+			"light": {
+				"kind": "hemisphere",
+				"color": "#dfe8ff",
+				"groundColor": "#2a2430",
+				"intensity": 0.6
+			}
+		},
+		{
+			"id": "sc01n",
+			"type": "mesh",
+			"name": "Floor",
+			"mesh": {
+				"shape": "disc"
+			},
+			"scale": [
+				28,
+				1,
+				28
+			],
+			"material": {
+				"color": "#2a3042",
+				"roughness": 0.6,
+				"metalness": 0.1
+			},
+			"castShadow": false
+		},
+		{
+			"id": "sc01o",
+			"type": "marker",
+			"name": "Show Spot",
+			"position": [
+				0,
+				0,
+				-2.9
+			]
+		},
+		{
+			"id": "sc01p",
+			"type": "mesh",
+			"name": "Show Ring",
+			"position": [
+				0,
+				0.02,
+				-2.9
+			],
+			"scale": [
+				1.5,
+				1.5,
+				1.5
+			],
+			"mesh": {
+				"shape": "ring"
+			},
+			"material": {
+				"color": "#5ad1ff",
+				"unlit": true,
+				"glow": 2.2,
+				"opacity": 0.99
+			},
+			"castShadow": false
+		},
+		{
+			"id": "sc01q",
+			"type": "group",
+			"name": "Pedestals",
+			"children": [
+				{
+					"id": "sc001",
+					"type": "group",
+					"name": "Pedestal 1",
+					"tag": "pedestal",
+					"position": [
+						-5.201,
+						0,
+						4.063
+					],
+					"rotation": [
+						0,
+						-52,
+						0
+					],
+					"children": [
+						{
+							"id": "sc002",
+							"type": "mesh",
+							"name": "Stand",
+							"position": [
+								0,
+								0.15,
+								0
+							],
+							"scale": [
+								1.46,
+								0.3,
+								1.46
+							],
+							"mesh": {
+								"shape": "cylinder"
+							},
+							"material": {
+								"color": "#3a4258",
+								"roughness": 0.35,
+								"clearcoat": 1
+							}
+						},
+						{
+							"id": "sc003",
+							"type": "mesh",
+							"name": "Rim",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1.4,
+								1.4,
+								1.4
+							],
+							"mesh": {
+								"shape": "ring"
+							},
+							"material": {
+								"color": "#5ad1ff",
+								"unlit": true,
+								"glow": 2.2
+							},
+							"castShadow": false
+						},
+						{
+							"id": "sc004",
+							"type": "prefab",
+							"name": "CRAB TANK",
+							"tag": "character",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								0.42,
+								0.42,
+								0.42
+							],
+							"prefab": {
+								"kind": "crab",
+								"params": {},
+								"mode": "idle"
+							}
+						}
+					]
+				},
+				{
+					"id": "sc005",
+					"type": "group",
+					"name": "Pedestal 2",
+					"tag": "pedestal",
+					"position": [
+						-6.266,
+						0,
+						2.073
+					],
+					"rotation": [
+						0,
+						-71.692,
+						0
+					],
+					"children": [
+						{
+							"id": "sc006",
+							"type": "mesh",
+							"name": "Stand",
+							"position": [
+								0,
+								0.15,
+								0
+							],
+							"scale": [
+								1.46,
+								0.3,
+								1.46
+							],
+							"mesh": {
+								"shape": "cylinder"
+							},
+							"material": {
+								"color": "#3a4258",
+								"roughness": 0.35,
+								"clearcoat": 1
+							}
+						},
+						{
+							"id": "sc007",
+							"type": "mesh",
+							"name": "Rim",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1.4,
+								1.4,
+								1.4
+							],
+							"mesh": {
+								"shape": "ring"
+							},
+							"material": {
+								"color": "#5ad1ff",
+								"unlit": true,
+								"glow": 2.2
+							},
+							"castShadow": false
+						},
+						{
+							"id": "sc008",
+							"type": "prefab",
+							"name": "DR ROBOTNIK",
+							"tag": "character",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1,
+								1,
+								1
+							],
+							"prefab": {
+								"kind": "robotnik",
+								"params": {},
+								"mode": "idle"
+							}
+						}
+					]
+				},
+				{
+					"id": "sc009",
+					"type": "group",
+					"name": "Pedestal 3",
+					"tag": "pedestal",
+					"position": [
+						-6.598,
+						0,
+						-0.159
+					],
+					"rotation": [
+						0,
+						-91.385,
+						0
+					],
+					"children": [
+						{
+							"id": "sc00a",
+							"type": "mesh",
+							"name": "Stand",
+							"position": [
+								0,
+								0.15,
+								0
+							],
+							"scale": [
+								1.46,
+								0.3,
+								1.46
+							],
+							"mesh": {
+								"shape": "cylinder"
+							},
+							"material": {
+								"color": "#3a4258",
+								"roughness": 0.35,
+								"clearcoat": 1
+							}
+						},
+						{
+							"id": "sc00b",
+							"type": "mesh",
+							"name": "Rim",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1.4,
+								1.4,
+								1.4
+							],
+							"mesh": {
+								"shape": "ring"
+							},
+							"material": {
+								"color": "#5ad1ff",
+								"unlit": true,
+								"glow": 2.2
+							},
+							"castShadow": false
+						},
+						{
+							"id": "sc00c",
+							"type": "prefab",
+							"name": "METAL SONIC",
+							"tag": "character",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1,
+								1,
+								1
+							],
+							"prefab": {
+								"kind": "speedster",
+								"params": {
+									"color": "#2a3f9a",
+									"kind": "metal"
+								},
+								"mode": "idle"
+							}
+						}
+					]
+				},
+				{
+					"id": "sc00d",
+					"type": "group",
+					"name": "Pedestal 4",
+					"tag": "pedestal",
+					"position": [
+						-6.158,
+						0,
+						-2.373
+					],
+					"rotation": [
+						0,
+						-111.077,
+						0
+					],
+					"children": [
+						{
+							"id": "sc00e",
+							"type": "mesh",
+							"name": "Stand",
+							"position": [
+								0,
+								0.15,
+								0
+							],
+							"scale": [
+								1.46,
+								0.3,
+								1.46
+							],
+							"mesh": {
+								"shape": "cylinder"
+							},
+							"material": {
+								"color": "#3a4258",
+								"roughness": 0.35,
+								"clearcoat": 1
+							}
+						},
+						{
+							"id": "sc00f",
+							"type": "mesh",
+							"name": "Rim",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1.4,
+								1.4,
+								1.4
+							],
+							"mesh": {
+								"shape": "ring"
+							},
+							"material": {
+								"color": "#5ad1ff",
+								"unlit": true,
+								"glow": 2.2
+							},
+							"castShadow": false
+						},
+						{
+							"id": "sc00g",
+							"type": "prefab",
+							"name": "SUPER SONIC",
+							"tag": "character",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1,
+								1,
+								1
+							],
+							"prefab": {
+								"kind": "speedster",
+								"params": {
+									"color": "#ffc21a",
+									"kind": "super"
+								},
+								"mode": "idle"
+							}
+						}
+					]
+				},
+				{
+					"id": "sc00h",
+					"type": "group",
+					"name": "Pedestal 5",
+					"tag": "pedestal",
+					"position": [
+						-4.998,
+						0,
+						-4.31
+					],
+					"rotation": [
+						0,
+						-130.769,
+						0
+					],
+					"children": [
+						{
+							"id": "sc00i",
+							"type": "mesh",
+							"name": "Stand",
+							"position": [
+								0,
+								0.15,
+								0
+							],
+							"scale": [
+								1.46,
+								0.3,
+								1.46
+							],
+							"mesh": {
+								"shape": "cylinder"
+							},
+							"material": {
+								"color": "#3a4258",
+								"roughness": 0.35,
+								"clearcoat": 1
+							}
+						},
+						{
+							"id": "sc00j",
+							"type": "mesh",
+							"name": "Rim",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1.4,
+								1.4,
+								1.4
+							],
+							"mesh": {
+								"shape": "ring"
+							},
+							"material": {
+								"color": "#5ad1ff",
+								"unlit": true,
+								"glow": 2.2
+							},
+							"castShadow": false
+						},
+						{
+							"id": "sc00k",
+							"type": "prefab",
+							"name": "SHADOW",
+							"tag": "character",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1,
+								1,
+								1
+							],
+							"prefab": {
+								"kind": "speedster",
+								"params": {
+									"color": "#1c1c24",
+									"kind": "shadow"
+								},
+								"mode": "idle"
+							}
+						}
+					]
+				},
+				{
+					"id": "sc00l",
+					"type": "group",
+					"name": "Pedestal 6",
+					"tag": "pedestal",
+					"position": [
+						-3.254,
+						0,
+						-5.742
+					],
+					"rotation": [
+						0,
+						-150.462,
+						0
+					],
+					"children": [
+						{
+							"id": "sc00m",
+							"type": "mesh",
+							"name": "Stand",
+							"position": [
+								0,
+								0.15,
+								0
+							],
+							"scale": [
+								1.46,
+								0.3,
+								1.46
+							],
+							"mesh": {
+								"shape": "cylinder"
+							},
+							"material": {
+								"color": "#3a4258",
+								"roughness": 0.35,
+								"clearcoat": 1
+							}
+						},
+						{
+							"id": "sc00n",
+							"type": "mesh",
+							"name": "Rim",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1.4,
+								1.4,
+								1.4
+							],
+							"mesh": {
+								"shape": "ring"
+							},
+							"material": {
+								"color": "#5ad1ff",
+								"unlit": true,
+								"glow": 2.2
+							},
+							"castShadow": false
+						},
+						{
+							"id": "sc00o",
+							"type": "prefab",
+							"name": "SPEEDSTER",
+							"tag": "character",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1,
+								1,
+								1
+							],
+							"prefab": {
+								"kind": "speedster",
+								"params": {
+									"color": "#2f6cf0",
+									"kind": "sonic"
+								},
+								"mode": "idle"
+							}
+						}
+					]
+				},
+				{
+					"id": "sc00p",
+					"type": "group",
+					"name": "Pedestal 7",
+					"tag": "pedestal",
+					"position": [
+						-1.129,
+						0,
+						-6.503
+					],
+					"rotation": [
+						0,
+						-170.154,
+						0
+					],
+					"children": [
+						{
+							"id": "sc00q",
+							"type": "mesh",
+							"name": "Stand",
+							"position": [
+								0,
+								0.15,
+								0
+							],
+							"scale": [
+								1.46,
+								0.3,
+								1.46
+							],
+							"mesh": {
+								"shape": "cylinder"
+							},
+							"material": {
+								"color": "#3a4258",
+								"roughness": 0.35,
+								"clearcoat": 1
+							}
+						},
+						{
+							"id": "sc00r",
+							"type": "mesh",
+							"name": "Rim",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1.4,
+								1.4,
+								1.4
+							],
+							"mesh": {
+								"shape": "ring"
+							},
+							"material": {
+								"color": "#5ad1ff",
+								"unlit": true,
+								"glow": 2.2
+							},
+							"castShadow": false
+						},
+						{
+							"id": "sc00s",
+							"type": "prefab",
+							"name": "KNUCKLES",
+							"tag": "character",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1,
+								1,
+								1
+							],
+							"prefab": {
+								"kind": "knuckles",
+								"params": {},
+								"mode": "idle"
+							}
+						}
+					]
+				},
+				{
+					"id": "sc00t",
+					"type": "group",
+					"name": "Pedestal 8",
+					"tag": "pedestal",
+					"position": [
+						1.129,
+						0,
+						-6.503
+					],
+					"rotation": [
+						0,
+						170.154,
+						0
+					],
+					"children": [
+						{
+							"id": "sc00u",
+							"type": "mesh",
+							"name": "Stand",
+							"position": [
+								0,
+								0.15,
+								0
+							],
+							"scale": [
+								1.46,
+								0.3,
+								1.46
+							],
+							"mesh": {
+								"shape": "cylinder"
+							},
+							"material": {
+								"color": "#3a4258",
+								"roughness": 0.35,
+								"clearcoat": 1
+							}
+						},
+						{
+							"id": "sc00v",
+							"type": "mesh",
+							"name": "Rim",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1.4,
+								1.4,
+								1.4
+							],
+							"mesh": {
+								"shape": "ring"
+							},
+							"material": {
+								"color": "#5ad1ff",
+								"unlit": true,
+								"glow": 2.2
+							},
+							"castShadow": false
+						},
+						{
+							"id": "sc00w",
+							"type": "prefab",
+							"name": "TAILS",
+							"tag": "character",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1,
+								1,
+								1
+							],
+							"prefab": {
+								"kind": "tails",
+								"params": {
+									"color": "#f08a12"
+								},
+								"mode": "idle"
+							}
+						}
+					]
+				},
+				{
+					"id": "sc00x",
+					"type": "group",
+					"name": "Pedestal 9",
+					"tag": "pedestal",
+					"position": [
+						3.254,
+						0,
+						-5.742
+					],
+					"rotation": [
+						0,
+						150.462,
+						0
+					],
+					"children": [
+						{
+							"id": "sc00y",
+							"type": "mesh",
+							"name": "Stand",
+							"position": [
+								0,
+								0.15,
+								0
+							],
+							"scale": [
+								1.46,
+								0.3,
+								1.46
+							],
+							"mesh": {
+								"shape": "cylinder"
+							},
+							"material": {
+								"color": "#3a4258",
+								"roughness": 0.35,
+								"clearcoat": 1
+							}
+						},
+						{
+							"id": "sc00z",
+							"type": "mesh",
+							"name": "Rim",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1.4,
+								1.4,
+								1.4
+							],
+							"mesh": {
+								"shape": "ring"
+							},
+							"material": {
+								"color": "#5ad1ff",
+								"unlit": true,
+								"glow": 2.2
+							},
+							"castShadow": false
+						},
+						{
+							"id": "sc010",
+							"type": "prefab",
+							"name": "AMY ROSE",
+							"tag": "character",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1,
+								1,
+								1
+							],
+							"prefab": {
+								"kind": "speedster",
+								"params": {
+									"color": "#ff7eb6",
+									"kind": "amy"
+								},
+								"mode": "idle"
+							}
+						}
+					]
+				},
+				{
+					"id": "sc011",
+					"type": "group",
+					"name": "Pedestal 10",
+					"tag": "pedestal",
+					"position": [
+						4.998,
+						0,
+						-4.31
+					],
+					"rotation": [
+						0,
+						130.769,
+						0
+					],
+					"children": [
+						{
+							"id": "sc012",
+							"type": "mesh",
+							"name": "Stand",
+							"position": [
+								0,
+								0.15,
+								0
+							],
+							"scale": [
+								1.46,
+								0.3,
+								1.46
+							],
+							"mesh": {
+								"shape": "cylinder"
+							},
+							"material": {
+								"color": "#3a4258",
+								"roughness": 0.35,
+								"clearcoat": 1
+							}
+						},
+						{
+							"id": "sc013",
+							"type": "mesh",
+							"name": "Rim",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1.4,
+								1.4,
+								1.4
+							],
+							"mesh": {
+								"shape": "ring"
+							},
+							"material": {
+								"color": "#5ad1ff",
+								"unlit": true,
+								"glow": 2.2
+							},
+							"castShadow": false
+						},
+						{
+							"id": "sc014",
+							"type": "prefab",
+							"name": "ROUGE",
+							"tag": "character",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1,
+								1,
+								1
+							],
+							"prefab": {
+								"kind": "speedster",
+								"params": {
+									"color": "#f4f2f6",
+									"kind": "rouge"
+								},
+								"mode": "idle"
+							}
+						}
+					]
+				},
+				{
+					"id": "sc015",
+					"type": "group",
+					"name": "Pedestal 11",
+					"tag": "pedestal",
+					"position": [
+						6.158,
+						0,
+						-2.373
+					],
+					"rotation": [
+						0,
+						111.077,
+						0
+					],
+					"children": [
+						{
+							"id": "sc016",
+							"type": "mesh",
+							"name": "Stand",
+							"position": [
+								0,
+								0.15,
+								0
+							],
+							"scale": [
+								1.46,
+								0.3,
+								1.46
+							],
+							"mesh": {
+								"shape": "cylinder"
+							},
+							"material": {
+								"color": "#3a4258",
+								"roughness": 0.35,
+								"clearcoat": 1
+							}
+						},
+						{
+							"id": "sc017",
+							"type": "mesh",
+							"name": "Rim",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1.4,
+								1.4,
+								1.4
+							],
+							"mesh": {
+								"shape": "ring"
+							},
+							"material": {
+								"color": "#5ad1ff",
+								"unlit": true,
+								"glow": 2.2
+							},
+							"castShadow": false
+						},
+						{
+							"id": "sc018",
+							"type": "prefab",
+							"name": "BEETLE BOT",
+							"tag": "character",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								0.55,
+								0.55,
+								0.55
+							],
+							"prefab": {
+								"kind": "beetle",
+								"params": {},
+								"mode": "idle"
+							}
+						}
+					]
+				},
+				{
+					"id": "sc019",
+					"type": "group",
+					"name": "Pedestal 12",
+					"tag": "pedestal",
+					"position": [
+						6.598,
+						0,
+						-0.159
+					],
+					"rotation": [
+						0,
+						91.385,
+						0
+					],
+					"children": [
+						{
+							"id": "sc01a",
+							"type": "mesh",
+							"name": "Stand",
+							"position": [
+								0,
+								0.15,
+								0
+							],
+							"scale": [
+								1.46,
+								0.3,
+								1.46
+							],
+							"mesh": {
+								"shape": "cylinder"
+							},
+							"material": {
+								"color": "#3a4258",
+								"roughness": 0.35,
+								"clearcoat": 1
+							}
+						},
+						{
+							"id": "sc01b",
+							"type": "mesh",
+							"name": "Rim",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1.4,
+								1.4,
+								1.4
+							],
+							"mesh": {
+								"shape": "ring"
+							},
+							"material": {
+								"color": "#5ad1ff",
+								"unlit": true,
+								"glow": 2.2
+							},
+							"castShadow": false
+						},
+						{
+							"id": "sc01c",
+							"type": "prefab",
+							"name": "BUZZ DRONE",
+							"tag": "character",
+							"position": [
+								0,
+								1.4,
+								0
+							],
+							"scale": [
+								0.55,
+								0.55,
+								0.55
+							],
+							"prefab": {
+								"kind": "buzzer",
+								"params": {},
+								"mode": "idle"
+							}
+						}
+					]
+				},
+				{
+					"id": "sc01d",
+					"type": "group",
+					"name": "Pedestal 13",
+					"tag": "pedestal",
+					"position": [
+						6.266,
+						0,
+						2.073
+					],
+					"rotation": [
+						0,
+						71.692,
+						0
+					],
+					"children": [
+						{
+							"id": "sc01e",
+							"type": "mesh",
+							"name": "Stand",
+							"position": [
+								0,
+								0.15,
+								0
+							],
+							"scale": [
+								1.46,
+								0.3,
+								1.46
+							],
+							"mesh": {
+								"shape": "cylinder"
+							},
+							"material": {
+								"color": "#3a4258",
+								"roughness": 0.35,
+								"clearcoat": 1
+							}
+						},
+						{
+							"id": "sc01f",
+							"type": "mesh",
+							"name": "Rim",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1.4,
+								1.4,
+								1.4
+							],
+							"mesh": {
+								"shape": "ring"
+							},
+							"material": {
+								"color": "#5ad1ff",
+								"unlit": true,
+								"glow": 2.2
+							},
+							"castShadow": false
+						},
+						{
+							"id": "sc01g",
+							"type": "prefab",
+							"name": "HOVER BOT",
+							"tag": "character",
+							"position": [
+								0,
+								1.2,
+								0
+							],
+							"scale": [
+								1,
+								1,
+								1
+							],
+							"prefab": {
+								"kind": "hoverbot",
+								"params": {},
+								"mode": "idle"
+							}
+						}
+					]
+				},
+				{
+					"id": "sc01h",
+					"type": "group",
+					"name": "Pedestal 14",
+					"tag": "pedestal",
+					"position": [
+						6.777,
+						0,
+						5.295
+					],
+					"rotation": [
+						0,
+						52,
+						0
+					],
+					"children": [
+						{
+							"id": "sc01i",
+							"type": "mesh",
+							"name": "Stand",
+							"position": [
+								0,
+								0.15,
+								0
+							],
+							"scale": [
+								1.46,
+								0.3,
+								1.46
+							],
+							"mesh": {
+								"shape": "cylinder"
+							},
+							"material": {
+								"color": "#3a4258",
+								"roughness": 0.35,
+								"clearcoat": 1
+							}
+						},
+						{
+							"id": "sc01j",
+							"type": "mesh",
+							"name": "Rim",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								1.4,
+								1.4,
+								1.4
+							],
+							"mesh": {
+								"shape": "ring"
+							},
+							"material": {
+								"color": "#5ad1ff",
+								"unlit": true,
+								"glow": 2.2
+							},
+							"castShadow": false
+						},
+						{
+							"id": "sc01k",
+							"type": "prefab",
+							"name": "STRIDER",
+							"tag": "character",
+							"position": [
+								0,
+								0.3,
+								0
+							],
+							"scale": [
+								0.24,
+								0.24,
+								0.24
+							],
+							"prefab": {
+								"kind": "strider",
+								"params": {},
+								"mode": "idle"
+							}
+						}
+					]
+				}
+			]
+		}
+	]
+}
