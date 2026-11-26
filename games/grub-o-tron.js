@@ -2343,20 +2343,20 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// The robot's tuning: its proportions, its walk and its finish. The ROBOT LAB (debug panel,
 	// or ?lab in the URL) edits these, keeps them in this browser (and the game uses them
 	// here too) and copies them as JSON: paste that in here to bake them in.
-	const ROBOT_TUNED = {
-		scale: 0.8,       // the whole robot (small: the user asked twice; the head a little under the counter top on screen)
-		leg: 0.12,        // thigh and shin length (stubby)
-		head: 1, torso: 1, eye: 1, plate: 1,   // sizes of the parts
-		neckTilt: 0.18,   // the neck leans forward a touch; the head is set back upright on it
+	const ROBOT_TUNED = {   // (the user's tuning from the lab, 2026-11-26)
+		scale: 0.8,       // the whole robot
+		leg: 0.06,        // thigh and shin length (very stubby)
+		head: 1, torso: 1, eye: 1, plate: 1.3,   // sizes of the parts
+		neckTilt: -0.24,  // the neck's set (back, here); the head is set back upright on it
 		step: 0.2,        // one step's length (before scaling)
-		knee: 1.15,       // how far a knee folds through a swing
-		lift: 0.15,       // how far a thigh lifts through a swing
-		reach: 1,         // how far the legs swing (1: a step's worth)
-		sway: 1, twist: 1, lean: 1,   // the hips' side to side and turn with each step; leaning into a walk
-		rust: 1,          // how much rust (0: none, 2: lots)
+		knee: 1.99,       // how far a knee folds through a swing
+		lift: 0.6,        // how far a thigh lifts through a swing
+		reach: 1.09,      // how far the legs swing (1: a step's worth)
+		sway: 3, twist: 1.84, lean: 1.55,   // the hips' side to side and turn with each step; leaning into a walk
+		rust: 0,          // how much rust (0: none, 2: lots)
 		gloss: 1,         // the clear coat (0: none, 1: mirror)
-		metal: 0.35,      // how metallic the paint is
-		trim: 0.55,       // the trim's shade of the colour (1: the same, lower: deeper)
+		metal: 0.47,      // how metallic the paint is
+		trim: 0.78,       // the trim's shade of the colour (1: the same, lower: deeper)
 	};
 	const LAB_KEY = 'fission-robot-lab';
 	const RB = Object.assign({}, ROBOT_TUNED, (function () { try { return JSON.parse(localStorage.getItem(LAB_KEY)) || {}; } catch { return {}; } })());
