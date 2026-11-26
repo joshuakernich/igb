@@ -2252,14 +2252,59 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	const STEP = 0.2;   // one step's length (before scaling)
 	const NECK_TILT = 0.18;   // the neck leans forward a touch; the head is set back upright on it
 	const HIP_Y = 0.12 + LEG * 2;   // hip height standing (feet 0.12 tall at the ankle)
+	// Shiny paint in the player's colour, rusting through: blotches of rust with drips running
+	// down from them, and pitting. Three maps share the one pattern: the colour, how rough
+	// it is (the paint glossy, the rust dull) and where the clear coat is (none on the rust).
+	function rustyPaint(col, seed) {
+		const rnd = seeded(seed);
+		const spots = [];
+		for (let k = 0; k < 9; k++) spots.push({ x: rnd(), y: rnd(), r: 0.04 + rnd() * 0.1, bits: Array.from({ length: 14 }, () => [rnd() - 0.5, rnd() - 0.5, 0.25 + rnd() * 0.6]), drip: rnd() < 0.7 ? 0.1 + rnd() * 0.35 : 0 });
+		const pits = Array.from({ length: 220 }, () => [rnd(), rnd(), 0.5 + rnd() * 1.6]);
+		const S = 256;
+		const pattern = (c, base, rust, edge) => {
+			c.fillStyle = base;
+			c.fillRect(0, 0, S, S);
+			for (const sp of spots) {
+				const x = sp.x * S, y = sp.y * S, r = sp.r * S;
+				// the drip first, under the blotch: a streak running down, fading
+				if (sp.drip) {
+					const g = c.createLinearGradient(0, y, 0, y + sp.drip * S);
+					g.addColorStop(0, rust); g.addColorStop(1, 'rgba(0,0,0,0)');
+					c.fillStyle = g;
+					c.fillRect(x - r * 0.25, y, r * 0.5, sp.drip * S);
+				}
+				// the blotch: a ragged cluster, a lighter rim round a dark core
+				c.fillStyle = edge;
+				for (const b of sp.bits) { c.beginPath(); c.arc(x + b[0] * r * 2, y + b[1] * r * 2, b[2] * r * 1.15, 0, Math.PI * 2); c.fill(); }
+				c.fillStyle = rust;
+				for (const b of sp.bits) { c.beginPath(); c.arc(x + b[0] * r * 1.7, y + b[1] * r * 1.7, b[2] * r * 0.85, 0, Math.PI * 2); c.fill(); }
+			}
+			c.fillStyle = rust;
+			for (const [px, py, pr] of pits) { c.beginPath(); c.arc(px * S, py * S, pr, 0, Math.PI * 2); c.fill(); }
+		};
+		const hex = '#' + col.getHexString();
+		const map = canvasTexture(S, S, (c) => {
+			pattern(c, hex, '#5a240e', '#a4501e');
+			// (a faint sheen of wear over the paint)
+			const g = c.createLinearGradient(0, 0, S, S);
+			g.addColorStop(0, 'rgba(255,255,255,0.08)'); g.addColorStop(1, 'rgba(0,0,0,0.12)');
+			c.fillStyle = g;
+			c.fillRect(0, 0, S, S);
+		});
+		const rough = canvasTexture(S, S, (c) => pattern(c, '#262626', '#f0f0f0', '#b8b8b8'), false);
+		const coat = canvasTexture(S, S, (c) => pattern(c, '#ffffff', '#000000', '#303030'), false);
+		for (const t of [map, rough, coat]) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; }
+		return new THREE.MeshPhysicalMaterial({ color: 0xffffff, map, roughness: 1, roughnessMap: rough, metalness: 0.35, clearcoat: 1, clearcoatMap: coat, clearcoatRoughness: 0.05, envMapIntensity: 1.6 });
+	}
+
 	function buildTray(n) {
 		const col = new THREE.Color(colourOf(n));
 		const g = new THREE.Group();
 		const p = { g };
-		const shell = std(0xf2f0ec, 0.38, 0.02, { clearcoat: 0.5, clearcoatRoughness: 0.4 });
+		const shell = rustyPaint(col, 17 + n * 31);   // (once white plastic: now their colour, glossy and rusting)
 		const servo = std(0x1c1b22, 0.5, 0.25);
 		const horn = std(0x9aa0aa, 0.3, 0.8);
-		const paint = std(col, 0.35, 0.05, { clearcoat: 0.6 });
+		const paint = std(col.clone().multiplyScalar(0.62), 0.2, 0.3, { clearcoat: 1, clearcoatRoughness: 0.05 });   // (the trim: a deeper shade of it)
 		const sole = std(col.clone().lerp(new THREE.Color(0xffe066), 0.55), 0.5, 0);
 		// a soft glow on the floor in their colour, so you can tell whose is whose
 		p.glow = mesh(new THREE.CircleGeometry(0.34, 40), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.22, depthWrite: false }), g, 0, 0.01, 0);
@@ -2351,7 +2396,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		head.add(plate);
 		p.plate = plate;
 		mesh(CYL(0.05, 0.06, 0.03, 20), servo, plate, 0, -0.012, 0);
-		mesh(lathe([[0, 0], [0.18, 0.005], [0.26, 0.035], [0.28, 0.045], [0.27, 0.05], [0.18, 0.02], [0, 0.018]], 48, 24), std(0xfbfaf6, 0.25, 0.02, { clearcoat: 0.8 }), plate, 0, 0, 0);
+		mesh(lathe([[0, 0], [0.18, 0.005], [0.26, 0.035], [0.28, 0.045], [0.27, 0.05], [0.18, 0.02], [0, 0.018]], 48, 24), shell, plate, 0, 0, 0);
 		mesh(new THREE.TorusGeometry(0.272, 0.012, 8, 56), paint, plate, 0, 0.046, 0).rotation.x = Math.PI / 2;
 		p.hold = new THREE.Group();
 		p.hold.position.y = 0.03;
@@ -2973,26 +3018,26 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			const sx = j ? 7 : -7, sw = Math.sin(ph + j * Math.PI) * (cheer ? 4 : 2), up = Math.max(0, Math.cos(ph + j * Math.PI)) * (cheer ? 5 : 2);
 			art.roundRect(ctx, sx - 4 + sw * 0.5, -40 - bob, 8, 20, 2, { fill: '#1c1b22', ...line });
 			art.roundRect(ctx, sx - 4 + sw, -22 - up, 8, 16, 2, { fill: '#1c1b22', ...line });
-			art.roundRect(ctx, sx - 5 + sw * 0.7, -26 - up * 0.6, 10, 8, 3, { fill: '#f2f0ec', ...line });
+			art.roundRect(ctx, sx - 5 + sw * 0.7, -26 - up * 0.6, 10, 8, 3, { fill: col, ...line });
 			art.roundRect(ctx, sx - 6 + sw, -8 - up, 14, 7, 3, { fill: col, ...line });
 		}
 		ctx.translate(0, -bob);
 		// hips, torso, neck
 		art.roundRect(ctx, -13, -46, 26, 8, 2, { fill: '#1c1b22', ...line });
-		art.roundRect(ctx, -13, -64, 26, 19, 5, { fill: '#f2f0ec', ...line });
+		art.roundRect(ctx, -13, -64, 26, 19, 5, { fill: col, ...line });
 		art.rect(ctx, 1, -72, 7, 10, { fill: '#1c1b22', ...line });
 		// the head: a loaf with a coloured band, one ringed eye; tilting about when cheering
 		ctx.save();
 		ctx.translate(2, -74);
 		ctx.rotate(cheer ? Math.sin(time * 7) * 0.2 : Math.sin(time * 1.3) * 0.05);
-		art.roundRect(ctx, -18, -22, 36, 22, 10, { fill: '#f2f0ec', ...line });
+		art.roundRect(ctx, -18, -22, 36, 22, 10, { fill: col, ...line });
 		art.roundRect(ctx, -19, -4, 38, 5, 2, { fill: col, ...line });
 		art.circle(ctx, 8, -12, 6.5, { fill: col, ...line });
 		art.circle(ctx, 8, -12, 3.5, { fill: '#0c0c12' });
 		art.circle(ctx, 9.2, -13.2, 1.1, { fill: '#ffffff' });
 		// the plate on top
 		art.rect(ctx, -3, -26, 6, 4, { fill: '#1c1b22' });
-		art.ellipse(ctx, 0, -28, 22, 4.5, { fill: '#fbfaf6', ...line });
+		art.ellipse(ctx, 0, -28, 22, 4.5, { fill: col, ...line });
 		art.ellipse(ctx, 0, -28, 22, 4.5, { stroke: col, lineWidth: 2.5 });
 		ctx.restore();
 		ctx.restore();
