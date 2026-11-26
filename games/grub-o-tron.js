@@ -2246,6 +2246,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// their size: small enough that the head sits level with the counter top behind it, on the wall
 	// (seen from the eye, at AV_MAX: the head's middle about 1.0 m up, against the counter's 0.92 m further back)
 	const BOT_SCALE = 0.95;
+	const STEP = 0.2;   // one step's length (before scaling)
 	const HIP_Y = 0.12 + LEG * 2;   // hip height standing (feet 0.12 tall at the ankle)
 	function buildTray(n) {
 		const col = new THREE.Color(colourOf(n));
@@ -2613,9 +2614,11 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			const want = speed > 0.35 ? Math.atan2(m.vx, m.vz) : wallYaw + (m.side || 1) * 0.75;
 			m.yaw = m.yaw === undefined ? want : m.yaw + Math.atan2(Math.sin(want - m.yaw), Math.cos(want - m.yaw)) * (1 - Math.exp(-dt * (m.hop && m.hop.u < 1 ? 14 : 7)));
 			m.g.rotation.y = m.yaw;
-			// walking: a stride as fast as they're moving, the hips bobbing twice a step
-			m.stride = lerp(m.stride, clamp(speed / 1.4, 0, 1), 1 - Math.exp(-dt * 10));
-			m.phase += dt * (5 + 9 * m.stride);
+			// walking: the legs turn over with the ground covered (half a cycle a step), so the
+			// feet plant instead of sliding; the stride opens up as they get going
+			m.stride = lerp(m.stride, clamp(speed / 0.8, 0, 1), 1 - Math.exp(-dt * 12));
+			m.phase += Math.min(Math.PI * speed * dt / (STEP * BOT_SCALE), 32 * dt);
+			if (m.stride < 0.05) m.phase = Math.round(m.phase / Math.PI) * Math.PI;   // (stopped: feet together)
 			const st = m.stride, ph = m.phase;
 			// a pose for what they're doing: lean in, dip the head, squat, shake
 			let lean = 0.04 + st * 0.12, nod = 0, squat = 0, shake = 0;
@@ -2632,16 +2635,25 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 				else if (a.kind === 'pump') { squat = 0.12 * pulse; }
 				else if (a.kind === 'douse') { lean = 0.2; shake = Math.sin(a.t * 40) * 0.2; }
 			}
-			const bob = Math.abs(Math.sin(ph)) * 0.035 * st + Math.sin(time * 2.4) * 0.006 * (1 - st);
+			// each leg: sin(q) is where its foot is (back -1 .. forward +1); while cos(q) > 0 it's
+			// swinging forward through the air, knee folding up to clear the floor, then reaching
+			// out nearly straight to plant; on the ground it stays straight and pushes back
 			const th = Math.acos(clamp(1 - squat / (2 * LEG), -1, 1));   // (knees bent for a squat)
-			m.hips.position.y = HIP_Y - squat + bob - 0.012 * st;
-			m.hips.rotation.z = Math.sin(ph) * 0.06 * st + shake * 0.3;
-			m.legs.forEach((L, j) => {
-				const q = ph + j * Math.PI, swing = Math.sin(q) * 0.55 * st, lift = Math.max(0, Math.cos(q)) * 0.75 * st;
-				L.hip.rotation.x = lerp(L.hip.rotation.x, -th - swing - lift * 0.35, Math.min(1, dt * 20));
-				L.knee.rotation.x = lerp(L.knee.rotation.x, 2 * th + lift, Math.min(1, dt * 20));
-				L.ankle.rotation.x = lerp(L.ankle.rotation.x, -th + swing * 0.6 - lift * 0.5, Math.min(1, dt * 20));
-			});
+			const reach = Math.asin(clamp(STEP / (4 * LEG), 0, 0.9)) * st;   // (the hip's swing either way)
+			let lowest = 0;
+			for (let j = 0; j < 2; j++) {
+				const L = m.legs[j], q = ph + j * Math.PI, air = Math.max(0, Math.cos(q));
+				const hf = th + reach * Math.sin(q) + air * 0.15 * st;                  // (thigh, forward of straight down)
+				const kf = 2 * th + 0.08 * st + Math.pow(air, 1.5) * 1.15 * st;        // (knee, folded back)
+				L.hip.rotation.x = -hf;
+				L.knee.rotation.x = kf;
+				L.ankle.rotation.x = hf - kf - air * 0.25 * st * Math.sin(q);           // (foot level; toes down as it lifts)
+				lowest = Math.max(lowest, LEG * Math.cos(hf) + LEG * Math.cos(hf - kf));
+			}
+			// the hips ride on whichever leg is down, so they bob as it straightens under them
+			m.hips.position.y = 0.12 + lowest + Math.sin(time * 2.4) * 0.004 * (1 - st);
+			m.hips.rotation.z = Math.sin(ph) * 0.07 * st + shake * 0.3;
+			m.hips.rotation.y = Math.sin(ph) * 0.12 * st;   // (a little twist with each step)
 			const ease = Math.min(1, dt * 14);
 			m.upper.rotation.x = lerp(m.upper.rotation.x, lean, ease);
 			m.upper.rotation.z = lerp(m.upper.rotation.z, -Math.sin(ph) * 0.05 * st + shake, ease);
