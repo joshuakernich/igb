@@ -1300,17 +1300,33 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// just inside its edges. One texture covers a 1.5 m square and tiles; the seams sink and the
 	// rivets stand proud (a bump map); the rivets shine more than the plates. w, h: the face it
 	// covers (metres), so the plates come out the same size everywhere.
-	const PLATE_TILE = 0.5;   // (the plates and rivets much smaller: the user asked)
-	const PLATES = [[0, 0, 780, 250], [780, 0, 244, 500], [0, 250, 520, 540], [520, 250, 260, 540], [780, 500, 244, 290], [0, 790, 250, 234], [250, 790, 774, 234]];
+	const PLATE_TILE = 1.0;   // (the texture covers a metre: the plates small, 10 to 35 cm, and laid out at random: the user asked)
+	// the plates: the square cut up at random, again and again, into pieces of all shapes
+	// (never thinner than MIN or wider than MAX; cuts on an 8-pixel grid so seams line up neatly)
+	function plateLayout(S, rnd) {
+		const MIN = 100, MAX = 360, out = [];
+		(function cut(x, y, w, h, depth) {
+			const canX = w >= MIN * 2, canY = h >= MIN * 2;
+			const big = w > MAX || h > MAX;
+			if ((!canX && !canY) || (!big && depth > 1 && rnd() < 0.35)) { out.push([x, y, w, h]); return; }
+			const alongX = canX && (!canY || (w / h) * (0.6 + rnd() * 0.8) > 1);
+			const len = alongX ? w : h;
+			const at = Math.round((MIN + rnd() * (len - 2 * MIN)) / 8) * 8;
+			if (alongX) { cut(x, y, at, h, depth + 1); cut(x + at, y, w - at, h, depth + 1); }
+			else { cut(x, y, w, at, depth + 1); cut(x, y + at, w, h - at, depth + 1); }
+		})(0, 0, S, S, 0);
+		return out;
+	}
 	let plates = null;
 	function stainless(w = 1, h = 1) {
 		if (!plates) {
 			const S = 1024, rnd = seeded(77);
-			const mottle = Array.from({ length: 260 }, () => [rnd() * S, rnd() * S, 20 + rnd() * 90, rnd(), rnd()]);
-			const dents = Array.from({ length: 1400 }, () => [rnd() * S, rnd() * S, 2 + rnd() * 6, rnd() * Math.PI, rnd()]);
-			const tones = PLATES.map(() => (rnd() - 0.5) * 18);
+			const PLATES = plateLayout(S, rnd);
+			const mottle = Array.from({ length: 420 }, () => [rnd() * S, rnd() * S, 10 + rnd() * 50, rnd(), rnd()]);
+			const dents = Array.from({ length: 3000 }, () => [rnd() * S, rnd() * S, 1 + rnd() * 3, rnd() * Math.PI, rnd()]);
+			const tones = PLATES.map(() => (rnd() - 0.5) * 22);
 			const rivetsOf = ([x, y, pw, ph]) => {
-				const IN = 22, GAPR = 40, out = [];
+				const IN = 11, GAPR = 20, out = [];
 				const nx = Math.max(2, Math.round((pw - 2 * IN) / GAPR)), ny = Math.max(2, Math.round((ph - 2 * IN) / GAPR));
 				for (let i = 0; i <= nx; i++) { const rx = x + IN + (pw - 2 * IN) * i / nx; out.push([rx, y + IN], [rx, y + ph - IN]); }
 				for (let j = 1; j < ny; j++) { const ry = y + IN + (ph - 2 * IN) * j / ny; out.push([x + IN, ry], [x + pw - IN, ry]); }
@@ -1339,16 +1355,16 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 					}
 					c.restore();
 					// the bevel: light along the top and left inside edges, dark along the bottom and right
-					c.fillStyle = o.bevelHi; c.fillRect(x + 3, y + 3, pw - 6, 3); c.fillRect(x + 3, y + 3, 3, ph - 6);
-					c.fillStyle = o.bevelLo; c.fillRect(x + 3, y + ph - 6, pw - 6, 3); c.fillRect(x + pw - 6, y + 3, 3, ph - 6);
+					c.fillStyle = o.bevelHi; c.fillRect(x + 2, y + 2, pw - 4, 2); c.fillRect(x + 2, y + 2, 2, ph - 4);
+					c.fillStyle = o.bevelLo; c.fillRect(x + 2, y + ph - 4, pw - 4, 2); c.fillRect(x + pw - 4, y + 2, 2, ph - 4);
 					// the seam
-					c.strokeStyle = o.seam; c.lineWidth = 5; c.strokeRect(x, y, pw, ph);
+					c.strokeStyle = o.seam; c.lineWidth = 3; c.strokeRect(x, y, pw, ph);
 					// the rivets: domes, lit from the top left, a shadow to the bottom right
 					for (const [rx, ry] of rivetsOf(pl)) {
-						c.fillStyle = o.rivetShadow; c.beginPath(); c.arc(rx + 2, ry + 2.5, 10, 0, Math.PI * 2); c.fill();
-						const g3 = c.createRadialGradient(rx - 3, ry - 3, 1, rx, ry, 10);
+						c.fillStyle = o.rivetShadow; c.beginPath(); c.arc(rx + 1, ry + 1.3, 5, 0, Math.PI * 2); c.fill();
+						const g3 = c.createRadialGradient(rx - 1.5, ry - 1.5, 0.5, rx, ry, 5);
 						g3.addColorStop(0, o.rivetHi); g3.addColorStop(0.55, o.rivet); g3.addColorStop(1, o.rivetLo);
-						c.fillStyle = g3; c.beginPath(); c.arc(rx, ry, 9, 0, Math.PI * 2); c.fill();
+						c.fillStyle = g3; c.beginPath(); c.arc(rx, ry, 4.5, 0, Math.PI * 2); c.fill();
 					}
 				});
 			};
