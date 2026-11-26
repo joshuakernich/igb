@@ -2589,7 +2589,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 
 	// A moulded block: a superellipsoid, boxy round the sides and as round on top (eTop) or
 	// flat underneath (eBot) as you like; small e is boxy, 1 is a ball. Smooth, seamless normals.
-	const sgnpow = (v, e) => Math.sign(v) * Math.pow(Math.abs(v), e);
+	function sgnpow(v, e) { return Math.sign(v) * Math.pow(Math.abs(v), e); }   // (a declaration: the stations use superBox as the game loads, before this line)
 	function superBox(w, h, d, eTop = 0.3, eBot = 0.3, eSide = 0.3, seg = 40) {
 		const geo = new THREE.SphereGeometry(1, seg, Math.round(seg * 0.75));
 		const pos = geo.attributes.position;
