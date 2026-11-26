@@ -2242,7 +2242,10 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// head with one big ringed camera eye, a boxy torso, servo hips and knees,
 	// chunky feet. The accents are the player's colour. A plate rides flat on top
 	// of the head; what they're carrying sits on it. They walk where their player walks.
-	const LEG = 0.2;   // thigh and shin length
+	const LEG = 0.15;   // thigh and shin length (stubby)
+	// their size: small enough that the head sits level with the counter top behind it, on the wall
+	// (seen from the eye, at AV_MAX: the head's middle about 1.0 m up, against the counter's 0.92 m further back)
+	const BOT_SCALE = 0.95;
 	const HIP_Y = 0.12 + LEG * 2;   // hip height standing (feet 0.12 tall at the ankle)
 	function buildTray(n) {
 		const col = new THREE.Color(colourOf(n));
@@ -2350,6 +2353,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		plate.add(p.hold);
 		shadows(g);
 		p.glow.castShadow = false;
+		g.scale.setScalar(BOT_SCALE);
 		p.phase = Math.random() * 6;
 		p.stride = 0;
 		return p;
@@ -2647,7 +2651,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			// what they're carrying, riding on the plate, turned to face the middle
 			const hv = syncItem(m.holder, c.held, m.hold, 0, 0, 0, 0.46);
 			if (hv) hv.rotation.y = faceEye(m.x, m.z) - m.yaw + Math.sin(rt * 1.5) * 0.3;
-			if (c.held && c.held.burnt) every('held-smoke-' + i, 2, dt, () => smoke(0, m.x, 1.0, m.z, 0.35));
+			if (c.held && c.held.burnt) every('held-smoke-' + i, 2, dt, () => smoke(0, m.x, 1.2, m.z, 0.35));
 		}
 
 		// the portals
@@ -2717,7 +2721,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		for (let i = 0; i < count; i++) {
 			const c = chefs[i], m = chefs3[i];
 			if (!latest[i] || !m || !m.g.visible || m.x === undefined) continue;
-			const at = onWall(m.x, 1.65, m.z);
+			const at = onWall(m.x, 1.45, m.z);
 			if (!at) continue;
 			const y = at.y;
 			if (c.held) {
@@ -2736,7 +2740,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// where a cook's floating words go: over their head
 	function overChef(i) {
 		const c = chefs[i], m = chefs3[i];
-		return (m && m.x !== undefined && onWall(m.x, 1.8, m.z)) || { x: c.x, y: 500 };
+		return (m && m.x !== undefined && onWall(m.x, 1.6, m.z)) || { x: c.x, y: 500 };
 	}
 
 	function bar(ctx, x, y, w, k, colour, back) {
