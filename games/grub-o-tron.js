@@ -1358,8 +1358,10 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		for (const x of [wl.x - 0.06, wr.x + 0.06]) mesh(BOX(0.14, 2.6, 0.16), MAT.darkSteel, g, x, 1.55, -FRONT_BACK + 0.08);
 		mesh(BOX(wr.x - wl.x + 0.3, 0.14, 0.16), MAT.darkSteel, g, 0, 2.85, -FRONT_BACK + 0.08);
 		buildSunbeams(wl.x, wr.x);
+		// the neon signs: high on the side walls, facing into the kitchen (the user asked)
 		for (const [x, text, colour] of [[-1.2, 'FISSION CHIPS', '#9dff3a'], [1.2, 'OPEN 25/8', '#FC1992']]) {
-			const sign = mesh(new THREE.PlaneGeometry(2.0, 0.37), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), room, x, 3.1, -FRONT_BACK + 0.06);
+			const sign = mesh(new THREE.PlaneGeometry(2.6, 0.48), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), room, Math.sign(x) * (BACK - 0.06), 2.95, 0);
+			sign.rotation.y = -Math.sign(x) * Math.PI / 2;
 			signs.push({ m: sign, text, colour, k: 1.3, seed: x, font: x < 0 ? 'Monoton' : null });   // (the name in the title's neon-tube lettering)
 		}
 		// light: a warm wash from overhead, a glow over each wall's counter
