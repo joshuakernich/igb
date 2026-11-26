@@ -947,7 +947,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// the front counter: a food hatch for each ingredient, then the binner
 	const DISP_ALONG = DISPENSERS.map((d) => slotAlong(d.wall, d.slot));
 	const BIN_ALONG = slotAlong(BIN.wall, BIN.slot);
-	const ITEM_AT = { salt: 0.38, chop: 0.78, fry: 0.92, grill: 0.72, stir: 1.02, press: 0.5, inject: 0.62, warp: 0.7, cryo: 0.5 };   // an item's height on each device (its own units)
+	const ITEM_AT = { salt: 0.38, chop: 1.42, fry: 0.92, grill: 0.72, stir: 1.02, press: 0.5, inject: 0.62, warp: 0.7, cryo: 0.5 };   // an item's height on each device (its own units)
 	const PORTAL_Y = CT.y + 0.15, PORTAL_D = CT.d + 0.32;   // warped food lands on a counter, in a ring of light
 
 	const renderer = new THREE.WebGLRenderer({ antialias: false });   // (the composer multisamples)
@@ -1513,17 +1513,55 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	/* ---------- 3D: the stations ---------- */
 
 	const STATION_3D = {
+		// the CHOPPER: a heavy steel chamber, a square hopper on top, and down inside it two
+		// toothed drums churning against each other (they spin up hard as it's fed); a dark
+		// window in its front glowing from within, a chute below, a motor on its side
 		chop(g, p) {
-			mesh(CYL(1.0, 1.12, 0.56, 32), [MAT.wood, MAT.woodTop, MAT.wood], g, 0, 0.28, 0);
-			const goo = mesh(new THREE.CircleGeometry(0.26, 16), glowMat(0x7aff2a, 0.9), g, -0.45, 0.565, 0.15);
-			goo.rotation.x = -Math.PI / 2;
-			const cleaver = new THREE.Group();
-			cleaver.position.set(0.9, 0.78, 0.1);
-			g.add(cleaver);
-			mesh(BOX(0.42, 0.1, 0.1), MAT.wood, cleaver, 0.18, 0, 0);
-			mesh(BOX(0.78, 0.44, 0.04), MAT.steel, cleaver, -0.4, -0.02, 0);
-			mesh(BOX(0.78, 0.05, 0.05), std(0xe8f0ee, 0.1, 1), cleaver, -0.4, -0.23, 0);
-			p.cleaver = cleaver;
+			const body = new THREE.Group();
+			g.add(body);
+			p.body = body;
+			const steel = std(0xb8c0c6, 0.3, 0.85);
+			const dark = std(0x2a2c32, 0.45, 0.5);
+			mesh(superBox(1.9, 1.0, 1.3, 0.25, 0.2, 0.25, 32), steel, body, 0, 0.5, 0);
+			mesh(BOX(1.96, 0.1, 1.36), MAT.hazard, body, 0, 0.2, 0);
+			// the hopper: a square funnel, open at the top, down into the chamber
+			const hopper = mesh(lathe([[0.62, 0.98], [0.66, 0.98], [1.06, 1.62], [1.0, 1.62]], 4, 8), std(0x9aa2a8, 0.35, 0.8, { side: THREE.DoubleSide }), body, 0, 0, 0);
+			hopper.rotation.y = Math.PI / 4;
+			// the drums: two of them, side by side, turning against each other, rows of teeth on each
+			p.drums = [];
+			const toothMat = std(0xe6ecef, 0.15, 1);
+			const drumMat = std(0x55595f, 0.35, 0.8);
+			for (const zz of [-0.16, 0.16]) {
+				const drum = new THREE.Group();
+				drum.position.set(0, 1.04, zz);
+				body.add(drum);
+				const core = mesh(CYL(0.15, 0.15, 0.8, 20), drumMat, drum);
+				core.rotation.z = Math.PI / 2;
+				for (let r = 0; r < 6; r++) for (let t = 0; t < 8; t++) {
+					const a = t / 8 * Math.PI * 2 + r * 0.4 + (zz > 0 ? 0.2 : 0);
+					const tooth = mesh(new THREE.ConeGeometry(0.05, 0.16, 6), toothMat, drum, -0.33 + r * 0.132, Math.sin(a) * 0.2, Math.cos(a) * 0.2);
+					tooth.quaternion.setFromUnitVectors(_up, new THREE.Vector3(0, Math.sin(a), Math.cos(a)));
+				}
+				p.drums.push(drum);
+			}
+			// a glow from down in the chamber, under the drums
+			p.maw = mesh(new THREE.PlaneGeometry(0.86, 0.86), glowMat(0xff3b2a, 1.2, { transparent: true, opacity: 0.8 }), body, 0, 1.005, 0);
+			p.maw.rotation.x = -Math.PI / 2;
+			// the front: a dark window glowing from within, rivets round it, a chute below
+			const win = mesh(superBox(0.9, 0.36, 0.06, 0.3, 0.3, 0.3, 20), std(0x120808, 0.05, 0.3, { clearcoat: 1, clearcoatRoughness: 0 }), body, -0.25, 0.6, 0.64);
+			win.castShadow = false;
+			p.window = mesh(new THREE.PlaneGeometry(0.8, 0.27), glowMat(0xff3b2a, 0.5, { transparent: true, opacity: 0.6 }), body, -0.25, 0.6, 0.675);
+			for (const [rx, ry] of [[-0.68, 0.76], [0.18, 0.76], [-0.68, 0.44], [0.18, 0.44]]) mesh(SPH(0.03, 8), steel, body, rx, ry, 0.66);
+			const chute = mesh(BOX(0.42, 0.08, 0.36), dark, body, 0.55, 0.34, 0.72);
+			chute.rotation.x = 0.35;
+			// the motor: a finned drum on its right flank, a belt guard
+			const motor = new THREE.Group();
+			motor.position.set(1.05, 0.62, -0.05);
+			body.add(motor);
+			const mc = mesh(CYL(0.26, 0.26, 0.42, 24), dark, motor);
+			mc.rotation.z = Math.PI / 2;
+			for (let f = 0; f < 5; f++) { const fin = mesh(CYL(0.29, 0.29, 0.025, 24), steel, motor, -0.15 + f * 0.075, 0, 0); fin.rotation.z = Math.PI / 2; }
+			p.fan = mesh(BOX(0.04, 0.4, 0.06), steel, motor, 0.24, 0, 0);
 		},
 		fry(g, p) {
 			mesh(BOX(2.2, 0.86, 1.3), MAT.steel, g, 0, 0.43, 0);
@@ -2893,7 +2931,19 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			const w = s.wall, cx = s.sx, cz = s.sz;
 			const hot = s.state === 'work' || s.state === 'done';
 			const k = s.kind;
-			if (k === 'chop') p.cleaver.rotation.z = lerp(-0.95, 0.03, s.hit);
+			if (k === 'chop') {
+				// the drums churn: idling, faster with food in, flat out on a tap; the chamber shudders
+				const spin = (1.2 + (s.state === 'work' ? 3 : 0) + s.hit * 28) * dt;
+				p.drums[0].rotation.x += spin;
+				p.drums[1].rotation.x -= spin;
+				p.fan.rotation.x += spin * 3;
+				p.body.position.x = s.hit * Math.sin(rt * 90) * 0.03;
+				p.body.rotation.z = s.hit * Math.sin(rt * 70) * 0.015;
+				const heat = s.state === 'work' ? 0.6 + s.hit * 0.8 : 0.25;
+				p.maw.material.opacity = 0.35 + heat * 0.5;
+				p.window.material.opacity = 0.25 + heat * 0.6 + Math.sin(rt * 23) * 0.05 * heat;
+				if (s.hit > 0.5) every('chop-bits', 30, dt, () => puff(w, cx + rnd1() * 0.3 * MS, ISLAND.y + MS * 1.6, cz + rnd1() * 0.2 * MS, { color: s.item ? INGS[s.item.ing].colour : 0xffe12a, size: 0.035, grow: 0.02, life: 0.5, vy: 1.6, vx: rnd1() * 1.4, vz: rnd1() * 0.8, glow: 1.4, alpha: 1 }));
+			}
 			else if (k === 'fry') {
 				p.oilMat.emissiveIntensity = s.item ? (s.state === 'burnt' ? 0.15 : 0.9 + Math.sin(rt * 9) * 0.1) : 0.25;
 				p.light.intensity = s.item && s.state !== 'burnt' ? 5 : 0;
@@ -2942,6 +2992,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			const item = s.kind === 'warp' && s.state === 'work' ? null : s.item;   // (warping food is elsewhere until it's back)
 			const v = syncItem(s, item, p.g, 0, ITEM_AT[k] + (s.state === 'done' ? 0.06 + Math.sin(rt * 5) * 0.05 : 0), 0, 1.3);
 			if (v && k === 'fry' && s.state === 'work') v.position.y -= 0.12;
+			if (v && k === 'chop' && s.state === 'work') { v.position.y -= s.prog * 0.35; v.rotation.z = Math.sin(rt * 40) * 0.08 * s.hit; }   // (sinking into the teeth)
 			if (v && k === 'press') v.scale.y = 1.3 * (1 - (s.state === 'work' ? s.prog : 1) * 0.35);
 			if (s.state === 'burnt') every('burnt-' + k, 3, dt, () => smoke(w, cx, ISLAND.y + MS * 1.0, cz, 1.1));
 			// fire
