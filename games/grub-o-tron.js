@@ -2250,6 +2250,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 	// their size: small (the user asked twice); the head sits a little under the counter top on screen
 	const BOT_SCALE = 0.8;
 	const STEP = 0.2;   // one step's length (before scaling)
+	const NECK_TILT = 0.18;   // the neck leans forward a touch; the head is set back upright on it
 	const HIP_Y = 0.12 + LEG * 2;   // hip height standing (feet 0.12 tall at the ankle)
 	function buildTray(n) {
 		const col = new THREE.Color(colourOf(n));
@@ -2304,7 +2305,7 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 		// the neck: two servo blocks with a cable loop, leaning forward
 		const neck = new THREE.Group();
 		neck.position.set(0, 0.22, 0.03);
-		neck.rotation.x = 0.18;
+		neck.rotation.x = NECK_TILT;
 		upper.add(neck);
 		mesh(BOX(0.07, 0.17, 0.08), servo, neck, 0, 0.09, 0);
 		mesh(CYL(0.026, 0.026, 0.085, 14), horn, neck, 0, 0.15, 0).rotation.z = Math.PI / 2;
@@ -2660,7 +2661,10 @@ IGB.register('grub-o-tron', function GrubOTron(stage, playersMeta) {
 			const ease = Math.min(1, dt * 14);
 			m.upper.rotation.x = lerp(m.upper.rotation.x, lean, ease);
 			m.upper.rotation.z = lerp(m.upper.rotation.z, -Math.sin(ph) * 0.05 * st + shake, ease);
-			m.head.rotation.x = lerp(m.head.rotation.x, nod - lean * 0.6, ease);   // (the head stays level-ish: the plate's full)
+			// the head sits upright whatever the body's doing (it only tips for a nod): it takes
+			// back the neck's forward set, the lean, and the hips' and body's sway
+			m.head.rotation.x = lerp(m.head.rotation.x, nod - m.upper.rotation.x - NECK_TILT, ease);
+			m.head.rotation.z = -(m.upper.rotation.z + m.hips.rotation.z);
 			m.head.rotation.y = lerp(m.head.rotation.y, st > 0.2 ? 0 : Math.sin(time * 0.7 + i) * 0.25, Math.min(1, dt * 3));
 			m.eyes.forEach((e) => { e.scale.y = (rt + i * 0.7) % 3.5 < 0.12 ? 0.2 : 1; });
 			// what they're carrying, riding on the plate, turned to face the middle
