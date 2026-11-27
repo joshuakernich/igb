@@ -43,6 +43,8 @@ IGB.manifest = [
 			title: { lines: [{ text: 'RED LIGHT', fill: '#ff3640', glow: '#ff3640' }, { text: 'GREEN LIGHT', fill: '#27d96b', glow: '#27d96b' }] }, box: { color: '#e5287a', bg: '#1d7a63', note: 'SURVIVAL' } },
 		{ id: 'temple-of-coins', name: 'Temple of Coins', icon: 'assets/icons/temple-of-coins.png', file: 'games/temple-of-coins.js', module: true,
 			title: { lines: [{ text: 'TEMPLE', fill: '#ffd34d', glow: '#ff9a1f', font: 'Bungee', scale: 1.25 }, { text: 'OF COINS', fill: '#ffd34d', glow: '#ff9a1f', font: 'Bungee', scale: 0.94, gap: 0.78 }], font: 'Bungee' }, box: { color: '#ffd34d', bg: '#2a1708', note: 'TREASURE' } },
+		{ id: 'dream-catcher', name: 'Dream Catcher', file: 'games/dream-catcher.js', module: true,
+			title: { lines: [{ text: 'DREAM', fill: '#d6b8ff', glow: '#9a6bff', font: 'Knewave', scale: 1.2 }, { text: 'CATCHER', fill: '#ffe9a8', glow: '#ff9ad6', font: 'Knewave' }], font: 'Knewave' }, box: { color: '#d6b8ff', bg: '#0c1238', note: 'NIGHT' } },
 		{ id: 'boogie-woods', name: 'GrooveWood', icon: 'assets/icons/boogie-woods.png', file: 'games/boogie-woods/index.js', module: true,
 			// (one word, kept together: GROOVE in hot pink, WOOD in leaf green)
 			title: { lines: [{ text: 'GROOVEWOOD', font: 'Shrikhand', scale: 1.25, parts: [{ text: 'GROOVE', fill: '#ff5fb0', glow: '#ff2a8a' }, { text: 'WOOD', fill: '#a8ff3e', glow: '#1fbf6a' }] }], font: 'Shrikhand' },
@@ -192,7 +194,7 @@ IGB.manifest = [
 
 // The only games the menu shows (in their folders above); the rest stay
 // playable by #id. Remove this (or set it to null) to show everything.
-IGB.menu = ['grub-o-tron', 'red-light-green-light', 'temple-of-coins', 'boogie-woods', 'loop-island', 'quill-relay', 'iron-stride', 'twin-tail-tower', 'tails-escape', 'knuckles-quest', 'super-sonic-battle', 'sonic-characters', 'small-talk', 'riddler-says', 'melody-canvas', 'show-debug', 'gaze-test'];
+IGB.menu = ['grub-o-tron', 'red-light-green-light', 'temple-of-coins', 'dream-catcher', 'boogie-woods', 'loop-island', 'quill-relay', 'iron-stride', 'twin-tail-tower', 'tails-escape', 'knuckles-quest', 'super-sonic-battle', 'sonic-characters', 'small-talk', 'riddler-says', 'melody-canvas', 'show-debug', 'gaze-test'];
 
 // The music tracks, on or off everywhere: every music-*.mp3 (the show's music
 // included). Tunes the games synthesise (the doll's song, Mingle's waltz),
