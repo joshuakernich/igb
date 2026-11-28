@@ -14,9 +14,9 @@
  *   bumping      walk into a cottage, a hedge or a tree and your tail scatters
  *                back into the air (and you're dizzy for a moment)
  *   bridges      the front wall is Moonlight Square, where the hourglasses
- *                are. A bridge off its left edge leads into Willow Lane, on
- *                the left wall; one off its right into Bramble Row, on the
- *                right. They're full of cottages, so full of dreams, but
+ *                are. A bridge from its front-left corner leads into Willow
+ *                Lane, on the left wall; one from its front-right corner into
+ *                Bramble Row, on the right. They're full of cottages, so full of dreams, but
  *                they've no hourglass: bring the dreams home across a bridge
  *   showers      every so often one village has a DREAM SHOWER
  *
@@ -27,10 +27,13 @@
  * mostly top-down through a camera pitched 60 degrees. The floor maps 1:1 to
  * the village you're in (px across, pz from the front wall), with the same
  * forgiving EDGE by each wall. The three villages are separate islands; you're
- * in one at a time. Walk onto the bridge cells at the room's left (or right)
- * edge, halfway along, and your catcher crosses into that wall's village,
- * at the very same spot on the floor: the bridge there leads off into the
- * wall too, so walk back onto it to come home. Seen from a side wall, that
+ * in one at a time. The bridges land in the room's two front corners: stand
+ * in the front-left (or front-right) corner, the sweet spot at the seam,
+ * and your catcher crosses into that side wall's village at the very same
+ * spot on the floor. It's the same corner seen from both walls: top-left of
+ * the square on the front wall, top-right of Willow Lane on the left wall
+ * (top-left of Bramble Row on the right), each bridge running off toward
+ * the seam. Step off the landing, then back on, to cross back. Seen from a side wall, that
  * village's columns run along the wall (left wall: pz from its left edge;
  * right wall: 1 - pz) and its rows run out from it (nearest the wall is the
  * top of the picture): the room's own axes, seen from that side.
@@ -39,6 +42,7 @@
  */
 import * as THREE from '../lib/three/three.module.min.js';
 import { createWallComposer, canvasTexture, environmentFromShader, toScreen } from '../lib/three/walls.js';
+import { mergeGeometries } from '../lib/three/addons/utils/BufferGeometryUtils.js';
 
 IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 
@@ -84,15 +88,15 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 
 	const MAPS = [
 		{ name: 'WILLOW LANE', short: 'WILLOW', map: [
-			'                ',
-			' Hh  Hh  Hh  Hh ',
-			' hh  hh  hh  hh ',
+			'BB              ',
+			'BB   Hh  Hh  Hh ',
+			'     hh  hh  hh ',
 			'  L    ,,    L  ',
 			'T    T    T    T',
 			'    Hh    Hh    ',
 			'T   hh L  hh   T',
-			'B               ',
-			'B      ,,       ',
+			' Hh             ',
+			' hh    ,,       ',
 			'T   Hh    Hh   T',
 			'    hh L  hh    ',
 			'  ,          ,  ',
@@ -102,15 +106,15 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 			'                ',
 		] },
 		{ name: 'MOONLIGHT SQUARE', short: 'SQUARE', map: [
-			'                ',
-			' Hh  T ,, T  Hh ',
-			' hh L      L hh ',
+			'BB            BB',
+			'BB  Hh ,, Hh  BB',
+			'    hh L  hh    ',
 			'       Gg       ',
 			' ##    gg    ## ',
 			'    L      L    ',
 			'T  Hh  ,,  Hh  T',
-			'B  hh      hh  B',
-			'B      TT      B',
+			'   hh      hh   ',
+			'       TT       ',
 			'    ,      ,    ',
 			'T  Hh      Hh  T',
 			'   hh  Gg  hh   ',
@@ -120,15 +124,15 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 			'                ',
 		] },
 		{ name: 'BRAMBLE ROW', short: 'BRAMBLE', map: [
-			'                ',
-			' Hh  ,  Hh  Hh  ',
-			' hh  T  hh  hh  ',
+			'              BB',
+			' Hh  ,  Hh    BB',
+			' hh  T  hh      ',
 			'                ',
 			'  Hh  ####  Hh  ',
 			'  hh  L     hh  ',
 			'T      Hh      T',
-			'   L   hh      B',
-			'      ,        B',
+			'   L   hh   Hh  ',
+			'      ,     hh  ',
 			'T  Hh     Hh   T',
 			'   hh  T  hh    ',
 			'                ',
@@ -209,7 +213,7 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 		{ caption: 'WALK AROUND: YOU ARE YOUR DREAM CATCHER', min: 2, max: 10, did: () => everyone((i) => tut.moved[i] > 1.5) },
 		{ caption: 'WALK PAST THE GLOWING DREAMS TO CATCH THEM', min: 2, max: 25, did: () => enough(tut.picked) },
 		{ caption: 'TAKE YOUR TAIL TO AN HOURGLASS TO BANK IT', min: 2, max: 25, did: () => enough(tut.banked) },
-		{ caption: 'WALK ONTO A BRIDGE TO VISIT ANOTHER VILLAGE', min: 2, max: 25, did: () => enough(tut.crossed) },
+		{ caption: 'STAND IN A FRONT CORNER TO CROSS THE BRIDGE THERE', min: 2, max: 25, did: () => enough(tut.crossed) },
 		{ caption: 'RUN THROUGH SOMEONE\'S TAIL TO STEAL IT!', min: 3.5, max: 3.5, did: () => true },
 		{ caption: 'DON\'T BUMP THE COTTAGES, OR YOUR DREAMS FLY OFF', min: 3.5, max: 3.5, did: () => true },
 	];
@@ -909,43 +913,55 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 			}
 			m.spots.push(...h.spots);
 		}
-		// the bridges, off the edge and over the water
-		const groups = {};
-		for (const b of m.bridges) (groups[b.c] = groups[b.c] || []).push(b);
-		for (const c of Object.keys(groups)) {
-			const cells = groups[c];
-			const r0 = Math.min(...cells.map((b) => b.r)), r1 = Math.max(...cells.map((b) => b.r));
-			const side = +c < N / 2 ? -1 : 1;
-			const z0 = cellZ(r0) - CS / 2, z1 = cellZ(r1) + CS / 2;
-			const len = 5.5;
+		// the bridges: a 2 x 2 landing in a corner by the front wall, the floor's
+		// sweet spot at a seam, and the bridge off it toward that seam: sideways
+		// off the square (into the side wall), up off a side village (into the
+		// front wall). Seen from either wall, it's in the corner beside the other.
+		m.pads = [];
+		const pads = {};
+		for (const b of m.bridges) (pads[b.c < N / 2 ? -1 : 1] = pads[b.c < N / 2 ? -1 : 1] || []).push(b);
+		for (const key of Object.keys(pads)) {
+			const cells = pads[key], side = +key;
+			const x0 = Math.min(...cells.map((b) => cellX(b.c))) - CS / 2, x1 = Math.max(...cells.map((b) => cellX(b.c))) + CS / 2;
+			const z0 = Math.min(...cells.map((b) => cellZ(b.r))) - CS / 2, z1 = Math.max(...cells.map((b) => cellZ(b.r))) + CS / 2;
+			const front = m.idx === FRONT;
+			const pad = { to: m.bridgeTo[cells[0].r][cells[0].c], x: (x0 + x1) / 2, z: (z0 + z1) / 2 };
+			m.pads.push(pad);
+			// a group whose +x runs out along the bridge, from the island's edge
 			const bg = new THREE.Group();
-			const deck = new THREE.Mesh(new THREE.BoxGeometry(len, 0.08, z1 - z0), MAT.planks);
-			deck.material = MAT.planks.clone();
+			const depth = front ? x1 - x0 : z1 - z0, wide = front ? z1 - z0 : x1 - x0;
+			if (front) { bg.position.set(side * HALF, 0, pad.z); bg.rotation.y = side < 0 ? Math.PI : 0; }
+			else { bg.position.set(pad.x, 0, -HALF); bg.rotation.y = Math.PI / 2; }
+			const len = 5.5;
+			const deck = new THREE.Mesh(new THREE.BoxGeometry(depth + len, 0.08, wide), MAT.planks.clone());
 			deck.material.map = TEX.planks.clone();
-			deck.material.map.repeat.set(len / 1.0, 1);
+			deck.material.map.repeat.set(depth + len, 1);
 			deck.material.map.needsUpdate = true;
-			deck.position.set(side * (HALF - CS + len / 2), 0.04, (z0 + z1) / 2);
+			deck.position.set((len - depth) / 2, 0.04, 0);
 			deck.receiveShadow = true;
 			deck.castShadow = true;
 			bg.add(deck);
-			for (const z of [z0 + 0.05, z1 - 0.05]) {
-				const rail = new THREE.Mesh(new THREE.BoxGeometry(len - CS, 0.05, 0.05), MAT.wood);
-				rail.position.set(side * (HALF + len / 2), 0.36, z);
+			for (const z of [-wide / 2 + 0.05, wide / 2 - 0.05]) {
+				const rail = new THREE.Mesh(new THREE.BoxGeometry(len - 0.3, 0.05, 0.05), MAT.wood);
+				rail.position.set(0.3 + (len - 0.3) / 2, 0.36, z);
 				rail.castShadow = true;
 				bg.add(rail);
 				for (let k = 0; k <= 5; k++) {
 					const post = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.36, 0.06), MAT.wood);
-					post.position.set(side * (HALF + k * (len - CS) / 5), 0.2, z);
+					post.position.set(0.3 + k * (len - 0.3) / 5, 0.2, z);
 					post.castShadow = true;
 					bg.add(post);
 				}
-				// a lantern at the island end
-				buildLamp(m, side * (HALF + 0.25), z + (z < 0 ? -0.12 : 0.12), bg, 0.7);
+				// a lantern each side at the island end
+				buildLamp(m, 0.25, z + (z < 0 ? -0.12 : 0.12), bg, 0.7);
 			}
-			// a glowing arch over the way in, so the bridge reads as a door to the next village
-			const arch = new THREE.Mesh(new THREE.TorusGeometry((z1 - z0) / 2 + 0.05, 0.04, 8, 32, Math.PI), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 1.3, 2.4) }));
+			// a glowing ring round the landing, and an arch over the way out, so it reads as a door to the next village
+			const ring = new THREE.Mesh(new THREE.PlaneGeometry(depth, wide).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: TEX.ring, color: new THREE.Color(1.2, 1.0, 2.0), transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending }));
+			ring.position.set(-depth / 2, 0.1, 0);
+			bg.add(ring);
+			const arch = new THREE.Mesh(new THREE.TorusGeometry(wide / 2 + 0.05, 0.04, 8, 32, Math.PI), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 1.3, 2.4) }));
 			arch.rotation.y = Math.PI / 2;
-			arch.position.set(side * (HALF - CS * 0.5), 0.1, (z0 + z1) / 2);
+			arch.position.set(0.05, 0.08, 0);
 			bg.add(arch);
 			m.bridgeArches = (m.bridgeArches || []).concat([arch]);
 			g.add(bg);
@@ -1342,6 +1358,89 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 		}
 	});
 
+	/* the forest between the villages: a moat round each island, and woods
+	   beyond it, with a path from every bridge off into the trees */
+
+	const MOAT = HALF + 2.8;      // the moat runs out this far from a village's middle; the woods start here
+	const REACH = LX / 2;         // each village's share of the woods, either side of it
+	TEX.forest = canvasTexture(512, 512, function (c, w) {
+		noiseFill(c, w, w, '#2a4a2a', 0.3, 16000, 41);
+		let k = 9;
+		for (let i = 0; i < 90; i++) {
+			k = (k * 1103515245 + 12345) >>> 0;
+			c.fillStyle = `rgba(${k % 2 ? '90,70,40' : '20,40,20'},0.25)`;
+			c.beginPath(); c.arc(k % w, (k >>> 9) % w, 6 + (k >>> 20) % 18, 0, Math.PI * 2); c.fill();
+		}
+	});
+	TEX.forest.wrapS = TEX.forest.wrapT = THREE.RepeatWrapping;
+	const forestMat = new THREE.MeshStandardMaterial({ map: TEX.forest, roughness: 0.95 });
+	const pathMat = new THREE.MeshStandardMaterial({ color: 0x8a6a48, roughness: 0.95 });
+	const forestPaths = [];
+	function forestBox(x0, x1, z0, z1) {
+		const m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, 1, z1 - z0), forestMat.clone());
+		m.material.map = TEX.forest.clone();
+		m.material.map.repeat.set((x1 - x0) / 6, (z1 - z0) / 6);
+		m.material.map.needsUpdate = true;
+		m.position.set((x0 + x1) / 2, -0.55, (z0 + z1) / 2);
+		m.receiveShadow = true;
+		scene.add(m);
+	}
+	for (const m of mazes) {
+		const cx = m.cx;
+		forestBox(cx - REACH, cx + REACH, -44, -MOAT);
+		forestBox(cx - REACH, cx + REACH, MOAT, 44);
+		forestBox(cx - REACH, cx - MOAT, -MOAT, MOAT);
+		forestBox(cx + MOAT, cx + REACH, -MOAT, MOAT);
+		// a path on from each bridge's far end
+		for (const pad of m.pads) {
+			const front = m.idx === FRONT;
+			const side = pad.x < 0 ? -1 : 1;
+			const x = front ? cx + side * (HALF + 5.5) : cx + pad.x, z = front ? pad.z : -(HALF + 5.5);
+			const dx = front ? side : 0, dz = front ? 0 : -1;
+			const len = 16;
+			const path = new THREE.Mesh(new THREE.BoxGeometry(front ? len : 1.3, 0.04, front ? 1.3 : len), pathMat);
+			path.position.set(x + dx * len / 2, -0.03, z + dz * len / 2);
+			path.receiveShadow = true;
+			scene.add(path);
+			forestPaths.push({ x, z, dx, dz, len });
+		}
+	}
+	// the trees: pines and round ones, as three instanced meshes (trunks, pine tops, round tops)
+	{
+		const cone = (r, h, y) => new THREE.ConeGeometry(r, h, 8).translate(0, y, 0);
+		const pineGeo = mergeGeometries([cone(0.55, 0.8, 0.9), cone(0.42, 0.7, 1.3), cone(0.28, 0.6, 1.7)]);
+		const roundGeo = mergeGeometries([new THREE.IcosahedronGeometry(0.55, 1).translate(0, 1.05, 0), new THREE.IcosahedronGeometry(0.38, 1).translate(0.3, 1.35, 0.1)]);
+		const trunkGeo = new THREE.CylinderGeometry(0.07, 0.1, 0.7, 6).translate(0, 0.35, 0);
+		const spots = [];
+		let k = 1234;
+		const rnd = () => ((k = (k * 1664525 + 1013904223) >>> 0) / 4294967296);
+		const nearPath = (x, z) => forestPaths.some((p) => {
+			const u = clamp((x - p.x) * p.dx + (z - p.z) * p.dz, 0, p.len);
+			return Math.hypot(x - (p.x + p.dx * u), z - (p.z + p.dz * u)) < 1.15;
+		});
+		for (const m of mazes) {
+			for (let i = 0; i < 1100; i++) {
+				const x = m.cx + (rnd() * 2 - 1) * REACH, z = (rnd() * 2 - 1) * 24;
+				if (Math.abs(x - m.cx) < MOAT + 0.4 && Math.abs(z) < MOAT + 0.4) continue;
+				if (nearPath(x, z)) continue;
+				spots.push({ x, z, pine: rnd() < 0.55, s: 0.75 + rnd() * 0.6, a: rnd() * 6, tint: rnd() });
+			}
+		}
+		const trunks = new THREE.InstancedMesh(trunkGeo, MAT.trunk, spots.length);
+		const pines = new THREE.InstancedMesh(pineGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85 }), spots.filter((t) => t.pine).length);
+		const rounds = new THREE.InstancedMesh(roundGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85 }), spots.filter((t) => !t.pine).length);
+		const mat4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), col = new THREE.Color();
+		let ip = 0, ir = 0;
+		spots.forEach(function (t, i) {
+			q.setFromAxisAngle(up, t.a);
+			mat4.compose(new THREE.Vector3(t.x, -0.05, t.z), q, new THREE.Vector3(t.s, t.s, t.s));
+			trunks.setMatrixAt(i, mat4);
+			if (t.pine) { pines.setMatrixAt(ip, mat4); pines.setColorAt(ip++, col.setHSL(0.36 + t.tint * 0.06, 0.45, 0.16 + t.tint * 0.08)); }
+			else { rounds.setMatrixAt(ir, mat4); rounds.setColorAt(ir++, col.setHSL(0.27 + t.tint * 0.08, 0.45, 0.2 + t.tint * 0.08)); }
+		});
+		for (const im of [trunks, pines, rounds]) { im.castShadow = true; im.receiveShadow = true; scene.add(im); }
+	}
+
 	/* the cameras: one a wall, each looking down on its own village */
 
 	const PITCH = 60 * Math.PI / 180;
@@ -1669,15 +1768,14 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 			if (playing || phase === 'intro') {
 				// the village's name, and who's in it
 				const here = cat.map((e, i) => i).filter((i) => cat[i].seen && cat[i].maze === w);
-				art.text(ctx, m.name, w * W + W - 40, 64, { size: 30, weight: 800, font: TITLE_FONT, fill: w === FRONT ? MOON : LILAC, outline: INK, outlineWidth: 6, align: 'right' });
-				here.forEach((i, k) => art.circle(ctx, w * W + W - 52 - k * 30, 100, 11, { fill: colour(i), stroke: INK, lineWidth: 3 }));
-				if (shower.maze === w) label(ctx, 'DREAM SHOWER! ' + Math.ceil(shower.t), w * W + W - 40 - 150, 136, 24, Math.sin(rt * 8) > 0 ? '#ff9ad6' : MOON);
+				const nx = w * W + W * [0.2, 0.27, 0.8][w];   // (between the clock and the corner without a bridge)
+				art.text(ctx, m.name, nx, 40, { size: 28, weight: 800, font: TITLE_FONT, fill: w === FRONT ? MOON : LILAC, outline: INK, outlineWidth: 6 });
+				here.forEach((i, k) => art.circle(ctx, nx + (k - (here.length - 1) / 2) * 28, 74, 10, { fill: colour(i), stroke: INK, lineWidth: 3 }));
+				if (shower.maze === w) label(ctx, 'DREAM SHOWER! ' + Math.ceil(shower.t), nx, 104, 22, Math.sin(rt * 8) > 0 ? '#ff9ad6' : MOON);
 				// the bridges
-				for (const b of m.bridges) {
-					if (b.r !== Math.min(...m.bridges.filter((q) => q.c === b.c).map((q) => q.r))) continue;
-					const to = m.bridgeTo[b.r][b.c];
-					const p = proj(w, cellX(b.c), 1.0, cellZ(b.r) + CS / 2);
-					label(ctx, 'TO ' + mazes[to].short, p.x, p.y, 22, w === FRONT ? LILAC : MOON, 0.9);
+				for (const pad of m.pads) {
+					const p = proj(w, pad.x, 1.1, pad.z);
+					label(ctx, 'TO ' + mazes[pad.to].short, p.x, p.y, 22, w === FRONT ? LILAC : MOON, 0.9);
 				}
 				// the hourglasses
 				for (const h of m.hourglasses) {
