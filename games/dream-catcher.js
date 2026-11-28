@@ -27,13 +27,15 @@
  * mostly top-down through a camera pitched 60 degrees. The floor maps 1:1 to
  * the village you're in (px across, pz from the front wall), with the same
  * forgiving EDGE by each wall. The three villages are separate islands; you're
- * in one at a time. The bridges land in the room's two front corners: stand
- * in the front-left (or front-right) corner, the sweet spot at the seam,
- * and your catcher crosses into that side wall's village at the very same
- * spot on the floor. It's the same corner seen from both walls: top-left of
- * the square on the front wall, top-right of Willow Lane on the left wall
- * (top-left of Bramble Row on the right), each bridge running off toward
- * the seam. Step off the landing, then back on, to cross back. Seen from a side wall, that
+ * in one at a time. Each bridge lands two squares in from both the front
+ * and the side wall, in the front-left (or front-right) corner of the room:
+ * stand on the landing and your catcher crosses into that side wall's
+ * village at the very same spot on the floor. It's the same spot seen from
+ * both walls, near the seam and clear of the top of each picture: upper
+ * left of the square on the front wall, upper right of Willow Lane on the
+ * left wall (upper left of Bramble Row on the right), each bridge's deck
+ * running over the island toward the seam. Step off the landing, then back
+ * on, to cross back. Seen from a side wall, that
  * village's columns run along the wall (left wall: pz from its left edge;
  * right wall: 1 - pz) and its rows run out from it (nearest the wall is the
  * top of the picture): the room's own axes, seen from that side.
@@ -83,15 +85,15 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 
 	/* ---------- the villages ---------- */
 	// Hh/hh a cottage (2 x 2, H its top-left)   Gg/gg an hourglass (2 x 2)
-	// # hedge   T tree   L lamp post   , flowers   B bridge (on the edge)
+	// # hedge   T tree   L lamp post   , flowers   B bridge landing (step on to cross)   b the bridge's deck over the island
 	// Columns run left to right across the room; row 0 is by the front wall.
 
 	const MAPS = [
 		{ name: 'WILLOW LANE', short: 'WILLOW', map: [
-			'BB              ',
-			'BB   Hh  Hh  Hh ',
-			'     hh  hh  hh ',
-			'  L    ,,    L  ',
+			'  bb  Hh  Hh    ',
+			'  bb  hh  hh Hh ',
+			'  BB         hh ',
+			'  BB   ,,    L  ',
 			'T    T    T    T',
 			'    Hh    Hh    ',
 			'T   hh L  hh   T',
@@ -106,11 +108,11 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 			'                ',
 		] },
 		{ name: 'MOONLIGHT SQUARE', short: 'SQUARE', map: [
-			'BB            BB',
-			'BB  Hh ,, Hh  BB',
-			'    hh L  hh    ',
-			'       Gg       ',
-			' ##    gg    ## ',
+			'     Hh  Hh     ',
+			' ,   hh  hh   , ',
+			'bbBB   L    BBbb',
+			'bbBB   Gg   BBbb',
+			'       gg       ',
 			'    L      L    ',
 			'T  Hh  ,,  Hh  T',
 			'   hh      hh   ',
@@ -124,13 +126,13 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 			'                ',
 		] },
 		{ name: 'BRAMBLE ROW', short: 'BRAMBLE', map: [
-			'              BB',
-			' Hh  ,  Hh    BB',
-			' hh  T  hh      ',
-			'                ',
-			'  Hh  ####  Hh  ',
-			'  hh  L     hh  ',
-			'T      Hh      T',
+			'            bb  ',
+			' Hh  ,  Hh  bb  ',
+			' hh  T  hh  BB  ',
+			'            BB  ',
+			'  Hh  ####      ',
+			'  hh  L    Hh   ',
+			'T      Hh  hh  T',
 			'   L   hh   Hh  ',
 			'      ,     hh  ',
 			'T  Hh     Hh   T',
@@ -746,7 +748,7 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 			const rnd = () => ((k = (k * 1103515245 + 12345) >>> 0) / 4294967296);
 			for (let r = 0; r < N; r++) for (let q = 0; q < N; q++) {
 				const ch = m.rows[r][q];
-				if (ch === ' ' || ch === 'L' || ch === 'B' || ch === 'G' || ch === 'g') {
+				if (ch === ' ' || ch === 'L' || ch === 'B' || ch === 'b' || ch === 'G' || ch === 'g') {
 					c.fillStyle = '#b8ab94';
 					c.fillRect(q * s - 2, r * s - 2, s + 4, s + 4);
 				}
@@ -754,7 +756,7 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 			// the cobbles
 			for (let r = 0; r < N; r++) for (let q = 0; q < N; q++) {
 				const ch = m.rows[r][q];
-				if (!(ch === ' ' || ch === 'L' || ch === 'B' || ch === 'G' || ch === 'g')) continue;
+				if (!(ch === ' ' || ch === 'L' || ch === 'B' || ch === 'b' || ch === 'G' || ch === 'g')) continue;
 				for (let i = 0; i < 9; i++) {
 					const x = q * s + rnd() * s, y = r * s + rnd() * s, rr = 6 + rnd() * 8;
 					c.fillStyle = `rgba(${rnd() > 0.5 ? '255,250,235' : '70,60,50'},${0.12 + rnd() * 0.15})`;
@@ -896,7 +898,7 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 		groundMat.map.offset.set(-0.3 / SIZE, -0.3 / SIZE);
 		groundMat.map.wrapS = groundMat.map.wrapT = THREE.ClampToEdgeWrapping;
 		// the free squares next to cottages, where dreams can hang
-		const walkable = (c, r) => inGrid(c, r) && !m.block[r][c] && m.bridgeTo[r][c] < 0 && m.rows[r][c] !== 'G' && m.rows[r][c] !== 'g';
+		const walkable = (c, r) => inGrid(c, r) && !m.block[r][c] && m.bridgeTo[r][c] < 0 && !'Ggb'.includes(m.rows[r][c]);
 		for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
 			const ch = m.rows[r][c];
 			const x = cellX(c), z = cellZ(r);
@@ -927,17 +929,18 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 			const front = m.idx === FRONT;
 			const pad = { to: m.bridgeTo[cells[0].r][cells[0].c], x: (x0 + x1) / 2, z: (z0 + z1) / 2 };
 			m.pads.push(pad);
-			// a group whose +x runs out along the bridge, from the island's edge
+			// a group whose +x runs out along the bridge, from the island's edge (the landing is a little way in)
 			const bg = new THREE.Group();
 			const depth = front ? x1 - x0 : z1 - z0, wide = front ? z1 - z0 : x1 - x0;
+			const inset = front ? (side < 0 ? x0 + HALF : HALF - x1) : z0 + HALF;
 			if (front) { bg.position.set(side * HALF, 0, pad.z); bg.rotation.y = side < 0 ? Math.PI : 0; }
 			else { bg.position.set(pad.x, 0, -HALF); bg.rotation.y = Math.PI / 2; }
 			const len = 5.5;
-			const deck = new THREE.Mesh(new THREE.BoxGeometry(depth + len, 0.08, wide), MAT.planks.clone());
+			const deck = new THREE.Mesh(new THREE.BoxGeometry(inset + depth + len, 0.08, wide), MAT.planks.clone());
 			deck.material.map = TEX.planks.clone();
-			deck.material.map.repeat.set(depth + len, 1);
+			deck.material.map.repeat.set(inset + depth + len, 1);
 			deck.material.map.needsUpdate = true;
-			deck.position.set((len - depth) / 2, 0.04, 0);
+			deck.position.set((len - depth - inset) / 2, 0.04, 0);
 			deck.receiveShadow = true;
 			deck.castShadow = true;
 			bg.add(deck);
@@ -953,15 +956,15 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 					bg.add(post);
 				}
 				// a lantern each side at the island end
-				buildLamp(m, 0.25, z + (z < 0 ? -0.12 : 0.12), bg, 0.7);
+				buildLamp(m, -inset + 0.1, z + (z < 0 ? -0.12 : 0.12), bg, 0.7);
 			}
 			// a glowing ring round the landing, and an arch over the way out, so it reads as a door to the next village
 			const ring = new THREE.Mesh(new THREE.PlaneGeometry(depth, wide).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: TEX.ring, color: new THREE.Color(1.2, 1.0, 2.0), transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending }));
-			ring.position.set(-depth / 2, 0.1, 0);
+			ring.position.set(-inset - depth / 2, 0.1, 0);
 			bg.add(ring);
 			const arch = new THREE.Mesh(new THREE.TorusGeometry(wide / 2 + 0.05, 0.04, 8, 32, Math.PI), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 1.3, 2.4) }));
 			arch.rotation.y = Math.PI / 2;
-			arch.position.set(0.05, 0.08, 0);
+			arch.position.set(-inset + 0.05, 0.08, 0);
 			bg.add(arch);
 			m.bridgeArches = (m.bridgeArches || []).concat([arch]);
 			g.add(bg);
