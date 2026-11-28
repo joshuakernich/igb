@@ -26,7 +26,10 @@
  * Drawn in 3D (three.js), after Temple of Coins: each wall shows one village,
  * mostly top-down through a camera pitched 60 degrees. The floor maps 1:1 to
  * the village you're in (px across, pz from the front wall), with the same
- * forgiving EDGE by each wall. The three villages are separate islands; you're
+ * forgiving EDGE by each wall, except that each village finishes level with
+ * the front of its bridge landings (rows 0 and 1 are forest), so the room's
+ * front-to-back maps onto rows 2 to 15. The three villages are separate
+ * clearings in one forest; you're
  * in one at a time. Each bridge lands two squares in from both the front
  * and the side wall, in the front-left (or front-right) corner of the room:
  * stand on the landing and your catcher crosses into that side wall's
@@ -34,8 +37,9 @@
  * both walls, near the seam and clear of the top of each picture: upper
  * left of the square on the front wall, upper right of Willow Lane on the
  * left wall (upper left of Bramble Row on the right), each bridge's deck
- * running over the island toward the seam. Step off the landing, then back
- * on, to cross back. Seen from a side wall, that
+ * running toward the seam. Step on and your catcher dashes off along the
+ * bridge, tail streaming, and dashes in along the next village's bridge to
+ * where you stand. Step off the landing, then back on, to cross back. Seen from a side wall, that
  * village's columns run along the wall (left wall: pz from its left edge;
  * right wall: 1 - pz) and its rows run out from it (nearest the wall is the
  * top of the picture): the room's own axes, seen from that side.
@@ -67,6 +71,9 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 	const HALF = SIZE / 2;
 	const EDGE = 0.12;            // this much of the room by each side wall is already the village's edge
 	const EDGE_Z = 0.24;          // ...and by the front and back
+	const Z0 = 2;                 // the villages start at this row: rows 0 and 1, in front of the bridges, are forest
+	const ZF = -HALF + Z0 * CS;   // ...so this is a village's front edge, level with the front of the bridge landings
+	const RUN = 0.4;              // seconds to run each half of a bridge (off one, onto the next)
 	const LX = 40;                // how far apart the villages' islands are (the cameras never see each other's)
 	const R = 0.2;                // a catcher's radius (for the cottages)
 	const BONK_GRACE = 0.15;      // seconds against a cottage before it counts (tracking jitters)
@@ -86,14 +93,15 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 	/* ---------- the villages ---------- */
 	// Hh/hh a cottage (2 x 2, H its top-left)   Gg/gg an hourglass (2 x 2)
 	// # hedge   T tree   L lamp post   , flowers   B bridge landing (step on to cross)   b the bridge's deck over the island
+	// ~ forest (rows 0 and 1, in front of the bridges: the villages finish level with them)
 	// Columns run left to right across the room; row 0 is by the front wall.
 
 	const MAPS = [
 		{ name: 'WILLOW LANE', short: 'WILLOW', map: [
-			'  bb  Hh  Hh    ',
-			'  bb  hh  hh Hh ',
-			'  BB         hh ',
-			'  BB   ,,    L  ',
+			'~~~~~~~~~~~~~~~~',
+			'~~~~~~~~~~~~~~~~',
+			'  BB  Hh  Hh  , ',
+			'  BB  hh  hh L  ',
 			'T    T    T    T',
 			'    Hh    Hh    ',
 			'T   hh L  hh   T',
@@ -108,8 +116,8 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 			'                ',
 		] },
 		{ name: 'MOONLIGHT SQUARE', short: 'SQUARE', map: [
-			'     Hh  Hh     ',
-			' ,   hh  hh   , ',
+			'~~~~~~~~~~~~~~~~',
+			'~~~~~~~~~~~~~~~~',
 			'bbBB   L    BBbb',
 			'bbBB   Gg   BBbb',
 			'       gg       ',
@@ -121,15 +129,15 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 			'T  Hh      Hh  T',
 			'   hh  Gg  hh   ',
 			' L     gg     L ',
-			' ##          ## ',
-			'    ,  TT  ,    ',
+			' Hh          Hh ',
+			' hh ,  TT  , hh ',
 			'                ',
 		] },
 		{ name: 'BRAMBLE ROW', short: 'BRAMBLE', map: [
-			'            bb  ',
-			' Hh  ,  Hh  bb  ',
+			'~~~~~~~~~~~~~~~~',
+			'~~~~~~~~~~~~~~~~',
+			' Hh  ,  Hh  BB  ',
 			' hh  T  hh  BB  ',
-			'            BB  ',
 			'  Hh  ####      ',
 			'  hh  L    Hh   ',
 			'T      Hh  hh  T',
@@ -320,7 +328,7 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 		scores = scores.map(() => 0);
 		for (const d of dreams) removeDream(d);
 		dreams = [];
-		for (const e of cat) { e.tail = []; e.maze = FRONT; e.path = []; e.dizzy = 0; e.armed = true; }
+		for (const e of cat) { e.tail = []; e.maze = FRONT; e.path = []; e.dizzy = 0; e.armed = true; e.run = null; }
 		for (const m of mazes) for (const h of m.hourglasses) h.reset();
 		shower = { maze: -1, t: 0, next: SHOWER_EVERY * 0.6 };
 		dawnT = -1;
@@ -356,11 +364,28 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 			if (!p) { e.seen = false; continue; }
 			const span = (v, m) => clamp((v - m) / (1 - m * 2), 0, 1);
 			const tx = (span(p.px, EDGE) - 0.5) * SIZE;
-			const tz = (0.5 - span(p.pz, EDGE_Z)) * SIZE;   // (pz is 1 at the front wall: the far edge, z -HALF)
+			const tz = ZF + (1 - span(p.pz, EDGE_Z)) * (HALF - ZF);   // (pz is 1 at the front wall: the village's front edge, ZF, level with the bridges)
 			if (!e.seen) { e.x = tx; e.z = tz; e.seen = true; e.path = [{ x: tx, z: tz }]; }
-			const k = 1 - Math.exp(-dt * 24);
-			const dx = (tx - e.x) * k, dz = (tz - e.z) * k;
-			e.x += dx; e.z += dz;
+			let dx, dz;
+			if (e.run) {
+				// running the bridge: out along this one, then in along the next to where they stand
+				const r = e.run;
+				r.t += dt;
+				let nx, nz;
+				if (r.t < RUN) { const u = r.t / RUN; nx = lerp(r.sx, r.ex, u); nz = lerp(r.sz, r.ez, u); }
+				else {
+					if (!r.over) { r.over = true; arrive(i, r); }
+					const u = easeOut((r.t - RUN) / RUN);
+					nx = lerp(r.ix, tx, u); nz = lerp(r.iz, tz, u);
+					if (r.t >= RUN * 2) e.run = null;
+				}
+				dx = nx - e.x; dz = nz - e.z;
+				e.x = nx; e.z = nz;
+			} else {
+				const k = 1 - Math.exp(-dt * 24);
+				dx = (tx - e.x) * k; dz = (tz - e.z) * k;
+				e.x += dx; e.z += dz;
+			}
 			const step = Math.hypot(dx, dz);
 			if (step > 0.004) e.face = Math.atan2(dx, dz);
 			e.walk += step * 9;
@@ -379,6 +404,7 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 			// the bridges
 			const c = colOf(e.x), r = rowOf(e.z);
 			const to = m.bridgeTo[r][c];
+			if (e.run) continue;
 			if (to < 0) e.armed = true;
 			else if (e.armed && phase !== 'off') { cross(i, to); continue; }
 			if (!live) continue;
@@ -404,7 +430,7 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 			if (e.snip <= 0) {
 				for (let j = 0; j < count; j++) {
 					const o = cat[j];
-					if (j === i || !o.seen || o.maze !== e.maze || o.cutSafe > 0 || !o.tail.length) continue;
+					if (j === i || !o.seen || o.run || o.maze !== e.maze || o.cutSafe > 0 || !o.tail.length) continue;
 					const k2 = o.tail.findIndex((d) => Math.hypot(d.x - e.x, d.z - e.z) < CUT_R);
 					if (k2 < 0) continue;
 					const stolen = o.tail.splice(k2);
@@ -452,17 +478,26 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 		if (lost) show.fx('whoosh', 0.4);
 	}
 
+	// onto a bridge: the catcher dashes off along it (their tail streaming behind),
+	// and in along the next village's bridge to where they're standing
 	function cross(i, to) {
 		const e = cat[i];
 		const from = e.maze;
+		const out = mazes[from].pads.find((p) => p.to === to);
+		const into = mazes[to].pads.find((p) => p.to === from);
 		float(from, e.x, e.z, '→ ' + mazes[to].name, colour(i), 0.8);
-		e.maze = to;
 		e.armed = false;
-		e.crossT = 0.6;
-		e.path = [{ x: e.x, z: e.z }];
-		for (const d of e.tail) { d.maze = to; d.x = e.x; d.z = e.z; d.y = 0.5; }
-		tut.crossed[i] = true;
+		e.run = { t: 0, to, sx: e.x, sz: e.z, ex: out.ex, ez: out.ez, ix: into.ex, iz: into.ez };
 		show.fx('whoosh', 0.5);
+	}
+	function arrive(i, r) {
+		const e = cat[i];
+		e.maze = r.to;
+		e.x = r.ix; e.z = r.iz;
+		e.path = [{ x: e.x, z: e.z }];
+		for (const d of e.tail) { d.maze = r.to; d.x = e.x; d.z = e.z; d.y = 0.5; }
+		tut.crossed[i] = true;
+		show.fx('whoosh', 0.4, 1.3);
 		show.fx('glint', 0.4);
 	}
 
@@ -889,16 +924,17 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 		// the island
 		const groundMat = new THREE.MeshStandardMaterial({ map: groundTexture(m), roughness: 0.9 });
 		groundMat.map.anisotropy = 8;
-		const isl = new THREE.Mesh(new THREE.BoxGeometry(SIZE + 0.6, 1.0, SIZE + 0.6), [MAT.bank, MAT.bank, groundMat, MAT.bank, MAT.bank, MAT.bank]);
-		isl.position.y = -0.5;
+		const deep = HALF - ZF + 0.6;
+		const isl = new THREE.Mesh(new THREE.BoxGeometry(SIZE + 0.6, 1.0, deep), [MAT.bank, MAT.bank, groundMat, MAT.bank, MAT.bank, MAT.bank]);
+		isl.position.set(0, -0.5, (ZF + HALF) / 2);
 		isl.receiveShadow = true;
 		g.add(isl);
 		// (the top's texture covers SIZE + 0.6: scale it so the squares line up)
-		groundMat.map.repeat.set((SIZE + 0.6) / SIZE, (SIZE + 0.6) / SIZE);
+		groundMat.map.repeat.set((SIZE + 0.6) / SIZE, deep / SIZE);
 		groundMat.map.offset.set(-0.3 / SIZE, -0.3 / SIZE);
 		groundMat.map.wrapS = groundMat.map.wrapT = THREE.ClampToEdgeWrapping;
 		// the free squares next to cottages, where dreams can hang
-		const walkable = (c, r) => inGrid(c, r) && !m.block[r][c] && m.bridgeTo[r][c] < 0 && !'Ggb'.includes(m.rows[r][c]);
+		const walkable = (c, r) => inGrid(c, r) && !m.block[r][c] && m.bridgeTo[r][c] < 0 && !'Ggb~'.includes(m.rows[r][c]);
 		for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
 			const ch = m.rows[r][c];
 			const x = cellX(c), z = cellZ(r);
@@ -928,6 +964,8 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 			const z0 = Math.min(...cells.map((b) => cellZ(b.r))) - CS / 2, z1 = Math.max(...cells.map((b) => cellZ(b.r))) + CS / 2;
 			const front = m.idx === FRONT;
 			const pad = { to: m.bridgeTo[cells[0].r][cells[0].c], x: (x0 + x1) / 2, z: (z0 + z1) / 2 };
+			// (the far end of the bridge, in the village's own x, z: where a runner leaves and arrives)
+			if (front) { pad.ex = side * (HALF + 5.5); pad.ez = pad.z; } else { pad.ex = pad.x; pad.ez = -(HALF + 5.5); }
 			m.pads.push(pad);
 			// a group whose +x runs out along the bridge, from the island's edge (the landing is a little way in)
 			const bg = new THREE.Group();
@@ -1361,10 +1399,11 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 		}
 	});
 
-	/* the forest between the villages: a moat round each island, and woods
-	   beyond it, with a path from every bridge off into the trees */
+	/* the forest between the villages: woods right up to each village's edge,
+	   with a path on from every bridge off into the trees */
 
-	const MOAT = HALF + 2.8;      // the moat runs out this far from a village's middle; the woods start here
+	const EDGE_W = HALF + 0.3;    // the woods start right at a village's edge (its island: HALF + a little rim, ZF - the rim at the front)
+	const EDGE_F = ZF - 0.3;
 	const REACH = LX / 2;         // each village's share of the woods, either side of it
 	TEX.forest = canvasTexture(512, 512, function (c, w) {
 		noiseFill(c, w, w, '#2a4a2a', 0.3, 16000, 41);
@@ -1390,10 +1429,10 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 	}
 	for (const m of mazes) {
 		const cx = m.cx;
-		forestBox(cx - REACH, cx + REACH, -44, -MOAT);
-		forestBox(cx - REACH, cx + REACH, MOAT, 44);
-		forestBox(cx - REACH, cx - MOAT, -MOAT, MOAT);
-		forestBox(cx + MOAT, cx + REACH, -MOAT, MOAT);
+		forestBox(cx - REACH, cx + REACH, -44, EDGE_F);
+		forestBox(cx - REACH, cx + REACH, EDGE_W, 44);
+		forestBox(cx - REACH, cx - EDGE_W, EDGE_F, EDGE_W);
+		forestBox(cx + EDGE_W, cx + REACH, EDGE_F, EDGE_W);
 		// a path on from each bridge's far end
 		for (const pad of m.pads) {
 			const front = m.idx === FRONT;
@@ -1418,13 +1457,17 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 		let k = 1234;
 		const rnd = () => ((k = (k * 1664525 + 1013904223) >>> 0) / 4294967296);
 		const nearPath = (x, z) => forestPaths.some((p) => {
-			const u = clamp((x - p.x) * p.dx + (z - p.z) * p.dz, 0, p.len);
+			const u = clamp((x - p.x) * p.dx + (z - p.z) * p.dz, -6, p.len);   // (and back under the bridge's deck)
 			return Math.hypot(x - (p.x + p.dx * u), z - (p.z + p.dz * u)) < 1.15;
 		});
 		for (const m of mazes) {
 			for (let i = 0; i < 1100; i++) {
 				const x = m.cx + (rnd() * 2 - 1) * REACH, z = (rnd() * 2 - 1) * 24;
-				if (Math.abs(x - m.cx) < MOAT + 0.4 && Math.abs(z) < MOAT + 0.4) continue;
+				// (clear of the village, and further clear on the side nearest its camera, so no tree hides the near lanes)
+				const near = [[1, 0], [0, 1], [-1, 0]][m.idx];
+				const lx = x - m.cx;
+				const gapX0 = near[0] < 0 ? 1.6 : 0.4, gapX1 = near[0] > 0 ? 1.6 : 0.4, gapZ1 = near[1] > 0 ? 1.6 : 0.4;
+				if (lx > -EDGE_W - gapX0 && lx < EDGE_W + gapX1 && z > EDGE_F - 0.4 && z < EDGE_W + gapZ1) continue;
 				if (nearPath(x, z)) continue;
 				spots.push({ x, z, pine: rnd() < 0.55, s: 0.75 + rnd() * 0.6, a: rnd() * 6, tint: rnd() });
 			}
@@ -1520,7 +1563,7 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 		lakeU.uTime.value = rt;
 		lakeU.uTop.value.set(sky.top);
 		lakeU.uHor.value.set(sky.hor);
-		lakeU.uStars.value = 1 - between(dk, 0.1, 0.6);
+		lakeU.uStars.value = 0;
 		lakeU.uGlint.value.setRGB(lerp(0.6, 1.6, dk), lerp(0.7, 1.2, dk), lerp(1.0, 0.7, dk));
 		lightAt(dk);
 
@@ -1621,6 +1664,7 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 				u.body.rotation.y = e.face + rt * 10;
 				u.body.rotation.z = Math.sin(rt * 14) * 0.25;
 			} else u.body.rotation.z = Math.sin(e.walk) * 0.12;
+			u.body.rotation.x = e.run ? 0.35 : 0;   // (leaning into the dash)
 			u.body.scale.setScalar(Math.max(0.001, sc));
 			u.body.position.y = Math.abs(Math.sin(e.walk)) * 0.05;
 			u.ring.scale.setScalar(1.35 * (1 + e.bankFlash * 1.2));
@@ -1698,40 +1742,18 @@ IGB.register('dream-catcher', function DreamCatcher(stage, playersMeta) {
 
 	const label = (ctx, str, x, y, size, fill, alpha = 1) => art.text(ctx, str, x, y, { size, weight: 800, font: FONT, fill, outline: INK, outlineWidth: Math.max(4, size * 0.18), alpha });
 
-	// the stars, over every wall's far edge (the sun, in the morning)
-	const STARS = Array.from({ length: 70 }, () => ({ x: Math.random(), y: Math.random(), s: rand(0.8, 2.4), a: Math.random() * 6 }));
+	// no sky at night (just the woods); at dawn a warm wash over every wall's far edge, and the sun
 	function drawSky(ctx, w) {
 		const dk = dawnK();
+		if (dk <= 0) return;
 		const sky = skyAt(dk);
 		const x0 = w * W, BAND = 112;
 		const g = ctx.createLinearGradient(0, 0, 0, BAND);
-		g.addColorStop(0, sky.top);
-		g.addColorStop(0.6, sky.hor + 'cc');
+		const a = Math.round(between(dk, 0, 0.4) * 255).toString(16).padStart(2, '0');
+		g.addColorStop(0, sky.hor + a);
 		g.addColorStop(1, sky.hor + '00');
 		ctx.fillStyle = g;
 		ctx.fillRect(x0, 0, W, BAND);
-		const starA = 1 - between(dk, 0.1, 0.55);
-		if (starA > 0) {
-			for (const s of STARS) {
-				const tw = 0.5 + 0.5 * Math.sin(rt * (1 + s.s) + s.a);
-				ctx.globalAlpha = starA * tw * (1 - s.y * 0.6);
-				ctx.fillStyle = '#fffbe8';
-				ctx.beginPath(); ctx.arc(x0 + s.x * W, s.y * BAND * 0.8, s.s, 0, Math.PI * 2); ctx.fill();
-			}
-			ctx.globalAlpha = 1;
-			// the moon (a crescent), sinking at dawn
-			const my = 44 + between(dk, 0, 0.5) * 90;
-			const mx = x0 + W * (w === 0 ? 0.2 : w === 1 ? 0.82 : 0.6);
-			ctx.save();
-			ctx.globalAlpha = starA;
-			ctx.shadowColor = MOON; ctx.shadowBlur = 24;
-			ctx.fillStyle = MOON;
-			ctx.beginPath(); ctx.arc(mx, my, 22, 0, Math.PI * 2); ctx.fill();
-			ctx.shadowBlur = 0;
-			ctx.globalCompositeOperation = 'destination-out';
-			ctx.beginPath(); ctx.arc(mx + 10, my - 6, 19, 0, Math.PI * 2); ctx.fill();
-			ctx.restore();
-		}
 		if (dk > 0.15) {
 			// the sun, rising
 			const sy = lerp(150, 50, easeOut(between(dk, 0.15, 0.9)));
